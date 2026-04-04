@@ -1,0 +1,19 @@
+sequenceDiagram
+    actor Arsiparis
+    participant Frontend
+    participant Server
+    participant Database
+    
+    Arsiparis->>Frontend: Buka Inbox Arsip (Dokumen status COMPLETED)
+    Frontend->>Server: GET /api/arsip/pending
+    Server->>Database: Query dokumen_transaksi WHERE status='COMPLETED'
+    Database-->>Server: List Dokumen
+    Server-->>Frontend: Tampilkan Dokumen Siap Arsip
+    
+    Arsiparis->>Frontend: Input Nomor Surat, Klasifikasi, Retensi
+    Frontend->>Server: POST /api/arsip/finalize
+    Server->>Database: INSERT INTO arsip metadata
+    Server->>Database: UPDATE dokumen_transaksi (status: ARCHIVED)
+    Server->>Database: INSERT INTO log_aktivitas (aksi: ARCHIVED)
+    Database-->>Server: Success
+    Server-->>Frontend: Dokumen Resmi Diarsipkan

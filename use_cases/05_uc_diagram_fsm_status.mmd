@@ -1,0 +1,9 @@
+stateDiagram-v2
+    [*] --> DRAFT : Mulai Draft
+    DRAFT --> IN_REVIEW : Submit Dokumen
+    IN_REVIEW --> NEED_REVISION : Reviewer Menolak (Reject)
+    NEED_REVISION --> IN_REVIEW : Uploader Submit Revisi
+    IN_REVIEW --> IN_REVIEW : Lanjut ke Step Berikutnya (Approve)
+    IN_REVIEW --> COMPLETED : Step Workflow Final Selesai
+    COMPLETED --> ARCHIVED : Arsiparis menambahkan Metadata
+    ARCHIVED --> [*]

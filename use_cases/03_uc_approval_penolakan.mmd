@@ -1,0 +1,27 @@
+sequenceDiagram
+    actor Approver
+    participant Frontend
+    participant Server
+    participant Database
+    
+    Approver->>Frontend: Buka Inbox Dokumen
+    Frontend->>Server: GET /api/inbox (Filter by Role)
+    Server->>Database: Query dokumen_transaksi (current_assignee_role_id)
+    Database-->>Server: List Dokumen
+    Server-->>Frontend: Tampilkan Daftar Dokumen
+    
+    Approver->>Frontend: Klik Dokumen & Lihat Lampiran PDF
+    Approver->>Frontend: Pilih aksi (APPROVE / REJECT)
+    
+    alt Jika REJECT
+        Approver->>Frontend: Wajib isi "Catatan Revisi"
+        Frontend->>Server: POST /api/dokumen/reject
+        Server->>Database: UPDATE dokumen_transaksi (status: NEED_REVISION, step mundur)
+        Server->>Database: INSERT INTO log_aktivitas (aksi: REJECT, catatan)
+    else Jika APPROVE
+        Frontend->>Server: POST /api/dokumen/approve
+        Server->>Database: UPDATE dokumen_transaksi (step maju, opsional: COMPLETED)
+        Server->>Database: INSERT INTO log_aktivitas (aksi: APPROVE)
+    end
+    Database-->>Server: Success
+    Server-->>Frontend: Status Dokumen Diperbarui
