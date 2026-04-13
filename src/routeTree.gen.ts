@@ -9,10 +9,44 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PpkRouteImport } from './routes/ppk'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForbiddenRouteImport } from './routes/forbidden'
+import { Route as DokumenRouteImport } from './routes/dokumen'
+import { Route as BendaharaRouteImport } from './routes/bendahara'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArsiparisIndexRouteImport } from './routes/arsiparis.index'
-import { Route as AdminWorkflowRouteImport } from './routes/admin.workflow'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
+import { Route as ApiAuthRoleSwitchRouteImport } from './routes/api/auth/role-switch'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 
+const PpkRoute = PpkRouteImport.update({
+  id: '/ppk',
+  path: '/ppk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForbiddenRoute = ForbiddenRouteImport.update({
+  id: '/forbidden',
+  path: '/forbidden',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DokumenRoute = DokumenRouteImport.update({
+  id: '/dokumen',
+  path: '/dokumen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BendaharaRoute = BendaharaRouteImport.update({
+  id: '/bendahara',
+  path: '/bendahara',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -23,44 +57,172 @@ const ArsiparisIndexRoute = ArsiparisIndexRouteImport.update({
   path: '/arsiparis/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminWorkflowRoute = AdminWorkflowRouteImport.update({
-  id: '/admin/workflow',
-  path: '/admin/workflow',
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
+  id: '/api/auth/session',
+  path: '/api/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRoleSwitchRoute = ApiAuthRoleSwitchRouteImport.update({
+  id: '/api/auth/role-switch',
+  path: '/api/auth/role-switch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin/workflow': typeof AdminWorkflowRoute
+  '/bendahara': typeof BendaharaRoute
+  '/dokumen': typeof DokumenRoute
+  '/forbidden': typeof ForbiddenRoute
+  '/login': typeof LoginRoute
+  '/ppk': typeof PpkRoute
+  '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin/workflow': typeof AdminWorkflowRoute
+  '/bendahara': typeof BendaharaRoute
+  '/dokumen': typeof DokumenRoute
+  '/forbidden': typeof ForbiddenRoute
+  '/login': typeof LoginRoute
+  '/ppk': typeof PpkRoute
+  '/admin': typeof AdminIndexRoute
   '/arsiparis': typeof ArsiparisIndexRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin/workflow': typeof AdminWorkflowRoute
+  '/bendahara': typeof BendaharaRoute
+  '/dokumen': typeof DokumenRoute
+  '/forbidden': typeof ForbiddenRoute
+  '/login': typeof LoginRoute
+  '/ppk': typeof PpkRoute
+  '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin/workflow' | '/arsiparis/'
+  fullPaths:
+    | '/'
+    | '/bendahara'
+    | '/dokumen'
+    | '/forbidden'
+    | '/login'
+    | '/ppk'
+    | '/admin/'
+    | '/arsiparis/'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/role-switch'
+    | '/api/auth/session'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin/workflow' | '/arsiparis'
-  id: '__root__' | '/' | '/admin/workflow' | '/arsiparis/'
+  to:
+    | '/'
+    | '/bendahara'
+    | '/dokumen'
+    | '/forbidden'
+    | '/login'
+    | '/ppk'
+    | '/admin'
+    | '/arsiparis'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/role-switch'
+    | '/api/auth/session'
+  id:
+    | '__root__'
+    | '/'
+    | '/bendahara'
+    | '/dokumen'
+    | '/forbidden'
+    | '/login'
+    | '/ppk'
+    | '/admin/'
+    | '/arsiparis/'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/role-switch'
+    | '/api/auth/session'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminWorkflowRoute: typeof AdminWorkflowRoute
+  BendaharaRoute: typeof BendaharaRoute
+  DokumenRoute: typeof DokumenRoute
+  ForbiddenRoute: typeof ForbiddenRoute
+  LoginRoute: typeof LoginRoute
+  PpkRoute: typeof PpkRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   ArsiparisIndexRoute: typeof ArsiparisIndexRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthRoleSwitchRoute: typeof ApiAuthRoleSwitchRoute
+  ApiAuthSessionRoute: typeof ApiAuthSessionRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ppk': {
+      id: '/ppk'
+      path: '/ppk'
+      fullPath: '/ppk'
+      preLoaderRoute: typeof PpkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forbidden': {
+      id: '/forbidden'
+      path: '/forbidden'
+      fullPath: '/forbidden'
+      preLoaderRoute: typeof ForbiddenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dokumen': {
+      id: '/dokumen'
+      path: '/dokumen'
+      fullPath: '/dokumen'
+      preLoaderRoute: typeof DokumenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bendahara': {
+      id: '/bendahara'
+      path: '/bendahara'
+      fullPath: '/bendahara'
+      preLoaderRoute: typeof BendaharaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -75,11 +237,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArsiparisIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/workflow': {
-      id: '/admin/workflow'
-      path: '/admin/workflow'
-      fullPath: '/admin/workflow'
-      preLoaderRoute: typeof AdminWorkflowRouteImport
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/session': {
+      id: '/api/auth/session'
+      path: '/api/auth/session'
+      fullPath: '/api/auth/session'
+      preLoaderRoute: typeof ApiAuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/role-switch': {
+      id: '/api/auth/role-switch'
+      path: '/api/auth/role-switch'
+      fullPath: '/api/auth/role-switch'
+      preLoaderRoute: typeof ApiAuthRoleSwitchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -87,8 +277,17 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminWorkflowRoute: AdminWorkflowRoute,
+  BendaharaRoute: BendaharaRoute,
+  DokumenRoute: DokumenRoute,
+  ForbiddenRoute: ForbiddenRoute,
+  LoginRoute: LoginRoute,
+  PpkRoute: PpkRoute,
+  AdminIndexRoute: AdminIndexRoute,
   ArsiparisIndexRoute: ArsiparisIndexRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthRoleSwitchRoute: ApiAuthRoleSwitchRoute,
+  ApiAuthSessionRoute: ApiAuthSessionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

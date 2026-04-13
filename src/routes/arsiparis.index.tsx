@@ -1,84 +1,69 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
-import { Button } from '#/components/ui/button'
-import { Search, FileArchive, Archive } from 'lucide-react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'
-import { Input } from '#/components/ui/input'
-import { StatusBadge } from '#/components/ui/StatusBadge'
+import { useEffect } from 'react'
+import { Archive } from 'lucide-react'
+import { getBrowserClient } from '#/lib/supabase-browser'
+import { getPrimaryRole } from '#/lib/auth'
 
 export const Route = createFileRoute('/arsiparis/')({
-  component: ArsiparisScreen,
+  component: ArsiparisWorkspace,
 })
 
-const MOCK_ARCHIVE = [
-  { id: '1', judul: 'Laporan Triwulan I', klasifikasi: 'Keuangan', retensi: '5 Tahun', status: 'COMPLETED', date: '2026-03-30' },
-  { id: '2', judul: 'Data Agregat Pertanian', klasifikasi: 'Statistik', retensi: '10 Tahun', status: 'COMPLETED', date: '2026-03-29' },
-]
+function ArsiparisWorkspace() {
+  useEffect(() => {
+    async function checkAuth() {
+      const supabase = getBrowserClient()
+      if (!supabase) { window.location.href = '/login'; return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { window.location.href = '/login'; return }
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('role:roles(nama)')
+        .eq('user_id', session.user.id)
+      const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
+      if (!roleNames.includes('ARSIPARIS')) { window.location.href = '/forbidden'; return }
+    }
+    checkAuth()
+  }, [])
 
-function ArsiparisScreen() {
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <header className="p-8 pb-6 flex justify-between items-end">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-primary">Ruang Arsiparis</h2>
-          <p className="text-muted-foreground">Tinjau dokumen yang telah disetujui penuh untuk pengarsipan final.</p>
+          <p className="text-primary font-bold tracking-widest text-[10px] uppercase font-headline mb-1">
+            ARSIPARIS PORTAL
+          </p>
+          <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight">
+            Pemberkasan Arsip
+          </h1>
+          <p className="text-on-surface-variant text-xs mt-1 font-medium max-w-xl">
+            Ruang kerja Arsiparis — pengelolaan dan klasifikasi dokumen arsip.
+          </p>
+        </div>
+      </header>
+
+      <div className="px-8 pb-8">
+        <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest/60 backdrop-blur-sm">
+          <div className="flex flex-col items-center justify-center py-20 gap-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Archive size={32} className="text-primary" />
+            </div>
+            <div className="text-center max-w-sm">
+              <h2 className="font-headline text-xl font-extrabold text-on-surface mb-2">
+                Ruang Arsiparis
+              </h2>
+              <p className="text-on-surface-variant text-sm">
+                Halaman atau fitur belum dibuat. Akan dikembangkan di iterasi berikutnya.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] font-extrabold text-primary uppercase tracking-widest">
+                Coming Soon
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Dokumen Menunggu Arsip</CardTitle>
-              <CardDescription>Dokumen berstatus COMPLETED yang menanti penetapan klasifikasi dan retensi.</CardDescription>
-            </div>
-            <div className="relative w-72">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Cari dokumen..." className="pl-8" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Judul Dokumen</TableHead>
-                  <TableHead>Klasifikasi Prediksi</TableHead>
-                  <TableHead>Retensi Dasar</TableHead>
-                  <TableHead>Tgl Tuntas</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {MOCK_ARCHIVE.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <FileArchive className="h-4 w-4 text-primary" />
-                        {doc.judul}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{doc.klasifikasi}</TableCell>
-                    <TableCell className="text-muted-foreground">{doc.retensi}</TableCell>
-                    <TableCell className="text-muted-foreground">{doc.date}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={doc.status as any} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="default" size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        <Archive className="mr-2 h-4 w-4"/>
-                        Arsipkan
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
