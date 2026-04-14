@@ -24,12 +24,26 @@ import {
   Search,
   Bell,
   ChevronDown,
+  FileX,
+  Trash2,
 } from 'lucide-react'
 
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
 import type { RoleName } from '#/lib/types/auth'
 import { ROLE_DISPLAY } from '#/lib/types/auth'
+
+// ─── Role → Default Route Mapping ─────────────────────────────────────────────
+// Maps each role to its default dashboard path. Used after role switch so the
+// user lands on the correct page for their new role instead of staying on the
+// previous role's page.
+const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
+  PEGAWAI: '/',
+  PPK: '/ppk',
+  BENDAHARA: '/bendahara',
+  ARSIPARIS: '/arsiparis',
+  ADMIN: '/admin',
+}
 
 // ─── Nav Config ─────────────────────────────────────────────────────────────
 
@@ -55,9 +69,16 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'MANAGEMENT',
       items: [
-        { id: 'tasks', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/', badge: 12 },
-        { id: 'docs', label: 'Dokumen Selesai', icon: FileText },
-        { id: 'report', label: 'Ajukan Laporan', icon: FilePlus },
+        { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: '/dokumen/aju' },
+        { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/dokumen/saya' },
+        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/dokumen/saya?status=NEED_REVISION' },
+        { id: 'selesai', label: 'Dokumen Selesai', icon: FileText, to: '/dokumen/saya?status=COMPLETED' },
+      ],
+    },
+    {
+      title: 'ARSIP',
+      items: [
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsip' },
       ],
     },
     {
@@ -74,12 +95,18 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/ppk' }],
     },
     {
-      title: 'MANAGEMENT',
+      title: 'VALIDASI',
       items: [
-        { id: 'approval', label: 'Persetujuan Dokumen', icon: BadgeCheck, to: '/ppk' },
-        { id: 'validated', label: 'Dokumen Tervalidasi', icon: ClipboardCheck },
-        { id: 'revision', label: 'Revisi Dokumen', icon: FileEdit },
-        { id: 'finished', label: 'Daftar Dokumen Selesai', icon: CheckSquare },
+        { id: 'validasi', label: 'Validasi Dokumen', icon: BadgeCheck, to: '/ppk/inbox' },
+        { id: 'tervalidasi', label: 'Dokumen Tervalidasi', icon: ClipboardCheck, to: '/ppk/tervalidasi' },
+        { id: 'ditolak', label: 'Dokumen Tidak Valid', icon: FileX, to: '/ppk/ditolak' },
+        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/ppk/revisi' },
+      ],
+    },
+    {
+      title: 'ARSIP',
+      items: [
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsip' },
       ],
     },
     {
@@ -96,10 +123,17 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/bendahara' }],
     },
     {
-      title: 'MANAGEMENT',
+      title: 'PERSETUJUAN',
       items: [
-        { id: 'payment', label: 'Pencairan Kegiatan', icon: Banknote, to: '/bendahara', badge: 12 },
-        { id: 'finished', label: 'Daftar Dokumen Selesai', icon: CheckSquare },
+        { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: '/bendahara/inbox' },
+        { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: '/bendahara/ditolak' },
+        { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: '/bendahara/selesai' },
+      ],
+    },
+    {
+      title: 'ARSIP',
+      items: [
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsip' },
       ],
     },
     {
@@ -116,12 +150,13 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/arsiparis' }],
     },
     {
-      title: 'ARCHIVE',
+      title: 'PEMBERKASAN',
       items: [
-        { id: 'filing', label: 'Pemberkasan Arsip', icon: Archive, to: '/arsiparis' },
-        { id: 'active_archive', label: 'Daftar Arsip Aktif', icon: FolderOpen },
-        { id: 'inactive_archive', label: 'Daftar Arsip Inaktif', icon: Archive },
-        { id: 'classification', label: 'Klasifikasi Arsip', icon: Network },
+        { id: 'pemberkasan', label: 'Pemberkasan Arsip', icon: Archive, to: '/arsiparis/inbox' },
+        { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: '/arsiparis/aktif' },
+        { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: Archive, to: '/arsiparis/inaktif' },
+        { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: '/arsiparis/usul-musnah' },
+        { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: '/arsiparis/klasifikasi' },
       ],
     },
     {
@@ -140,10 +175,10 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'MANAGEMENT',
       items: [
-        { id: 'master_user', label: 'Master User', icon: Shield, to: '/admin' },
-        { id: 'dept_function', label: 'Departemen Fungsi', icon: Building2, to: '/admin' },
-        { id: 'master_activity', label: 'Master Kegiatan', icon: ClipboardList, to: '/admin' },
-        { id: 'doc_completeness', label: 'Kelengkapan Dokumen', icon: FileCheck, to: '/admin' },
+        { id: 'master_user', label: 'Master User', icon: Shield, to: '/admin/master-data/user' },
+        { id: 'master_fungsi', label: 'Departemen Fungsi', icon: Building2, to: '/admin/master-data/fungsi' },
+        { id: 'master_kegiatan', label: 'Master Kegiatan', icon: ClipboardList, to: '/admin/master-data/kegiatan' },
+        { id: 'master_kelengkapan', label: 'Kelengkapan Dokumen', icon: FileCheck, to: '/admin/master-data/kelengkapan' },
       ],
     },
     {
@@ -254,7 +289,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     document.cookie = `${ACTIVE_ROLE_COOKIE}=${newRole}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
     setActiveRole(newRole)
     setRoleSwitcherOpen(false)
-    window.location.reload()
+    // Redirect to the new role's default dashboard instead of just reloading.
+    // This ensures the user lands on the correct page for their new role.
+    window.location.href = ROLE_DEFAULT_ROUTE[newRole]
   }
 
   const handleLogout = async () => {
