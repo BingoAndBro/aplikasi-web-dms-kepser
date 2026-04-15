@@ -17,10 +17,21 @@ import { Route as BendaharaRouteImport } from './routes/bendahara'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArsiparisIndexRouteImport } from './routes/arsiparis.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as ApiMasterKelengkapanRouteImport } from './routes/api/master-kelengkapan'
+import { Route as ApiMasterKegiatanRouteImport } from './routes/api/master-kegiatan'
+import { Route as ApiMasterFungsiRouteImport } from './routes/api/master-fungsi'
+import { Route as AdminMasterDataIndexRouteImport } from './routes/admin.master-data.index'
+import { Route as ApiMasterKelengkapanIdRouteImport } from './routes/api/master-kelengkapan.$id'
+import { Route as ApiMasterKegiatanIdRouteImport } from './routes/api/master-kegiatan.$id'
+import { Route as ApiMasterFungsiIdRouteImport } from './routes/api/master-fungsi.$id'
 import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthRoleSwitchRouteImport } from './routes/api/auth/role-switch'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as AdminMasterDataUserRouteImport } from './routes/admin.master-data.user'
+import { Route as AdminMasterDataKelengkapanRouteImport } from './routes/admin.master-data.kelengkapan'
+import { Route as AdminMasterDataKegiatanRouteImport } from './routes/admin.master-data.kegiatan'
+import { Route as AdminMasterDataFungsiRouteImport } from './routes/admin.master-data.fungsi'
 
 const PpkRoute = PpkRouteImport.update({
   id: '/ppk',
@@ -62,6 +73,41 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMasterKelengkapanRoute = ApiMasterKelengkapanRouteImport.update({
+  id: '/api/master-kelengkapan',
+  path: '/api/master-kelengkapan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMasterKegiatanRoute = ApiMasterKegiatanRouteImport.update({
+  id: '/api/master-kegiatan',
+  path: '/api/master-kegiatan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMasterFungsiRoute = ApiMasterFungsiRouteImport.update({
+  id: '/api/master-fungsi',
+  path: '/api/master-fungsi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMasterDataIndexRoute = AdminMasterDataIndexRouteImport.update({
+  id: '/admin/master-data/',
+  path: '/admin/master-data/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMasterKelengkapanIdRoute = ApiMasterKelengkapanIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiMasterKelengkapanRoute,
+} as any)
+const ApiMasterKegiatanIdRoute = ApiMasterKegiatanIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiMasterKegiatanRoute,
+} as any)
+const ApiMasterFungsiIdRoute = ApiMasterFungsiIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiMasterFungsiRoute,
+} as any)
 const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
   id: '/api/auth/session',
   path: '/api/auth/session',
@@ -82,6 +128,27 @@ const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   path: '/api/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminMasterDataUserRoute = AdminMasterDataUserRouteImport.update({
+  id: '/admin/master-data/user',
+  path: '/admin/master-data/user',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMasterDataKelengkapanRoute =
+  AdminMasterDataKelengkapanRouteImport.update({
+    id: '/admin/master-data/kelengkapan',
+    path: '/admin/master-data/kelengkapan',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminMasterDataKegiatanRoute = AdminMasterDataKegiatanRouteImport.update({
+  id: '/admin/master-data/kegiatan',
+  path: '/admin/master-data/kegiatan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMasterDataFungsiRoute = AdminMasterDataFungsiRouteImport.update({
+  id: '/admin/master-data/fungsi',
+  path: '/admin/master-data/fungsi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -90,12 +157,23 @@ export interface FileRoutesByFullPath {
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/ppk': typeof PpkRoute
+  '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
+  '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
+  '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
+  '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
+  '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
+  '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
+  '/admin/master-data/user': typeof AdminMasterDataUserRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
+  '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
+  '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/admin/master-data/': typeof AdminMasterDataIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -104,12 +182,23 @@ export interface FileRoutesByTo {
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/ppk': typeof PpkRoute
+  '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
+  '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
+  '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
   '/admin': typeof AdminIndexRoute
   '/arsiparis': typeof ArsiparisIndexRoute
+  '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
+  '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
+  '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
+  '/admin/master-data/user': typeof AdminMasterDataUserRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
+  '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
+  '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/admin/master-data': typeof AdminMasterDataIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -119,12 +208,23 @@ export interface FileRoutesById {
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/ppk': typeof PpkRoute
+  '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
+  '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
+  '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
+  '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
+  '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
+  '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
+  '/admin/master-data/user': typeof AdminMasterDataUserRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
+  '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
+  '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/admin/master-data/': typeof AdminMasterDataIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -135,12 +235,23 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/login'
     | '/ppk'
+    | '/api/master-fungsi'
+    | '/api/master-kegiatan'
+    | '/api/master-kelengkapan'
     | '/admin/'
     | '/arsiparis/'
+    | '/admin/master-data/fungsi'
+    | '/admin/master-data/kegiatan'
+    | '/admin/master-data/kelengkapan'
+    | '/admin/master-data/user'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
+    | '/api/master-fungsi/$id'
+    | '/api/master-kegiatan/$id'
+    | '/api/master-kelengkapan/$id'
+    | '/admin/master-data/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -149,12 +260,23 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/login'
     | '/ppk'
+    | '/api/master-fungsi'
+    | '/api/master-kegiatan'
+    | '/api/master-kelengkapan'
     | '/admin'
     | '/arsiparis'
+    | '/admin/master-data/fungsi'
+    | '/admin/master-data/kegiatan'
+    | '/admin/master-data/kelengkapan'
+    | '/admin/master-data/user'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
+    | '/api/master-fungsi/$id'
+    | '/api/master-kegiatan/$id'
+    | '/api/master-kelengkapan/$id'
+    | '/admin/master-data'
   id:
     | '__root__'
     | '/'
@@ -163,12 +285,23 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/login'
     | '/ppk'
+    | '/api/master-fungsi'
+    | '/api/master-kegiatan'
+    | '/api/master-kelengkapan'
     | '/admin/'
     | '/arsiparis/'
+    | '/admin/master-data/fungsi'
+    | '/admin/master-data/kegiatan'
+    | '/admin/master-data/kelengkapan'
+    | '/admin/master-data/user'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
+    | '/api/master-fungsi/$id'
+    | '/api/master-kegiatan/$id'
+    | '/api/master-kelengkapan/$id'
+    | '/admin/master-data/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -178,12 +311,20 @@ export interface RootRouteChildren {
   ForbiddenRoute: typeof ForbiddenRoute
   LoginRoute: typeof LoginRoute
   PpkRoute: typeof PpkRoute
+  ApiMasterFungsiRoute: typeof ApiMasterFungsiRouteWithChildren
+  ApiMasterKegiatanRoute: typeof ApiMasterKegiatanRouteWithChildren
+  ApiMasterKelengkapanRoute: typeof ApiMasterKelengkapanRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   ArsiparisIndexRoute: typeof ArsiparisIndexRoute
+  AdminMasterDataFungsiRoute: typeof AdminMasterDataFungsiRoute
+  AdminMasterDataKegiatanRoute: typeof AdminMasterDataKegiatanRoute
+  AdminMasterDataKelengkapanRoute: typeof AdminMasterDataKelengkapanRoute
+  AdminMasterDataUserRoute: typeof AdminMasterDataUserRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthRoleSwitchRoute: typeof ApiAuthRoleSwitchRoute
   ApiAuthSessionRoute: typeof ApiAuthSessionRoute
+  AdminMasterDataIndexRoute: typeof AdminMasterDataIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -244,6 +385,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/master-kelengkapan': {
+      id: '/api/master-kelengkapan'
+      path: '/api/master-kelengkapan'
+      fullPath: '/api/master-kelengkapan'
+      preLoaderRoute: typeof ApiMasterKelengkapanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/master-kegiatan': {
+      id: '/api/master-kegiatan'
+      path: '/api/master-kegiatan'
+      fullPath: '/api/master-kegiatan'
+      preLoaderRoute: typeof ApiMasterKegiatanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/master-fungsi': {
+      id: '/api/master-fungsi'
+      path: '/api/master-fungsi'
+      fullPath: '/api/master-fungsi'
+      preLoaderRoute: typeof ApiMasterFungsiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/master-data/': {
+      id: '/admin/master-data/'
+      path: '/admin/master-data'
+      fullPath: '/admin/master-data/'
+      preLoaderRoute: typeof AdminMasterDataIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/master-kelengkapan/$id': {
+      id: '/api/master-kelengkapan/$id'
+      path: '/$id'
+      fullPath: '/api/master-kelengkapan/$id'
+      preLoaderRoute: typeof ApiMasterKelengkapanIdRouteImport
+      parentRoute: typeof ApiMasterKelengkapanRoute
+    }
+    '/api/master-kegiatan/$id': {
+      id: '/api/master-kegiatan/$id'
+      path: '/$id'
+      fullPath: '/api/master-kegiatan/$id'
+      preLoaderRoute: typeof ApiMasterKegiatanIdRouteImport
+      parentRoute: typeof ApiMasterKegiatanRoute
+    }
+    '/api/master-fungsi/$id': {
+      id: '/api/master-fungsi/$id'
+      path: '/$id'
+      fullPath: '/api/master-fungsi/$id'
+      preLoaderRoute: typeof ApiMasterFungsiIdRouteImport
+      parentRoute: typeof ApiMasterFungsiRoute
+    }
     '/api/auth/session': {
       id: '/api/auth/session'
       path: '/api/auth/session'
@@ -272,8 +462,70 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/master-data/user': {
+      id: '/admin/master-data/user'
+      path: '/admin/master-data/user'
+      fullPath: '/admin/master-data/user'
+      preLoaderRoute: typeof AdminMasterDataUserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/master-data/kelengkapan': {
+      id: '/admin/master-data/kelengkapan'
+      path: '/admin/master-data/kelengkapan'
+      fullPath: '/admin/master-data/kelengkapan'
+      preLoaderRoute: typeof AdminMasterDataKelengkapanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/master-data/kegiatan': {
+      id: '/admin/master-data/kegiatan'
+      path: '/admin/master-data/kegiatan'
+      fullPath: '/admin/master-data/kegiatan'
+      preLoaderRoute: typeof AdminMasterDataKegiatanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/master-data/fungsi': {
+      id: '/admin/master-data/fungsi'
+      path: '/admin/master-data/fungsi'
+      fullPath: '/admin/master-data/fungsi'
+      preLoaderRoute: typeof AdminMasterDataFungsiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
+
+interface ApiMasterFungsiRouteChildren {
+  ApiMasterFungsiIdRoute: typeof ApiMasterFungsiIdRoute
+}
+
+const ApiMasterFungsiRouteChildren: ApiMasterFungsiRouteChildren = {
+  ApiMasterFungsiIdRoute: ApiMasterFungsiIdRoute,
+}
+
+const ApiMasterFungsiRouteWithChildren = ApiMasterFungsiRoute._addFileChildren(
+  ApiMasterFungsiRouteChildren,
+)
+
+interface ApiMasterKegiatanRouteChildren {
+  ApiMasterKegiatanIdRoute: typeof ApiMasterKegiatanIdRoute
+}
+
+const ApiMasterKegiatanRouteChildren: ApiMasterKegiatanRouteChildren = {
+  ApiMasterKegiatanIdRoute: ApiMasterKegiatanIdRoute,
+}
+
+const ApiMasterKegiatanRouteWithChildren =
+  ApiMasterKegiatanRoute._addFileChildren(ApiMasterKegiatanRouteChildren)
+
+interface ApiMasterKelengkapanRouteChildren {
+  ApiMasterKelengkapanIdRoute: typeof ApiMasterKelengkapanIdRoute
+}
+
+const ApiMasterKelengkapanRouteChildren: ApiMasterKelengkapanRouteChildren = {
+  ApiMasterKelengkapanIdRoute: ApiMasterKelengkapanIdRoute,
+}
+
+const ApiMasterKelengkapanRouteWithChildren =
+  ApiMasterKelengkapanRoute._addFileChildren(ApiMasterKelengkapanRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -282,12 +534,20 @@ const rootRouteChildren: RootRouteChildren = {
   ForbiddenRoute: ForbiddenRoute,
   LoginRoute: LoginRoute,
   PpkRoute: PpkRoute,
+  ApiMasterFungsiRoute: ApiMasterFungsiRouteWithChildren,
+  ApiMasterKegiatanRoute: ApiMasterKegiatanRouteWithChildren,
+  ApiMasterKelengkapanRoute: ApiMasterKelengkapanRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   ArsiparisIndexRoute: ArsiparisIndexRoute,
+  AdminMasterDataFungsiRoute: AdminMasterDataFungsiRoute,
+  AdminMasterDataKegiatanRoute: AdminMasterDataKegiatanRoute,
+  AdminMasterDataKelengkapanRoute: AdminMasterDataKelengkapanRoute,
+  AdminMasterDataUserRoute: AdminMasterDataUserRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthRoleSwitchRoute: ApiAuthRoleSwitchRoute,
   ApiAuthSessionRoute: ApiAuthSessionRoute,
+  AdminMasterDataIndexRoute: AdminMasterDataIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -285,12 +285,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [userRoles])
 
-  const handleRoleSwitch = async (newRole: RoleName) => {
+  const handleRoleSwitch = (newRole: RoleName) => {
     document.cookie = `${ACTIVE_ROLE_COOKIE}=${newRole}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
-    setActiveRole(newRole)
-    setRoleSwitcherOpen(false)
-    // Redirect to the new role's default dashboard instead of just reloading.
-    // This ensures the user lands on the correct page for their new role.
+    // Redirect immediately — page reload resets all local state anyway,
+    // so no need to call setActiveRole / setRoleSwitcherOpen here.
+    // Calling them would trigger React's "setState during render" warning.
     window.location.href = ROLE_DEFAULT_ROUTE[newRole]
   }
 
