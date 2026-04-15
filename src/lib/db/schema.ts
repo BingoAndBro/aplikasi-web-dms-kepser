@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, unique, boolean } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, unique, boolean, integer } from 'drizzle-orm/pg-core'
 
 export const roles = pgTable('roles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -60,3 +60,45 @@ export type MasterKegiatan = typeof masterKegiatan.$inferSelect
 export type NewMasterKegiatan = typeof masterKegiatan.$inferInsert
 export type MasterKelengkapan = typeof masterKelengkapanDokumen.$inferSelect
 export type NewMasterKelengkapan = typeof masterKelengkapanDokumen.$inferInsert
+
+// ---------------------------------------------------------------------------
+// dokumen_transaksi — dokumen yang diajukan pegawai
+// ---------------------------------------------------------------------------
+
+export const dokumenTransaksi = pgTable('dokumen_transaksi', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  judul: text('judul').notNull(),
+  fungsiId: uuid('fungsi_id').notNull().references(() => masterFungsi.id, { onDelete: 'restrict' }),
+  kegiatanJenisId: uuid('kegiatan_jenis_id').notNull().references(() => masterKegiatan.id, { onDelete: 'restrict' }),
+  isKetuaTim: boolean('is_ketua_tim').default(false).notNull(),
+  status: text('status').notNull().default('DRAFT'),
+  currentStep: text('current_step'),
+  revisionTarget: text('revision_target'),
+  revisionNotes: text('revision_notes'),
+  lampiranUrls: text('lampiran_urls').notNull().default('[]'), // JSON array
+  tahun: integer('tahun').notNull(),
+  tanggal: text('tanggal').notNull(), // ISO date string yyyy-MM-dd
+  createdBy: uuid('created_by').notNull(), // UUID from auth.users (no FK)
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+// ---------------------------------------------------------------------------
+// log_aktivitas — audit trail (append-only, NO UPDATE/DELETE)
+// ---------------------------------------------------------------------------
+
+export const logAktivitas = pgTable('log_aktivitas', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dokumenId: uuid('dokumen_id').notNull().references(() => dokumenTransaksi.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull(), // UUID from auth.users (no FK)
+  aksi: text('aksi').notNull(), // SUBMIT, RESUBMIT, PPK_APPROVE, PPK_REJECT, BENDAHARA_APPROVE, BENDAHARA_REJECT, ARCHIVE, ARCHIVE_SKIP
+  catatan: text('catatan'),
+  stepUrutan: integer('step_urutan'),
+  timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+})
+
+// Type exports
+export type DokumenTransaksi = typeof dokumenTransaksi.$inferSelect
+export type NewDokumenTransaksi = typeof dokumenTransaksi.$inferInsert
+export type LogAktivitas = typeof logAktivitas.$inferSelect
+export type NewLogAktivitas = typeof logAktivitas.$inferInsert
