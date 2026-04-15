@@ -17,13 +17,22 @@ import { Route as BendaharaRouteImport } from './routes/bendahara'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArsiparisIndexRouteImport } from './routes/arsiparis.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as DokumenSayaRouteImport } from './routes/dokumen/saya'
+import { Route as DokumenAjuRouteImport } from './routes/dokumen/aju'
+import { Route as DokumenAjiRouteImport } from './routes/dokumen/aji'
+import { Route as DokumenIdRouteImport } from './routes/dokumen.$id'
+import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as ApiMasterKelengkapanRouteImport } from './routes/api/master-kelengkapan'
 import { Route as ApiMasterKegiatanRouteImport } from './routes/api/master-kegiatan'
 import { Route as ApiMasterFungsiRouteImport } from './routes/api/master-fungsi'
+import { Route as ApiDokumenIndexRouteImport } from './routes/api/dokumen/index'
 import { Route as AdminMasterDataIndexRouteImport } from './routes/admin.master-data.index'
+import { Route as DokumenIdEditRouteImport } from './routes/dokumen.$id.edit'
 import { Route as ApiMasterKelengkapanIdRouteImport } from './routes/api/master-kelengkapan.$id'
 import { Route as ApiMasterKegiatanIdRouteImport } from './routes/api/master-kegiatan.$id'
 import { Route as ApiMasterFungsiIdRouteImport } from './routes/api/master-fungsi.$id'
+import { Route as ApiDokumenSubmitRouteImport } from './routes/api/dokumen/submit'
+import { Route as ApiDokumenIdRouteImport } from './routes/api/dokumen.$id'
 import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthRoleSwitchRouteImport } from './routes/api/auth/role-switch'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -32,6 +41,8 @@ import { Route as AdminMasterDataUserRouteImport } from './routes/admin.master-d
 import { Route as AdminMasterDataKelengkapanRouteImport } from './routes/admin.master-data.kelengkapan'
 import { Route as AdminMasterDataKegiatanRouteImport } from './routes/admin.master-data.kegiatan'
 import { Route as AdminMasterDataFungsiRouteImport } from './routes/admin.master-data.fungsi'
+import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id.submit'
+import { Route as ApiDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/dokumen.$id.download.$lampiranIndex'
 
 const PpkRoute = PpkRouteImport.update({
   id: '/ppk',
@@ -73,6 +84,31 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DokumenSayaRoute = DokumenSayaRouteImport.update({
+  id: '/saya',
+  path: '/saya',
+  getParentRoute: () => DokumenRoute,
+} as any)
+const DokumenAjuRoute = DokumenAjuRouteImport.update({
+  id: '/aju',
+  path: '/aju',
+  getParentRoute: () => DokumenRoute,
+} as any)
+const DokumenAjiRoute = DokumenAjiRouteImport.update({
+  id: '/aji',
+  path: '/aji',
+  getParentRoute: () => DokumenRoute,
+} as any)
+const DokumenIdRoute = DokumenIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => DokumenRoute,
+} as any)
+const ApiUploadRoute = ApiUploadRouteImport.update({
+  id: '/api/upload',
+  path: '/api/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMasterKelengkapanRoute = ApiMasterKelengkapanRouteImport.update({
   id: '/api/master-kelengkapan',
   path: '/api/master-kelengkapan',
@@ -88,10 +124,20 @@ const ApiMasterFungsiRoute = ApiMasterFungsiRouteImport.update({
   path: '/api/master-fungsi',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDokumenIndexRoute = ApiDokumenIndexRouteImport.update({
+  id: '/api/dokumen/',
+  path: '/api/dokumen/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminMasterDataIndexRoute = AdminMasterDataIndexRouteImport.update({
   id: '/admin/master-data/',
   path: '/admin/master-data/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DokumenIdEditRoute = DokumenIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => DokumenIdRoute,
 } as any)
 const ApiMasterKelengkapanIdRoute = ApiMasterKelengkapanIdRouteImport.update({
   id: '/$id',
@@ -107,6 +153,16 @@ const ApiMasterFungsiIdRoute = ApiMasterFungsiIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiMasterFungsiRoute,
+} as any)
+const ApiDokumenSubmitRoute = ApiDokumenSubmitRouteImport.update({
+  id: '/api/dokumen/submit',
+  path: '/api/dokumen/submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDokumenIdRoute = ApiDokumenIdRouteImport.update({
+  id: '/api/dokumen/$id',
+  path: '/api/dokumen/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
   id: '/api/auth/session',
@@ -149,17 +205,33 @@ const AdminMasterDataFungsiRoute = AdminMasterDataFungsiRouteImport.update({
   path: '/admin/master-data/fungsi',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDokumenIdSubmitRoute = ApiDokumenIdSubmitRouteImport.update({
+  id: '/submit',
+  path: '/submit',
+  getParentRoute: () => ApiDokumenIdRoute,
+} as any)
+const ApiDokumenIdDownloadLampiranIndexRoute =
+  ApiDokumenIdDownloadLampiranIndexRouteImport.update({
+    id: '/download/$lampiranIndex',
+    path: '/download/$lampiranIndex',
+    getParentRoute: () => ApiDokumenIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bendahara': typeof BendaharaRoute
-  '/dokumen': typeof DokumenRoute
+  '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/ppk': typeof PpkRoute
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
+  '/api/upload': typeof ApiUploadRoute
+  '/dokumen/$id': typeof DokumenIdRouteWithChildren
+  '/dokumen/aji': typeof DokumenAjiRoute
+  '/dokumen/aju': typeof DokumenAjuRoute
+  '/dokumen/saya': typeof DokumenSayaRoute
   '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
@@ -170,21 +242,32 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
+  '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
+  '/api/dokumen/': typeof ApiDokumenIndexRoute
+  '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
+  '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bendahara': typeof BendaharaRoute
-  '/dokumen': typeof DokumenRoute
+  '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/ppk': typeof PpkRoute
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
+  '/api/upload': typeof ApiUploadRoute
+  '/dokumen/$id': typeof DokumenIdRouteWithChildren
+  '/dokumen/aji': typeof DokumenAjiRoute
+  '/dokumen/aju': typeof DokumenAjuRoute
+  '/dokumen/saya': typeof DokumenSayaRoute
   '/admin': typeof AdminIndexRoute
   '/arsiparis': typeof ArsiparisIndexRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
@@ -195,22 +278,33 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
+  '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/admin/master-data': typeof AdminMasterDataIndexRoute
+  '/api/dokumen': typeof ApiDokumenIndexRoute
+  '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
+  '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/bendahara': typeof BendaharaRoute
-  '/dokumen': typeof DokumenRoute
+  '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/ppk': typeof PpkRoute
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
+  '/api/upload': typeof ApiUploadRoute
+  '/dokumen/$id': typeof DokumenIdRouteWithChildren
+  '/dokumen/aji': typeof DokumenAjiRoute
+  '/dokumen/aju': typeof DokumenAjuRoute
+  '/dokumen/saya': typeof DokumenSayaRoute
   '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
@@ -221,10 +315,16 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
+  '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
+  '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
+  '/api/dokumen/': typeof ApiDokumenIndexRoute
+  '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
+  '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -238,6 +338,11 @@ export interface FileRouteTypes {
     | '/api/master-fungsi'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
+    | '/api/upload'
+    | '/dokumen/$id'
+    | '/dokumen/aji'
+    | '/dokumen/aju'
+    | '/dokumen/saya'
     | '/admin/'
     | '/arsiparis/'
     | '/admin/master-data/fungsi'
@@ -248,10 +353,16 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
+    | '/api/dokumen/$id'
+    | '/api/dokumen/submit'
     | '/api/master-fungsi/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
+    | '/dokumen/$id/edit'
     | '/admin/master-data/'
+    | '/api/dokumen/'
+    | '/api/dokumen/$id/submit'
+    | '/api/dokumen/$id/download/$lampiranIndex'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -263,6 +374,11 @@ export interface FileRouteTypes {
     | '/api/master-fungsi'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
+    | '/api/upload'
+    | '/dokumen/$id'
+    | '/dokumen/aji'
+    | '/dokumen/aju'
+    | '/dokumen/saya'
     | '/admin'
     | '/arsiparis'
     | '/admin/master-data/fungsi'
@@ -273,10 +389,16 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
+    | '/api/dokumen/$id'
+    | '/api/dokumen/submit'
     | '/api/master-fungsi/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
+    | '/dokumen/$id/edit'
     | '/admin/master-data'
+    | '/api/dokumen'
+    | '/api/dokumen/$id/submit'
+    | '/api/dokumen/$id/download/$lampiranIndex'
   id:
     | '__root__'
     | '/'
@@ -288,6 +410,11 @@ export interface FileRouteTypes {
     | '/api/master-fungsi'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
+    | '/api/upload'
+    | '/dokumen/$id'
+    | '/dokumen/aji'
+    | '/dokumen/aju'
+    | '/dokumen/saya'
     | '/admin/'
     | '/arsiparis/'
     | '/admin/master-data/fungsi'
@@ -298,22 +425,29 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
+    | '/api/dokumen/$id'
+    | '/api/dokumen/submit'
     | '/api/master-fungsi/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
+    | '/dokumen/$id/edit'
     | '/admin/master-data/'
+    | '/api/dokumen/'
+    | '/api/dokumen/$id/submit'
+    | '/api/dokumen/$id/download/$lampiranIndex'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BendaharaRoute: typeof BendaharaRoute
-  DokumenRoute: typeof DokumenRoute
+  DokumenRoute: typeof DokumenRouteWithChildren
   ForbiddenRoute: typeof ForbiddenRoute
   LoginRoute: typeof LoginRoute
   PpkRoute: typeof PpkRoute
   ApiMasterFungsiRoute: typeof ApiMasterFungsiRouteWithChildren
   ApiMasterKegiatanRoute: typeof ApiMasterKegiatanRouteWithChildren
   ApiMasterKelengkapanRoute: typeof ApiMasterKelengkapanRouteWithChildren
+  ApiUploadRoute: typeof ApiUploadRoute
   AdminIndexRoute: typeof AdminIndexRoute
   ArsiparisIndexRoute: typeof ArsiparisIndexRoute
   AdminMasterDataFungsiRoute: typeof AdminMasterDataFungsiRoute
@@ -324,7 +458,10 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthRoleSwitchRoute: typeof ApiAuthRoleSwitchRoute
   ApiAuthSessionRoute: typeof ApiAuthSessionRoute
+  ApiDokumenIdRoute: typeof ApiDokumenIdRouteWithChildren
+  ApiDokumenSubmitRoute: typeof ApiDokumenSubmitRoute
   AdminMasterDataIndexRoute: typeof AdminMasterDataIndexRoute
+  ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -385,6 +522,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dokumen/saya': {
+      id: '/dokumen/saya'
+      path: '/saya'
+      fullPath: '/dokumen/saya'
+      preLoaderRoute: typeof DokumenSayaRouteImport
+      parentRoute: typeof DokumenRoute
+    }
+    '/dokumen/aju': {
+      id: '/dokumen/aju'
+      path: '/aju'
+      fullPath: '/dokumen/aju'
+      preLoaderRoute: typeof DokumenAjuRouteImport
+      parentRoute: typeof DokumenRoute
+    }
+    '/dokumen/aji': {
+      id: '/dokumen/aji'
+      path: '/aji'
+      fullPath: '/dokumen/aji'
+      preLoaderRoute: typeof DokumenAjiRouteImport
+      parentRoute: typeof DokumenRoute
+    }
+    '/dokumen/$id': {
+      id: '/dokumen/$id'
+      path: '/$id'
+      fullPath: '/dokumen/$id'
+      preLoaderRoute: typeof DokumenIdRouteImport
+      parentRoute: typeof DokumenRoute
+    }
+    '/api/upload': {
+      id: '/api/upload'
+      path: '/api/upload'
+      fullPath: '/api/upload'
+      preLoaderRoute: typeof ApiUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/master-kelengkapan': {
       id: '/api/master-kelengkapan'
       path: '/api/master-kelengkapan'
@@ -406,12 +578,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMasterFungsiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dokumen/': {
+      id: '/api/dokumen/'
+      path: '/api/dokumen'
+      fullPath: '/api/dokumen/'
+      preLoaderRoute: typeof ApiDokumenIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/master-data/': {
       id: '/admin/master-data/'
       path: '/admin/master-data'
       fullPath: '/admin/master-data/'
       preLoaderRoute: typeof AdminMasterDataIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dokumen/$id/edit': {
+      id: '/dokumen/$id/edit'
+      path: '/edit'
+      fullPath: '/dokumen/$id/edit'
+      preLoaderRoute: typeof DokumenIdEditRouteImport
+      parentRoute: typeof DokumenIdRoute
     }
     '/api/master-kelengkapan/$id': {
       id: '/api/master-kelengkapan/$id'
@@ -433,6 +619,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/master-fungsi/$id'
       preLoaderRoute: typeof ApiMasterFungsiIdRouteImport
       parentRoute: typeof ApiMasterFungsiRoute
+    }
+    '/api/dokumen/submit': {
+      id: '/api/dokumen/submit'
+      path: '/api/dokumen/submit'
+      fullPath: '/api/dokumen/submit'
+      preLoaderRoute: typeof ApiDokumenSubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/dokumen/$id': {
+      id: '/api/dokumen/$id'
+      path: '/api/dokumen/$id'
+      fullPath: '/api/dokumen/$id'
+      preLoaderRoute: typeof ApiDokumenIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/session': {
       id: '/api/auth/session'
@@ -490,8 +690,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMasterDataFungsiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dokumen/$id/submit': {
+      id: '/api/dokumen/$id/submit'
+      path: '/submit'
+      fullPath: '/api/dokumen/$id/submit'
+      preLoaderRoute: typeof ApiDokumenIdSubmitRouteImport
+      parentRoute: typeof ApiDokumenIdRoute
+    }
+    '/api/dokumen/$id/download/$lampiranIndex': {
+      id: '/api/dokumen/$id/download/$lampiranIndex'
+      path: '/download/$lampiranIndex'
+      fullPath: '/api/dokumen/$id/download/$lampiranIndex'
+      preLoaderRoute: typeof ApiDokumenIdDownloadLampiranIndexRouteImport
+      parentRoute: typeof ApiDokumenIdRoute
+    }
   }
 }
+
+interface DokumenIdRouteChildren {
+  DokumenIdEditRoute: typeof DokumenIdEditRoute
+}
+
+const DokumenIdRouteChildren: DokumenIdRouteChildren = {
+  DokumenIdEditRoute: DokumenIdEditRoute,
+}
+
+const DokumenIdRouteWithChildren = DokumenIdRoute._addFileChildren(
+  DokumenIdRouteChildren,
+)
+
+interface DokumenRouteChildren {
+  DokumenIdRoute: typeof DokumenIdRouteWithChildren
+  DokumenAjiRoute: typeof DokumenAjiRoute
+  DokumenAjuRoute: typeof DokumenAjuRoute
+  DokumenSayaRoute: typeof DokumenSayaRoute
+}
+
+const DokumenRouteChildren: DokumenRouteChildren = {
+  DokumenIdRoute: DokumenIdRouteWithChildren,
+  DokumenAjiRoute: DokumenAjiRoute,
+  DokumenAjuRoute: DokumenAjuRoute,
+  DokumenSayaRoute: DokumenSayaRoute,
+}
+
+const DokumenRouteWithChildren =
+  DokumenRoute._addFileChildren(DokumenRouteChildren)
 
 interface ApiMasterFungsiRouteChildren {
   ApiMasterFungsiIdRoute: typeof ApiMasterFungsiIdRoute
@@ -527,16 +770,32 @@ const ApiMasterKelengkapanRouteChildren: ApiMasterKelengkapanRouteChildren = {
 const ApiMasterKelengkapanRouteWithChildren =
   ApiMasterKelengkapanRoute._addFileChildren(ApiMasterKelengkapanRouteChildren)
 
+interface ApiDokumenIdRouteChildren {
+  ApiDokumenIdSubmitRoute: typeof ApiDokumenIdSubmitRoute
+  ApiDokumenIdDownloadLampiranIndexRoute: typeof ApiDokumenIdDownloadLampiranIndexRoute
+}
+
+const ApiDokumenIdRouteChildren: ApiDokumenIdRouteChildren = {
+  ApiDokumenIdSubmitRoute: ApiDokumenIdSubmitRoute,
+  ApiDokumenIdDownloadLampiranIndexRoute:
+    ApiDokumenIdDownloadLampiranIndexRoute,
+}
+
+const ApiDokumenIdRouteWithChildren = ApiDokumenIdRoute._addFileChildren(
+  ApiDokumenIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BendaharaRoute: BendaharaRoute,
-  DokumenRoute: DokumenRoute,
+  DokumenRoute: DokumenRouteWithChildren,
   ForbiddenRoute: ForbiddenRoute,
   LoginRoute: LoginRoute,
   PpkRoute: PpkRoute,
   ApiMasterFungsiRoute: ApiMasterFungsiRouteWithChildren,
   ApiMasterKegiatanRoute: ApiMasterKegiatanRouteWithChildren,
   ApiMasterKelengkapanRoute: ApiMasterKelengkapanRouteWithChildren,
+  ApiUploadRoute: ApiUploadRoute,
   AdminIndexRoute: AdminIndexRoute,
   ArsiparisIndexRoute: ArsiparisIndexRoute,
   AdminMasterDataFungsiRoute: AdminMasterDataFungsiRoute,
@@ -547,7 +806,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthRoleSwitchRoute: ApiAuthRoleSwitchRoute,
   ApiAuthSessionRoute: ApiAuthSessionRoute,
+  ApiDokumenIdRoute: ApiDokumenIdRouteWithChildren,
+  ApiDokumenSubmitRoute: ApiDokumenSubmitRoute,
   AdminMasterDataIndexRoute: AdminMasterDataIndexRoute,
+  ApiDokumenIndexRoute: ApiDokumenIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
