@@ -69,3 +69,28 @@ export const createAndSubmitDokumenSchema = z.object({
     }, { message: 'Tanggal tidak boleh melewati hari ini' }),
   lampiranUrls: z.array(lampiranUrlSchema),
 })
+
+// ---------------------------------------------------------------------------
+// Approval actions — for PPK and Bendahara
+// ---------------------------------------------------------------------------
+
+// Approve dokumen — no body needed
+export const approveDokumenSchema = z.object({}).strict()
+
+// Reject dokumen — catatan wajib min 10 karakter
+export const rejectDokumenSchema = z.object({
+  catatan: z.string().min(10, 'Catatan minimal 10 karakter').max(2000, 'Catatan maksimal 2000 karakter'),
+})
+
+// Resubmit by PPK after Bendahara rejection — optional lampiran update
+export const resubmitDokumenSchema = z.object({
+  lampiranUrls: z.array(lampiranUrlSchema).optional(),
+}).strict()
+
+// ---------------------------------------------------------------------------
+// Inferred types
+// ---------------------------------------------------------------------------
+
+export type ApproveDokumen = z.infer<typeof approveDokumenSchema>
+export type RejectDokumen = z.infer<typeof rejectDokumenSchema>
+export type ResubmitDokumen = z.infer<typeof resubmitDokumenSchema>
