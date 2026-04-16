@@ -107,7 +107,7 @@ function DokumenEditPage() {
 
   if (loading) {
     return (
-      <DashboardShell role="PEGAWAI">
+      <DashboardShell role="PEGAWAI" showHero={false}>
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="animate-spin text-primary" />
         </div>
@@ -124,7 +124,7 @@ function DokumenEditPage() {
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
             <FileText size={12} />
-            <Link href={`/dokumen/${id}`} className="hover:text-primary">Dokumen</Link>
+            <Link to="/dokumen/$id" params={{ id }} className="hover:text-primary">Dokumen</Link>
             <span>/</span>
             <span className="text-primary">Perbaiki & Ajukan Ulang</span>
           </div>
@@ -181,7 +181,6 @@ function DokumenEditPage() {
           <KelengkapanChecklist
             kegiatanId={dokumen.kegiatan_jenis_id}
             isKetuaTim={dokumen.is_ketua_tim}
-            dokumenId={dokumen.id}
             initialLampirans={dokumen.lampiran_urls}
             onComplete={handleKelengkapanComplete}
           />
@@ -196,7 +195,7 @@ function DokumenEditPage() {
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Link href={`/dokumen/${id}`}>
+          <Link to="/dokumen/$id" params={{ id }}>
             <Button variant="outline" className="gap-1.5">
               <ChevronLeft size={14} />Kembali
             </Button>

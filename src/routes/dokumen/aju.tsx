@@ -3,11 +3,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { DashboardShell } from '#/components/dashboard/DashboardShell'
 import { Button } from '#/components/ui/button'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#/components/ui/select'
+import { DatePicker } from '#/components/ui/date-picker'
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
 import { KelengkapanChecklist } from '#/components/dokumen/KelengkapanChecklist'
 import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import { getBrowserClient } from '#/lib/supabase-browser'
-import { getTahunOptions } from '#/lib/utils/tahun'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import {
   ChevronLeft,
@@ -45,18 +45,25 @@ function AjukanDokumenPage() {
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [tanggalError, setTanggalError] = useState('')
+
+  // Today's date in local timezone (ISO YYYY-MM-DD) — used to validate & restrict date picker
+  const today = (() => {
+    const d = new Date()
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  })()
 
   // Form state
   const [fungsiId, setFungsiId] = useState('')
   const [fungsiNama, setFungsiNama] = useState('')
   const [tahun, setTahun] = useState(new Date().getFullYear())
-  const [tanggal, setTanggal] = useState(
-    new Date().toISOString().split('T')[0]
-  )
+  const [tanggal, setTanggal] = useState(today)
   const [kegiatanId, setKegiatanId] = useState('')
   const [kegiatanNama, setKegiatanNama] = useState('')
   const [isKetuaTim, setIsKetuaTim] = useState(false)
-  const [dokumenId, setDokumenId] = useState('') // generated after create
   const [lampiranUrls, setLampiranUrls] = useState<LampiranUrl[]>([])
   const [missingRequired, setMissingRequired] = useState<any[]>([])
 
@@ -110,15 +117,21 @@ function AjukanDokumenPage() {
   ].filter((s): s is number => s !== null)
 
   // Step validation
-  const canAdvanceFromStep1 = !!fungsiId && !!tahun && !!tanggal
+  const canAdvanceFromStep1 = !!fungsiId && !!tahun && !!tanggal && !tanggalError
   const canAdvanceFromStep2 = !!kegiatanId
   const canAdvanceFromStep3 = true // Role is always selected
 
   function handleNext() {
+    // Validate date is not in the future before advancing from step 1
+    if (step === 1 && tanggal > today) {
+      setTanggalError('Tanggal tidak boleh melewati hari ini')
+      return
+    }
     if (step < 5) setStep(step + 1)
   }
 
   function handleBack() {
+    if (step === 2) setTanggalError('') // Clear date error when going back to step 1
     if (step > 1) setStep(step - 1)
   }
 
@@ -175,16 +188,14 @@ function AjukanDokumenPage() {
     }
   }
 
-  const tahunOptions = getTahunOptions()
-
   return (
-    <DashboardShell role="PEGAWAI">
+    <DashboardShell role="PEGAWAI" showHero={false}>
       <div className="space-y-6 max-w-2xl mx-auto">
         {/* Header */}
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
             <FileText size={12} />
-            <Link href="/dokumen/saya" className="hover:text-primary">Dokumen</Link>
+            <Link to="/dokumen/saya" className="hover:text-primary">Dokumen</Link>
             <span>/</span>
             <span className="text-primary">Ajukan Dokumen</span>
           </div>
@@ -226,7 +237,7 @@ function AjukanDokumenPage() {
                   <Select
                     value={fungsiId}
                     onValueChange={v => {
-                      setFungsiId(v)
+                      setFungsiId(v ?? '')
                       const fn = fungsiList.find(f => f.id === v)
                       setFungsiNama(fn?.nama ?? '')
                       setKegiatanId('')
@@ -234,11 +245,13 @@ function AjukanDokumenPage() {
                     }}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih fungsi..." />
+                      <SelectValue placeholder="Pilih fungsi...">
+                        {v => v ? (fungsiList.find(f => f.id === v)?.nama ?? '') : 'Pilih fungsi...'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {fungsiList.map(f => (
-                        <SelectItem key={f.id} value={f.id}>
+                        <SelectItem key={f.id} value={f.id} label={f.nama}>
                           {f.nama}
                         </SelectItem>
                       ))}
@@ -247,36 +260,32 @@ function AjukanDokumenPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-on-surface">
-                    Tahun <span className="text-error">*</span>
-                  </label>
-                  <Select value={String(tahun)} onValueChange={v => setTahun(parseInt(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tahunOptions.map(y => (
-                        <SelectItem key={y} value={String(y)}>
-                          {y}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-on-surface">
-                    Tanggal <span className="text-error">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={tanggal}
-                    onChange={e => setTanggal(e.target.value)}
-                    className="w-full px-3 py-2 bg-background border border-input rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-ring/40"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-on-surface">
+                  Tanggal <span className="text-error">*</span>
+                </label>
+                <DatePicker
+                  value={tanggal}
+                  onChange={newTanggal => {
+                    if (!newTanggal) return
+                    setTanggal(newTanggal)
+                    setTahun(new Date(newTanggal).getFullYear())
+                    // Clear error when user picks a valid date
+                    if (newTanggal <= today) {
+                      setTanggalError('')
+                    }
+                  }}
+                  placeholder="Pilih tanggal..."
+                />
+                {tanggalError ? (
+                  <p className="text-[10px] text-error flex items-center gap-1">
+                    <span>⚠</span> {tanggalError}
+                  </p>
+                ) : tahun ? (
+                  <p className="text-[10px] text-on-surface-variant">
+                    Tahun: <span className="font-semibold text-primary">{tahun}</span>
+                  </p>
+                ) : null}
               </div>
 
               <Button
@@ -312,17 +321,19 @@ function AjukanDokumenPage() {
                   <Select
                     value={kegiatanId}
                     onValueChange={v => {
-                      setKegiatanId(v)
+                      setKegiatanId(v ?? '')
                       const kn = kegiatanList.find(k => k.id === v)
                       setKegiatanNama(kn?.nama ?? '')
                     }}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih kegiatan..." />
+                      <SelectValue placeholder="Pilih kegiatan...">
+                        {v => kegiatanList.find(k => k.id === v)?.nama ?? ''}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {kegiatanList.map(k => (
-                        <SelectItem key={k.id} value={k.id}>
+                        <SelectItem key={k.id} value={k.id} label={k.nama}>
                           {k.nama}
                         </SelectItem>
                       ))}
@@ -422,7 +433,6 @@ function AjukanDokumenPage() {
               <KelengkapanChecklist
                 kegiatanId={kegiatanId}
                 isKetuaTim={isKetuaTim}
-                dokumenId={dokumenId || 'new'}
                 onComplete={handleKelengkapanComplete}
               />
 

@@ -53,7 +53,7 @@ export type LogRow = {
 // ---------------------------------------------------------------------------
 
 /**
- * Get single dokumen by ID with joined fungsi + kegiatan.
+ * Get single dokumen by ID with joined fungsi + kegiatan (manual join).
  */
 export async function getDokumenById(
   supabase: SupabaseClient,
@@ -61,21 +61,38 @@ export async function getDokumenById(
 ): Promise<DokumenRow | null> {
   const { data, error } = await supabase
     .from('dokumen_transaksi')
-    .select(`
-      *,
-      master_fungsi:nama as fungsi_nama,
-      master_kegiatan:nama as kegiatan_nama
-    `)
+    .select('*')
     .eq('id', id)
     .single()
 
   if (error || !data) return null
+
+  // Manual join: fetch kegiatan name
+  if (data.kegiatan_jenis_id) {
+    const { data: keg } = await supabase
+      .from('master_kegiatan')
+      .select('nama')
+      .eq('id', data.kegiatan_jenis_id)
+      .single()
+    if (keg) (data as any).kegiatan_nama = keg.nama
+  }
+
+  // Manual join: fetch fungsi name
+  if (data.fungsi_id) {
+    const { data: fns } = await supabase
+      .from('master_fungsi')
+      .select('nama')
+      .eq('id', data.fungsi_id)
+      .single()
+    if (fns) (data as any).fungsi_nama = fns.nama
+  }
 
   return parseDokumen(data)
 }
 
 /**
  * Get all dokumen for a specific user, ordered by created_at DESC.
+ * Manual join for kegiatan_nama and fungsi_nama (avoids PostgREST alias issues).
  */
 export async function getDokumenByUser(
   supabase: SupabaseClient,
@@ -83,11 +100,7 @@ export async function getDokumenByUser(
 ): Promise<DokumenRow[]> {
   const { data, error } = await supabase
     .from('dokumen_transaksi')
-    .select(`
-      *,
-      master_fungsi:nama as fungsi_nama,
-      master_kegiatan:nama as kegiatan_nama
-    `)
+    .select('*')
     .eq('created_by', userId)
     .order('created_at', { ascending: false })
 
@@ -96,7 +109,39 @@ export async function getDokumenByUser(
     return []
   }
 
-  return (data ?? []).map(parseDokumen)
+  const dokList = data ?? []
+
+  if (dokList.length === 0) return []
+
+  // Collect unique IDs for manual join
+  const fungsiIds = [...new Set(dokList.map(d => d.fungsi_id).filter(Boolean))]
+  const kegiatanIds = [...new Set(dokList.map(d => d.kegiatan_jenis_id).filter(Boolean))]
+
+  // Fetch fungsi names
+  const fungsiMap: Record<string, string> = {}
+  if (fungsiIds.length > 0) {
+    const { data: fungsiRows } = await supabase
+      .from('master_fungsi')
+      .select('id, nama')
+      .in('id', fungsiIds)
+    for (const row of fungsiRows ?? []) {
+      fungsiMap[row.id] = row.nama
+    }
+  }
+
+  // Fetch kegiatan names
+  const kegiatanMap: Record<string, string> = {}
+  if (kegiatanIds.length > 0) {
+    const { data: kegRows } = await supabase
+      .from('master_kegiatan')
+      .select('id, nama')
+      .in('id', kegiatanIds)
+    for (const row of kegRows ?? []) {
+      kegiatanMap[row.id] = row.nama
+    }
+  }
+
+  return dokList.map(d => parseDokumenWithNames(d, fungsiMap, kegiatanMap))
 }
 
 /**
@@ -128,11 +173,7 @@ export async function createDokumen(
       created_by: payload.createdBy,
       status: 'DRAFT',
     })
-    .select(`
-      *,
-      master_fungsi:nama as fungsi_nama,
-      master_kegiatan:nama as kegiatan_nama
-    `)
+    .select('*')
     .single()
 
   if (error) {
@@ -140,7 +181,15 @@ export async function createDokumen(
     return { error: 'Gagal membuat dokumen' }
   }
 
-  return { data: parseDokumen(data) }
+  // Manual join for response
+  const fungsiMap: Record<string, string> = {}
+  const kegMap: Record<string, string> = {}
+  const { data: fns } = await supabase.from('master_fungsi').select('id, nama').eq('id', payload.fungsiId).single()
+  if (fns) fungsiMap[payload.fungsiId] = fns.nama
+  const { data: keg } = await supabase.from('master_kegiatan').select('id, nama').eq('id', payload.kegiatanJenisId).single()
+  if (keg) kegMap[payload.kegiatanJenisId] = keg.nama
+
+  return { data: parseDokumenWithNames(data, fungsiMap, kegMap) }
 }
 
 /**
@@ -158,11 +207,7 @@ export async function updateDokumen(
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select(`
-      *,
-      master_fungsi:nama as fungsi_nama,
-      master_kegiatan:nama as kegiatan_nama
-    `)
+    .select('*')
     .single()
 
   if (error) {
@@ -170,11 +215,24 @@ export async function updateDokumen(
     return { error: 'Gagal memperbarui dokumen' }
   }
 
-  return { data: parseDokumen(data) }
+  // Manual join for response
+  const fungsiMap: Record<string, string> = {}
+  const kegMap: Record<string, string> = {}
+  if (data.fungsi_id) {
+    const { data: fns } = await supabase.from('master_fungsi').select('id, nama').eq('id', data.fungsi_id).single()
+    if (fns) fungsiMap[data.fungsi_id] = fns.nama
+  }
+  if (data.kegiatan_jenis_id) {
+    const { data: keg } = await supabase.from('master_kegiatan').select('id, nama').eq('id', data.kegiatan_jenis_id).single()
+    if (keg) kegMap[data.kegiatan_jenis_id] = keg.nama
+  }
+
+  return { data: parseDokumenWithNames(data, fungsiMap, kegMap) }
 }
 
 /**
  * Update dokumen status fields after FSM transition.
+ * Returns the updated fields without re-fetching (avoids FK join issues).
  */
 export async function updateDokumenStatus(
   supabase: SupabaseClient,
@@ -185,8 +243,8 @@ export async function updateDokumenStatus(
     revisionTarget: string | null
     revisionNotes?: string
   }
-): Promise<{ data?: DokumenRow; error?: string }> {
-  const { data, error } = await supabase
+): Promise<{ error?: string }> {
+  const { error } = await supabase
     .from('dokumen_transaksi')
     .update({
       status: payload.status,
@@ -196,19 +254,13 @@ export async function updateDokumenStatus(
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select(`
-      *,
-      master_fungsi:nama as fungsi_nama,
-      master_kegiatan:nama as kegiatan_nama
-    `)
-    .single()
 
   if (error) {
     console.error('[dokumen-helpers] updateDokumenStatus error:', error)
     return { error: 'Gagal memperbarui status dokumen' }
   }
 
-  return { data: parseDokumen(data) }
+  return {}
 }
 
 // ---------------------------------------------------------------------------
@@ -362,5 +414,44 @@ function parseDokumen(raw: any): DokumenRow {
     updated_at: raw.updated_at,
     fungsi_nama: raw.fungsi_nama,
     kegiatan_nama: raw.kegiatan_nama,
+  }
+}
+
+function parseDokumenWithNames(
+  raw: any,
+  fungsiMap: Record<string, string>,
+  kegMap: Record<string, string>
+): DokumenRow {
+  let lampiranUrls: LampiranUrl[] = []
+  if (raw.lampiran_urls) {
+    if (typeof raw.lampiran_urls === 'string') {
+      try {
+        lampiranUrls = JSON.parse(raw.lampiran_urls)
+      } catch {
+        lampiranUrls = []
+      }
+    } else {
+      lampiranUrls = raw.lampiran_urls
+    }
+  }
+
+  return {
+    id: raw.id,
+    judul: raw.judul,
+    fungsi_id: raw.fungsi_id,
+    kegiatan_jenis_id: raw.kegiatan_jenis_id,
+    is_ketua_tim: raw.is_ketua_tim,
+    status: raw.status,
+    current_step: raw.current_step,
+    revision_target: raw.revision_target,
+    revision_notes: raw.revision_notes,
+    lampiran_urls: lampiranUrls,
+    tahun: raw.tahun,
+    tanggal: raw.tanggal,
+    created_by: raw.created_by,
+    created_at: raw.created_at,
+    updated_at: raw.updated_at,
+    fungsi_nama: fungsiMap[raw.fungsi_id] ?? raw.fungsi_nama ?? undefined,
+    kegiatan_nama: kegMap[raw.kegiatan_jenis_id] ?? raw.kegiatan_nama ?? undefined,
   }
 }

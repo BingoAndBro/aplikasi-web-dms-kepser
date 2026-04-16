@@ -29,7 +29,7 @@ import {
 } from 'lucide-react'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import {
-  getAllFungsi,
+  getFungsiWithKegiatanCount,
   createFungsi,
   updateFungsi,
   deleteFungsi,
@@ -61,8 +61,8 @@ function FungsiPage() {
     try {
       const supabase = getBrowserClient()
       if (!supabase) { setLoading(false); return }
-      const fungsis = await getAllFungsi(supabase)
-      setItems(fungsis.map(f => ({ ...f, jumlah_kegiatan: 0 })))
+      const fungsis = await getFungsiWithKegiatanCount(supabase)
+      setItems(fungsis)
     } catch { /* silent */ } finally { setLoading(false) }
   }
 

@@ -9,11 +9,13 @@ import {
   FileText,
   ChevronRight,
   Download,
+  Eye,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   Loader2,
   ArrowRight,
+  X,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 
@@ -52,6 +54,10 @@ function DokumenDetailPage() {
   const [logs, setLogs] = useState<LogRow[]>([])
   const [loading, setLoading] = useState(true)
   const [downloadingIdx, setDownloadingIdx] = useState<number | null>(null)
+  const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewFilename, setPreviewFilename] = useState('')
 
   useEffect(() => { fetchData() }, [id])
 
@@ -89,13 +95,62 @@ function DokumenDetailPage() {
     try {
       const res = await fetch(`/api/dokumen/${id}/download/${index}`, { credentials: 'include' })
       const json = await res.json()
-      if (json.signedUrl) {
-        window.open(json.signedUrl, '_blank')
-      }
+      if (!json.signedUrl) return
+
+      // Fetch the file as a blob so we can set a proper filename
+      const fileRes = await fetch(json.signedUrl, { credentials: 'omit' })
+      if (!fileRes.ok) return
+
+      const blob = await fileRes.blob()
+      const blobUrl = URL.createObjectURL(blob)
+
+      // Extract filename from Content-Disposition header or default to lampiran name
+      let filename = json.filename ?? `lampiran-${index + 1}`
+      // Strip any path components
+      filename = filename.split('/').pop() ?? filename
+
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      a.click()
+
+      // Clean up
+      URL.revokeObjectURL(blobUrl)
     } catch { /* silent */ } finally {
       setDownloadingIdx(null)
     }
   }
+
+  async function handlePreview(index: number) {
+    setPreviewingIdx(index)
+    setPreviewUrl(null)
+    setPreviewLoading(true)
+    try {
+      const res = await fetch(`/api/dokumen/${id}/download/${index}`, { credentials: 'include' })
+      const json = await res.json()
+      if (json.signedUrl) {
+        setPreviewUrl(json.signedUrl)
+        setPreviewFilename(json.filename ?? `lampiran-${index + 1}`)
+      }
+    } catch { /* silent */ } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  function closePreview() {
+    setPreviewingIdx(null)
+    setPreviewUrl(null)
+    setPreviewFilename('')
+  }
+
+  // Close preview on ESC
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewingIdx !== null) closePreview()
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [previewingIdx])
 
   function formatDate(dateStr: string): string {
     try {
@@ -126,7 +181,7 @@ function DokumenDetailPage() {
 
   if (loading) {
     return (
-      <DashboardShell role="PEGAWAI">
+      <DashboardShell role="PEGAWAI" showHero={false}>
         <div className="flex items-center justify-center py-20">
           <Loader2 size={24} className="animate-spin text-primary" />
         </div>
@@ -136,10 +191,10 @@ function DokumenDetailPage() {
 
   if (!dokumen) {
     return (
-      <DashboardShell role="PEGAWAI">
+      <DashboardShell role="PEGAWAI" showHero={false}>
         <div className="text-center py-20">
           <p className="text-sm text-on-surface-variant">Dokumen tidak ditemukan.</p>
-          <Link href="/dokumen/saya">
+          <Link to="/dokumen/saya">
             <Button variant="outline" size="sm" className="mt-4">Kembali</Button>
           </Link>
         </div>
@@ -152,14 +207,57 @@ function DokumenDetailPage() {
   const canResubmit = dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'USER'
 
   return (
-    <DashboardShell role="PEGAWAI">
+    <DashboardShell role="PEGAWAI" showHero={false}>
+      {/* Preview Modal */}
+      {previewingIdx !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={(e) => { if (e.target === e.currentTarget) closePreview() }}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-2xl mx-4 bg-white dark:bg-surface-container rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/30 shrink-0">
+              <FileText size={16} className="text-primary shrink-0" />
+              <p className="text-sm font-semibold text-on-surface truncate flex-1">{previewFilename}</p>
+              <span className="text-[10px] text-outline hidden sm:block">ESC</span>
+              <button
+                onClick={closePreview}
+                className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors shrink-0"
+                aria-label="Tutup"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-auto bg-surface-container-low/30">
+              {previewLoading ? (
+                <div className="flex items-center justify-center h-48">
+                  <Loader2 size={22} className="animate-spin text-primary" />
+                </div>
+              ) : previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  className="w-full h-[calc(70vh-96px)] border-0"
+                  title={previewFilename}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-48">
+                  <p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6 max-w-3xl">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
               <FileText size={12} />
-              <Link href="/dokumen/saya" className="hover:text-primary">Dokumen</Link>
+              <Link to="/dokumen/saya" className="hover:text-primary">Dokumen</Link>
               <ChevronRight size={10} />
               <span className="text-primary">Detail</span>
             </div>
@@ -277,6 +375,18 @@ function DokumenDetailPage() {
                   </div>
                   <Button
                     size="icon-xs" variant="ghost"
+                    onClick={() => handlePreview(i)}
+                    disabled={previewingIdx === i}
+                    aria-label="Pratinjau"
+                  >
+                    {previewingIdx === i ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Eye size={14} />
+                    )}
+                  </Button>
+                  <Button
+                    size="icon-xs" variant="ghost"
                     onClick={() => handleDownload(i)}
                     disabled={downloadingIdx === i}
                     aria-label="Download"
@@ -324,13 +434,13 @@ function DokumenDetailPage() {
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Link href="/dokumen/saya">
+          <Link to="/dokumen/saya">
             <Button variant="outline" size="sm" className="gap-1.5">
               <ChevronRight size={14} className="rotate-180" />Kembali
             </Button>
           </Link>
           {canResubmit && (
-            <Link href={`/dokumen/${id}/edit`} className="flex-1">
+            <Link to="/dokumen/$id/edit" params={{ id }} className="flex-1">
               <Button size="sm" className="w-full gap-1.5">
                 Perbaiki & Ajukan Ulang <ArrowRight size={14} />
               </Button>

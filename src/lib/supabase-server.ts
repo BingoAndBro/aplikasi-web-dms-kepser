@@ -43,10 +43,10 @@ export function createServerSupabaseClient(
           if (event?.cookie) {
             // For read access, we need raw cookies from request headers
             // event.cookie is for writing, so we parse from the request
-            const rawCookie = cookieHeader ?? event.request.headers.get('cookie')
+            const rawCookie = cookieHeader ?? event.request.headers.get('cookie') ?? null
             return parseCookies(rawCookie)
           }
-          return parseCookies(cookieHeader)
+          return parseCookies(cookieHeader ?? null)
         },
         setAll(cookiesToSet) {
           if (!event?.cookie) return

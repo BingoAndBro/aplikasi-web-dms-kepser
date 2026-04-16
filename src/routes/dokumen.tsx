@@ -1,10 +1,8 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/dokumen')({
-  loader: () => {
-    throw redirect({ to: '/dokumen/saya' })
-  },
-  component: function Empty() {
-    return null
+  ssr: false,
+  component: function DokumenLayout() {
+    return <Outlet />
   },
 })

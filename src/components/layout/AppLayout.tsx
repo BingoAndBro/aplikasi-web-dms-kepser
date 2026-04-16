@@ -303,53 +303,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     navigate({ to: '/login' })
   }
 
-  const isLoginPage = routerState.location.pathname === '/login'
-  if (isLoginPage) return <>{children}</>
-
-  // TC 13: segera redirect ke /login jika belum login (tidak render layout tanpa session)
-  if (!isLoading && !hasSession) {
-    navigate({ to: '/login' })
-    return (
-      <>
-        <div className="mesh-bg">
-          <div className="mesh-blob mesh-blob-1" />
-          <div className="mesh-blob mesh-blob-2" />
-          <div className="mesh-blob mesh-blob-3" />
-        </div>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 mx-auto animate-pulse" />
-            <p className="text-[11px] font-extrabold text-outline uppercase tracking-widest">Memuat...</p>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <>
-        <div className="mesh-bg">
-          <div className="mesh-blob mesh-blob-1" />
-          <div className="mesh-blob mesh-blob-2" />
-          <div className="mesh-blob mesh-blob-3" />
-        </div>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 mx-auto animate-pulse" />
-            <p className="text-[11px] font-extrabold text-outline uppercase tracking-widest">Memuat...</p>
-          </div>
-        </div>
-      </>
-    )
-  }
+  const pathname = routerState.location.pathname
+  const isLoginPage = pathname === '/login'
+  const navGroups = NAV_CONFIG[activeRole] ?? []
 
   const isAdmin = activeRole === 'ADMIN'
-  const menuGroups = NAV_CONFIG[activeRole] ?? NAV_CONFIG.PEGAWAI
-  const pathname = routerState.location.pathname
   const initials = getInitials(userName, email)
   const displayName = userName || email?.split('@')[0] || 'User'
   const canSwitchRole = userRoles.length > 1 && !isAdmin
+
+  // Login page: render children without sidebar/header
+  if (isLoginPage) {
+    return <>{children}</>
+  }
 
   return (
     <>
@@ -380,7 +346,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2 space-y-8">
-            {menuGroups.map((group) => (
+            {navGroups.map((group) => (
               <div key={group.title} className="space-y-3">
                 <h3 className="text-[10px] font-black text-outline uppercase tracking-[0.25em] px-4">
                   {group.title}
@@ -388,7 +354,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <nav className="space-y-1">
                   {group.items.map((item) => {
                     const Icon = item.icon
-                    const isActive = item.to ? pathname === item.to : false
+                    // Special case: root "/" must be exact match
+                    const isActive = item.to
+                      ? item.to === '/'
+                        ? pathname === '/'
+                        : pathname.startsWith(item.to + '/') || pathname === item.to
+                      : false
                     const isBuilt = !!item.to
 
                     if (!isBuilt) {
@@ -556,7 +527,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Content */}
-          <main className="flex-1 flex overflow-hidden">
+          <main className="flex-1 flex overflow-y-auto">
             <section className="flex-1 flex flex-col min-w-0 bg-background border-r border-outline-variant/15">
               {children}
 

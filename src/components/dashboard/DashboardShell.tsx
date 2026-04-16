@@ -13,6 +13,8 @@ const BPS_VISION = 'Terintegrasi, Akuntabel, Sejarahan.'
 interface DashboardShellProps {
   role: RoleName
   children: React.ReactNode
+  /** Hide the hero section (BPS motto, title, CTA) on non-dashboard pages */
+  showHero?: boolean
 }
 
 const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string; ctaLabel: string; ctaTo: string }> = {
@@ -53,7 +55,7 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
   },
 }
 
-export function DashboardShell({ role, children }: DashboardShellProps) {
+export function DashboardShell({ role, children, showHero = true }: DashboardShellProps) {
   const info = ROLE_LABELS[role]
 
   return (
@@ -66,7 +68,8 @@ export function DashboardShell({ role, children }: DashboardShellProps) {
       </div>
 
       <div className="p-8 space-y-10 relative z-10 max-w-[1600px] mx-auto">
-        {/* Hero Section */}
+        {/* Hero Section — shown only on role dashboard pages */}
+        {showHero && (
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -99,6 +102,7 @@ export function DashboardShell({ role, children }: DashboardShellProps) {
             <p className="text-[10px] text-outline font-bold uppercase tracking-wider">{BPS_VISION}</p>
           </div>
         </motion.div>
+        )}
 
         {/* Content */}
         {children}

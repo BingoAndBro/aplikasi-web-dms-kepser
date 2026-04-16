@@ -19,7 +19,6 @@ type KelengkapanItem = {
 interface KelengkapanChecklistProps {
   kegiatanId: string
   isKetuaTim: boolean
-  dokumenId: string
   initialLampirans?: LampiranUrl[]
   onComplete: (lampirans: LampiranUrl[], missingRequired: KelengkapanItem[]) => void
 }
@@ -27,7 +26,6 @@ interface KelengkapanChecklistProps {
 export function KelengkapanChecklist({
   kegiatanId,
   isKetuaTim,
-  dokumenId,
   initialLampirans = [],
   onComplete,
 }: KelengkapanChecklistProps) {
@@ -175,7 +173,6 @@ export function KelengkapanChecklist({
                   {uploaded ? (
                     <FileUploadButton
                       kelengkapanId={item.id}
-                      dokumenId={dokumenId}
                       namaDokumen={item.nama_dokumen}
                       initialLampiran={uploaded}
                       onUploaded={(lamp) => handleUploaded(item.id, lamp)}
@@ -184,7 +181,6 @@ export function KelengkapanChecklist({
                   ) : (
                     <FileUploadButton
                       kelengkapanId={item.id}
-                      dokumenId={dokumenId}
                       namaDokumen={item.nama_dokumen}
                       onUploaded={(lamp) => handleUploaded(item.id, lamp)}
                     />

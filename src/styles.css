@@ -70,6 +70,38 @@
   --radius-full: 9999px;
 }
 
+/* === react-day-picker base reset (prevents rdp-* default styles) === */
+.rdp {
+  --rdp-cell-size: 36px;
+  --rdp-accent-color: #FF5F1F;
+  --rdp-background-color: #FFDBCB;
+  margin: 0;
+}
+
+/* === Date Input === */
+input[type="date"] {
+  color-scheme: light;
+}
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  padding: 4px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+/* Make placeholder in date picker popup more readable */
+input[type="date"]::-webkit-datetime-edit {
+  color: var(--color-on-surface, #2e2f2f);
+}
+input[type="date"]::-webkit-datetime-edit-placeholder {
+  color: var(--color-outline, #85736b);
+}
+
 /* === Animations === */
 @keyframes mesh {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -122,6 +154,14 @@
     background-color: #FFFBF7;
     overflow: hidden;
   }
+
+  .dark .mesh-bg {
+    background-color: #0a0a0f;
+  }
+
+  .dark .mesh-blob-1 { background: #2a1a0f; }
+  .dark .mesh-blob-2 { background: #1a0a05; opacity: 0.15; }
+  .dark .mesh-blob-3 { background: #1a1a2a; }
 
   .mesh-blob {
     position: absolute;

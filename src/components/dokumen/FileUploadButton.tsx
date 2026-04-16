@@ -17,13 +17,12 @@ const ALLOWED_TYPES = [
 ]
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx']
-const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_SIZE = 2 * 1024 * 1024 // 2MB
 
 type UploadState = 'idle' | 'uploading' | 'uploaded' | 'error'
 
 interface FileUploadButtonProps {
   kelengkapanId: string
-  dokumenId: string
   namaDokumen: string
   initialLampiran?: LampiranUrl // pre-populated for edit/resubmit page
   onUploaded: (lampiran: LampiranUrl) => void
@@ -39,7 +38,6 @@ function formatFileSize(bytes: number): string {
 
 export function FileUploadButton({
   kelengkapanId,
-  dokumenId,
   namaDokumen,
   initialLampiran,
   onUploaded,
@@ -65,7 +63,7 @@ export function FileUploadButton({
 
     // Validate size
     if (file.size > MAX_SIZE) {
-      setErrorMsg('Ukuran file maksimal 10MB')
+      setErrorMsg('Ukuran file maksimal 2MB')
       setState('error')
       return
     }
@@ -79,7 +77,6 @@ export function FileUploadButton({
       const formData = new FormData()
       formData.append('file', file)
       formData.append('kelengkapan_id', kelengkapanId)
-      formData.append('dokumen_id', dokumenId)
       formData.append('nama_dokumen', namaDokumen)
 
       const res = await fetch('/api/upload', {
@@ -191,7 +188,7 @@ export function FileUploadButton({
         Unggah File
       </Button>
       <p className="text-[10px] text-outline">
-        PDF, DOC, DOCX, XLS, XLSX · Maks 10MB
+        PDF, DOC, DOCX, XLS, XLSX · Maks 2MB
       </p>
     </div>
   )

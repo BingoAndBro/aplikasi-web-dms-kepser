@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Eye,
+  AlertCircle,
 } from 'lucide-react'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
@@ -99,6 +100,7 @@ const PAGE_SIZE = 10
 function DokumenSayaPage() {
   const [items, setItems] = useState<DokumenRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(0)
@@ -107,22 +109,24 @@ function DokumenSayaPage() {
 
   async function fetchData() {
     setLoading(true)
+    setFetchError(null)
     try {
       const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
+      if (!supabase) { setFetchError('Gagal menginisialisasi Supabase. Refresh halaman.'); setLoading(false); return }
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setLoading(false); return }
+      if (!session) { setFetchError('Sesi tidak ditemukan. Silakan login ulang.'); setLoading(false); return }
 
       const res = await fetch('/api/dokumen', {
-        headers: {
-          Cookie: `sb-access-token=${session.access_token}`,
-        },
         credentials: 'include',
       })
-      if (!res.ok) { setLoading(false); return }
+      if (!res.ok) { setFetchError(`Gagal mengambil data (HTTP ${res.status})`); setLoading(false); return }
       const json = await res.json()
+      if (json.error) { setFetchError(json.error); setLoading(false); return }
       setItems(json.dokumen ?? [])
-    } catch { /* silent */ } finally { setLoading(false) }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat mengambil data'
+      setFetchError(msg)
+    } finally { setLoading(false) }
   }
 
   // Client-side filtering
@@ -149,7 +153,7 @@ function DokumenSayaPage() {
   }
 
   return (
-    <DashboardShell role="PEGAWAI">
+    <DashboardShell role="PEGAWAI" showHero={false}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -163,7 +167,7 @@ function DokumenSayaPage() {
               Daftar dokumen yang telah dan sedang Anda proses.
             </p>
           </div>
-          <Link href="/dokumen/aju">
+          <Link to="/dokumen/aju">
             <Button size="sm" className="gap-1.5"><Plus size={14} />Ajukan Dokumen Baru</Button>
           </Link>
         </div>
@@ -200,6 +204,17 @@ function DokumenSayaPage() {
           <div className="flex items-center justify-center py-20">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : fetchError ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
+            <AlertCircle size={32} className="text-error" />
+            <div className="text-center">
+              <p className="font-headline text-base font-bold text-error">Gagal memuat dokumen</p>
+              <p className="text-on-surface-variant text-xs mt-1">{fetchError}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => fetchData()}>
+              Coba Lagi
+            </Button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -214,7 +229,7 @@ function DokumenSayaPage() {
               </p>
             </div>
             {!search && !statusFilter && (
-              <Link href="/dokumen/aju">
+              <Link to="/dokumen/aju">
                 <Button size="sm" variant="outline" className="gap-1.5">
                   <Plus size={14} />Ajukan Dokumen Baru
                 </Button>
@@ -265,7 +280,7 @@ function DokumenSayaPage() {
                           <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Link href={`/dokumen/${dok.id}`}>
+                          <Link to="/dokumen/$id" params={{ id: dok.id }}>
                             <Button size="icon-xs" variant="ghost" aria-label="Lihat detail">
                               <Eye size={14} />
                             </Button>

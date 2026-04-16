@@ -5,24 +5,31 @@
 -- ============================================================
 -- NOTE: Run this AFTER creating Storage bucket "dokumen-lampiran"
 -- in Supabase Dashboard → Storage → New Bucket
--- Bucket settings: Name=dokumen-lampiran, Public=OFF, File size limit=10MB
+-- Bucket settings: Name=dokumen-lampiran, Public=OFF, File size limit=2MB
+--
+-- The bucket's Public=OFF setting provides the RLS protection for storage files.
+-- We only create bucket-level policies here. DO NOT ALTER TABLE storage.objects
+-- directly — it is managed by Supabase and requires elevated privileges.
 -- ============================================================
 
 -- ============================================================
--- Storage RLS
+-- Bucket Policies
+-- These policies work alongside the bucket's public/private setting.
+-- When Public=OFF, files are only accessible via signed URLs or authenticated access.
 -- ============================================================
-ALTER TABLE "storage"."objects" ENABLE ROW LEVEL SECURITY;
 
--- Users can upload to their own folder [user_id]/
+-- Allow authenticated users to upload to their own folder
 CREATE POLICY "storage_insert_own" ON "storage"."objects"
-  FOR INSERT WITH CHECK (
+  FOR INSERT TO authenticated
+  WITH CHECK (
     bucket_id = 'dokumen-lampiran'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
 
--- Users can read files in their own folder OR owned documents folder
+-- Allow users to read files in their own folder or owned documents
 CREATE POLICY "storage_select_own" ON "storage"."objects"
-  FOR SELECT USING (
+  FOR SELECT TO authenticated
+  USING (
     bucket_id = 'dokumen-lampiran'
     AND (
       (storage.foldername(name))[1] = auth.uid()::text
@@ -39,9 +46,10 @@ CREATE POLICY "storage_select_own" ON "storage"."objects"
     )
   );
 
--- Users can delete own files only
+-- Allow users to delete their own files only
 CREATE POLICY "storage_delete_own" ON "storage"."objects"
-  FOR DELETE USING (
+  FOR DELETE TO authenticated
+  USING (
     bucket_id = 'dokumen-lampiran'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );

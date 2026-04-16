@@ -44,11 +44,24 @@ export function clearActiveRoleCookieHeader(existingHeader: string | null): stri
 // ---------------------------------------------------------------------------
 
 /**
- * Ambil session dari Supabase server client
+ * Ambil session dari Supabase server client.
+ * ⚠️ Untuk use di server (API routes): gunakan getServerSession() di bawah
+ * karena getSession() tidak terverifikasi dan bisa di-spoof.
  */
 export async function getSession(supabase: SupabaseClient) {
   const { data } = await supabase.auth.getSession()
   return data.session
+}
+
+/**
+ * Ambil user yang terverifikasi dari Supabase (server-side).
+ * Menggunakan getUser() yang menghubungi Auth server untuk verifikasi.
+ */
+export async function getServerSession(supabase: SupabaseClient) {
+  const { data, error } = await supabase.auth.getUser()
+  if (error || !data.user) return null
+  const { data: sessionData } = await supabase.auth.getSession()
+  return sessionData.session
 }
 
 /**
