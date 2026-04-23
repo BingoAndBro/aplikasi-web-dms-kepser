@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getSession } from '#/lib/auth'
+import { getServerSession } from '#/lib/auth'
 import { rejectDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
 import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/reject')({
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const authClient = createAuthClient(request)
-        const session = await getSession(authClient)
+        const session = await getServerSession(authClient)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })

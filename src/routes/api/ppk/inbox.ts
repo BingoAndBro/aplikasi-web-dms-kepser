@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getSession } from '#/lib/auth'
+import { getServerSession } from '#/lib/auth'
 
 function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -23,7 +23,7 @@ export const Route = createFileRoute('/api/ppk/inbox')({
       GET: async ({ request }: { request: Request }) => {
         // 1. Verifikasi auth via session (anon client + cookies)
         const authClient = createAuthClient(request)
-        const session = await getSession(authClient)
+        const session = await getServerSession(authClient)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })

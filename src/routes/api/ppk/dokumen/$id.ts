@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getSession } from '#/lib/auth'
+import { getServerSession } from '#/lib/auth'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
 function createAuthClient(request: Request) {
@@ -23,7 +23,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         // 1. Auth check
         const authClient = createAuthClient(request)
-        const session = await getSession(authClient)
+        const session = await getServerSession(authClient)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })

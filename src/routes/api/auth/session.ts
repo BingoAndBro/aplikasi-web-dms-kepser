@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getUserRole, getActiveRoleFromCookies, getPrimaryRole } from '#/lib/auth'
+import { getServerSession, getUserRole, getActiveRoleFromCookies, getPrimaryRole } from '#/lib/auth'
 import type { RoleName } from '#/lib/types/auth'
 
 export const Route = createFileRoute('/api/auth/session')({
@@ -14,7 +14,7 @@ export const Route = createFileRoute('/api/auth/session')({
         } as any
         const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
 
-        const { data: { session } } = await supabase.auth.getSession()
+        const session = await getServerSession(supabase)
 
         if (!session) {
           return Response.json({

@@ -45,8 +45,8 @@ export function clearActiveRoleCookieHeader(existingHeader: string | null): stri
 
 /**
  * Ambil session dari Supabase server client.
- * ⚠️ Untuk use di server (API routes): gunakan getServerSession() di bawah
- * karena getSession() tidak terverifikasi dan bisa di-spoof.
+ * ⚠️ UNVERIFIED — tidak untuk penggunaan server-side.
+ * Gunakan getServerSession() untuk verifikasi keamanan.
  */
 export async function getSession(supabase: SupabaseClient) {
   const { data } = await supabase.auth.getSession()
@@ -132,7 +132,7 @@ export async function buildAppSession(
   supabase: SupabaseClient,
   cookieHeader: string | null
 ): Promise<AppSession | null> {
-  const session = await getSession(supabase)
+  const session = await getServerSession(supabase)
   if (!session) return null
 
   const roles = await getUserRole(supabase, session.user.id)

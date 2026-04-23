@@ -1,7 +1,7 @@
 import { redirect } from '@tanstack/react-router'
 import type { RoleName } from './types/auth'
 import { createServerSupabaseClient, type ServerEventContext } from './supabase-server'
-import { getSession, hasRole, hasAnyRole } from './auth'
+import { getServerSession, hasRole, hasAnyRole } from './auth'
 
 /**
  * SSR route guard: require authenticated user.
@@ -10,7 +10,7 @@ import { getSession, hasRole, hasAnyRole } from './auth'
 export async function requireAuth(event: ServerEventContext) {
   const cookieHeader = event.request.headers.get('cookie') ?? null
   const supabase = createServerSupabaseClient(event, cookieHeader)
-  const session = await getSession(supabase)
+  const session = await getServerSession(supabase)
   if (!session) {
     throw redirect({ to: '/login' })
   }

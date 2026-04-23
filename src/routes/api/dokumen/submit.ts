@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getSession } from '#/lib/auth'
+import { getServerSession } from '#/lib/auth'
 import { transition } from '#/lib/fsm'
 import type { TransitionResult } from '#/lib/types/fsm'
 import {
@@ -46,7 +46,7 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         }
 
         const supabase = createAuthClient(request)
-        const session = await getSession(supabase)
+        const session = await getServerSession(supabase)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getSession } from '#/lib/auth'
+import { getServerSession } from '#/lib/auth'
 import { transition } from '#/lib/fsm'
 import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
 import { resubmitDokumenSchema } from '#/lib/schemas/dokumen'
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const authClient = createAuthClient(request)
-        const session = await getSession(authClient)
+        const session = await getServerSession(authClient)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
         const { data: rolesData } = await authClient.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
@@ -83,7 +83,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
 
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const authClient = createAuthClient(request)
-        const session = await getSession(authClient)
+        const session = await getServerSession(authClient)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
         const { data: rolesData } = await authClient.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
@@ -138,7 +138,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         console.log('[API/ppk/resubmit/:id] POST START id:', params.id)
         const authClient = createAuthClient(request)
-        const session = await getSession(authClient)
+        const session = await getServerSession(authClient)
         console.log('[API/ppk/resubmit/:id] session user:', session?.user?.id)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 

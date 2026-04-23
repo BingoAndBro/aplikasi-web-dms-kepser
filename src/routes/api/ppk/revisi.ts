@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getSession } from '#/lib/auth'
+import { getServerSession } from '#/lib/auth'
 import { resubmitDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
 import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
@@ -23,7 +23,7 @@ export const Route = createFileRoute('/api/ppk/revisi')({
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const authClient = createAuthClient(request)
-        const session = await getSession(authClient)
+        const session = await getServerSession(authClient)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
         const { data: rolesData } = await authClient.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
