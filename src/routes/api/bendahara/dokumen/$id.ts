@@ -28,10 +28,6 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
         const { data: dok, error } = await supabase.from('dokumen_transaksi').select('*').eq('id', params.id).single()
         if (error || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-        if (dok.status !== 'IN_BENDAHARA_APPROVAL') {
-          return Response.json({ error: 'Dokumen tidak dalam tahap persetujuan Bendahara' }, { status: 400 })
-        }
-
         let fungsiNama = '—'
         if (dok.fungsi_id) {
           const { data: f } = await supabase.from('master_fungsi').select('nama').eq('id', dok.fungsi_id).single()
@@ -69,7 +65,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
             kegiatan_jenis_id: dok.kegiatan_jenis_id, kegiatan_nama: kegiatanNama,
             is_ketua_tim: dok.is_ketua_tim, status: dok.status, lampiran_urls: lampiranUrls,
             tahun: dok.tahun, tanggal: dok.tanggal, created_by: dok.created_by,
-            created_at: dok.created_at,
+            created_at: dok.created_at, revision_notes: dok.revision_notes,
           },
           ppkValidation: logs ? { user_id: logs.user_id, timestamp: logs.timestamp } : null,
           logs: logs2 ?? [],

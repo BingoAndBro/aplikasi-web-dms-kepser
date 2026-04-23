@@ -1,12 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { createAdminClient } from '#/lib/supabase-admin'
+import { getSession } from '#/lib/auth'
 import { resubmitDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
 import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
-function createClient(request: Request) {
+function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
   const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
   return createServerSupabaseClient(mockEvent, cookieHeader)
@@ -21,15 +22,17 @@ export const Route = createFileRoute('/api/ppk/revisi')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const authClient = createAuthClient(request)
+        const session = await getSession(authClient)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
+        const { data: rolesData } = await authClient.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
         const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
         if (!roleNames.includes('PPK')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        const { data: docs, error } = await supabase
+        const admin = createAdminClient()
+
+        const { data: docs, error } = await admin
           .from('dokumen_transaksi')
           .select('id, judul, fungsi_id, kegiatan_jenis_id, tahun, tanggal, created_at, revision_notes, updated_at')
           .eq('status', 'NEED_REVISION')
@@ -41,14 +44,14 @@ export const Route = createFileRoute('/api/ppk/revisi')({
         const fungsiIds = [...new Set((docs ?? []).map(d => d.fungsi_id).filter(Boolean))]
         const fungsiMap: Record<string, string> = {}
         if (fungsiIds.length > 0) {
-          const { data: rows } = await supabase.from('master_fungsi').select('id, nama').in('id', fungsiIds)
+          const { data: rows } = await admin.from('master_fungsi').select('id, nama').in('id', fungsiIds)
           for (const r of rows ?? []) fungsiMap[r.id] = r.nama
         }
 
         const kegIds = [...new Set((docs ?? []).map(d => d.kegiatan_jenis_id).filter(Boolean))]
         const kegMap: Record<string, string> = {}
         if (kegIds.length > 0) {
-          const { data: rows } = await supabase.from('master_kegiatan').select('id, nama').in('id', kegIds)
+          const { data: rows } = await admin.from('master_kegiatan').select('id, nama').in('id', kegIds)
           for (const r of rows ?? []) kegMap[r.id] = r.nama
         }
 

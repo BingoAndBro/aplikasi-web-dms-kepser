@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
   Table,
   TableHeader,
@@ -110,7 +110,7 @@ function FungsiPage() {
   }
 
   return (
-    <DashboardShell role="ADMIN">
+    <PageLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -219,6 +219,6 @@ function FungsiPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardShell>
+    </PageLayout>
   )
 }

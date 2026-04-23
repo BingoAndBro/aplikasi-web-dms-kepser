@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
@@ -115,7 +115,7 @@ function KelengkapanPage() {
   }
 
   return (
-    <DashboardShell role="ADMIN">
+    <PageLayout>
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
@@ -200,7 +200,7 @@ function KelengkapanPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardShell>
+    </PageLayout>
   )
 }
 

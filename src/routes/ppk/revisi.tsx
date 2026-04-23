@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
-import { FileText, ChevronRight, Eye, AlertCircle, FileEdit } from 'lucide-react'
+import { FileText, ChevronRight, Eye, AlertCircle, FileEdit, ArrowLeft } from 'lucide-react'
 import { cn } from '#/lib/utils'
 
 type Item = {
@@ -24,7 +24,7 @@ function truncate(str: string | null, len = 50): string {
   return str.length > len ? str.slice(0, len) + '...' : str
 }
 
-export function PpkRevisiPage() {
+function PpkRevisiPage() {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +37,7 @@ export function PpkRevisiPage() {
   }, [])
 
   return (
-    <DashboardShell role="PPK" showHero={false}>
+    <PageLayout>
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
@@ -62,7 +62,7 @@ export function PpkRevisiPage() {
             <p className="text-sm text-on-surface-variant">{error}</p>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-surface-container-low/30 rounded-2xl border border-outline-variant/20">
             <div className="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center">
               <FileText size={24} className="text-green-500" />
             </div>
@@ -103,8 +103,8 @@ export function PpkRevisiPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         <Link to="/ppk/dokumen/$id/resubmit" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label="Revisi">
-                            <Eye size={14} />
+                          <Button size="sm" className="gap-1.5" variant="secondary">
+                            <FileEdit size={14} />Buka Revisi
                           </Button>
                         </Link>
                       </TableCell>
@@ -116,6 +116,6 @@ export function PpkRevisiPage() {
           </div>
         )}
       </div>
-    </DashboardShell>
+    </PageLayout>
   )
 }

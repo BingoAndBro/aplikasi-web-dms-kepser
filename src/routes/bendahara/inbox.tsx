@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import {
@@ -19,7 +19,7 @@ type InboxItem = {
   ppk_user_id: string | null; ppk_validated_at: string | null
 }
 
-export function BendaharaInboxPage() {
+function BendaharaInboxPage() {
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,10 +27,10 @@ export function BendaharaInboxPage() {
   const [fungsiFilter, setFungsiFilter] = useState('')
 
   useEffect(() => {
-    getBrowserClient().then(supabase => {
-      if (!supabase) return
-      supabase.from('master_fungsi').select('id, nama').eq('is_active', true).order('nama').then(({ data }) => setFungsiList(data ?? []))
-    })
+    const supabase = getBrowserClient()
+    if (!supabase) return
+    const fungsiRows: { id: string; nama: string }[] = []
+    supabase.from('master_fungsi').select('id, nama').eq('is_active', true).order('nama').then(({ data: fungsiData }: { data: { id: string; nama: string }[] | null }) => setFungsiList(fungsiData ?? []))
   }, [])
 
   async function fetchData() {
@@ -55,7 +55,7 @@ export function BendaharaInboxPage() {
   }
 
   return (
-    <DashboardShell role="BENDAHARA" showHero={false}>
+    <PageLayout>
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
@@ -130,6 +130,6 @@ export function BendaharaInboxPage() {
           </div>
         )}
       </div>
-    </DashboardShell>
+    </PageLayout>
   )
 }

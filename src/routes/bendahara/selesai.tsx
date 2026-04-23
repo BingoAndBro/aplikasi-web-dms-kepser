@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
@@ -24,7 +24,7 @@ function BendaharaSelesaiPage() {
   }, [])
 
   return (
-    <DashboardShell role="BENDAHARA" showHero={false}>
+    <PageLayout>
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
@@ -74,7 +74,7 @@ function BendaharaSelesaiPage() {
                       <TableCell className="text-center"><span className="text-xs font-semibold text-on-surface">{d.tahun}</span></TableCell>
                       <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.updated_at)}</span></TableCell>
                       <TableCell className="text-center">
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800 text-[10px] font-semibold">Selesai</Badge>
+                        <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px] font-semibold">Selesai</Badge>
                       </TableCell>
                       <TableCell className="text-center">
                         <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}><Button size="icon-xs" variant="ghost"><Eye size={14} /></Button></Link>
@@ -87,8 +87,6 @@ function BendaharaSelesaiPage() {
           </div>
         )}
       </div>
-    </DashboardShell>
+    </PageLayout>
   )
 }
-
-export const Route2 = createFileRoute('/bendahara/selesai')({ component: BendaharaSelesaiPage })

@@ -22,9 +22,10 @@ export type RevisionTarget = 'USER' | 'PPK' | null
 export type FSMAction =
   | 'SUBMIT' // Pegawai ajukan dokumen
   | 'APPROVE' // PPK/Bendahara approve
-  | 'REJECT' // PPK/Bendahara reject
+  | 'REJECT' // PPK/Bendahara reject dari validasi/approval
   | 'RESUBMIT' // USER resubmit setelah perbaikan (target=USER)
   | 'RESUBMIT_PPK' // PPK resubmit setelah Bendahara reject (target=PPK)
+  | 'KEMBALIKAN' // PPK kembalikan ke USER dari revision page (target=PPK -> USER)
   | 'ARCHIVE' // Arsiparis arsipkan
   | 'SKIP' // Arsiparis skip (tidak arsip, tetap COMPLETED)
 

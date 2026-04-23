@@ -1,14 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { getBrowserClient } from '#/lib/supabase-browser'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
-import { StatsBento } from '#/components/dashboard/StatsBento'
 
 export const Route = createFileRoute('/bendahara')({
-  component: BendaharaDashboard,
+  component: BendaharaLayout,
 })
 
-function BendaharaDashboard() {
+function BendaharaLayout() {
   useEffect(() => {
     async function checkAuth() {
       const supabase = getBrowserClient()
@@ -25,9 +23,5 @@ function BendaharaDashboard() {
     checkAuth()
   }, [])
 
-  return (
-    <DashboardShell role="BENDAHARA">
-      <StatsBento role="BENDAHARA" />
-    </DashboardShell>
-  )
+  return <Outlet />
 }

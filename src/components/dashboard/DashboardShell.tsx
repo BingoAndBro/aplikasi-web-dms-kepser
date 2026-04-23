@@ -57,17 +57,11 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
 
 export function DashboardShell({ role, children, showHero = true }: DashboardShellProps) {
   const info = ROLE_LABELS[role]
+  const padding = showHero ? 'p-8 space-y-10' : 'px-6 pt-8 pb-6 space-y-6'
 
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-      {/* Mesh Background Blobs */}
-      <div className="mesh-bg">
-        <div className="mesh-blob mesh-blob-1" />
-        <div className="mesh-blob mesh-blob-2" />
-        <div className="mesh-blob mesh-blob-3" />
-      </div>
-
-      <div className="p-8 space-y-10 relative z-10 max-w-[1600px] mx-auto">
+      <div className={`${padding} relative z-10 max-w-[1600px] mx-auto`}>
         {/* Hero Section — shown only on role dashboard pages */}
         {showHero && (
         <motion.div

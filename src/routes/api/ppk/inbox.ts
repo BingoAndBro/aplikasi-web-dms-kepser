@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { createAdminClient } from '#/lib/supabase-admin'
+import { getSession } from '#/lib/auth'
 
-function createClient(request: Request) {
+function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
   const mockEvent = {
     request,
@@ -20,15 +21,16 @@ export const Route = createFileRoute('/api/ppk/inbox')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        // 1. Verifikasi auth via session (anon client + cookies)
+        const authClient = createAuthClient(request)
+        const session = await getSession(authClient)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Role check: must be PPK
-        const { data: rolesData } = await supabase
+        // 2. Role check: must be PPK
+        const { data: rolesData } = await authClient
           .from('user_roles')
           .select('role:roles(nama)')
           .eq('user_id', session.user.id)
@@ -38,6 +40,10 @@ export const Route = createFileRoute('/api/ppk/inbox')({
           return Response.json({ error: 'Akses ditolak — bukan PPK' }, { status: 403 })
         }
 
+        // 3. Data fetch menggunakan admin client (bypass RLS) karena PPK
+        //    perlu melihat dokumen milik pegawai lain
+        const admin = createAdminClient()
+
         // Parse query params
         const url = new URL(request.url)
         const fungsiId = url.searchParams.get('fungsi_id') ?? undefined
@@ -45,9 +51,9 @@ export const Route = createFileRoute('/api/ppk/inbox')({
         const endDate = url.searchParams.get('end_date') ?? undefined
 
         // Build query
-        let query = supabase
+        let query = admin
           .from('dokumen_transaksi')
-          .select('id, judul, fungsi_id, kegiatan_jenis_id, created_by, tahun, tanggal, created_at')
+          .select('id, judul, fungsi_id, kegiatan_jenis_id, created_by, tahun, tanggal, created_at, status')
           .eq('status', 'IN_PPK_VALIDATION')
 
         if (fungsiId) {
@@ -76,7 +82,7 @@ export const Route = createFileRoute('/api/ppk/inbox')({
         const fungsiIds = [...new Set(docs.map(d => d.fungsi_id).filter(Boolean))]
         const fungsiMap: Record<string, string> = {}
         if (fungsiIds.length > 0) {
-          const { data: fungsiRows } = await supabase
+          const { data: fungsiRows } = await admin
             .from('master_fungsi')
             .select('id, nama')
             .in('id', fungsiIds)
@@ -89,7 +95,7 @@ export const Route = createFileRoute('/api/ppk/inbox')({
         const kegIds = [...new Set(docs.map(d => d.kegiatan_jenis_id).filter(Boolean))]
         const kegMap: Record<string, string> = {}
         if (kegIds.length > 0) {
-          const { data: kegRows } = await supabase
+          const { data: kegRows } = await admin
             .from('master_kegiatan')
             .select('id, nama')
             .in('id', kegIds)
@@ -97,10 +103,6 @@ export const Route = createFileRoute('/api/ppk/inbox')({
             kegMap[row.id] = row.nama
           }
         }
-
-        // created_by user info not fetched via PostgREST (auth.users needs admin).
-        // Show "Pegawai" label — date will indicate who submitted.
-        // In production, add a profiles table for user display names.
 
         const result = docs.map(d => ({
           id: d.id,

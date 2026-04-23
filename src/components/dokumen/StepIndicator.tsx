@@ -35,7 +35,7 @@ export function StepIndicator({ currentStep, onStepClick, completedSteps = [] }:
               {i < STEPS.length - 1 && (
                 <div
                   className={cn(
-                    'absolute top-4 left-1/2 w-full h-0.5 -z-0 transition-colors',
+                    'absolute top-4 left-1/2 w-full h-0.5 z-0 transition-colors',
                     isCompleted ? 'bg-primary' : 'bg-outline-variant'
                   )}
                   style={{ width: 'calc(100% - 2rem)' }}

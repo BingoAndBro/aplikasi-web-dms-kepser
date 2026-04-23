@@ -1,19 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { createAdminClient } from '#/lib/supabase-admin'
+import { getSession } from '#/lib/auth'
 
-function createClient(request: Request) {
+function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
   const mockEvent = {
     request,
     cookie: { get: () => undefined, set: () => {}, delete: () => {} },
   } as any
   return createServerSupabaseClient(mockEvent, cookieHeader)
-}
-
-function createAdminClient() {
-  const { createClient } = require('#/lib/supabase-admin')
-  return createClient()
 }
 
 // ---------------------------------------------------------------------------
@@ -25,15 +21,15 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const authClient = createAuthClient(request)
+        const session = await getSession(authClient)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         // Role check
-        const { data: rolesData } = await supabase
+        const { data: rolesData } = await authClient
           .from('user_roles')
           .select('role:roles(nama)')
           .eq('user_id', session.user.id)
@@ -43,8 +39,9 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
           return Response.json({ error: 'Akses ditolak' }, { status: 403 })
         }
 
-        // Fetch dokumen
-        const { data: dok, error: dokError } = await supabase
+        // Fetch dokumen via admin (bypass RLS)
+        const admin = createAdminClient()
+        const { data: dok, error: dokError } = await admin
           .from('dokumen_transaksi')
           .select('lampiran_urls, created_by')
           .eq('id', params.id)
@@ -70,8 +67,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
         const lampiran = lampiranUrls[index]
 
         // 15-minute signed URL for preview
-        const supabaseAdmin = createAdminClient()
-        const { data, error } = await supabaseAdmin.storage
+        const { data, error } = await admin.storage
           .from('dokumen-lampiran')
           .createSignedUrl(lampiran.url, 900) // 15 minutes = 900 seconds
 

@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
-import { FileText, ChevronRight, Eye, AlertCircle, CheckCircle2, ClipboardCheck } from 'lucide-react'
+import { FileText, ChevronRight, Eye, AlertCircle, CheckCircle2, ClipboardCheck, Info } from 'lucide-react'
 import { cn } from '#/lib/utils'
 
 type Item = {
@@ -21,15 +21,15 @@ function formatDate(str: string) {
 
 function StatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { label: string; cls: string }> = {
-    IN_BENDAHARA_APPROVAL: { label: 'Menunggu Bendahara', cls: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
-    COMPLETED: { label: 'Selesai', cls: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800' },
+    IN_BENDAHARA_APPROVAL: { label: 'Menunggu Bendahara', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+    COMPLETED: { label: 'Selesai', cls: 'bg-green-100 text-green-800 border-green-200' },
     ARCHIVED: { label: 'Diarsipkan', cls: 'border-outline text-outline/60' },
   }
   const c = cfg[status] ?? { label: status, cls: '' }
   return <Badge className={cn('text-[10px] font-semibold', c.cls)}>{c.label}</Badge>
 }
 
-export function PpkTervalidasiPage() {
+function PpkTervalidasiPage() {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +42,7 @@ export function PpkTervalidasiPage() {
   }, [])
 
   return (
-    <DashboardShell role="PPK" showHero={false}>
+    <PageLayout>
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
@@ -67,7 +67,7 @@ export function PpkTervalidasiPage() {
             <p className="text-sm text-on-surface-variant">{error}</p>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-surface-container-low/30 rounded-2xl border border-outline-variant/20">
             <div className="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center">
               <CheckCircle2 size={24} className="text-green-500" />
             </div>
@@ -115,6 +115,6 @@ export function PpkTervalidasiPage() {
           </div>
         )}
       </div>
-    </DashboardShell>
+    </PageLayout>
   )
 }

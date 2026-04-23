@@ -10,7 +10,7 @@ export const Route = createFileRoute('/api/auth/session')({
         const cookieHeader = request.headers.get('cookie')
         const mockEvent = {
           request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
+          cookie: { get: () => undefined, set: () => { }, delete: () => { } },
         } as any
         const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
 

@@ -120,7 +120,7 @@ export function FileUploadButton({
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-on-surface truncate">{filename}</p>
           {fileSize > 0 && (
-            <p className="text-[10px] text-green-600 dark:text-green-400">{formatFileSize(fileSize)}</p>
+            <p className="text-[10px] text-green-600">{formatFileSize(fileSize)}</p>
           )}
         </div>
         <button

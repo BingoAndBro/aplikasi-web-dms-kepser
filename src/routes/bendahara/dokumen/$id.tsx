@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import {
   FileText, ChevronRight, Download, Eye, AlertTriangle,
-  CheckCircle2, Loader2, ArrowRight, X, Banknote,
+  CheckCircle2, Loader2, X, Banknote,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
@@ -16,8 +17,8 @@ type DokumenDetail = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
   is_ketua_tim: boolean; status: string; lampiran_urls: LampiranUrl[]
   tahun: number; tanggal: string; created_by: string; created_at: string
+  revision_notes?: string
 }
-type LogRow = { id: string; aksi: string; catatan: string | null; timestamp: string }
 
 const WORKFLOW_STEPS = [
   { key: 'DRAFT', label: 'Draf' },
@@ -29,12 +30,10 @@ function getWorkflowIdx(status: string) { return WORKFLOW_STEPS.findIndex(s => s
 function formatDate(str: string) { try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str } }
 function formatDateTime(str: string) { try { return new Date(str).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) } catch { return str } }
 
-export function BendaharaDokumenDetailPage() {
+function BendaharaDokumenDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const [dokumen, setDokumen] = useState<DokumenDetail | null>(null)
-  const [logs, setLogs] = useState<LogRow[]>([])
-  const [ppkValidation, setPpkValidation] = useState<{ user_id: string; timestamp: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -60,8 +59,6 @@ export function BendaharaDokumenDetailPage() {
       if (!res.ok) { const json = await res.json(); setFetchError(json.error ?? 'Gagal'); setLoading(false); return }
       const json = await res.json()
       setDokumen(json.dokumen)
-      setLogs(json.logs ?? [])
-      setPpkValidation(json.ppkValidation)
     } catch { setFetchError('Terjadi kesalahan') } finally { setLoading(false) }
   }
 
@@ -72,7 +69,7 @@ export function BendaharaDokumenDetailPage() {
       const res = await fetch(`/api/bendahara/dokumen/${id}/approve`, { method: 'POST', credentials: 'include' })
       const json = await res.json()
       if (!res.ok) { alert(json.error ?? 'Gagal'); return }
-      navigate({ to: '/bendahara/inbox' })
+      navigate({ to: '/bendahara/selesai' })
     } catch { alert('Terjadi kesalahan') } finally { setActionLoading(null) }
   }
 
@@ -86,7 +83,7 @@ export function BendaharaDokumenDetailPage() {
       })
       const json = await res.json()
       if (!res.ok) { setRejectError(json.error ?? 'Gagal'); return }
-      navigate({ to: '/bendahara/inbox' })
+      navigate({ to: '/bendahara/ditolak' })
     } catch { setRejectError('Terjadi kesalahan') } finally { setActionLoading(null) }
   }
 
@@ -100,17 +97,18 @@ export function BendaharaDokumenDetailPage() {
   }
   function closePreview() { setPreviewingIdx(null); setPreviewUrl(null); setPreviewFilename('') }
 
-  if (loading) return <DashboardShell role="BENDAHARA" showHero={false}><div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-primary" /></div></DashboardShell>
-  if (fetchError || !dokumen) return <DashboardShell role="BENDAHARA" showHero={false}><div className="text-center py-20"><AlertTriangle size={32} className="text-error mx-auto mb-3" /><p className="text-sm text-on-surface-variant">{fetchError ?? 'Tidak ditemukan'}</p><Button variant="outline" size="sm" className="mt-4" onClick={() => navigate({ to: '/bendahara/inbox' })}>Kembali</Button></div></DashboardShell>
+  if (loading) return <PageLayout><div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-primary" /></div></PageLayout>
+  if (fetchError) return <PageLayout><div className="text-center py-20"><AlertTriangle size={32} className="text-error mx-auto mb-3" /><p className="text-sm text-on-surface-variant">{fetchError}</p><Button variant="outline" size="sm" className="mt-4" onClick={() => navigate({ to: '/bendahara/inbox' })}>Kembali</Button></div></PageLayout>
+  if (!dokumen) return <PageLayout><div className="text-center py-20"><AlertTriangle size={32} className="text-error mx-auto mb-3" /><p className="text-sm text-on-surface-variant">Dokumen tidak ditemukan atau tidak dalam tahap persetujuan</p><Button variant="outline" size="sm" className="mt-4" onClick={() => navigate({ to: '/bendahara/inbox' })}>Kembali ke Inbox</Button></div></PageLayout>
 
   const workflowIdx = getWorkflowIdx(dokumen.status)
 
   return (
-    <DashboardShell role="BENDAHARA" showHero={false}>
+    <PageLayout>
       {previewingIdx !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) closePreview() }}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-2xl mx-4 bg-white dark:bg-surface-container rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
+          <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
             <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
               <FileText size={16} className="text-primary shrink-0" />
               <p className="text-sm font-semibold text-on-surface truncate flex-1">{previewFilename}</p>
@@ -129,7 +127,7 @@ export function BendaharaDokumenDetailPage() {
       {rejectOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) { setRejectOpen(false); setRejectCatatan(''); setRejectError(null) } }}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-md mx-4 bg-white dark:bg-surface-container rounded-2xl shadow-2xl">
+          <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
             <div className="flex items-center gap-3 px-5 py-4 border-b">
               <AlertTriangle size={18} className="text-error shrink-0" />
               <p className="font-semibold text-on-surface">Tolak Dokumen</p>
@@ -154,7 +152,7 @@ export function BendaharaDokumenDetailPage() {
         </div>
       )}
 
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6 max-w-3xl mx-auto">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
@@ -167,21 +165,10 @@ export function BendaharaDokumenDetailPage() {
             </div>
             <h2 className="font-headline text-xl font-extrabold text-on-surface">{dokumen.judul}</h2>
           </div>
-          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800 text-xs font-semibold shrink-0">
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs font-semibold shrink-0">
             Persetujuan Bendahara
           </Badge>
         </div>
-
-        {/* PPK Validation Badge */}
-        {ppkValidation && (
-          <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl">
-            <CheckCircle2 size={18} className="text-green-500 shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-green-700 dark:text-green-400">Hasil Validasi PPK</p>
-              <p className="text-xs text-green-600 dark:text-green-300">Divalidasi pada {formatDateTime(ppkValidation.timestamp)}</p>
-            </div>
-          </div>
-        )}
 
         {/* Workflow */}
         <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm">
@@ -190,18 +177,30 @@ export function BendaharaDokumenDetailPage() {
             {WORKFLOW_STEPS.map((step, i) => {
               const isCurrent = step.key === dokumen.status
               const isPast = workflowIdx > i || dokumen.status === 'COMPLETED'
+              const showAsRevision = dokumen.status === 'NEED_REVISION' && step.key === 'IN_BENDAHARA_APPROVAL'
               return (
                 <div key={step.key} className="flex flex-col items-center flex-1 relative">
                   {i < WORKFLOW_STEPS.length - 1 && <div className={cn('absolute top-4 -right-1/2 w-full h-0.5 z-0', isPast ? 'bg-primary' : 'bg-outline-variant')} />}
-                  <div className={cn('relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2', isCurrent || isPast ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-background text-outline')}>
-                    {isPast && !isCurrent ? <CheckCircle2 size={14} /> : (i + 1)}
+                  <div className={cn('relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2', isCurrent || showAsRevision ? 'border-primary bg-primary text-white' : isPast ? 'border-primary bg-primary text-white' : 'border-outline-variant bg-background text-outline')}>
+                    {showAsRevision ? <AlertTriangle size={14} /> : isPast && !isCurrent ? <CheckCircle2 size={14} /> : i + 1}
                   </div>
-                  <span className={cn('mt-2 text-[10px] font-medium text-center', isCurrent ? 'text-primary font-semibold' : isPast ? 'text-primary' : 'text-outline')}>{step.label}</span>
+                  <span className={cn('mt-2 text-[10px] font-medium text-center', isCurrent || showAsRevision ? 'text-primary font-semibold' : isPast ? 'text-primary' : 'text-outline')}>{step.label}</span>
                 </div>
               )
             })}
           </div>
         </div>
+
+        {/* Revision Notes Banner */}
+        {dokumen.status === 'NEED_REVISION' && (
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-bold text-amber-700 mb-1">Catatan Revisi dari Bendahara</p>
+              <p className="text-xs text-amber-700">{dokumen.revision_notes || 'Tidak ada catatan'}</p>
+            </div>
+          </div>
+        )}
 
         {/* Info Grid */}
         <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
@@ -224,33 +223,37 @@ export function BendaharaDokumenDetailPage() {
                <FileText size={16} className="text-primary shrink-0" />
                <div className="flex-1 min-w-0"><p className="text-xs font-medium text-on-surface truncate">{lamp.nama}</p><p className="text-[10px] text-outline">{formatDateTime(lamp.uploaded_at)}</p></div>
                <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(i)}><Eye size={14} /></Button>
-               <Button size="icon-xs" variant="ghost" onClick={() => { const a = document.createElement('a'); a.href = `/api/dokumen/${id}/download/${i}`; a.click() }}><Download size={14} /></Button>
+               <Button size="icon-xs" variant="ghost" onClick={() => { fetch(`/api/dokumen/${id}/download/${i}`, { credentials: 'include' }).then(r => r.json()).then(d => d.signedUrl && window.open(d.signedUrl, '_blank')).catch(() => alert('Gagal download')) }}><Download size={14} /></Button>
              </div>
            ))}</div>}
         </div>
 
-        {/* Log */}
-        {logs.length > 0 && <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-          <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Riwayat Aktivitas</p>
-          <div className="space-y-3">{logs.map(log => (
-            <div key={log.id} className="flex items-start gap-3">
-              <div className="mt-1">{log.aksi.includes('APPROVE') ? <CheckCircle2 size={14} className="text-green-500" /> : log.aksi.includes('REJECT') ? <X size={14} className="text-error" /> : <ArrowRight size={14} className="text-blue-500" />}</div>
-              <div><p className="text-xs font-medium text-on-surface">{log.aksi}</p>{log.catatan && <p className="text-[10px] text-on-surface-variant mt-0.5">{log.catatan}</p>}<p className="text-[10px] text-outline mt-0.5">{formatDateTime(log.timestamp)}</p></div>
-            </div>
-          ))}</div>
-        </div>}
+        {/* Activity Log */}
+        <ActivityLog dokumenId={id} />
 
-        {/* Actions */}
-        <div className="flex gap-3">
-          <Link to="/bendahara/inbox"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
-          <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { setRejectCatatan(''); setRejectError(null); setRejectOpen(true) }} disabled={!!actionLoading}>
-            {actionLoading === 'reject' ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}Tolak
-          </Button>
-          <Button size="sm" className="gap-1.5 flex-1" onClick={handleApprove} disabled={!!actionLoading}>
-            {actionLoading === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}Setujui Pencairan
-          </Button>
-        </div>
+        {/* Actions - Only show buttons for IN_BENDAHARA_APPROVAL status */}
+        {dokumen.status === 'IN_BENDAHARA_APPROVAL' && (
+          <div className="flex gap-3">
+            <Link to="/bendahara/inbox"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
+            <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { setRejectCatatan(''); setRejectError(null); setRejectOpen(true) }} disabled={!!actionLoading}>
+              {actionLoading === 'reject' ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}Tolak
+            </Button>
+            <Button size="sm" className="gap-1.5 flex-1" onClick={handleApprove} disabled={!!actionLoading}>
+              {actionLoading === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}Setujui Pencairan
+            </Button>
+          </div>
+        )}
+        {dokumen.status === 'COMPLETED' && (
+          <div className="flex gap-3">
+            <Link to="/bendahara/selesai"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
+          </div>
+        )}
+        {dokumen.status === 'NEED_REVISION' && (
+          <div className="flex gap-3">
+            <Link to="/bendahara/ditolak"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
+          </div>
+        )}
       </div>
-    </DashboardShell>
+    </PageLayout>
   )
 }

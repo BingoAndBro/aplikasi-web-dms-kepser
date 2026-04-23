@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { createAdminClient } from '#/lib/supabase-admin'
+import { getSession } from '#/lib/auth'
 import { transition } from '#/lib/fsm'
 import type { TransitionResult } from '#/lib/types/fsm'
 import {
@@ -11,7 +12,7 @@ import {
 } from '#/lib/dokumen-helpers'
 import { createDokumenSchema } from '#/lib/schemas/dokumen'
 
-function createClient(request: Request) {
+function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
   const mockEvent = {
     request,
@@ -44,7 +45,7 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           }, { status: 400 })
         }
 
-        const supabase = createClient(request)
+        const supabase = createAuthClient(request)
         const session = await getSession(supabase)
 
         if (!session) {
@@ -127,7 +128,12 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           updated_at: new Date().toISOString(),
         }
 
-        const updateRes = await updateDokumenStatus(supabase, dok.id, {
+        // Gunakan admin client untuk update status — RLS policy pegawai
+        // hanya mengizinkan UPDATE pada status NEED_REVISION, sehingga
+        // update DRAFT → IN_PPK_VALIDATION akan gagal diam-diam via anon client.
+        const admin = createAdminClient()
+
+        const updateRes = await updateDokumenStatus(admin, dok.id, {
           status: transitionResult.newStatus,
           currentStep: transitionResult.newCurrentStep,
           revisionTarget: transitionResult.newRevisionTarget,
@@ -137,8 +143,10 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           return Response.json({ error: updateRes.error }, { status: 500 })
         }
 
-        // Insert log — append-only
-        await insertLog(supabase, {
+        // Insert log — append-only (admin karena RLS log_insert hanya
+        // check auth.uid() = user_id, namun di server session mungkin
+        // tidak terpropagasi sempurna)
+        await insertLog(admin, {
           dokumenId: dok.id,
           userId: session.user.id,
           aksi: 'SUBMIT',

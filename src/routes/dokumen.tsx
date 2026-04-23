@@ -1,8 +1,10 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
+// Route /dokumen sudah dipindahkan ke /pegawai/dokumen
+// Redirect otomatis agar link lama tetap berfungsi
 export const Route = createFileRoute('/dokumen')({
-  ssr: false,
-  component: function DokumenLayout() {
-    return <Outlet />
+  beforeLoad: () => {
+    throw redirect({ to: '/pegawai/dokumen', replace: true })
   },
+  component: () => null,
 })

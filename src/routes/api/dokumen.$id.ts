@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { createAdminClient } from '#/lib/supabase-admin'
+import { getServerSession } from '#/lib/auth'
 import { updateDokumenSchema } from '#/lib/schemas/dokumen'
 import {
   getDokumenById,
@@ -27,13 +28,16 @@ export const Route = createFileRoute('/api/dokumen/$id')({
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getServerSession(supabase)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const dok = await getDokumenById(supabase, params.id)
+        // Use adminClient to bypass RLS on dokumen_transaksi SELECT.
+        // Ownership/role check is enforced below at the application layer.
+        const admin = createAdminClient()
+        const dok = await getDokumenById(admin, params.id)
 
         if (!dok) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
@@ -66,8 +70,11 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           }, { status: 400 })
         }
 
+        // Session-scoped client for auth check (SELECT operations)
         const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getServerSession(supabase)
+
+        console.log('[API/dokumen/:id] PATCH START id:', params.id, 'session user:', session?.user?.id)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -91,12 +98,39 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           return Response.json({ error: 'Dokumen ini perlu direvisi oleh PPK, bukan oleh Anda' }, { status: 400 })
         }
 
-        const result = await updateDokumen(supabase, params.id, {
+        // Collect old URLs that will be replaced
+        const oldUrls: string[] = []
+        if (parsed.data.lampiranUrls) {
+          for (const newLamp of parsed.data.lampiranUrls) {
+            const oldLamp = dok.lampiran_urls.find(l => l.kelengkapan_id === newLamp.kelengkapan_id)
+            if (oldLamp && oldLamp.url !== newLamp.url) {
+              oldUrls.push(oldLamp.url)
+            }
+          }
+        }
+
+        const admin = createAdminClient()
+        const result = await updateDokumen(admin, params.id, {
           lampiranUrls: parsed.data.lampiranUrls,
+          judul: parsed.data.judul,
+          tahun: parsed.data.tahun,
+          fungsiId: parsed.data.fungsiId,
+          kegiatanId: parsed.data.kegiatanId,
+          tanggal: parsed.data.tanggal,
         })
+
+        console.log('[API/dokumen/:id] PATCH result:', result.error ?? 'success')
 
         if (result.error) {
           return Response.json({ error: result.error }, { status: 500 })
+        }
+
+        // Delete old files from storage (fire and forget)
+        for (const oldUrl of oldUrls) {
+          admin.storage.from('dokumen-lampiran').remove([oldUrl]).then(({ error }) => {
+            if (error) console.warn('[dokumen] Failed to delete old file:', oldUrl, error.message)
+            else console.log('[dokumen] Deleted old file:', oldUrl)
+          })
         }
 
         return Response.json({ dokumen: result.data })

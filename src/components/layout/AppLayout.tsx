@@ -30,6 +30,9 @@ import {
 
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
+
+// Routes where the mesh background should show
+const MESH_ROUTES = ['/', '/ppk', '/bendahara', '/arsiparis', '/admin']
 import type { RoleName } from '#/lib/types/auth'
 import { ROLE_DISPLAY } from '#/lib/types/auth'
 
@@ -69,10 +72,10 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'MANAGEMENT',
       items: [
-        { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: '/dokumen/aju' },
-        { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/dokumen/saya' },
-        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/dokumen/saya?status=NEED_REVISION' },
-        { id: 'selesai', label: 'Dokumen Selesai', icon: FileText, to: '/dokumen/saya?status=COMPLETED' },
+        { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: '/pegawai/dokumen/aju' },
+        { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/pegawai/dokumen' },
+        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/pegawai/dokumen?status=NEED_REVISION' },
+        { id: 'selesai', label: 'Dokumen Selesai', icon: FileText, to: '/pegawai/dokumen?status=COMPLETED' },
       ],
     },
     {
@@ -223,11 +226,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const supabase = React.useMemo(() => getBrowserClient(), [])
 
+  // Routes where the mesh background should show
+  const pathname = routerState.location.pathname
+  const isMeshPage = MESH_ROUTES.includes(pathname)
+  const isLoginPage = pathname === '/login'
+
   const fetchSession = React.useCallback(async () => {
     if (!supabase) { setIsLoading(false); setHasSession(false); return }
 
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setIsLoading(false); setHasSession(false); return }
+
+    // Re-validate with server to eliminate getSession warning
+    await supabase.auth.getUser()
 
     setHasSession(true)
     setUserName(session.user.user_metadata?.user_name as string | undefined)
@@ -267,12 +278,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         setUserRoles([]); setActiveRole('PEGAWAI')
         setUserName(undefined); setEmail(undefined)
         setHasSession(false); clearAppState()
+        // Redirect to login when session expires
+        if (!isLoginPage) {
+          window.location.href = '/login'
+        }
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         fetchSession()
       }
     })
     return () => { subscription.unsubscribe() }
-  }, [fetchSession])
+  }, [fetchSession, isLoginPage])
+
+  // Redirect to login when not authenticated
+  React.useEffect(() => {
+    if (!isLoading && !hasSession && !isLoginPage) {
+      window.location.href = '/login'
+    }
+  }, [isLoading, hasSession, isLoginPage])
 
   React.useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -303,14 +325,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     navigate({ to: '/login' })
   }
 
-  const pathname = routerState.location.pathname
-  const isLoginPage = pathname === '/login'
   const navGroups = NAV_CONFIG[activeRole] ?? []
 
   const isAdmin = activeRole === 'ADMIN'
   const initials = getInitials(userName, email)
   const displayName = userName || email?.split('@')[0] || 'User'
   const canSwitchRole = userRoles.length > 1 && !isAdmin
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium text-on-surface-variant">Memuat...</span>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect to login when not authenticated
+  if (!hasSession && !isLoginPage) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium text-on-surface-variant">Mengalihkan ke login...</span>
+        </div>
+      </div>
+    )
+  }
 
   // Login page: render children without sidebar/header
   if (isLoginPage) {
@@ -319,12 +363,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Animated Mesh Background */}
-      <div className="mesh-bg">
-        <div className="mesh-blob mesh-blob-1" />
-        <div className="mesh-blob mesh-blob-2" />
-        <div className="mesh-blob mesh-blob-3" />
-      </div>
+      {/* Animated Mesh Background — only on dashboard pages */}
+      {isMeshPage && (
+        <div className="mesh-bg">
+          <div className="mesh-blob mesh-blob-1" />
+          <div className="mesh-blob mesh-blob-2" />
+          <div className="mesh-blob mesh-blob-3" />
+        </div>
+      )}
 
       <div className="flex h-screen overflow-hidden bg-background relative selection:bg-primary-container selection:text-on-primary-container">
         {/* ── Sidebar ── */}
@@ -354,11 +400,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <nav className="space-y-1">
                   {group.items.map((item) => {
                     const Icon = item.icon
-                    // Special case: root "/" must be exact match
+                    // Check if current pathname matches this item
+                    // For paths with query params, also check pathname without query
+                    const itemPath = item.to?.split('?')[0] ?? ''
+                    const itemQuery = item.to?.split('?')[1] ?? ''
+                    const currentPath = routerState.location.pathname
+                    const currentQuery = routerState.location.searchStr?.replace(/^\?/, '') ?? ''
+
+                    // Bug fix: item tanpa query hanya aktif saat exact path match (bukan prefix).
+                    // Item dengan query aktif jika path cocok DAN query mengandung itemQuery.
+                    // Item dengan prefix (seperti detail dokumen) aktif jika path dimulai dengan itemPath.
                     const isActive = item.to
                       ? item.to === '/'
-                        ? pathname === '/'
-                        : pathname.startsWith(item.to + '/') || pathname === item.to
+                        ? currentPath === '/'
+                        : itemQuery
+                          // Item punya query (e.g. ?status=NEED_REVISION) → exact path + query match
+                          ? currentPath === itemPath && currentQuery.includes(itemQuery)
+                          // Item tanpa query → exact path + NO query (supaya tidak nabrak item berquery)
+                          : currentPath === itemPath && currentQuery === ''
                       : false
                     const isBuilt = !!item.to
 
@@ -386,11 +445,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link
                         key={item.id}
                         to={item.to!}
-                        className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 group ${
-                          isActive
+                        className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 group ${isActive
                             ? 'bg-primary text-white shadow-xl shadow-primary/30'
                             : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <span className={`${isActive ? 'text-white' : 'text-outline group-hover:text-primary'} transition-colors`}>
@@ -401,9 +459,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                           </span>
                         </div>
                         {item.badge && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black ${
-                            isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
-                          }`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black ${isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                            }`}>
                             {item.badge}
                           </span>
                         )}
@@ -493,11 +550,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                             <button
                               key={role}
                               onClick={() => handleRoleSwitch(role)}
-                              className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                                role === activeRole
+                              className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${role === activeRole
                                   ? 'bg-primary text-white'
                                   : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                              }`}
+                                }`}
                             >
                               {role}
                             </button>
@@ -527,20 +583,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Content */}
-          <main className="flex-1 flex overflow-y-auto">
-            <section className="flex-1 flex flex-col min-w-0 bg-background border-r border-outline-variant/15">
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <section className="flex-1 overflow-y-auto custom-scrollbar bg-background border-r border-outline-variant/15">
               {children}
-
-              <footer className="w-full py-4 flex justify-center gap-8 items-center mt-auto border-t border-outline-variant/15 shrink-0 bg-surface-container-lowest">
-                <span className="font-body text-[10px] font-bold tracking-widest text-outline uppercase">
-                  © {new Date().getFullYear()} BPS Kabupaten Kepulauan Seribu
-                </span>
-                <div className="flex gap-6">
-                  <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Support</button>
-                  <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Kebijakan</button>
-                </div>
-              </footer>
             </section>
+            <footer className="w-full py-4 flex justify-center gap-8 items-center border-t border-outline-variant/15 shrink-0 bg-surface-container-lowest">
+              <span className="font-body text-[10px] font-bold tracking-widest text-outline uppercase">
+                © {new Date().getFullYear()} BPS Kabupaten Kepulauan Seribu
+              </span>
+              <div className="flex gap-6">
+                <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Support</button>
+                <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Kebijakan</button>
+              </div>
+            </footer>
           </main>
         </div>
       </div>

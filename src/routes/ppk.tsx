@@ -1,14 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { getBrowserClient } from '#/lib/supabase-browser'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
-import { StatsBento } from '#/components/dashboard/StatsBento'
 
 export const Route = createFileRoute('/ppk')({
-  component: PpkDashboard,
+  component: PpkLayout,
 })
 
-function PpkDashboard() {
+function PpkLayout() {
   useEffect(() => {
     async function checkAuth() {
       const supabase = getBrowserClient()
@@ -25,9 +23,5 @@ function PpkDashboard() {
     checkAuth()
   }, [])
 
-  return (
-    <DashboardShell role="PPK">
-      <StatsBento role="PPK" />
-    </DashboardShell>
-  )
+  return <Outlet />
 }

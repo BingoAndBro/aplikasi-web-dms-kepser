@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { createAdminClient } from '#/lib/supabase-admin'
+import { getSession } from '#/lib/auth'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
-function createClient(request: Request) {
+function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
   const mockEvent = {
     request,
@@ -20,15 +21,16 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        // 1. Auth check
+        const authClient = createAuthClient(request)
+        const session = await getSession(authClient)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Role check
-        const { data: rolesData } = await supabase
+        // 2. Role check
+        const { data: rolesData } = await authClient
           .from('user_roles')
           .select('role:roles(nama)')
           .eq('user_id', session.user.id)
@@ -38,8 +40,10 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
           return Response.json({ error: 'Akses ditolak — bukan PPK' }, { status: 403 })
         }
 
-        // Fetch dokumen
-        const { data: dok, error } = await supabase
+        // 3. Fetch dokumen via admin client (bypass RLS)
+        const admin = createAdminClient()
+
+        const { data: dok, error } = await admin
           .from('dokumen_transaksi')
           .select('*')
           .eq('id', params.id)
@@ -49,15 +53,22 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
 
-        // Status check: must be IN_PPK_VALIDATION
-        if (dok.status !== 'IN_PPK_VALIDATION') {
-          return Response.json({ error: 'Dokumen tidak dalam tahap validasi PPK' }, { status: 400 })
+        // Status check: PPK hanya boleh lihat dokumen yang relevan dengannya
+        const ppkStatuses = [
+          'IN_PPK_VALIDATION',
+          'IN_BENDAHARA_APPROVAL',
+          'NEED_REVISION',
+          'COMPLETED',
+          'ARCHIVED',
+        ]
+        if (!ppkStatuses.includes(dok.status)) {
+          return Response.json({ error: 'Dokumen tidak tersedia untuk PPK' }, { status: 400 })
         }
 
         // Manual join: fungsi_nama
         let fungsiNama = '—'
         if (dok.fungsi_id) {
-          const { data: fns } = await supabase
+          const { data: fns } = await admin
             .from('master_fungsi')
             .select('nama')
             .eq('id', dok.fungsi_id)
@@ -68,7 +79,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
         // Manual join: kegiatan_nama
         let kegiatanNama = '—'
         if (dok.kegiatan_jenis_id) {
-          const { data: keg } = await supabase
+          const { data: keg } = await admin
             .from('master_kegiatan')
             .select('nama')
             .eq('id', dok.kegiatan_jenis_id)
@@ -85,7 +96,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
         }
 
         // Fetch activity log
-        const { data: logs } = await supabase
+        const { data: logs } = await admin
           .from('log_aktivitas')
           .select('*')
           .eq('dokumen_id', params.id)

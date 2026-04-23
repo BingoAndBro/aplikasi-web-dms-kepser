@@ -129,7 +129,7 @@ export function KelengkapanChecklist({
           )}
         </span>
         {requiredCount > 0 && uploadedCount < requiredCount && (
-          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+          <span className="flex items-center gap-1 text-amber-600">
             <AlertCircle size={12} />
             {requiredCount - uploadedCount} wajib belum diunggah
           </span>
@@ -146,9 +146,9 @@ export function KelengkapanChecklist({
               className={cn(
                 'flex items-start gap-3 p-3 rounded-lg border transition-colors',
                 uploaded
-                  ? 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10'
+                  ? 'border-green-200 bg-green-50/50'
                   : item.required
-                    ? 'border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-900/10'
+                    ? 'border-amber-200 bg-amber-50/30'
                     : 'border-border bg-background'
               )}
             >
@@ -164,7 +164,7 @@ export function KelengkapanChecklist({
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-xs font-medium text-on-surface">{item.nama_dokumen}</p>
                   {item.required && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 rounded">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
                       WAJIB
                     </span>
                   )}

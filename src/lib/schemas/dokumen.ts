@@ -34,11 +34,16 @@ export const createDokumenSchema = z.object({
 })
 
 // ---------------------------------------------------------------------------
-// Update dokumen (lampiran only — for resubmit)
+// Update dokumen (lampiran + optional metadata)
 // ---------------------------------------------------------------------------
 
 export const updateDokumenSchema = z.object({
-  lampiranUrls: z.array(lampiranUrlSchema),
+  lampiranUrls: z.array(lampiranUrlSchema).optional(),
+  judul: z.string().min(3, 'Judul minimal 3 karakter').max(255, 'Judul maksimal 255 karakter').optional(),
+  tahun: z.number().int().min(2000).max(2100).optional(),
+  fungsiId: z.string().uuid('ID fungsi tidak valid').optional(),
+  kegiatanId: z.string().uuid('ID kegiatan tidak valid').optional(),
+  tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal tidak valid').optional(),
 })
 
 // ---------------------------------------------------------------------------

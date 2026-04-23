@@ -193,19 +193,44 @@ export async function createDokumen(
 }
 
 /**
- * Update lampiran_urls on a dokumen. Only for NEED_REVISION target=USER.
+ * Update lampiran_urls and/or metadata on a dokumen.
  */
 export async function updateDokumen(
   supabase: SupabaseClient,
   id: string,
-  payload: { lampiranUrls: LampiranUrl[] }
+  payload: {
+    lampiranUrls?: LampiranUrl[]
+    judul?: string
+    tahun?: number
+    fungsiId?: string
+    kegiatanId?: string
+    tanggal?: string
+  }
 ): Promise<{ data?: DokumenRow; error?: string }> {
+  const updates: Record<string, any> = { updated_at: new Date().toISOString() }
+
+  if (payload.lampiranUrls !== undefined) {
+    updates.lampiran_urls = JSON.stringify(payload.lampiranUrls)
+  }
+  if (payload.judul !== undefined) {
+    updates.judul = payload.judul
+  }
+  if (payload.tahun !== undefined) {
+    updates.tahun = payload.tahun
+  }
+  if (payload.fungsiId !== undefined) {
+    updates.fungsi_id = payload.fungsiId
+  }
+  if (payload.kegiatanId !== undefined) {
+    updates.kegiatan_jenis_id = payload.kegiatanId
+  }
+  if (payload.tanggal !== undefined) {
+    updates.tanggal = payload.tanggal
+  }
+
   const { data, error } = await supabase
     .from('dokumen_transaksi')
-    .update({
-      lampiran_urls: JSON.stringify(payload.lampiranUrls),
-      updated_at: new Date().toISOString(),
-    })
+    .update(updates)
     .eq('id', id)
     .select('*')
     .single()

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
   Table,
   TableHeader,
@@ -72,7 +72,7 @@ function PpkInboxPage() {
       .select('id, nama')
       .eq('is_active', true)
       .order('nama', { ascending: true })
-      .then(({ data }) => { setFungsiList(data ?? []) })
+      .then(({ data }: { data: { id: string; nama: string }[] | null }) => { setFungsiList(data ?? []) })
   }, [])
 
   // Fetch inbox data
@@ -117,7 +117,7 @@ function PpkInboxPage() {
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   return (
-    <DashboardShell role="PPK" showHero={false}>
+    <PageLayout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -205,7 +205,7 @@ function PpkInboxPage() {
             </Button>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-surface-container-low/30 rounded-2xl border border-outline-variant/20">
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
               <FileText size={24} className="text-primary" />
             </div>
@@ -262,7 +262,7 @@ function PpkInboxPage() {
                           <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800 text-[10px] font-semibold">
+                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] font-semibold">
                             Validasi PPK
                           </Badge>
                         </TableCell>
@@ -305,6 +305,6 @@ function PpkInboxPage() {
           </>
         )}
       </div>
-    </DashboardShell>
+    </PageLayout>
   )
 }

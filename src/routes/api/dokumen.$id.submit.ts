@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
+import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession as getSession } from '#/lib/auth'
 import { transition } from '#/lib/fsm'
 import type { TransitionResult } from '#/lib/types/fsm'
@@ -28,8 +29,10 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        console.log('[API/dokumen/:id/submit] START id:', params.id)
         const supabase = createClient(request)
         const session = await getSession(supabase)
+        console.log('[API/dokumen/:id/submit] session user:', session?.user?.id)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -74,7 +77,7 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           transitionResult = transition(dok.status, 'SUBMIT', 'PEGAWAI')
           aksi = 'SUBMIT'
         } else if (dok.status === 'NEED_REVISION' && dok.revision_target === 'USER') {
-          transitionResult = transition(dok.status, 'RESUBMIT', 'PEGAWAI')
+          transitionResult = transition(dok.status, 'RESUBMIT', 'PEGAWAI', dok.revision_target)
           aksi = 'RESUBMIT'
         } else {
           return Response.json({
@@ -86,8 +89,11 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           return Response.json({ error: transitionResult.error || 'Transisi status gagal' }, { status: 400 })
         }
 
+        // Admin client for UPDATE operations (bypass RLS)
+        const admin = createAdminClient()
+
         // Update status via FSM result
-        const updateRes = await updateDokumenStatus(supabase, params.id, {
+        const updateRes = await updateDokumenStatus(admin, params.id, {
           status: transitionResult.newStatus,
           currentStep: transitionResult.newCurrentStep,
           revisionTarget: transitionResult.newRevisionTarget,
@@ -98,7 +104,7 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
         }
 
         // Insert log — append-only
-        const logRes = await insertLog(supabase, {
+        const logRes = await insertLog(admin, {
           dokumenId: params.id,
           userId: session.user.id,
           aksi,
@@ -110,7 +116,7 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           console.error('[submit] Log insert failed:', logRes.error)
         }
 
-        return Response.json({ success: true, dokumen: updateRes.data })
+        return Response.json({ success: true })
       },
     },
   },

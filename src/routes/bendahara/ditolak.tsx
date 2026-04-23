@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
@@ -8,8 +8,9 @@ import { FileText, ChevronRight, Eye, AlertCircle, Banknote } from 'lucide-react
 
 type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string; revision_notes: string | null }
 
-function formatDate(str: string) { try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str } }
 function truncate(str: string | null, len = 50): string { if (!str) return '—'; return str.length > len ? str.slice(0, len) + '...' : str }
+
+function formatDate(str: string) { try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str } }
 
 export const Route = createFileRoute('/bendahara/ditolak')({ component: BendaharaDitolakPage })
 
@@ -25,7 +26,7 @@ function BendaharaDitolakPage() {
   }, [])
 
   return (
-    <DashboardShell role="BENDAHARA" showHero={false}>
+    <PageLayout>
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
@@ -86,8 +87,6 @@ function BendaharaDitolakPage() {
           </div>
         )}
       </div>
-    </DashboardShell>
+    </PageLayout>
   )
 }
-
-export const Route = createFileRoute('/bendahara/ditolak')({ component: BendaharaDitolakPage })

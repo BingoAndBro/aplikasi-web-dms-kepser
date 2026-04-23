@@ -51,21 +51,21 @@ export const Route = createFileRoute('/api/dokumen/$id/download/$lampiranIndex')
 
         const lampiran = dok.lampiran_urls[index]
 
-        // Generate signed URL (1 hour expiry)
+        // Extract original filename from storage path: [user_id]/[kelengkapan_id]_[timestamp]_[filename]
+        const urlParts = lampiran.url.split('_')
+        const filename = urlParts.slice(2).join('_') || lampiran.nama
+
+        // Generate signed URL with download option (1 hour expiry)
         const supabaseAdmin = createAdminClient()
 
         const { data, error } = await supabaseAdmin.storage
           .from('dokumen-lampiran')
-          .createSignedUrl(lampiran.url, 3600) // 1 hour = 3600 seconds
+          .createSignedUrl(lampiran.url, 3600, { download: filename }) // Forces browser to save file
 
         if (error || !data) {
           console.error('[download] Signed URL error:', error)
           return Response.json({ error: 'Gagal membuat link download' }, { status: 500 })
         }
-
-        // Extract original filename from storage path: [user_id]/[kelengkapan_id]_[timestamp]_[filename]
-        const urlParts = lampiran.url.split('_')
-        const filename = urlParts.slice(2).join('_') || lampiran.nama
 
         return Response.json({ signedUrl: data.signedUrl, filename })
       },

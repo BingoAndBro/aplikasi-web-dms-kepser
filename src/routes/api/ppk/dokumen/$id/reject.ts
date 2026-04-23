@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { createAdminClient } from '#/lib/supabase-admin'
+import { getSession } from '#/lib/auth'
 import { rejectDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
 import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
 
-function createClient(request: Request) {
+function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
   const mockEvent = {
     request,
@@ -22,15 +23,15 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/reject')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const authClient = createAuthClient(request)
+        const session = await getSession(authClient)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
         // Role check
-        const { data: rolesData } = await supabase
+        const { data: rolesData } = await authClient
           .from('user_roles')
           .select('role:roles(nama)')
           .eq('user_id', session.user.id)
@@ -56,8 +57,9 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/reject')({
           }, { status: 400 })
         }
 
-        // Fetch dokumen
-        const { data: dok, error: dokError } = await supabase
+        // Fetch dokumen via admin client (bypass RLS)
+        const admin = createAdminClient()
+        const { data: dok, error: dokError } = await admin
           .from('dokumen_transaksi')
           .select('id, status')
           .eq('id', params.id)
@@ -81,7 +83,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/reject')({
         }
 
         // Update status with catatan
-        const updateErr = await updateDokumenStatus(supabase, params.id, {
+        const updateErr = await updateDokumenStatus(admin, params.id, {
           status: result.newStatus,
           currentStep: result.newCurrentStep,
           revisionTarget: result.newRevisionTarget,
@@ -92,7 +94,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/reject')({
         }
 
         // Insert log
-        await insertLog(supabase, {
+        await insertLog(admin, {
           dokumenId: params.id,
           userId: session.user.id,
           aksi: 'PPK_REJECT',

@@ -54,6 +54,13 @@ const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> =
     newRevisionTarget: null,
     stepUrutan: 2,
   },
+  // PPK returns document to USER from revision page (NEED_REVISION, target=PPK -> USER)
+  'NEED_REVISION:KEMBALIKAN': {
+    newStatus: 'NEED_REVISION',
+    newCurrentStep: 'PPK',
+    newRevisionTarget: 'USER',
+    stepUrutan: 1,
+  },
   'COMPLETED:ARCHIVE': {
     newStatus: 'ARCHIVED',
     newCurrentStep: null,
@@ -153,6 +160,8 @@ function isActorValidForAction(
       return role === 'PEGAWAI'
     case 'RESUBMIT_PPK':
       return role === 'PPK'
+    case 'KEMBALIKAN':
+      return role === 'PPK' && status === 'NEED_REVISION'
     case 'ARCHIVE':
     case 'SKIP':
       return role === 'ARSIPARIS'
