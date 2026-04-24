@@ -8,7 +8,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MasterFungsi } from './db/schema'
-import { createFungsiSchema, createKegiatanSchema, createKelengkapanSchema } from './schemas/master-data'
+import { createFungsiSchema, createKegiatanSchema, createKelengkapanSchema, createJenisSchema, createKategoriSchema, createDetailSchema } from './schemas/master-data'
 
 // ---------------------------------------------------------------------------
 // Types for API responses (with joined data)
@@ -48,6 +48,40 @@ export type KelengkapanRow = {
   created_at: string
   kegiatan_nama?: string
   fungsi_nama?: string
+  jenis_permintaan_id?: string | null
+  kategori_permintaan_id?: string | null
+  detail_permintaan_id?: string | null
+}
+
+export type JenisRow = {
+  id: string
+  nama: string
+  deskripsi: string | null
+  is_active: boolean
+  created_at: string
+  jumlah_kategori?: number
+}
+
+export type KategoriRow = {
+  id: string
+  nama: string
+  deskripsi: string | null
+  is_active: boolean
+  created_at: string
+  jenis_permintaan_id: string
+  jenis_nama?: string
+  jumlah_detail?: number
+}
+
+export type DetailRow = {
+  id: string
+  nama: string
+  deskripsi: string | null
+  is_active: boolean
+  created_at: string
+  kategori_permintaan_id: string
+  kategori_nama?: string
+  jenis_nama?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +349,55 @@ export async function getKelengkapanByKegiatanWithInfo(
   }
 }
 
+export async function getKelengkapanByChain(
+  supabase: SupabaseClient,
+  fungsiId: string,
+  kegiatanId: string,
+  jenisId?: string,
+  kategoriId?: string,
+  detailId?: string,
+): Promise<KelengkapanRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('master_kelengkapan_dokumen')
+      .select(`
+        *,
+        master_kegiatan(nama, master_fungsi(nama))
+      `)
+      .eq('kegiatan_id', kegiatanId)
+      .order('is_ketua_tim', { ascending: true })
+      .order('nama_dokumen', { ascending: true })
+
+    if (error) {
+      console.error('[master-data] getKelengkapanByChain error:', error)
+      return []
+    }
+
+    // Filter in-memory: show item if its chain matches OR it's a legacy item (all chain cols null)
+    const filtered = (data as any[]).filter(row => {
+      const isLegacy = !row.jenis_permintaan_id && !row.kategori_permintaan_id && !row.detail_permintaan_id
+      if (isLegacy) return true
+
+      // Non-legacy items: must match the chain
+      // Jenis must match (or be null = legacy, already handled above)
+      if (jenisId && row.jenis_permintaan_id && row.jenis_permintaan_id !== jenisId) return false
+      if (kategoriId && row.kategori_permintaan_id && row.kategori_permintaan_id !== kategoriId) return false
+      if (detailId && row.detail_permintaan_id && row.detail_permintaan_id !== detailId) return false
+
+      return true
+    })
+
+    return filtered.map(row => ({
+      ...row,
+      kegiatan_nama: row.master_kegiatan?.nama,
+      fungsi_nama: row.master_kegiatan?.master_fungsi?.nama,
+    })) as KelengkapanRow[]
+  } catch (err) {
+    console.error('[master-data] getKelengkapanByChain exception:', err)
+    return []
+  }
+}
+
 // ---------------------------------------------------------------------------
 // CRUD — Fungsi
 // ---------------------------------------------------------------------------
@@ -472,7 +555,7 @@ export async function deleteKegiatan(
 
 export async function createKelengkapan(
   supabase: SupabaseClient,
-  payload: { kegiatanId: string; isKetuaTim: boolean; namaDokumen: string; required: boolean }
+  payload: { kegiatanId: string; isKetuaTim: boolean; namaDokumen: string; required: boolean; jenisPermintaanId?: string; kategoriPermintaanId?: string; detailPermintaanId?: string }
 ): Promise<{ data?: KelengkapanRow; error?: string }> {
   const parsed = createKelengkapanSchema.safeParse(payload)
   if (!parsed.success) {
@@ -486,6 +569,9 @@ export async function createKelengkapan(
       is_ketua_tim: parsed.data.isKetuaTim,
       nama_dokumen: parsed.data.namaDokumen,
       required: parsed.data.required,
+      jenis_permintaan_id: parsed.data.jenisPermintaanId ?? null,
+      kategori_permintaan_id: parsed.data.kategoriPermintaanId ?? null,
+      detail_permintaan_id: parsed.data.detailPermintaanId ?? null,
     })
     .select('*, master_kegiatan(nama, master_fungsi(nama))')
     .single()
@@ -505,11 +591,19 @@ export async function createKelengkapan(
 export async function updateKelengkapan(
   supabase: SupabaseClient,
   id: string,
-  payload: { isKetuaTim?: boolean; namaDokumen?: string; required?: boolean }
+  payload: { isKetuaTim?: boolean; namaDokumen?: string; required?: boolean; jenisPermintaanId?: string | null; kategoriPermintaanId?: string | null; detailPermintaanId?: string | null }
 ): Promise<{ data?: KelengkapanRow; error?: string }> {
+  const updatePayload: Record<string, unknown> = {}
+  if (payload.isKetuaTim !== undefined) updatePayload.is_ketua_tim = payload.isKetuaTim
+  if (payload.namaDokumen !== undefined) updatePayload.nama_dokumen = payload.namaDokumen
+  if (payload.required !== undefined) updatePayload.required = payload.required
+  if (payload.jenisPermintaanId !== undefined) updatePayload.jenis_permintaan_id = payload.jenisPermintaanId
+  if (payload.kategoriPermintaanId !== undefined) updatePayload.kategori_permintaan_id = payload.kategoriPermintaanId
+  if (payload.detailPermintaanId !== undefined) updatePayload.detail_permintaan_id = payload.detailPermintaanId
+
   const { data, error } = await supabase
     .from('master_kelengkapan_dokumen')
-    .update({ is_ketua_tim: payload.isKetuaTim, nama_dokumen: payload.namaDokumen, required: payload.required })
+    .update(updatePayload)
     .eq('id', id)
     .select('*, master_kegiatan(nama, master_fungsi(nama))')
     .single()
@@ -536,5 +630,433 @@ export async function deleteKelengkapan(
     .eq('id', id)
 
   if (error) return { error: 'Gagal menghapus kelengkapan' }
+  return {}
+}
+
+// ---------------------------------------------------------------------------
+// Jenis Permintaan Helpers
+// ---------------------------------------------------------------------------
+
+export async function getAllJenis(
+  supabase: SupabaseClient
+): Promise<JenisRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('master_jenis_permintaan')
+      .select('*')
+      .eq('is_active', true)
+      .order('nama', { ascending: true })
+
+    if (error) {
+      console.error('[master-data] getAllJenis error:', error)
+      return []
+    }
+
+    return (data as JenisRow[]) ?? []
+  } catch (err) {
+    console.error('[master-data] getAllJenis exception:', err)
+    return []
+  }
+}
+
+export async function getAllJenisWithCount(
+  supabase: SupabaseClient
+): Promise<JenisRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('master_jenis_permintaan')
+      .select('*, master_kategori_permintaan(id)')
+      .eq('is_active', true)
+      .order('nama', { ascending: true })
+
+    if (error) {
+      console.error('[master-data] getAllJenisWithCount error:', error)
+      return []
+    }
+
+    return (data as any[]).map(row => ({
+      ...row,
+      jumlah_kategori: Array.isArray(row.master_kategori_permintaan)
+        ? row.master_kategori_permintaan.length
+        : 0,
+    })) as JenisRow[]
+  } catch (err) {
+    console.error('[master-data] getAllJenisWithCount exception:', err)
+    return []
+  }
+}
+
+export async function getAllKategoriWithCount(
+  supabase: SupabaseClient
+): Promise<KategoriRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('master_kategori_permintaan')
+      .select('*, master_jenis_permintaan(nama), master_detail_permintaan(id)')
+      .eq('is_active', true)
+      .order('nama', { ascending: true })
+
+    if (error) {
+      console.error('[master-data] getAllKategoriWithCount error:', error)
+      return []
+    }
+
+    return (data as any[]).map(row => ({
+      ...row,
+      jenis_nama: row.master_jenis_permintaan?.nama,
+      jumlah_detail: Array.isArray(row.master_detail_permintaan)
+        ? row.master_detail_permintaan.length
+        : 0,
+    })) as KategoriRow[]
+  } catch (err) {
+    console.error('[master-data] getAllKategoriWithCount exception:', err)
+    return []
+  }
+}
+
+export async function getKategoriByJenis(
+  supabase: SupabaseClient,
+  jenisId: string
+): Promise<KategoriRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('master_kategori_permintaan')
+      .select('*, master_jenis_permintaan(nama)')
+      .eq('jenis_permintaan_id', jenisId)
+      .eq('is_active', true)
+      .order('nama', { ascending: true })
+
+    if (error) {
+      console.error('[master-data] getKategoriByJenis error:', error)
+      return []
+    }
+
+    return (data as any[]).map(row => ({
+      ...row,
+      jenis_nama: row.master_jenis_permintaan?.nama,
+    })) as KategoriRow[]
+  } catch (err) {
+    console.error('[master-data] getKategoriByJenis exception:', err)
+    return []
+  }
+}
+
+export async function getDetailByKategori(
+  supabase: SupabaseClient,
+  kategoriId: string
+): Promise<DetailRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('master_detail_permintaan')
+      .select('*, master_kategori_permintaan(nama, master_jenis_permintaan(nama))')
+      .eq('kategori_permintaan_id', kategoriId)
+      .eq('is_active', true)
+      .order('nama', { ascending: true })
+
+    if (error) {
+      console.error('[master-data] getDetailByKategori error:', error)
+      return []
+    }
+
+    return (data as any[]).map(row => ({
+      ...row,
+      kategori_nama: row.master_kategori_permintaan?.nama,
+      jenis_nama: row.master_kategori_permintaan?.master_jenis_permintaan?.nama,
+    })) as DetailRow[]
+  } catch (err) {
+    console.error('[master-data] getDetailByKategori exception:', err)
+    return []
+  }
+}
+
+export async function hasDetailChildren(
+  supabase: SupabaseClient,
+  kategoriId: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('master_detail_permintaan')
+      .select('id')
+      .eq('kategori_permintaan_id', kategoriId)
+      .eq('is_active', true)
+      .limit(1)
+
+    if (error) return false
+    return (data?.length ?? 0) > 0
+  } catch {
+    return false
+  }
+}
+
+export async function getAllDetailWithInfo(
+  supabase: SupabaseClient
+): Promise<DetailRow[]> {
+  try {
+    const { data, error } = await supabase
+      .from('master_detail_permintaan')
+      .select('*, master_kategori_permintaan(nama, master_jenis_permintaan(nama))')
+      .eq('is_active', true)
+      .order('nama', { ascending: true })
+
+    if (error) {
+      console.error('[master-data] getAllDetailWithInfo error:', error)
+      return []
+    }
+
+    return (data as any[]).map(row => ({
+      ...row,
+      kategori_nama: row.master_kategori_permintaan?.nama,
+      jenis_nama: row.master_kategori_permintaan?.master_jenis_permintaan?.nama,
+    })) as DetailRow[]
+  } catch (err) {
+    console.error('[master-data] getAllDetailWithInfo exception:', err)
+    return []
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CRUD — Jenis
+// ---------------------------------------------------------------------------
+
+export async function createJenis(
+  supabase: SupabaseClient,
+  payload: { nama: string; deskripsi?: string }
+): Promise<{ data?: JenisRow; error?: string }> {
+  const parsed = createJenisSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().formErrors.join(', ') }
+  }
+
+  const { data: existing } = await supabase
+    .from('master_jenis_permintaan')
+    .select('id')
+    .eq('nama', parsed.data.nama)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (existing) {
+    return { error: `Jenis permintaan "${parsed.data.nama}" sudah ada` }
+  }
+
+  const { data, error } = await supabase
+    .from('master_jenis_permintaan')
+    .insert({ nama: parsed.data.nama, deskripsi: parsed.data.deskripsi ?? null })
+    .select()
+    .single()
+
+  if (error) return { error: 'Gagal membuat jenis permintaan' }
+  return { data: data as JenisRow }
+}
+
+export async function updateJenis(
+  supabase: SupabaseClient,
+  id: string,
+  payload: { nama?: string; deskripsi?: string; isActive?: boolean }
+): Promise<{ data?: JenisRow; error?: string }> {
+  const { data, error } = await supabase
+    .from('master_jenis_permintaan')
+    .update({
+      nama: payload.nama,
+      deskripsi: payload.deskripsi,
+      is_active: payload.isActive,
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return { error: 'Gagal mengupdate jenis permintaan' }
+  return { data: data as JenisRow }
+}
+
+export async function deleteJenis(
+  supabase: SupabaseClient,
+  id: string
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from('master_jenis_permintaan')
+    .update({ is_active: false })
+    .eq('id', id)
+
+  if (error) return { error: 'Gagal menghapus jenis permintaan' }
+  return {}
+}
+
+// ---------------------------------------------------------------------------
+// CRUD — Kategori
+// ---------------------------------------------------------------------------
+
+export async function createKategori(
+  supabase: SupabaseClient,
+  payload: { jenisPermintaanId: string; nama: string; deskripsi?: string }
+): Promise<{ data?: KategoriRow; error?: string }> {
+  const parsed = createKategoriSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().formErrors.join(', ') }
+  }
+
+  const { data: jenis } = await supabase
+    .from('master_jenis_permintaan')
+    .select('id, nama')
+    .eq('id', parsed.data.jenisPermintaanId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (!jenis) return { error: 'Jenis permintaan tidak ditemukan atau tidak aktif' }
+
+  const { data: existing } = await supabase
+    .from('master_kategori_permintaan')
+    .select('id')
+    .eq('nama', parsed.data.nama)
+    .eq('jenis_permintaan_id', parsed.data.jenisPermintaanId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (existing) return { error: `Kategori "${parsed.data.nama}" sudah ada di jenis "${jenis.nama}"` }
+
+  const { data, error } = await supabase
+    .from('master_kategori_permintaan')
+    .insert({
+      jenis_permintaan_id: parsed.data.jenisPermintaanId,
+      nama: parsed.data.nama,
+      deskripsi: parsed.data.deskripsi ?? null,
+    })
+    .select('*, master_jenis_permintaan(nama)')
+    .single()
+
+  if (error) return { error: 'Gagal membuat kategori permintaan' }
+
+  const row = data as any
+  return { data: { ...row, jenis_nama: row.master_jenis_permintaan?.nama } as KategoriRow }
+}
+
+export async function updateKategori(
+  supabase: SupabaseClient,
+  id: string,
+  payload: { jenisPermintaanId?: string; nama?: string; deskripsi?: string; isActive?: boolean }
+): Promise<{ data?: KategoriRow; error?: string }> {
+  const { data, error } = await supabase
+    .from('master_kategori_permintaan')
+    .update({
+      jenis_permintaan_id: payload.jenisPermintaanId,
+      nama: payload.nama,
+      deskripsi: payload.deskripsi,
+      is_active: payload.isActive,
+    })
+    .eq('id', id)
+    .select('*, master_jenis_permintaan(nama)')
+    .single()
+
+  if (error) return { error: 'Gagal mengupdate kategori permintaan' }
+
+  const row = data as any
+  return { data: { ...row, jenis_nama: row.master_jenis_permintaan?.nama } as KategoriRow }
+}
+
+export async function deleteKategori(
+  supabase: SupabaseClient,
+  id: string
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from('master_kategori_permintaan')
+    .update({ is_active: false })
+    .eq('id', id)
+
+  if (error) return { error: 'Gagal menghapus kategori permintaan' }
+  return {}
+}
+
+// ---------------------------------------------------------------------------
+// CRUD — Detail
+// ---------------------------------------------------------------------------
+
+export async function createDetail(
+  supabase: SupabaseClient,
+  payload: { kategoriPermintaanId: string; nama: string; deskripsi?: string }
+): Promise<{ data?: DetailRow; error?: string }> {
+  const parsed = createDetailSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().formErrors.join(', ') }
+  }
+
+  const { data: kategori } = await supabase
+    .from('master_kategori_permintaan')
+    .select('id, nama')
+    .eq('id', parsed.data.kategoriPermintaanId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (!kategori) return { error: 'Kategori permintaan tidak ditemukan atau tidak aktif' }
+
+  const { data: existing } = await supabase
+    .from('master_detail_permintaan')
+    .select('id')
+    .eq('nama', parsed.data.nama)
+    .eq('kategori_permintaan_id', parsed.data.kategoriPermintaanId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (existing) return { error: `Detail "${parsed.data.nama}" sudah ada di kategori "${kategori.nama}"` }
+
+  const { data, error } = await supabase
+    .from('master_detail_permintaan')
+    .insert({
+      kategori_permintaan_id: parsed.data.kategoriPermintaanId,
+      nama: parsed.data.nama,
+      deskripsi: parsed.data.deskripsi ?? null,
+    })
+    .select('*, master_kategori_permintaan(nama, master_jenis_permintaan(nama))')
+    .single()
+
+  if (error) return { error: 'Gagal membuat detail permintaan' }
+
+  const row = data as any
+  return {
+    data: {
+      ...row,
+      kategori_nama: row.master_kategori_permintaan?.nama,
+      jenis_nama: row.master_kategori_permintaan?.master_jenis_permintaan?.nama,
+    } as DetailRow,
+  }
+}
+
+export async function updateDetail(
+  supabase: SupabaseClient,
+  id: string,
+  payload: { kategoriPermintaanId?: string; nama?: string; deskripsi?: string; isActive?: boolean }
+): Promise<{ data?: DetailRow; error?: string }> {
+  const { data, error } = await supabase
+    .from('master_detail_permintaan')
+    .update({
+      kategori_permintaan_id: payload.kategoriPermintaanId,
+      nama: payload.nama,
+      deskripsi: payload.deskripsi,
+      is_active: payload.isActive,
+    })
+    .eq('id', id)
+    .select('*, master_kategori_permintaan(nama, master_jenis_permintaan(nama))')
+    .single()
+
+  if (error) return { error: 'Gagal mengupdate detail permintaan' }
+
+  const row = data as any
+  return {
+    data: {
+      ...row,
+      kategori_nama: row.master_kategori_permintaan?.nama,
+      jenis_nama: row.master_kategori_permintaan?.master_jenis_permintaan?.nama,
+    } as DetailRow,
+  }
+}
+
+export async function deleteDetail(
+  supabase: SupabaseClient,
+  id: string
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from('master_detail_permintaan')
+    .update({ is_active: false })
+    .eq('id', id)
+
+  if (error) return { error: 'Gagal menghapus detail permintaan' }
   return {}
 }

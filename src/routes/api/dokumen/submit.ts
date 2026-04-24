@@ -56,7 +56,12 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         const requiredItems = await getKelengkapanRequired(
           supabase,
           parsed.data.kegiatanJenisId,
-          parsed.data.isKetuaTim
+          parsed.data.isKetuaTim,
+          {
+            jenisPermintaanId: parsed.data.jenisPermintaanId,
+            kategoriPermintaanId: parsed.data.kategoriPermintaanId,
+            detailPermintaanId: parsed.data.detailPermintaanId,
+          }
         )
         const uploadedIds = parsed.data.lampiranUrls.map(l => l.kelengkapan_id)
         const missing = requiredItems.filter(r => r.required && !uploadedIds.includes(r.id))
@@ -104,6 +109,9 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           tanggal: parsed.data.tanggal,
           lampiranUrls: parsed.data.lampiranUrls,
           createdBy: session.user.id,
+          jenisPermintaanId: parsed.data.jenisPermintaanId,
+          kategoriPermintaanId: parsed.data.kategoriPermintaanId,
+          detailPermintaanId: parsed.data.detailPermintaanId,
         })
 
         if (createResult.error || !createResult.data) {

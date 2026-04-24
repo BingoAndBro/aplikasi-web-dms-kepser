@@ -40,6 +40,24 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
           if (k) kegiatanNama = k.nama
         }
 
+        let jenisPermintaanNama: string | undefined
+        if (dok.jenis_permintaan_id) {
+          const { data: j } = await supabase.from('master_jenis_permintaan').select('nama').eq('id', dok.jenis_permintaan_id).single()
+          if (j) jenisPermintaanNama = j.nama
+        }
+
+        let kategoriPermintaanNama: string | undefined
+        if (dok.kategori_permintaan_id) {
+          const { data: k } = await supabase.from('master_kategori_permintaan').select('nama').eq('id', dok.kategori_permintaan_id).single()
+          if (k) kategoriPermintaanNama = k.nama
+        }
+
+        let detailPermintaanNama: string | undefined
+        if (dok.detail_permintaan_id) {
+          const { data: d } = await supabase.from('master_detail_permintaan').select('nama').eq('id', dok.detail_permintaan_id).single()
+          if (d) detailPermintaanNama = d.nama
+        }
+
         let lampiranUrls: LampiranUrl[] = []
         if (dok.lampiran_urls) {
           lampiranUrls = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
@@ -66,6 +84,12 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
             is_ketua_tim: dok.is_ketua_tim, status: dok.status, lampiran_urls: lampiranUrls,
             tahun: dok.tahun, tanggal: dok.tanggal, created_by: dok.created_by,
             created_at: dok.created_at, revision_notes: dok.revision_notes,
+            jenis_permintaan_id: dok.jenis_permintaan_id,
+            kategori_permintaan_id: dok.kategori_permintaan_id,
+            detail_permintaan_id: dok.detail_permintaan_id,
+            jenis_permintaan_nama: jenisPermintaanNama,
+            kategori_permintaan_nama: kategoriPermintaanNama,
+            detail_permintaan_nama: detailPermintaanNama,
           },
           ppkValidation: logs ? { user_id: logs.user_id, timestamp: logs.timestamp } : null,
           logs: logs2 ?? [],

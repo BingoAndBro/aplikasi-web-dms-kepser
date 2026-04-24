@@ -55,35 +55,37 @@ CREATE POLICY "storage_delete_own" ON "storage"."objects"
   );
 
 -- ============================================================
--- Orphan file cleanup trigger
--- When dokumen_transaksi is deleted, auto-delete all storage files
--- Storage path format: [user_id]/[dokumen_id]/[filename]
+-- Orphan file cleanup trigger — COMMENTED OUT
+-- Reason: Supabase hosted blocks direct DELETE on storage.objects table.
+-- Storage cleanup is handled by the application layer (dokumen.$id.ts PATCH handler)
+-- using supabase.storage.from().remove(), which is the correct approach.
+-- Keeping the function definition commented for reference only.
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION cleanup_dokumen_files()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  doc_id_text TEXT;
-  user_path TEXT;
-BEGIN
-  doc_id_text := OLD.id::text;
-  user_path := OLD.created_by::text || '/' || doc_id_text || '/';
-
-  -- Delete all files in the dokumen's folder
-  DELETE FROM "storage"."objects"
-  WHERE bucket_id = 'dokumen-lampiran'
-  AND name LIKE user_path || '%';
-
-  RETURN OLD;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS on_dokumen_delete_cleanup ON "public"."dokumen_transaksi";
-CREATE TRIGGER on_dokumen_delete_cleanup
-  AFTER DELETE ON "public"."dokumen_transaksi"
-  FOR EACH ROW
-  EXECUTE FUNCTION cleanup_dokumen_files();
+-- CREATE OR REPLACE FUNCTION cleanup_dokumen_files()
+-- RETURNS TRIGGER
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- SET search_path = public
+-- AS $$
+-- DECLARE
+--   doc_id_text TEXT;
+--   user_path TEXT;
+-- BEGIN
+--   doc_id_text := OLD.id::text;
+--   user_path := OLD.created_by::text || '/' || doc_id_text || '/';
+--
+--   -- Delete all files in the dokumen's folder
+--   DELETE FROM "storage"."objects"
+--   WHERE bucket_id = 'dokumen-lampiran'
+--   AND name LIKE user_path || '%';
+--
+--   RETURN OLD;
+-- END;
+-- $$;
+--
+-- DROP TRIGGER IF EXISTS on_dokumen_delete_cleanup ON "public"."dokumen_transaksi";
+-- CREATE TRIGGER on_dokumen_delete_cleanup
+--   AFTER DELETE ON "public"."dokumen_transaksi"
+--   FOR EACH ROW
+--   EXECUTE FUNCTION cleanup_dokumen_files();

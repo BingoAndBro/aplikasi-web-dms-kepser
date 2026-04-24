@@ -43,6 +43,12 @@ type DokumenResubmit = {
   tahun: number
   tanggal: string
   created_at: string
+  jenis_permintaan_id?: string | null
+  kategori_permintaan_id?: string | null
+  detail_permintaan_id?: string | null
+  jenis_permintaan_nama?: string
+  kategori_permintaan_nama?: string
+  detail_permintaan_nama?: string
 }
 
 const WORKFLOW_STEPS = [
@@ -108,7 +114,18 @@ function PpkResubmitPage() {
       setDokumen(json.dokumen)
       setLampiranUrls(json.dokumen.lampiran_urls ?? [])
       if (supabase && json.dokumen.kegiatan_jenis_id) {
-        const { data: kelData } = await supabase.from('master_kelengkapan_dokumen').select('id, nama_dokumen, required').eq('kegiatan_id', json.dokumen.kegiatan_jenis_id).eq('is_ketua_tim', json.dokumen.is_ketua_tim)
+        const dokData = json.dokumen
+        let query = supabase.from('master_kelengkapan_dokumen').select('id, nama_dokumen, required, jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
+          .eq('kegiatan_id', dokData.kegiatan_jenis_id)
+          .eq('is_ketua_tim', dokData.is_ketua_tim)
+        if (dokData.detail_permintaan_id) {
+          query = query.eq('detail_permintaan_id', dokData.detail_permintaan_id)
+        } else if (dokData.kategori_permintaan_id) {
+          query = query.eq('kategori_permintaan_id', dokData.kategori_permintaan_id).is('detail_permintaan_id', null)
+        } else if (dokData.jenis_permintaan_id) {
+          query = query.eq('jenis_permintaan_id', dokData.jenis_permintaan_id).is('kategori_permintaan_id', null).is('detail_permintaan_id', null)
+        }
+        const { data: kelData } = await query
         if (kelData) setKelengkapan(kelData as KelengkapanItem[])
       }
     } catch { setFetchError('Terjadi kesalahan') } finally { setLoading(false) }
@@ -253,6 +270,15 @@ function PpkResubmitPage() {
         <div className="grid grid-cols-2 gap-4">
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Fungsi</p><p className="text-sm font-semibold text-on-surface">{dokumen.fungsi_nama ?? '—'}</p></div>
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kegiatan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kegiatan_nama ?? '—'}</p></div>
+          {dokumen.jenis_permintaan_id && (
+            <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Jenis Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.jenis_permintaan_nama ?? '—'}</p></div>
+          )}
+          {dokumen.kategori_permintaan_id && (
+            <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kategori Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kategori_permintaan_nama ?? '—'}</p></div>
+          )}
+          {dokumen.detail_permintaan_id && (
+            <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Detail Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.detail_permintaan_nama ?? '—'}</p></div>
+          )}
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tahun</p><p className="text-sm font-semibold text-on-surface">{dokumen.tahun}</p></div>
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p><p className="text-sm font-semibold text-on-surface">{dokumen.tanggal ? formatDate(dokumen.tanggal) : '—'}</p></div>
         </div>

@@ -39,6 +39,12 @@ type DokumenDetail = {
   created_by: string
   created_at: string
   updated_at: string
+  jenis_permintaan_id?: string | null
+  kategori_permintaan_id?: string | null
+  detail_permintaan_id?: string | null
+  jenis_permintaan_nama?: string
+  kategori_permintaan_nama?: string
+  detail_permintaan_nama?: string
 }
 
 const WORKFLOW_STEPS = [
@@ -240,6 +246,15 @@ function PpkDokumenDetailIndexPage() {
         <div className="grid grid-cols-2 gap-4">
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Fungsi</p><p className="text-sm font-semibold text-on-surface">{dokumen.fungsi_nama ?? '—'}</p></div>
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kegiatan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kegiatan_nama ?? '—'}</p></div>
+          {dokumen.jenis_permintaan_id && (
+            <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Jenis Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.jenis_permintaan_nama ?? '—'}</p></div>
+          )}
+          {dokumen.kategori_permintaan_id && (
+            <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kategori Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kategori_permintaan_nama ?? '—'}</p></div>
+          )}
+          {dokumen.detail_permintaan_id && (
+            <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Detail Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.detail_permintaan_nama ?? '—'}</p></div>
+          )}
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tahun</p><p className="text-sm font-semibold text-on-surface">{dokumen.tahun}</p></div>
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p><p className="text-sm font-semibold text-on-surface">{formatDate(dokumen.tanggal)}</p></div>
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>

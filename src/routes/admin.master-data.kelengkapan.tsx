@@ -5,18 +5,24 @@ import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { FileCheck, ChevronRight, Plus, Edit2, Trash2, CheckCircle2, Circle } from 'lucide-react'
+import { FileCheck, ChevronRight, Plus, Edit2, Trash2, CheckCircle2, Circle, Lock } from 'lucide-react'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import {
   getAllFungsi,
   getKegiatanByFungsi,
-  getKelengkapanByKegiatanWithInfo,
+  getKelengkapanByChain,
   createKelengkapan,
   updateKelengkapan,
   deleteKelengkapan,
+  getAllJenis,
+  getKategoriByJenis,
+  getDetailByKategori,
   type FungsiRow,
   type KegiatanRow,
   type KelengkapanRow,
+  type JenisRow,
+  type KategoriRow,
+  type DetailRow,
 } from '#/lib/master-data'
 
 export const Route = createFileRoute('/admin/master-data/kelengkapan')({
@@ -26,10 +32,16 @@ export const Route = createFileRoute('/admin/master-data/kelengkapan')({
 function KelengkapanPage() {
   const [fungsis, setFungsis] = useState<FungsiRow[]>([])
   const [kegiatans, setKegiatans] = useState<KegiatanRow[]>([])
+  const [jenisList, setJenisList] = useState<JenisRow[]>([])
+  const [kategoriList, setKategoriList] = useState<KategoriRow[]>([])
+  const [detailList, setDetailList] = useState<DetailRow[]>([])
   const [items, setItems] = useState<KelengkapanRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filterFungsi, setFilterFungsi] = useState('')
   const [filterKegiatan, setFilterKegiatan] = useState('')
+  const [filterJenis, setFilterJenis] = useState('')
+  const [filterKategori, setFilterKategori] = useState('')
+  const [filterDetail, setFilterDetail] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<KelengkapanRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<KelengkapanRow | null>(null)
@@ -39,17 +51,36 @@ function KelengkapanPage() {
   const [formIsKetuaTim, setFormIsKetuaTim] = useState(false)
   const [formNamaDokumen, setFormNamaDokumen] = useState('')
   const [formRequired, setFormRequired] = useState(true)
+  const [formJenisId, setFormJenisId] = useState('')
+  const [formKategoriId, setFormKategoriId] = useState('')
+  const [formDetailId, setFormDetailId] = useState('')
 
-  useEffect(() => { fetchFungsis() }, [])
+  // Chain complete (leaf node) when:
+  // - Kategori selected + kategori tidak punya Detail children (leaf node), OR
+  // - Detail selected (leaf node)
+  // Jangan tampilkan kelengkapan jika belum sampai leaf node.
+  const chainComplete =
+    (filterJenis && filterKategori && detailList.length === 0) ||
+    (filterJenis && filterKategori && filterDetail)
+
+  useEffect(() => { fetchFungsis(); fetchJenis() }, [])
 
   useEffect(() => {
     if (filterFungsi) { fetchKegiatans(filterFungsi) } else { setKegiatans([]); setFilterKegiatan(''); setItems([]) }
   }, [filterFungsi])
 
   useEffect(() => {
-    if (filterKegiatan) fetchKelengkapan(filterKegiatan)
-    else setItems([])
-  }, [filterKegiatan])
+    if (filterJenis) { fetchKategori(filterJenis) } else { setKategoriList([]); setFilterKategori(''); setFilterDetail(''); setDetailList([]) }
+  }, [filterJenis])
+
+  useEffect(() => {
+    if (filterKategori) { fetchDetail(filterKategori) } else { setDetailList([]); setFilterDetail('') }
+  }, [filterKategori])
+
+  useEffect(() => {
+    if (chainComplete && filterFungsi && filterKegiatan) fetchKelengkapan()
+    else if (!filterFungsi || !filterKegiatan) setItems([])
+  }, [filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, chainComplete])
 
   async function fetchFungsis() {
     const supabase = getBrowserClient()
@@ -59,25 +90,81 @@ function KelengkapanPage() {
     setLoading(false)
   }
 
+  async function fetchJenis() {
+    const supabase = getBrowserClient()
+    if (!supabase) return
+    const data = await getAllJenis(supabase)
+    setJenisList(data)
+  }
+
   async function fetchKegiatans(fungsiId: string) {
     const supabase = getBrowserClient()
     if (!supabase) return
     const data = await getKegiatanByFungsi(supabase, fungsiId)
     setKegiatans(data)
     setFilterKegiatan(''); setItems([])
+    // reset chain
+    setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
   }
 
-  async function fetchKelengkapan(kegiatanId: string) {
+  async function fetchKategori(jenisId: string) {
     const supabase = getBrowserClient()
     if (!supabase) return
-    const data = await getKelengkapanByKegiatanWithInfo(supabase, kegiatanId)
-    setItems(data)
+    const data = await getKategoriByJenis(supabase, jenisId)
+    setKategoriList(data)
+    setFilterKategori(''); setFilterDetail(''); setDetailList([])
+  }
+
+  async function fetchDetail(kategoriId: string) {
+    const supabase = getBrowserClient()
+    if (!supabase) return
+    const data = await getDetailByKategori(supabase, kategoriId)
+    setDetailList(data)
+    setFilterDetail('')
+  }
+
+  async function fetchKelengkapan() {
+    setLoading(true)
+    try {
+      const supabase = getBrowserClient()
+      if (!supabase) { setLoading(false); return }
+      const data = await getKelengkapanByChain(
+        supabase,
+        filterFungsi,
+        filterKegiatan,
+        filterJenis || undefined,
+        filterKategori || undefined,
+        filterDetail || undefined,
+      )
+      setItems(data)
+    } catch { /* silent */ } finally { setLoading(false) }
   }
 
   const filteredByRole = (isKetuaTim: boolean) => items.filter(k => k.is_ketua_tim === isKetuaTim)
 
-  function openCreate(isKetuaTim: boolean) { setEditing(null); setFormIsKetuaTim(isKetuaTim); setFormNamaDokumen(''); setFormRequired(true); setError(''); setModalOpen(true) }
-  function openEdit(item: KelengkapanRow) { setEditing(item); setFormIsKetuaTim(item.is_ketua_tim); setFormNamaDokumen(item.nama_dokumen); setFormRequired(item.required); setError(''); setModalOpen(true) }
+  function openCreate(isKetua: boolean) {
+    setEditing(null)
+    setFormIsKetuaTim(isKetua)
+    setFormNamaDokumen('')
+    setFormRequired(true)
+    setFormJenisId(filterJenis)
+    setFormKategoriId(filterKategori)
+    setFormDetailId(filterDetail)
+    setError('')
+    setModalOpen(true)
+  }
+
+  function openEdit(item: KelengkapanRow) {
+    setEditing(item)
+    setFormIsKetuaTim(item.is_ketua_tim)
+    setFormNamaDokumen(item.nama_dokumen)
+    setFormRequired(item.required)
+    setFormJenisId(item.jenis_permintaan_id ?? '')
+    setFormKategoriId(item.kategori_permintaan_id ?? '')
+    setFormDetailId(item.detail_permintaan_id ?? '')
+    setError('')
+    setModalOpen(true)
+  }
 
   async function handleSave() {
     if (!formNamaDokumen.trim()) { setError('Nama dokumen tidak boleh kosong'); return }
@@ -86,16 +173,30 @@ function KelengkapanPage() {
       const supabase = getBrowserClient()
       if (!supabase) { setError('Koneksi database tidak tersedia'); return }
       if (editing) {
-        const result = await updateKelengkapan(supabase, editing.id, { namaDokumen: formNamaDokumen.trim(), required: formRequired })
+        const result = await updateKelengkapan(supabase, editing.id, {
+          namaDokumen: formNamaDokumen.trim(),
+          required: formRequired,
+          jenisPermintaanId: formJenisId || null,
+          kategoriPermintaanId: formKategoriId || null,
+          detailPermintaanId: formDetailId || null,
+        })
         if (result.error) { setError(result.error); return }
       } else {
-        const result = await createKelengkapan(supabase, { kegiatanId: filterKegiatan, isKetuaTim: formIsKetuaTim, namaDokumen: formNamaDokumen.trim(), required: formRequired })
+        const result = await createKelengkapan(supabase, {
+          kegiatanId: filterKegiatan,
+          isKetuaTim: formIsKetuaTim,
+          namaDokumen: formNamaDokumen.trim(),
+          required: formRequired,
+          jenisPermintaanId: formJenisId || undefined,
+          kategoriPermintaanId: formKategoriId || undefined,
+          detailPermintaanId: formDetailId || undefined,
+        })
         if (result.error) { setError(result.error); return }
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Item kelengkapan berhasil diperbarui.' : 'Item kelengkapan berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
-      fetchKelengkapan(filterKegiatan)
+      fetchKelengkapan()
     } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
   }
 
@@ -110,7 +211,7 @@ function KelengkapanPage() {
       setDeleteTarget(null)
       setSuccessMsg('Item kelengkapan berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
-      fetchKelengkapan(filterKegiatan)
+      fetchKelengkapan()
     } finally { setSaving(false) }
   }
 
@@ -123,7 +224,7 @@ function KelengkapanPage() {
             <span className="text-primary">Kelengkapan Dokumen</span>
           </div>
           <h2 className="font-headline text-2xl font-extrabold text-on-surface">Kelengkapan Dokumen</h2>
-          <p className="text-on-surface-variant text-xs mt-1">Konfigurasi kelengkapan dokumen per kegiatan untuk Ketua Tim dan Anggota.</p>
+          <p className="text-on-surface-variant text-xs mt-1">Konfigurasi kelengkapan dokumen per kegiatan + chain (jenis/kategori/detail). Kelengkapan hanya tampil setelah chain sampai ke leaf node.</p>
         </div>
 
         {successMsg && (
@@ -132,16 +233,20 @@ function KelengkapanPage() {
           </div>
         )}
 
+        {/* Langkah 1: Fungsi & Kegiatan */}
         <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 space-y-4">
-          <h3 className="text-sm font-bold text-on-surface">Langkah 1: Pilih Kegiatan</h3>
+          <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">1</span>
+            Pilih Fungsi & Kegiatan
+          </h3>
           <div className="flex flex-wrap gap-3">
-            <select value={filterFungsi} onChange={e => setFilterFungsi(e.target.value)}
+            <select value={filterFungsi} onChange={e => { setFilterFungsi(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
               className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[180px]">
               <option value="">Pilih Fungsi</option>
               {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
             </select>
             {filterFungsi && (
-              <select value={filterKegiatan} onChange={e => setFilterKegiatan(e.target.value)}
+              <select value={filterKegiatan} onChange={e => { setFilterKegiatan(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
                 className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[220px]">
                 <option value="">Pilih Kegiatan</option>
                 {kegiatans.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
@@ -150,15 +255,73 @@ function KelengkapanPage() {
           </div>
         </div>
 
+        {/* Langkah 2: Chain - hanya tampil kalau kegiatan dipilih */}
         {filterKegiatan && (
+          <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 space-y-4">
+            <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">2</span>
+              Chain Jenis / Kategori / Detail
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori(''); setFilterDetail('') }}
+                className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[180px]">
+                <option value="">Pilih Jenis Permintaan</option>
+                {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
+              </select>
+              {filterJenis && (
+                <select value={filterKategori} onChange={e => { setFilterKategori(e.target.value); setFilterDetail('') }}
+                  className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[200px]">
+                  <option value="">Pilih Kategori</option>
+                  {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                </select>
+              )}
+              {filterKategori && detailList.length > 0 && (
+                <select value={filterDetail} onChange={e => setFilterDetail(e.target.value)}
+                  className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[200px]">
+                  <option value="">Pilih Detail (opsional)</option>
+                  {detailList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
+                </select>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Kelengkapan section - hanya tampil kalau chain complete */}
+        {filterKegiatan && chainComplete && (
           loading ? (
             <div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <KelengkapanSection title="Kelengkapan Ketua Tim" items={filteredByRole(true)} onAdd={() => openCreate(true)} onEdit={openEdit} onDelete={setDeleteTarget} />
-              <KelengkapanSection title="Kelengkapan Anggota" items={filteredByRole(false)} onAdd={() => openCreate(false)} onEdit={openEdit} onDelete={setDeleteTarget} />
+              <KelengkapanSection
+                title="Kelengkapan Ketua Tim"
+                items={filteredByRole(true)}
+                onAdd={() => openCreate(true)}
+                onEdit={openEdit}
+                onDelete={setDeleteTarget}
+                chainLabel={getChainLabel(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList)}
+              />
+              <KelengkapanSection
+                title="Kelengkapan Anggota"
+                items={filteredByRole(false)}
+                onAdd={() => openCreate(false)}
+                onEdit={openEdit}
+                onDelete={setDeleteTarget}
+                chainLabel={getChainLabel(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList)}
+              />
             </div>
           )
+        )}
+
+        {/* Empty state - belum sampai leaf */}
+        {filterKegiatan && !chainComplete && !loading && (
+          <div className="flex flex-col items-center justify-center py-10 gap-3 bg-white/5 rounded-2xl border border-white/10">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center"><Lock size={20} className="text-primary" /></div>
+            <p className="text-sm text-on-surface font-medium">Selesaikan chain untuk melihat kelengkapan</p>
+            <p className="text-xs text-on-surface-variant text-center max-w-sm">
+              Pilih Jenis{filterJenis ? ' dan Kategori' : ''}{detailList.length > 0 ? ' (dan Detail jika ada)' : ''} untuk mencapai leaf node.
+              {detailList.length > 0 ? ` Kategori "${kategoriList.find(k => k.id === filterKategori)?.nama}" punya ${detailList.length} detail.` : ''}
+            </p>
+          </div>
         )}
 
         {!filterFungsi && !loading && (
@@ -175,9 +338,37 @@ function KelengkapanPage() {
           <div className="space-y-4">
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="space-y-1.5">
-              <Label htmlFor="docn">Nama Dokumen <span className="text-error">*</span></Label>
-              <Input id="docn" value={formNamaDokumen} onChange={e => setFormNamaDokumen(e.target.value)} placeholder="Contoh: Laporan Pertanggungjawaban" maxLength={255} />
+              <Label>Nama Dokumen <span className="text-error">*</span></Label>
+              <Input value={formNamaDokumen} onChange={e => setFormNamaDokumen(e.target.value)} placeholder="Contoh: Laporan Pertanggungjawaban" maxLength={255} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Jenis Permintaan</Label>
+              <select value={formJenisId} onChange={e => { setFormJenisId(e.target.value); setFormKategoriId(''); setFormDetailId('') }}
+                className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
+                <option value="">Semua jenis</option>
+                {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
+              </select>
+            </div>
+            {formJenisId && (
+              <div className="space-y-1.5">
+                <Label>Kategori</Label>
+                <select value={formKategoriId} onChange={e => { setFormKategoriId(e.target.value); setFormDetailId('') }}
+                  className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
+                  <option value="">Semua kategori</option>
+                  {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                </select>
+              </div>
+            )}
+            {formKategoriId && detailList.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Detail (Opsional)</Label>
+                <select value={formDetailId} onChange={e => setFormDetailId(e.target.value)}
+                  className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
+                  <option value="">Tanpa detail</option>
+                  {detailList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
+                </select>
+              </div>
+            )}
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={formRequired} onChange={e => setFormRequired(e.target.checked)} className="w-4 h-4 accent-primary" />
               <span className="text-xs font-medium text-on-surface">Wajib (Required)</span>
@@ -204,13 +395,34 @@ function KelengkapanPage() {
   )
 }
 
-function KelengkapanSection({ title, items, onAdd, onEdit, onDelete }: {
-  title: string; items: KelengkapanRow[]; onAdd: () => void; onEdit: (item: KelengkapanRow) => void; onDelete: (item: KelengkapanRow) => void
+function getChainLabel(
+  fungsiId: string, kegiatanId: string, jenisId: string, kategoriId: string, detailId: string,
+  fungsis: FungsiRow[], kegiatans: KegiatanRow[], jenisList: JenisRow[], kategoriList: KategoriRow[], detailList: DetailRow[]
+): string {
+  const parts = []
+  if (fungsiId) { const f = fungsis.find(f => f.id === fungsiId); if (f) parts.push(f.nama) }
+  if (kegiatanId) { const k = kegiatans.find(k => k.id === kegiatanId); if (k) parts.push(k.nama) }
+  if (jenisId) { const j = jenisList.find(j => j.id === jenisId); if (j) parts.push(j.nama) }
+  if (kategoriId) { const k = kategoriList.find(k => k.id === kategoriId); if (k) parts.push(k.nama) }
+  if (detailId) { const d = detailList.find(d => d.id === detailId); if (d) parts.push(d.nama) }
+  return parts.join(' / ')
+}
+
+function KelengkapanSection({ title, items, onAdd, onEdit, onDelete, chainLabel }: {
+  title: string
+  items: KelengkapanRow[]
+  onAdd: () => void
+  onEdit: (item: KelengkapanRow) => void
+  onDelete: (item: KelengkapanRow) => void
+  chainLabel: string
 }) {
   return (
     <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-        <h3 className="text-sm font-bold text-on-surface">{title}</h3>
+        <div>
+          <h3 className="text-sm font-bold text-on-surface">{title}</h3>
+          <p className="text-[10px] text-outline mt-0.5">{chainLabel}</p>
+        </div>
         <Button onClick={onAdd} size="xs" variant="outline" className="gap-1"><Plus size={12} />Tambah</Button>
       </div>
       {items.length === 0 ? (

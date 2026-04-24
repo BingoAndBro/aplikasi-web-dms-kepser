@@ -10,11 +10,24 @@ import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import {
+  getAllFungsi,
+  getKegiatanByFungsi,
+  getAllJenis,
+  getKategoriByJenis,
+  getDetailByKategori,
+  type FungsiRow,
+  type KegiatanRow,
+  type JenisRow,
+  type KategoriRow,
+  type DetailRow,
+} from '#/lib/master-data'
+import {
   ChevronLeft,
   ChevronRight,
   FileText,
   AlertCircle,
   Loader2,
+  Tag,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -24,17 +37,6 @@ export const Route = createFileRoute('/pegawai/dokumen/aju')({
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type Fungsi = {
-  id: string
-  nama: string
-}
-
-type Kegiatan = {
-  id: string
-  nama: string
-  fungsi_id: string
-}
 
 // ---------------------------------------------------------------------------
 // Main Page
@@ -47,7 +49,6 @@ function AjukanDokumenPage() {
   const [submitError, setSubmitError] = useState('')
   const [tanggalError, setTanggalError] = useState('')
 
-  // Today's date in local timezone (ISO YYYY-MM-DD) — used to validate & restrict date picker
   const today = (() => {
     const d = new Date()
     const y = d.getFullYear()
@@ -56,34 +57,55 @@ function AjukanDokumenPage() {
     return `${y}-${m}-${day}`
   })()
 
-  // Form state
+  // Step 1: Fungsi & Tanggal
   const [fungsiId, setFungsiId] = useState('')
   const [fungsiNama, setFungsiNama] = useState('')
   const [tahun, setTahun] = useState(new Date().getFullYear())
   const [tanggal, setTanggal] = useState(today)
+
+  // Step 2: Kegiatan
   const [kegiatanId, setKegiatanId] = useState('')
   const [kegiatanNama, setKegiatanNama] = useState('')
+
+  // Step 3: Jenis Permintaan
+  const [jenisPermintaanId, setJenisPermintaanId] = useState('')
+  const [jenisPermintaanNama, setJenisPermintaanNama] = useState('')
+
+  // Step 4: Kategori Permintaan
+  const [kategoriPermintaanId, setKategoriPermintaanId] = useState('')
+  const [kategoriPermintaanNama, setKategoriPermintaanNama] = useState('')
+
+  // Step 5: Detail Permintaan (opsional)
+  const [detailPermintaanId, setDetailPermintaanId] = useState('')
+  const [detailPermintaanNama, setDetailPermintaanNama] = useState('')
+  const [kategoriHasDetail, setKategoriHasDetail] = useState(false)
+
+  // Step 6: Peran
   const [isKetuaTim, setIsKetuaTim] = useState(false)
+
+  // Step 7: Lampiran
   const [lampiranUrls, setLampiranUrls] = useState<LampiranUrl[]>([])
   const [missingRequired, setMissingRequired] = useState<any[]>([])
 
-  // Data for dropdowns
-  const [fungsiList, setFungsiList] = useState<Fungsi[]>([])
-  const [kegiatanList, setKegiatanList] = useState<Kegiatan[]>([])
+  // Data lists
+  const [fungsiList, setFungsiList] = useState<FungsiRow[]>([])
+  const [kegiatanList, setKegiatanList] = useState<KegiatanRow[]>([])
+  const [jenisList, setJenisList] = useState<JenisRow[]>([])
+  const [kategoriList, setKategoriList] = useState<KategoriRow[]>([])
+  const [detailList, setDetailList] = useState<DetailRow[]>([])
+
   const [loadingFungsi, setLoadingFungsi] = useState(true)
   const [loadingKegiatan, setLoadingKegiatan] = useState(false)
+  const [loadingJenis, setLoadingJenis] = useState(false)
+  const [loadingKategori, setLoadingKategori] = useState(false)
 
   // Load fungsi on mount
   useEffect(() => {
     async function load() {
       const supabase = getBrowserClient()
       if (!supabase) return
-      const { data } = await supabase
-        .from('master_fungsi')
-        .select('id, nama')
-        .eq('is_active', true)
-        .order('nama', { ascending: true })
-      setFungsiList(data ?? [])
+      const data = await getAllFungsi(supabase)
+      setFungsiList(data)
       setLoadingFungsi(false)
     }
     load()
@@ -96,42 +118,134 @@ function AjukanDokumenPage() {
       setLoadingKegiatan(true)
       const supabase = getBrowserClient()
       if (!supabase) { setLoadingKegiatan(false); return }
-      const { data } = await supabase
-        .from('master_kegiatan')
-        .select('id, nama, fungsi_id')
-        .eq('fungsi_id', fungsiId)
-        .eq('is_active', true)
-        .order('nama', { ascending: true })
-      setKegiatanList(data ?? [])
+      const data = await getKegiatanByFungsi(supabase, fungsiId)
+      setKegiatanList(data)
       setLoadingKegiatan(false)
     }
     load()
   }, [fungsiId])
 
-  // Track completed steps for StepIndicator
-  const completedSteps = [
-    step > 1 ? 1 : null,
-    step > 2 ? 2 : null,
-    step > 3 ? 3 : null,
-    step > 4 ? 4 : null,
-  ].filter((s): s is number => s !== null)
+  // Load jenis when kegiatan is selected (jenis BEBAS — tidak bergantung ke apapun)
+  useEffect(() => {
+    if (!kegiatanId) { setJenisList([]); return }
+    async function load() {
+      setLoadingJenis(true)
+      const supabase = getBrowserClient()
+      if (!supabase) { setLoadingJenis(false); return }
+      const data = await getAllJenis(supabase)
+      setJenisList(data)
+      setLoadingJenis(false)
+    }
+    load()
+  }, [kegiatanId])
+
+  // Load kategori when jenis changes
+  useEffect(() => {
+    if (!jenisPermintaanId) { setKategoriList([]); return }
+    async function load() {
+      setLoadingKategori(true)
+      const supabase = getBrowserClient()
+      if (!supabase) { setLoadingKategori(false); return }
+      const data = await getKategoriByJenis(supabase, jenisPermintaanId)
+      setKategoriList(data)
+      setLoadingKategori(false)
+    }
+    load()
+  }, [jenisPermintaanId])
+
+  // Load detail when kategori changes, check if has children
+  useEffect(() => {
+    if (!kategoriPermintaanId) { setDetailList([]); setKategoriHasDetail(false); return }
+    async function load() {
+      const supabase = getBrowserClient()
+      if (!supabase) return
+      const data = await getDetailByKategori(supabase, kategoriPermintaanId)
+      setDetailList(data)
+      setKategoriHasDetail(data.length > 0)
+    }
+    load()
+  }, [kategoriPermintaanId])
+
+  // Clear downstream on upstream change
+  function handleFungsiChange(id: string) {
+    setFungsiId(id)
+    const fn = fungsiList.find(f => f.id === id)
+    setFungsiNama(fn?.nama ?? '')
+    setKegiatanId(''); setKegiatanNama('')
+    setJenisPermintaanId(''); setJenisPermintaanNama('')
+    setKategoriPermintaanId(''); setKategoriPermintaanNama('')
+    setDetailPermintaanId(''); setDetailPermintaanNama('')
+    setKategoriHasDetail(false)
+  }
+
+  function handleKegiatanChange(id: string) {
+    setKegiatanId(id)
+    const kn = kegiatanList.find(k => k.id === id)
+    setKegiatanNama(kn?.nama ?? '')
+    setJenisPermintaanId(''); setJenisPermintaanNama('')
+    setKategoriPermintaanId(''); setKategoriPermintaanNama('')
+    setDetailPermintaanId(''); setDetailPermintaanNama('')
+    setKategoriHasDetail(false)
+  }
+
+  function handleJenisChange(id: string) {
+    setJenisPermintaanId(id)
+    const jn = jenisList.find(j => j.id === id)
+    setJenisPermintaanNama(jn?.nama ?? '')
+    setKategoriPermintaanId(''); setKategoriPermintaanNama('')
+    setDetailPermintaanId(''); setDetailPermintaanNama('')
+    setKategoriHasDetail(false)
+  }
+
+  function handleKategoriChange(id: string) {
+    setKategoriPermintaanId(id)
+    const kn = kategoriList.find(k => k.id === id)
+    setKategoriPermintaanNama(kn?.nama ?? '')
+    setDetailPermintaanId(''); setDetailPermintaanNama('')
+  }
+
+  // Dynamic step labels
+  const stepLabels = kategoriHasDetail
+    ? ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Detail', 'Peran', 'Unggah', 'Review']
+    : ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Peran', 'Unggah', 'Review']
+
+  // Map visual step to internal step logic
+  function getVisualStepLabel(currentStep: number): string {
+    return stepLabels[currentStep - 1] ?? String(currentStep)
+  }
+
+  // Completed steps for indicator
+  const completedSteps: number[] = []
+  if (step > 1) completedSteps.push(1)
+  if (step > 2) completedSteps.push(2)
+  if (step > 3) completedSteps.push(3)
+  if (step > 4) completedSteps.push(4)
+  if (step > 5) completedSteps.push(5)
+  if (step > 6) completedSteps.push(6)
+  if (step > 7) completedSteps.push(7)
+  if (step > 8) completedSteps.push(8)
 
   // Step validation
   const canAdvanceFromStep1 = !!fungsiId && !!tahun && !!tanggal && !tanggalError
   const canAdvanceFromStep2 = !!kegiatanId
-  const canAdvanceFromStep3 = true // Role is always selected
+  const canAdvanceFromStep3 = !!jenisPermintaanId
+  const canAdvanceFromStep4 = !!kategoriPermintaanId
+
+  // Detail step validation: only required if kategoriHasDetail is true
+  const canAdvanceFromStep5 = !kategoriHasDetail || !!detailPermintaanId
+  const canAdvanceFromStep6 = true
 
   function handleNext() {
-    // Validate date is not in the future before advancing from step 1
     if (step === 1 && tanggal > today) {
       setTanggalError('Tanggal tidak boleh melewati hari ini')
       return
     }
-    if (step < 5) setStep(step + 1)
+    if (step < (kategoriHasDetail ? 8 : 7)) setStep(step + 1)
   }
 
   function handleBack() {
-    if (step === 2) setTanggalError('') // Clear date error when going back to step 1
+    if (step === 1) return
+    if (step === 2) setTanggalError('')
     if (step > 1) setStep(step - 1)
   }
 
@@ -169,6 +283,9 @@ function AjukanDokumenPage() {
           tahun,
           tanggal,
           lampiranUrls,
+          jenisPermintaanId: jenisPermintaanId || undefined,
+          kategoriPermintaanId: kategoriPermintaanId || undefined,
+          detailPermintaanId: detailPermintaanId || undefined,
         }),
       })
 
@@ -179,7 +296,6 @@ function AjukanDokumenPage() {
         return
       }
 
-      // Success — navigate to dokumen saya
       navigate({ to: '/pegawai/dokumen' })
     } catch {
       setSubmitError('Terjadi kesalahan. Coba lagi.')
@@ -203,7 +319,7 @@ function AjukanDokumenPage() {
             Ajukan Dokumen Baru
           </h2>
           <p className="text-on-surface-variant text-xs mt-1">
-            Ikuti 5 langkah untuk mengajukan dokumen SPD baru.
+            Ikuti {kategoriHasDetail ? '8' : '7'} langkah untuk mengajukan dokumen SPD baru.
           </p>
         </div>
 
@@ -213,6 +329,7 @@ function AjukanDokumenPage() {
             currentStep={step}
             completedSteps={completedSteps}
             onStepClick={handleStepClick}
+            labels={stepLabels}
           />
         </div>
 
@@ -234,16 +351,7 @@ function AjukanDokumenPage() {
                     <Loader2 size={14} className="animate-spin" />Memuat...
                   </div>
                 ) : (
-                  <Select
-                    value={fungsiId}
-                    onValueChange={v => {
-                      setFungsiId(v ?? '')
-                      const fn = fungsiList.find(f => f.id === v)
-                      setFungsiNama(fn?.nama ?? '')
-                      setKegiatanId('')
-                      setKegiatanNama('')
-                    }}
-                  >
+                  <Select value={fungsiId} onValueChange={v => handleFungsiChange(v ?? '')}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Pilih fungsi...">
                         {v => v ? (fungsiList.find(f => f.id === v)?.nama ?? '') : 'Pilih fungsi...'}
@@ -270,10 +378,7 @@ function AjukanDokumenPage() {
                     if (!newTanggal) return
                     setTanggal(newTanggal)
                     setTahun(new Date(newTanggal).getFullYear())
-                    // Clear error when user picks a valid date
-                    if (newTanggal <= today) {
-                      setTanggalError('')
-                    }
+                    if (newTanggal <= today) setTanggalError('')
                   }}
                   placeholder="Pilih tanggal..."
                 />
@@ -288,11 +393,7 @@ function AjukanDokumenPage() {
                 ) : null}
               </div>
 
-              <Button
-                onClick={handleNext}
-                disabled={!canAdvanceFromStep1}
-                className="w-full gap-1.5"
-              >
+              <Button onClick={handleNext} disabled={!canAdvanceFromStep1} className="w-full gap-1.5">
                 Lanjut <ChevronRight size={14} />
               </Button>
             </div>
@@ -318,14 +419,7 @@ function AjukanDokumenPage() {
                     Tidak ada kegiatan untuk fungsi yang dipilih.
                   </p>
                 ) : (
-                  <Select
-                    value={kegiatanId}
-                    onValueChange={v => {
-                      setKegiatanId(v ?? '')
-                      const kn = kegiatanList.find(k => k.id === v)
-                      setKegiatanNama(kn?.nama ?? '')
-                    }}
-                  >
+                  <Select value={kegiatanId} onValueChange={v => handleKegiatanChange(v ?? '')}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Pilih kegiatan...">
                         {v => kegiatanList.find(k => k.id === v)?.nama ?? ''}
@@ -346,22 +440,173 @@ function AjukanDokumenPage() {
                 <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
                   <ChevronLeft size={14} />Kembali
                 </Button>
-                <Button
-                  onClick={handleNext}
-                  disabled={!canAdvanceFromStep2}
-                  className="gap-1.5 flex-1"
-                >
+                <Button onClick={handleNext} disabled={!canAdvanceFromStep2} className="gap-1.5 flex-1">
                   Lanjut <ChevronRight size={14} />
                 </Button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: Role */}
+          {/* STEP 3: Jenis Permintaan */}
           {step === 3 && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                3. Peran dalam Kegiatan
+                3. Pilih Jenis Permintaan
+              </h3>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-on-surface">
+                  Jenis Permintaan <span className="text-error">*</span>
+                </label>
+                {loadingJenis ? (
+                  <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                    <Loader2 size={14} className="animate-spin" />Memuat...
+                  </div>
+                ) : jenisList.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
+                    Tidak ada jenis permintaan tersedia.
+                  </p>
+                ) : (
+                  <Select value={jenisPermintaanId} onValueChange={v => handleJenisChange(v ?? '')}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih jenis permintaan...">
+                        {v => jenisList.find(j => j.id === v)?.nama ?? ''}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {jenisList.map(j => (
+                        <SelectItem key={j.id} value={j.id} label={j.nama}>
+                          <div>
+                            <p className="font-medium">{j.nama}</p>
+                            {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
+                  <ChevronLeft size={14} />Kembali
+                </Button>
+                <Button onClick={handleNext} disabled={!canAdvanceFromStep3} className="gap-1.5 flex-1">
+                  Lanjut <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Kategori Permintaan */}
+          {step === 4 && (
+            <div className="space-y-4">
+              <h3 className="font-headline text-base font-bold text-on-surface">
+                4. Pilih Kategori Permintaan
+              </h3>
+
+              <p className="text-xs text-on-surface-variant">
+                Untuk <strong className="text-on-surface">{jenisPermintaanNama}</strong>
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-on-surface">
+                  Kategori <span className="text-error">*</span>
+                </label>
+                {loadingKategori ? (
+                  <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                    <Loader2 size={14} className="animate-spin" />Memuat...
+                  </div>
+                ) : kategoriList.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
+                    Tidak ada kategori untuk jenis yang dipilih.
+                  </p>
+                ) : (
+                  <Select value={kategoriPermintaanId} onValueChange={v => handleKategoriChange(v ?? '')}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih kategori...">
+                        {v => kategoriList.find(k => k.id === v)?.nama ?? ''}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kategoriList.map(k => (
+                        <SelectItem key={k.id} value={k.id} label={k.nama}>
+                          <div>
+                            <p className="font-medium">{k.nama}</p>
+                            {k.deskripsi && <p className="text-[10px] text-on-surface-variant">{k.deskripsi}</p>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
+                  <ChevronLeft size={14} />Kembali
+                </Button>
+                <Button onClick={handleNext} disabled={!canAdvanceFromStep4} className="gap-1.5 flex-1">
+                  Lanjut <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: Detail Permintaan (OPSIONAL — hanya jika kategori punya anak) */}
+          {step === 5 && kategoriHasDetail && (
+            <div className="space-y-4">
+              <h3 className="font-headline text-base font-bold text-on-surface">
+                5. Pilih Detail Permintaan
+              </h3>
+
+              <p className="text-xs text-on-surface-variant">
+                Untuk kategori <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-on-surface">
+                  Detail <span className="text-error">*</span>
+                </label>
+                <Select value={detailPermintaanId} onValueChange={v => {
+                  setDetailPermintaanId(v ?? '')
+                  const dn = detailList.find(d => d.id === v)
+                  setDetailPermintaanNama(dn?.nama ?? '')
+                }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih detail...">
+                      {v => detailList.find(d => d.id === v)?.nama ?? ''}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {detailList.map(d => (
+                      <SelectItem key={d.id} value={d.id} label={d.nama}>
+                        <div>
+                          <p className="font-medium">{d.nama}</p>
+                          {d.deskripsi && <p className="text-[10px] text-on-surface-variant">{d.deskripsi}</p>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
+                  <ChevronLeft size={14} />Kembali
+                </Button>
+                <Button onClick={handleNext} disabled={!canAdvanceFromStep5} className="gap-1.5 flex-1">
+                  Lanjut <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5/6: Peran (Ketua Tim / Anggota) — shown after step 4 if no detail, or after step 5 if has detail */}
+          {step === (kategoriHasDetail ? 6 : 5) && (
+            <div className="space-y-4">
+              <h3 className="font-headline text-base font-bold text-on-surface">
+                {kategoriHasDetail ? '6' : '5'}. Peran dalam Kegiatan
               </h3>
 
               <div className="space-y-2">
@@ -410,30 +655,36 @@ function AjukanDokumenPage() {
                 <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
                   <ChevronLeft size={14} />Kembali
                 </Button>
-                <Button onClick={handleNext} disabled={!canAdvanceFromStep3} className="gap-1.5 flex-1">
+                <Button onClick={handleNext} className="gap-1.5 flex-1">
                   Lanjut <ChevronRight size={14} />
                 </Button>
               </div>
             </div>
           )}
 
-          {/* STEP 4: Upload */}
-          {step === 4 && (
+          {/* STEP 6/7: Upload */}
+          {step === (kategoriHasDetail ? 7 : 6) && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                4. Unggah Lampiran
+                {kategoriHasDetail ? '7' : '6'}. Unggah Lampiran
               </h3>
 
               <p className="text-xs text-on-surface-variant">
-                {isKetuaTim ? 'Kelengkapan untuk' : 'Kelengkapan untuk'}{' '}
-                <strong className="text-on-surface">{kegiatanNama}</strong>{' '}
-                sebagai <strong className="text-on-surface">{isKetuaTim ? 'Ketua Tim' : 'Anggota'}</strong>
+                Kelengkapan untuk <strong className="text-on-surface">{kegiatanNama}</strong>{' '}
+                — <strong className="text-on-surface">{jenisPermintaanNama}</strong>{' / '}
+                <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
+                {detailPermintaanNama && <> / <strong className="text-on-surface">{detailPermintaanNama}</strong></>}
+                {' sebagai '}
+                <strong className="text-on-surface">{isKetuaTim ? 'Ketua Tim' : 'Anggota'}</strong>
               </p>
 
               <KelengkapanChecklist
                 kegiatanId={kegiatanId}
                 isKetuaTim={isKetuaTim}
                 onComplete={handleKelengkapanComplete}
+                jenisPermintaanId={jenisPermintaanId || undefined}
+                kategoriPermintaanId={kategoriPermintaanId || undefined}
+                detailPermintaanId={detailPermintaanId || undefined}
               />
 
               <div className="flex gap-3">
@@ -451,11 +702,11 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 5: Review */}
-          {step === 5 && (
+          {/* STEP 7/8: Review */}
+          {step === (kategoriHasDetail ? 8 : 7) && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                5. Review & Ajukan
+                {kategoriHasDetail ? '8' : '7'}. Review & Ajukan
               </h3>
 
               <ReviewSummary
@@ -465,6 +716,9 @@ function AjukanDokumenPage() {
                 tanggal={tanggal}
                 isKetuaTim={isKetuaTim}
                 lampiranUrls={lampiranUrls}
+                jenisPermintaanNama={jenisPermintaanNama}
+                kategoriPermintaanNama={kategoriPermintaanNama}
+                detailPermintaanNama={detailPermintaanNama}
               />
 
               {submitError && (

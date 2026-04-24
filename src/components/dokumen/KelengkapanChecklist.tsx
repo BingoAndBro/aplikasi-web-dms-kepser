@@ -21,6 +21,9 @@ interface KelengkapanChecklistProps {
   isKetuaTim: boolean
   initialLampirans?: LampiranUrl[]
   onComplete: (lampirans: LampiranUrl[], missingRequired: KelengkapanItem[]) => void
+  jenisPermintaanId?: string
+  kategoriPermintaanId?: string
+  detailPermintaanId?: string
 }
 
 export function KelengkapanChecklist({
@@ -28,6 +31,9 @@ export function KelengkapanChecklist({
   isKetuaTim,
   initialLampirans = [],
   onComplete,
+  jenisPermintaanId,
+  kategoriPermintaanId,
+  detailPermintaanId,
 }: KelengkapanChecklistProps) {
   const [items, setItems] = useState<KelengkapanItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,12 +49,30 @@ export function KelengkapanChecklist({
         const supabase = getBrowserClient()
         if (!supabase) { setLoading(false); return }
 
-        const { data, error: fetchError } = await supabase
+        let query = supabase
           .from('master_kelengkapan_dokumen')
           .select('id, nama_dokumen, is_ketua_tim, required')
           .eq('kegiatan_id', kegiatanId)
           .eq('is_ketua_tim', isKetuaTim)
           .order('nama_dokumen', { ascending: true })
+
+        // Apply chain filters — kelengkapan melekat ke leaf node.
+        // When only a parent ID is provided, ensure child chain columns are NULL.
+        if (detailPermintaanId) {
+          query = query.eq('detail_permintaan_id', detailPermintaanId)
+        } else if (kategoriPermintaanId) {
+          query = query
+            .eq('kategori_permintaan_id', kategoriPermintaanId)
+            .is('detail_permintaan_id', null)
+        } else if (jenisPermintaanId) {
+          query = query
+            .eq('jenis_permintaan_id', jenisPermintaanId)
+            .is('kategori_permintaan_id', null)
+            .is('detail_permintaan_id', null)
+        }
+        // else: no chain selected → match legacy items (all chain cols NULL)
+
+        const { data, error: fetchError } = await query
 
         if (fetchError) {
           setError('Gagal mengambil daftar kelengkapan')
@@ -64,7 +88,7 @@ export function KelengkapanChecklist({
     }
 
     fetchKelengkapan()
-  }, [kegiatanId, isKetuaTim])
+  }, [kegiatanId, isKetuaTim, jenisPermintaanId, kategoriPermintaanId, detailPermintaanId])
 
   // Notify parent when lampiranUrls changes
   useEffect(() => {

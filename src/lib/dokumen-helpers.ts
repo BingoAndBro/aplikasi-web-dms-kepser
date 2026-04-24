@@ -31,9 +31,16 @@ export type DokumenRow = {
   created_by: string
   created_at: string
   updated_at: string
+  // Chain fields
+  jenis_permintaan_id?: string | null
+  kategori_permintaan_id?: string | null
+  detail_permintaan_id?: string | null
   // Joined fields
   fungsi_nama?: string
   kegiatan_nama?: string
+  jenis_permintaan_nama?: string
+  kategori_permintaan_nama?: string
+  detail_permintaan_nama?: string
 }
 
 export type LogRow = {
@@ -85,6 +92,36 @@ export async function getDokumenById(
       .eq('id', data.fungsi_id)
       .single()
     if (fns) (data as any).fungsi_nama = fns.nama
+  }
+
+  // Manual join: fetch jenis_permintaan nama
+  if (data.jenis_permintaan_id) {
+    const { data: jenis } = await supabase
+      .from('master_jenis_permintaan')
+      .select('nama')
+      .eq('id', data.jenis_permintaan_id)
+      .single()
+    if (jenis) (data as any).jenis_permintaan_nama = jenis.nama
+  }
+
+  // Manual join: fetch kategori_permintaan nama
+  if (data.kategori_permintaan_id) {
+    const { data: kat } = await supabase
+      .from('master_kategori_permintaan')
+      .select('nama')
+      .eq('id', data.kategori_permintaan_id)
+      .single()
+    if (kat) (data as any).kategori_permintaan_nama = kat.nama
+  }
+
+  // Manual join: fetch detail_permintaan nama
+  if (data.detail_permintaan_id) {
+    const { data: det } = await supabase
+      .from('master_detail_permintaan')
+      .select('nama')
+      .eq('id', data.detail_permintaan_id)
+      .single()
+    if (det) (data as any).detail_permintaan_nama = det.nama
   }
 
   return parseDokumen(data)
@@ -158,6 +195,9 @@ export async function createDokumen(
     tanggal: string
     lampiranUrls: LampiranUrl[]
     createdBy: string
+    jenisPermintaanId?: string
+    kategoriPermintaanId?: string
+    detailPermintaanId?: string
   }
 ): Promise<{ data?: DokumenRow; error?: string }> {
   const { data, error } = await supabase
@@ -172,6 +212,9 @@ export async function createDokumen(
       lampiran_urls: JSON.stringify(payload.lampiranUrls),
       created_by: payload.createdBy,
       status: 'DRAFT',
+      jenis_permintaan_id: payload.jenisPermintaanId ?? null,
+      kategori_permintaan_id: payload.kategoriPermintaanId ?? null,
+      detail_permintaan_id: payload.detailPermintaanId ?? null,
     })
     .select('*')
     .single()
@@ -357,18 +400,42 @@ export type KelengkapanRequired = {
 }
 
 /**
- * Get required kelengkapan for a kegiatan + role combination.
+ * Get required kelengkapan for a kegiatan + role + optional chain.
+ * Uses dynamic match: only filters on chain columns if provided.
+ * When all chain params are null, falls back to kegiatan+role only (backward compat).
  */
 export async function getKelengkapanRequired(
   supabase: SupabaseClient,
   kegiatanId: string,
-  isKetuaTim: boolean
+  isKetuaTim: boolean,
+  options?: {
+    jenisPermintaanId?: string
+    kategoriPermintaanId?: string
+    detailPermintaanId?: string
+  }
 ): Promise<KelengkapanRequired[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('master_kelengkapan_dokumen')
     .select('id, nama_dokumen, required')
     .eq('kegiatan_id', kegiatanId)
     .eq('is_ketua_tim', isKetuaTim)
+
+  // Kelengkapan melekat ke leaf node — apply chain filters.
+  if (options?.detailPermintaanId) {
+    query = query.eq('detail_permintaan_id', options.detailPermintaanId)
+  } else if (options?.kategoriPermintaanId) {
+    query = query
+      .eq('kategori_permintaan_id', options.kategoriPermintaanId)
+      .is('detail_permintaan_id', null)
+  } else if (options?.jenisPermintaanId) {
+    query = query
+      .eq('jenis_permintaan_id', options.jenisPermintaanId)
+      .is('kategori_permintaan_id', null)
+      .is('detail_permintaan_id', null)
+  }
+  // else: no chain → match legacy items (all chain cols NULL)
+
+  const { data, error } = await query
 
   if (error) {
     console.error('[dokumen-helpers] getKelengkapanRequired error:', error)
@@ -439,6 +506,12 @@ function parseDokumen(raw: any): DokumenRow {
     updated_at: raw.updated_at,
     fungsi_nama: raw.fungsi_nama,
     kegiatan_nama: raw.kegiatan_nama,
+    jenis_permintaan_id: raw.jenis_permintaan_id,
+    kategori_permintaan_id: raw.kategori_permintaan_id,
+    detail_permintaan_id: raw.detail_permintaan_id,
+    jenis_permintaan_nama: raw.jenis_permintaan_nama,
+    kategori_permintaan_nama: raw.kategori_permintaan_nama,
+    detail_permintaan_nama: raw.detail_permintaan_nama,
   }
 }
 

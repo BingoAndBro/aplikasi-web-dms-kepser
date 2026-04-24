@@ -31,6 +31,9 @@ export const createDokumenSchema = z.object({
       return selected <= today
     }, { message: 'Tanggal tidak boleh melewati hari ini' }),
   lampiranUrls: z.array(lampiranUrlSchema).default([]),
+  jenisPermintaanId: z.string().uuid().optional(),
+  kategoriPermintaanId: z.string().uuid().optional(),
+  detailPermintaanId: z.string().uuid().optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -44,6 +47,9 @@ export const updateDokumenSchema = z.object({
   fungsiId: z.string().uuid('ID fungsi tidak valid').optional(),
   kegiatanId: z.string().uuid('ID kegiatan tidak valid').optional(),
   tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal tidak valid').optional(),
+  jenisPermintaanId: z.string().uuid().optional().nullable(),
+  kategoriPermintaanId: z.string().uuid().optional().nullable(),
+  detailPermintaanId: z.string().uuid().optional().nullable(),
 })
 
 // ---------------------------------------------------------------------------
@@ -73,6 +79,9 @@ export const createAndSubmitDokumenSchema = z.object({
       return selected <= today
     }, { message: 'Tanggal tidak boleh melewati hari ini' }),
   lampiranUrls: z.array(lampiranUrlSchema),
+  jenisPermintaanId: z.string().uuid().optional(),
+  kategoriPermintaanId: z.string().uuid().optional(),
+  detailPermintaanId: z.string().uuid().optional(),
 })
 
 // ---------------------------------------------------------------------------

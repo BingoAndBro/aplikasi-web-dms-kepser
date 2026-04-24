@@ -1,11 +1,11 @@
 /**
  * StepIndicator — horizontal step progress bar for Ajukan Dokumen form.
- * Shows 5 steps: Fungsi → Kegiatan → Role → Upload → Review
+ * Shows steps dynamically based on labels prop.
  */
 import { Check } from 'lucide-react'
 import { cn } from '#/lib/utils'
 
-const STEPS = [
+const DEFAULT_STEPS = [
   { label: 'Fungsi' },
   { label: 'Kegiatan' },
   { label: 'Peran' },
@@ -14,16 +14,20 @@ const STEPS = [
 ]
 
 interface StepIndicatorProps {
-  currentStep: number // 1-5
+  currentStep: number
   onStepClick?: (step: number) => void
-  completedSteps?: number[] // steps that have been filled
+  completedSteps?: number[]
+  labels?: string[]
 }
 
-export function StepIndicator({ currentStep, onStepClick, completedSteps = [] }: StepIndicatorProps) {
+export function StepIndicator({ currentStep, onStepClick, completedSteps = [], labels }: StepIndicatorProps) {
+  const steps = labels
+    ? labels.map(label => ({ label }))
+    : DEFAULT_STEPS
   return (
     <div className="w-full">
       <div className="flex items-center justify-between">
-        {STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const stepNum = i + 1
           const isActive = stepNum === currentStep
           const isCompleted = completedSteps.includes(stepNum) || stepNum < currentStep
@@ -32,7 +36,7 @@ export function StepIndicator({ currentStep, onStepClick, completedSteps = [] }:
           return (
             <div key={step.label} className="flex flex-col items-center relative flex-1">
               {/* Connector line */}
-              {i < STEPS.length - 1 && (
+              {i < steps.length - 1 && (
                 <div
                   className={cn(
                     'absolute top-4 left-1/2 w-full h-0.5 z-0 transition-colors',

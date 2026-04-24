@@ -35,15 +35,15 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
 
         const { data: dok, error: dokError } = await supabase.from('dokumen_transaksi').select('id, status').eq('id', params.id).single()
         if (dokError || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
-        if (dok.status !== 'IN_BENDAHARA_APPROVAL') return Response.json({ error: 'Dokumen sudah tidak dalam tahap persetujuan' }, { status: 400 })
 
-        // Idempotency: prevent double action
-        console.log('[Bendahara/reject] checking idempotency for dok:', params.id)
-        const { data: existing } = await supabase.from('log_aktivitas')
-          .select('id').eq('dokumen_id', params.id)
-          .in('aksi', ['BENDAHARA_APPROVE', 'BENDAHARA_REJECT']).single()
-        console.log('[Bendahara/reject] existing action:', existing ? 'BLOCKED' : 'PROCEED')
-        if (existing) return Response.json({ error: 'Dokumen sudah pernah diaksi oleh Bendahara' }, { status: 400 })
+        // Idempotency: jika dokumen tidak dalam tahap Bendahara, block. Jika masih di IN_BENDAHARA_APPROVAL, ijinkan (karena bisa resubmit dan harus bisa tolak lagi).
+        if (dok.status !== 'IN_BENDAHARA_APPROVAL') {
+          const { data: existing } = await supabase.from('log_aktivitas')
+            .select('id').eq('dokumen_id', params.id)
+            .in('aksi', ['BENDAHARA_APPROVE', 'BENDAHARA_REJECT']).single()
+          if (existing) return Response.json({ error: 'Dokumen sudah pernah diaksi oleh Bendahara' }, { status: 400 })
+          return Response.json({ error: 'Dokumen sudah tidak dalam tahap persetujuan' }, { status: 400 })
+        }
 
         const result = transition(dok.status, 'REJECT', 'BENDAHARA', 'PPK')
         if (!result.success) return Response.json({ error: result.error ?? 'Transisi gagal' }, { status: 400 })

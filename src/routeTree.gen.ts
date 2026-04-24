@@ -35,7 +35,10 @@ import { Route as BendaharaDitolakRouteImport } from './routes/bendahara/ditolak
 import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as ApiMasterKelengkapanRouteImport } from './routes/api/master-kelengkapan'
 import { Route as ApiMasterKegiatanRouteImport } from './routes/api/master-kegiatan'
+import { Route as ApiMasterKategoriRouteImport } from './routes/api/master-kategori'
+import { Route as ApiMasterJenisRouteImport } from './routes/api/master-jenis'
 import { Route as ApiMasterFungsiRouteImport } from './routes/api/master-fungsi'
+import { Route as ApiMasterDetailRouteImport } from './routes/api/master-detail'
 import { Route as PegawaiDokumenIndexRouteImport } from './routes/pegawai/dokumen/index'
 import { Route as DokumenIdIndexRouteImport } from './routes/dokumen/$id/index'
 import { Route as ApiDokumenIndexRouteImport } from './routes/api/dokumen/index'
@@ -51,7 +54,10 @@ import { Route as ApiPpkInboxRouteImport } from './routes/api/ppk/inbox'
 import { Route as ApiPpkDitolakRouteImport } from './routes/api/ppk/ditolak'
 import { Route as ApiMasterKelengkapanIdRouteImport } from './routes/api/master-kelengkapan.$id'
 import { Route as ApiMasterKegiatanIdRouteImport } from './routes/api/master-kegiatan.$id'
+import { Route as ApiMasterKategoriIdRouteImport } from './routes/api/master-kategori.$id'
+import { Route as ApiMasterJenisIdRouteImport } from './routes/api/master-jenis.$id'
 import { Route as ApiMasterFungsiIdRouteImport } from './routes/api/master-fungsi.$id'
+import { Route as ApiMasterDetailIdRouteImport } from './routes/api/master-detail.$id'
 import { Route as ApiDokumenSubmitRouteImport } from './routes/api/dokumen/submit'
 import { Route as ApiDokumenIdRouteImport } from './routes/api/dokumen.$id'
 import { Route as ApiBendaharaSelesaiRouteImport } from './routes/api/bendahara/selesai'
@@ -64,7 +70,10 @@ import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as AdminMasterDataUserRouteImport } from './routes/admin.master-data.user'
 import { Route as AdminMasterDataKelengkapanRouteImport } from './routes/admin.master-data.kelengkapan'
 import { Route as AdminMasterDataKegiatanRouteImport } from './routes/admin.master-data.kegiatan'
+import { Route as AdminMasterDataKategoriRouteImport } from './routes/admin.master-data.kategori'
+import { Route as AdminMasterDataJenisRouteImport } from './routes/admin.master-data.jenis'
 import { Route as AdminMasterDataFungsiRouteImport } from './routes/admin.master-data.fungsi'
+import { Route as AdminMasterDataDetailRouteImport } from './routes/admin.master-data.detail'
 import { Route as PpkDokumenIdIndexRouteImport } from './routes/ppk/dokumen/$id/index'
 import { Route as PegawaiDokumenIdIndexRouteImport } from './routes/pegawai/dokumen/$id/index'
 import { Route as PpkDokumenIdResubmitRouteImport } from './routes/ppk/dokumen/$id/resubmit'
@@ -214,9 +223,24 @@ const ApiMasterKegiatanRoute = ApiMasterKegiatanRouteImport.update({
   path: '/api/master-kegiatan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMasterKategoriRoute = ApiMasterKategoriRouteImport.update({
+  id: '/api/master-kategori',
+  path: '/api/master-kategori',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMasterJenisRoute = ApiMasterJenisRouteImport.update({
+  id: '/api/master-jenis',
+  path: '/api/master-jenis',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMasterFungsiRoute = ApiMasterFungsiRouteImport.update({
   id: '/api/master-fungsi',
   path: '/api/master-fungsi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMasterDetailRoute = ApiMasterDetailRouteImport.update({
+  id: '/api/master-detail',
+  path: '/api/master-detail',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PegawaiDokumenIndexRoute = PegawaiDokumenIndexRouteImport.update({
@@ -294,10 +318,25 @@ const ApiMasterKegiatanIdRoute = ApiMasterKegiatanIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiMasterKegiatanRoute,
 } as any)
+const ApiMasterKategoriIdRoute = ApiMasterKategoriIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiMasterKategoriRoute,
+} as any)
+const ApiMasterJenisIdRoute = ApiMasterJenisIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiMasterJenisRoute,
+} as any)
 const ApiMasterFungsiIdRoute = ApiMasterFungsiIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiMasterFungsiRoute,
+} as any)
+const ApiMasterDetailIdRoute = ApiMasterDetailIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiMasterDetailRoute,
 } as any)
 const ApiDokumenSubmitRoute = ApiDokumenSubmitRouteImport.update({
   id: '/api/dokumen/submit',
@@ -360,9 +399,24 @@ const AdminMasterDataKegiatanRoute = AdminMasterDataKegiatanRouteImport.update({
   path: '/admin/master-data/kegiatan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminMasterDataKategoriRoute = AdminMasterDataKategoriRouteImport.update({
+  id: '/admin/master-data/kategori',
+  path: '/admin/master-data/kategori',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMasterDataJenisRoute = AdminMasterDataJenisRouteImport.update({
+  id: '/admin/master-data/jenis',
+  path: '/admin/master-data/jenis',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminMasterDataFungsiRoute = AdminMasterDataFungsiRouteImport.update({
   id: '/admin/master-data/fungsi',
   path: '/admin/master-data/fungsi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminMasterDataDetailRoute = AdminMasterDataDetailRouteImport.update({
+  id: '/admin/master-data/detail',
+  path: '/admin/master-data/detail',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PpkDokumenIdIndexRoute = PpkDokumenIdIndexRouteImport.update({
@@ -470,7 +524,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
+  '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
+  '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
+  '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
@@ -490,7 +547,10 @@ export interface FileRoutesByFullPath {
   '/arsiparis/': typeof ArsiparisIndexRoute
   '/bendahara/': typeof BendaharaIndexRoute
   '/ppk/': typeof PpkIndexRoute
+  '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
+  '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
+  '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
   '/admin/master-data/user': typeof AdminMasterDataUserRoute
@@ -503,7 +563,10 @@ export interface FileRoutesByFullPath {
   '/api/bendahara/selesai': typeof ApiBendaharaSelesaiRoute
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
+  '/api/master-jenis/$id': typeof ApiMasterJenisIdRoute
+  '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
   '/api/ppk/ditolak': typeof ApiPpkDitolakRoute
@@ -544,7 +607,10 @@ export interface FileRoutesByTo {
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
+  '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
+  '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
+  '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
@@ -562,7 +628,10 @@ export interface FileRoutesByTo {
   '/arsiparis': typeof ArsiparisIndexRoute
   '/bendahara': typeof BendaharaIndexRoute
   '/ppk': typeof PpkIndexRoute
+  '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
+  '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
+  '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
   '/admin/master-data/user': typeof AdminMasterDataUserRoute
@@ -575,7 +644,10 @@ export interface FileRoutesByTo {
   '/api/bendahara/selesai': typeof ApiBendaharaSelesaiRoute
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
+  '/api/master-jenis/$id': typeof ApiMasterJenisIdRoute
+  '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
   '/api/ppk/ditolak': typeof ApiPpkDitolakRoute
@@ -617,7 +689,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
+  '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
+  '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
+  '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
@@ -637,7 +712,10 @@ export interface FileRoutesById {
   '/arsiparis/': typeof ArsiparisIndexRoute
   '/bendahara/': typeof BendaharaIndexRoute
   '/ppk/': typeof PpkIndexRoute
+  '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
+  '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
+  '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
   '/admin/master-data/user': typeof AdminMasterDataUserRoute
@@ -650,7 +728,10 @@ export interface FileRoutesById {
   '/api/bendahara/selesai': typeof ApiBendaharaSelesaiRoute
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
+  '/api/master-jenis/$id': typeof ApiMasterJenisIdRoute
+  '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
   '/api/ppk/ditolak': typeof ApiPpkDitolakRoute
@@ -695,7 +776,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/pegawai'
     | '/ppk'
+    | '/api/master-detail'
     | '/api/master-fungsi'
+    | '/api/master-jenis'
+    | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
     | '/api/upload'
@@ -715,7 +799,10 @@ export interface FileRouteTypes {
     | '/arsiparis/'
     | '/bendahara/'
     | '/ppk/'
+    | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
+    | '/admin/master-data/jenis'
+    | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
     | '/admin/master-data/user'
@@ -728,7 +815,10 @@ export interface FileRouteTypes {
     | '/api/bendahara/selesai'
     | '/api/dokumen/$id'
     | '/api/dokumen/submit'
+    | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
+    | '/api/master-jenis/$id'
+    | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
     | '/api/ppk/ditolak'
@@ -769,7 +859,10 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/login'
     | '/pegawai'
+    | '/api/master-detail'
     | '/api/master-fungsi'
+    | '/api/master-jenis'
+    | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
     | '/api/upload'
@@ -787,7 +880,10 @@ export interface FileRouteTypes {
     | '/arsiparis'
     | '/bendahara'
     | '/ppk'
+    | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
+    | '/admin/master-data/jenis'
+    | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
     | '/admin/master-data/user'
@@ -800,7 +896,10 @@ export interface FileRouteTypes {
     | '/api/bendahara/selesai'
     | '/api/dokumen/$id'
     | '/api/dokumen/submit'
+    | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
+    | '/api/master-jenis/$id'
+    | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
     | '/api/ppk/ditolak'
@@ -841,7 +940,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/pegawai'
     | '/ppk'
+    | '/api/master-detail'
     | '/api/master-fungsi'
+    | '/api/master-jenis'
+    | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
     | '/api/upload'
@@ -861,7 +963,10 @@ export interface FileRouteTypes {
     | '/arsiparis/'
     | '/bendahara/'
     | '/ppk/'
+    | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
+    | '/admin/master-data/jenis'
+    | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
     | '/admin/master-data/user'
@@ -874,7 +979,10 @@ export interface FileRouteTypes {
     | '/api/bendahara/selesai'
     | '/api/dokumen/$id'
     | '/api/dokumen/submit'
+    | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
+    | '/api/master-jenis/$id'
+    | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
     | '/api/ppk/ditolak'
@@ -918,13 +1026,19 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PegawaiRoute: typeof PegawaiRouteWithChildren
   PpkRoute: typeof PpkRouteWithChildren
+  ApiMasterDetailRoute: typeof ApiMasterDetailRouteWithChildren
   ApiMasterFungsiRoute: typeof ApiMasterFungsiRouteWithChildren
+  ApiMasterJenisRoute: typeof ApiMasterJenisRouteWithChildren
+  ApiMasterKategoriRoute: typeof ApiMasterKategoriRouteWithChildren
   ApiMasterKegiatanRoute: typeof ApiMasterKegiatanRouteWithChildren
   ApiMasterKelengkapanRoute: typeof ApiMasterKelengkapanRouteWithChildren
   ApiUploadRoute: typeof ApiUploadRoute
   AdminIndexRoute: typeof AdminIndexRoute
   ArsiparisIndexRoute: typeof ArsiparisIndexRoute
+  AdminMasterDataDetailRoute: typeof AdminMasterDataDetailRoute
   AdminMasterDataFungsiRoute: typeof AdminMasterDataFungsiRoute
+  AdminMasterDataJenisRoute: typeof AdminMasterDataJenisRoute
+  AdminMasterDataKategoriRoute: typeof AdminMasterDataKategoriRoute
   AdminMasterDataKegiatanRoute: typeof AdminMasterDataKegiatanRoute
   AdminMasterDataKelengkapanRoute: typeof AdminMasterDataKelengkapanRoute
   AdminMasterDataUserRoute: typeof AdminMasterDataUserRoute
@@ -1133,11 +1247,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMasterKegiatanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/master-kategori': {
+      id: '/api/master-kategori'
+      path: '/api/master-kategori'
+      fullPath: '/api/master-kategori'
+      preLoaderRoute: typeof ApiMasterKategoriRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/master-jenis': {
+      id: '/api/master-jenis'
+      path: '/api/master-jenis'
+      fullPath: '/api/master-jenis'
+      preLoaderRoute: typeof ApiMasterJenisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/master-fungsi': {
       id: '/api/master-fungsi'
       path: '/api/master-fungsi'
       fullPath: '/api/master-fungsi'
       preLoaderRoute: typeof ApiMasterFungsiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/master-detail': {
+      id: '/api/master-detail'
+      path: '/api/master-detail'
+      fullPath: '/api/master-detail'
+      preLoaderRoute: typeof ApiMasterDetailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pegawai/dokumen/': {
@@ -1245,12 +1380,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMasterKegiatanIdRouteImport
       parentRoute: typeof ApiMasterKegiatanRoute
     }
+    '/api/master-kategori/$id': {
+      id: '/api/master-kategori/$id'
+      path: '/$id'
+      fullPath: '/api/master-kategori/$id'
+      preLoaderRoute: typeof ApiMasterKategoriIdRouteImport
+      parentRoute: typeof ApiMasterKategoriRoute
+    }
+    '/api/master-jenis/$id': {
+      id: '/api/master-jenis/$id'
+      path: '/$id'
+      fullPath: '/api/master-jenis/$id'
+      preLoaderRoute: typeof ApiMasterJenisIdRouteImport
+      parentRoute: typeof ApiMasterJenisRoute
+    }
     '/api/master-fungsi/$id': {
       id: '/api/master-fungsi/$id'
       path: '/$id'
       fullPath: '/api/master-fungsi/$id'
       preLoaderRoute: typeof ApiMasterFungsiIdRouteImport
       parentRoute: typeof ApiMasterFungsiRoute
+    }
+    '/api/master-detail/$id': {
+      id: '/api/master-detail/$id'
+      path: '/$id'
+      fullPath: '/api/master-detail/$id'
+      preLoaderRoute: typeof ApiMasterDetailIdRouteImport
+      parentRoute: typeof ApiMasterDetailRoute
     }
     '/api/dokumen/submit': {
       id: '/api/dokumen/submit'
@@ -1336,11 +1492,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMasterDataKegiatanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/master-data/kategori': {
+      id: '/admin/master-data/kategori'
+      path: '/admin/master-data/kategori'
+      fullPath: '/admin/master-data/kategori'
+      preLoaderRoute: typeof AdminMasterDataKategoriRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/master-data/jenis': {
+      id: '/admin/master-data/jenis'
+      path: '/admin/master-data/jenis'
+      fullPath: '/admin/master-data/jenis'
+      preLoaderRoute: typeof AdminMasterDataJenisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/master-data/fungsi': {
       id: '/admin/master-data/fungsi'
       path: '/admin/master-data/fungsi'
       fullPath: '/admin/master-data/fungsi'
       preLoaderRoute: typeof AdminMasterDataFungsiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/master-data/detail': {
+      id: '/admin/master-data/detail'
+      path: '/admin/master-data/detail'
+      fullPath: '/admin/master-data/detail'
+      preLoaderRoute: typeof AdminMasterDataDetailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ppk/dokumen/$id/': {
@@ -1597,6 +1774,18 @@ const PpkRouteChildren: PpkRouteChildren = {
 
 const PpkRouteWithChildren = PpkRoute._addFileChildren(PpkRouteChildren)
 
+interface ApiMasterDetailRouteChildren {
+  ApiMasterDetailIdRoute: typeof ApiMasterDetailIdRoute
+}
+
+const ApiMasterDetailRouteChildren: ApiMasterDetailRouteChildren = {
+  ApiMasterDetailIdRoute: ApiMasterDetailIdRoute,
+}
+
+const ApiMasterDetailRouteWithChildren = ApiMasterDetailRoute._addFileChildren(
+  ApiMasterDetailRouteChildren,
+)
+
 interface ApiMasterFungsiRouteChildren {
   ApiMasterFungsiIdRoute: typeof ApiMasterFungsiIdRoute
 }
@@ -1608,6 +1797,29 @@ const ApiMasterFungsiRouteChildren: ApiMasterFungsiRouteChildren = {
 const ApiMasterFungsiRouteWithChildren = ApiMasterFungsiRoute._addFileChildren(
   ApiMasterFungsiRouteChildren,
 )
+
+interface ApiMasterJenisRouteChildren {
+  ApiMasterJenisIdRoute: typeof ApiMasterJenisIdRoute
+}
+
+const ApiMasterJenisRouteChildren: ApiMasterJenisRouteChildren = {
+  ApiMasterJenisIdRoute: ApiMasterJenisIdRoute,
+}
+
+const ApiMasterJenisRouteWithChildren = ApiMasterJenisRoute._addFileChildren(
+  ApiMasterJenisRouteChildren,
+)
+
+interface ApiMasterKategoriRouteChildren {
+  ApiMasterKategoriIdRoute: typeof ApiMasterKategoriIdRoute
+}
+
+const ApiMasterKategoriRouteChildren: ApiMasterKategoriRouteChildren = {
+  ApiMasterKategoriIdRoute: ApiMasterKategoriIdRoute,
+}
+
+const ApiMasterKategoriRouteWithChildren =
+  ApiMasterKategoriRoute._addFileChildren(ApiMasterKategoriRouteChildren)
 
 interface ApiMasterKegiatanRouteChildren {
   ApiMasterKegiatanIdRoute: typeof ApiMasterKegiatanIdRoute
@@ -1693,13 +1905,19 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PegawaiRoute: PegawaiRouteWithChildren,
   PpkRoute: PpkRouteWithChildren,
+  ApiMasterDetailRoute: ApiMasterDetailRouteWithChildren,
   ApiMasterFungsiRoute: ApiMasterFungsiRouteWithChildren,
+  ApiMasterJenisRoute: ApiMasterJenisRouteWithChildren,
+  ApiMasterKategoriRoute: ApiMasterKategoriRouteWithChildren,
   ApiMasterKegiatanRoute: ApiMasterKegiatanRouteWithChildren,
   ApiMasterKelengkapanRoute: ApiMasterKelengkapanRouteWithChildren,
   ApiUploadRoute: ApiUploadRoute,
   AdminIndexRoute: AdminIndexRoute,
   ArsiparisIndexRoute: ArsiparisIndexRoute,
+  AdminMasterDataDetailRoute: AdminMasterDataDetailRoute,
   AdminMasterDataFungsiRoute: AdminMasterDataFungsiRoute,
+  AdminMasterDataJenisRoute: AdminMasterDataJenisRoute,
+  AdminMasterDataKategoriRoute: AdminMasterDataKategoriRoute,
   AdminMasterDataKegiatanRoute: AdminMasterDataKegiatanRoute,
   AdminMasterDataKelengkapanRoute: AdminMasterDataKelengkapanRoute,
   AdminMasterDataUserRoute: AdminMasterDataUserRoute,

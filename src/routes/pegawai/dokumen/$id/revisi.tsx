@@ -139,12 +139,30 @@ function DokumenRevisiPage() {
       setDok(dokumen)
       setLampiranUrls(dokumen.lampiran_urls as LampiranUrl[] ?? [])
 
-      const { data: kelData } = await supabase
+      // Build dynamic query — filter by chain from the dokumen's stored chain IDs.
+      // Kelengkapan melekat ke leaf node: detail > kategori > jenis.
+      // Dokumen lama (tanpa chain) fallback ke match by kegiatan + is_ketua_tim.
+      let query = supabase
         .from('master_kelengkapan_dokumen')
-        .select('id, nama_dokumen, required')
+        .select('id, nama_dokumen, required, jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
         .eq('kegiatan_id', dokumen.kegiatan_jenis_id)
         .eq('is_ketua_tim', dokumen.is_ketua_tim)
 
+      if (dokumen.detail_permintaan_id) {
+        query = query.eq('detail_permintaan_id', dokumen.detail_permintaan_id)
+      } else if (dokumen.kategori_permintaan_id) {
+        query = query
+          .eq('kategori_permintaan_id', dokumen.kategori_permintaan_id)
+          .is('detail_permintaan_id', null)
+      } else if (dokumen.jenis_permintaan_id) {
+        query = query
+          .eq('jenis_permintaan_id', dokumen.jenis_permintaan_id)
+          .is('kategori_permintaan_id', null)
+          .is('detail_permintaan_id', null)
+      }
+      // else: dokumen lama (tanpa chain) — query tanpa chain filter, match semua legacy kelengkapan
+
+      const { data: kelData } = await query
       if (kelData) setKelengkapan(kelData as KelengkapanItem[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
@@ -395,6 +413,24 @@ function DokumenRevisiPage() {
                   <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kegiatan</p>
                   <p className="text-sm font-semibold text-on-surface">{dok.kegiatan_nama ?? '—'}</p>
                 </div>
+                {dok.jenis_permintaan_id && (
+                  <div>
+                    <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Jenis Permintaan</p>
+                    <p className="text-sm font-semibold text-on-surface">{dok.jenis_permintaan_nama ?? '—'}</p>
+                  </div>
+                )}
+                {dok.kategori_permintaan_id && (
+                  <div>
+                    <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kategori Permintaan</p>
+                    <p className="text-sm font-semibold text-on-surface">{dok.kategori_permintaan_nama ?? '—'}</p>
+                  </div>
+                )}
+                {dok.detail_permintaan_id && (
+                  <div>
+                    <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Detail Permintaan</p>
+                    <p className="text-sm font-semibold text-on-surface">{dok.detail_permintaan_nama ?? '—'}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tahun</p>
                   <p className="text-sm font-semibold text-on-surface">{dok.tahun ?? '—'}</p>

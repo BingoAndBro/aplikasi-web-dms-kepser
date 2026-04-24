@@ -87,6 +87,39 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
           if (keg) kegiatanNama = keg.nama
         }
 
+        // Manual join: jenis_permintaan_nama
+        let jenisPermintaanNama: string | undefined
+        if (dok.jenis_permintaan_id) {
+          const { data: jenis } = await admin
+            .from('master_jenis_permintaan')
+            .select('nama')
+            .eq('id', dok.jenis_permintaan_id)
+            .single()
+          if (jenis) jenisPermintaanNama = jenis.nama
+        }
+
+        // Manual join: kategori_permintaan_nama
+        let kategoriPermintaanNama: string | undefined
+        if (dok.kategori_permintaan_id) {
+          const { data: kat } = await admin
+            .from('master_kategori_permintaan')
+            .select('nama')
+            .eq('id', dok.kategori_permintaan_id)
+            .single()
+          if (kat) kategoriPermintaanNama = kat.nama
+        }
+
+        // Manual join: detail_permintaan_nama
+        let detailPermintaanNama: string | undefined
+        if (dok.detail_permintaan_id) {
+          const { data: det } = await admin
+            .from('master_detail_permintaan')
+            .select('nama')
+            .eq('id', dok.detail_permintaan_id)
+            .single()
+          if (det) detailPermintaanNama = det.nama
+        }
+
         // Parse lampiran_urls
         let lampiranUrls: LampiranUrl[] = []
         if (dok.lampiran_urls) {
@@ -121,6 +154,12 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
             created_by: dok.created_by,
             created_at: dok.created_at,
             updated_at: dok.updated_at,
+            jenis_permintaan_id: dok.jenis_permintaan_id,
+            kategori_permintaan_id: dok.kategori_permintaan_id,
+            detail_permintaan_id: dok.detail_permintaan_id,
+            jenis_permintaan_nama: jenisPermintaanNama,
+            kategori_permintaan_nama: kategoriPermintaanNama,
+            detail_permintaan_nama: detailPermintaanNama,
           },
           logs: logs ?? [],
         })
