@@ -58,7 +58,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
           .eq('is_active', true)
           .single()
 
-        if (existing) return Response.json({ error: `Nama klasifikasi `${parsed.data.nama}` sudah ada` }, { status: 409 })
+        if (existing) return Response.json({ error: `Nama klasifikasi "${parsed.data.nama}" sudah ada` }, { status: 409 })
 
         const { data, error } = await supabase
           .from('master_klasifikasi_arsip')

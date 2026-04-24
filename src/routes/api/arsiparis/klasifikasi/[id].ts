@@ -55,7 +55,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/id')({
             .neq('id', params.id)
             .single()
 
-          if (duplicate) return Response.json({ error: `Nama klasifikasi `${parsed.data.nama}` sudah ada` }, { status: 409 })
+          if (duplicate) return Response.json({ error: `Nama klasifikasi "${parsed.data.nama}" sudah ada` }, { status: 409 })
         }
 
         const updateData: Record<string, unknown> = {}
