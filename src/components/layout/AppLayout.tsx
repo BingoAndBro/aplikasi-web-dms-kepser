@@ -83,7 +83,7 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsip' },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
       ],
     },
     {
@@ -111,7 +111,7 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsip' },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
       ],
     },
     {
@@ -138,7 +138,7 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsip' },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
       ],
     },
     {
@@ -159,16 +159,10 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [
         { id: 'pemberkasan', label: 'Pemberkasan Arsip', icon: Archive, to: '/arsiparis/inbox' },
         { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: '/arsiparis/aktif' },
-        { id: 'verifikasi_penyusutan', label: 'Verifikasi Penyusutan', icon: ClipboardCheck, to: '/arsiparis/verifikasi-penyusutan' },
         { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: '/arsiparis/inaktif' },
         { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: '/arsiparis/usul-musnah' },
         { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: '/arsiparis/klasifikasi' },
-      ],
-    },
-    {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Search, to: '/arsip' },
+        { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: '/arsiparis/search' },
       ],
     },
     {

@@ -116,7 +116,7 @@ function ArsiparisInboxPage() {
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kegiatan</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tahun</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Approve</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-20">Aksi</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-20">Proses</th>
                   </tr>
                 </thead>
                 <tbody>

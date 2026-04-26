@@ -51,6 +51,17 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
 
+        // Check if arsip is DIMUSNAHKAN
+        const { data: arsipRecord } = await authClient
+          .from('arsip')
+          .select('status_arsip')
+          .eq('dokumen_id', params.id)
+          .single()
+
+        if (arsipRecord?.status_arsip === 'DIMUSNAHKAN') {
+          return Response.json({ error: 'File asli tidak tersedia — arsip telah dimusnahkan' }, { status: 410 })
+        }
+
         // Parse lampiran_urls
         let lampiranUrls: any[] = []
         if (dok.lampiran_urls) {
@@ -72,6 +83,10 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
           .createSignedUrl(lampiran.url, 900) // 15 minutes = 900 seconds
 
         if (error || !data) {
+          // Object not found means file was deleted (musnah)
+          if (error?.message === 'Object not found') {
+            return Response.json({ error: 'File asli tidak tersedia — arsip telah dimusnahkan' }, { status: 410 })
+          }
           console.error('[ppk/preview] Signed URL error:', error)
           return Response.json({ error: 'Gagal membuat link pratinjau' }, { status: 500 })
         }

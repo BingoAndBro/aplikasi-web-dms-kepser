@@ -4,12 +4,12 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import {
   FolderOpen, ChevronRight, AlertCircle, Loader2,
-  Archive, ArrowRightCircle, Clock, FileText,
+  Eye,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { getBrowserClient } from '#/lib/supabase-browser'
 
-export const Route = createFileRoute('/arsiparis/aktif')({ component: ArsipAktifPage })
+export const Route = createFileRoute('/arsiparis/aktif/')({ component: ArsipAktifPage })
 
 type ArsipAktifItem = {
   id: string
@@ -28,11 +28,6 @@ function ArsipAktifPage() {
   const [fungsiList, setFungsiList] = useState<{ id: string; nama: string }[]>([])
   const [fungsiFilter, setFungsiFilter] = useState('')
   const [q, setQ] = useState('')
-  const [pindahkanOpen, setPindahkanOpen] = useState(false)
-  const [selectedArsip, setSelectedArsip] = useState<ArsipAktifItem | null>(null)
-  const [catatan, setCatatan] = useState('')
-  const [pindahkanLoading, setPindahkanLoading] = useState(false)
-  const [pindahkanError, setPindahkanError] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = getBrowserClient()
@@ -48,7 +43,7 @@ function ArsipAktifPage() {
       const params = new URLSearchParams()
       if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
       if (q) params.set('q', q)
-      const res = await fetch(`/api/arsiparis/aktif?${params}`, { credentials: 'include' })
+      const res = await fetch(`/api/arsiparis/aktif?${params}`, { credentials: `include` })
       const json = await res.json()
       if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
       setItems(json.aktif ?? [])
@@ -59,28 +54,6 @@ function ArsipAktifPage() {
 
   function formatDate(str: string) {
     try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
-  }
-
-  function openPindahkan(arsip: ArsipAktifItem) {
-    setSelectedArsip(arsip); setCatatan(''); setPindahkanError(null); setPindahkanOpen(true)
-  }
-
-  async function handlePindahkan() {
-    if (!selectedArsip) return
-    setPindahkanLoading(true); setPindahkanError(null)
-    try {
-      const res = await fetch(`/api/arsiparis/verifikasi-penyusutan/pindahkan`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ arsip_id: selectedArsip.id, catatan: catatan.trim() || undefined }),
-      })
-      const json = await res.json()
-      if (!res.ok) { setPindahkanError(json.error ?? 'Gagal'); setPindahkanLoading(false); return }
-      setPindahkanOpen(false)
-      setSelectedArsip(null)
-      fetchData()
-    } catch { setPindahkanError('Terjadi kesalahan'); setPindahkanLoading(false) }
   }
 
   return (
@@ -105,42 +78,8 @@ function ArsipAktifPage() {
             type="text" value={q} onChange={e => setQ(e.target.value)} placeholder="Cari nomor surat atau judul..."
             className="px-3 py-2 bg-white border border-border rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring w-64"
           />
-          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter('')}>Reset</Button>}
+          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter("")}>Reset</Button>}
         </div>
-
-        {/* Pindahkan Modal */}
-        {pindahkanOpen && selectedArsip && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) setPindahkanOpen(false) }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-outline-variant/30">
-                <ArrowRightCircle size={18} className="text-primary shrink-0" />
-                <p className="font-semibold text-on-surface">Pindahkan ke Verifikasi Penyusutan?</p>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="p-3 bg-surface-container-low/30 rounded-lg space-y-1">
-                  <p className="text-xs font-semibold text-on-surface">{selectedArsip.nomor_surat}</p>
-                  <p className="text-xs text-on-surface-variant">{selectedArsip.judul_dokumen}</p>
-                </div>
-                <p className="text-xs text-on-surface-variant">Arsip akan dipindahkan ke tahap Verifikasi Penyusutan dan menunggu persetujuan Anda.</p>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-1.5">Catatan <span className="text-outline font-normal">(opsional)</span></label>
-                  <textarea value={catatan} onChange={e => setCatatan(e.target.value)} rows={3}
-                    className={cn('w-full px-3 py-2 border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring resize-none', pindahkanError ? 'border-error' : 'border-border')}
-                  />
-                  {pindahkanError && <p className="text-[10px] text-error mt-1">{pindahkanError}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => setPindahkanOpen(false)} disabled={!!pindahkanLoading}>Batal</Button>
-                  <Button className="flex-1 gap-1.5" onClick={handlePindahkan} disabled={!!pindahkanLoading}>
-                    {pindahkanLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowRightCircle size={14} />}
-                    Ya, Pindahkan
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-primary" /></div>
@@ -153,7 +92,7 @@ function ArsipAktifPage() {
           <div className="flex flex-col items-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
             <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center"><FolderOpen size={24} className="text-blue-500" /></div>
             <p className="font-headline text-lg font-bold text-on-surface">Tidak ada arsip aktif</p>
-            <p className="text-on-surface-variant text-xs">Arsip yang sudah tidak aktif akan muncul di sini.</p>
+            <p className="text-on-surface-variant text-xs">Arsip dalam masa aktif akan muncul di sini.</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
@@ -168,7 +107,7 @@ function ArsipAktifPage() {
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kegiatan</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Arsip</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Masa Aktif Berakhir</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-20">Aksi</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-16">Detail</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -186,7 +125,9 @@ function ArsipAktifPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openPindahkan(a)} aria-label="Pindahkan"><ArrowRightCircle size={14} /></Button>
+                        <Link to="/arsiparis/aktif/$id" params={{ id: a.id }}>
+                          <Button size="icon-xs" variant="ghost" aria-label="Lihat detail"><Eye size={14} /></Button>
+                        </Link>
                       </td>
                     </tr>
                   ))}

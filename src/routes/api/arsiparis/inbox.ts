@@ -41,7 +41,10 @@ export const Route = createFileRoute('/api/arsiparis/inbox')({
         query = query.order('created_at', { ascending: false })
 
         const { data: docs, error } = await query
-        if (error) return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+        if (error) {
+          console.error('[inbox] query error:', JSON.stringify(error))
+          return Response.json({ error: 'Gagal mengambil data', detail: error.message }, { status: 500 })
+        }
 
         if (!docs || docs.length === 0) return Response.json({ inbox: [] })
 

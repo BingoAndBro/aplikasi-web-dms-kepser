@@ -41,8 +41,9 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
         const session = await getSession(supabase)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) return Response.json({ error: 'Hanya ADMIN yang bisa menambah klasifikasi' }, { status: 403 })
+        const isAdminOrArsiparis = await hasRole(supabase, session.user.id, 'ADMIN') ||
+          await hasRole(supabase, session.user.id, 'ARSIPARIS')
+        if (!isAdminOrArsiparis) return Response.json({ error: 'Hanya ADMIN atau ARSIPARIS yang bisa menambah klasifikasi' }, { status: 403 })
 
         const body = await request.json().catch(() => null)
         if (!body) return Response.json({ error: 'Body tidak valid' }, { status: 400 })

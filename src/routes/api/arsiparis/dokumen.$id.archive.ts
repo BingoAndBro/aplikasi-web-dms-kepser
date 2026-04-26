@@ -37,8 +37,8 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         const schema = z.object({
           nomor_surat: z.string().min(1, 'Nomor surat wajib diisi'),
           klasifikasi: z.string().min(1, 'Klasifikasi wajib diisi'),
-          retensi_aktif: z.enum(RETENSI_OPTIONS, { errorMap: () => ({ message: 'Retensi aktif tidak valid' }) }),
-          retensi_inaktif: z.enum(RETENSI_OPTIONS, { errorMap: () => ({ message: 'Retensi inaktif tidak valid' }) }),
+          retensi_aktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi aktif tidak valid' }),
+          retensi_inaktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi inaktif tidak valid' }),
           masa_aktif_berakhir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD'),
           masa_inaktif_berakhir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD'),
           catatan_arsiparis: z.string().optional(),
@@ -70,13 +70,29 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
 
         if (existingArsip) return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
 
+        // Ambil lampiran_urls dari dokumen_transaksi — snapshot on archive
+        const { data: dokWithLampiran } = await supabase
+          .from('dokumen_transaksi')
+          .select('lampiran_urls')
+          .eq('id', params.id)
+          .single()
+
+        let lampiranSnapshot: unknown[] = []
+        if (dokWithLampiran?.lampiran_urls) {
+          if (typeof dokWithLampiran.lampiran_urls === 'string') {
+            lampiranSnapshot = JSON.parse(dokWithLampiran.lampiran_urls)
+          } else {
+            lampiranSnapshot = dokWithLampiran.lampiran_urls
+          }
+        }
+
         // FSM transition: COMPLETED → ARCHIVED
         const fsResult = transition(dok.status, 'ARCHIVE', 'ARSIPARIS')
         if (!fsResult.success) {
           return Response.json({ error: fsResult.error ?? 'Transisi status gagal' }, { status: 400 })
         }
 
-        // Insert arsip record
+        // Insert arsip record with snapshot
         const { error: arsipError } = await supabase.from('arsip').insert({
           dokumen_id: params.id,
           nomor_surat: data.nomor_surat,
@@ -88,6 +104,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
           catatan_arsiparis: data.catatan_arsiparis ?? null,
           archived_by: session.user.id,
           status_arsip: 'AKTIF',
+          lampiran_snapshot: lampiranSnapshot,
         })
 
         if (arsipError) {

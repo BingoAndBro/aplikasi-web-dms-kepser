@@ -82,6 +82,7 @@ function PpkDokumenDetailIndexPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewFilename, setPreviewFilename] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [id])
 
@@ -134,12 +135,14 @@ function PpkDokumenDetailIndexPage() {
   }
 
   async function handlePreview(index: number) {
-    setPreviewingIdx(index); setPreviewUrl(null); setPreviewLoading(true)
+    setPreviewingIdx(index); setPreviewUrl(null); setPreviewLoading(true); setPreviewError(null)
     try {
       const res = await fetch(`/api/ppk/dokumen/${id}/preview/${index}`, { credentials: 'include' })
       const json = await res.json()
+      if (!res.ok) { setPreviewError(json.error ?? 'Terjadi kesalahan'); setPreviewLoading(false); return }
       if (json.signedUrl) { setPreviewUrl(json.signedUrl); setPreviewFilename(json.filename ?? `lampiran-${index + 1}`) }
-    } catch { /* silent */ } finally { setPreviewLoading(false) }
+    } catch { setPreviewError('Terjadi kesalahan') }
+    finally { setPreviewLoading(false) }
   }
 
   function closePreview() { setPreviewingIdx(null); setPreviewUrl(null); setPreviewFilename('') }
@@ -177,7 +180,16 @@ function PpkDokumenDetailIndexPage() {
             <div className="flex-1 overflow-auto bg-surface-container-low/30">
               {previewLoading ? <div className="flex items-center justify-center h-48"><Loader2 size={22} className="animate-spin text-primary" /></div>
                : previewUrl ? <iframe src={previewUrl} className="w-full h-[calc(70vh-96px)] border-0" title={previewFilename} />
-               : <div className="flex items-center justify-center h-48"><p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p></div>}
+               : <div className="flex items-center justify-center h-48">
+                   {previewError ? (
+                     <div className="text-center px-4">
+                       <p className="text-sm text-error font-semibold">File tidak tersedia</p>
+                       <p className="text-xs text-on-surface-variant mt-1">{previewError}</p>
+                     </div>
+                   ) : (
+                     <p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p>
+                   )}
+                 </div>}
             </div>
           </div>
         </div>
@@ -273,7 +285,7 @@ function PpkDokumenDetailIndexPage() {
                 <FileText size={16} className="text-primary shrink-0" />
                 <div className="flex-1 min-w-0"><p className="text-xs font-medium text-on-surface truncate">{lamp.nama}</p><p className="text-[10px] text-outline">{formatDateTime(lamp.uploaded_at)}</p></div>
                 <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(i)} disabled={previewingIdx === i} aria-label="Pratinjau">{previewingIdx === i ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}</Button>
-                <Button size="icon-xs" variant="ghost" onClick={() => { fetch(`/api/dokumen/${id}/download/${i}`, { credentials: 'include' }).then(r => r.json()).then(d => d.signedUrl && window.open(d.signedUrl, '_blank')).catch(() => alert('Gagal download')) }} aria-label="Download"><Download size={14} /></Button>
+                <Button size="icon-xs" variant="ghost" onClick={() => { fetch(`/api/dokumen/${id}/download/${i}`, { credentials: 'include' }).then(r => r.json()).then(d => { if (d.signedUrl) window.open(d.signedUrl, '_blank'); else if (d.error) alert(d.error) }).catch(() => alert('Gagal download')) }} aria-label="Download"><Download size={14} /></Button>
               </div>
             ))}
           </div>

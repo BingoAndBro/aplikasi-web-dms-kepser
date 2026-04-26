@@ -4,11 +4,12 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import {
   Archive, ChevronRight, AlertCircle, Loader2,
-  Search, FileText,
+  Search, Eye,
 } from 'lucide-react'
+import { Badge } from '#/components/ui/badge'
 import { getBrowserClient } from '#/lib/supabase-browser'
 
-export const Route = createFileRoute('/arsip/')({ component: ArsipSearchPage })
+export const Route = createFileRoute('/arsiparis/search')({ component: ArsipSearchPage })
 
 type ArsipItem = {
   id: string
@@ -56,7 +57,7 @@ function ArsipSearchPage() {
       if (tahun) params.set('tahun', tahun)
       if (q) params.set('q', q)
       params.set('page', String(page))
-      const res = await fetch(`/api/arsip/?${params}`, { credentials: `include` })
+      const res = await fetch(`/api/arsiparis/search?${params}`, { credentials: 'include' })
       const json = await res.json()
       if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
       setItems(json.arsip ?? [])
@@ -74,6 +75,21 @@ function ArsipSearchPage() {
     try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
   }
 
+  function statusBadge(s: string) {
+    if (s === 'AKTIF') return <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">AKTIF</Badge>
+    if (s === 'INAKTIF') return <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-[10px]">INAKTIF</Badge>
+    if (s === 'USUL_MUSNAH') return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">USUL MUSNAH</Badge>
+    if (s === 'DIMUSNAHKAN') return <Badge className="bg-gray-100 text-gray-500 border-gray-300 text-[10px]">DIMUSNAHKAN</Badge>
+    return <Badge className="bg-gray-100 text-gray-500 text-[10px]">{s}</Badge>
+  }
+
+  function getDetailUrl(a: ArsipItem) {
+    if (a.status_arsip === 'AKTIF') return '/arsiparis/aktif/' + a.id
+    if (a.status_arsip === 'INAKTIF') return '/arsiparis/inaktif/' + a.id
+    if (a.status_arsip === 'USUL_MUSNAH') return '/arsiparis/usul-musnah/' + a.id
+    return null
+  }
+
   const totalPages = Math.ceil(total / PER_PAGE)
 
   return (
@@ -81,16 +97,16 @@ function ArsipSearchPage() {
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <Archive size={12} />
-            <span className="text-primary">Cari Arsip</span>
+            <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
+            <ChevronRight size={10} />
+            <span className="text-primary">Pencarian Arsip</span>
           </div>
           <h2 className="font-headline text-2xl font-extrabold text-on-surface">Pencarian Arsip</h2>
           <p className="text-on-surface-variant text-xs mt-1">Temukan arsip dokumen yang sudah diarsipkan.</p>
         </div>
 
-        {/* Filter Sidebar */}
         <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-on-surface mb-1.5">Fungsi</label>
               <select
@@ -133,16 +149,15 @@ function ArsipSearchPage() {
                 className="w-full px-3 py-2 border border-border rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={fetchData} className="flex-1 gap-1.5">
-                <Search size={12} />Cari
-              </Button>
-              <Button variant="ghost" size="sm" onClick={resetFilters}>Reset</Button>
-            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Button size="sm" onClick={fetchData} className="gap-1.5">
+              <Search size={12} />Cari
+            </Button>
+            <Button variant="ghost" size="sm" onClick={resetFilters}>Reset</Button>
           </div>
         </div>
 
-        {/* Results */}
         {loading ? (
           <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-primary" /></div>
         ) : error ? (
@@ -169,19 +184,32 @@ function ArsipSearchPage() {
                       <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Fungsi</th>
                       <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kegiatan</th>
                       <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Arsip</th>
+                      <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((a, i) => (
-                      <tr key={a.id} className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors cursor-pointer"
-                        onClick={() => window.location.href = `/arsip/${a.id}`}
-                      >
+                      <tr key={a.id} className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
                         <td className="px-4 py-3 text-center text-outline">{i + 1}</td>
                         <td className="px-4 py-3 font-semibold text-on-surface">{a.nomor_surat}</td>
                         <td className="px-4 py-3 text-on-surface line-clamp-1">{a.judul}</td>
                         <td className="px-4 py-3 text-on-surface">{a.fungsi_nama}</td>
                         <td className="px-4 py-3 text-on-surface">{a.kegiatan_nama}</td>
                         <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(a.archived_at)}</td>
+                        <td className="px-4 py-3 text-center">{statusBadge(a.status_arsip)}</td>
+                        <td className="px-4 py-3 text-center">
+                          {getDetailUrl(a) ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); window.location.href = getDetailUrl(a)! }}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors"
+                              aria-label="Lihat detail"
+                            >
+                              <Eye size={14} className="text-primary" />
+                            </button>
+                          ) : (
+                            <span className="text-outline text-[10px]">—</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -189,7 +217,6 @@ function ArsipSearchPage() {
               </div>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2">
                 <Button size="icon-xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>‹</Button>

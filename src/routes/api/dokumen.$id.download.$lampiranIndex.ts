@@ -35,6 +35,17 @@ export const Route = createFileRoute('/api/dokumen/$id/download/$lampiranIndex')
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
 
+        // Check if arsip is DIMUSNAHKAN
+        const { data: arsipRecord } = await supabase
+          .from('arsip')
+          .select('status_arsip, lampiran_snapshot')
+          .eq('dokumen_id', params.id)
+          .single()
+
+        if (arsipRecord?.status_arsip === 'DIMUSNAHKAN') {
+          return Response.json({ error: 'File asli tidak tersedia — arsip telah dimusnahkan' }, { status: 410 })
+        }
+
         // Ownership or approver role check
         const isOwner = dok.created_by === session.user.id
         const isApprover = await userHasApproverRole(supabase, session.user.id)

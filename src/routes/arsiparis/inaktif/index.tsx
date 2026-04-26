@@ -4,12 +4,12 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import {
   ArchiveX, ChevronRight, AlertCircle, Loader2,
-  Trash2, Clock, FileText,
+  Eye,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { getBrowserClient } from '#/lib/supabase-browser'
 
-export const Route = createFileRoute('/arsiparis/inaktif')({ component: ArsipInaktifPage })
+export const Route = createFileRoute('/arsiparis/inaktif/')({ component: ArsipInaktifPage })
 
 type ArsipInaktifItem = {
   id: string
@@ -29,12 +29,6 @@ function ArsipInaktifPage() {
   const [fungsiList, setFungsiList] = useState<{ id: string; nama: string }[]>([])
   const [fungsiFilter, setFungsiFilter] = useState('')
 
-  const [musnahOpen, setMusnahOpen] = useState(false)
-  const [selectedArsip, setSelectedArsip] = useState<ArsipInaktifItem | null>(null)
-  const [catatan, setCatatan] = useState('')
-  const [musnahLoading, setMusnahLoading] = useState(false)
-  const [musnahError, setMusnahError] = useState<string | null>(null)
-
   useEffect(() => {
     const supabase = getBrowserClient()
     if (!supabase) return
@@ -48,7 +42,7 @@ function ArsipInaktifPage() {
     try {
       const params = new URLSearchParams()
       if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      const res = await fetch(`/api/arsiparis/inaktif?${params}`, { credentials: 'include' })
+      const res = await fetch(`/api/arsiparis/inaktif?${params}`, { credentials: `include` })
       const json = await res.json()
       if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
       setItems(json.inaktif ?? [])
@@ -59,26 +53,6 @@ function ArsipInaktifPage() {
 
   function formatDate(str: string) {
     try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
-  }
-
-  function openMusnah(arsip: ArsipInaktifItem) {
-    setSelectedArsip(arsip); setCatatan(''); setMusnahError(null); setMusnahOpen(true)
-  }
-
-  async function handleMusnah() {
-    if (!selectedArsip) return
-    setMusnahLoading(true); setMusnahError(null)
-    try {
-      const res = await fetch('/api/arsiparis/usul-musnah/pindahkan', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ arsip_id: selectedArsip.id, catatan: catatan.trim() || undefined }),
-      })
-      const json = await res.json()
-      if (!res.ok) { setMusnahError(json.error ?? 'Gagal'); setMusnahLoading(false); return }
-      setMusnahOpen(false); setSelectedArsip(null); fetchData()
-    } catch { setMusnahError('Terjadi kesalahan'); setMusnahLoading(false) }
   }
 
   return (
@@ -99,45 +73,8 @@ function ArsipInaktifPage() {
             <option value="">Semua Fungsi</option>
             {fungsiList.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
           </select>
-          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter('')}>Reset</Button>}
+          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter("")}>Reset</Button>}
         </div>
-
-        {/* Musnah Modal */}
-        {musnahOpen && selectedArsip && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) setMusnahOpen(false) }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-outline-variant/30">
-                <Trash2 size={18} className="text-amber-500 shrink-0" />
-                <p className="font-semibold text-on-surface">Usulkan Pemusnahan?</p>
-              </div>
-              <div className="p-5 space-y-4">
-                <div className="p-3 bg-surface-container-low/30 rounded-lg space-y-1">
-                  <p className="text-xs font-semibold text-on-surface">{selectedArsip.nomor_surat}</p>
-                  <p className="text-xs text-on-surface-variant">{selectedArsip.judul_dokumen}</p>
-                </div>
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs text-amber-700 font-semibold">PERHATIAN</p>
-                  <p className="text-xs text-amber-600 mt-1">Arsip akan diusulkan untuk dimusnahkan. Persetujuan akhir diperlukan sebelum dokumen dihapus permanen.</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-1.5">Catatan <span className="text-outline font-normal">(opsional)</span></label>
-                  <textarea value={catatan} onChange={e => setCatatan(e.target.value)} rows={3}
-                    className={cn('w-full px-3 py-2 border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring resize-none', musnahError ? 'border-error' : 'border-border')}
-                  />
-                  {musnahError && <p className="text-[10px] text-error mt-1">{musnahError}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => setMusnahOpen(false)} disabled={!!musnahLoading}>Batal</Button>
-                  <Button className="flex-1 gap-1.5" onClick={handleMusnah} disabled={!!musnahLoading}>
-                    {musnahLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                    Ya, Usulkan
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-primary" /></div>
@@ -164,7 +101,7 @@ function ArsipInaktifPage() {
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Fungsi</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kegiatan</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Masa Inaktif Berakhir</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-20">Aksi</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-16">Detail</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -181,7 +118,9 @@ function ArsipInaktifPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openMusnah(a)} aria-label="Usulkan musnah"><Trash2 size={14} /></Button>
+                        <Link to="/arsiparis/inaktif/$id" params={{ id: a.id }}>
+                          <Button size="icon-xs" variant="ghost" aria-label="Lihat detail"><Eye size={14} /></Button>
+                        </Link>
                       </td>
                     </tr>
                   ))}

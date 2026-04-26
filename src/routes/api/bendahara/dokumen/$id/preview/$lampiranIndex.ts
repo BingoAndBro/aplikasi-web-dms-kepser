@@ -30,6 +30,17 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/preview/$lampir
           .from('dokumen_transaksi').select('lampiran_urls').eq('id', params.id).single()
         if (dokError || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
+        // Check if arsip is DIMUSNAHKAN
+        const { data: arsipRecord } = await supabase
+          .from('arsip')
+          .select('status_arsip')
+          .eq('dokumen_id', params.id)
+          .single()
+
+        if (arsipRecord?.status_arsip === 'DIMUSNAHKAN') {
+          return Response.json({ error: 'File asli tidak tersedia — arsip telah dimusnahkan' }, { status: 410 })
+        }
+
         let lampiranUrls: any[] = []
         if (dok.lampiran_urls) lampiranUrls = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
 

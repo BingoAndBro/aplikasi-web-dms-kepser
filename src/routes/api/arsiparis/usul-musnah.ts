@@ -35,7 +35,10 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah')({
           .eq('is_ditolak', false)
           .order('archived_at', { ascending: false })
 
-        if (error) return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+        if (error) {
+          console.error('[usul-musnah] arsip query error:', JSON.stringify(error))
+          return Response.json({ error: 'Gagal mengambil data', detail: error.message }, { status: 500 })
+        }
         if (!arsipList || arsipList.length === 0) return Response.json({ usul_musnah: [] })
 
         const arsipIds = arsipList.map(a => a.id)

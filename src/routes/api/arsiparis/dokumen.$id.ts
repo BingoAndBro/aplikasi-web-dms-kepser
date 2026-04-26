@@ -46,6 +46,25 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
           if (k) { kegiatanNama = k.nama; kegiatanId = k.id }
         }
 
+        // Get chain names
+        let jenisPermintaanNama: string | undefined
+        if (dok.jenis_permintaan_id) {
+          const { data: j } = await supabase.from('master_jenis_permintaan').select('nama').eq('id', dok.jenis_permintaan_id).single()
+          if (j) jenisPermintaanNama = j.nama
+        }
+
+        let kategoriPermintaanNama: string | undefined
+        if (dok.kategori_permintaan_id) {
+          const { data: k } = await supabase.from('master_kategori_permintaan').select('nama').eq('id', dok.kategori_permintaan_id).single()
+          if (k) kategoriPermintaanNama = k.nama
+        }
+
+        let detailPermintaanNama: string | undefined
+        if (dok.detail_permintaan_id) {
+          const { data: d } = await supabase.from('master_detail_permintaan').select('nama').eq('id', dok.detail_permintaan_id).single()
+          if (d) detailPermintaanNama = d.nama
+        }
+
         // Parse lampiran_urls
         let lampiranUrls: LampiranUrl[] = []
         if (dok.lampiran_urls) {
@@ -77,11 +96,19 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
             judul: dok.judul,
             fungsi: { id: fungsiId, nama: fungsiNama },
             kegiatan: { id: kegiatanId, nama: kegiatanNama },
+            jenis_permintaan_id: dok.jenis_permintaan_id,
+            jenis_permintaan_nama: jenisPermintaanNama,
+            kategori_permintaan_id: dok.kategori_permintaan_id,
+            kategori_permintaan_nama: kategoriPermintaanNama,
+            detail_permintaan_id: dok.detail_permintaan_id,
+            detail_permintaan_nama: detailPermintaanNama,
             tanggal: dok.tanggal,
             tahun: dok.tahun,
+            is_ketua_tim: dok.is_ketua_tim,
             lampiran_urls: lampiranUrls,
             created_by: { id: dok.created_by, nama: 'Pegawai' },
             status: dok.status,
+            is_archived: !!arsipRecord,
           },
           bendahara_approve: bendaharaApprove,
           arsip: arsipRecord

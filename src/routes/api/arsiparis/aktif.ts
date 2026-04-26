@@ -31,13 +31,16 @@ export const Route = createFileRoute('/api/arsiparis/aktif')({
 
         let query = supabase
           .from('arsip')
-          .select('id, nomor_surat, archived_at, masa_aktif_berakhir, klasifikasi, retensi_aktif, retensi_inaktif')
+          .select('id, dokumen_id, nomor_surat, archived_at, masa_aktif_berakhir, klasifikasi, retensi_aktif, retensi_inaktif')
           .eq('status_arsip', 'AKTIF')
           .eq('is_ditolak', false)
           .order('archived_at', { ascending: false })
 
         const { data: arsipList, error } = await query
-        if (error) return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+        if (error) {
+          console.error('[aktif] arsip query error:', JSON.stringify(error))
+          return Response.json({ error: 'Gagal mengambil data', detail: error.message }, { status: 500 })
+        }
 
         if (!arsipList || arsipList.length === 0) return Response.json({ aktif: [] })
 

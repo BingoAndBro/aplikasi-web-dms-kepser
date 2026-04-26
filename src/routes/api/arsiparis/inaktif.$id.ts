@@ -10,10 +10,10 @@ function createClient(request: Request) {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/arsip/[id] — detail arsip untuk semua authenticated user
+// GET /api/arsiparis/inaktif/[id] — detail arsip inaktif
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/api/arsip/id/')({
+export const Route = createFileRoute('/api/arsiparis/inaktif/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -21,30 +21,33 @@ export const Route = createFileRoute('/api/arsip/id/')({
         const session = await getSession(supabase)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
+        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
+        if (!roleNames.includes('ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+
         const { data: arsip, error } = await supabase
           .from('arsip')
-          .select('*')
+          .select('*, lampiran_snapshot')
           .eq('id', params.id)
+          .eq('status_arsip', 'INAKTIF')
           .single()
 
-        if (error || !arsip) return Response.json({ error: 'Arsip tidak ditemukan' }, { status: 404 })
+        if (error || !arsip) return Response.json({ error: 'Arsip inaktif tidak ditemukan' }, { status: 404 })
 
-        // Get dokumen info
         const { data: dok } = await supabase
           .from('dokumen_transaksi')
-          .select('id, judul, fungsi_id, kegiatan_jenis_id, tahun, lampiran_urls, created_by')
+          .select('id, judul, fungsi_id, kegiatan_jenis_id, tahun, created_by, jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
           .eq('id', arsip.dokumen_id)
           .single()
 
         if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-        // Parse lampiran_urls
-        let lampiranUrls: LampiranUrl[] = []
-        if (dok.lampiran_urls) {
-          lampiranUrls = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
+        // Use lampiran_snapshot from arsip, not from dokumen_transaksi
+        let lampiranSnapshot: LampiranUrl[] = []
+        if (arsip.lampiran_snapshot) {
+          lampiranSnapshot = typeof arsip.lampiran_snapshot === 'string' ? JSON.parse(arsip.lampiran_snapshot) : arsip.lampiran_snapshot
         }
 
-        // Get fungsi & kegiatan
         let fungsiNama = '—', fungsiId = ''
         if (dok.fungsi_id) {
           const { data: f } = await supabase.from('master_fungsi').select('id, nama').eq('id', dok.fungsi_id).single()
@@ -57,7 +60,24 @@ export const Route = createFileRoute('/api/arsip/id/')({
           if (k) { kegiatanNama = k.nama; kegiatanId = k.id }
         }
 
-        // Get archived_by user info
+        let jenisPermintaanNama = '—'
+        if (dok.jenis_permintaan_id) {
+          const { data: j } = await supabase.from('master_jenis_permintaan').select('nama').eq('id', dok.jenis_permintaan_id).single()
+          if (j) jenisPermintaanNama = j.nama
+        }
+
+        let kategoriPermintaanNama = '—'
+        if (dok.kategori_permintaan_id) {
+          const { data: k } = await supabase.from('master_kategori_permintaan').select('nama').eq('id', dok.kategori_permintaan_id).single()
+          if (k) kategoriPermintaanNama = k.nama
+        }
+
+        let detailPermintaanNama = '—'
+        if (dok.detail_permintaan_id) {
+          const { data: d } = await supabase.from('master_detail_permintaan').select('nama').eq('id', dok.detail_permintaan_id).single()
+          if (d) detailPermintaanNama = d.nama
+        }
+
         const { data: allUsers } = await supabase.auth.admin.listUsers()
         const archivedByUser = allUsers?.users.find(u => u.id === arsip.archived_by)
         const archivedByNama = archivedByUser?.user_metadata?.nama ?? archivedByUser?.email ?? '—'
@@ -73,15 +93,20 @@ export const Route = createFileRoute('/api/arsip/id/')({
             masa_inaktif_berakhir: arsip.masa_inaktif_berakhir,
             status_arsip: arsip.status_arsip,
             archived_at: arsip.archived_at,
+            archived_by: arsip.archived_by,
             archived_by_nama: archivedByNama,
             catatan_arsiparis: arsip.catatan_arsiparis,
+            dokumen_id: dok.id,
             dokumen: {
               id: dok.id,
               judul: dok.judul,
               fungsi: { id: fungsiId, nama: fungsiNama },
               kegiatan: { id: kegiatanId, nama: kegiatanNama },
+              jenis_permintaan: jenisPermintaanNama,
+              kategori_permintaan: kategoriPermintaanNama,
+              detail_permintaan: detailPermintaanNama,
               tahun: dok.tahun,
-              lampiran_urls: lampiranUrls,
+              lampiran_urls: lampiranSnapshot,
             },
           },
         })

@@ -30,13 +30,16 @@ export const Route = createFileRoute('/api/arsiparis/inaktif')({
 
         let query = supabase
           .from('arsip')
-          .select('id, nomor_surat, archived_at, masa_aktif_berakhir, masa_inaktif_berakhir, klasifikasi')
+          .select('id, dokumen_id, nomor_surat, archived_at, masa_aktif_berakhir, masa_inaktif_berakhir, klasifikasi')
           .eq('status_arsip', 'INAKTIF')
           .eq('is_ditolak', false)
           .order('archived_at', { ascending: false })
 
         const { data: arsipList, error } = await query
-        if (error) return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+        if (error) {
+          console.error('[inaktif] arsip query error:', JSON.stringify(error))
+          return Response.json({ error: 'Gagal mengambil data', detail: error.message }, { status: 500 })
+        }
 
         if (!arsipList || arsipList.length === 0) return Response.json({ inaktif: [] })
 

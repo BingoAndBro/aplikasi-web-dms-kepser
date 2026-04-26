@@ -5,8 +5,9 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import {
   FileText, ChevronRight, Download, Eye, AlertCircle,
-  Loader2, X, CheckCircle2, AlertTriangle,
+  Loader2, X, CheckCircle2,
 } from 'lucide-react'
+import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { cn } from '#/lib/utils'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
@@ -46,8 +47,16 @@ type DokumenDetail = {
   lampiran_urls: LampiranUrl[]
   created_by: { id: string; nama: string }
   status: string
+  is_ketua_tim: boolean
   bendahara_approve: { nama: string; tanggal: string } | null
   arsip: { id: string; status_arsip: string; nomor_surat: string } | null
+  is_archived: boolean
+  jenis_permintaan_id?: string | null
+  jenis_permintaan_nama?: string
+  kategori_permintaan_id?: string | null
+  kategori_permintaan_nama?: string
+  detail_permintaan_id?: string | null
+  detail_permintaan_nama?: string
 }
 
 function ArsiparisDokumenDetailPage() {
@@ -56,7 +65,6 @@ function ArsiparisDokumenDetailPage() {
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  // Form state
   const [klasifikasiList, setKlasifikasiList] = useState<Klasifikasi[]>([])
   const [nomorSurat, setNomorSurat] = useState('')
   const [klasifikasi, setKlasifikasi] = useState('')
@@ -69,13 +77,6 @@ function ArsiparisDokumenDetailPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
 
-  // Skip modal
-  const [skipOpen, setSkipOpen] = useState(false)
-  const [skipCatatan, setSkipCatatan] = useState('')
-  const [skipLoading, setSkipLoading] = useState(false)
-  const [skipError, setSkipError] = useState<string | null>(null)
-
-  // Preview state
   const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewFilename, setPreviewFilename] = useState('')
@@ -104,7 +105,6 @@ function ArsiparisDokumenDetailPage() {
     finally { setLoading(false) }
   }
 
-  // Fetch klasifikasi list
   useEffect(() => {
     fetch('/api/arsiparis/klasifikasi', { credentials: 'include' })
       .then(r => r.json())
@@ -112,7 +112,6 @@ function ArsiparisDokumenDetailPage() {
       .catch(() => {})
   }, [])
 
-  // Auto-calculate masa aktif & inaktif
   function recalcDates() {
     if (!dokumen) return
     const archivedAt = dokumen.tanggal || new Date().toISOString().split('T')[0]
@@ -163,23 +162,8 @@ function ArsiparisDokumenDetailPage() {
       })
       const json = await res.json()
       if (!res.ok) { setFormSubmitError(json.error ?? 'Gagal'); setFormLoading(false); return }
-      window.location.href = '/arsiparis/inbox'
+      window.location.href = '/arsiparis/aktif'
     } catch { setFormSubmitError('Terjadi kesalahan'); setFormLoading(false) }
-  }
-
-  async function handleSkip() {
-    setSkipLoading(true); setSkipError(null)
-    try {
-      const res = await fetch(`/api/arsiparis/dokumen/${id}/skip`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catatan_arsiparis: skipCatatan.trim() || undefined }),
-      })
-      const json = await res.json()
-      if (!res.ok) { setSkipError(json.error ?? 'Gagal'); setSkipLoading(false); return }
-      window.location.href = '/arsiparis/inbox'
-    } catch { setSkipError('Terjadi kesalahan'); setSkipLoading(false) }
   }
 
   if (loading) return (
@@ -190,7 +174,7 @@ function ArsiparisDokumenDetailPage() {
 
   if (fetchError || !dokumen) return (
     <div className="text-center py-20">
-      <AlertTriangle size={32} className="text-error mx-auto mb-3" />
+      <AlertCircle size={32} className="text-error mx-auto mb-3" />
       <p className="text-sm text-on-surface-variant">{fetchError ?? 'Dokumen tidak ditemukan'}</p>
       <Button variant="outline" size="sm" className="mt-4" onClick={() => window.location.href = '/arsiparis/inbox'}>Kembali ke Inbox</Button>
     </div>
@@ -221,40 +205,6 @@ function ArsiparisDokumenDetailPage() {
           </div>
         )}
 
-        {/* Skip Modal */}
-        {skipOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) { setSkipOpen(false); setSkipCatatan(''); setSkipError(null) } }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-outline-variant/30">
-                <AlertTriangle size={18} className="text-amber-500 shrink-0" />
-                <p className="font-semibold text-on-surface">Tidak Diarsipkan?</p>
-              </div>
-              <div className="p-5 space-y-4">
-                <p className="text-xs text-on-surface-variant">Dokumen ini akan ditandai sebagai "tidak diarsipkan" dan tidak akan muncul kembali di daftar pemberkasan.</p>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-1.5">Catatan <span className="text-outline font-normal">(opsional)</span></label>
-                  <textarea
-                    value={skipCatatan}
-                    onChange={e => { setSkipCatatan(e.target.value); setSkipError(null) }}
-                    placeholder="Alasan tidak diarsipkan..."
-                    rows={3}
-                    className={cn('w-full px-3 py-2 border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring resize-none', skipError ? 'border-error' : 'border-border')}
-                  />
-                  {skipError && <p className="text-[10px] text-error mt-1">{skipError}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => { setSkipOpen(false); setSkipCatatan(''); setSkipError(null) }} disabled={!!skipLoading}>Batal</Button>
-                  <Button variant="destructive" className="flex-1" onClick={handleSkip} disabled={!!skipLoading}>
-                    {skipLoading ? <Loader2 size={14} className="animate-spin" /> : 'Ya, Tidak Diarsipkan'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
           <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
           <ChevronRight size={10} />
@@ -265,7 +215,6 @@ function ArsiparisDokumenDetailPage() {
 
         <h2 className="font-headline text-xl font-extrabold text-on-surface">{dokumen.judul}</h2>
 
-        {/* Status */}
         <div className="flex items-center gap-3">
           <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">COMPLETED</Badge>
           {isArchived && (
@@ -273,19 +222,27 @@ function ArsiparisDokumenDetailPage() {
           )}
         </div>
 
-        {/* Dokumen Info */}
         <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
           <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Informasi Dokumen</p>
           <div className="grid grid-cols-2 gap-4">
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Fungsi</p><p className="text-sm font-semibold text-on-surface">{dokumen.fungsi.nama ?? '—'}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kegiatan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kegiatan.nama ?? '—'}</p></div>
+            {dokumen.jenis_permintaan_id && (
+              <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Jenis Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.jenis_permintaan_nama ?? '—'}</p></div>
+            )}
+            {dokumen.kategori_permintaan_id && (
+              <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kategori Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kategori_permintaan_nama ?? '—'}</p></div>
+            )}
+            {dokumen.detail_permintaan_id && (
+              <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Detail Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.detail_permintaan_nama ?? '—'}</p></div>
+            )}
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tahun</p><p className="text-sm font-semibold text-on-surface">{dokumen.tahun}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p><p className="text-sm font-semibold text-on-surface">{formatDate(dokumen.tanggal)}</p></div>
+            <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>
             <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Disetujui Bendahara</p><p className="text-sm font-semibold text-on-surface">{dokumen.bendahara_approve ? `${dokumen.bendahara_approve.nama} — ${formatDate(dokumen.bendahara_approve.tanggal)}` : '—'}</p></div>
           </div>
         </div>
 
-        {/* Lampiran */}
         <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
           <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Lampiran ({dokumen.lampiran_urls.length})</p>
           {dokumen.lampiran_urls.length === 0 ? (
@@ -314,7 +271,8 @@ function ArsiparisDokumenDetailPage() {
           )}
         </div>
 
-        {/* Archive Form */}
+        <ActivityLog dokumenId={id} />
+
         {isArchived ? (
           <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-center gap-3">
             <CheckCircle2 size={20} className="text-green-500 shrink-0" />
@@ -325,7 +283,7 @@ function ArsiparisDokumenDetailPage() {
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-            <p className="text-xs font-bold text-outline uppercase tracking-widest mb-4">Formulir Pemberkasan Arsip</p>
+            <p className="text-xs font-bold text-outline uppercase tracking-widest mb-4">Formulir Pemberkasan</p>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-on-surface mb-1.5">Nomor Surat <span className="text-error">*</span></label>
@@ -419,19 +377,15 @@ function ArsiparisDokumenDetailPage() {
               )}
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => { setSkipCatatan(''); setSkipError(null); setSkipOpen(true) }}>
-                  Tidak Diarsipkan
-                </Button>
                 <Button className="flex-1 gap-1.5" onClick={handleArchive} disabled={!!formLoading}>
                   {formLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  Arsipkan
+                  Terima
                 </Button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Back */}
         <Link to="/arsiparis/inbox">
           <Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button>
         </Link>

@@ -50,6 +50,7 @@ function BendaharaDokumenDetailPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewFilename, setPreviewFilename] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [id])
   useEffect(() => {
@@ -94,12 +95,14 @@ function BendaharaDokumenDetailPage() {
   }
 
   async function handlePreview(idx: number) {
-    setPreviewingIdx(idx); setPreviewUrl(null); setPreviewLoading(true)
+    setPreviewingIdx(idx); setPreviewUrl(null); setPreviewLoading(true); setPreviewError(null)
     try {
       const res = await fetch(`/api/bendahara/dokumen/${id}/preview/${idx}`, { credentials: 'include' })
       const json = await res.json()
+      if (!res.ok) { setPreviewError(json.error ?? 'Terjadi kesalahan'); setPreviewLoading(false); return }
       if (json.signedUrl) { setPreviewUrl(json.signedUrl); setPreviewFilename(json.filename) }
-    } catch { /* silent */ } finally { setPreviewLoading(false) }
+    } catch { setPreviewError('Terjadi kesalahan') }
+    finally { setPreviewLoading(false) }
   }
   function closePreview() { setPreviewingIdx(null); setPreviewUrl(null); setPreviewFilename('') }
 
@@ -124,7 +127,16 @@ function BendaharaDokumenDetailPage() {
             <div className="flex-1 overflow-auto bg-surface-container-low/30">
               {previewLoading ? <div className="flex items-center justify-center h-48"><Loader2 size={22} className="animate-spin text-primary" /></div> :
                previewUrl ? <iframe src={previewUrl} className="w-full h-[calc(70vh-96px)] border-0" /> :
-               <div className="flex items-center justify-center h-48"><p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p></div>}
+               <div className="flex items-center justify-center h-48">
+                 {previewError ? (
+                   <div className="text-center px-4">
+                     <p className="text-sm text-error font-semibold">File tidak tersedia</p>
+                     <p className="text-xs text-on-surface-variant mt-1">{previewError}</p>
+                   </div>
+                 ) : (
+                   <p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p>
+                 )}
+               </div>}
             </div>
           </div>
         </div>
