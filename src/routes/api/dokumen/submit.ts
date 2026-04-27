@@ -9,6 +9,7 @@ import {
   createDokumen,
   updateDokumenStatus,
   insertLog,
+  resolveLeafNodeName,
 } from '#/lib/dokumen-helpers'
 import { createDokumenSchema } from '#/lib/schemas/dokumen'
 
@@ -89,6 +90,8 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           return Response.json({ error: 'Kegiatan tidak ditemukan' }, { status: 400 })
         }
 
+        const admin = createAdminClient()
+
         // User display name
         const userName =
           session.user.user_metadata?.nama_lengkap as string | undefined
@@ -96,10 +99,48 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           || session.user.email?.split('@')[0]
           || 'Unknown'
 
-        // Judul: [Kegiatan] [Tahun] [Nama Pegawai]
-        const judul = `${kegiatan.nama} ${parsed.data.tahun} ${userName}`
+        // Validasi Ketua Tim ganda:
+        // Jika isKetuaTim = true, pastikan belum ada Ketua Tim lain
+        // dengan leaf node + tanggal yang sama.
+        if (parsed.data.isKetuaTim) {
+          const leafCol = parsed.data.detailPermintaanId ? 'detail_permintaan_id'
+            : parsed.data.kategoriPermintaanId ? 'kategori_permintaan_id'
+            : parsed.data.jenisPermintaanId ? 'jenis_permintaan_id'
+            : null
+          const leafVal = parsed.data.detailPermintaanId
+            ?? parsed.data.kategoriPermintaanId
+            ?? parsed.data.jenisPermintaanId
+            ?? null
 
-        // Create DRAFT dokumen first
+          if (leafCol && leafVal) {
+            let checkQuery = admin
+              .from('dokumen_transaksi')
+              .select('id')
+              .eq('tanggal', parsed.data.tanggal)
+              .eq('is_ketua_tim', true)
+              .eq(leafCol, leafVal)
+              .neq('status', 'DRAFT')
+              .limit(1)
+
+            const { data: existingKetua } = await checkQuery
+            if (existingKetua && existingKetua.length > 0) {
+              return Response.json({
+                error: 'Ketua tim untuk kegiatan ini pada tanggal tersebut sudah ada. Anda hanya dapat mengajukan sebagai Anggota.',
+              }, { status: 409 })
+            }
+          }
+        }
+
+        // Resolve nama Leaf Node untuk judul dokumen
+        const leafName = await resolveLeafNodeName(supabase, {
+          detailId: parsed.data.detailPermintaanId,
+          kategoriId: parsed.data.kategoriPermintaanId,
+          jenisId: parsed.data.jenisPermintaanId,
+          fallback: kegiatan.nama,
+        })
+
+        // Judul: [Leaf Node] [Tahun] [Nama Pegawai]
+        const judul = `${leafName} ${parsed.data.tahun} ${userName}`
         const createResult = await createDokumen(supabase, {
           judul,
           fungsiId: parsed.data.fungsiId,
@@ -139,8 +180,6 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         // Gunakan admin client untuk update status — RLS policy pegawai
         // hanya mengizinkan UPDATE pada status NEED_REVISION, sehingga
         // update DRAFT → IN_PPK_VALIDATION akan gagal diam-diam via anon client.
-        const admin = createAdminClient()
-
         const updateRes = await updateDokumenStatus(admin, dok.id, {
           status: transitionResult.newStatus,
           currentStep: transitionResult.newCurrentStep,

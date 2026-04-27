@@ -471,6 +471,212 @@ export async function userHasApproverRole(
 }
 
 // ---------------------------------------------------------------------------
+// Leaf Node Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the most specific (leaf) node name from a permintaan chain.
+ * Priority: detail → kategori → jenis → fallback
+ */
+export async function resolveLeafNodeName(
+  supabase: SupabaseClient,
+  opts: {
+    detailId?: string | null
+    kategoriId?: string | null
+    jenisId?: string | null
+    fallback?: string
+  }
+): Promise<string> {
+  if (opts.detailId) {
+    const { data } = await supabase
+      .from('master_detail_permintaan')
+      .select('nama')
+      .eq('id', opts.detailId)
+      .single()
+    if (data?.nama) return data.nama
+  }
+  if (opts.kategoriId) {
+    const { data } = await supabase
+      .from('master_kategori_permintaan')
+      .select('nama')
+      .eq('id', opts.kategoriId)
+      .single()
+    if (data?.nama) return data.nama
+  }
+  if (opts.jenisId) {
+    const { data } = await supabase
+      .from('master_jenis_permintaan')
+      .select('nama')
+      .eq('id', opts.jenisId)
+      .single()
+    if (data?.nama) return data.nama
+  }
+  return opts.fallback ?? 'Dokumen'
+}
+
+// ---------------------------------------------------------------------------
+// Laporan Helpers
+// ---------------------------------------------------------------------------
+
+export type DokumenLaporanRow = DokumenRow & {
+  pengaju_nama?: string
+  pengaju_id?: string
+  leaf_node_nama?: string
+}
+
+/**
+ * Ambil semua dokumen berstatus COMPLETED milik user, dengan full join nama.
+ */
+export async function getDokumenSelesaiByUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<DokumenLaporanRow[]> {
+  const { data, error } = await supabase
+    .from('dokumen_transaksi')
+    .select('*')
+    .eq('created_by', userId)
+    .eq('status', 'COMPLETED')
+    .order('tanggal', { ascending: false })
+
+  if (error || !data || data.length === 0) return []
+
+  return _enrichDokumenRows(supabase, data)
+}
+
+/**
+ * Ambil semua dokumen dari proyek yang pernah dipimpin user sebagai Ketua Tim.
+ * Termasuk dokumen milik anggota dengan leaf_node + tanggal yang sama.
+ * WAJIB menggunakan admin client agar bisa baca dokumen user lain.
+ */
+export async function getDokumenKegiatanByKetuaTim(
+  adminClient: SupabaseClient,
+  userId: string
+): Promise<DokumenLaporanRow[]> {
+  // 1. Cari semua dokumen ketua tim milik user (status COMPLETED)
+  const { data: ketuaDocs, error: e1 } = await adminClient
+    .from('dokumen_transaksi')
+    .select('*')
+    .eq('created_by', userId)
+    .eq('is_ketua_tim', true)
+    .eq('status', 'COMPLETED')
+
+  if (e1 || !ketuaDocs || ketuaDocs.length === 0) return []
+
+  // 2. Bangun daftar proyek unik: (leaf_node_col, leaf_node_id, tanggal)
+  type Proyek = {
+    leafCol: string
+    leafVal: string
+    tanggal: string
+  }
+  const proyek: Proyek[] = []
+  for (const dok of ketuaDocs) {
+    const leafCol = dok.detail_permintaan_id ? 'detail_permintaan_id'
+      : dok.kategori_permintaan_id ? 'kategori_permintaan_id'
+      : dok.jenis_permintaan_id ? 'jenis_permintaan_id'
+      : null
+    const leafVal = dok.detail_permintaan_id ?? dok.kategori_permintaan_id ?? dok.jenis_permintaan_id ?? null
+    if (leafCol && leafVal) {
+      // hindari duplikat
+      const exists = proyek.some(p => p.leafCol === leafCol && p.leafVal === leafVal && p.tanggal === dok.tanggal)
+      if (!exists) proyek.push({ leafCol, leafVal, tanggal: dok.tanggal })
+    }
+  }
+
+  if (proyek.length === 0) return _enrichDokumenRows(adminClient, ketuaDocs)
+
+  // 3. Ambil dokumen anggota dari semua proyek — query per proyek karena
+  //    kolom leaf node berbeda-beda (tidak bisa .in() multi-kolom di PostgREST)
+  const anggotaDocs: any[] = []
+  for (const p of proyek) {
+    const { data: rows } = await adminClient
+      .from('dokumen_transaksi')
+      .select('*')
+      .eq(p.leafCol, p.leafVal)
+      .eq('tanggal', p.tanggal)
+      .eq('is_ketua_tim', false)
+      .eq('status', 'COMPLETED')
+    if (rows) anggotaDocs.push(...rows)
+  }
+
+  // 4. Gabungkan ketua + anggota, hindari duplikat by id
+  const allIds = new Set(ketuaDocs.map((d: any) => d.id))
+  const merged = [...ketuaDocs]
+  for (const d of anggotaDocs) {
+    if (!allIds.has(d.id)) { merged.push(d); allIds.add(d.id) }
+  }
+
+  const enriched = await _enrichDokumenRows(adminClient, merged)
+
+  // 5. Tambah nama pengaju (query auth user metadata via admin)
+  //    — dilakukan di level API route yang punya akses admin
+  return enriched
+}
+
+/**
+ * Internal: enrich array dokumen raw dengan nama-nama joined.
+ */
+async function _enrichDokumenRows(
+  supabase: SupabaseClient,
+  rows: any[]
+): Promise<DokumenLaporanRow[]> {
+  if (rows.length === 0) return []
+
+  // Collect unique IDs
+  const fungsiIds = [...new Set(rows.map((d: any) => d.fungsi_id).filter(Boolean))]
+  const kegIds = [...new Set(rows.map((d: any) => d.kegiatan_jenis_id).filter(Boolean))]
+  const jenisIds = [...new Set(rows.map((d: any) => d.jenis_permintaan_id).filter(Boolean))]
+  const katIds = [...new Set(rows.map((d: any) => d.kategori_permintaan_id).filter(Boolean))]
+  const detIds = [...new Set(rows.map((d: any) => d.detail_permintaan_id).filter(Boolean))]
+
+  const fungsiMap: Record<string, string> = {}
+  const kegMap: Record<string, string> = {}
+  const jenisMap: Record<string, string> = {}
+  const katMap: Record<string, string> = {}
+  const detMap: Record<string, string> = {}
+
+  if (fungsiIds.length) {
+    const { data } = await supabase.from('master_fungsi').select('id, nama').in('id', fungsiIds)
+    for (const r of data ?? []) fungsiMap[r.id] = r.nama
+  }
+  if (kegIds.length) {
+    const { data } = await supabase.from('master_kegiatan').select('id, nama').in('id', kegIds)
+    for (const r of data ?? []) kegMap[r.id] = r.nama
+  }
+  if (jenisIds.length) {
+    const { data } = await supabase.from('master_jenis_permintaan').select('id, nama').in('id', jenisIds)
+    for (const r of data ?? []) jenisMap[r.id] = r.nama
+  }
+  if (katIds.length) {
+    const { data } = await supabase.from('master_kategori_permintaan').select('id, nama').in('id', katIds)
+    for (const r of data ?? []) katMap[r.id] = r.nama
+  }
+  if (detIds.length) {
+    const { data } = await supabase.from('master_detail_permintaan').select('id, nama').in('id', detIds)
+    for (const r of data ?? []) detMap[r.id] = r.nama
+  }
+
+  return rows.map((raw: any): DokumenLaporanRow => {
+    const leafNama = detMap[raw.detail_permintaan_id]
+      ?? katMap[raw.kategori_permintaan_id]
+      ?? jenisMap[raw.jenis_permintaan_id]
+      ?? kegMap[raw.kegiatan_jenis_id]
+      ?? ''
+
+    return {
+      ...parseDokumenWithNames(raw, fungsiMap, kegMap),
+      jenis_permintaan_id: raw.jenis_permintaan_id,
+      kategori_permintaan_id: raw.kategori_permintaan_id,
+      detail_permintaan_id: raw.detail_permintaan_id,
+      jenis_permintaan_nama: jenisMap[raw.jenis_permintaan_id],
+      kategori_permintaan_nama: katMap[raw.kategori_permintaan_id],
+      detail_permintaan_nama: detMap[raw.detail_permintaan_id],
+      leaf_node_nama: leafNama,
+      pengaju_id: raw.created_by,
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 

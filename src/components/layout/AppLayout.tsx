@@ -28,6 +28,8 @@ import {
   ChevronDown,
   FileX,
   Trash2,
+  BarChart3,
+  Users,
 } from 'lucide-react'
 
 import { getBrowserClient } from '#/lib/supabase-browser'
@@ -77,7 +79,8 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: '/pegawai/dokumen/aju' },
         { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/pegawai/dokumen' },
         { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/pegawai/dokumen?status=NEED_REVISION' },
-        { id: 'selesai', label: 'Dokumen Selesai', icon: FileText, to: '/pegawai/dokumen?status=COMPLETED' },
+        { id: 'laporan_saya', label: 'Laporan Saya', icon: FileText, to: '/pegawai/laporan/saya' },
+        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: '/pegawai/laporan/kegiatan' },
       ],
     },
     {
