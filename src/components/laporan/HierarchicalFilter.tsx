@@ -148,7 +148,11 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
             onValueChange={v => handleFungsi((v ?? '') === '_all' ? '' : (v ?? ''))}
           >
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Semua Fungsi" />
+              <SelectValue placeholder="Semua Fungsi">
+                {value.fungsiId && fungsis.length > 0
+                  ? fungsis.find(f => f.id === value.fungsiId)?.nama ?? value.fungsiId
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_all">Semua Fungsi</SelectItem>
@@ -167,7 +171,11 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
               onValueChange={v => handleKegiatan((v ?? '') === '_all' ? '' : (v ?? ''))}
             >
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Semua Kegiatan" />
+                <SelectValue placeholder="Semua Kegiatan">
+                  {value.kegiatanId && kegiatans.length > 0
+                    ? kegiatans.find(k => k.id === value.kegiatanId)?.nama ?? value.kegiatanId
+                    : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_all">Semua Kegiatan</SelectItem>
@@ -189,7 +197,11 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
             onValueChange={v => handleJenis((v ?? '') === '_all' ? '' : (v ?? ''))}
           >
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Semua Jenis" />
+              <SelectValue placeholder="Semua Jenis">
+                {value.jenisId && jenisList.length > 0
+                  ? jenisList.find(j => j.id === value.jenisId)?.nama ?? value.jenisId
+                  : undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_all">Semua Jenis</SelectItem>
@@ -208,7 +220,11 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
               onValueChange={v => handleKategori((v ?? '') === '_all' ? '' : (v ?? ''))}
             >
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Semua Kategori" />
+                <SelectValue placeholder="Semua Kategori">
+                  {value.kategoriId && kategoriList.length > 0
+                    ? kategoriList.find(k => k.id === value.kategoriId)?.nama ?? value.kategoriId
+                    : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_all">Semua Kategori</SelectItem>
@@ -231,7 +247,11 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
               onValueChange={v => handleDetail((v ?? '') === '_all' ? '' : (v ?? ''))}
             >
               <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Semua Detail" />
+                <SelectValue placeholder="Semua Detail">
+                  {value.detailId && detailList.length > 0
+                    ? detailList.find(d => d.id === value.detailId)?.nama ?? value.detailId
+                    : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="_all">Semua Detail</SelectItem>
