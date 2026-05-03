@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { getPrimaryRole, getUserRole, ACTIVE_ROLE_COOKIE } from '#/lib/auth'
 import { z } from 'zod'
@@ -14,10 +14,25 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginPage() {
+  // Check for inactive account message from redirect
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
+  const inactiveReason = searchParams.get('reason') === 'inactive'
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Show inactive message on page load if redirected
+  useEffect(() => {
+    if (inactiveReason) {
+      setError('Akun Anda tidak aktif. Hubungi Administrator.')
+      // Clean up URL parameter
+      const url = new URL(window.location.href)
+      url.searchParams.delete('reason')
+      window.history.replaceState({}, '', url.pathname)
+    }
+  }, [inactiveReason])
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
@@ -53,7 +68,23 @@ function LoginPage() {
         return
       }
 
-      // Login berhasil — get roles & set active_role cookie
+      // Login berhasil — check if user is still active
+      const { data: statusData } = await supabase
+        .from('user_status')
+        .select('is_active')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
+
+      // If is_active is explicitly false, block login
+      if (statusData && statusData.is_active === false) {
+        // User is inactive, sign out and show error
+        await supabase.auth.signOut()
+        setError('Akun Anda tidak aktif. Hubungi Administrator.')
+        setIsLoading(false)
+        return
+      }
+
+      // Get roles & set active_role cookie
       const roles = await getUserRole(supabase, data.user.id)
       const primaryRole = getPrimaryRole(roles)
 

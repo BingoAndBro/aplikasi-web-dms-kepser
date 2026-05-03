@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PpkRouteImport } from './routes/ppk'
 import { Route as PegawaiRouteImport } from './routes/pegawai'
 import { Route as LoginRouteImport } from './routes/login'
@@ -47,6 +48,7 @@ import { Route as DokumenIdIndexRouteImport } from './routes/dokumen/$id/index'
 import { Route as ArsiparisUsulMusnahIndexRouteImport } from './routes/arsiparis/usul-musnah/index'
 import { Route as ArsiparisInaktifIndexRouteImport } from './routes/arsiparis/inaktif/index'
 import { Route as ArsiparisAktifIndexRouteImport } from './routes/arsiparis/aktif/index'
+import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
 import { Route as ApiDokumenIndexRouteImport } from './routes/api/dokumen/index'
 import { Route as AdminMasterDataIndexRouteImport } from './routes/admin.master-data.index'
 import { Route as PpkDokumenIdRouteImport } from './routes/ppk/dokumen/$id'
@@ -59,6 +61,8 @@ import { Route as BendaharaDokumenIdRouteImport } from './routes/bendahara/dokum
 import { Route as ArsiparisUsulMusnahIdRouteImport } from './routes/arsiparis/usul-musnah/$id'
 import { Route as ArsiparisInaktifIdRouteImport } from './routes/arsiparis/inaktif/$id'
 import { Route as ArsiparisAktifIdRouteImport } from './routes/arsiparis/aktif/$id'
+import { Route as ApiUsersMeRouteImport } from './routes/api/users/me'
+import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
 import { Route as ApiPpkTervalidasiRouteImport } from './routes/api/ppk/tervalidasi'
 import { Route as ApiPpkRevisiRouteImport } from './routes/api/ppk/revisi'
 import { Route as ApiPpkInboxRouteImport } from './routes/api/ppk/inbox'
@@ -98,6 +102,10 @@ import { Route as ArsiparisDokumenIdIndexRouteImport } from './routes/arsiparis/
 import { Route as ApiArsiparisKlasifikasiIndexRouteImport } from './routes/api/arsiparis/klasifikasi/index'
 import { Route as PpkDokumenIdResubmitRouteImport } from './routes/ppk/dokumen/$id/resubmit'
 import { Route as PegawaiDokumenIdRevisiRouteImport } from './routes/pegawai/dokumen/$id/revisi'
+import { Route as ApiUsersMeChangePasswordRouteImport } from './routes/api/users/me/change-password'
+import { Route as ApiUsersIdResetPasswordRouteImport } from './routes/api/users/$id/reset-password'
+import { Route as ApiUsersIdDeactivateRouteImport } from './routes/api/users/$id/deactivate'
+import { Route as ApiUsersIdActivateRouteImport } from './routes/api/users/$id/activate'
 import { Route as ApiPpkResubmitIdRouteImport } from './routes/api/ppk/resubmit/$id'
 import { Route as ApiPpkKembalikanIdRouteImport } from './routes/api/ppk/kembalikan/$id'
 import { Route as ApiPpkDokumenIdRouteImport } from './routes/api/ppk/dokumen/$id'
@@ -105,7 +113,7 @@ import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id
 import { Route as ApiDokumenIdLogRouteImport } from './routes/api/dokumen.$id.log'
 import { Route as ApiBendaharaDokumenIdRouteImport } from './routes/api/bendahara/dokumen/$id'
 import { Route as ApiArsiparisUsulMusnahIdRouteImport } from './routes/api/arsiparis/usul-musnah.$id'
-import { Route as ApiArsiparisKlasifikasiChar91idChar93RouteImport } from './routes/api/arsiparis/klasifikasi/[id]'
+import { Route as ApiArsiparisKlasifikasiIdRouteImport } from './routes/api/arsiparis/klasifikasi/$id'
 import { Route as ApiArsiparisInaktifIdRouteImport } from './routes/api/arsiparis/inaktif.$id'
 import { Route as ApiArsiparisDokumenIdRouteImport } from './routes/api/arsiparis/dokumen.$id'
 import { Route as ApiArsiparisAktifIdRouteImport } from './routes/api/arsiparis/aktif.$id'
@@ -121,6 +129,11 @@ import { Route as ApiArsiparisAktifIdPindahkanRouteImport } from './routes/api/a
 import { Route as ApiPpkDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/preview/$lampiranIndex'
 import { Route as ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/bendahara/dokumen/$id/preview/$lampiranIndex'
 
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PpkRoute = PpkRouteImport.update({
   id: '/ppk',
   path: '/ppk',
@@ -312,6 +325,11 @@ const ArsiparisAktifIndexRoute = ArsiparisAktifIndexRouteImport.update({
   path: '/arsiparis/aktif/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUsersIndexRoute = ApiUsersIndexRouteImport.update({
+  id: '/api/users/',
+  path: '/api/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDokumenIndexRoute = ApiDokumenIndexRouteImport.update({
   id: '/api/dokumen/',
   path: '/api/dokumen/',
@@ -370,6 +388,16 @@ const ArsiparisInaktifIdRoute = ArsiparisInaktifIdRouteImport.update({
 const ArsiparisAktifIdRoute = ArsiparisAktifIdRouteImport.update({
   id: '/arsiparis/aktif/$id',
   path: '/arsiparis/aktif/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUsersMeRoute = ApiUsersMeRouteImport.update({
+  id: '/api/users/me',
+  path: '/api/users/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
+  id: '/api/users/$id',
+  path: '/api/users/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPpkTervalidasiRoute = ApiPpkTervalidasiRouteImport.update({
@@ -569,6 +597,27 @@ const PegawaiDokumenIdRevisiRoute = PegawaiDokumenIdRevisiRouteImport.update({
   path: '/revisi',
   getParentRoute: () => PegawaiDokumenIdRoute,
 } as any)
+const ApiUsersMeChangePasswordRoute =
+  ApiUsersMeChangePasswordRouteImport.update({
+    id: '/change-password',
+    path: '/change-password',
+    getParentRoute: () => ApiUsersMeRoute,
+  } as any)
+const ApiUsersIdResetPasswordRoute = ApiUsersIdResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => ApiUsersIdRoute,
+} as any)
+const ApiUsersIdDeactivateRoute = ApiUsersIdDeactivateRouteImport.update({
+  id: '/deactivate',
+  path: '/deactivate',
+  getParentRoute: () => ApiUsersIdRoute,
+} as any)
+const ApiUsersIdActivateRoute = ApiUsersIdActivateRouteImport.update({
+  id: '/activate',
+  path: '/activate',
+  getParentRoute: () => ApiUsersIdRoute,
+} as any)
 const ApiPpkResubmitIdRoute = ApiPpkResubmitIdRouteImport.update({
   id: '/api/ppk/resubmit/$id',
   path: '/api/ppk/resubmit/$id',
@@ -605,10 +654,10 @@ const ApiArsiparisUsulMusnahIdRoute =
     path: '/$id',
     getParentRoute: () => ApiArsiparisUsulMusnahRoute,
   } as any)
-const ApiArsiparisKlasifikasiChar91idChar93Route =
-  ApiArsiparisKlasifikasiChar91idChar93RouteImport.update({
-    id: '/api/arsiparis/klasifikasi/id',
-    path: '/api/arsiparis/klasifikasi/id',
+const ApiArsiparisKlasifikasiIdRoute =
+  ApiArsiparisKlasifikasiIdRouteImport.update({
+    id: '/api/arsiparis/klasifikasi/$id',
+    path: '/api/arsiparis/klasifikasi/$id',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiArsiparisInaktifIdRoute = ApiArsiparisInaktifIdRouteImport.update({
@@ -699,6 +748,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -758,6 +808,8 @@ export interface FileRoutesByFullPath {
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
   '/api/ppk/revisi': typeof ApiPpkRevisiRoute
   '/api/ppk/tervalidasi': typeof ApiPpkTervalidasiRoute
+  '/api/users/$id': typeof ApiUsersIdRouteWithChildren
+  '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/aktif/$id': typeof ArsiparisAktifIdRoute
   '/arsiparis/inaktif/$id': typeof ArsiparisInaktifIdRoute
   '/arsiparis/usul-musnah/$id': typeof ArsiparisUsulMusnahIdRoute
@@ -770,6 +822,7 @@ export interface FileRoutesByFullPath {
   '/ppk/dokumen/$id': typeof PpkDokumenIdRouteWithChildren
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
   '/api/dokumen/': typeof ApiDokumenIndexRoute
+  '/api/users/': typeof ApiUsersIndexRoute
   '/arsiparis/aktif/': typeof ArsiparisAktifIndexRoute
   '/arsiparis/inaktif/': typeof ArsiparisInaktifIndexRoute
   '/arsiparis/usul-musnah/': typeof ArsiparisUsulMusnahIndexRoute
@@ -778,7 +831,7 @@ export interface FileRoutesByFullPath {
   '/api/arsiparis/aktif/$id': typeof ApiArsiparisAktifIdRouteWithChildren
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/inaktif/$id': typeof ApiArsiparisInaktifIdRouteWithChildren
-  '/api/arsiparis/klasifikasi/id': typeof ApiArsiparisKlasifikasiChar91idChar93Route
+  '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/usul-musnah/$id': typeof ApiArsiparisUsulMusnahIdRoute
   '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
@@ -786,6 +839,10 @@ export interface FileRoutesByFullPath {
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
+  '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
+  '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
+  '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
+  '/api/users/me/change-password': typeof ApiUsersMeChangePasswordRoute
   '/pegawai/dokumen/$id/revisi': typeof PegawaiDokumenIdRevisiRoute
   '/ppk/dokumen/$id/resubmit': typeof PpkDokumenIdResubmitRoute
   '/api/arsiparis/klasifikasi/': typeof ApiArsiparisKlasifikasiIndexRoute
@@ -810,6 +867,7 @@ export interface FileRoutesByTo {
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -867,6 +925,8 @@ export interface FileRoutesByTo {
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
   '/api/ppk/revisi': typeof ApiPpkRevisiRoute
   '/api/ppk/tervalidasi': typeof ApiPpkTervalidasiRoute
+  '/api/users/$id': typeof ApiUsersIdRouteWithChildren
+  '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/aktif/$id': typeof ArsiparisAktifIdRoute
   '/arsiparis/inaktif/$id': typeof ArsiparisInaktifIdRoute
   '/arsiparis/usul-musnah/$id': typeof ArsiparisUsulMusnahIdRoute
@@ -877,6 +937,7 @@ export interface FileRoutesByTo {
   '/pegawai/laporan/saya': typeof PegawaiLaporanSayaRoute
   '/admin/master-data': typeof AdminMasterDataIndexRoute
   '/api/dokumen': typeof ApiDokumenIndexRoute
+  '/api/users': typeof ApiUsersIndexRoute
   '/arsiparis/aktif': typeof ArsiparisAktifIndexRoute
   '/arsiparis/inaktif': typeof ArsiparisInaktifIndexRoute
   '/arsiparis/usul-musnah': typeof ArsiparisUsulMusnahIndexRoute
@@ -885,7 +946,7 @@ export interface FileRoutesByTo {
   '/api/arsiparis/aktif/$id': typeof ApiArsiparisAktifIdRouteWithChildren
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/inaktif/$id': typeof ApiArsiparisInaktifIdRouteWithChildren
-  '/api/arsiparis/klasifikasi/id': typeof ApiArsiparisKlasifikasiChar91idChar93Route
+  '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/usul-musnah/$id': typeof ApiArsiparisUsulMusnahIdRoute
   '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
@@ -893,6 +954,10 @@ export interface FileRoutesByTo {
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
+  '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
+  '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
+  '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
+  '/api/users/me/change-password': typeof ApiUsersMeChangePasswordRoute
   '/pegawai/dokumen/$id/revisi': typeof PegawaiDokumenIdRevisiRoute
   '/ppk/dokumen/$id/resubmit': typeof PpkDokumenIdResubmitRoute
   '/api/arsiparis/klasifikasi': typeof ApiArsiparisKlasifikasiIndexRoute
@@ -920,6 +985,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
+  '/profile': typeof ProfileRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -979,6 +1045,8 @@ export interface FileRoutesById {
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
   '/api/ppk/revisi': typeof ApiPpkRevisiRoute
   '/api/ppk/tervalidasi': typeof ApiPpkTervalidasiRoute
+  '/api/users/$id': typeof ApiUsersIdRouteWithChildren
+  '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/aktif/$id': typeof ArsiparisAktifIdRoute
   '/arsiparis/inaktif/$id': typeof ArsiparisInaktifIdRoute
   '/arsiparis/usul-musnah/$id': typeof ArsiparisUsulMusnahIdRoute
@@ -991,6 +1059,7 @@ export interface FileRoutesById {
   '/ppk/dokumen/$id': typeof PpkDokumenIdRouteWithChildren
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
   '/api/dokumen/': typeof ApiDokumenIndexRoute
+  '/api/users/': typeof ApiUsersIndexRoute
   '/arsiparis/aktif/': typeof ArsiparisAktifIndexRoute
   '/arsiparis/inaktif/': typeof ArsiparisInaktifIndexRoute
   '/arsiparis/usul-musnah/': typeof ArsiparisUsulMusnahIndexRoute
@@ -999,7 +1068,7 @@ export interface FileRoutesById {
   '/api/arsiparis/aktif/$id': typeof ApiArsiparisAktifIdRouteWithChildren
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/inaktif/$id': typeof ApiArsiparisInaktifIdRouteWithChildren
-  '/api/arsiparis/klasifikasi/id': typeof ApiArsiparisKlasifikasiChar91idChar93Route
+  '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/usul-musnah/$id': typeof ApiArsiparisUsulMusnahIdRoute
   '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
@@ -1007,6 +1076,10 @@ export interface FileRoutesById {
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
+  '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
+  '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
+  '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
+  '/api/users/me/change-password': typeof ApiUsersMeChangePasswordRoute
   '/pegawai/dokumen/$id/revisi': typeof PegawaiDokumenIdRevisiRoute
   '/ppk/dokumen/$id/resubmit': typeof PpkDokumenIdResubmitRoute
   '/api/arsiparis/klasifikasi/': typeof ApiArsiparisKlasifikasiIndexRoute
@@ -1035,6 +1108,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pegawai'
     | '/ppk'
+    | '/profile'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1094,6 +1168,8 @@ export interface FileRouteTypes {
     | '/api/ppk/inbox'
     | '/api/ppk/revisi'
     | '/api/ppk/tervalidasi'
+    | '/api/users/$id'
+    | '/api/users/me'
     | '/arsiparis/aktif/$id'
     | '/arsiparis/inaktif/$id'
     | '/arsiparis/usul-musnah/$id'
@@ -1106,6 +1182,7 @@ export interface FileRouteTypes {
     | '/ppk/dokumen/$id'
     | '/admin/master-data/'
     | '/api/dokumen/'
+    | '/api/users/'
     | '/arsiparis/aktif/'
     | '/arsiparis/inaktif/'
     | '/arsiparis/usul-musnah/'
@@ -1114,7 +1191,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/aktif/$id'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/inaktif/$id'
-    | '/api/arsiparis/klasifikasi/id'
+    | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/usul-musnah/$id'
     | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
@@ -1122,6 +1199,10 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
+    | '/api/users/$id/activate'
+    | '/api/users/$id/deactivate'
+    | '/api/users/$id/reset-password'
+    | '/api/users/me/change-password'
     | '/pegawai/dokumen/$id/revisi'
     | '/ppk/dokumen/$id/resubmit'
     | '/api/arsiparis/klasifikasi/'
@@ -1146,6 +1227,7 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/login'
     | '/pegawai'
+    | '/profile'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1203,6 +1285,8 @@ export interface FileRouteTypes {
     | '/api/ppk/inbox'
     | '/api/ppk/revisi'
     | '/api/ppk/tervalidasi'
+    | '/api/users/$id'
+    | '/api/users/me'
     | '/arsiparis/aktif/$id'
     | '/arsiparis/inaktif/$id'
     | '/arsiparis/usul-musnah/$id'
@@ -1213,6 +1297,7 @@ export interface FileRouteTypes {
     | '/pegawai/laporan/saya'
     | '/admin/master-data'
     | '/api/dokumen'
+    | '/api/users'
     | '/arsiparis/aktif'
     | '/arsiparis/inaktif'
     | '/arsiparis/usul-musnah'
@@ -1221,7 +1306,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/aktif/$id'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/inaktif/$id'
-    | '/api/arsiparis/klasifikasi/id'
+    | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/usul-musnah/$id'
     | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
@@ -1229,6 +1314,10 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
+    | '/api/users/$id/activate'
+    | '/api/users/$id/deactivate'
+    | '/api/users/$id/reset-password'
+    | '/api/users/me/change-password'
     | '/pegawai/dokumen/$id/revisi'
     | '/ppk/dokumen/$id/resubmit'
     | '/api/arsiparis/klasifikasi'
@@ -1255,6 +1344,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pegawai'
     | '/ppk'
+    | '/profile'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1314,6 +1404,8 @@ export interface FileRouteTypes {
     | '/api/ppk/inbox'
     | '/api/ppk/revisi'
     | '/api/ppk/tervalidasi'
+    | '/api/users/$id'
+    | '/api/users/me'
     | '/arsiparis/aktif/$id'
     | '/arsiparis/inaktif/$id'
     | '/arsiparis/usul-musnah/$id'
@@ -1326,6 +1418,7 @@ export interface FileRouteTypes {
     | '/ppk/dokumen/$id'
     | '/admin/master-data/'
     | '/api/dokumen/'
+    | '/api/users/'
     | '/arsiparis/aktif/'
     | '/arsiparis/inaktif/'
     | '/arsiparis/usul-musnah/'
@@ -1334,7 +1427,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/aktif/$id'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/inaktif/$id'
-    | '/api/arsiparis/klasifikasi/id'
+    | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/usul-musnah/$id'
     | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
@@ -1342,6 +1435,10 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
+    | '/api/users/$id/activate'
+    | '/api/users/$id/deactivate'
+    | '/api/users/$id/reset-password'
+    | '/api/users/me/change-password'
     | '/pegawai/dokumen/$id/revisi'
     | '/ppk/dokumen/$id/resubmit'
     | '/api/arsiparis/klasifikasi/'
@@ -1369,6 +1466,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PegawaiRoute: typeof PegawaiRouteWithChildren
   PpkRoute: typeof PpkRouteWithChildren
+  ProfileRoute: typeof ProfileRoute
   ApiMasterDetailRoute: typeof ApiMasterDetailRouteWithChildren
   ApiMasterFungsiRoute: typeof ApiMasterFungsiRouteWithChildren
   ApiMasterJenisRoute: typeof ApiMasterJenisRouteWithChildren
@@ -1408,16 +1506,19 @@ export interface RootRouteChildren {
   ApiPpkInboxRoute: typeof ApiPpkInboxRoute
   ApiPpkRevisiRoute: typeof ApiPpkRevisiRoute
   ApiPpkTervalidasiRoute: typeof ApiPpkTervalidasiRoute
+  ApiUsersIdRoute: typeof ApiUsersIdRouteWithChildren
+  ApiUsersMeRoute: typeof ApiUsersMeRouteWithChildren
   ArsiparisAktifIdRoute: typeof ArsiparisAktifIdRoute
   ArsiparisInaktifIdRoute: typeof ArsiparisInaktifIdRoute
   ArsiparisUsulMusnahIdRoute: typeof ArsiparisUsulMusnahIdRoute
   AdminMasterDataIndexRoute: typeof AdminMasterDataIndexRoute
   ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
+  ApiUsersIndexRoute: typeof ApiUsersIndexRoute
   ArsiparisAktifIndexRoute: typeof ArsiparisAktifIndexRoute
   ArsiparisInaktifIndexRoute: typeof ArsiparisInaktifIndexRoute
   ArsiparisUsulMusnahIndexRoute: typeof ArsiparisUsulMusnahIndexRoute
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
-  ApiArsiparisKlasifikasiChar91idChar93Route: typeof ApiArsiparisKlasifikasiChar91idChar93Route
+  ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
   ApiBendaharaDokumenIdRoute: typeof ApiBendaharaDokumenIdRouteWithChildren
   ApiPpkDokumenIdRoute: typeof ApiPpkDokumenIdRouteWithChildren
   ApiPpkKembalikanIdRoute: typeof ApiPpkKembalikanIdRoute
@@ -1428,6 +1529,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ppk': {
       id: '/ppk'
       path: '/ppk'
@@ -1694,6 +1802,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArsiparisAktifIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/users/': {
+      id: '/api/users/'
+      path: '/api/users'
+      fullPath: '/api/users/'
+      preLoaderRoute: typeof ApiUsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/dokumen/': {
       id: '/api/dokumen/'
       path: '/api/dokumen'
@@ -1776,6 +1891,20 @@ declare module '@tanstack/react-router' {
       path: '/arsiparis/aktif/$id'
       fullPath: '/arsiparis/aktif/$id'
       preLoaderRoute: typeof ArsiparisAktifIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/users/me': {
+      id: '/api/users/me'
+      path: '/api/users/me'
+      fullPath: '/api/users/me'
+      preLoaderRoute: typeof ApiUsersMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/users/$id': {
+      id: '/api/users/$id'
+      path: '/api/users/$id'
+      fullPath: '/api/users/$id'
+      preLoaderRoute: typeof ApiUsersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ppk/tervalidasi': {
@@ -2051,6 +2180,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PegawaiDokumenIdRevisiRouteImport
       parentRoute: typeof PegawaiDokumenIdRoute
     }
+    '/api/users/me/change-password': {
+      id: '/api/users/me/change-password'
+      path: '/change-password'
+      fullPath: '/api/users/me/change-password'
+      preLoaderRoute: typeof ApiUsersMeChangePasswordRouteImport
+      parentRoute: typeof ApiUsersMeRoute
+    }
+    '/api/users/$id/reset-password': {
+      id: '/api/users/$id/reset-password'
+      path: '/reset-password'
+      fullPath: '/api/users/$id/reset-password'
+      preLoaderRoute: typeof ApiUsersIdResetPasswordRouteImport
+      parentRoute: typeof ApiUsersIdRoute
+    }
+    '/api/users/$id/deactivate': {
+      id: '/api/users/$id/deactivate'
+      path: '/deactivate'
+      fullPath: '/api/users/$id/deactivate'
+      preLoaderRoute: typeof ApiUsersIdDeactivateRouteImport
+      parentRoute: typeof ApiUsersIdRoute
+    }
+    '/api/users/$id/activate': {
+      id: '/api/users/$id/activate'
+      path: '/activate'
+      fullPath: '/api/users/$id/activate'
+      preLoaderRoute: typeof ApiUsersIdActivateRouteImport
+      parentRoute: typeof ApiUsersIdRoute
+    }
     '/api/ppk/resubmit/$id': {
       id: '/api/ppk/resubmit/$id'
       path: '/api/ppk/resubmit/$id'
@@ -2100,11 +2257,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArsiparisUsulMusnahIdRouteImport
       parentRoute: typeof ApiArsiparisUsulMusnahRoute
     }
-    '/api/arsiparis/klasifikasi/id': {
-      id: '/api/arsiparis/klasifikasi/id'
-      path: '/api/arsiparis/klasifikasi/id'
-      fullPath: '/api/arsiparis/klasifikasi/id'
-      preLoaderRoute: typeof ApiArsiparisKlasifikasiChar91idChar93RouteImport
+    '/api/arsiparis/klasifikasi/$id': {
+      id: '/api/arsiparis/klasifikasi/$id'
+      path: '/api/arsiparis/klasifikasi/$id'
+      fullPath: '/api/arsiparis/klasifikasi/$id'
+      preLoaderRoute: typeof ApiArsiparisKlasifikasiIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/arsiparis/inaktif/$id': {
@@ -2485,6 +2642,34 @@ const ApiDokumenIdRouteWithChildren = ApiDokumenIdRoute._addFileChildren(
   ApiDokumenIdRouteChildren,
 )
 
+interface ApiUsersIdRouteChildren {
+  ApiUsersIdActivateRoute: typeof ApiUsersIdActivateRoute
+  ApiUsersIdDeactivateRoute: typeof ApiUsersIdDeactivateRoute
+  ApiUsersIdResetPasswordRoute: typeof ApiUsersIdResetPasswordRoute
+}
+
+const ApiUsersIdRouteChildren: ApiUsersIdRouteChildren = {
+  ApiUsersIdActivateRoute: ApiUsersIdActivateRoute,
+  ApiUsersIdDeactivateRoute: ApiUsersIdDeactivateRoute,
+  ApiUsersIdResetPasswordRoute: ApiUsersIdResetPasswordRoute,
+}
+
+const ApiUsersIdRouteWithChildren = ApiUsersIdRoute._addFileChildren(
+  ApiUsersIdRouteChildren,
+)
+
+interface ApiUsersMeRouteChildren {
+  ApiUsersMeChangePasswordRoute: typeof ApiUsersMeChangePasswordRoute
+}
+
+const ApiUsersMeRouteChildren: ApiUsersMeRouteChildren = {
+  ApiUsersMeChangePasswordRoute: ApiUsersMeChangePasswordRoute,
+}
+
+const ApiUsersMeRouteWithChildren = ApiUsersMeRoute._addFileChildren(
+  ApiUsersMeRouteChildren,
+)
+
 interface ApiArsiparisDokumenIdRouteChildren {
   ApiArsiparisDokumenIdArchiveRoute: typeof ApiArsiparisDokumenIdArchiveRoute
 }
@@ -2541,6 +2726,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PegawaiRoute: PegawaiRouteWithChildren,
   PpkRoute: PpkRouteWithChildren,
+  ProfileRoute: ProfileRoute,
   ApiMasterDetailRoute: ApiMasterDetailRouteWithChildren,
   ApiMasterFungsiRoute: ApiMasterFungsiRouteWithChildren,
   ApiMasterJenisRoute: ApiMasterJenisRouteWithChildren,
@@ -2580,17 +2766,19 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpkInboxRoute: ApiPpkInboxRoute,
   ApiPpkRevisiRoute: ApiPpkRevisiRoute,
   ApiPpkTervalidasiRoute: ApiPpkTervalidasiRoute,
+  ApiUsersIdRoute: ApiUsersIdRouteWithChildren,
+  ApiUsersMeRoute: ApiUsersMeRouteWithChildren,
   ArsiparisAktifIdRoute: ArsiparisAktifIdRoute,
   ArsiparisInaktifIdRoute: ArsiparisInaktifIdRoute,
   ArsiparisUsulMusnahIdRoute: ArsiparisUsulMusnahIdRoute,
   AdminMasterDataIndexRoute: AdminMasterDataIndexRoute,
   ApiDokumenIndexRoute: ApiDokumenIndexRoute,
+  ApiUsersIndexRoute: ApiUsersIndexRoute,
   ArsiparisAktifIndexRoute: ArsiparisAktifIndexRoute,
   ArsiparisInaktifIndexRoute: ArsiparisInaktifIndexRoute,
   ArsiparisUsulMusnahIndexRoute: ArsiparisUsulMusnahIndexRoute,
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
-  ApiArsiparisKlasifikasiChar91idChar93Route:
-    ApiArsiparisKlasifikasiChar91idChar93Route,
+  ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
   ApiBendaharaDokumenIdRoute: ApiBendaharaDokumenIdRouteWithChildren,
   ApiPpkDokumenIdRoute: ApiPpkDokumenIdRouteWithChildren,
   ApiPpkKembalikanIdRoute: ApiPpkKembalikanIdRoute,
