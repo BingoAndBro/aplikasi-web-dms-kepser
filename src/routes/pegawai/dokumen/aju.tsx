@@ -28,6 +28,8 @@ import {
   AlertCircle,
   Loader2,
   Tag,
+  Trophy,
+  Medal,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -80,8 +82,10 @@ function AjukanDokumenPage() {
   const [detailPermintaanNama, setDetailPermintaanNama] = useState('')
   const [kategoriHasDetail, setKategoriHasDetail] = useState(false)
 
-  // Step 6: Peran
+  // Step 6: Peran (auto-detected based on kegiatan)
   const [isKetuaTim, setIsKetuaTim] = useState(false)
+  const [isChairmanLoading, setIsChairmanLoading] = useState(false)
+  const [chairmanBadgeVisible, setChairmanBadgeVisible] = useState(false)
 
   // Step 7: Lampiran
   const [lampiranUrls, setLampiranUrls] = useState<LampiranUrl[]>([])
@@ -186,6 +190,8 @@ function AjukanDokumenPage() {
     setKategoriPermintaanId(''); setKategoriPermintaanNama('')
     setDetailPermintaanId(''); setDetailPermintaanNama('')
     setKategoriHasDetail(false)
+    // Check chairman status for the selected kegiatan
+    checkChairmanStatus(id)
   }
 
   function handleJenisChange(id: string) {
@@ -204,17 +210,17 @@ function AjukanDokumenPage() {
     setDetailPermintaanId(''); setDetailPermintaanNama('')
   }
 
-  // Dynamic step labels
+  // Dynamic step labels - removed "Peran" step (now auto-detected)
   const stepLabels = kategoriHasDetail
-    ? ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Detail', 'Peran', 'Unggah', 'Review']
-    : ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Peran', 'Unggah', 'Review']
+    ? ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Detail', 'Unggah', 'Review']
+    : ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Unggah', 'Review']
 
   // Map visual step to internal step logic
   function getVisualStepLabel(currentStep: number): string {
     return stepLabels[currentStep - 1] ?? String(currentStep)
   }
 
-  // Completed steps for indicator
+  // Completed steps for indicator - updated for removed "Peran" step
   const completedSteps: number[] = []
   if (step > 1) completedSteps.push(1)
   if (step > 2) completedSteps.push(2)
@@ -223,24 +229,21 @@ function AjukanDokumenPage() {
   if (step > 5) completedSteps.push(5)
   if (step > 6) completedSteps.push(6)
   if (step > 7) completedSteps.push(7)
-  if (step > 8) completedSteps.push(8)
 
-  // Step validation
+  // Step validation - updated for removed "Peran" step
   const canAdvanceFromStep1 = !!fungsiId && !!tahun && !!tanggal && !tanggalError
   const canAdvanceFromStep2 = !!kegiatanId
   const canAdvanceFromStep3 = !!jenisPermintaanId
   const canAdvanceFromStep4 = !!kategoriPermintaanId
-
-  // Detail step validation: only required if kategoriHasDetail is true
   const canAdvanceFromStep5 = !kategoriHasDetail || !!detailPermintaanId
-  const canAdvanceFromStep6 = true
+  const canAdvanceFromStep6 = true // Upload step - always can advance (validation is in submit)
 
   function handleNext() {
     if (step === 1 && tanggal > today) {
       setTanggalError('Tanggal tidak boleh melewati hari ini')
       return
     }
-    if (step < (kategoriHasDetail ? 8 : 7)) setStep(step + 1)
+    if (step < (kategoriHasDetail ? 7 : 6)) setStep(step + 1)
   }
 
   function handleBack() {
@@ -260,6 +263,33 @@ function AjukanDokumenPage() {
     },
     []
   )
+
+  // Check chairman status when kegiatan is selected
+  async function checkChairmanStatus(kegId: string) {
+    setIsChairmanLoading(true)
+    setChairmanBadgeVisible(false)
+
+    try {
+      const res = await fetch(`/api/users/me/is-ketua-tim/${kegId}`, {
+        credentials: 'include'
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setIsKetuaTim(data.is_ketua_tim === true)
+        setChairmanBadgeVisible(true)
+      } else {
+        setIsKetuaTim(false)
+        setChairmanBadgeVisible(true)
+      }
+    } catch (err) {
+      console.error('Failed to check chairman status:', err)
+      setIsKetuaTim(false)
+      setChairmanBadgeVisible(true)
+    } finally {
+      setIsChairmanLoading(false)
+    }
+  }
 
   async function handleSubmit() {
     if (missingRequired.length > 0) return
@@ -319,7 +349,7 @@ function AjukanDokumenPage() {
             Ajukan Dokumen Baru
           </h2>
           <p className="text-on-surface-variant text-xs mt-1">
-            Ikuti {kategoriHasDetail ? '8' : '7'} langkah untuk mengajukan dokumen SPD baru.
+            Ikuti {kategoriHasDetail ? '7' : '6'} langkah untuk mengajukan dokumen SPD baru.
           </p>
         </div>
 
@@ -602,54 +632,54 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 5/6: Peran (Ketua Tim / Anggota) — shown after step 4 if no detail, or after step 5 if has detail */}
+          {/* STEP 5/6: Peran (auto-detected based on kegiatan) */}
           {step === (kategoriHasDetail ? 6 : 5) && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
                 {kategoriHasDetail ? '6' : '5'}. Peran dalam Kegiatan
               </h3>
 
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-on-surface">
-                  Apakah Anda sebagai Ketua Tim?
-                </label>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsKetuaTim(false)}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-all text-left ${
-                      !isKetuaTim
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <p className="text-sm font-semibold text-on-surface">Anggota</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">
-                      Saya adalah anggota tim, bukan ketua.
-                    </p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsKetuaTim(true)}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-all text-left ${
-                      isKetuaTim
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <p className="text-sm font-semibold text-on-surface">Ketua Tim</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">
-                      Saya adalah penanggung jawab kegiatan ini.
-                    </p>
-                  </button>
+              {/* Auto-detected badge - role is determined by chairman assignment */}
+              {chairmanBadgeVisible && (
+                <div className={`rounded-lg p-4 transition-all ${
+                  isKetuaTim
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-blue-50 border border-blue-200'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    {isChairmanLoading ? (
+                      <Loader2 size={20} className="animate-spin text-primary" />
+                    ) : isKetuaTim ? (
+                      <Trophy size={20} className="text-green-600" />
+                    ) : (
+                      <Medal size={20} className="text-blue-600" />
+                    )}
+                    <div>
+                      <p className={`text-sm font-semibold ${
+                        isKetuaTim ? 'text-green-800' : 'text-blue-800'
+                      }`}>
+                        {isKetuaTim
+                          ? 'Anda adalah Ketua Tim di kegiatan ini'
+                          : 'Anda adalah Anggota di kegiatan ini'}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${
+                        isKetuaTim ? 'text-green-600' : 'text-blue-600'
+                      }`}>
+                        {isKetuaTim
+                          ? 'Dokumen akan masuk ke Laporan Kegiatan. Anggota tim dapat melihat dokumen ini.'
+                          : 'Dokumen akan masuk ke Laporan Saya.'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <p className="text-xs text-on-surface-variant bg-surface-container-low/30 p-3 rounded-lg">
-                {isKetuaTim
-                  ? 'Anda perlu mengunggah kelengkapan untuk Ketua Tim.'
-                  : 'Anda perlu mengunggah kelengkapan untuk Anggota.'}
-              </p>
+              {!chairmanBadgeVisible && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 size={20} className="animate-spin text-outline" />
+                  <span className="ml-2 text-sm text-on-surface-variant">Memeriksa peran...</span>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
@@ -662,11 +692,11 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 6/7: Upload */}
-          {step === (kategoriHasDetail ? 7 : 6) && (
+          {/* STEP 5/6: Upload - step 6 (with detail) or 5 (without detail) */}
+          {step === (kategoriHasDetail ? 6 : 5) && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                {kategoriHasDetail ? '7' : '6'}. Unggah Lampiran
+                {kategoriHasDetail ? '6' : '5'}. Unggah Lampiran
               </h3>
 
               <p className="text-xs text-on-surface-variant">
@@ -702,11 +732,11 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 7/8: Review */}
-          {step === (kategoriHasDetail ? 8 : 7) && (
+          {/* STEP 6/7: Review - step 7 (with detail) or 6 (without detail) */}
+          {step === (kategoriHasDetail ? 7 : 6) && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                {kategoriHasDetail ? '8' : '7'}. Review & Ajukan
+                {kategoriHasDetail ? '7' : '6'}. Review & Ajukan
               </h3>
 
               <ReviewSummary
