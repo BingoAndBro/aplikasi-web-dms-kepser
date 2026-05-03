@@ -36,17 +36,10 @@ export const Route = createFileRoute('/api/ketua-tim/')({
           return Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 })
         }
 
+        // Fetch assignments without joins (PostgREST schema cache issue)
         const { data, error } = await supabase
           .from('ketua_tim_assignments')
-          .select(`
-            id,
-            user_id,
-            kegiatan_id,
-            created_at,
-            created_by,
-            user:auth_users!user_id(id, email, raw_user_meta_data),
-            kegiatan:master_kegiatan(id, nama)
-          `)
+          .select('id, user_id, kegiatan_id, created_at, created_by')
           .order('created_at', { ascending: false })
 
         if (error) {
@@ -54,7 +47,37 @@ export const Route = createFileRoute('/api/ketua-tim/')({
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
 
-        return Response.json({ assignments: data })
+        if (!data || data.length === 0) {
+          return Response.json({ assignments: [] })
+        }
+
+        // Fetch related data in separate queries
+        const userIds = [...new Set(data.map(a => a.user_id).filter(Boolean))]
+        const kegiatanIds = [...new Set(data.map(a => a.kegiatan_id).filter(Boolean))]
+
+        const [usersResult, kegiatansResult] = await Promise.all([
+          userIds.length > 0
+            ? supabase.from('auth.users').select('id, email, raw_user_meta_data').in('id', userIds)
+            : { data: [], error: null },
+          kegiatanIds.length > 0
+            ? supabase.from('master_kegiatan').select('id, nama').in('id', kegiatanIds)
+            : { data: [], error: null }
+        ])
+
+        const usersMap = new Map((usersResult.data || []).map(u => [u.id, u]))
+        const kegiatansMap = new Map((kegiatansResult.data || []).map(k => [k.id, k]))
+
+        const assignments = data.map(a => ({
+          id: a.id,
+          user_id: a.user_id,
+          kegiatan_id: a.kegiatan_id,
+          created_at: a.created_at,
+          created_by: a.created_by,
+          user: usersMap.get(a.user_id),
+          kegiatan: kegiatansMap.get(a.kegiatan_id)
+        }))
+
+        return Response.json({ assignments })
       },
 
       POST: async ({ request }: { request: Request }) => {
@@ -89,16 +112,23 @@ export const Route = createFileRoute('/api/ketua-tim/')({
         // Check if kegiatan already has a chairman
         const { data: existingChair } = await supabase
           .from('ketua_tim_assignments')
-          .select('id, user:auth_users!user_id(id, raw_user_meta_data)')
+          .select('id, user_id')
           .eq('kegiatan_id', kegiatan_id)
           .maybeSingle()
 
         if (existingChair) {
+          // Fetch user info
+          const { data: existingUser } = await supabase
+            .from('auth.users')
+            .select('id, raw_user_meta_data')
+            .eq('id', existingChair.user_id)
+            .maybeSingle()
+
           return Response.json({
             error: 'Kegiatan sudah memiliki chairman',
             existing_chairman: {
-              id: existingChair.user?.id,
-              name: existingChair.user?.raw_user_meta_data?.user_name,
+              id: existingUser?.id,
+              name: existingUser?.raw_user_meta_data?.user_name,
             }
           }, { status: 409 })
         }
@@ -111,7 +141,7 @@ export const Route = createFileRoute('/api/ketua-tim/')({
             kegiatan_id,
             created_by: session.user.id,
           })
-          .select()
+          .select('id, user_id, kegiatan_id, created_at, created_by')
           .single()
 
         if (error) {

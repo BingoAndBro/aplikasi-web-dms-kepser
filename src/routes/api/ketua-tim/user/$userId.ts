@@ -40,14 +40,10 @@ export const Route = createFileRoute('/api/ketua-tim/user/$userId')({
           return Response.json({ error: 'userId wajib diisi' }, { status: 400 })
         }
 
+        // Fetch without joins (PostgREST schema cache issue)
         const { data, error } = await supabase
           .from('ketua_tim_assignments')
-          .select(`
-            id,
-            kegiatan_id,
-            created_at,
-            kegiatan:master_kegiatan(id, nama)
-          `)
+          .select('id, kegiatan_id, created_at')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
 
@@ -56,7 +52,27 @@ export const Route = createFileRoute('/api/ketua-tim/user/$userId')({
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
 
-        return Response.json({ assignments: data })
+        if (!data || data.length === 0) {
+          return Response.json({ assignments: [] })
+        }
+
+        // Fetch kegiatan details separately
+        const kegiatanIds = [...new Set(data.map(a => a.kegiatan_id).filter(Boolean))]
+        const { data: kegiatansData } = await supabase
+          .from('master_kegiatan')
+          .select('id, nama')
+          .in('id', kegiatanIds)
+
+        const kegiatansMap = new Map((kegiatansData || []).map(k => [k.id, k]))
+
+        const assignments = data.map(a => ({
+          id: a.id,
+          kegiatan_id: a.kegiatan_id,
+          created_at: a.created_at,
+          kegiatan: kegiatansMap.get(a.kegiatan_id)
+        }))
+
+        return Response.json({ assignments })
       }
     }
   }
