@@ -42,7 +42,12 @@ export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
 
         const { data, error } = await supabase
           .from('ketua_tim_assignments')
-          .select('id, user_id, created_at')
+          .select(`
+            id,
+            user_id,
+            created_at,
+            user:auth_users!user_id(id, email, raw_user_meta_data)
+          `)
           .eq('kegiatan_id', kegiatanId)
           .maybeSingle()
 
@@ -55,19 +60,12 @@ export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
           return Response.json({ chairman: null })
         }
 
-        // Fetch user details separately
-        const { data: userData } = await supabase
-          .from('auth.users')
-          .select('id, email, raw_user_meta_data')
-          .eq('id', data.user_id)
-          .maybeSingle()
-
         return Response.json({
           chairman: {
             id: data.id,
             user_id: data.user_id,
-            user_name: userData?.raw_user_meta_data?.user_name,
-            user_email: userData?.email,
+            user_name: data.user?.raw_user_meta_data?.user_name,
+            user_email: data.user?.email,
           }
         })
       }
