@@ -236,6 +236,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = React.useState<string | undefined>()
   const [email, setEmail] = React.useState<string | undefined>()
   const [isLoading, setIsLoading] = React.useState(true)
+  const [chairmanKegiatan, setChairmanKegiatan] = React.useState<{ id: string; nama: string }[]>([])
+
+  // Fetch chairman status
+  const fetchChairmanStatus = React.useCallback(async (session: any) => {
+    if (!session) return
+    try {
+      const res = await fetch('/api/users/me/ketua-tim', { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setChairmanKegiatan(data.kegiatan || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch chairman status:', err)
+    }
+  }, [])
   const [hasSession, setHasSession] = React.useState(false)
   const [roleSwitcherOpen, setRoleSwitcherOpen] = React.useState(false)
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false)
@@ -301,7 +316,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
     setActiveRole(effectiveRole)
     setIsLoading(false)
-  }, [supabase])
+
+    // Fetch chairman status after session is loaded
+    fetchChairmanStatus(session)
+  }, [supabase, fetchChairmanStatus])
 
   React.useEffect(() => {
     fetchSession()
@@ -311,7 +329,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setUserRoles([]); setActiveRole('PEGAWAI')
         setUserName(undefined); setEmail(undefined)
-        setHasSession(false); clearAppState()
+        setHasSession(false); setChairmanKegiatan([])
+        clearAppState()
         // Redirect to login when session expires
         if (!isLoginPage) {
           window.location.href = '/login'
@@ -359,7 +378,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     navigate({ to: '/login' })
   }
 
-  const navGroups = NAV_CONFIG[activeRole] ?? []
+  // Build nav groups with conditional "Laporan Kegiatan" for PEGAWAI
+  const navGroups = React.useMemo(() => {
+    const baseConfig = NAV_CONFIG[activeRole] ?? []
+
+    if (activeRole !== 'PEGAWAI') return baseConfig
+
+    return baseConfig.map(group => {
+      if (group.title !== 'MANAGEMENT') return group
+
+      const filteredItems = group.items.filter(item => {
+        // Always show all items except laporan_kegiatan
+        if (item.id !== 'laporan_kegiatan') return true
+        // Only show laporan_kegiatan if user has chairman assignments
+        return chairmanKegiatan.length > 0
+      })
+
+      return { ...group, items: filteredItems }
+    })
+  }, [activeRole, chairmanKegiatan])
 
   const isAdmin = activeRole === 'ADMIN'
   const initials = getInitials(userName, email)
