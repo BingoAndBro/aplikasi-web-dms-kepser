@@ -228,6 +228,7 @@ function MasterUserPage() {
       const res = await fetch(`/api/ketua-tim/user/${userId}`, { credentials: 'include' })
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
+      // API returns { assignments: [...] } - kegiatan is nested inside
       if (data.assignments) {
         setDialogChairmanAssignments(data.assignments.map((a: any) => ({
           id: a.id,
@@ -243,11 +244,16 @@ function MasterUserPage() {
   const loadAvailableKegiatan = async () => {
     try {
       const res = await fetch('/api/master-kegiatan', { credentials: 'include' })
+      console.log('Master kegiatan response status:', res.status)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
-      if (data.kegiatan) {
+      console.log('Master kegiatan response data:', data)
+      console.log('Is array:', Array.isArray(data))
+      // API returns array directly, not { kegiatan: [...] }
+      if (Array.isArray(data)) {
         const assignedKegiatanIds = dialogChairmanAssignments.map(c => c.kegiatan_id)
-        const available = data.kegiatan.filter((k: any) => !assignedKegiatanIds.includes(k.id))
+        const available = data.filter((k: any) => !assignedKegiatanIds.includes(k.id))
+        console.log('Available kegiatan:', available)
         setAvailableKegiatan(available)
       }
     } catch (err) {
