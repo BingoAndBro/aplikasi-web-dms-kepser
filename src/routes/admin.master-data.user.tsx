@@ -92,6 +92,12 @@ const INITIAL_EDIT_FORM: EditUserForm = {
   roles: [],
 }
 
+interface ChairmanAssignment {
+  id: string
+  kegiatan_id: string
+  kegiatan_nama: string
+}
+
 // ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
@@ -103,6 +109,10 @@ function MasterUserPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'aktif' | 'nonaktif'>('all')
+
+  // Chairman assignments state
+  const [chairmanAssignments, setChairmanAssignments] = useState<Record<string, ChairmanAssignment[]>>({})
+  const [loadingChairmen, setLoadingChairmen] = useState(false)
 
   // Dialog states
   const [createOpen, setCreateOpen] = useState(false)
@@ -148,6 +158,43 @@ function MasterUserPage() {
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
+
+  // ---------------------------------------------------------------------------
+  // Fetch chairman assignments
+  // ---------------------------------------------------------------------------
+
+  const fetchChairmanAssignments = useCallback(async () => {
+    setLoadingChairmen(true)
+    try {
+      const res = await fetch('/api/ketua-tim/', { credentials: 'include' })
+      if (!res.ok) throw new Error('Failed to fetch')
+      const data = await res.json()
+
+      if (data.assignments) {
+        const grouped: Record<string, ChairmanAssignment[]> = {}
+        data.assignments.forEach((a: any) => {
+          const userId = a.user_id
+          if (!grouped[userId]) grouped[userId] = []
+          grouped[userId].push({
+            id: a.id,
+            kegiatan_id: a.kegiatan_id,
+            kegiatan_nama: a.kegiatan?.nama || 'Unknown',
+          })
+        })
+        setChairmanAssignments(grouped)
+      }
+    } catch (err) {
+      console.error('Failed to fetch chairman assignments:', err)
+    } finally {
+      setLoadingChairmen(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (users.length > 0) {
+      fetchChairmanAssignments()
+    }
+  }, [users, fetchChairmanAssignments])
 
   // ---------------------------------------------------------------------------
   // Filtered users
@@ -451,6 +498,7 @@ function MasterUserPage() {
                 <TableHead className="w-12 text-center">No</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead className="text-center">Hak Akses</TableHead>
+                <TableHead className="text-center min-w-[140px]">Ketua Tim</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center w-32">Aksi</TableHead>
               </TableRow>
@@ -458,13 +506,13 @@ function MasterUserPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     <Loader2 size={20} className="animate-spin mx-auto text-outline" />
                   </TableCell>
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-outline">
+                  <TableCell colSpan={6} className="text-center py-8 text-outline">
                     Tidak ada user yang ditemukan
                   </TableCell>
                 </TableRow>
@@ -503,6 +551,24 @@ function MasterUserPage() {
                           <span className="text-xs text-outline">-</span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {loadingChairmen ? (
+                        <span className="text-outline/40 text-xs">...</span>
+                      ) : chairmanAssignments[user.id]?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {chairmanAssignments[user.id].map((c) => (
+                            <span
+                              key={c.id}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200"
+                            >
+                              {c.kegiatan_nama}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-outline text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1.5">
