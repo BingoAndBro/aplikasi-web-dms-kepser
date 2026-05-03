@@ -102,3 +102,21 @@ export type DokumenTransaksi = typeof dokumenTransaksi.$inferSelect
 export type NewDokumenTransaksi = typeof dokumenTransaksi.$inferInsert
 export type LogAktivitas = typeof logAktivitas.$inferSelect
 export type NewLogAktivitas = typeof logAktivitas.$inferInsert
+
+// ---------------------------------------------------------------------------
+// ketua_tim_assignments — assignment user sebagai Ketua Tim pada kegiatan
+// ---------------------------------------------------------------------------
+
+export const ketuaTimAssignments = pgTable('ketua_tim_assignments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  kegiatanId: uuid('kegiatan_id').notNull().references(() => masterKegiatan.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdBy: uuid('created_by'),
+}, (table) => ({
+  kegiatanUnique: unique().on(table.kegiatanId),
+}))
+
+// Type exports
+export type KetuaTimAssignment = typeof ketuaTimAssignments.$inferSelect
+export type NewKetuaTimAssignment = typeof ketuaTimAssignments.$inferInsert
