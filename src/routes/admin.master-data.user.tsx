@@ -114,6 +114,12 @@ function MasterUserPage() {
   const [chairmanAssignments, setChairmanAssignments] = useState<Record<string, ChairmanAssignment[]>>({})
   const [loadingChairmen, setLoadingChairmen] = useState(false)
 
+  // Dialog chairman management
+  const [dialogChairmanAssignments, setDialogChairmanAssignments] = useState<ChairmanAssignment[]>([])
+  const [availableKegiatan, setAvailableKegiatan] = useState<{ id: string; nama: string }[]>([])
+  const [showChairmanConfirm, setShowChairmanConfirm] = useState(false)
+  const [pendingChairmanReplace, setPendingChairmanReplace] = useState<{ kegiatan_id: string; kegiatan_nama: string; old_user: string } | null>(null)
+
   // Dialog states
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -217,6 +223,118 @@ function MasterUserPage() {
   // Dialog handlers
   // ---------------------------------------------------------------------------
 
+  const loadChairmanForUser = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/ketua-tim/user/${userId}`, { credentials: 'include' })
+      if (!res.ok) throw new Error('Failed to fetch')
+      const data = await res.json()
+      if (data.assignments) {
+        setDialogChairmanAssignments(data.assignments.map((a: any) => ({
+          id: a.id,
+          kegiatan_id: a.kegiatan_id,
+          kegiatan_nama: a.kegiatan?.nama || 'Unknown',
+        })))
+      }
+    } catch (err) {
+      console.error('Failed to load chairman assignments:', err)
+    }
+  }
+
+  const loadAvailableKegiatan = async () => {
+    try {
+      const res = await fetch('/api/master-kegiatan', { credentials: 'include' })
+      if (!res.ok) throw new Error('Failed to fetch')
+      const data = await res.json()
+      if (data.kegiatan) {
+        const assignedKegiatanIds = dialogChairmanAssignments.map(c => c.kegiatan_id)
+        const available = data.kegiatan.filter((k: any) => !assignedKegiatanIds.includes(k.id))
+        setAvailableKegiatan(available)
+      }
+    } catch (err) {
+      console.error('Failed to load kegiatan:', err)
+    }
+  }
+
+  const handleAddChairman = async (kegiatanId: string, userId: string) => {
+    try {
+      const res = await fetch('/api/ketua-tim/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          kegiatan_id: kegiatanId,
+        })
+      })
+
+      if (res.status === 409) {
+        const data = await res.json()
+        setPendingChairmanReplace({
+          kegiatan_id: kegiatanId,
+          kegiatan_nama: availableKegiatan.find(k => k.id === kegiatanId)?.nama ?? '',
+          old_user: data.existing_chairman?.name ?? 'Chairman sebelumnya'
+        })
+        setShowChairmanConfirm(true)
+        return
+      }
+
+      if (!res.ok) throw new Error('Failed to add')
+
+      await loadChairmanForUser(userId)
+      await loadAvailableKegiatan()
+    } catch (err) {
+      console.error('Failed to add chairman:', err)
+      alert('Gagal menambahkan kegiatan chairman')
+    }
+  }
+
+  const handleRemoveChairman = async (assignmentId: string, userId: string) => {
+    try {
+      const res = await fetch(`/api/ketua-tim/${assignmentId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      if (!res.ok) throw new Error('Failed to remove')
+      await loadChairmanForUser(userId)
+      await loadAvailableKegiatan()
+    } catch (err) {
+      console.error('Failed to remove chairman:', err)
+      alert('Gagal menghapus kegiatan chairman')
+    }
+  }
+
+  const handleConfirmReplace = async () => {
+    if (!pendingChairmanReplace || !selectedUser) return
+    // Remove old first
+    try {
+      const oldChairRes = await fetch(`/api/ketua-tim/kegiatan/${pendingChairmanReplace.kegiatan_id}`, { credentials: 'include' })
+      if (oldChairRes.ok) {
+        const oldChairData = await oldChairRes.json()
+        if (oldChairData.chairman?.id) {
+          await fetch(`/api/ketua-tim/${oldChairData.chairman.id}`, { method: 'DELETE', credentials: 'include' })
+        }
+      }
+      // Add new
+      const res = await fetch('/api/ketua-tim/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: selectedUser.id,
+          kegiatan_id: pendingChairmanReplace.kegiatan_id,
+        })
+      })
+      if (!res.ok) throw new Error('Failed to add')
+      setShowChairmanConfirm(false)
+      setPendingChairmanReplace(null)
+      await loadChairmanForUser(selectedUser.id)
+      await loadAvailableKegiatan()
+    } catch (err) {
+      console.error('Failed to replace chairman:', err)
+      alert('Gagal mengganti chairman')
+    }
+  }
+
   const openEdit = (user: UserWithRoles) => {
     setSelectedUser(user)
     setEditForm({
@@ -225,7 +343,16 @@ function MasterUserPage() {
       departemen: user.metadata.departemen || '',
       roles: [...user.roles],
     })
+    setDialogChairmanAssignments([])
+    loadChairmanForUser(user.id).then(() => loadAvailableKegiatan())
     setEditOpen(true)
+  }
+
+  const openCreate = () => {
+    setDialogChairmanAssignments([])
+    setAvailableKegiatan([])
+    setCreateOpen(true)
+    loadAvailableKegiatan()
   }
 
   const openResetPassword = (user: UserWithRoles) => {
@@ -451,7 +578,7 @@ function MasterUserPage() {
               Kelola akses dan data pengguna sistem DMS BPS Kabupaten Kepulauan Seribu.
             </p>
           </div>
-          <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" className="gap-1.5" onClick={openCreate}>
             <UserPlus size={14} />
             Tambah User
           </Button>
@@ -760,6 +887,58 @@ function MasterUserPage() {
                 ))}
               </div>
             </div>
+
+            {/* Section: Kegiatan sebagai Ketua Tim */}
+            <div className="space-y-3 border-t border-outline-variant/20 pt-4 mt-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-on-surface">Kegiatan sebagai Ketua Tim</h4>
+                <span className="text-[10px] text-on-surface-variant">
+                  {dialogChairmanAssignments.length} kegiatan
+                </span>
+              </div>
+
+              {/* Chips kegiatan */}
+              <div className="flex flex-wrap gap-2">
+                {dialogChairmanAssignments.map((c) => (
+                  <span
+                    key={c.id}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"
+                  >
+                    {c.kegiatan_nama}
+                    <button
+                      type="button"
+                      onClick={() => selectedUser && handleRemoveChairman(c.id, selectedUser.id)}
+                      className="ml-1 text-amber-600 hover:text-amber-900 hover:bg-amber-200 rounded-full p-0.5 cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                {dialogChairmanAssignments.length === 0 && (
+                  <span className="text-xs text-on-surface-variant">Belum ada kegiatan</span>
+                )}
+              </div>
+
+              {/* Dropdown Tambah Kegiatan */}
+              {availableKegiatan.length > 0 && (
+                <div className="flex gap-2">
+                  <select
+                    className="flex-1 px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                    value=""
+                    onChange={(e) => selectedUser && e.target.value && handleAddChairman(e.target.value, selectedUser.id)}
+                  >
+                    <option value="">Tambah kegiatan...</option>
+                    {availableKegiatan.map((k) => (
+                      <option key={k.id} value={k.id}>{k.nama}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <p className="text-[10px] text-on-surface-variant">
+                Satu kegiatan hanya boleh memiliki 1 ketua tim
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Batal</Button>
@@ -808,6 +987,31 @@ function MasterUserPage() {
             <Button onClick={handleResetPassword} disabled={actionLoading}>
               {actionLoading && <Loader2 size={14} className="animate-spin mr-1" />}
               Reset Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Chairman Replace Confirmation Dialog */}
+      <Dialog open={showChairmanConfirm} onOpenChange={setShowChairmanConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ganti Ketua Tim?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-on-surface-variant">
+            Apakah Anda yakin ingin menunjuk user ini sebagai chairman kegiatan{" "}
+            <span className="font-semibold text-on-surface">{pendingChairmanReplace?.kegiatan_nama}</span>?
+            Ini akan menggantikan <span className="font-semibold text-on-surface">{pendingChairmanReplace?.old_user}</span>.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowChairmanConfirm(false)
+              setPendingChairmanReplace(null)
+            }}>
+              Batal
+            </Button>
+            <Button onClick={handleConfirmReplace} disabled={actionLoading}>
+              Ya, Ganti
             </Button>
           </DialogFooter>
         </DialogContent>
