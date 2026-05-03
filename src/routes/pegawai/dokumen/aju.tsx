@@ -298,6 +298,12 @@ function AjukanDokumenPage() {
       return
     }
 
+    // Safety check: is_ketua_tim must be determined (from chairman status)
+    if (!chairmanBadgeVisible && !isChairmanLoading) {
+      setSubmitError('Peran belum ditentukan. Silakan pilih kegiatan terlebih dahulu.')
+      return
+    }
+
     setSubmitting(true)
     setSubmitError('')
 
