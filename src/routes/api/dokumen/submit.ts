@@ -99,34 +99,29 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           || session.user.email?.split('@')[0]
           || 'Unknown'
 
-        // Validasi Ketua Tim ganda:
-        // Jika isKetuaTim = true, pastikan belum ada Ketua Tim lain
-        // dengan leaf node + tanggal yang sama.
+        // Validasi Ketua Tim:
+        // Jika isKetuaTim = true, pastikan user ini memang chairman yang ditunjuk
+        // untuk kegiatan ini di tabel ketua_tim_assignments.
+        // Yang dicek adalah ASSIGNED chairman, bukan dokumen yang sudah ada.
         if (parsed.data.isKetuaTim) {
-          const leafCol = parsed.data.detailPermintaanId ? 'detail_permintaan_id'
-            : parsed.data.kategoriPermintaanId ? 'kategori_permintaan_id'
-            : parsed.data.jenisPermintaanId ? 'jenis_permintaan_id'
-            : null
+          // Get leaf info for chairman assignment check
           const leafVal = parsed.data.detailPermintaanId
             ?? parsed.data.kategoriPermintaanId
             ?? parsed.data.jenisPermintaanId
-            ?? null
 
-          if (leafCol && leafVal) {
-            let checkQuery = admin
-              .from('dokumen_transaksi')
+          if (leafVal) {
+            // Check if current user is the assigned chairman for this kegiatan
+            const { data: chairmanAssignment } = await supabase
+              .from('ketua_tim_assignments')
               .select('id')
-              .eq('tanggal', parsed.data.tanggal)
-              .eq('is_ketua_tim', true)
-              .eq(leafCol, leafVal)
-              .neq('status', 'DRAFT')
-              .limit(1)
+              .eq('user_id', session.user.id)
+              .eq('kegiatan_id', parsed.data.kegiatanJenisId)
+              .maybeSingle()
 
-            const { data: existingKetua } = await checkQuery
-            if (existingKetua && existingKetua.length > 0) {
+            if (!chairmanAssignment) {
               return Response.json({
-                error: 'Ketua tim untuk kegiatan ini pada tanggal tersebut sudah ada. Anda hanya dapat mengajukan sebagai Anggota.',
-              }, { status: 409 })
+                error: 'Anda bukan Ketua Tim yang ditunjuk untuk kegiatan ini.',
+              }, { status: 403 })
             }
           }
         }

@@ -26,6 +26,12 @@ function LaporanKegiatanPage() {
     async function checkPermission() {
       setCheckingAuth(true)
       try {
+        // Get current user ID from session
+        const meRes = await fetch('/api/users/me', { credentials: 'include' })
+        if (!meRes.ok) throw new Error('Not authenticated')
+        const meData = await meRes.json()
+        setCurrentUserId(meData.user.id)
+
         const res = await fetch('/api/users/me/ketua-tim', { credentials: 'include' })
 
         if (!res.ok) {
@@ -49,8 +55,6 @@ function LaporanKegiatanPage() {
         const d = await docRes.json()
         if (d.error) { setError(d.error); return }
         setDokumen(d.dokumen ?? [])
-        const ketuaRow = (d.dokumen ?? []).find((dok: any) => dok.is_ketua_tim)
-        if (ketuaRow?.pengaju_id) setCurrentUserId(ketuaRow.pengaju_id)
       } catch (err) {
         console.error('Permission check failed:', err)
         setIsAuthorized(false)

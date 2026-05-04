@@ -638,27 +638,36 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 5/6: Peran (auto-detected based on kegiatan) */}
+          {/* STEP 5/6: Upload - step 6 (with detail) or 5 (without detail) */}
           {step === (kategoriHasDetail ? 6 : 5) && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                {kategoriHasDetail ? '6' : '5'}. Peran dalam Kegiatan
+                {kategoriHasDetail ? '6' : '5'}. Unggah Lampiran
               </h3>
 
-              {/* Auto-detected badge - role is determined by chairman assignment */}
+              <p className="text-xs text-on-surface-variant">
+                Kelengkapan untuk <strong className="text-on-surface">{kegiatanNama}</strong>{' '}
+                — <strong className="text-on-surface">{jenisPermintaanNama}</strong>{' / '}
+                <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
+                {detailPermintaanNama && <> / <strong className="text-on-surface">{detailPermintaanNama}</strong></>}
+                {' sebagai '}
+                <strong className="text-on-surface">{isKetuaTim ? 'Ketua Tim' : 'Anggota'}</strong>
+              </p>
+
+              {/* Auto-detected badge - shown below upload section */}
               {chairmanBadgeVisible && (
-                <div className={`rounded-lg p-4 transition-all ${
+                <div className={`rounded-lg p-3 transition-all ${
                   isKetuaTim
                     ? 'bg-green-50 border border-green-200'
                     : 'bg-blue-50 border border-blue-200'
                 }`}>
                   <div className="flex items-center gap-3">
                     {isChairmanLoading ? (
-                      <Loader2 size={20} className="animate-spin text-primary" />
+                      <Loader2 size={18} className="animate-spin text-primary" />
                     ) : isKetuaTim ? (
-                      <Trophy size={20} className="text-green-600" />
+                      <Trophy size={18} className="text-green-600" />
                     ) : (
-                      <Medal size={20} className="text-blue-600" />
+                      <Medal size={18} className="text-blue-600" />
                     )}
                     <div>
                       <p className={`text-sm font-semibold ${
@@ -681,38 +690,11 @@ function AjukanDokumenPage() {
               )}
 
               {!chairmanBadgeVisible && (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 size={20} className="animate-spin text-outline" />
+                <div className="flex items-center justify-center py-2">
+                  <Loader2 size={18} className="animate-spin text-outline" />
                   <span className="ml-2 text-sm text-on-surface-variant">Memeriksa peran...</span>
                 </div>
               )}
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
-                  <ChevronLeft size={14} />Kembali
-                </Button>
-                <Button onClick={handleNext} className="gap-1.5 flex-1">
-                  Lanjut <ChevronRight size={14} />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5/6: Upload - step 6 (with detail) or 5 (without detail) */}
-          {step === (kategoriHasDetail ? 6 : 5) && (
-            <div className="space-y-4">
-              <h3 className="font-headline text-base font-bold text-on-surface">
-                {kategoriHasDetail ? '6' : '5'}. Unggah Lampiran
-              </h3>
-
-              <p className="text-xs text-on-surface-variant">
-                Kelengkapan untuk <strong className="text-on-surface">{kegiatanNama}</strong>{' '}
-                — <strong className="text-on-surface">{jenisPermintaanNama}</strong>{' / '}
-                <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
-                {detailPermintaanNama && <> / <strong className="text-on-surface">{detailPermintaanNama}</strong></>}
-                {' sebagai '}
-                <strong className="text-on-surface">{isKetuaTim ? 'Ketua Tim' : 'Anggota'}</strong>
-              </p>
 
               <KelengkapanChecklist
                 kegiatanId={kegiatanId}

@@ -544,72 +544,35 @@ export async function getDokumenSelesaiByUser(
 }
 
 /**
- * Ambil semua dokumen dari proyek yang pernah dipimpin user sebagai Ketua Tim.
- * Termasuk dokumen milik anggota dengan leaf_node + tanggal yang sama.
+ * Ambil semua dokumen COMPLETED dari kegiatan dimana user adalah chairman saat ini.
+ * Includes all documents regardless of who submitted them.
  * WAJIB menggunakan admin client agar bisa baca dokumen user lain.
  */
 export async function getDokumenKegiatanByKetuaTim(
   adminClient: SupabaseClient,
   userId: string
 ): Promise<DokumenLaporanRow[]> {
-  // 1. Cari semua dokumen ketua tim milik user (status COMPLETED)
-  const { data: ketuaDocs, error: e1 } = await adminClient
+  // 1. Get all kegiatan where user is assigned as chairman
+  const { data: assignments, error: e0 } = await adminClient
+    .from('ketua_tim_assignments')
+    .select('kegiatan_id')
+    .eq('user_id', userId)
+
+  if (e0 || !assignments || assignments.length === 0) return []
+
+  const kegiatanIds = assignments.map((a: any) => a.kegiatan_id)
+
+  // 2. Get ALL COMPLETED documents for those kegiatan
+  const { data: allDocs, error: e1 } = await adminClient
     .from('dokumen_transaksi')
     .select('*')
-    .eq('created_by', userId)
-    .eq('is_ketua_tim', true)
+    .in('kegiatan_jenis_id', kegiatanIds)
     .eq('status', 'COMPLETED')
 
-  if (e1 || !ketuaDocs || ketuaDocs.length === 0) return []
+  if (e1 || !allDocs || allDocs.length === 0) return []
 
-  // 2. Bangun daftar proyek unik: (leaf_node_col, leaf_node_id, tanggal)
-  type Proyek = {
-    leafCol: string
-    leafVal: string
-    tanggal: string
-  }
-  const proyek: Proyek[] = []
-  for (const dok of ketuaDocs) {
-    const leafCol = dok.detail_permintaan_id ? 'detail_permintaan_id'
-      : dok.kategori_permintaan_id ? 'kategori_permintaan_id'
-      : dok.jenis_permintaan_id ? 'jenis_permintaan_id'
-      : null
-    const leafVal = dok.detail_permintaan_id ?? dok.kategori_permintaan_id ?? dok.jenis_permintaan_id ?? null
-    if (leafCol && leafVal) {
-      // hindari duplikat
-      const exists = proyek.some(p => p.leafCol === leafCol && p.leafVal === leafVal && p.tanggal === dok.tanggal)
-      if (!exists) proyek.push({ leafCol, leafVal, tanggal: dok.tanggal })
-    }
-  }
-
-  if (proyek.length === 0) return _enrichDokumenRows(adminClient, ketuaDocs)
-
-  // 3. Ambil dokumen anggota dari semua proyek — query per proyek karena
-  //    kolom leaf node berbeda-beda (tidak bisa .in() multi-kolom di PostgREST)
-  const anggotaDocs: any[] = []
-  for (const p of proyek) {
-    const { data: rows } = await adminClient
-      .from('dokumen_transaksi')
-      .select('*')
-      .eq(p.leafCol, p.leafVal)
-      .eq('tanggal', p.tanggal)
-      .eq('is_ketua_tim', false)
-      .eq('status', 'COMPLETED')
-    if (rows) anggotaDocs.push(...rows)
-  }
-
-  // 4. Gabungkan ketua + anggota, hindari duplikat by id
-  const allIds = new Set(ketuaDocs.map((d: any) => d.id))
-  const merged = [...ketuaDocs]
-  for (const d of anggotaDocs) {
-    if (!allIds.has(d.id)) { merged.push(d); allIds.add(d.id) }
-  }
-
-  const enriched = await _enrichDokumenRows(adminClient, merged)
-
-  // 5. Tambah nama pengaju (query auth user metadata via admin)
-  //    — dilakukan di level API route yang punya akses admin
-  return enriched
+  // 3. Return enriched list with all metadata
+  return _enrichDokumenRows(adminClient, allDocs)
 }
 
 /**
