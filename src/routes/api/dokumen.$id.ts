@@ -6,7 +6,9 @@ import { updateDokumenSchema } from '#/lib/schemas/dokumen'
 import {
   getDokumenById,
   updateDokumen,
+  insertLog,
   userHasApproverRole,
+  type LampiranUrl,
 } from '#/lib/dokumen-helpers'
 
 function createClient(request: Request) {
@@ -74,8 +76,6 @@ export const Route = createFileRoute('/api/dokumen/$id')({
         const supabase = createClient(request)
         const session = await getServerSession(supabase)
 
-        console.log('[API/dokumen/:id] PATCH START id:', params.id, 'session user:', session?.user?.id)
-
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
@@ -90,24 +90,47 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
         }
 
-        if (dok.status !== 'NEED_REVISION') {
+        // Check if Non-Material
+        const isNonMaterial = dok.is_non_material === true ||
+          (!dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+
+        // Allow edit for:
+        // 1. Non-Material with TERSIMPAN status
+        // 2. Material with NEED_REVISION target=USER
+        const canEditNonMaterial = isNonMaterial && dok.status === 'TERSIMPAN'
+        const canEditMaterial = !isNonMaterial && dok.status === 'NEED_REVISION' && dok.revision_target === 'USER'
+
+        if (!canEditNonMaterial && !canEditMaterial) {
+          if (isNonMaterial) {
+            return Response.json({ error: 'Dokumen Non-Material hanya bisa diedit jika status Tersimpan' }, { status: 400 })
+          }
           return Response.json({ error: 'Dokumen tidak bisa diedit — status bukan NEED_REVISION' }, { status: 400 })
         }
 
-        if (dok.revision_target !== 'USER') {
-          return Response.json({ error: 'Dokumen ini perlu direvisi oleh PPK, bukan oleh Anda' }, { status: 400 })
-        }
+        // lampiran_urls may come back as JSON string from DB
+        const storedLampirans = dok.lampiran_urls
+          ? (typeof dok.lampiran_urls === 'string'
+              ? JSON.parse(dok.lampiran_urls) as LampiranUrl[]
+              : dok.lampiran_urls as LampiranUrl[])
+          : []
 
         // Collect old URLs that will be replaced
         const oldUrls: string[] = []
         if (parsed.data.lampiranUrls) {
           for (const newLamp of parsed.data.lampiranUrls) {
-            const oldLamp = dok.lampiran_urls.find(l => l.kelengkapan_id === newLamp.kelengkapan_id)
+            const oldLamp = storedLampirans.find(l => l.kelengkapan_id === newLamp.kelengkapan_id)
+            console.log('[PATCH] Checking replacement:', {
+              kelengkapan_id: newLamp.kelengkapan_id,
+              newUrl: newLamp.url,
+              oldUrl: oldLamp?.url,
+              willDelete: oldLamp && oldLamp.url !== newLamp.url
+            })
             if (oldLamp && oldLamp.url !== newLamp.url) {
               oldUrls.push(oldLamp.url)
             }
           }
         }
+        console.log('[PATCH] Old URLs to delete:', oldUrls)
 
         const admin = createAdminClient()
         const result = await updateDokumen(admin, params.id, {
@@ -117,23 +140,109 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           fungsiId: parsed.data.fungsiId,
           kegiatanId: parsed.data.kegiatanId,
           tanggal: parsed.data.tanggal,
+          nominalRealisasi: parsed.data.nominalRealisasi,
         })
-
-        console.log('[API/dokumen/:id] PATCH result:', result.error ?? 'success')
 
         if (result.error) {
           return Response.json({ error: result.error }, { status: 500 })
         }
 
+        // Insert log for Non-Material edit
+        if (isNonMaterial) {
+          await insertLog(admin, {
+            dokumenId: params.id,
+            userId: session.user.id,
+            aksi: 'UPDATE',
+            stepUrutan: null,
+          })
+        }
+
         // Delete old files from storage (fire and forget)
         for (const oldUrl of oldUrls) {
+          console.log('[PATCH] Deleting old file from storage:', oldUrl)
           admin.storage.from('dokumen-lampiran').remove([oldUrl]).then(({ error }) => {
             if (error) console.warn('[dokumen] Failed to delete old file:', oldUrl, error.message)
-            else console.log('[dokumen] Deleted old file:', oldUrl)
+            else console.log('[dokumen] Old file deleted:', oldUrl)
           })
         }
 
         return Response.json({ dokumen: result.data })
+      },
+
+      DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const supabase = createClient(request)
+        const session = await getServerSession(supabase)
+
+        if (!session) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        // Use admin client to bypass RLS
+        const admin = createAdminClient()
+        const dok = await getDokumenById(admin, params.id)
+
+        if (!dok) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
+
+        // Check if owner
+        if (dok.created_by !== session.user.id) {
+          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+        }
+
+        // Check if Non-Material and TERSIMPAN
+        const isNonMaterial = dok.is_non_material === true ||
+          (!dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+
+        if (!isNonMaterial || dok.status !== 'TERSIMPAN') {
+          return Response.json({ error: 'Dokumen tidak bisa dihapus' }, { status: 400 })
+        }
+
+        // Get lampiran URLs for file deletion
+        const lampiranUrls = dok.lampiran_urls || []
+        console.log('[DELETE] Deleting dokumen:', {
+          dokumenId: params.id,
+          judul: dok.judul,
+          lampiranFiles: lampiranUrls.map(l => l.url)
+        })
+
+        // Insert log before delete (so it records who deleted)
+        await insertLog(admin, {
+          dokumenId: params.id,
+          userId: session.user.id,
+          aksi: 'DELETE',
+          stepUrutan: null,
+        })
+
+        // Delete dokumen from database
+        const { error: deleteError } = await admin
+          .from('dokumen_transaksi')
+          .delete()
+          .eq('id', params.id)
+
+        if (deleteError) {
+          console.error('[API/dokumen/:id] DELETE error:', deleteError)
+          return Response.json({ error: 'Gagal menghapus dokumen' }, { status: 500 })
+        }
+
+        console.log('[DELETE] Dokumen metadata deleted from database:', params.id)
+
+        // Delete files from storage
+        for (const lamp of lampiranUrls) {
+          console.log('[DELETE] Deleting file from storage:', lamp.url)
+          admin.storage.from('dokumen-lampiran').remove([lamp.url]).then(({ error }) => {
+            if (error) console.warn('[dokumen] Failed to delete file:', lamp.url, error.message)
+            else console.log('[DELETE] File deleted from storage:', lamp.url)
+          })
+        }
+
+        console.log('[DELETE] Complete:', {
+          dokumenId: params.id,
+          judul: dok.judul,
+          filesDeleted: lampiranUrls.length
+        })
+
+        return Response.json({ success: true })
       },
     },
   },

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   Loader2,
   ClipboardList,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
@@ -38,6 +40,9 @@ type DokumenDetail = {
   tahun: number
   tanggal: string
   created_at: string
+  created_by: string
+  is_non_material: boolean
+  nominal_realisasi: number | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -50,16 +55,25 @@ type DokumenDetail = {
 // Workflow config
 // ---------------------------------------------------------------------------
 
-const WORKFLOW_STEPS = [
+const WORKFLOW_STEPS_MATERIAL = [
   { key: 'DRAFT', label: 'Draf' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
   { key: 'IN_BENDAHARA_APPROVAL', label: 'Bendahara' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 
-function getWorkflowIndex(status: string): number {
+const WORKFLOW_STEPS_NON_MATERIAL = [
+  { key: 'DRAFT', label: 'Draf' },
+  { key: 'TERSIMPAN', label: 'Tersimpan' },
+]
+
+function getWorkflowIndexMaterial(status: string): number {
   if (status === 'NEED_REVISION') return -1
-  return WORKFLOW_STEPS.findIndex(s => s.key === status)
+  return WORKFLOW_STEPS_MATERIAL.findIndex(s => s.key === status)
+}
+
+function getWorkflowIndexNonMaterial(status: string): number {
+  return WORKFLOW_STEPS_NON_MATERIAL.findIndex(s => s.key === status)
 }
 
 function formatDate(str: string): string {
@@ -78,6 +92,7 @@ function formatDateTime(str: string): string {
 
 function DokumenDetailPage() {
   const { id } = Route.useParams()
+  const navigate = useNavigate()
   const [dok, setDok] = useState<DokumenDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -86,6 +101,7 @@ function DokumenDetailPage() {
   const [previewFilename, setPreviewFilename] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => { fetchData() }, [id])
   useEffect(() => {
@@ -116,11 +132,39 @@ function DokumenDetailPage() {
   }
   function closePreview() { setPreviewingIdx(null); setPreviewUrl(null); setPreviewFilename('') }
 
+  async function handleDelete() {
+    if (!confirm('Yakin ingin menghapus dokumen ini?')) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/dokumen/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        alert(json.error || 'Gagal menghapus dokumen')
+        return
+      }
+      navigate({ to: '/pegawai/dokumen' })
+    } catch {
+      alert('Gagal menghapus dokumen')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (loading) return <PageLayout><div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-primary" /></div></PageLayout>
   if (fetchError) return <PageLayout><div className="text-center py-20"><AlertTriangle size={32} className="text-error mx-auto mb-3" /><p className="text-sm text-on-surface-variant">{fetchError}</p><Link to="/pegawai/dokumen"><Button variant="outline" size="sm" className="mt-4">Kembali</Button></Link></div></PageLayout>
   if (!dok) return <PageLayout><div className="text-center py-20"><AlertTriangle size={32} className="text-error mx-auto mb-3" /><p className="text-sm text-on-surface-variant">Dokumen tidak ditemukan</p><Link to="/pegawai/dokumen"><Button variant="outline" size="sm" className="mt-4">Kembali</Button></Link></div></PageLayout>
 
-  const workflowIdx = getWorkflowIndex(dok.status)
+  // Check if Non-Material document
+  const isNonMaterial = dok.is_non_material === true ||
+    (dok.is_non_material === undefined && !dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+
+  const workflowSteps = isNonMaterial ? WORKFLOW_STEPS_NON_MATERIAL : WORKFLOW_STEPS_MATERIAL
+  const workflowIdx = isNonMaterial
+    ? getWorkflowIndexNonMaterial(dok.status)
+    : getWorkflowIndexMaterial(dok.status)
 
   return (
     <PageLayout>
@@ -170,27 +214,31 @@ function DokumenDetailPage() {
             dok.status === 'IN_PPK_VALIDATION' ? 'bg-amber-100 text-amber-800 border-amber-200' :
             dok.status === 'IN_BENDAHARA_APPROVAL' ? 'bg-blue-100 text-blue-800 border-blue-200' :
             dok.status === 'NEED_REVISION' ? 'bg-red-100 text-red-800 border-red-200' :
+            dok.status === 'TERSIMPAN' ? 'bg-purple-100 text-purple-800 border-purple-200' :
             'bg-green-100 text-green-800 border-green-200'
           )}>
             {dok.status === 'DRAFT' ? 'Draf' :
              dok.status === 'IN_PPK_VALIDATION' ? 'Validasi PPK' :
              dok.status === 'IN_BENDAHARA_APPROVAL' ? 'Persetujuan Bendahara' :
              dok.status === 'NEED_REVISION' ? 'Perlu Revisi' :
+             dok.status === 'TERSIMPAN' ? 'Tersimpan' :
              'Selesai'}
           </Badge>
         </div>
 
-        {/* Workflow */}
+        {/* Workflow - berbeda untuk Non-Material */}
         <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm">
-          <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Alur Dokumen</p>
+          <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">
+            {isNonMaterial ? 'Status Dokumen' : 'Alur Dokumen'}
+          </p>
           <div className="flex items-center gap-0">
-            {WORKFLOW_STEPS.map((step, i) => {
+            {workflowSteps.map((step, i) => {
               const isCurrent = step.key === dok.status
-              const isPast = workflowIdx > i || dok.status === 'COMPLETED'
+              const isPast = workflowIdx > i || dok.status === 'TERSIMPAN' || dok.status === 'COMPLETED'
               const showAsRevision = dok.status === 'NEED_REVISION' && step.key === 'IN_PPK_VALIDATION'
               return (
                 <div key={step.key} className="flex flex-col items-center flex-1 relative">
-                  {i < WORKFLOW_STEPS.length - 1 && <div className={cn('absolute top-4 -right-1/2 w-full h-0.5 z-0', isPast ? 'bg-primary' : 'bg-outline-variant')} />}
+                  {i < workflowSteps.length - 1 && <div className={cn('absolute top-4 -right-1/2 w-full h-0.5 z-0', isPast ? 'bg-primary' : 'bg-outline-variant')} />}
                   <div className={cn('relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2',
                     isCurrent || showAsRevision ? 'border-primary bg-primary text-white' :
                     isPast ? 'border-primary bg-primary text-white' :
@@ -234,6 +282,9 @@ function DokumenDetailPage() {
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p><p className="text-sm font-semibold text-on-surface">{dok.tanggal ? formatDate(dok.tanggal) : '—'}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dok.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Diajukan</p><p className="text-sm font-semibold text-on-surface">{dok.created_at ? formatDate(dok.created_at) : '—'}</p></div>
+            {!isNonMaterial && dok.nominal_realisasi !== null && dok.nominal_realisasi !== undefined && (
+              <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi</p><p className="text-sm font-semibold text-on-surface">Rp {(typeof dok.nominal_realisasi === 'number' ? dok.nominal_realisasi : parseFloat(dok.nominal_realisasi)).toLocaleString('id-ID')}</p></div>
+            )}
           </div>
         </div>
 
@@ -257,8 +308,28 @@ function DokumenDetailPage() {
         {/* Actions */}
         <div className="flex gap-3">
           <Link to="/pegawai/dokumen"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
-          {dok.status === 'NEED_REVISION' && dok.revision_target === 'USER' && (
+          {dok.status === 'NEED_REVISION' && dok.revision_target === 'USER' && !isNonMaterial && (
             <Link to="/pegawai/dokumen/$id/revisi" params={{ id }}><Button size="sm" className="gap-1.5 flex-1"><FileText size={14} />Revisi Dokumen</Button></Link>
+          )}
+          {/* Edit & Delete untuk Non-Material tersimpan */}
+          {isNonMaterial && dok.status === 'TERSIMPAN' && (
+            <>
+              <Link to="/pegawai/dokumen/$id/edit" params={{ id }}>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Pencil size={14} />Edit
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-error hover:bg-error/10"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                Hapus
+              </Button>
+            </>
           )}
         </div>
       </div>

@@ -53,6 +53,7 @@ export const updateDokumenSchema = z.object({
   jenisPermintaanId: z.string().uuid().optional().nullable(),
   kategoriPermintaanId: z.string().uuid().optional().nullable(),
   detailPermintaanId: z.string().uuid().optional().nullable(),
+  nominalRealisasi: z.number().min(0).max(999999999999).nullable().optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -126,6 +127,7 @@ export const rejectDokumenSchema = z.object({
 // Resubmit by PPK after Bendahara rejection — optional lampiran update
 export const resubmitDokumenSchema = z.object({
   lampiranUrls: z.array(lampiranUrlSchema).optional(),
+  nominalRealisasi: z.number().min(0).max(999999999999).nullable().optional(),
 }).strict()
 
 // ---------------------------------------------------------------------------

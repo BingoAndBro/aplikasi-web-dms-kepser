@@ -1,7 +1,6 @@
 // Role enum — hardcoded untuk MVP
-// Note: KETUA_TIM tidak disimpan di user_roles, tapi ditentukan per kegiatan via ketua_tim_assignments
 
-export const ROLE_NAMES = ['PEGAWAI', 'PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN', 'KETUA_TIM'] as const
+export const ROLE_NAMES = ['PEGAWAI', 'PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN'] as const
 
 export type RoleName = typeof ROLE_NAMES[number]
 
@@ -31,5 +30,4 @@ export const ROLE_DISPLAY: Record<RoleName, string> = {
   BENDAHARA: 'Bendahara',
   ARSIPARIS: 'Arsiparis',
   ADMIN: 'Administrator',
-  KETUA_TIM: 'Ketua Tim',
 }

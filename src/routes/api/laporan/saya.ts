@@ -21,6 +21,7 @@ function createClient(request: Request) {
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/laporan/saya')({
+  ssr: false,
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {

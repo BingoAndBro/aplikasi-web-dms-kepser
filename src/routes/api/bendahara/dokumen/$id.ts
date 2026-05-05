@@ -84,6 +84,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
             is_ketua_tim: dok.is_ketua_tim, status: dok.status, lampiran_urls: lampiranUrls,
             tahun: dok.tahun, tanggal: dok.tanggal, created_by: dok.created_by,
             created_at: dok.created_at, revision_notes: dok.revision_notes,
+            nominal_realisasi: dok.nominal_realisasi,
             jenis_permintaan_id: dok.jenis_permintaan_id,
             kategori_permintaan_id: dok.kategori_permintaan_id,
             detail_permintaan_id: dok.detail_permintaan_id,

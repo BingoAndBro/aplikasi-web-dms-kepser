@@ -16,7 +16,7 @@ interface ReviewSummaryProps {
   tanggal: string
   isKetuaTim: boolean
   lampiranUrls: LampiranUrl[]
-  nominalRealisasi?: number | null
+  nominalRealisasi?: string | number | null
   isNonMaterial?: boolean
   jenisPermintaanNama?: string
   kategoriPermintaanNama?: string
@@ -145,7 +145,7 @@ export function ReviewSummary({
               <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">Nominal Realisasi</p>
               <p className="text-xs font-semibold text-on-surface">
                 {nominalRealisasi ? (
-                  <span>Rp {nominalRealisasi.toLocaleString('id-ID')}</span>
+                  <span>Rp {nominalRealisasi}</span>
                 ) : (
                   <span className="text-error">Belum diisi</span>
                 )}

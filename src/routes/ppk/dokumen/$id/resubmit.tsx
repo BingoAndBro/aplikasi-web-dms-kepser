@@ -17,6 +17,7 @@ import {
   XCircle,
   X,
   ArrowLeft,
+  AlertCircle,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
@@ -43,6 +44,7 @@ type DokumenResubmit = {
   tahun: number
   tanggal: string
   created_at: string
+  nominal_realisasi: number | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -86,23 +88,28 @@ function PpkResubmitPage() {
   const [dokumen, setDokumen] = useState<DokumenResubmit | null>(null)
   const [kelengkapan, setKelengkapan] = useState<KelengkapanItem[]>([])
   const [lampiranUrls, setLampiranUrls] = useState<LampiranUrl[]>([])
+  const [originalLampirans, setOriginalLampirans] = useState<LampiranUrl[]>([])
+  const [pendingFiles, setPendingFiles] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [kembalikanLoading, setKembalikanLoading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string | null>(null)
-  const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
+  const [previewingDocId, setPreviewingDocId] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewFilename, setPreviewFilename] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [nominalRealisasi, setNominalRealisasi] = useState<string>('')
+  const [nominalError, setNominalError] = useState<string>('')
+  const [originalNominal, setOriginalNominal] = useState<string>('')
 
   useEffect(() => { fetchData() }, [id])
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && previewingIdx !== null) closePreview() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && previewingDocId !== null) closePreview() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [previewingIdx])
+  }, [previewingDocId])
 
   async function fetchData() {
     setLoading(true)
@@ -112,7 +119,19 @@ function PpkResubmitPage() {
       if (!res.ok) { const json = await res.json(); setFetchError(json.error ?? 'Gagal'); setLoading(false); return }
       const json = await res.json()
       setDokumen(json.dokumen)
-      setLampiranUrls(json.dokumen.lampiran_urls ?? [])
+      const lampirans = json.dokumen.lampiran_urls ?? []
+      setLampiranUrls(lampirans)
+      setOriginalLampirans(lampirans)
+      console.log('[Revisi] Initial state loaded:', { count: lampirans.length })
+
+      // Initialize nominal_realisasi
+      if (json.dokumen.nominal_realisasi !== null && json.dokumen.nominal_realisasi !== undefined) {
+        const formattedNominal = json.dokumen.nominal_realisasi.toLocaleString('id-ID')
+        setNominalRealisasi(formattedNominal)
+        setOriginalNominal(formattedNominal)
+        console.log('[Revisi] Initial nominal_realisasi:', formattedNominal)
+      }
+
       if (supabase && json.dokumen.kegiatan_jenis_id) {
         const dokData = json.dokumen
         let query = supabase.from('master_kelengkapan_dokumen').select('id, nama_dokumen, required, jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
@@ -136,37 +155,130 @@ function PpkResubmitPage() {
     try {
       const { url } = await uploadFile(file)
       const newLamp: LampiranUrl = { kelengkapan_id: kel.id, nama: kel.nama_dokumen, url, uploaded_at: new Date().toISOString() }
-      const newLampiranUrls = [...lampiranUrls.filter(l => l.kelengkapan_id !== kel.id), newLamp]
-      const patchRes = await fetch(`/api/ppk/resubmit/${id}`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lampiranUrls: newLampiranUrls }) })
-      if (patchRes.ok) setLampiranUrls(newLampiranUrls)
-      else { const errJson = await patchRes.json(); alert(`Gagal menyimpan: ${errJson.error ?? 'Error'}`) }
+      // Update local state only for real-time preview/download
+      setLampiranUrls(prev => [...prev.filter(l => l.kelengkapan_id !== kel.id), newLamp])
+      // Track pending file for cleanup if cancelled
+      setPendingFiles(prev => new Map(prev).set(kel.id, url))
+      console.log('[Revisi] File uploaded (pending):', { docId: kel.id, newUrl: url })
     } catch { alert('Gagal mengupload file') } finally { setUploadProgress(null) }
   }
 
-  async function handleDownload(idx: number) {
+  async function handleDownload(docId: string) {
+    const lamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
+    if (!lamp || !dokumen) return
     try {
-      const res = await fetch(`/api/dokumen/${id}/download/${idx}`, { credentials: 'include' })
+      // Storage path format: [user_id]/[uuid]_[timestamp]_[original_filename]
+      // Example: "user-id/7df5992f-be9a-4e8d-b836-7d677d7976c4_1777969605493_Penilaian_360.pdf"
+      const pathParts = lamp.url.split('/')
+      const filenameWithExt = pathParts[pathParts.length - 1] || 'download'
+
+      // Extract original filename from storage path
+      const pathMatch = filenameWithExt.match(/^[a-zA-Z0-9-]+_(\d+)_.*$/)
+      let originalFilename = filenameWithExt
+      if (pathMatch) {
+        const timestampPos = filenameWithExt.indexOf('_') + 1 + 13 + 1
+        if (timestampPos < filenameWithExt.length) {
+          originalFilename = filenameWithExt.substring(timestampPos)
+        }
+      }
+
+      // Extract extension
+      const lastDotIdx = originalFilename.lastIndexOf('.')
+      let ext = ''
+      let nameWithoutExt = originalFilename
+      if (lastDotIdx > 0 && lastDotIdx < originalFilename.length - 1) {
+        ext = originalFilename.slice(lastDotIdx + 1).toLowerCase()
+        nameWithoutExt = originalFilename.slice(0, lastDotIdx)
+      }
+
+      const docIdShort = dokumen.id.substring(0, 8)
+      const dateStr = dokumen.tanggal ? `_${dokumen.tanggal}` : ''
+      const filename = `${docIdShort}_${nameWithoutExt}${dateStr}.${ext}`
+
+      console.log('[Revisi] Download file:', {
+        docIdShort,
+        lampUrl: lamp.url,
+        originalFilename,
+        ext,
+        filename
+      })
+
+      const res = await fetch(`/api/dokumen/download-url?url=${encodeURIComponent(lamp.url)}&docId=${dokumen.id}&docDate=${dokumen.tanggal || ''}&lampName=${encodeURIComponent(originalFilename)}`, { credentials: 'include' })
       const json = await res.json()
       if (json.signedUrl) {
+        // Create anchor and trigger download with correct filename
         const a = document.createElement('a')
         a.href = json.signedUrl
-        a.download = json.filename ?? 'lampiran'
+        a.download = filename
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
       } else { alert('Gagal mengunduh') }
-    } catch { alert('Gagal mengunduh') }
+    } catch (err) {
+      console.error('[Revisi] Download error:', err)
+      alert('Gagal mengunduh')
+    }
   }
 
   async function handleResubmit() {
     if (!dokumen) return
+
+    // Validate nominal (always material at this point since Non-Material doesn't go to PPK)
+    const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
+    if (!rawNominal || rawNominal === '0') {
+      setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0')
+      return
+    }
+    const num = parseInt(rawNominal, 10)
+    if (isNaN(num) || num <= 0) {
+      setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0')
+      return
+    }
+
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/ppk/resubmit/${id}`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lampiranUrls }) })
-      const json = await res.json()
-      if (!res.ok) { alert(json.error ?? 'Gagal'); return }
+      console.log('[Revisi] Ajukan clicked, pending files:', pendingFiles.size)
+      console.log('[Revisi] PATCH sent to API:', { lampiranUrls })
+
+      // Parse nominal value
+      const nominalValue = parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) || null
+
+      // PATCH to API first (this saves changes and deletes old files)
+      const res = await fetch(`/api/ppk/resubmit/${id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lampiranUrls, nominalRealisasi: nominalValue }),
+      })
+
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error || 'Gagal menyimpan')
+      }
+
+      console.log('[Revisi] PATCH success, now submitting to next step...')
+
+      // Then submit to next workflow step
+      const submitRes = await fetch(`/api/ppk/resubmit/${id}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lampiranUrls }),
+      })
+
+      if (!submitRes.ok) {
+        const json = await submitRes.json()
+        throw new Error(json.error || 'Gagal mengajukan ulang')
+      }
+
+      console.log('[Revisi] Submit success')
+      setPendingFiles(new Map())
       navigate({ to: '/ppk/revisi' })
-    } catch { alert('Terjadi kesalahan') } finally { setSubmitting(false) }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Terjadi kesalahan')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleKembalikan() {
@@ -180,21 +292,107 @@ function PpkResubmitPage() {
     } catch { alert('Terjadi kesalahan') } finally { setKembalikanLoading(false) }
   }
 
-  async function handlePreview(idx: number) {
-    setPreviewingIdx(idx); setPreviewUrl(null); setPreviewLoading(true)
+  async function handlePreview(docId: string) {
+    const lamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
+    if (!lamp) return
+    setPreviewingDocId(docId)
+    setPreviewUrl(null)
+    setPreviewFilename(lamp.nama)
+    setPreviewLoading(true)
     try {
-      const res = await fetch(`/api/ppk/dokumen/${id}/preview/${idx}`, { credentials: 'include' })
+      const res = await fetch(`/api/dokumen/preview-url?url=${encodeURIComponent(lamp.url)}`, { credentials: 'include' })
       const json = await res.json()
-      if (json.signedUrl) { setPreviewUrl(json.signedUrl); setPreviewFilename(json.filename ?? 'Lampiran') }
+      if (json.signedUrl) { setPreviewUrl(json.signedUrl) }
     } catch { /* silent */ } finally { setPreviewLoading(false) }
   }
 
-  function closePreview() { setPreviewingIdx(null); setPreviewUrl(null); setPreviewFilename('') }
+  function closePreview() { setPreviewingDocId(null); setPreviewUrl(null); setPreviewFilename('') }
+
+  function handleBack() {
+    // Check if there are any pending changes
+    const hasFileChanges = pendingFiles.size > 0
+    const hasNominalChange = nominalRealisasi !== originalNominal
+
+    console.log('[Revisi] === HANDLE BACK START ===')
+    console.log('[Revisi] Checking for pending changes...')
+    console.log('[Revisi] File changes:', {
+      pendingFilesCount: pendingFiles.size,
+      pendingFiles: Array.from(pendingFiles.entries()).map(([id, url]) => ({ id, url })),
+    })
+    console.log('[Revisi] Nominal changes:', {
+      originalNominal,
+      currentNominal: nominalRealisasi,
+      hasNominalChange,
+    })
+
+    if (!hasFileChanges && !hasNominalChange) {
+      console.log('[Revisi] No pending changes detected — redirecting immediately')
+      navigate({ to: '/ppk/revisi' })
+      return
+    }
+
+    // Show detailed changes summary
+    const changesList: string[] = []
+    if (hasFileChanges) changesList.push(`${pendingFiles.size} file(s) replaced/added`)
+    if (hasNominalChange) changesList.push('nominal changed')
+    console.log('[Revisi] Pending changes found:', changesList.join(', '))
+
+    // Show confirmation dialog
+    const confirmed = confirm('Apakah anda ingin batal? Data perubahan belum tersimpan dan akan terhapus.')
+    if (!confirmed) {
+      console.log('[Revisi] User cancelled — staying on page')
+      return
+    }
+
+    console.log('[Revisi] User confirmed — reverting all changes...')
+
+    // Step 1: Revert lampiranUrls to original state (in memory)
+    console.log('[Revisi] Step 1: Reverting lampiranUrls to original state')
+    console.log('[Revisi] Before:', lampiranUrls.length, 'items')
+    console.log('[Revisi] After:', originalLampirans.length, 'items')
+    setLampiranUrls(originalLampirans)
+
+    // Step 2: Revert nominal to original state (in memory)
+    if (hasNominalChange) {
+      console.log('[Revisi] Step 2: Reverting nominal_realisasi to original value')
+      console.log('[Revisi] Before:', nominalRealisasi)
+      console.log('[Revisi] After:', originalNominal)
+      setNominalRealisasi(originalNominal)
+      setNominalError('')
+    }
+
+    // Step 3: Delete newly uploaded files from storage (files that were never saved to DB)
+    const supabase = getBrowserClient()
+    if (supabase && hasFileChanges) {
+      console.log('[Revisi] Step 3: Deleting newly uploaded files from storage')
+      for (const [docId, url] of pendingFiles) {
+        if (url) {
+          const isNewFile = !originalLampirans.some(l => l.url === url)
+          if (isNewFile) {
+            console.log('[Revisi] Deleting file:', { docId, url })
+            supabase.storage.from('dokumen-lampiran').remove([url])
+          } else {
+            console.log('[Revisi] Skipping (file existed before):', { docId, url })
+          }
+        }
+      }
+    }
+
+    // Step 4: Clear pending files tracker
+    console.log('[Revisi] Step 4: Clearing pending files tracker')
+    setPendingFiles(new Map())
+
+    console.log('[Revisi] === ALL CHANGES REVERTED ===')
+    console.log('[Revisi] Redirecting to /ppk/revisi')
+    navigate({ to: '/ppk/revisi' })
+  }
 
   const requiredItems = kelengkapan.filter(k => k.required)
   const uploadedIds = new Set(lampiranUrls.map(l => l.kelengkapan_id))
   const missingRequired = requiredItems.filter(r => !uploadedIds.has(r.id))
-  const canSubmit = lampiranUrls.length > 0 && missingRequired.length === 0
+  // Material docs need all required lampiran and valid nominal
+  const nominalValid = nominalRealisasi.replace(/[^\d]/g, '') !== '' && parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) > 0
+  const canSubmit = lampiranUrls.length > 0 && missingRequired.length === 0 && nominalValid
   const workflowIdx = dokumen ? getWorkflowIndex(dokumen.status) : -1
 
   if (loading) return (
@@ -215,7 +413,7 @@ function PpkResubmitPage() {
     <PageLayout>
       <div className="max-w-3xl mx-auto">
       {/* Preview Modal */}
-      {previewingIdx !== null && (
+      {previewingDocId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) closePreview() }}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
@@ -281,6 +479,28 @@ function PpkResubmitPage() {
           )}
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tahun</p><p className="text-sm font-semibold text-on-surface">{dokumen.tahun}</p></div>
           <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p><p className="text-sm font-semibold text-on-surface">{dokumen.tanggal ? formatDate(dokumen.tanggal) : '—'}</p></div>
+          <div>
+            <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi (Rp)</p>
+            <input
+              type="text"
+              value={nominalRealisasi}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^\d]/g, '')
+                const num = parseInt(raw, 10)
+                setNominalRealisasi(raw ? num.toLocaleString('id-ID') : '')
+                setNominalError('')
+              }}
+              placeholder="Contoh: 1.500.000"
+              className="w-full px-3 py-1.5 border border-outline rounded-lg text-sm bg-surface text-on-surface
+                focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+                placeholder:text-outline"
+            />
+            {nominalError && (
+              <p className="text-[10px] text-error mt-1 flex items-center gap-1">
+                <AlertCircle size={12} /> {nominalError}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -294,7 +514,6 @@ function PpkResubmitPage() {
           {kelengkapan.map(kel => {
             const lamp = lampiranUrls.find(l => l.kelengkapan_id === kel.id)
             const isUploaded = !!lamp
-            const lampIdx = lampiranUrls.findIndex(l => l.kelengkapan_id === kel.id)
             return (
               <div key={kel.id} className="flex items-center gap-3 p-3 bg-surface-container-low/20 rounded-lg">
                 {isUploaded ? <CheckCircle2 size={16} className="text-green-600 shrink-0" />
@@ -305,8 +524,8 @@ function PpkResubmitPage() {
                   {kel.required && <span className="text-red-500 ml-1">*</span>}
                 </div>
                 {isUploaded && (
-                  <><Button size="icon-xs" variant="ghost" onClick={() => handlePreview(lampIdx)} aria-label="Pratinjau"><Eye size={14} /></Button>
-                  <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(lampIdx)} aria-label="Unduh"><Download size={14} /></Button></>
+                  <><Button size="icon-xs" variant="ghost" onClick={() => handlePreview(kel.id)} aria-label="Pratinjau"><Eye size={14} /></Button>
+                  <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(kel.id)} aria-label="Unduh"><Download size={14} /></Button></>
                 )}
                 <input key={lamp ? `replace-${lamp.url}` : `upload-${kel.id}`} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" className="hidden" id={`upload-${kel.id}`} onChange={e => { const file = e.target.files?.[0]; if (!file) return; saveLampiran(kel, file); e.target.value = '' }} />
                 <label htmlFor={`upload-${kel.id}`} className="cursor-pointer">
@@ -325,7 +544,7 @@ function PpkResubmitPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <Link to="/ppk/revisi"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Daftar Revisi</Button></Link>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleBack}><ChevronRight size={14} className="rotate-180" />Kembali</Button>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={handleKembalikan} disabled={kembalikanLoading}>
           {kembalikanLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowLeft size={14} />}Kembalikan ke Pegawai
         </Button>

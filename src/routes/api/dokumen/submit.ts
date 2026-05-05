@@ -179,11 +179,22 @@ export const Route = createFileRoute('/api/dokumen/submit')({
 
         const dok = createResult.data
 
-        // FSM transition based on document type
+        // FSM transition
         // Material: DRAFT → IN_PPK_VALIDATION
-        // Non-Material: DRAFT → IN_KETUA_TIM_APPROVAL
-        const action = parsed.data.is_non_material ? 'SUBMIT_NON_MATERIAL' : 'SUBMIT'
-        const transitionResult: TransitionResult = transition(dok.status as any, action as any, 'PEGAWAI')
+        // Non-Material: DRAFT → COMPLETED (langsung selesai)
+        let transitionResult: TransitionResult
+        if (parsed.data.is_non_material) {
+          // Non-Material langsung tersimpan
+          transitionResult = {
+            success: true,
+            newStatus: 'TERSIMPAN',
+            newCurrentStep: null,
+            newRevisionTarget: null,
+            stepUrutan: 1,
+          }
+        } else {
+          transitionResult = transition(dok.status as any, 'SUBMIT', 'PEGAWAI')
+        }
 
         if (!transitionResult.success) {
           return Response.json({ error: transitionResult.error || 'Transisi status gagal' }, { status: 500 })
@@ -200,7 +211,7 @@ export const Route = createFileRoute('/api/dokumen/submit')({
 
         // Gunakan admin client untuk update status — RLS policy pegawai
         // hanya mengizinkan UPDATE pada status NEED_REVISION, sehingga
-        // update DRAFT → IN_PPK_VALIDATION atau IN_KETUA_TIM_APPROVAL akan gagal diam-diam via anon client.
+        // update DRAFT → IN_PPK_VALIDATION akan gagal diam-diam via anon client.
         const updateRes = await updateDokumenStatus(admin, dok.id, {
           status: transitionResult.newStatus,
           currentStep: transitionResult.newCurrentStep,
@@ -211,13 +222,12 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           return Response.json({ error: updateRes.error }, { status: 500 })
         }
 
-        // Insert log — append-only (admin karena RLS log_insert hanya
-        // check auth.uid() = user_id, namun di server session mungkin
-        // tidak terpropagasi sempurna)
+        // Insert log — append-only
+        // Non-Material uses STORE, Material uses SUBMIT
         await insertLog(admin, {
           dokumenId: dok.id,
           userId: session.user.id,
-          aksi: parsed.data.is_non_material ? 'SUBMIT_NON_MATERIAL' : 'SUBMIT',
+          aksi: parsed.data.is_non_material ? 'STORE' : 'SUBMIT',
           stepUrutan: transitionResult.stepUrutan,
         })
 

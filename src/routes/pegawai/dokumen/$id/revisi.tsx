@@ -38,7 +38,7 @@ interface KelengkapanItem {
   id: string
   nama_dokumen: string
   required: boolean
-  isUserCreated?: boolean // For user-created documents
+  isUserCreated?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -93,19 +93,23 @@ function DokumenRevisiPage() {
   const [dok, setDok] = useState<DokumenRow | null>(null)
   const [kelengkapan, setKelengkapan] = useState<KelengkapanItem[]>([])
   const [lampiranUrls, setLampiranUrls] = useState<LampiranUrl[]>([])
+  const [originalLampirans, setOriginalLampirans] = useState<LampiranUrl[]>([])
+  const [pendingFiles, setPendingFiles] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<string | null>(null)
-
-  // User-created documents for Non-Material
   const [userDocs, setUserDocs] = useState<KelengkapanItem[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [newDocTitle, setNewDocTitle] = useState('')
+  const [isNonMaterial, setIsNonMaterial] = useState(false)
+  const [nominalRealisasi, setNominalRealisasi] = useState<string>('')
+  const [nominalError, setNominalError] = useState<string>('')
+  const [originalNominal, setOriginalNominal] = useState<string>('')
 
   // Preview modal state
-  const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
+  const [previewingDocId, setPreviewingDocId] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewFilename, setPreviewFilename] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -115,11 +119,11 @@ function DokumenRevisiPage() {
   // ESC to close preview
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && previewingIdx !== null) closePreview()
+      if (e.key === 'Escape' && previewingDocId !== null) closePreview()
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [previewingIdx])
+  }, [previewingDocId])
 
   async function fetchData() {
     setLoading(true)
@@ -145,27 +149,22 @@ function DokumenRevisiPage() {
       }
 
       setDok(dokumen)
-      setLampiranUrls(dokumen.lampiran_urls as LampiranUrl[] ?? [])
+      const lampirans = dokumen.lampiran_urls as LampiranUrl[] ?? []
+      setLampiranUrls(lampirans)
+      setOriginalLampirans(lampirans)
+      console.log('[Revisi] Initial state loaded:', { count: lampirans.length })
 
-      // Check if Non-Material document
-      const isNonMaterial = dokumen.is_non_material === true ||
-        (dokumen.is_non_material === undefined && !dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)
+      // Check if Non-Material
+      const nonMaterial = dokumen.is_non_material === true ||
+        (!dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)
+      setIsNonMaterial(nonMaterial)
 
-      // For Non-Material: skip kelengkapan fetch, use lampiran_urls directly
-      if (isNonMaterial) {
-        setKelengkapan([]) // No required kelengkapan
-        // Extract user-created documents from lampiran_urls
-        const userCreatedDocs: KelengkapanItem[] = (dokumen.lampiran_urls as LampiranUrl[] ?? [])
-          .filter((l: LampiranUrl) => l.kelengkapan_id.startsWith('user-custom-'))
-          .map((l: LampiranUrl) => ({
-            id: l.kelengkapan_id,
-            nama_dokumen: l.nama,
-            required: false,
-            isUserCreated: true,
-          }))
-        setUserDocs(userCreatedDocs)
-        setLoading(false)
-        return
+      // Initialize nominal_realisasi
+      if (!nonMaterial && dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined) {
+        const formattedNominal = dokumen.nominal_realisasi.toLocaleString('id-ID')
+        setNominalRealisasi(formattedNominal)
+        setOriginalNominal(formattedNominal)
+        console.log('[Revisi] Initial nominal_realisasi:', formattedNominal)
       }
 
       // Build dynamic query — filter by chain from the dokumen's stored chain IDs.
@@ -205,36 +204,23 @@ function DokumenRevisiPage() {
     try {
       const { url } = await uploadFile(file)
 
-      // Build new lampiran list, using kelengkapan nama_dokumen as the name
+      // Build new lampiran, using kelengkapan nama_dokumen as the name
       const newLamp: LampiranUrl = {
         kelengkapan_id: kel.id,
         nama: kel.nama_dokumen,
         url,
         uploaded_at: new Date().toISOString(),
       }
-      const newLampiranUrls = [
-        ...lampiranUrls.filter(l => l.kelengkapan_id !== kel.id),
-        newLamp,
-      ]
 
-      // Save immediately to API (this also deletes the old file from storage)
-      const patchRes = await fetch(`/api/dokumen/${id}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lampiranUrls: newLampiranUrls }),
-      })
+      // Update local state only for real-time preview/download
+      setLampiranUrls(prev => [...prev.filter(l => l.kelengkapan_id !== kel.id), newLamp])
+      // Track pending file for cleanup if cancelled
+      setPendingFiles(prev => new Map(prev).set(kel.id, url))
+      console.log('[Revisi] File uploaded (pending):', { docId: kel.id, newUrl: url })
 
-      if (patchRes.ok) {
-        setLampiranUrls(newLampiranUrls)
-        // If user-created doc was uploaded, add it to userDocs
-        if (kel.isUserCreated) {
-          setUserDocs(prev => [...prev.filter(d => d.id !== kel.id), { ...kel, nama_dokumen: kel.nama_dokumen }])
-        }
-      } else {
-        const errJson = await patchRes.json()
-        console.error('Failed to save lampiran:', errJson.error)
-        alert(`Gagal menyimpan: ${errJson.error ?? 'Terjadi kesalahan'}`)
+      // If user-created doc was uploaded, add it to userDocs
+      if (kel.isUserCreated) {
+        setUserDocs(prev => [...prev.filter(d => d.id !== kel.id), { ...kel, nama_dokumen: kel.nama_dokumen }])
       }
     } catch (err) {
       console.error('Upload error:', err)
@@ -255,32 +241,72 @@ function DokumenRevisiPage() {
       isUserCreated: true,
     }
     setUserDocs(prev => [...prev, newDoc])
+    setPendingFiles(prev => new Map(prev).set(docId, ''))
     setNewDocTitle('')
     setShowAddForm(false)
   }
 
   function removeUserDoc(docId: string) {
+    const lamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
     // Remove from userDocs state
     setUserDocs(prev => prev.filter(d => d.id !== docId))
     // Remove from lampiranUrls
-    const newLampiranUrls = lampiranUrls.filter(l => l.kelengkapan_id !== docId)
-    setLampiranUrls(newLampiranUrls)
-    // Update API
-    fetch(`/api/dokumen/${id}`, {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lampiranUrls: newLampiranUrls }),
-    })
+    setLampiranUrls(prev => prev.filter(l => l.kelengkapan_id !== docId))
+    // Track for cleanup if was a pending new file
+    if (lamp?.url) {
+      setPendingFiles(prev => new Map(prev).set(docId, lamp.url))
+    } else {
+      setPendingFiles(prev => {
+        const next = new Map(prev)
+        next.delete(docId)
+        return next
+      })
+    }
   }
 
   async function handleSubmit() {
     if (!dok) return
 
+    // Validate nominal for Material docs
+    if (!isNonMaterial) {
+      const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
+      if (!rawNominal || rawNominal === '0') {
+        setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0')
+        return
+      }
+      const num = parseInt(rawNominal, 10)
+      if (isNaN(num) || num <= 0) {
+        setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0')
+        return
+      }
+    }
+
     setSubmitting(true)
     setSubmitError(null)
 
     try {
+      console.log('[Revisi] Ajukan clicked, pending files:', pendingFiles.size)
+      console.log('[Revisi] PATCH sent to API:', { lampiranUrls })
+
+      // Parse nominal value
+      const nominalValue = !isNonMaterial ? parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) || null : null
+
+      // PATCH to API first (this saves changes and deletes old files)
+      const patchRes = await fetch(`/api/dokumen/${id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lampiranUrls, nominalRealisasi: nominalValue }),
+      })
+
+      if (!patchRes.ok) {
+        const json = await patchRes.json()
+        throw new Error(json.error || 'Gagal menyimpan')
+      }
+
+      console.log('[Revisi] PATCH success, now submitting to next step...')
+
+      // Then submit to next workflow step
       const submitRes = await fetch(`/api/dokumen/${id}/submit`, {
         method: 'POST',
         credentials: 'include',
@@ -292,6 +318,8 @@ function DokumenRevisiPage() {
         throw new Error(json.error || 'Gagal mengajukan ulang')
       }
 
+      console.log('[Revisi] Submit success')
+      setPendingFiles(new Map())
       window.location.href = '/pegawai/dokumen'
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Terjadi kesalahan')
@@ -300,73 +328,202 @@ function DokumenRevisiPage() {
     }
   }
 
-  async function handlePreview(idx: number) {
-    setPreviewingIdx(idx)
+  async function handlePreview(docId: string) {
+    const lamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
+    if (!lamp) return
+    setPreviewingDocId(docId)
     setPreviewUrl(null)
+    setPreviewFilename(lamp.nama)
     setPreviewLoading(true)
     try {
-      const res = await fetch(`/api/dokumen/${id}/preview/${idx}`, { credentials: 'include' })
+      const res = await fetch(`/api/dokumen/preview-url?url=${encodeURIComponent(lamp.url)}`, { credentials: 'include' })
       const json = await res.json()
       if (json.signedUrl) {
         setPreviewUrl(json.signedUrl)
-        const lamp = lampiranUrls[idx]
-        // Look for filename: first check kelengkapan (Material), then lampiranUrls.nama (Non-Material)
-        const found = lamp ? kelengkapan.find(k => k.id === lamp.kelengkapan_id) : null
-        setPreviewFilename(found?.nama_dokumen ?? lamp?.nama ?? 'Lampiran')
       }
     } catch { /* silent */ } finally {
       setPreviewLoading(false)
     }
   }
 
-  async function handleDownload(idx: number) {
+  async function handleDownload(docId: string) {
+    const lamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
+    if (!lamp || !dok) return
     try {
-      const res = await fetch(`/api/dokumen/${id}/download/${idx}`, { credentials: 'include' })
+      // Storage path format: [user_id]/[uuid]_[timestamp]_[original_filename]
+      // Example: "user-id/7df5992f-be9a-4e8d-b836-7d677d7976c4_1777969605493_Penilaian_360.pdf"
+      const pathParts = lamp.url.split('/')
+      const filenameWithExt = pathParts[pathParts.length - 1] || 'download'
+
+      // Extract original filename from storage path
+      const pathMatch = filenameWithExt.match(/^[a-zA-Z0-9-]+_(\d+)_.*$/)
+      let originalFilename = filenameWithExt
+      if (pathMatch) {
+        const timestampPos = filenameWithExt.indexOf('_') + 1 + 13 + 1
+        if (timestampPos < filenameWithExt.length) {
+          originalFilename = filenameWithExt.substring(timestampPos)
+        }
+      }
+
+      // Extract extension
+      const lastDotIdx = originalFilename.lastIndexOf('.')
+      let ext = ''
+      let nameWithoutExt = originalFilename
+      if (lastDotIdx > 0 && lastDotIdx < originalFilename.length - 1) {
+        ext = originalFilename.slice(lastDotIdx + 1).toLowerCase()
+        nameWithoutExt = originalFilename.slice(0, lastDotIdx)
+      }
+
+      const docIdShort = dok.id.substring(0, 8)
+      const dateStr = dok.tanggal ? `_${dok.tanggal}` : ''
+      const filename = `${docIdShort}_${nameWithoutExt}${dateStr}.${ext}`
+
+      console.log('[Revisi] Download file:', {
+        docIdShort,
+        lampUrl: lamp.url,
+        originalFilename,
+        ext,
+        filename
+      })
+
+      const res = await fetch(`/api/dokumen/download-url?url=${encodeURIComponent(lamp.url)}&docId=${dok.id}&docDate=${dok.tanggal || ''}&lampName=${encodeURIComponent(originalFilename)}`, { credentials: 'include' })
       const json = await res.json()
-      if (json.signedUrl) window.open(json.signedUrl, '_blank')
-    } catch {
+      if (json.signedUrl) {
+        // Create anchor and trigger download with correct filename
+        const a = document.createElement('a')
+        a.href = json.signedUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } else { alert('Gagal mengunduh') }
+    } catch (err) {
+      console.error('[Revisi] Download error:', err)
       alert('Gagal mengunduh')
     }
   }
 
   function closePreview() {
-    setPreviewingIdx(null)
+    setPreviewingDocId(null)
     setPreviewUrl(null)
     setPreviewFilename('')
+  }
+
+  function handleBack() {
+    // Check if there are any pending changes
+    const hasFileChanges = pendingFiles.size > 0
+    const hasNominalChange = !isNonMaterial && nominalRealisasi !== originalNominal
+    const hasUserDocChanges = userDocs.some(d => !originalLampirans.some(l => l.kelengkapan_id === d.id))
+
+    console.log('[Revisi] === HANDLE BACK START ===')
+    console.log('[Revisi] Checking for pending changes...')
+    console.log('[Revisi] File changes:', {
+      pendingFilesCount: pendingFiles.size,
+      pendingFiles: Array.from(pendingFiles.entries()).map(([id, url]) => ({ id, url })),
+    })
+    console.log('[Revisi] Nominal changes:', {
+      isMaterial: !isNonMaterial,
+      originalNominal,
+      currentNominal: nominalRealisasi,
+      hasNominalChange,
+    })
+    console.log('[Revisi] User doc changes:', {
+      userDocsCount: userDocs.length,
+      hasUserDocChanges,
+    })
+
+    if (!hasFileChanges && !hasNominalChange && !hasUserDocChanges) {
+      console.log('[Revisi] No pending changes detected — redirecting immediately')
+      window.location.href = '/pegawai/dokumen'
+      return
+    }
+
+    // Show detailed changes summary
+    const changesList: string[] = []
+    if (hasFileChanges) changesList.push(`${pendingFiles.size} file(s) replaced/added`)
+    if (hasNominalChange) changesList.push('nominal changed')
+    if (hasUserDocChanges) changesList.push('dokumen tambahan ditambahkan')
+    console.log('[Revisi] Pending changes found:', changesList.join(', '))
+
+    // Show confirmation dialog
+    const confirmed = confirm('Apakah anda ingin batal? Data perubahan belum tersimpan dan akan terhapus.')
+    if (!confirmed) {
+      console.log('[Revisi] User cancelled — staying on page')
+      return
+    }
+
+    console.log('[Revisi] User confirmed — reverting all changes...')
+
+    // Step 1: Revert lampiranUrls to original state (in memory)
+    console.log('[Revisi] Step 1: Reverting lampiranUrls to original state')
+    console.log('[Revisi] Before:', lampiranUrls.length, 'items')
+    console.log('[Revisi] After:', originalLampirans.length, 'items')
+    setLampiranUrls(originalLampirans)
+
+    // Step 2: Revert nominal to original state (in memory)
+    if (hasNominalChange) {
+      console.log('[Revisi] Step 2: Reverting nominal_realisasi to original value')
+      console.log('[Revisi] Before:', nominalRealisasi)
+      console.log('[Revisi] After:', originalNominal)
+      setNominalRealisasi(originalNominal)
+      setNominalError('')
+    }
+
+    // Step 3: Revert userDocs to original state (in memory)
+    if (hasUserDocChanges) {
+      console.log('[Revisi] Step 3: Reverting userDocs to original state')
+      const originalUserDocs = originalLampirans
+        .filter(l => l.kelengkapan_id.startsWith('user-custom-'))
+        .map(l => ({ id: l.kelengkapan_id, nama_dokumen: l.nama, required: false, isUserCreated: true }))
+      console.log('[Revisi] User docs before:', userDocs.length)
+      console.log('[Revisi] User docs after:', originalUserDocs.length)
+      setUserDocs(originalUserDocs)
+    }
+
+    // Step 4: Delete newly uploaded files from storage (files that were never saved to DB)
+    const supabase = getBrowserClient()
+    if (supabase && hasFileChanges) {
+      console.log('[Revisi] Step 4: Deleting newly uploaded files from storage')
+      for (const [docId, url] of pendingFiles) {
+        if (url) {
+          const isNewFile = !originalLampirans.some(l => l.url === url)
+          if (isNewFile) {
+            console.log('[Revisi] Deleting file:', { docId, url })
+            supabase.storage.from('dokumen-lampiran').remove([url])
+          } else {
+            console.log('[Revisi] Skipping (file existed before):', { docId, url })
+          }
+        }
+      }
+    }
+
+    // Step 5: Clear pending files tracker
+    console.log('[Revisi] Step 5: Clearing pending files tracker')
+    setPendingFiles(new Map())
+
+    console.log('[Revisi] === ALL CHANGES REVERTED ===')
+    console.log('[Revisi] Redirecting to /pegawai/dokumen')
+    window.location.href = '/pegawai/dokumen'
   }
 
   // Check required lampiran
   const requiredItems = kelengkapan.filter(k => k.required)
   const uploadedIds = new Set(lampiranUrls.map(l => l.kelengkapan_id))
   const missingRequired = requiredItems.filter(r => !uploadedIds.has(r.id))
-  const isNonMaterial = dok?.is_non_material === true ||
-    (dok?.is_non_material === undefined && !dok?.jenis_permintaan_id && !dok?.kategori_permintaan_id && !dok?.detail_permintaan_id)
 
-  // For Non-Material: just need at least one lampiran
-  // For Material: need all required lampiran
-  const canSubmit = lampiranUrls.length > 0 &&
-    (isNonMaterial || missingRequired.length === 0)
+  // Material documents need all required lampiran and valid nominal
+  const nominalValid = isNonMaterial || (
+    nominalRealisasi.replace(/[^\d]/g, '') !== '' &&
+    parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) > 0
+  )
+  const canSubmit = lampiranUrls.length > 0 && missingRequired.length === 0 && nominalValid
 
-  // Workflow steps based on document type
-  const workflowSteps = isNonMaterial
-    ? [
-        { key: 'DRAFT', label: 'Draf' },
-        { key: 'IN_KETUA_TIM_APPROVAL', label: 'Ketua Tim' },
-        { key: 'COMPLETED', label: 'Selesai' },
-      ]
-    : WORKFLOW_STEPS
-
-  function getNonMaterialWorkflowIndex(status: string): number {
-    if (status === 'NEED_REVISION') return -1
-    return workflowSteps.findIndex(s => s.key === status)
-  }
-
-  const workflowIdx = isNonMaterial ? getNonMaterialWorkflowIndex(dok?.status ?? '') : getWorkflowIndex(dok?.status ?? '')
+  const workflowIdx = dok ? getWorkflowIndex(dok.status) : -1
 
   return (
     <PageLayout>
       {/* Preview Modal */}
-      {previewingIdx !== null && (
+      {previewingDocId !== null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
           onClick={(e) => { if (e.target === e.currentTarget) closePreview() }}
@@ -439,13 +596,13 @@ function DokumenRevisiPage() {
             <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm">
               <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Alur Dokumen</p>
               <div className="flex items-center gap-0">
-                {workflowSteps.map((step, i) => {
+                {WORKFLOW_STEPS.map((step, i) => {
                   const isCurrent = step.key === dok.status
                   const isPast = workflowIdx > i || dok.status === 'COMPLETED'
                   const showAsRevision = dok.status === 'NEED_REVISION' && step.key === 'IN_PPK_VALIDATION'
                   return (
                     <div key={step.key} className="flex flex-col items-center flex-1 relative">
-                      {i < workflowSteps.length - 1 && (
+                      {i < WORKFLOW_STEPS.length - 1 && (
                         <div className={cn('absolute top-4 -right-1/2 w-full h-0.5 z-0', isPast ? 'bg-primary' : 'bg-outline-variant')} />
                       )}
                       <div className={cn(
@@ -522,6 +679,30 @@ function DokumenRevisiPage() {
                   <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p>
                   <p className="text-sm font-semibold text-on-surface">{dok.tanggal ? formatDate(dok.tanggal) : '—'}</p>
                 </div>
+                {!isNonMaterial && (
+                  <div>
+                    <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi (Rp)</p>
+                    <input
+                      type="text"
+                      value={nominalRealisasi}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^\d]/g, '')
+                        const num = parseInt(raw, 10)
+                        setNominalRealisasi(raw ? num.toLocaleString('id-ID') : '')
+                        setNominalError('')
+                      }}
+                      placeholder="Contoh: 1.500.000"
+                      className="w-full px-3 py-1.5 border border-outline rounded-lg text-sm bg-surface text-on-surface
+                        focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+                        placeholder:text-outline"
+                    />
+                    {nominalError && (
+                      <p className="text-[10px] text-error mt-1 flex items-center gap-1">
+                        <AlertCircle size={12} /> {nominalError}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -541,7 +722,6 @@ function DokumenRevisiPage() {
                   {kelengkapan.map(kel => {
                     const lamp = lampiranUrls.find(l => l.kelengkapan_id === kel.id)
                     const isUploaded = !!lamp
-                    const lampIdx = lampiranUrls.findIndex(l => l.kelengkapan_id === kel.id)
                     return (
                       <div key={kel.id} className="flex items-center gap-3 p-3 bg-surface-container-low/20 rounded-lg">
                         {isUploaded ? (
@@ -557,10 +737,10 @@ function DokumenRevisiPage() {
                         </div>
                         {isUploaded && (
                           <>
-                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(lampIdx)} aria-label="Pratinjau">
+                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(kel.id)} aria-label="Pratinjau">
                               <Eye size={14} />
                             </Button>
-                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(lampIdx)} aria-label="Unduh">
+                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(kel.id)} aria-label="Unduh">
                               <Download size={14} />
                             </Button>
                           </>
@@ -616,7 +796,6 @@ function DokumenRevisiPage() {
                   {userDocs.map(userDoc => {
                     const lamp = lampiranUrls.find(l => l.kelengkapan_id === userDoc.id)
                     const isUploaded = !!lamp
-                    const lampIdx = lampiranUrls.findIndex(l => l.kelengkapan_id === userDoc.id)
                     return (
                       <div key={userDoc.id} className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                         {isUploaded ? (
@@ -631,10 +810,10 @@ function DokumenRevisiPage() {
                         </div>
                         {isUploaded && (
                           <>
-                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(lampIdx)} aria-label="Pratinjau">
+                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(userDoc.id)} aria-label="Pratinjau">
                               <Eye size={14} />
                             </Button>
-                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(lampIdx)} aria-label="Unduh">
+                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(userDoc.id)} aria-label="Unduh">
                               <Download size={14} />
                             </Button>
                           </>
@@ -724,9 +903,7 @@ function DokumenRevisiPage() {
 
             {/* Submit button */}
             <div className="flex items-center justify-end gap-3">
-              <Link to="/pegawai/dokumen">
-                <Button variant="outline" disabled={submitting}>Batal</Button>
-              </Link>
+              <Button variant="outline" disabled={submitting} onClick={handleBack}>Batal</Button>
               <Button
                 onClick={handleSubmit}
                 disabled={submitting || !canSubmit}

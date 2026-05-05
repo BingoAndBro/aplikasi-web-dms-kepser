@@ -95,6 +95,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
             tahun: dok.tahun,
             tanggal: dok.tanggal,
             created_at: dok.created_at,
+            nominal_realisasi: dok.nominal_realisasi,
             jenis_permintaan_id: dok.jenis_permintaan_id,
             kategori_permintaan_id: dok.kategori_permintaan_id,
             detail_permintaan_id: dok.detail_permintaan_id,
@@ -114,7 +115,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
         const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
         if (!roleNames.includes('PPK')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        let body: { lampiranUrls?: LampiranUrl[] } = {}
+        let body: { lampiranUrls?: LampiranUrl[]; nominalRealisasi?: number | null } = {}
         try { body = await request.json() } catch { /* empty body OK */ }
 
         if (body.lampiranUrls !== undefined) {
@@ -145,6 +146,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
 
         const { error: updateErr } = await admin.from('dokumen_transaksi').update({
           lampiran_urls: body.lampiranUrls ? JSON.stringify(body.lampiranUrls) : undefined,
+          nominal_realisasi: body.nominalRealisasi,
           updated_at: new Date().toISOString(),
         }).eq('id', params.id)
 
@@ -171,7 +173,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
         if (!roleNames.includes('PPK')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         // Parse optional body for lampiran update
-        let body: { lampiranUrls?: LampiranUrl[] } = {}
+        let body: { lampiranUrls?: LampiranUrl[]; nominalRealisasi?: number | null } = {}
         try {
           body = await request.json()
         } catch { /* empty body OK */ }
@@ -224,6 +226,11 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
             }
           }
           updatePayload.lampiran_urls = JSON.stringify(body.lampiranUrls)
+        }
+
+        // Update nominal_realisasi if provided
+        if (body.nominalRealisasi !== undefined) {
+          updatePayload.nominal_realisasi = body.nominalRealisasi
         }
 
         const { error: updateErr } = await admin

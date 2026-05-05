@@ -31,7 +31,6 @@ import {
   BarChart3,
   Users,
   UserCircle,
-  Trophy,
 } from 'lucide-react'
 
 import { getBrowserClient } from '#/lib/supabase-browser'
@@ -52,7 +51,6 @@ const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
   BENDAHARA: '/bendahara',
   ARSIPARIS: '/arsiparis',
   ADMIN: '/admin',
-  KETUA_TIM: '/ketua-tim/inbox',
 }
 
 // ─── Nav Config ─────────────────────────────────────────────────────────────
@@ -81,8 +79,9 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [
         { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: '/pegawai/dokumen/aju' },
         { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/pegawai/dokumen' },
-        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/pegawai/dokumen?status=NEED_REVISION' },
+        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/pegawai/revisi' },
         { id: 'laporan_saya', label: 'Laporan Saya', icon: FileText, to: '/pegawai/laporan/saya' },
+        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: '/pegawai/laporan/kegiatan' },
       ],
     },
     {
@@ -209,38 +208,6 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       ],
     },
   ],
-  KETUA_TIM: [
-    {
-      title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/ketua-tim' }],
-    },
-    {
-      title: 'PERSETUJUAN',
-      items: [
-        { id: 'inbox', label: 'Pengecekan Dokumen Non-Material', icon: Trophy, to: '/ketua-tim/inbox' },
-      ],
-    },
-    {
-      title: 'LAPORAN',
-      items: [
-        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: '/pegawai/laporan/kegiatan' },
-      ],
-    },
-    {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
-      ],
-    },
-    {
-      title: 'SYSTEM',
-      items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: '/profile' },
-        { id: 'history', label: 'Activity Log', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings },
-      ],
-    },
-  ],
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -350,11 +317,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((n: any): n is RoleName => n !== undefined && n !== null)
 
-    // Add KETUA_TIM if user has chairman assignments
-    if (isChairman && !roleNames.includes('KETUA_TIM')) {
-      roleNames.push('KETUA_TIM')
-    }
-
     setUserRoles(roleNames)
 
     const cookieRole = document.cookie
@@ -433,10 +395,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [activeRole])
 
   const isAdmin = activeRole === 'ADMIN'
-  const isKetuaTim = activeRole === 'KETUA_TIM'
   const initials = getInitials(userName, email)
   const displayName = userName || email?.split('@')[0] || 'User'
-  const canSwitchRole = (userRoles.length > 1 || (userRoles.length === 1 && isKetuaTim)) && !isAdmin
+  const canSwitchRole = userRoles.length > 1 && !isAdmin
 
   // Show loading spinner while checking auth
   if (isLoading) {

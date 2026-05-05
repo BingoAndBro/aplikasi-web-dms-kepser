@@ -24,6 +24,7 @@ function createClient(request: Request) {
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/laporan/kegiatan')({
+  ssr: false,
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {

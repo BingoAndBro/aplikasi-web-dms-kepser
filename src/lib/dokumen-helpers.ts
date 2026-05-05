@@ -546,7 +546,9 @@ export type DokumenLaporanRow = DokumenRow & {
 }
 
 /**
- * Ambil semua dokumen berstatus COMPLETED milik user, dengan full join nama.
+ * Ambil semua dokumen berstatus COMPLETED atau TERSIMPAN milik user, dengan full join nama.
+ * TERSIMPAN = dokumen Non-Material yang tersimpan
+ * COMPLETED = dokumen Material yang telah disetujui
  */
 export async function getDokumenSelesaiByUser(
   supabase: SupabaseClient,
@@ -556,7 +558,7 @@ export async function getDokumenSelesaiByUser(
     .from('dokumen_transaksi')
     .select('*')
     .eq('created_by', userId)
-    .eq('status', 'COMPLETED')
+    .in('status', ['COMPLETED', 'TERSIMPAN'])
     .order('tanggal', { ascending: false })
 
   if (error || !data || data.length === 0) return []
@@ -565,7 +567,7 @@ export async function getDokumenSelesaiByUser(
 }
 
 /**
- * Ambil semua dokumen COMPLETED dari kegiatan dimana user adalah chairman saat ini.
+ * Ambil semua dokumen COMPLETED/TERSIMPAN dari kegiatan dimana user adalah chairman saat ini.
  * Includes all documents regardless of who submitted them.
  * WAJIB menggunakan admin client agar bisa baca dokumen user lain.
  */
@@ -583,12 +585,12 @@ export async function getDokumenKegiatanByKetuaTim(
 
   const kegiatanIds = assignments.map((a: any) => a.kegiatan_id)
 
-  // 2. Get ALL COMPLETED documents for those kegiatan
+  // 2. Get ALL COMPLETED/TERSIMPAN documents for those kegiatan
   const { data: allDocs, error: e1 } = await adminClient
     .from('dokumen_transaksi')
     .select('*')
     .in('kegiatan_jenis_id', kegiatanIds)
-    .eq('status', 'COMPLETED')
+    .in('status', ['COMPLETED', 'TERSIMPAN'])
 
   if (e1 || !allDocs || allDocs.length === 0) return []
 

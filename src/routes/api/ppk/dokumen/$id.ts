@@ -154,6 +154,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
             created_by: dok.created_by,
             created_at: dok.created_at,
             updated_at: dok.updated_at,
+            nominal_realisasi: dok.nominal_realisasi,
             jenis_permintaan_id: dok.jenis_permintaan_id,
             kategori_permintaan_id: dok.kategori_permintaan_id,
             detail_permintaan_id: dok.detail_permintaan_id,

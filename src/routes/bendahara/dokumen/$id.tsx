@@ -18,6 +18,7 @@ type DokumenDetail = {
   is_ketua_tim: boolean; status: string; lampiran_urls: LampiranUrl[]
   tahun: number; tanggal: string; created_by: string; created_at: string
   revision_notes?: string
+  nominal_realisasi: number | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -238,6 +239,9 @@ function BendaharaDokumenDetailPage() {
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p><p className="text-sm font-semibold text-on-surface">{formatDate(dokumen.tanggal)}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Diajukan</p><p className="text-sm font-semibold text-on-surface">{formatDate(dokumen.created_at)}</p></div>
+            {dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined && (
+              <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi</p><p className="text-sm font-semibold text-on-surface">Rp {dokumen.nominal_realisasi.toLocaleString('id-ID')}</p></div>
+            )}
           </div>
         </div>
 

@@ -293,7 +293,11 @@ function AjukanDokumenPage() {
     if (isNonMaterial) {
       return !!keteranganDetail.trim()
     } else {
-      return !!nominalRealisasi
+      // Material: must have nominal > 0
+      const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
+      if (!rawNominal || rawNominal === '0') return false
+      const num = parseInt(rawNominal, 10)
+      return !isNaN(num) && num > 0
     }
   }
 
@@ -301,6 +305,20 @@ function AjukanDokumenPage() {
     if (step === 1 && tanggal > today) {
       setTanggalError('Tanggal tidak boleh melewati hari ini')
       return
+    }
+
+    // Validate nominal when advancing from step 6 (Material docs)
+    if (step === stepLabels.length - 1 && !isNonMaterial) {
+      const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
+      if (!rawNominal || rawNominal === '0') {
+        setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0')
+        return
+      }
+      const num = parseInt(rawNominal, 10)
+      if (isNaN(num) || num <= 0) {
+        setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0')
+        return
+      }
     }
 
     const maxStep = stepLabels.length
@@ -924,7 +942,7 @@ function AjukanDokumenPage() {
                 tanggal={tanggal}
                 isKetuaTim={isKetuaTim}
                 lampiranUrls={lampiranUrls}
-                nominalRealisasi={isNonMaterial ? null : parseFloat(nominalRealisasi.replace(/[^\d.-]/g, '')) || null}
+                nominalRealisasi={isNonMaterial ? null : nominalRealisasi || null}
                 isNonMaterial={isNonMaterial}
                 jenisPermintaanNama={isNonMaterial ? jenisDokumenNama : jenisPermintaanNama}
                 kategoriPermintaanNama={isNonMaterial ? undefined : kategoriPermintaanNama}
