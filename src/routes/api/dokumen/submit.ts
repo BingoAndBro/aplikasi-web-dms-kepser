@@ -11,7 +11,7 @@ import {
   insertLog,
   resolveLeafNodeName,
 } from '#/lib/dokumen-helpers'
-import { createDokumenSchema } from '#/lib/schemas/dokumen'
+import { createAndSubmitDokumenSchema, validateNominalForMaterial } from '#/lib/schemas/dokumen'
 
 function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -28,6 +28,7 @@ function createAuthClient(request: Request) {
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/submit')({
+  ssr: false,
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
@@ -38,12 +39,21 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
         }
 
-        const parsed = createDokumenSchema.safeParse(body)
+        const parsed = createAndSubmitDokumenSchema.safeParse(body)
         if (!parsed.success) {
           return Response.json({
             error: 'Validasi gagal',
             details: parsed.error.flatten(),
           }, { status: 400 })
+        }
+
+        // Validate nominal_realisasi for Material documents
+        const nominalValidation = validateNominalForMaterial(
+          parsed.data.is_non_material,
+          parsed.data.nominal_realisasi
+        )
+        if (!nominalValidation.valid) {
+          return Response.json({ error: nominalValidation.error }, { status: 400 })
         }
 
         const supabase = createAuthClient(request)
@@ -54,23 +64,27 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         }
 
         // Validate required lampiran
-        const requiredItems = await getKelengkapanRequired(
-          supabase,
-          parsed.data.kegiatanJenisId,
-          parsed.data.isKetuaTim,
-          {
-            jenisPermintaanId: parsed.data.jenisPermintaanId,
-            kategoriPermintaanId: parsed.data.kategoriPermintaanId,
-            detailPermintaanId: parsed.data.detailPermintaanId,
-          }
-        )
-        const uploadedIds = parsed.data.lampiranUrls.map(l => l.kelengkapan_id)
-        const missing = requiredItems.filter(r => r.required && !uploadedIds.includes(r.id))
+        // For Non-Material, we might not have the chain, so only validate if chain is provided
+        let requiredItems: any[] = []
+        if (!parsed.data.is_non_material || parsed.data.jenisPermintaanId) {
+          requiredItems = await getKelengkapanRequired(
+            supabase,
+            parsed.data.kegiatanJenisId,
+            parsed.data.isKetuaTim,
+            {
+              jenisPermintaanId: parsed.data.jenisPermintaanId,
+              kategoriPermintaanId: parsed.data.kategoriPermintaanId,
+              detailPermintaanId: parsed.data.detailPermintaanId,
+            }
+          )
+          const uploadedIds = parsed.data.lampiranUrls.map(l => l.kelengkapan_id)
+          const missing = requiredItems.filter(r => r.required && !uploadedIds.includes(r.id))
 
-        if (missing.length > 0) {
-          return Response.json({
-            error: `Lampiran wajib belum lengkap: ${missing.map(m => m.nama_dokumen).join(', ')}`,
-          }, { status: 400 })
+          if (missing.length > 0) {
+            return Response.json({
+              error: `Lampiran wajib belum lengkap: ${missing.map(m => m.nama_dokumen).join(', ')}`,
+            }, { status: 400 })
+          }
         }
 
         if (parsed.data.lampiranUrls.length === 0) {
@@ -102,37 +116,42 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         // Validasi Ketua Tim:
         // Jika isKetuaTim = true, pastikan user ini memang chairman yang ditunjuk
         // untuk kegiatan ini di tabel ketua_tim_assignments.
-        // Yang dicek adalah ASSIGNED chairman, bukan dokumen yang sudah ada.
+        // Untuk Non-Material: check langsung by kegiatan_id
+        // Untuk Material: check by kegiatan_id (no leaf-level check needed)
         if (parsed.data.isKetuaTim) {
-          // Get leaf info for chairman assignment check
-          const leafVal = parsed.data.detailPermintaanId
-            ?? parsed.data.kategoriPermintaanId
-            ?? parsed.data.jenisPermintaanId
+          // Check if current user is the assigned chairman for this kegiatan
+          const { data: chairmanAssignment } = await supabase
+            .from('ketua_tim_assignments')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .eq('kegiatan_id', parsed.data.kegiatanJenisId)
+            .maybeSingle()
 
-          if (leafVal) {
-            // Check if current user is the assigned chairman for this kegiatan
-            const { data: chairmanAssignment } = await supabase
-              .from('ketua_tim_assignments')
-              .select('id')
-              .eq('user_id', session.user.id)
-              .eq('kegiatan_id', parsed.data.kegiatanJenisId)
-              .maybeSingle()
-
-            if (!chairmanAssignment) {
-              return Response.json({
-                error: 'Anda bukan Ketua Tim yang ditunjuk untuk kegiatan ini.',
-              }, { status: 403 })
-            }
+          if (!chairmanAssignment) {
+            return Response.json({
+              error: 'Anda bukan Ketua Tim yang ditunjuk untuk kegiatan ini.',
+            }, { status: 403 })
           }
         }
 
         // Resolve nama Leaf Node untuk judul dokumen
-        const leafName = await resolveLeafNodeName(supabase, {
-          detailId: parsed.data.detailPermintaanId,
-          kategoriId: parsed.data.kategoriPermintaanId,
-          jenisId: parsed.data.jenisPermintaanId,
-          fallback: kegiatan.nama,
-        })
+        // For Non-Material: use jenis dokumen name; for Material: use permintaan chain
+        let leafName: string
+        if (parsed.data.is_non_material && parsed.data.jenisDokumenId) {
+          const { data: jenisDokumen } = await supabase
+            .from('master_jenis_dokumen')
+            .select('nama')
+            .eq('id', parsed.data.jenisDokumenId)
+            .single()
+          leafName = jenisDokumen?.nama ?? kegiatan.nama
+        } else {
+          leafName = await resolveLeafNodeName(supabase, {
+            detailId: parsed.data.detailPermintaanId,
+            kategoriId: parsed.data.kategoriPermintaanId,
+            jenisId: parsed.data.jenisPermintaanId,
+            fallback: kegiatan.nama,
+          })
+        }
 
         // Judul: [Leaf Node] [Tahun] [Nama Pegawai]
         const judul = `${leafName} ${parsed.data.tahun} ${userName}`
@@ -145,6 +164,10 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           tanggal: parsed.data.tanggal,
           lampiranUrls: parsed.data.lampiranUrls,
           createdBy: session.user.id,
+          nominalRealisasi: parsed.data.nominal_realisasi ?? 0,
+          isNonMaterial: parsed.data.is_non_material,
+          jenisDokumenId: parsed.data.jenisDokumenId,
+          keteranganDetail: parsed.data.keteranganDetail,
           jenisPermintaanId: parsed.data.jenisPermintaanId,
           kategoriPermintaanId: parsed.data.kategoriPermintaanId,
           detailPermintaanId: parsed.data.detailPermintaanId,
@@ -156,8 +179,11 @@ export const Route = createFileRoute('/api/dokumen/submit')({
 
         const dok = createResult.data
 
-        // FSM transition: DRAFT → IN_PPK_VALIDATION
-        const transitionResult: TransitionResult = transition(dok.status as any, 'SUBMIT', 'PEGAWAI')
+        // FSM transition based on document type
+        // Material: DRAFT → IN_PPK_VALIDATION
+        // Non-Material: DRAFT → IN_KETUA_TIM_APPROVAL
+        const action = parsed.data.is_non_material ? 'SUBMIT_NON_MATERIAL' : 'SUBMIT'
+        const transitionResult: TransitionResult = transition(dok.status as any, action as any, 'PEGAWAI')
 
         if (!transitionResult.success) {
           return Response.json({ error: transitionResult.error || 'Transisi status gagal' }, { status: 500 })
@@ -174,7 +200,7 @@ export const Route = createFileRoute('/api/dokumen/submit')({
 
         // Gunakan admin client untuk update status — RLS policy pegawai
         // hanya mengizinkan UPDATE pada status NEED_REVISION, sehingga
-        // update DRAFT → IN_PPK_VALIDATION akan gagal diam-diam via anon client.
+        // update DRAFT → IN_PPK_VALIDATION atau IN_KETUA_TIM_APPROVAL akan gagal diam-diam via anon client.
         const updateRes = await updateDokumenStatus(admin, dok.id, {
           status: transitionResult.newStatus,
           currentStep: transitionResult.newCurrentStep,
@@ -191,7 +217,7 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         await insertLog(admin, {
           dokumenId: dok.id,
           userId: session.user.id,
-          aksi: 'SUBMIT',
+          aksi: parsed.data.is_non_material ? 'SUBMIT_NON_MATERIAL' : 'SUBMIT',
           stepUrutan: transitionResult.stepUrutan,
         })
 

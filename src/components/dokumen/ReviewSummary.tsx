@@ -1,12 +1,11 @@
 /**
  * ReviewSummary — summary card shown in Step 5 before submit.
  */
-import { FileText, Calendar, Users, Building2, CheckCircle2, Tag } from 'lucide-react'
+import { FileText, Calendar, Users, Building2, CheckCircle2, Tag, Banknote, FileCheck } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
 function formatFileSizeFromUrl(url: string): string {
-  // We can't get file size from URL alone, but we show the filename
   return url.split('/').pop() ?? 'File'
 }
 
@@ -17,9 +16,12 @@ interface ReviewSummaryProps {
   tanggal: string
   isKetuaTim: boolean
   lampiranUrls: LampiranUrl[]
+  nominalRealisasi?: number | null
+  isNonMaterial?: boolean
   jenisPermintaanNama?: string
   kategoriPermintaanNama?: string
   detailPermintaanNama?: string
+  keteranganDetail?: string
 }
 
 function formatDate(dateStr: string): string {
@@ -38,9 +40,12 @@ export function ReviewSummary({
   tanggal,
   isKetuaTim,
   lampiranUrls,
+  nominalRealisasi,
+  isNonMaterial,
   jenisPermintaanNama,
   kategoriPermintaanNama,
   detailPermintaanNama,
+  keteranganDetail,
 }: ReviewSummaryProps) {
   return (
     <div className="space-y-4">
@@ -68,7 +73,9 @@ export function ReviewSummary({
           <div className="flex items-start gap-2 p-3 bg-surface-container-low/30 rounded-lg">
             <Tag size={14} className="text-primary mt-0.5 shrink-0" />
             <div>
-              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">Jenis Permintaan</p>
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">
+                {isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan'}
+              </p>
               <p className="text-xs font-semibold text-on-surface">{jenisPermintaanNama}</p>
             </div>
           </div>
@@ -110,7 +117,7 @@ export function ReviewSummary({
           </div>
         </div>
 
-        <div className="flex items-start gap-2 p-3 bg-surface-container-low/30 rounded-lg col-span-2">
+        <div className="flex items-start gap-2 p-3 bg-surface-container-low/30 rounded-lg">
           <Users size={14} className="text-primary mt-0.5 shrink-0" />
           <div>
             <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">Peran</p>
@@ -119,6 +126,33 @@ export function ReviewSummary({
             </p>
           </div>
         </div>
+
+        {/* Nominal Realisasi (Material) / Keterangan Detail (Non-Material) */}
+        {isNonMaterial ? (
+          <div className="flex items-start gap-2 p-3 bg-blue-50/30 rounded-lg col-span-2">
+            <FileCheck size={14} className="text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">Keterangan Detail</p>
+              <p className="text-xs font-semibold text-on-surface">
+                {keteranganDetail || <span className="text-error">Belum diisi</span>}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 p-3 bg-surface-container-low/30 rounded-lg col-span-2">
+            <Banknote size={14} className="text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">Nominal Realisasi</p>
+              <p className="text-xs font-semibold text-on-surface">
+                {nominalRealisasi ? (
+                  <span>Rp {nominalRealisasi.toLocaleString('id-ID')}</span>
+                ) : (
+                  <span className="text-error">Belum diisi</span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Lampiran */}

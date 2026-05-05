@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, unique, boolean, integer } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, unique, boolean, integer, numeric } from 'drizzle-orm/pg-core'
 
 export const roles = pgTable('roles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -62,6 +62,18 @@ export type MasterKelengkapan = typeof masterKelengkapanDokumen.$inferSelect
 export type NewMasterKelengkapan = typeof masterKelengkapanDokumen.$inferInsert
 
 // ---------------------------------------------------------------------------
+// master_jenis_dokumen — jenis dokumen untuk Non-Material
+// ---------------------------------------------------------------------------
+
+export const masterJenisDokumen = pgTable('master_jenis_dokumen', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nama: text('nama').notNull(),
+  deskripsi: text('deskripsi'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+})
+
+// ---------------------------------------------------------------------------
 // dokumen_transaksi — dokumen yang diajukan pegawai
 // ---------------------------------------------------------------------------
 
@@ -79,6 +91,10 @@ export const dokumenTransaksi = pgTable('dokumen_transaksi', {
   tahun: integer('tahun').notNull(),
   tanggal: text('tanggal').notNull(), // ISO date string yyyy-MM-dd
   createdBy: uuid('created_by').notNull(), // UUID from auth.users (no FK)
+  nominalRealisasi: numeric('nominal_realisasi', { precision: 15, scale: 2 }),
+  isNonMaterial: boolean('is_non_material').default(false).notNull(),
+  jenisDokumenId: uuid('jenis_dokumen_id').references(() => masterJenisDokumen.id),
+  keteranganDetail: text('keterangan_detail'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })

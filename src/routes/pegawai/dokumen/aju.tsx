@@ -15,11 +15,13 @@ import {
   getAllJenis,
   getKategoriByJenis,
   getDetailByKategori,
+  getAllJenisDokumen,
   type FungsiRow,
   type KegiatanRow,
   type JenisRow,
   type KategoriRow,
   type DetailRow,
+  type JenisDokumenRow,
 } from '#/lib/master-data'
 import {
   ChevronLeft,
@@ -30,6 +32,7 @@ import {
   Tag,
   Trophy,
   Medal,
+  FileCheck,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -50,6 +53,7 @@ function AjukanDokumenPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [tanggalError, setTanggalError] = useState('')
+  const [nominalError, setNominalError] = useState('')
 
   const today = (() => {
     const d = new Date()
@@ -69,11 +73,14 @@ function AjukanDokumenPage() {
   const [kegiatanId, setKegiatanId] = useState('')
   const [kegiatanNama, setKegiatanNama] = useState('')
 
-  // Step 3: Jenis Permintaan
+  // Step 3: Jenis Permintaan (Material) / Jenis Dokumen (Non-Material)
+  const [isNonMaterial, setIsNonMaterial] = useState(false)
   const [jenisPermintaanId, setJenisPermintaanId] = useState('')
   const [jenisPermintaanNama, setJenisPermintaanNama] = useState('')
+  const [jenisDokumenId, setJenisDokumenId] = useState('')
+  const [jenisDokumenNama, setJenisDokumenNama] = useState('')
 
-  // Step 4: Kategori Permintaan
+  // Step 4: Kategori Permintaan (Material only)
   const [kategoriPermintaanId, setKategoriPermintaanId] = useState('')
   const [kategoriPermintaanNama, setKategoriPermintaanNama] = useState('')
 
@@ -87,14 +94,17 @@ function AjukanDokumenPage() {
   const [isChairmanLoading, setIsChairmanLoading] = useState(false)
   const [chairmanBadgeVisible, setChairmanBadgeVisible] = useState(false)
 
-  // Step 7: Lampiran
+  // Step 7: Lampiran + Nominal/Keterangan
   const [lampiranUrls, setLampiranUrls] = useState<LampiranUrl[]>([])
   const [missingRequired, setMissingRequired] = useState<any[]>([])
+  const [nominalRealisasi, setNominalRealisasi] = useState('')
+  const [keteranganDetail, setKeteranganDetail] = useState('')
 
   // Data lists
   const [fungsiList, setFungsiList] = useState<FungsiRow[]>([])
   const [kegiatanList, setKegiatanList] = useState<KegiatanRow[]>([])
   const [jenisList, setJenisList] = useState<JenisRow[]>([])
+  const [jenisDokumenList, setJenisDokumenList] = useState<JenisDokumenRow[]>([])
   const [kategoriList, setKategoriList] = useState<KategoriRow[]>([])
   const [detailList, setDetailList] = useState<DetailRow[]>([])
 
@@ -129,7 +139,7 @@ function AjukanDokumenPage() {
     load()
   }, [fungsiId])
 
-  // Load jenis when kegiatan is selected (jenis BEBAS — tidak bergantung ke apapun)
+  // Load jenis permintaan when kegiatan is selected
   useEffect(() => {
     if (!kegiatanId) { setJenisList([]); return }
     async function load() {
@@ -143,9 +153,21 @@ function AjukanDokumenPage() {
     load()
   }, [kegiatanId])
 
-  // Load kategori when jenis changes
+  // Load jenis dokumen (for Non-Material)
   useEffect(() => {
-    if (!jenisPermintaanId) { setKategoriList([]); return }
+    if (!isNonMaterial) { setJenisDokumenList([]); return }
+    async function load() {
+      const supabase = getBrowserClient()
+      if (!supabase) return
+      const data = await getAllJenisDokumen(supabase)
+      setJenisDokumenList(data)
+    }
+    load()
+  }, [isNonMaterial])
+
+  // Load kategori when jenis changes (Material only)
+  useEffect(() => {
+    if (!jenisPermintaanId || isNonMaterial) { setKategoriList([]); return }
     async function load() {
       setLoadingKategori(true)
       const supabase = getBrowserClient()
@@ -155,7 +177,7 @@ function AjukanDokumenPage() {
       setLoadingKategori(false)
     }
     load()
-  }, [jenisPermintaanId])
+  }, [jenisPermintaanId, isNonMaterial])
 
   // Load detail when kategori changes, check if has children
   useEffect(() => {
@@ -190,7 +212,6 @@ function AjukanDokumenPage() {
     setKategoriPermintaanId(''); setKategoriPermintaanNama('')
     setDetailPermintaanId(''); setDetailPermintaanNama('')
     setKategoriHasDetail(false)
-    // Check chairman status for the selected kegiatan
     checkChairmanStatus(id)
   }
 
@@ -203,6 +224,12 @@ function AjukanDokumenPage() {
     setKategoriHasDetail(false)
   }
 
+  function handleJenisDokumenChange(id: string) {
+    setJenisDokumenId(id)
+    const jd = jenisDokumenList.find(j => j.id === id)
+    setJenisDokumenNama(jd?.nama ?? '')
+  }
+
   function handleKategoriChange(id: string) {
     setKategoriPermintaanId(id)
     const kn = kategoriList.find(k => k.id === id)
@@ -210,40 +237,74 @@ function AjukanDokumenPage() {
     setDetailPermintaanId(''); setDetailPermintaanNama('')
   }
 
-  // Dynamic step labels - removed "Peran" step (now auto-detected)
-  const stepLabels = kategoriHasDetail
-    ? ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Detail', 'Unggah', 'Review']
-    : ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Unggah', 'Review']
-
-  // Map visual step to internal step logic
-  function getVisualStepLabel(currentStep: number): string {
-    return stepLabels[currentStep - 1] ?? String(currentStep)
+  // Toggle Non-Material - changes flow
+  function handleToggleNonMaterial(checked: boolean) {
+    setIsNonMaterial(checked)
+    // Reset related fields
+    setJenisPermintaanId(''); setJenisPermintaanNama('')
+    setKategoriPermintaanId(''); setKategoriPermintaanNama('')
+    setDetailPermintaanId(''); setDetailPermintaanNama('')
+    setKategoriHasDetail(false)
+    if (checked) {
+      setJenisDokumenId(''); setJenisDokumenNama('')
+    } else {
+      setJenisDokumenId(''); setJenisDokumenNama('')
+    }
   }
 
-  // Completed steps for indicator - updated for removed "Peran" step
-  const completedSteps: number[] = []
-  if (step > 1) completedSteps.push(1)
-  if (step > 2) completedSteps.push(2)
-  if (step > 3) completedSteps.push(3)
-  if (step > 4) completedSteps.push(4)
-  if (step > 5) completedSteps.push(5)
-  if (step > 6) completedSteps.push(6)
-  if (step > 7) completedSteps.push(7)
+  // Dynamic step labels
+  // Material: Fungsi -> Kegiatan -> Jenis -> Kategori -> Detail -> Unggah -> Review
+  // Non-Material: Fungsi -> Kegiatan -> Jenis Dokumen -> Unggah -> Review
+  const getStepLabels = () => {
+    if (isNonMaterial) {
+      return ['Fungsi', 'Kegiatan', 'Jenis Dokumen', 'Unggah', 'Review']
+    }
+    return kategoriHasDetail
+      ? ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Detail', 'Unggah', 'Review']
+      : ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Unggah', 'Review']
+  }
 
-  // Step validation - updated for removed "Peran" step
+  const stepLabels = getStepLabels()
+
+  // Completed steps
+  const getCompletedSteps = () => {
+    const completed: number[] = []
+    if (step > 1) completed.push(1)
+    if (step > 2) completed.push(2)
+    if (step > 3) completed.push(3)
+    if (step > 4) completed.push(4)
+    if (step > 5) completed.push(5)
+    if (step > 6) completed.push(6)
+    if (step > 7) completed.push(7)
+    return completed
+  }
+  const completedSteps = getCompletedSteps()
+
+  // Step validation
   const canAdvanceFromStep1 = !!fungsiId && !!tahun && !!tanggal && !tanggalError
   const canAdvanceFromStep2 = !!kegiatanId
-  const canAdvanceFromStep3 = !!jenisPermintaanId
-  const canAdvanceFromStep4 = !!kategoriPermintaanId
-  const canAdvanceFromStep5 = !kategoriHasDetail || !!detailPermintaanId
-  const canAdvanceFromStep6 = true // Upload step - always can advance (validation is in submit)
+  const canAdvanceFromStep3 = isNonMaterial ? !!jenisDokumenId : !!jenisPermintaanId
+  const canAdvanceFromStep4 = isNonMaterial ? true : !!kategoriPermintaanId
+  const canAdvanceFromStep5 = isNonMaterial ? true : (!kategoriHasDetail || !!detailPermintaanId)
+
+  // Step 6 (Unggah) validation
+  const canAdvanceFromStep6 = () => {
+    if (missingRequired.length > 0) return false
+    if (isNonMaterial) {
+      return !!keteranganDetail.trim()
+    } else {
+      return !!nominalRealisasi
+    }
+  }
 
   function handleNext() {
     if (step === 1 && tanggal > today) {
       setTanggalError('Tanggal tidak boleh melewati hari ini')
       return
     }
-    if (step < (kategoriHasDetail ? 7 : 6)) setStep(step + 1)
+
+    const maxStep = stepLabels.length
+    if (step < maxStep) setStep(step + 1)
   }
 
   function handleBack() {
@@ -264,7 +325,6 @@ function AjukanDokumenPage() {
     []
   )
 
-  // Check chairman status when kegiatan is selected
   async function checkChairmanStatus(kegId: string) {
     setIsChairmanLoading(true)
     setChairmanBadgeVisible(false)
@@ -292,13 +352,26 @@ function AjukanDokumenPage() {
   }
 
   async function handleSubmit() {
+    // Validate based on document type
+    if (!isNonMaterial) {
+      const nominal = parseFloat(nominalRealisasi.replace(/[^\d.-]/g, ''))
+      if (isNaN(nominal) || nominal <= 0) {
+        setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0 untuk dokumen Material')
+        return
+      }
+    } else {
+      if (!keteranganDetail.trim()) {
+        setSubmitError('Keterangan detail dokumen wajib diisi untuk dokumen Non-Material')
+        return
+      }
+    }
+
     if (missingRequired.length > 0) return
     if (lampiranUrls.length === 0) {
       setSubmitError('Minimal upload satu lampiran sebelum mengajukan dokumen')
       return
     }
 
-    // Safety check: is_ketua_tim must be determined (from chairman status)
     if (!chairmanBadgeVisible && !isChairmanLoading) {
       setSubmitError('Peran belum ditentukan. Silakan pilih kegiatan terlebih dahulu.')
       return
@@ -308,6 +381,8 @@ function AjukanDokumenPage() {
     setSubmitError('')
 
     try {
+      const nominalValue = isNonMaterial ? null : parseFloat(nominalRealisasi.replace(/[^\d.-]/g, ''))
+
       const res = await fetch('/api/dokumen/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -319,9 +394,13 @@ function AjukanDokumenPage() {
           tahun,
           tanggal,
           lampiranUrls,
-          jenisPermintaanId: jenisPermintaanId || undefined,
-          kategoriPermintaanId: kategoriPermintaanId || undefined,
-          detailPermintaanId: detailPermintaanId || undefined,
+          nominal_realisasi: nominalValue,
+          is_non_material: isNonMaterial,
+          jenisDokumenId: isNonMaterial ? jenisDokumenId : undefined,
+          keteranganDetail: isNonMaterial ? keteranganDetail : undefined,
+          jenisPermintaanId: !isNonMaterial ? jenisPermintaanId : undefined,
+          kategoriPermintaanId: !isNonMaterial ? kategoriPermintaanId : undefined,
+          detailPermintaanId: !isNonMaterial ? detailPermintaanId : undefined,
         }),
       })
 
@@ -355,7 +434,7 @@ function AjukanDokumenPage() {
             Ajukan Dokumen Baru
           </h2>
           <p className="text-on-surface-variant text-xs mt-1">
-            Ikuti {kategoriHasDetail ? '7' : '6'} langkah untuk mengajukan dokumen SPD baru.
+            Ikuti {stepLabels.length} langkah untuk mengajukan dokumen baru.
           </p>
         </div>
 
@@ -483,45 +562,95 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 3: Jenis Permintaan */}
+          {/* STEP 3: Jenis Permintaan (Material) / Jenis Dokumen (Non-Material) */}
           {step === 3 && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                3. Pilih Jenis Permintaan
+                3. {isNonMaterial ? 'Pilih Jenis Dokumen' : 'Pilih Jenis Permintaan'}
               </h3>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-on-surface">
-                  Jenis Permintaan <span className="text-error">*</span>
+              {/* Non-Material Toggle */}
+              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="isNonMaterial"
+                  checked={isNonMaterial}
+                  onChange={(e) => handleToggleNonMaterial(e.target.checked)}
+                  className="w-4 h-4 rounded border-blue-400 text-primary focus:ring-primary"
+                />
+                <label htmlFor="isNonMaterial" className="text-sm text-blue-800 cursor-pointer flex-1">
+                  <span className="font-semibold">Dokumen Non-Material</span>
+                  <span className="text-xs text-blue-600 block">
+                    Centang jika dokumen tidak memerlukan nominal (misalnya: rapat, perjalanan non-SPD)
+                  </span>
                 </label>
-                {loadingJenis ? (
-                  <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                    <Loader2 size={14} className="animate-spin" />Memuat...
-                  </div>
-                ) : jenisList.length === 0 ? (
-                  <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
-                    Tidak ada jenis permintaan tersedia.
-                  </p>
-                ) : (
-                  <Select value={jenisPermintaanId} onValueChange={v => handleJenisChange(v ?? '')}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih jenis permintaan...">
-                        {v => jenisList.find(j => j.id === v)?.nama ?? ''}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {jenisList.map(j => (
-                        <SelectItem key={j.id} value={j.id} label={j.nama}>
-                          <div>
-                            <p className="font-medium">{j.nama}</p>
-                            {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
               </div>
+
+              {isNonMaterial ? (
+                // Non-Material: Jenis Dokumen dropdown
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-on-surface">
+                    Jenis Dokumen <span className="text-error">*</span>
+                  </label>
+                  {jenisDokumenList.length === 0 ? (
+                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                      <Loader2 size={14} className="animate-spin" />Memuat jenis dokumen...
+                    </div>
+                  ) : (
+                    <Select value={jenisDokumenId} onValueChange={v => handleJenisDokumenChange(v ?? '')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih jenis dokumen...">
+                          {v => jenisDokumenList.find(j => j.id === v)?.nama ?? ''}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {jenisDokumenList.map(j => (
+                          <SelectItem key={j.id} value={j.id} label={j.nama}>
+                            <div>
+                              <p className="font-medium">{j.nama}</p>
+                              {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              ) : (
+                // Material: Jenis Permintaan dropdown
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-on-surface">
+                    Jenis Permintaan <span className="text-error">*</span>
+                  </label>
+                  {loadingJenis ? (
+                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                      <Loader2 size={14} className="animate-spin" />Memuat...
+                    </div>
+                  ) : jenisList.length === 0 ? (
+                    <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
+                      Tidak ada jenis permintaan tersedia.
+                    </p>
+                  ) : (
+                    <Select value={jenisPermintaanId} onValueChange={v => handleJenisChange(v ?? '')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih jenis permintaan...">
+                          {v => jenisList.find(j => j.id === v)?.nama ?? ''}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {jenisList.map(j => (
+                          <SelectItem key={j.id} value={j.id} label={j.nama}>
+                            <div>
+                              <p className="font-medium">{j.nama}</p>
+                              {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
@@ -534,8 +663,8 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 4: Kategori Permintaan */}
-          {step === 4 && (
+          {/* STEP 4: Kategori Permintaan (Material only) */}
+          {!isNonMaterial && step === 4 && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
                 4. Pilih Kategori Permintaan
@@ -589,8 +718,8 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 5: Detail Permintaan (OPSIONAL — hanya jika kategori punya anak) */}
-          {step === 5 && kategoriHasDetail && (
+          {/* STEP 5: Detail Permintaan (Material only, opsional) */}
+          {!isNonMaterial && step === 5 && kategoriHasDetail && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
                 5. Pilih Detail Permintaan
@@ -638,23 +767,29 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 5/6: Upload - step 6 (with detail) or 5 (without detail) */}
-          {step === (kategoriHasDetail ? 6 : 5) && (
+          {/* STEP: Unggah + Nominal/Keterangan */}
+          {(step === (isNonMaterial ? 4 : (kategoriHasDetail ? 6 : 5))) && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                {kategoriHasDetail ? '6' : '5'}. Unggah Lampiran
+                {isNonMaterial ? '4' : (kategoriHasDetail ? '6' : '5')}. Unggah Lampiran
+                {isNonMaterial ? '' : ' & Nominal'}
               </h3>
 
               <p className="text-xs text-on-surface-variant">
-                Kelengkapan untuk <strong className="text-on-surface">{kegiatanNama}</strong>{' '}
-                — <strong className="text-on-surface">{jenisPermintaanNama}</strong>{' / '}
-                <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
-                {detailPermintaanNama && <> / <strong className="text-on-surface">{detailPermintaanNama}</strong></>}
+                Kelengkapan untuk <strong className="text-on-surface">{kegiatanNama}</strong>
+                {isNonMaterial ? (
+                  <> — <strong className="text-on-surface">{jenisDokumenNama}</strong></>
+                ) : (
+                  <> — <strong className="text-on-surface">{jenisPermintaanNama}</strong>{' / '}
+                  <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
+                  {detailPermintaanNama && <> / <strong className="text-on-surface">{detailPermintaanNama}</strong></>}
+                </>
+                )}
                 {' sebagai '}
                 <strong className="text-on-surface">{isKetuaTim ? 'Ketua Tim' : 'Anggota'}</strong>
               </p>
 
-              {/* Auto-detected badge - shown below upload section */}
+              {/* Auto-detected badge */}
               {chairmanBadgeVisible && (
                 <div className={`rounded-lg p-3 transition-all ${
                   isKetuaTim
@@ -681,7 +816,7 @@ function AjukanDokumenPage() {
                         isKetuaTim ? 'text-green-600' : 'text-blue-600'
                       }`}>
                         {isKetuaTim
-                          ? 'Dokumen akan masuk ke Laporan Kegiatan. Anggota tim dapat melihat dokumen ini.'
+                          ? 'Dokumen akan masuk ke Laporan Kegiatan.'
                           : 'Dokumen akan masuk ke Laporan Saya.'}
                       </p>
                     </div>
@@ -700,10 +835,65 @@ function AjukanDokumenPage() {
                 kegiatanId={kegiatanId}
                 isKetuaTim={isKetuaTim}
                 onComplete={handleKelengkapanComplete}
-                jenisPermintaanId={jenisPermintaanId || undefined}
-                kategoriPermintaanId={kategoriPermintaanId || undefined}
-                detailPermintaanId={detailPermintaanId || undefined}
+                jenisPermintaanId={!isNonMaterial ? jenisPermintaanId || undefined : undefined}
+                kategoriPermintaanId={!isNonMaterial ? kategoriPermintaanId || undefined : undefined}
+                detailPermintaanId={!isNonMaterial ? detailPermintaanId || undefined : undefined}
+                isNonMaterial={isNonMaterial}
               />
+
+              {/* Nominal / Keterangan Section */}
+              {isNonMaterial ? (
+                // Non-Material: Keterangan Detail
+                <div className="space-y-1.5 p-3 border border-outline-variant/30 rounded-lg bg-muted/30">
+                  <label className="text-xs font-medium text-on-surface">
+                    Keterangan Detail Dokumen <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={keteranganDetail}
+                    onChange={(e) => {
+                      setKeteranganDetail(e.target.value)
+                      setSubmitError('')
+                    }}
+                    placeholder={`Contoh: ${jenisDokumenNama || 'Judul kegiatan'}...`}
+                    className="w-full px-3 py-2 border border-outline rounded-lg text-sm bg-surface text-on-surface
+                      focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+                      placeholder:text-outline"
+                  />
+                  <p className="text-[10px] text-on-surface-variant">
+                    Jelaskan detail dokumen, contoh: "{jenisDokumenNama || 'Rapat'} Bersama Pimpinan"
+                  </p>
+                </div>
+              ) : (
+                // Material: Nominal Realisasi
+                <div className="space-y-1.5 p-3 border border-outline-variant/30 rounded-lg bg-muted/30">
+                  <label className="text-xs font-medium text-on-surface">
+                    Nominal Realisasi (Rp) <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nominalRealisasi}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^\d]/g, '')
+                      const num = parseInt(raw, 10)
+                      setNominalRealisasi(raw ? num.toLocaleString('id-ID') : '')
+                      setNominalError('')
+                    }}
+                    placeholder="Contoh: 1.500.000"
+                    className="w-full px-3 py-2 border border-outline rounded-lg text-sm bg-surface text-on-surface
+                      focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+                      placeholder:text-outline"
+                  />
+                  {nominalError && (
+                    <p className="text-[10px] text-error flex items-center gap-1">
+                      <AlertCircle size={12} /> {nominalError}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-on-surface-variant">
+                    Masukkan nominal dalam rupiah.
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
@@ -711,7 +901,7 @@ function AjukanDokumenPage() {
                 </Button>
                 <Button
                   onClick={handleNext}
-                  disabled={missingRequired.length > 0}
+                  disabled={!canAdvanceFromStep6()}
                   className="gap-1.5 flex-1"
                 >
                   Lanjut <ChevronRight size={14} />
@@ -720,11 +910,11 @@ function AjukanDokumenPage() {
             </div>
           )}
 
-          {/* STEP 6/7: Review - step 7 (with detail) or 6 (without detail) */}
-          {step === (kategoriHasDetail ? 7 : 6) && (
+          {/* STEP: Review */}
+          {step === stepLabels.length && (
             <div className="space-y-4">
               <h3 className="font-headline text-base font-bold text-on-surface">
-                {kategoriHasDetail ? '7' : '6'}. Review & Ajukan
+                {stepLabels.length}. Review & Ajukan
               </h3>
 
               <ReviewSummary
@@ -734,9 +924,12 @@ function AjukanDokumenPage() {
                 tanggal={tanggal}
                 isKetuaTim={isKetuaTim}
                 lampiranUrls={lampiranUrls}
-                jenisPermintaanNama={jenisPermintaanNama}
-                kategoriPermintaanNama={kategoriPermintaanNama}
-                detailPermintaanNama={detailPermintaanNama}
+                nominalRealisasi={isNonMaterial ? null : parseFloat(nominalRealisasi.replace(/[^\d.-]/g, '')) || null}
+                isNonMaterial={isNonMaterial}
+                jenisPermintaanNama={isNonMaterial ? jenisDokumenNama : jenisPermintaanNama}
+                kategoriPermintaanNama={isNonMaterial ? undefined : kategoriPermintaanNama}
+                detailPermintaanNama={isNonMaterial ? undefined : detailPermintaanNama}
+                keteranganDetail={isNonMaterial ? keteranganDetail : undefined}
               />
 
               {submitError && (

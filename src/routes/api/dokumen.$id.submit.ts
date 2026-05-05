@@ -26,6 +26,7 @@ function createClient(request: Request) {
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/$id/submit')({
+  ssr: false,
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -77,8 +78,18 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           transitionResult = transition(dok.status, 'SUBMIT', 'PEGAWAI')
           aksi = 'SUBMIT'
         } else if (dok.status === 'NEED_REVISION' && dok.revision_target === 'USER') {
-          transitionResult = transition(dok.status, 'RESUBMIT', 'PEGAWAI', dok.revision_target)
-          aksi = 'RESUBMIT'
+          // Check if Non-Material document (is_non_material flag or lack of chain fields)
+          const isNonMaterial = dok.is_non_material === true ||
+            (dok.is_non_material === undefined && !dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+          console.log('[API/dokumen/:id/submit] isNonMaterial check:', { is_non_material: dok.is_non_material, isNonMaterial, chainFields: { jenis: dok.jenis_permintaan_id, kategori: dok.kategori_permintaan_id, detail: dok.detail_permintaan_id } })
+
+          if (isNonMaterial) {
+            transitionResult = transition(dok.status, 'RESUBMIT_NON_MATERIAL', 'PEGAWAI', dok.revision_target)
+            aksi = 'RESUBMIT_NON_MATERIAL'
+          } else {
+            transitionResult = transition(dok.status, 'RESUBMIT', 'PEGAWAI', dok.revision_target)
+            aksi = 'RESUBMIT'
+          }
         } else {
           return Response.json({
             error: 'Dokumen tidak bisa disubmit dalam status ini',
@@ -86,8 +97,10 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
         }
 
         if (!transitionResult.success) {
+          console.log('[API/dokumen/:id/submit] FSM transition failed:', transitionResult.error)
           return Response.json({ error: transitionResult.error || 'Transisi status gagal' }, { status: 400 })
         }
+        console.log('[API/dokumen/:id/submit] FSM transition success:', { aksi, newStatus: transitionResult.newStatus, newStep: transitionResult.newCurrentStep })
 
         // Admin client for UPDATE operations (bypass RLS)
         const admin = createAdminClient()

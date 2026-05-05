@@ -56,9 +56,11 @@ export const Route = createFileRoute('/api/upload')({
           return Response.json({ error: 'kelengkapan_id dan nama_dokumen wajib diisi' }, { status: 400 })
         }
 
-        // Validate kelengkapanId is a valid UUID
+        // Validate kelengkapanId is a valid UUID or user-created document ID
+        // UUID format for admin kelengkapan, or "user-custom-{uuid}" for user-created documents
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-        if (!uuidRegex.test(kelengkapanId)) {
+        const userDocRegex = /^user-custom-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(kelengkapanId) && !userDocRegex.test(kelengkapanId)) {
           return Response.json({ error: 'ID kelengkapan tidak valid' }, { status: 400 })
         }
 
@@ -76,8 +78,10 @@ export const Route = createFileRoute('/api/upload')({
 
         // Generate storage path: [user_id]/[kelengkapan_id]_[timestamp]_[filename]
         // dokumen_id is not required — storage path is independent of dokumen record
+        // For user-created docs, kelengkapanId is "user-custom-{uuid}"
         const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-        const path = `${session.user.id}/${kelengkapanId}_${Date.now()}_${safeFilename}`
+        const safeKelengkapanId = kelengkapanId.replace(/[^a-zA-Z0-9.-]/g, '_')
+        const path = `${session.user.id}/${safeKelengkapanId}_${Date.now()}_${safeFilename}`
 
         // Read file as ArrayBuffer
         let fileContent: ArrayBuffer

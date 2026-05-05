@@ -10,8 +10,9 @@ import type {
 } from './types/fsm'
 import type { RoleName } from './types/auth'
 
-// Lookup table — 9 valid transitions
+// Lookup table — 11 valid transitions
 const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> = {
+  // Material documents
   'DRAFT:SUBMIT': {
     newStatus: 'IN_PPK_VALIDATION',
     newCurrentStep: 'PPK',
@@ -48,6 +49,12 @@ const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> =
     newRevisionTarget: null,
     stepUrutan: 1,
   },
+  'NEED_REVISION:RESUBMIT_NON_MATERIAL': {
+    newStatus: 'IN_KETUA_TIM_APPROVAL',
+    newCurrentStep: 'KETUA_TIM',
+    newRevisionTarget: null,
+    stepUrutan: 1,
+  },
   'NEED_REVISION:RESUBMIT_PPK': {
     newStatus: 'IN_BENDAHARA_APPROVAL',
     newCurrentStep: 'BENDAHARA',
@@ -72,6 +79,25 @@ const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> =
     newCurrentStep: null,
     newRevisionTarget: null,
     stepUrutan: null,
+  },
+  // Non-Material documents (Chairman's approval)
+  'DRAFT:SUBMIT_NON_MATERIAL': {
+    newStatus: 'IN_KETUA_TIM_APPROVAL',
+    newCurrentStep: 'KETUA_TIM',
+    newRevisionTarget: null,
+    stepUrutan: 1,
+  },
+  'IN_KETUA_TIM_APPROVAL:APPROVE': {
+    newStatus: 'COMPLETED',
+    newCurrentStep: null,
+    newRevisionTarget: null,
+    stepUrutan: 1,
+  },
+  'IN_KETUA_TIM_APPROVAL:REJECT': {
+    newStatus: 'NEED_REVISION',
+    newCurrentStep: 'KETUA_TIM',
+    newRevisionTarget: 'USER',
+    stepUrutan: 1,
   },
 }
 
@@ -118,6 +144,12 @@ export function transition(
       "RESUBMIT only valid when revisionTarget is 'USER'",
     )
   }
+  if (action === 'RESUBMIT_NON_MATERIAL' && revisionTarget !== 'USER') {
+    return makeError(
+      currentStatus,
+      "RESUBMIT_NON_MATERIAL only valid when revisionTarget is 'USER'",
+    )
+  }
   if (action === 'RESUBMIT_PPK' && revisionTarget !== 'PPK') {
     return makeError(
       currentStatus,
@@ -146,17 +178,23 @@ function isActorValidForAction(
   switch (action) {
     case 'SUBMIT':
       return role === 'PEGAWAI'
+    case 'SUBMIT_NON_MATERIAL':
+      return role === 'PEGAWAI'
     case 'APPROVE':
       return (
         (status === 'IN_PPK_VALIDATION' && role === 'PPK') ||
-        (status === 'IN_BENDAHARA_APPROVAL' && role === 'BENDAHARA')
+        (status === 'IN_BENDAHARA_APPROVAL' && role === 'BENDAHARA') ||
+        (status === 'IN_KETUA_TIM_APPROVAL' && role === 'KETUA_TIM')
       )
     case 'REJECT':
       return (
         (status === 'IN_PPK_VALIDATION' && role === 'PPK') ||
-        (status === 'IN_BENDAHARA_APPROVAL' && role === 'BENDAHARA')
+        (status === 'IN_BENDAHARA_APPROVAL' && role === 'BENDAHARA') ||
+        (status === 'IN_KETUA_TIM_APPROVAL' && role === 'KETUA_TIM')
       )
     case 'RESUBMIT':
+      return role === 'PEGAWAI'
+    case 'RESUBMIT_NON_MATERIAL':
       return role === 'PEGAWAI'
     case 'RESUBMIT_PPK':
       return role === 'PPK'

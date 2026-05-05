@@ -29,9 +29,13 @@ export type DokumenRow = {
   tahun: number
   tanggal: string
   created_by: string
+  nominal_realisasi: number | null
+  is_non_material: boolean
+  jenis_dokumen_id: string | null
+  keterangan_detail: string | null
   created_at: string
   updated_at: string
-  // Chain fields
+  // Chain fields (for Material)
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -41,6 +45,7 @@ export type DokumenRow = {
   jenis_permintaan_nama?: string
   kategori_permintaan_nama?: string
   detail_permintaan_nama?: string
+  jenis_dokumen_nama?: string
 }
 
 export type LogRow = {
@@ -195,6 +200,10 @@ export async function createDokumen(
     tanggal: string
     lampiranUrls: LampiranUrl[]
     createdBy: string
+    nominalRealisasi?: number | null
+    isNonMaterial?: boolean
+    jenisDokumenId?: string
+    keteranganDetail?: string
     jenisPermintaanId?: string
     kategoriPermintaanId?: string
     detailPermintaanId?: string
@@ -212,6 +221,10 @@ export async function createDokumen(
       lampiran_urls: JSON.stringify(payload.lampiranUrls),
       created_by: payload.createdBy,
       status: 'DRAFT',
+      nominal_realisasi: payload.nominalRealisasi ?? 0,
+      is_non_material: payload.isNonMaterial ?? false,
+      jenis_dokumen_id: payload.jenisDokumenId ?? null,
+      keterangan_detail: payload.keteranganDetail ?? null,
       jenis_permintaan_id: payload.jenisPermintaanId ?? null,
       kategori_permintaan_id: payload.kategoriPermintaanId ?? null,
       detail_permintaan_id: payload.detailPermintaanId ?? null,
@@ -248,6 +261,8 @@ export async function updateDokumen(
     fungsiId?: string
     kegiatanId?: string
     tanggal?: string
+    nominalRealisasi?: number | null
+    isNonMaterial?: boolean
   }
 ): Promise<{ data?: DokumenRow; error?: string }> {
   const updates: Record<string, any> = { updated_at: new Date().toISOString() }
@@ -269,6 +284,12 @@ export async function updateDokumen(
   }
   if (payload.tanggal !== undefined) {
     updates.tanggal = payload.tanggal
+  }
+  if (payload.nominalRealisasi !== undefined) {
+    updates.nominal_realisasi = payload.nominalRealisasi
+  }
+  if (payload.isNonMaterial !== undefined) {
+    updates.is_non_material = payload.isNonMaterial
   }
 
   const { data, error } = await supabase
@@ -671,6 +692,10 @@ function parseDokumen(raw: any): DokumenRow {
     tahun: raw.tahun,
     tanggal: raw.tanggal,
     created_by: raw.created_by,
+    nominal_realisasi: raw.nominal_realisasi ?? null,
+    is_non_material: raw.is_non_material ?? false,
+    jenis_dokumen_id: raw.jenis_dokumen_id ?? null,
+    keterangan_detail: raw.keterangan_detail ?? null,
     created_at: raw.created_at,
     updated_at: raw.updated_at,
     fungsi_nama: raw.fungsi_nama,
@@ -716,6 +741,10 @@ function parseDokumenWithNames(
     tahun: raw.tahun,
     tanggal: raw.tanggal,
     created_by: raw.created_by,
+    nominal_realisasi: raw.nominal_realisasi ?? null,
+    is_non_material: raw.is_non_material ?? false,
+    jenis_dokumen_id: raw.jenis_dokumen_id ?? null,
+    keterangan_detail: raw.keterangan_detail ?? null,
     created_at: raw.created_at,
     updated_at: raw.updated_at,
     fungsi_nama: fungsiMap[raw.fungsi_id] ?? raw.fungsi_nama ?? undefined,

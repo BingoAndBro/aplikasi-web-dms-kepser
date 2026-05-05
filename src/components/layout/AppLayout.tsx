@@ -31,6 +31,7 @@ import {
   BarChart3,
   Users,
   UserCircle,
+  Trophy,
 } from 'lucide-react'
 
 import { getBrowserClient } from '#/lib/supabase-browser'
@@ -51,6 +52,7 @@ const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
   BENDAHARA: '/bendahara',
   ARSIPARIS: '/arsiparis',
   ADMIN: '/admin',
+  KETUA_TIM: '/ketua-tim/inbox',
 }
 
 // ─── Nav Config ─────────────────────────────────────────────────────────────
@@ -81,7 +83,6 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/pegawai/dokumen' },
         { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/pegawai/dokumen?status=NEED_REVISION' },
         { id: 'laporan_saya', label: 'Laporan Saya', icon: FileText, to: '/pegawai/laporan/saya' },
-        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: '/pegawai/laporan/kegiatan' },
       ],
     },
     {
@@ -193,9 +194,42 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'master_fungsi', label: 'Departemen Fungsi', icon: Building2, to: '/admin/master-data/fungsi' },
         { id: 'master_kegiatan', label: 'Master Kegiatan', icon: ClipboardList, to: '/admin/master-data/kegiatan' },
         { id: 'master_jenis', label: 'Jenis Permintaan', icon: Tag, to: '/admin/master-data/jenis' },
+        { id: 'master_jenis_dokumen', label: 'Jenis Dokumen', icon: Tag, to: '/admin/master-data/jenis-dokumen' },
         { id: 'master_kategori', label: 'Kategori Permintaan', icon: Tag, to: '/admin/master-data/kategori' },
         { id: 'master_detail', label: 'Detail Permintaan', icon: Tag, to: '/admin/master-data/detail' },
         { id: 'master_kelengkapan', label: 'Kelengkapan Dokumen', icon: FileCheck, to: '/admin/master-data/kelengkapan' },
+      ],
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        { id: 'profile', label: 'Profil', icon: UserCircle, to: '/profile' },
+        { id: 'history', label: 'Activity Log', icon: History },
+        { id: 'settings', label: 'Settings', icon: Settings },
+      ],
+    },
+  ],
+  KETUA_TIM: [
+    {
+      title: 'GENERAL',
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/ketua-tim' }],
+    },
+    {
+      title: 'PERSETUJUAN',
+      items: [
+        { id: 'inbox', label: 'Pengecekan Dokumen Non-Material', icon: Trophy, to: '/ketua-tim/inbox' },
+      ],
+    },
+    {
+      title: 'LAPORAN',
+      items: [
+        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: '/pegawai/laporan/kegiatan' },
+      ],
+    },
+    {
+      title: 'ARSIP',
+      items: [
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
       ],
     },
     {
@@ -293,6 +327,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setUserName(session.user.user_metadata?.user_name as string | undefined)
     setEmail(session.user.email ?? undefined)
 
+    // Fetch chairman status FIRST so we know if user has KETUA_TIM role
+    let isChairman = false
+    try {
+      const ktRes = await fetch('/api/users/me/ketua-tim', { credentials: 'include' })
+      if (ktRes.ok) {
+        const ktData = await ktRes.json()
+        setChairmanKegiatan(ktData.kegiatan || [])
+        isChairman = (ktData.kegiatan || []).length > 0
+      }
+    } catch (err) {
+      console.error('Failed to fetch chairman status:', err)
+    }
+
     const { data: rolesData } = await supabase
       .from('user_roles')
       .select('role:roles(nama)')
@@ -302,6 +349,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       .map((r: { role?: { nama?: RoleName } }) => r.role?.nama)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((n: any): n is RoleName => n !== undefined && n !== null)
+
+    // Add KETUA_TIM if user has chairman assignments
+    if (isChairman && !roleNames.includes('KETUA_TIM')) {
+      roleNames.push('KETUA_TIM')
+    }
 
     setUserRoles(roleNames)
 
@@ -316,10 +368,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
     setActiveRole(effectiveRole)
     setIsLoading(false)
-
-    // Fetch chairman status after session is loaded
-    fetchChairmanStatus(session)
-  }, [supabase, fetchChairmanStatus])
+  }, [supabase])
 
   React.useEffect(() => {
     fetchSession()
@@ -358,7 +407,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [userRoles])
+  }, [userRoles, chairmanKegiatan])
 
   const handleRoleSwitch = (newRole: RoleName) => {
     document.cookie = `${ACTIVE_ROLE_COOKIE}=${newRole}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
@@ -378,30 +427,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     navigate({ to: '/login' })
   }
 
-  // Build nav groups with conditional "Laporan Kegiatan" for PEGAWAI
+  // Build nav groups based on active role
   const navGroups = React.useMemo(() => {
-    const baseConfig = NAV_CONFIG[activeRole] ?? []
-
-    if (activeRole !== 'PEGAWAI') return baseConfig
-
-    return baseConfig.map(group => {
-      if (group.title !== 'MANAGEMENT') return group
-
-      const filteredItems = group.items.filter(item => {
-        // Always show all items except laporan_kegiatan
-        if (item.id !== 'laporan_kegiatan') return true
-        // Only show laporan_kegiatan if user has chairman assignments
-        return chairmanKegiatan.length > 0
-      })
-
-      return { ...group, items: filteredItems }
-    })
-  }, [activeRole, chairmanKegiatan])
+    return NAV_CONFIG[activeRole] ?? []
+  }, [activeRole])
 
   const isAdmin = activeRole === 'ADMIN'
+  const isKetuaTim = activeRole === 'KETUA_TIM'
   const initials = getInitials(userName, email)
   const displayName = userName || email?.split('@')[0] || 'User'
-  const canSwitchRole = userRoles.length > 1 && !isAdmin
+  const canSwitchRole = (userRoles.length > 1 || (userRoles.length === 1 && isKetuaTim)) && !isAdmin
 
   // Show loading spinner while checking auth
   if (isLoading) {

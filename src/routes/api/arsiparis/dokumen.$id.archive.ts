@@ -54,7 +54,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         // Verify dokumen exists + status = COMPLETED
         const { data: dok, error: dokError } = await supabase
           .from('dokumen_transaksi')
-          .select('id, status')
+          .select('id, status, nominal_realisasi')
           .eq('id', params.id)
           .single()
 
@@ -92,7 +92,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
           return Response.json({ error: fsResult.error ?? 'Transisi status gagal' }, { status: 400 })
         }
 
-        // Insert arsip record with snapshot
+        // Insert arsip record with snapshot + nominal_realisasi
         const { error: arsipError } = await supabase.from('arsip').insert({
           dokumen_id: params.id,
           nomor_surat: data.nomor_surat,
@@ -105,6 +105,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
           archived_by: session.user.id,
           status_arsip: 'AKTIF',
           lampiran_snapshot: lampiranSnapshot,
+          nominal_realisasi: dok.nominal_realisasi ?? null,
         })
 
         if (arsipError) {

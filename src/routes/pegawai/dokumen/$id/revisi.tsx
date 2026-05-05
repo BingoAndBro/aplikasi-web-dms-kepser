@@ -19,6 +19,8 @@ import {
   X,
   Loader2,
   FileEdit,
+  User,
+  Plus,
 } from 'lucide-react'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
@@ -36,6 +38,7 @@ interface KelengkapanItem {
   id: string
   nama_dokumen: string
   required: boolean
+  isUserCreated?: boolean // For user-created documents
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +99,11 @@ function DokumenRevisiPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [uploadProgress, setUploadProgress] = useState<string | null>(null)
 
+  // User-created documents for Non-Material
+  const [userDocs, setUserDocs] = useState<KelengkapanItem[]>([])
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newDocTitle, setNewDocTitle] = useState('')
+
   // Preview modal state
   const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -138,6 +146,27 @@ function DokumenRevisiPage() {
 
       setDok(dokumen)
       setLampiranUrls(dokumen.lampiran_urls as LampiranUrl[] ?? [])
+
+      // Check if Non-Material document
+      const isNonMaterial = dokumen.is_non_material === true ||
+        (dokumen.is_non_material === undefined && !dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)
+
+      // For Non-Material: skip kelengkapan fetch, use lampiran_urls directly
+      if (isNonMaterial) {
+        setKelengkapan([]) // No required kelengkapan
+        // Extract user-created documents from lampiran_urls
+        const userCreatedDocs: KelengkapanItem[] = (dokumen.lampiran_urls as LampiranUrl[] ?? [])
+          .filter((l: LampiranUrl) => l.kelengkapan_id.startsWith('user-custom-'))
+          .map((l: LampiranUrl) => ({
+            id: l.kelengkapan_id,
+            nama_dokumen: l.nama,
+            required: false,
+            isUserCreated: true,
+          }))
+        setUserDocs(userCreatedDocs)
+        setLoading(false)
+        return
+      }
 
       // Build dynamic query — filter by chain from the dokumen's stored chain IDs.
       // Kelengkapan melekat ke leaf node: detail > kategori > jenis.
@@ -198,6 +227,10 @@ function DokumenRevisiPage() {
 
       if (patchRes.ok) {
         setLampiranUrls(newLampiranUrls)
+        // If user-created doc was uploaded, add it to userDocs
+        if (kel.isUserCreated) {
+          setUserDocs(prev => [...prev.filter(d => d.id !== kel.id), { ...kel, nama_dokumen: kel.nama_dokumen }])
+        }
       } else {
         const errJson = await patchRes.json()
         console.error('Failed to save lampiran:', errJson.error)
@@ -209,6 +242,36 @@ function DokumenRevisiPage() {
     } finally {
       setUploadProgress(null)
     }
+  }
+
+  // User-created document handlers
+  function addUserDoc() {
+    if (!newDocTitle.trim()) return
+    const docId = `user-custom-${crypto.randomUUID()}`
+    const newDoc: KelengkapanItem = {
+      id: docId,
+      nama_dokumen: newDocTitle.trim(),
+      required: false,
+      isUserCreated: true,
+    }
+    setUserDocs(prev => [...prev, newDoc])
+    setNewDocTitle('')
+    setShowAddForm(false)
+  }
+
+  function removeUserDoc(docId: string) {
+    // Remove from userDocs state
+    setUserDocs(prev => prev.filter(d => d.id !== docId))
+    // Remove from lampiranUrls
+    const newLampiranUrls = lampiranUrls.filter(l => l.kelengkapan_id !== docId)
+    setLampiranUrls(newLampiranUrls)
+    // Update API
+    fetch(`/api/dokumen/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lampiranUrls: newLampiranUrls }),
+    })
   }
 
   async function handleSubmit() {
@@ -247,9 +310,9 @@ function DokumenRevisiPage() {
       if (json.signedUrl) {
         setPreviewUrl(json.signedUrl)
         const lamp = lampiranUrls[idx]
-        setPreviewFilename(
-          lamp ? kelengkapan.find(k => k.id === lamp.kelengkapan_id)?.nama_dokumen ?? 'Lampiran' : 'Lampiran'
-        )
+        // Look for filename: first check kelengkapan (Material), then lampiranUrls.nama (Non-Material)
+        const found = lamp ? kelengkapan.find(k => k.id === lamp.kelengkapan_id) : null
+        setPreviewFilename(found?.nama_dokumen ?? lamp?.nama ?? 'Lampiran')
       }
     } catch { /* silent */ } finally {
       setPreviewLoading(false)
@@ -276,9 +339,29 @@ function DokumenRevisiPage() {
   const requiredItems = kelengkapan.filter(k => k.required)
   const uploadedIds = new Set(lampiranUrls.map(l => l.kelengkapan_id))
   const missingRequired = requiredItems.filter(r => !uploadedIds.has(r.id))
-  const canSubmit = lampiranUrls.length > 0 && missingRequired.length === 0
+  const isNonMaterial = dok?.is_non_material === true ||
+    (dok?.is_non_material === undefined && !dok?.jenis_permintaan_id && !dok?.kategori_permintaan_id && !dok?.detail_permintaan_id)
 
-  const workflowIdx = dok ? getWorkflowIndex(dok.status) : -1
+  // For Non-Material: just need at least one lampiran
+  // For Material: need all required lampiran
+  const canSubmit = lampiranUrls.length > 0 &&
+    (isNonMaterial || missingRequired.length === 0)
+
+  // Workflow steps based on document type
+  const workflowSteps = isNonMaterial
+    ? [
+        { key: 'DRAFT', label: 'Draf' },
+        { key: 'IN_KETUA_TIM_APPROVAL', label: 'Ketua Tim' },
+        { key: 'COMPLETED', label: 'Selesai' },
+      ]
+    : WORKFLOW_STEPS
+
+  function getNonMaterialWorkflowIndex(status: string): number {
+    if (status === 'NEED_REVISION') return -1
+    return workflowSteps.findIndex(s => s.key === status)
+  }
+
+  const workflowIdx = isNonMaterial ? getNonMaterialWorkflowIndex(dok?.status ?? '') : getWorkflowIndex(dok?.status ?? '')
 
   return (
     <PageLayout>
@@ -356,13 +439,13 @@ function DokumenRevisiPage() {
             <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm">
               <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Alur Dokumen</p>
               <div className="flex items-center gap-0">
-                {WORKFLOW_STEPS.map((step, i) => {
+                {workflowSteps.map((step, i) => {
                   const isCurrent = step.key === dok.status
                   const isPast = workflowIdx > i || dok.status === 'COMPLETED'
                   const showAsRevision = dok.status === 'NEED_REVISION' && step.key === 'IN_PPK_VALIDATION'
                   return (
                     <div key={step.key} className="flex flex-col items-center flex-1 relative">
-                      {i < WORKFLOW_STEPS.length - 1 && (
+                      {i < workflowSteps.length - 1 && (
                         <div className={cn('absolute top-4 -right-1/2 w-full h-0.5 z-0', isPast ? 'bg-primary' : 'bg-outline-variant')} />
                       )}
                       <div className={cn(
@@ -442,73 +525,188 @@ function DokumenRevisiPage() {
               </div>
             </div>
 
-            {/* Kelengkapan checklist */}
-            <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-              <div className="bg-surface-container-low/30 px-4 py-3 border-b border-outline-variant/30">
-                <h3 className="text-sm font-semibold text-on-surface">Kelengkapan Dokumen</h3>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  {kelengkapan.length > 0
-                    ? `${requiredItems.filter(r => uploadedIds.has(r.id)).length} dari ${requiredItems.length} lampiran wajib terunggah`
-                    : 'Memuat...'}
-                </p>
-              </div>
-              <div className="p-4 space-y-3">
-                {uploadProgress && (
-                  <p className="text-xs text-primary animate-pulse">{uploadProgress}</p>
-                )}
-                {kelengkapan.map(kel => {
-                  const lamp = lampiranUrls.find(l => l.kelengkapan_id === kel.id)
-                  const isUploaded = !!lamp
-                  const lampIdx = lampiranUrls.findIndex(l => l.kelengkapan_id === kel.id)
-                  return (
-                    <div key={kel.id} className="flex items-center gap-3 p-3 bg-surface-container-low/20 rounded-lg">
-                      {isUploaded ? (
-                        <CheckCircle2 size={16} className="text-green-600 shrink-0" />
-                      ) : kel.required ? (
-                        <XCircle size={16} className="text-red-500 shrink-0" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-outline shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm text-on-surface font-medium">{kel.nama_dokumen}</span>
-                        {kel.required && <span className="text-red-500 ml-1">*</span>}
+            {/* Kelengkapan checklist - Material Documents */}
+            {!isNonMaterial && kelengkapan.length > 0 && (
+              <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+                <div className="bg-surface-container-low/30 px-4 py-3 border-b border-outline-variant/30">
+                  <h3 className="text-sm font-semibold text-on-surface">Kelengkapan Dokumen</h3>
+                  <p className="text-xs text-on-surface-variant mt-0.5">
+                    {requiredItems.filter(r => uploadedIds.has(r.id)).length} dari {requiredItems.length} lampiran wajib terunggah
+                  </p>
+                </div>
+                <div className="p-4 space-y-3">
+                  {uploadProgress && (
+                    <p className="text-xs text-primary animate-pulse">{uploadProgress}</p>
+                  )}
+                  {kelengkapan.map(kel => {
+                    const lamp = lampiranUrls.find(l => l.kelengkapan_id === kel.id)
+                    const isUploaded = !!lamp
+                    const lampIdx = lampiranUrls.findIndex(l => l.kelengkapan_id === kel.id)
+                    return (
+                      <div key={kel.id} className="flex items-center gap-3 p-3 bg-surface-container-low/20 rounded-lg">
+                        {isUploaded ? (
+                          <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                        ) : kel.required ? (
+                          <XCircle size={16} className="text-red-500 shrink-0" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border border-outline shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-on-surface font-medium">{kel.nama_dokumen}</span>
+                          {kel.required && <span className="text-red-500 ml-1">*</span>}
+                        </div>
+                        {isUploaded && (
+                          <>
+                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(lampIdx)} aria-label="Pratinjau">
+                              <Eye size={14} />
+                            </Button>
+                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(lampIdx)} aria-label="Unduh">
+                              <Download size={14} />
+                            </Button>
+                          </>
+                        )}
+                        <input
+                          key={lamp ? `replace-${lamp.url}` : `upload-${kel.id}`}
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                          className="hidden"
+                          id={`upload-${kel.id}`}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            saveLampiran(kel, file)
+                            e.target.value = ''
+                          }}
+                        />
+                        <label htmlFor={`upload-${kel.id}`} className="cursor-pointer">
+                          <span className="inline-flex items-center gap-1 h-6 px-2 rounded-[min(var(--radius-md),10px)] text-xs font-medium border border-border bg-background hover:bg-muted text-foreground">
+                            <Upload size={12} />{isUploaded ? 'Ganti' : 'Unggah'}
+                          </span>
+                        </label>
                       </div>
-                      {isUploaded && (
-                        <>
-                          <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(lampIdx)} aria-label="Pratinjau">
-                            <Eye size={14} />
-                          </Button>
-                          <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(lampIdx)} aria-label="Unduh">
-                            <Download size={14} />
-                          </Button>
-                        </>
-                      )}
-                      <input
-                        key={lamp ? `replace-${lamp.url}` : `upload-${kel.id}`}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                        className="hidden"
-                        id={`upload-${kel.id}`}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          saveLampiran(kel, file)
-                          e.target.value = ''
-                        }}
-                      />
-                      <label htmlFor={`upload-${kel.id}`} className="cursor-pointer">
-                        <span className="inline-flex items-center gap-1 h-6 px-2 rounded-[min(var(--radius-md),10px)] text-xs font-medium border border-border bg-background hover:bg-muted text-foreground">
-                          <Upload size={12} />{isUploaded ? 'Ganti' : 'Unggah'}
-                        </span>
-                      </label>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Upload summary */}
-            {lampiranUrls.length > 0 && (
+            {/* Non-Material: Dokumen Pendukung */}
+            {isNonMaterial && (
+              <div className="bg-white rounded-xl border border-blue-200 overflow-hidden shadow-sm">
+                <div className="bg-blue-50/50 px-4 py-3 border-b border-blue-200">
+                  <h3 className="text-sm font-semibold text-blue-700">Dokumen Pendukung</h3>
+                  <p className="text-xs text-blue-600 mt-0.5">
+                    {lampiranUrls.length > 0
+                      ? `${lampiranUrls.filter(l => l.kelengkapan_id.startsWith('user-custom-')).length} dokumen pendukung terunggah`
+                      : 'Tambahkan dokumen pendukung untuk revisi'}
+                  </p>
+                </div>
+                <div className="p-4 space-y-3">
+                  {uploadProgress && (
+                    <p className="text-xs text-blue-600 animate-pulse">{uploadProgress}</p>
+                  )}
+
+                  {userDocs.length === 0 && !showAddForm && (
+                    <div className="text-center py-6 text-on-surface-variant text-xs">
+                      Belum ada dokumen pendukung. Klik tombol di bawah untuk menambahkan.
+                    </div>
+                  )}
+
+                  {/* User-created documents list */}
+                  {userDocs.map(userDoc => {
+                    const lamp = lampiranUrls.find(l => l.kelengkapan_id === userDoc.id)
+                    const isUploaded = !!lamp
+                    const lampIdx = lampiranUrls.findIndex(l => l.kelengkapan_id === userDoc.id)
+                    return (
+                      <div key={userDoc.id} className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                        {isUploaded ? (
+                          <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border-2 border-blue-300 shrink-0" />
+                        )}
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <User size={14} className="text-blue-500 shrink-0" />
+                          <span className="text-sm text-on-surface font-medium">{userDoc.nama_dokumen}</span>
+                          <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium shrink-0">TAMBAHAN ANDA</span>
+                        </div>
+                        {isUploaded && (
+                          <>
+                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(lampIdx)} aria-label="Pratinjau">
+                              <Eye size={14} />
+                            </Button>
+                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(lampIdx)} aria-label="Unduh">
+                              <Download size={14} />
+                            </Button>
+                          </>
+                        )}
+                        <input
+                          key={lamp ? `replace-${lamp.url}` : `upload-${userDoc.id}`}
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                          className="hidden"
+                          id={`upload-${userDoc.id}`}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            saveLampiran(userDoc, file)
+                            e.target.value = ''
+                          }}
+                        />
+                        <label htmlFor={`upload-${userDoc.id}`} className="cursor-pointer">
+                          <span className="inline-flex items-center gap-1 h-6 px-2 rounded-[min(var(--radius-md),10px)] text-xs font-medium border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700">
+                            <Upload size={12} />{isUploaded ? 'Ganti' : 'Unggah'}
+                          </span>
+                        </label>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={() => removeUserDoc(userDoc.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          aria-label="Hapus dokumen"
+                        >
+                          <X size={14} />
+                        </Button>
+                      </div>
+                    )
+                  })}
+
+                  {/* Add document button / form */}
+                  {showAddForm ? (
+                    <div className="flex items-center gap-2 p-3 bg-surface-container-low/20 rounded-lg">
+                      <input
+                        type="text"
+                        value={newDocTitle}
+                        onChange={(e) => setNewDocTitle(e.target.value)}
+                        placeholder="Nama dokumen (misal: Bukti Transfer)"
+                        className="flex-1 h-8 px-3 text-sm border border-outline rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') addUserDoc()
+                          if (e.key === 'Escape') { setShowAddForm(false); setNewDocTitle('') }
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" onClick={addUserDoc} disabled={!newDocTitle.trim()}>
+                        Simpan
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setShowAddForm(false); setNewDocTitle('') }}>
+                        Batal
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowAddForm(true)}
+                      className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-blue-300 text-blue-600 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+                    >
+                      <Plus size={16} />
+                      <span className="text-sm font-medium">Tambah Dokumen Pendukung</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Upload summary - Material only */}
+            {!isNonMaterial && lampiranUrls.length > 0 && (
               <div className="bg-surface-container-low/20 rounded-lg p-3">
                 <p className="text-xs text-on-surface-variant">
                   {lampiranUrls.length} lampiran terunggah. Klik "Ganti" pada kolom di atas untuk mengganti file.
@@ -537,7 +735,7 @@ function DokumenRevisiPage() {
                 {submitting ? (
                   <><Loader2 size={14} className="animate-spin" />Mengajukan...</>
                 ) : (
-                  'Ajukan Ulang ke PPK'
+                  isNonMaterial ? 'Ajukan Ulang ke Ketua Tim' : 'Ajukan Ulang ke PPK'
                 )}
               </Button>
             </div>
