@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
 import { createAdminClient } from '#/lib/supabase-admin'
+import { getServerSession as getSession } from '#/lib/auth'
 import { getDokumenById, userHasApproverRole } from '#/lib/dokumen-helpers'
 
 function createClient(request: Request) {
@@ -16,6 +16,7 @@ function createClient(request: Request) {
 // ---------------------------------------------------------------------------
 // GET /api/dokumen/[id]/download/[lampiranIndex]
 // Returns a signed URL for downloading a lampiran file
+// NOTE: Filename is built client-side using buildStorageFilename()
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/$id/download/$lampiranIndex')({
@@ -62,69 +63,21 @@ export const Route = createFileRoute('/api/dokumen/$id/download/$lampiranIndex')
 
         const lampiran = dok.lampiran_urls[index]
 
-        // Storage path format variations:
-        // 1. [user_id]/[uuid]_[timestamp]_[original_filename] (underscore)
-        // 2. [user_id]/[timestamp]-[random]-[original_filename] (dash)
-        // Example 1: "user-id/7df5992f-be9a-4e8d-b836-7d677d7976c4_1777969605493_Penilaian_360.pdf"
-        // Example 2: "user-id/1777964598700-9d5docxfisv-Penilaian_360.pdf"
-        const pathParts = lampiran.url.split('/')
-        const filenameWithExt = pathParts[pathParts.length - 1] || 'download'
-
-        // Try to extract original filename based on format
-        let originalFilename = filenameWithExt
-
-        // Pattern 1: UUID_timestamp_originalName (underscore format)
-        // UUID is 36 chars with dashes, followed by underscore and 13-digit timestamp
-        const underscoreMatch = filenameWithExt.match(/^[a-zA-Z0-9-]+_(\d{13})_(.+)$/)
-        if (underscoreMatch) {
-          originalFilename = underscoreMatch[2]
-        }
-
-        // Pattern 2: timestamp-randomName (dash format)
-        // Timestamp is 13 digits, followed by dash, then random chars, then dash, then filename
-        const dashMatch = filenameWithExt.match(/^(\d{13})-[a-zA-Z0-9]+-(.+)$/)
-        if (dashMatch) {
-          originalFilename = dashMatch[2]
-        }
-
-        // Extract extension from original filename
-        const lastDotIdx = originalFilename.lastIndexOf('.')
-        let ext = ''
-        let nameWithoutExt = originalFilename
-        if (lastDotIdx > 0 && lastDotIdx < originalFilename.length - 1) {
-          ext = originalFilename.slice(lastDotIdx + 1).toLowerCase()
-          nameWithoutExt = originalFilename.slice(0, lastDotIdx)
-        }
-
-        const docIdShort = params.id.substring(0, 8)
-        const dateStr = dok.tanggal ? `_${dok.tanggal}` : ''
-        const downloadFilename = `${docIdShort}_${nameWithoutExt}${dateStr}.${ext}`
-
-        console.log('[download] Generating download:', {
-          lampiranUrl: lampiran.url,
-          filenameWithExt,
-          underscoreMatch: underscoreMatch ? underscoreMatch[2] : null,
-          dashMatch: dashMatch ? dashMatch[2] : null,
-          originalFilename,
-          docIdShort,
-          ext,
-          nameWithoutExt,
-          downloadFilename
-        })
-
-        // Generate signed URL with download option (1 hour expiry)
+        // Generate signed URL (1 hour expiry)
         const supabaseAdmin = createAdminClient()
-
         const { data, error } = await supabaseAdmin.storage
           .from('dokumen-lampiran')
-          .createSignedUrl(lampiran.url, 3600, { download: downloadFilename })
+          .createSignedUrl(lampiran.url, 3600) // 1 hour
 
         if (error || !data) {
+          if (error?.message === 'Object not found') {
+            return Response.json({ error: 'File tidak ditemukan' }, { status: 404 })
+          }
           console.error('[download] Signed URL error:', error)
           return Response.json({ error: 'Gagal membuat link download' }, { status: 500 })
         }
 
-        return Response.json({ signedUrl: data.signedUrl, filename: downloadFilename })
+        return Response.json({ signedUrl: data.signedUrl })
       },
     },
   },

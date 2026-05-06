@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
 import { createAdminClient } from '#/lib/supabase-admin'
+import { getServerSession as getSession } from '#/lib/auth'
 import { getDokumenById, userHasApproverRole } from '#/lib/dokumen-helpers'
 
 function createClient(request: Request) {
@@ -15,7 +15,8 @@ function createClient(request: Request) {
 
 // ---------------------------------------------------------------------------
 // GET /api/dokumen/[id]/preview/[lampiranIndex]
-// Returns a signed URL for previewing a lampiran file (no download)
+// Returns a signed URL for previewing a lampiran file
+// NOTE: Filename is built client-side using buildStorageFilename()
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/$id/preview/$lampiranIndex')({
@@ -61,21 +62,21 @@ export const Route = createFileRoute('/api/dokumen/$id/preview/$lampiranIndex')(
 
         const lampiran = dok.lampiran_urls[index]
 
-        // Extract original filename from storage path
-        const urlParts = lampiran.url.split('_')
-        const filename = urlParts.slice(2).join('_') || lampiran.nama
-
+        // Get signed URL (15 minutes, no download flag)
         const supabaseAdmin = createAdminClient()
         const { data, error } = await supabaseAdmin.storage
           .from('dokumen-lampiran')
-          .createSignedUrl(lampiran.url, 900) // 15 minutes, no download flag
+          .createSignedUrl(lampiran.url, 900) // 15 minutes
 
         if (error || !data) {
+          if (error?.message === 'Object not found') {
+            return Response.json({ error: 'File tidak ditemukan' }, { status: 404 })
+          }
           console.error('[preview] Signed URL error:', error)
           return Response.json({ error: 'Gagal membuat link pratinjau' }, { status: 500 })
         }
 
-        return Response.json({ signedUrl: data.signedUrl, filename })
+        return Response.json({ signedUrl: data.signedUrl })
       },
     },
   },

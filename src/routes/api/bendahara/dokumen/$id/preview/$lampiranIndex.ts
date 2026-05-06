@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
 import { createAdminClient } from '#/lib/supabase-admin'
+import { getServerSession as getSession } from '#/lib/auth'
+import { getDokumenById } from '#/lib/dokumen-helpers'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -12,6 +13,7 @@ function createClient(request: Request) {
 // ---------------------------------------------------------------------------
 // GET /api/bendahara/dokumen/[id]/preview/[lampiranIndex]
 // Returns a 15-minute signed URL for in-browser preview
+// NOTE: Filename is built client-side using buildStorageFilename()
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/bendahara/dokumen/$id/preview/$lampiranIndex')({
@@ -26,9 +28,9 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/preview/$lampir
         const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
         if (!roleNames.includes('BENDAHARA')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        const { data: dok, error: dokError } = await supabase
-          .from('dokumen_transaksi').select('lampiran_urls').eq('id', params.id).single()
-        if (dokError || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        // Fetch dokumen via getDokumenById (includes manual joins for leaf node names)
+        const dok = await getDokumenById(supabase, params.id)
+        if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
         // Check if arsip is DIMUSNAHKAN
         const { data: arsipRecord } = await supabase
@@ -41,9 +43,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/preview/$lampir
           return Response.json({ error: 'File asli tidak tersedia — arsip telah dimusnahkan' }, { status: 410 })
         }
 
-        let lampiranUrls: any[] = []
-        if (dok.lampiran_urls) lampiranUrls = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
-
+        const lampiranUrls = dok.lampiran_urls
         const index = parseInt(params.lampiranIndex, 10)
         if (isNaN(index) || index < 0 || index >= lampiranUrls.length) {
           return Response.json({ error: 'Lampiran tidak ditemukan' }, { status: 404 })
@@ -52,11 +52,16 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/preview/$lampir
         const lampiran = lampiranUrls[index]
         const supabaseAdmin = createAdminClient()
         const { data, error } = await supabaseAdmin.storage
-          .from('dokumen-lampiran').createSignedUrl(lampiran.url, 900)
+          .from('dokumen-lampiran').createSignedUrl(lampiran.url, 900) // 15 minutes
 
-        if (error || !data) return Response.json({ error: 'Gagal membuat link pratinjau' }, { status: 500 })
+        if (error || !data) {
+          if (error?.message === 'Object not found') {
+            return Response.json({ error: 'File tidak ditemukan' }, { status: 404 })
+          }
+          return Response.json({ error: 'Gagal membuat link pratinjau' }, { status: 500 })
+        }
 
-        return Response.json({ signedUrl: data.signedUrl, filename: lampiran.nama })
+        return Response.json({ signedUrl: data.signedUrl })
       },
     },
   },

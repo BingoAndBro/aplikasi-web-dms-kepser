@@ -4,12 +4,12 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import {
-  FileText, ChevronRight, Download, Eye, AlertCircle,
-  Loader2, X, CheckCircle2,
+  ChevronRight, AlertCircle,
+  Loader2, CheckCircle2,
 } from 'lucide-react'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
+import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import { cn } from '#/lib/utils'
-import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
 export const Route = createFileRoute('/arsiparis/dokumen/$id/')({
   component: ArsiparisDokumenDetailPage,
@@ -41,10 +41,12 @@ type DokumenDetail = {
   id: string
   judul: string
   fungsi: { id: string; nama: string }
+  fungsi_nama?: string
   kegiatan: { id: string; nama: string }
+  kegiatan_nama?: string
   tanggal: string
   tahun: number
-  lampiran_urls: LampiranUrl[]
+  lampiran_urls: any[]
   created_by: { id: string; nama: string }
   status: string
   is_ketua_tim: boolean
@@ -52,12 +54,15 @@ type DokumenDetail = {
   arsip: { id: string; status_arsip: string; nomor_surat: string } | null
   is_archived: boolean
   nominal_realisasi: number | null
+  is_non_material?: boolean
   jenis_permintaan_id?: string | null
   jenis_permintaan_nama?: string
   kategori_permintaan_id?: string | null
   kategori_permintaan_nama?: string
   detail_permintaan_id?: string | null
   detail_permintaan_nama?: string
+  jenis_dokumen_nama?: string
+  jenis_dokumen_id?: string | null
 }
 
 function ArsiparisDokumenDetailPage() {
@@ -78,18 +83,7 @@ function ArsiparisDokumenDetailPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
 
-  const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [previewFilename, setPreviewFilename] = useState('')
-  const [previewLoading, setPreviewLoading] = useState(false)
-
   useEffect(() => { fetchData() }, [id])
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape' && previewingIdx !== null) closePreview() }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [previewingIdx])
 
   async function fetchData() {
     setLoading(true); setFetchError(null)
@@ -124,18 +118,6 @@ function ArsiparisDokumenDetailPage() {
   }
 
   useEffect(() => { recalcDates() }, [dokumen, retensiAktif, retensiInaktif])
-
-  async function handlePreview(index: number) {
-    setPreviewingIdx(index); setPreviewUrl(null); setPreviewLoading(true)
-    try {
-      const res = await fetch(`/api/dokumen/${id}/preview/${index}`, { credentials: 'include' })
-      const json = await res.json()
-      if (json.signedUrl) { setPreviewUrl(json.signedUrl); setPreviewFilename(json.filename ?? `lampiran-${index + 1}`) }
-    } catch { /* silent */ }
-    finally { setPreviewLoading(false) }
-  }
-
-  function closePreview() { setPreviewingIdx(null); setPreviewUrl(null); setPreviewFilename('') }
 
   async function handleArchive() {
     const errors: Record<string, string> = {}
@@ -186,25 +168,6 @@ function ArsiparisDokumenDetailPage() {
   return (
     <PageLayout>
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Preview Modal */}
-        {previewingIdx !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) closePreview() }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/30 shrink-0">
-                <FileText size={16} className="text-primary shrink-0" />
-                <p className="text-sm font-semibold text-on-surface truncate flex-1">{previewFilename}</p>
-                <span className="text-[10px] text-outline hidden sm:block">ESC</span>
-                <button onClick={closePreview} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors shrink-0" aria-label="Tutup"><X size={16} /></button>
-              </div>
-              <div className="flex-1 overflow-auto bg-surface-container-low/30">
-                {previewLoading ? <div className="flex items-center justify-center h-48"><Loader2 size={22} className="animate-spin text-primary" /></div>
-                 : previewUrl ? <iframe src={previewUrl} className="w-full h-[calc(70vh-96px)] border-0" title={previewFilename} />
-                 : <div className="flex items-center justify-center h-48"><p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p></div>}
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
           <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
@@ -247,33 +210,8 @@ function ArsiparisDokumenDetailPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-          <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Lampiran ({dokumen.lampiran_urls.length})</p>
-          {dokumen.lampiran_urls.length === 0 ? (
-            <p className="text-xs text-on-surface-variant text-center py-4">Belum ada lampiran.</p>
-          ) : (
-            <div className="space-y-2">
-              {dokumen.lampiran_urls.map((lamp, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-surface-container-low/20 rounded-lg">
-                  <FileText size={16} className="text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-on-surface truncate">{lamp.nama}</p>
-                    <p className="text-[10px] text-outline">{lamp.uploaded_at ? formatDate(lamp.uploaded_at) : ''}</p>
-                  </div>
-                  <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(i)} aria-label="Pratinjau">
-                    {previewingIdx === i ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
-                  </Button>
-                  <Button size="icon-xs" variant="ghost" onClick={() => {
-                    fetch(`/api/dokumen/${id}/download/${i}`, { credentials: 'include' })
-                      .then(r => r.json())
-                      .then(d => d.signedUrl && window.open(d.signedUrl, '_blank'))
-                      .catch(() => alert('Gagal download'))
-                  }} aria-label="Download"><Download size={14} /></Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Lampiran */}
+        <AttachmentViewer dokumen={dokumen as any} lampiranUrls={dokumen.lampiran_urls} />
 
         <ActivityLog dokumenId={id} />
 

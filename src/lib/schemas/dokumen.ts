@@ -54,6 +54,7 @@ export const updateDokumenSchema = z.object({
   kategoriPermintaanId: z.string().uuid().optional().nullable(),
   detailPermintaanId: z.string().uuid().optional().nullable(),
   nominalRealisasi: z.number().min(0).max(999999999999).nullable().optional(),
+  keteranganDetail: z.string().max(5000).optional().nullable(),
 })
 
 // ---------------------------------------------------------------------------

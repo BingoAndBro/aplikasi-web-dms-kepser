@@ -9,9 +9,23 @@ function createAuthClient(request: Request) {
   return createServerSupabaseClient(mockEvent, cookieHeader)
 }
 
+/**
+ * Helper: Check if path is PENDING format (timestamp-random-filename)
+ * PENDING = storage path dengan format timestamp-random-filename (dash).
+ * Pattern: {userId}/{timestamp}-{random}-{filename}.{ext}
+ */
+function isPendingPath(url: string): boolean {
+  const pathParts = url.split('/')
+  const filenameWithExt = pathParts[pathParts.length - 1] || ''
+  return /^\d{13}-[a-zA-Z0-9]+-.+$/.test(filenameWithExt)
+}
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/cleanup-orphan-files
 // Deletes storage files that are not referenced by any dokumen_transaksi lampiran_urls
+// Query params:
+//   - pending_only=true : only delete PENDING format files (not formal paths)
+//   - dry_run=true : return list without deleting
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({

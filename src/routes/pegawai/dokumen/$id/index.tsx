@@ -4,11 +4,10 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
+import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import {
   FileText,
   ChevronRight,
-  Download,
-  Eye,
   AlertTriangle,
   CheckCircle2,
   Loader2,
@@ -17,7 +16,6 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
-import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/')({
   component: DokumenDetailPage,
@@ -36,19 +34,22 @@ type DokumenDetail = {
   status: string
   revision_notes: string | null
   revision_target: string | null
-  lampiran_urls: LampiranUrl[]
+  lampiran_urls: any[]
   tahun: number
   tanggal: string
   created_at: string
   created_by: string
   is_non_material: boolean
   nominal_realisasi: number | null
+  keterangan_detail: string | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
   jenis_permintaan_nama?: string
   kategori_permintaan_nama?: string
   detail_permintaan_nama?: string
+  jenis_dokumen_nama?: string
+  jenis_dokumen_id?: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -81,11 +82,6 @@ function formatDate(str: string): string {
   catch { return str }
 }
 
-function formatDateTime(str: string): string {
-  try { return new Date(str).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
-  catch { return str }
-}
-
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
@@ -96,19 +92,9 @@ function DokumenDetailPage() {
   const [dok, setDok] = useState<DokumenDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [previewFilename, setPreviewFilename] = useState('')
-  const [previewLoading, setPreviewLoading] = useState(false)
-  const [previewError, setPreviewError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => { fetchData() }, [id])
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && previewingIdx !== null) closePreview() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [previewingIdx])
 
   async function fetchData() {
     setLoading(true)
@@ -119,18 +105,6 @@ function DokumenDetailPage() {
       setDok(json.dokumen)
     } catch { setFetchError('Terjadi kesalahan') } finally { setLoading(false) }
   }
-
-  async function handlePreview(idx: number) {
-    setPreviewingIdx(idx); setPreviewUrl(null); setPreviewLoading(true); setPreviewError(null)
-    try {
-      const res = await fetch(`/api/dokumen/${id}/preview/${idx}`, { credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { setPreviewError(json.error ?? 'Terjadi kesalahan'); setPreviewLoading(false); return }
-      if (json.signedUrl) { setPreviewUrl(json.signedUrl); setPreviewFilename(json.filename) }
-    } catch { setPreviewError('Terjadi kesalahan') }
-    finally { setPreviewLoading(false) }
-  }
-  function closePreview() { setPreviewingIdx(null); setPreviewUrl(null); setPreviewFilename('') }
 
   async function handleDelete() {
     if (!confirm('Yakin ingin menghapus dokumen ini?')) return
@@ -168,35 +142,6 @@ function DokumenDetailPage() {
 
   return (
     <PageLayout>
-      {/* Preview Modal */}
-      {previewingIdx !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) closePreview() }}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
-            <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
-              <FileText size={16} className="text-primary shrink-0" />
-              <p className="text-sm font-semibold text-on-surface truncate flex-1">{previewFilename}</p>
-              <span className="text-[10px] text-outline hidden sm:block">ESC</span>
-              <button onClick={closePreview} className="w-7 h-7 rounded-full hover:bg-surface-container-low flex items-center justify-center"><FileText size={16} /></button>
-            </div>
-            <div className="flex-1 overflow-auto bg-surface-container-low/30">
-              {previewLoading ? <div className="flex items-center justify-center h-48"><Loader2 size={22} className="animate-spin text-primary" /></div> :
-               previewUrl ? <iframe src={previewUrl} className="w-full h-[calc(70vh-96px)] border-0" /> :
-               <div className="flex items-center justify-center h-48">
-                 {previewError ? (
-                   <div className="text-center px-4">
-                     <p className="text-sm text-error font-semibold">File tidak tersedia</p>
-                     <p className="text-xs text-on-surface-variant mt-1">{previewError}</p>
-                   </div>
-                 ) : (
-                   <p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p>
-                 )}
-               </div>}
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="space-y-6 max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -285,22 +230,14 @@ function DokumenDetailPage() {
             {!isNonMaterial && dok.nominal_realisasi !== null && dok.nominal_realisasi !== undefined && (
               <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi</p><p className="text-sm font-semibold text-on-surface">Rp {(typeof dok.nominal_realisasi === 'number' ? dok.nominal_realisasi : parseFloat(dok.nominal_realisasi)).toLocaleString('id-ID')}</p></div>
             )}
+            {dok.keterangan_detail && (
+              <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Keterangan Detail</p><p className="text-sm text-on-surface whitespace-pre-wrap">{dok.keterangan_detail}</p></div>
+            )}
           </div>
         </div>
 
         {/* Lampiran */}
-        <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-          <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Lampiran ({dok.lampiran_urls.length})</p>
-          {dok.lampiran_urls.length === 0 ? <p className="text-xs text-center py-4 text-on-surface-variant">Belum ada lampiran.</p> :
-           <div className="space-y-2">{dok.lampiran_urls.map((lamp, i) => (
-             <div key={i} className="flex items-center gap-3 p-3 bg-surface-container-low/20 rounded-lg">
-               <FileText size={16} className="text-primary shrink-0" />
-               <div className="flex-1 min-w-0"><p className="text-xs font-medium text-on-surface truncate">{lamp.nama}</p><p className="text-[10px] text-outline">{formatDateTime(lamp.uploaded_at)}</p></div>
-               <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(i)}><Eye size={14} /></Button>
-               <Button size="icon-xs" variant="ghost" onClick={() => { fetch(`/api/dokumen/${id}/download/${i}`, { credentials: 'include' }).then(r => r.json()).then(d => d.signedUrl && window.open(d.signedUrl, '_blank')).catch(() => alert('Gagal download')) }}><Download size={14} /></Button>
-             </div>
-           ))}</div>}
-        </div>
+        <AttachmentViewer dokumen={dok as any} lampiranUrls={dok.lampiran_urls} />
 
         {/* Activity Log */}
         <ActivityLog dokumenId={id} />

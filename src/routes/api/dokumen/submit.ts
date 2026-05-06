@@ -153,8 +153,58 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           })
         }
 
+        // Helper functions for renaming pending files
+        function isPendingPath(url: string): boolean {
+          const pathParts = url.split('/')
+          const filenameWithExt = pathParts[pathParts.length - 1] || ''
+          return /^\d{13}-[a-zA-Z0-9]+-.+$/.test(filenameWithExt)
+        }
+
+        function extractExtension(url: string): string {
+          const filename = url.split('/').pop() || ''
+          const parts = filename.split('.')
+          return parts.length > 1 ? parts[parts.length - 1] : ''
+        }
+
+        // Build formal storage path
+        function buildFormalPath(userId: string, dokId: string, ext: string): string {
+          return `${userId}/${dokId}/${crypto.randomUUID()}.${ext}`
+        }
+
         // Judul: [Leaf Node] [Tahun] [Nama Pegawai]
         const judul = `${leafName} ${parsed.data.tahun} ${userName}`
+
+        // Pre-process lampiranUrls: rename pending files before create
+        let processedLampirans = parsed.data.lampiranUrls
+        for (let i = 0; i < processedLampirans.length; i++) {
+          const lamp = processedLampirans[i]
+          if (!lamp.url || !isPendingPath(lamp.url)) continue
+
+          const oldPath = lamp.url
+          const ext = extractExtension(oldPath)
+          const newPath = buildFormalPath(session.user.id, 'temp-id', ext)
+
+          console.log('[API/dokumen/submit] Renaming pending file:', oldPath, '->', newPath)
+          const { error: moveError } = await admin.storage
+            .from('dokumen-lampiran')
+            .move(oldPath, newPath)
+
+          if (moveError) {
+            console.error('[API/dokumen/submit] Move failed:', oldPath, 'error:', moveError.message)
+            return Response.json({
+              error: `Gagal menyimpan perubahan: file "${oldPath}" gagal diproses. Silakan coba lagi.`,
+              details: {
+                failedPath: oldPath,
+                newPath: newPath,
+                reason: moveError.message,
+              },
+            }, { status: 500 })
+          }
+
+          processedLampirans[i] = { ...lamp, url: newPath }
+          console.log('[API/dokumen/submit] Move success:', newPath)
+        }
+
         const createResult = await createDokumen(supabase, {
           judul,
           fungsiId: parsed.data.fungsiId,
@@ -162,7 +212,7 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           isKetuaTim: parsed.data.isKetuaTim,
           tahun: parsed.data.tahun,
           tanggal: parsed.data.tanggal,
-          lampiranUrls: parsed.data.lampiranUrls,
+          lampiranUrls: processedLampirans,
           createdBy: session.user.id,
           nominalRealisasi: parsed.data.nominal_realisasi ?? 0,
           isNonMaterial: parsed.data.is_non_material,

@@ -129,6 +129,16 @@ export async function getDokumenById(
     if (det) (data as any).detail_permintaan_nama = det.nama
   }
 
+  // Manual join: fetch jenis_dokumen nama (for Non-Material)
+  if ((data as any).jenis_dokumen_id) {
+    const { data: jenisDok } = await supabase
+      .from('master_jenis_dokumen')
+      .select('nama')
+      .eq('id', (data as any).jenis_dokumen_id)
+      .single()
+    if (jenisDok) (data as any).jenis_dokumen_nama = jenisDok.nama
+  }
+
   return parseDokumen(data)
 }
 
@@ -263,6 +273,7 @@ export async function updateDokumen(
     tanggal?: string
     nominalRealisasi?: number | null
     isNonMaterial?: boolean
+    keteranganDetail?: string | null
   }
 ): Promise<{ data?: DokumenRow; error?: string }> {
   const updates: Record<string, any> = { updated_at: new Date().toISOString() }
@@ -290,6 +301,9 @@ export async function updateDokumen(
   }
   if (payload.isNonMaterial !== undefined) {
     updates.is_non_material = payload.isNonMaterial
+  }
+  if (payload.keteranganDetail !== undefined) {
+    updates.keterangan_detail = payload.keteranganDetail
   }
 
   const { data, error } = await supabase
@@ -708,6 +722,7 @@ function parseDokumen(raw: any): DokumenRow {
     jenis_permintaan_nama: raw.jenis_permintaan_nama,
     kategori_permintaan_nama: raw.kategori_permintaan_nama,
     detail_permintaan_nama: raw.detail_permintaan_nama,
+    jenis_dokumen_nama: raw.jenis_dokumen_nama,
   }
 }
 
@@ -751,5 +766,125 @@ function parseDokumenWithNames(
     updated_at: raw.updated_at,
     fungsi_nama: fungsiMap[raw.fungsi_id] ?? raw.fungsi_nama ?? undefined,
     kegiatan_nama: kegMap[raw.kegiatan_jenis_id] ?? raw.kegiatan_nama ?? undefined,
+    jenis_dokumen_nama: raw.jenis_dokumen_nama,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Storage Filename Helpers (Single Source of Truth)
+// ---------------------------------------------------------------------------
+
+/**
+ * Membersihkan karakter berbahaya dari nama file.
+ * Karakter seperti / \ * ? " < > | akan diganti dengan underscore.
+ */
+function _sanitizeFilename(str: string): string {
+  return str.replace(/[\/\\:*?"<>|]/g, '_').replace(/_+/g, '_')
+}
+
+/**
+ * Mengekstrak ekstensi dari nama file.
+ * Returns: ekstensi dalam lowercase atau string kosong jika tidak ada.
+ */
+function _extractExtension(filename: string): string {
+  const lastDotIdx = filename.lastIndexOf('.')
+  return lastDotIdx > 0 && lastDotIdx < filename.length - 1
+    ? filename.slice(lastDotIdx + 1).toLowerCase()
+    : ''
+}
+
+/**
+ * Mengekstrak nama file dari storage path.
+ * Handles format: [folder]/[filename.ext] atau dash-style [timestamp]-[random]-[filename]
+ */
+function _extractFilenameFromPath(url: string): string {
+  const pathParts = url.split('/')
+  const filenameWithExt = pathParts[pathParts.length - 1] || 'download'
+
+  // Cek apakah dash-format (PENDING file): timestamp-random-filename
+  const dashMatch = filenameWithExt.match(/^\d{13}-[a-zA-Z0-9]+-(.+)$/)
+  if (dashMatch) {
+    return dashMatch[1]
+  }
+
+  return filenameWithExt
+}
+
+/**
+ * Cek apakah storage path adalah PENDING file.
+ * PENDING = storage path dengan format timestamp-random-filename (dash).
+ * File PENDING adalah file yang baru diupload saat edit/revisi.
+ * File FORMAL adalah file yang sudah disubmit ke workflow.
+ */
+export function isStoragePathPending(lampiranUrl: string): boolean {
+  const pathParts = lampiranUrl.split('/')
+  const filenameWithExt = pathParts[pathParts.length - 1] || 'download'
+  return /^\d{13}-[a-zA-Z0-9]+-.+$/.test(filenameWithExt)
+}
+
+/**
+ * Membangun nama file formal berdasarkan metadata dokumen.
+ *
+ * FORMAT:
+ * - Material: [Kelengkapan]_[Detail/Kategori/Jenis_Permintaan]_[Kegiatan]_[YYYY-MM-DD].ext
+ * - Non-Material: [Kelengkapan]_[Jenis_Dokumen_Nama]_[Kegiatan]_[YYYY-MM-DD].ext
+ *
+ * Contoh Material: "Daftar_Nilai_Translok>8_Jam_SAKERNAS_2026-05-05.pdf"
+ * Contoh Non-Material: "Notulen_Rapat_Service_2026-05-05.pdf"
+ */
+export function buildDokumenFilename(dok: DokumenRow, lamp: LampiranUrl): string {
+  const kelengkapanNama = lamp.nama || 'Dokumen'
+  const kegiatanNama = dok.kegiatan_nama || 'TanpaKegiatan'
+  const tanggal = dok.tanggal || ''
+
+  // Tentukan leaf node berdasarkan tipe dokumen
+  let leafNode: string
+  if (dok.is_non_material) {
+    // Non-Material: gunakan jenis_dokumen_nama dari master_jenis_dokumen
+    leafNode = dok.jenis_dokumen_nama || 'Dokumen'
+  } else {
+    // Material: leaf node dari permintaan chain
+    leafNode = dok.detail_permintaan_nama
+      || dok.kategori_permintaan_nama
+      || dok.jenis_permintaan_nama
+      || kegiatanNama
+  }
+
+  // Extract extension dari storage path
+  const ext = _extractExtension(lamp.url)
+
+  return `${_sanitizeFilename(kelengkapanNama)}_${_sanitizeFilename(leafNode)}_${_sanitizeFilename(kegiatanNama)}_${tanggal}.${ext}`
+}
+
+/**
+ * Membangun nama file untuk storage/display.
+ * - Jika file PENDING (dash-format path), kembalikan nama upload asli
+ * - Jika file FORMAL, kembalikan formal filename
+ */
+export function buildStorageFilename(dok: DokumenRow, lamp: LampiranUrl): string {
+  if (isStoragePathPending(lamp.url)) {
+    // File PENDING - gunakan nama upload asli dari storage path
+    return _extractFilenameFromPath(lamp.url)
+  }
+
+  // File FORMAL - gunakan formal filename
+  return buildDokumenFilename(dok, lamp)
+}
+
+/**
+ * Membangun storage path formal untuk file yang sudah disubmit.
+ * Format: {user_id}/{dok_id}/{uuid}.{ext}
+ *
+ * Storage path flat dan tidak mengandung info metadata (agar tidak perlu
+ * update path saat metadata berubah). Display filename tetap mengikuti
+ * format formal di buildDokumenFilename().
+ */
+export function buildFormalStoragePath(
+  userId: string,
+  dokId: string,
+  lamp: LampiranUrl
+): string {
+  const ext = _extractExtension(lamp.url)
+  const uuid = crypto.randomUUID()
+  return `${userId}/${dokId}/${uuid}.${ext}`
 }

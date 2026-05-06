@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession } from '#/lib/auth'
+import { getDokumenById } from '#/lib/dokumen-helpers'
 
 function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -15,6 +16,7 @@ function createAuthClient(request: Request) {
 // ---------------------------------------------------------------------------
 // GET /api/ppk/dokumen/[id]/preview/[lampiranIndex]
 // Returns a 15-minute signed URL for in-browser preview
+// NOTE: Filename is built client-side using buildStorageFilename()
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranIndex')({
@@ -39,15 +41,10 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
           return Response.json({ error: 'Akses ditolak' }, { status: 403 })
         }
 
-        // Fetch dokumen via admin (bypass RLS)
-        const admin = createAdminClient()
-        const { data: dok, error: dokError } = await admin
-          .from('dokumen_transaksi')
-          .select('lampiran_urls, created_by')
-          .eq('id', params.id)
-          .single()
+        // Fetch dokumen via getDokumenById (includes manual joins for leaf node names)
+        const dok = await getDokumenById(authClient, params.id)
 
-        if (dokError || !dok) {
+        if (!dok) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
 
@@ -62,13 +59,8 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
           return Response.json({ error: 'File asli tidak tersedia — arsip telah dimusnahkan' }, { status: 410 })
         }
 
-        // Parse lampiran_urls
-        let lampiranUrls: any[] = []
-        if (dok.lampiran_urls) {
-          lampiranUrls = typeof dok.lampiran_urls === 'string'
-            ? JSON.parse(dok.lampiran_urls)
-            : dok.lampiran_urls
-        }
+        // lampiran_urls sudah di-parse oleh getDokumenById
+        const lampiranUrls = dok.lampiran_urls
 
         const index = parseInt(params.lampiranIndex, 10)
         if (isNaN(index) || index < 0 || index >= lampiranUrls.length) {
@@ -77,13 +69,13 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
 
         const lampiran = lampiranUrls[index]
 
-        // 15-minute signed URL for preview
+        // Generate signed URL (15 minutes, no download flag)
+        const admin = createAdminClient()
         const { data, error } = await admin.storage
           .from('dokumen-lampiran')
-          .createSignedUrl(lampiran.url, 900) // 15 minutes = 900 seconds
+          .createSignedUrl(lampiran.url, 900) // 15 minutes
 
         if (error || !data) {
-          // Object not found means file was deleted (musnah)
           if (error?.message === 'Object not found') {
             return Response.json({ error: 'File asli tidak tersedia — arsip telah dimusnahkan' }, { status: 410 })
           }
@@ -91,7 +83,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/preview/$lampiranInde
           return Response.json({ error: 'Gagal membuat link pratinjau' }, { status: 500 })
         }
 
-        return Response.json({ signedUrl: data.signedUrl, filename: lampiran.nama })
+        return Response.json({ signedUrl: data.signedUrl })
       },
     },
   },

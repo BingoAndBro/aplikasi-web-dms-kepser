@@ -78,6 +78,7 @@ import { Route as ApiMasterDetailIdRouteImport } from './routes/api/master-detai
 import { Route as ApiLaporanSayaRouteImport } from './routes/api/laporan/saya'
 import { Route as ApiLaporanKegiatanRouteImport } from './routes/api/laporan/kegiatan'
 import { Route as ApiDokumenSubmitRouteImport } from './routes/api/dokumen/submit'
+import { Route as ApiDokumenRenamePendingRouteImport } from './routes/api/dokumen/rename-pending'
 import { Route as ApiDokumenPreviewUrlRouteImport } from './routes/api/dokumen/preview-url'
 import { Route as ApiDokumenDownloadUrlRouteImport } from './routes/api/dokumen/download-url'
 import { Route as ApiDokumenIdRouteImport } from './routes/api/dokumen.$id'
@@ -138,7 +139,9 @@ import { Route as ApiArsiparisInaktifIdMusnahkanRouteImport } from './routes/api
 import { Route as ApiArsiparisDokumenIdArchiveRouteImport } from './routes/api/arsiparis/dokumen.$id.archive'
 import { Route as ApiArsiparisAktifIdPindahkanRouteImport } from './routes/api/arsiparis/aktif.$id/pindahkan'
 import { Route as ApiPpkDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/preview/$lampiranIndex'
+import { Route as ApiPpkDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/download/$lampiranIndex'
 import { Route as ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/bendahara/dokumen/$id/preview/$lampiranIndex'
+import { Route as ApiBendaharaDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/bendahara/dokumen/$id/download/$lampiranIndex'
 
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
@@ -486,6 +489,11 @@ const ApiDokumenSubmitRoute = ApiDokumenSubmitRouteImport.update({
   path: '/api/dokumen/submit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDokumenRenamePendingRoute = ApiDokumenRenamePendingRouteImport.update({
+  id: '/api/dokumen/rename-pending',
+  path: '/api/dokumen/rename-pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDokumenPreviewUrlRoute = ApiDokumenPreviewUrlRouteImport.update({
   id: '/api/dokumen/preview-url',
   path: '/api/dokumen/preview-url',
@@ -802,10 +810,22 @@ const ApiPpkDokumenIdPreviewLampiranIndexRoute =
     path: '/preview/$lampiranIndex',
     getParentRoute: () => ApiPpkDokumenIdRoute,
   } as any)
+const ApiPpkDokumenIdDownloadLampiranIndexRoute =
+  ApiPpkDokumenIdDownloadLampiranIndexRouteImport.update({
+    id: '/download/$lampiranIndex',
+    path: '/download/$lampiranIndex',
+    getParentRoute: () => ApiPpkDokumenIdRoute,
+  } as any)
 const ApiBendaharaDokumenIdPreviewLampiranIndexRoute =
   ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport.update({
     id: '/preview/$lampiranIndex',
     path: '/preview/$lampiranIndex',
+    getParentRoute: () => ApiBendaharaDokumenIdRoute,
+  } as any)
+const ApiBendaharaDokumenIdDownloadLampiranIndexRoute =
+  ApiBendaharaDokumenIdDownloadLampiranIndexRouteImport.update({
+    id: '/download/$lampiranIndex',
+    path: '/download/$lampiranIndex',
     getParentRoute: () => ApiBendaharaDokumenIdRoute,
   } as any)
 
@@ -870,6 +890,7 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
+  '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
@@ -938,7 +959,9 @@ export interface FileRoutesByFullPath {
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
   '/api/users/me/is-ketua-tim/$kegiatanId': typeof ApiUsersMeIsKetuaTimKegiatanIdRoute
+  '/api/bendahara/dokumen/$id/download/$lampiranIndex': typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
   '/api/bendahara/dokumen/$id/preview/$lampiranIndex': typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
+  '/api/ppk/dokumen/$id/download/$lampiranIndex': typeof ApiPpkDokumenIdDownloadLampiranIndexRoute
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
 }
 export interface FileRoutesByTo {
@@ -998,6 +1021,7 @@ export interface FileRoutesByTo {
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
+  '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
@@ -1064,7 +1088,9 @@ export interface FileRoutesByTo {
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
   '/api/users/me/is-ketua-tim/$kegiatanId': typeof ApiUsersMeIsKetuaTimKegiatanIdRoute
+  '/api/bendahara/dokumen/$id/download/$lampiranIndex': typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
   '/api/bendahara/dokumen/$id/preview/$lampiranIndex': typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
+  '/api/ppk/dokumen/$id/download/$lampiranIndex': typeof ApiPpkDokumenIdDownloadLampiranIndexRoute
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
 }
 export interface FileRoutesById {
@@ -1129,6 +1155,7 @@ export interface FileRoutesById {
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
+  '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
@@ -1197,7 +1224,9 @@ export interface FileRoutesById {
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
   '/api/users/me/is-ketua-tim/$kegiatanId': typeof ApiUsersMeIsKetuaTimKegiatanIdRoute
+  '/api/bendahara/dokumen/$id/download/$lampiranIndex': typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
   '/api/bendahara/dokumen/$id/preview/$lampiranIndex': typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
+  '/api/ppk/dokumen/$id/download/$lampiranIndex': typeof ApiPpkDokumenIdDownloadLampiranIndexRoute
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
 }
 export interface FileRouteTypes {
@@ -1263,6 +1292,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
+    | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
@@ -1331,7 +1361,9 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
     | '/api/users/me/is-ketua-tim/$kegiatanId'
+    | '/api/bendahara/dokumen/$id/download/$lampiranIndex'
     | '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
+    | '/api/ppk/dokumen/$id/download/$lampiranIndex'
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1391,6 +1423,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
+    | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
@@ -1457,7 +1490,9 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
     | '/api/users/me/is-ketua-tim/$kegiatanId'
+    | '/api/bendahara/dokumen/$id/download/$lampiranIndex'
     | '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
+    | '/api/ppk/dokumen/$id/download/$lampiranIndex'
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
   id:
     | '__root__'
@@ -1521,6 +1556,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
+    | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
@@ -1589,7 +1625,9 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
     | '/api/users/me/is-ketua-tim/$kegiatanId'
+    | '/api/bendahara/dokumen/$id/download/$lampiranIndex'
     | '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
+    | '/api/ppk/dokumen/$id/download/$lampiranIndex'
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
   fileRoutesById: FileRoutesById
 }
@@ -1639,6 +1677,7 @@ export interface RootRouteChildren {
   ApiDokumenIdRoute: typeof ApiDokumenIdRouteWithChildren
   ApiDokumenDownloadUrlRoute: typeof ApiDokumenDownloadUrlRoute
   ApiDokumenPreviewUrlRoute: typeof ApiDokumenPreviewUrlRoute
+  ApiDokumenRenamePendingRoute: typeof ApiDokumenRenamePendingRoute
   ApiDokumenSubmitRoute: typeof ApiDokumenSubmitRoute
   ApiLaporanKegiatanRoute: typeof ApiLaporanKegiatanRoute
   ApiLaporanSayaRoute: typeof ApiLaporanSayaRoute
@@ -2153,6 +2192,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDokumenSubmitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dokumen/rename-pending': {
+      id: '/api/dokumen/rename-pending'
+      path: '/api/dokumen/rename-pending'
+      fullPath: '/api/dokumen/rename-pending'
+      preLoaderRoute: typeof ApiDokumenRenamePendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/dokumen/preview-url': {
       id: '/api/dokumen/preview-url'
       path: '/api/dokumen/preview-url'
@@ -2573,11 +2619,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPpkDokumenIdPreviewLampiranIndexRouteImport
       parentRoute: typeof ApiPpkDokumenIdRoute
     }
+    '/api/ppk/dokumen/$id/download/$lampiranIndex': {
+      id: '/api/ppk/dokumen/$id/download/$lampiranIndex'
+      path: '/download/$lampiranIndex'
+      fullPath: '/api/ppk/dokumen/$id/download/$lampiranIndex'
+      preLoaderRoute: typeof ApiPpkDokumenIdDownloadLampiranIndexRouteImport
+      parentRoute: typeof ApiPpkDokumenIdRoute
+    }
     '/api/bendahara/dokumen/$id/preview/$lampiranIndex': {
       id: '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
       path: '/preview/$lampiranIndex'
       fullPath: '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
       preLoaderRoute: typeof ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport
+      parentRoute: typeof ApiBendaharaDokumenIdRoute
+    }
+    '/api/bendahara/dokumen/$id/download/$lampiranIndex': {
+      id: '/api/bendahara/dokumen/$id/download/$lampiranIndex'
+      path: '/download/$lampiranIndex'
+      fullPath: '/api/bendahara/dokumen/$id/download/$lampiranIndex'
+      preLoaderRoute: typeof ApiBendaharaDokumenIdDownloadLampiranIndexRouteImport
       parentRoute: typeof ApiBendaharaDokumenIdRoute
     }
   }
@@ -2914,12 +2974,15 @@ const ApiArsiparisDokumenIdRouteWithChildren =
 interface ApiBendaharaDokumenIdRouteChildren {
   ApiBendaharaDokumenIdApproveRoute: typeof ApiBendaharaDokumenIdApproveRoute
   ApiBendaharaDokumenIdRejectRoute: typeof ApiBendaharaDokumenIdRejectRoute
+  ApiBendaharaDokumenIdDownloadLampiranIndexRoute: typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
   ApiBendaharaDokumenIdPreviewLampiranIndexRoute: typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
 }
 
 const ApiBendaharaDokumenIdRouteChildren: ApiBendaharaDokumenIdRouteChildren = {
   ApiBendaharaDokumenIdApproveRoute: ApiBendaharaDokumenIdApproveRoute,
   ApiBendaharaDokumenIdRejectRoute: ApiBendaharaDokumenIdRejectRoute,
+  ApiBendaharaDokumenIdDownloadLampiranIndexRoute:
+    ApiBendaharaDokumenIdDownloadLampiranIndexRoute,
   ApiBendaharaDokumenIdPreviewLampiranIndexRoute:
     ApiBendaharaDokumenIdPreviewLampiranIndexRoute,
 }
@@ -2932,12 +2995,15 @@ const ApiBendaharaDokumenIdRouteWithChildren =
 interface ApiPpkDokumenIdRouteChildren {
   ApiPpkDokumenIdApproveRoute: typeof ApiPpkDokumenIdApproveRoute
   ApiPpkDokumenIdRejectRoute: typeof ApiPpkDokumenIdRejectRoute
+  ApiPpkDokumenIdDownloadLampiranIndexRoute: typeof ApiPpkDokumenIdDownloadLampiranIndexRoute
   ApiPpkDokumenIdPreviewLampiranIndexRoute: typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
 }
 
 const ApiPpkDokumenIdRouteChildren: ApiPpkDokumenIdRouteChildren = {
   ApiPpkDokumenIdApproveRoute: ApiPpkDokumenIdApproveRoute,
   ApiPpkDokumenIdRejectRoute: ApiPpkDokumenIdRejectRoute,
+  ApiPpkDokumenIdDownloadLampiranIndexRoute:
+    ApiPpkDokumenIdDownloadLampiranIndexRoute,
   ApiPpkDokumenIdPreviewLampiranIndexRoute:
     ApiPpkDokumenIdPreviewLampiranIndexRoute,
 }
@@ -2992,6 +3058,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenIdRoute: ApiDokumenIdRouteWithChildren,
   ApiDokumenDownloadUrlRoute: ApiDokumenDownloadUrlRoute,
   ApiDokumenPreviewUrlRoute: ApiDokumenPreviewUrlRoute,
+  ApiDokumenRenamePendingRoute: ApiDokumenRenamePendingRoute,
   ApiDokumenSubmitRoute: ApiDokumenSubmitRoute,
   ApiLaporanKegiatanRoute: ApiLaporanKegiatanRoute,
   ApiLaporanSayaRoute: ApiLaporanSayaRoute,

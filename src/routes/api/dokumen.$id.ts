@@ -114,33 +114,80 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               : dok.lampiran_urls as LampiranUrl[])
           : []
 
+        // Helper functions for renaming pending files
+        function isPendingPath(url: string): boolean {
+          const pathParts = url.split('/')
+          const filenameWithExt = pathParts[pathParts.length - 1] || ''
+          return /^\d{13}-[a-zA-Z0-9]+-.+$/.test(filenameWithExt)
+        }
+
+        function extractExtension(url: string): string {
+          const filename = url.split('/').pop() || ''
+          const parts = filename.split('.')
+          return parts.length > 1 ? parts[parts.length - 1] : ''
+        }
+
         // Collect old URLs that will be replaced
         const oldUrls: string[] = []
-        if (parsed.data.lampiranUrls) {
-          for (const newLamp of parsed.data.lampiranUrls) {
-            const oldLamp = storedLampirans.find(l => l.kelengkapan_id === newLamp.kelengkapan_id)
+        const admin = createAdminClient()
+        let processedLampirans = parsed.data.lampiranUrls ?? undefined
+
+        if (parsed.data.lampiranUrls && parsed.data.lampiranUrls.length > 0) {
+          // Pre-process: rename pending files
+          for (let i = 0; i < parsed.data.lampiranUrls.length; i++) {
+            const lamp = parsed.data.lampiranUrls[i]
+            if (!lamp.url || !isPendingPath(lamp.url)) continue
+
+            const oldLamp = storedLampirans.find(l => l.kelengkapan_id === lamp.kelengkapan_id)
             console.log('[PATCH] Checking replacement:', {
-              kelengkapan_id: newLamp.kelengkapan_id,
-              newUrl: newLamp.url,
+              kelengkapan_id: lamp.kelengkapan_id,
+              newUrl: lamp.url,
               oldUrl: oldLamp?.url,
-              willDelete: oldLamp && oldLamp.url !== newLamp.url
+              willDelete: oldLamp && oldLamp.url !== lamp.url
             })
-            if (oldLamp && oldLamp.url !== newLamp.url) {
+            if (oldLamp && oldLamp.url !== lamp.url) {
               oldUrls.push(oldLamp.url)
             }
-          }
-        }
-        console.log('[PATCH] Old URLs to delete:', oldUrls)
 
-        const admin = createAdminClient()
+            // Rename pending file to formal path
+            const ext = extractExtension(lamp.url)
+            const newPath = `${session.user.id}/${params.id}/${crypto.randomUUID()}.${ext}`
+
+            console.log('[PATCH] Renaming pending file:', lamp.url, '->', newPath)
+            const { error: moveError } = await admin.storage
+              .from('dokumen-lampiran')
+              .move(lamp.url, newPath)
+
+            if (moveError) {
+              console.error('[PATCH] Move failed:', lamp.url, 'error:', moveError.message)
+              return Response.json({
+                error: `Gagal menyimpan perubahan: file "${lamp.url}" gagal diproses. Silakan coba lagi.`,
+                details: {
+                  failedPath: lamp.url,
+                  newPath: newPath,
+                  reason: moveError.message,
+                },
+              }, { status: 500 })
+            }
+
+            // Update in processedLampirans
+            if (!processedLampirans) processedLampirans = [...parsed.data.lampiranUrls]
+            processedLampirans[i] = { ...lamp, url: newPath }
+            console.log('[PATCH] Move success:', newPath)
+          }
+
+          console.log('[PATCH] Old URLs to delete:', oldUrls)
+        }
+
         const result = await updateDokumen(admin, params.id, {
-          lampiranUrls: parsed.data.lampiranUrls,
+          lampiranUrls: processedLampirans,
           judul: parsed.data.judul,
           tahun: parsed.data.tahun,
           fungsiId: parsed.data.fungsiId,
           kegiatanId: parsed.data.kegiatanId,
           tanggal: parsed.data.tanggal,
           nominalRealisasi: parsed.data.nominalRealisasi,
+          keteranganDetail: parsed.data.keteranganDetail,
         })
 
         if (result.error) {
