@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession } from '#/lib/auth'
 import { transition } from '#/lib/fsm'
-import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
+import { updateDokumenStatus, insertLog, syncDocumentAttachments, deleteOrphanFiles } from '#/lib/dokumen-helpers'
 import { resubmitDokumenSchema } from '#/lib/schemas/dokumen'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
@@ -138,32 +138,45 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
           return Response.json({ error: 'Dokumen ini tidak memerlukan revisi oleh PPK' }, { status: 400 })
         }
 
-        const oldUrls: string[] = []
-        let existingLampirans: any[] = []
-        if (dok.lampiran_urls) {
-          existingLampirans = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
-        }
+        // Parse existing lampirans from database
+        const existingLampirans: LampiranUrl[] = dok.lampiran_urls
+          ? (typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls)
+          : []
+
+        // Sync attachments: move PENDING files + track old files for deletion
+        let pathsToDelete: string[] = []
+        let updatedLampirans = body.lampiranUrls ?? existingLampirans
 
         if (body.lampiranUrls && Array.isArray(body.lampiranUrls)) {
-          for (const newLamp of body.lampiranUrls) {
-            const oldLamp = existingLampirans.find((l: any) => l.kelengkapan_id === newLamp.kelengkapan_id)
-            if (oldLamp && oldLamp.url !== newLamp.url) oldUrls.push(oldLamp.url)
+          try {
+            const result = await syncDocumentAttachments(
+              admin,
+              session.user.id,
+              params.id,
+              body.lampiranUrls,
+              existingLampirans
+            )
+            updatedLampirans = result.updatedLampirans
+            pathsToDelete = result.pathsToDelete
+          } catch (err) {
+            console.error('[resubmit/PATCH] syncDocumentAttachments error:', err)
+            return Response.json({
+              error: `Gagal menyimpan perubahan: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`,
+            }, { status: 500 })
           }
         }
 
+        // Update database
         const { error: updateErr } = await admin.from('dokumen_transaksi').update({
-          lampiran_urls: body.lampiranUrls ? JSON.stringify(body.lampiranUrls) : undefined,
+          lampiran_urls: JSON.stringify(updatedLampirans),
           nominal_realisasi: body.nominalRealisasi,
           updated_at: new Date().toISOString(),
         }).eq('id', params.id)
 
         if (updateErr) return Response.json({ error: 'Gagal menyimpan' }, { status: 500 })
 
-        for (const oldUrl of oldUrls) {
-          admin.storage.from('dokumen-lampiran').remove([oldUrl]).then(({ error }) => {
-            if (error) console.warn('[resubmit/PATCH] Failed to delete old file:', oldUrl, error.message)
-          })
-        }
+        // Delete orphaned files (fire and forget)
+        deleteOrphanFiles(admin, pathsToDelete)
 
         return Response.json({ success: true })
       },
@@ -211,75 +224,31 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
         console.log('[API/ppk/resubmit/:id] FSM result:', result.success ? 'success' : result.error)
         if (!result.success) return Response.json({ error: result.error || 'Transisi gagal' }, { status: 400 })
 
-        // Helper functions for renaming
-        function isPendingPath(url: string): boolean {
-          const pathParts = url.split('/')
-          const filenameWithExt = pathParts[pathParts.length - 1] || ''
-          return /^\d{13}-[a-zA-Z0-9]+-.+$/.test(filenameWithExt)
-        }
+        // Parse existing lampirans from database
+        const existingLampirans: LampiranUrl[] = dok.lampiran_urls
+          ? (typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls)
+          : []
 
-        function extractExtension(url: string): string {
-          const filename = url.split('/').pop() || ''
-          const parts = filename.split('.')
-          return parts.length > 1 ? parts[parts.length - 1] : ''
-        }
-
-        // Collect old URLs that will be replaced
-        const oldUrls: string[] = []
-        let updatedLampirans: LampiranUrl[] | undefined
+        // Sync attachments: move PENDING files + track old files for deletion
+        let pathsToDelete: string[] = []
+        let updatedLampirans: LampiranUrl[] | undefined = body.lampiranUrls
 
         if (body.lampiranUrls && Array.isArray(body.lampiranUrls)) {
-          let existingLampirans: any[] = []
-          if (dok.lampiran_urls) {
-            existingLampirans = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
-          }
-          for (const newLamp of body.lampiranUrls) {
-            const oldLamp = existingLampirans.find((l: any) => l.kelengkapan_id === newLamp.kelengkapan_id)
-            if (oldLamp && oldLamp.url !== newLamp.url) {
-              oldUrls.push(oldLamp.url)
-            }
-          }
-          updatedLampirans = [...body.lampiranUrls]
-        }
-
-        // Rename pending files before saving to database
-        const pathsToDelete: string[] = []
-        if (updatedLampirans && updatedLampirans.length > 0) {
-          console.log('[API/ppk/resubmit/:id] Renaming pending files...')
-          for (let i = 0; i < updatedLampirans.length; i++) {
-            const lamp = updatedLampirans[i]
-            if (!lamp.url || !isPendingPath(lamp.url)) {
-              console.log('[API/ppk/resubmit/:id] Skipping non-pending:', lamp.url)
-              continue
-            }
-
-            const oldPath = lamp.url
-            const ext = extractExtension(oldPath)
-            const newPath = `${session.user.id}/${params.id}/${crypto.randomUUID()}.${ext}`
-
-            console.log('[API/ppk/resubmit/:id] Moving:', oldPath, '->', newPath)
-            const { error: moveError } = await admin.storage
-              .from('dokumen-lampiran')
-              .move(oldPath, newPath)
-
-            if (moveError) {
-              console.error('[API/ppk/resubmit/:id] Move failed:', oldPath, 'error:', moveError.message)
-              return Response.json({
-                error: `Gagal menyimpan perubahan: file "${oldPath}" gagal diproses. Silakan coba lagi.`,
-                details: {
-                  failedPath: oldPath,
-                  newPath: newPath,
-                  reason: moveError.message,
-                },
-              }, { status: 500 })
-            }
-
-            // Track old PENDING path for deletion (cleanup orphan PENDING files)
-            pathsToDelete.push(oldPath)
-            console.log('[API/ppk/resubmit/:id] Move success, new path:', newPath)
-
-            // Update lampiran with new path
-            updatedLampirans[i] = { ...lamp, url: newPath }
+          try {
+            const syncResult = await syncDocumentAttachments(
+              admin,
+              session.user.id,
+              params.id,
+              body.lampiranUrls,
+              existingLampirans
+            )
+            updatedLampirans = syncResult.updatedLampirans
+            pathsToDelete = syncResult.pathsToDelete
+          } catch (err) {
+            console.error('[API/ppk/resubmit/:id] syncDocumentAttachments error:', err)
+            return Response.json({
+              error: `Gagal menyimpan perubahan: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`,
+            }, { status: 500 })
           }
         }
 
@@ -317,21 +286,8 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
           stepUrutan: result.stepUrutan,
         })
 
-        // Delete REPLACED old files (from database old URLs)
-        for (const oldUrl of oldUrls) {
-          admin.storage.from('dokumen-lampiran').remove([oldUrl]).then(({ error }) => {
-            if (error) console.warn('[resubmit] Failed to delete replaced file:', oldUrl, error.message)
-            else console.log('[resubmit] Deleted replaced file:', oldUrl)
-          })
-        }
-
-        // Delete OLD PENDING paths (cleanup orphan PENDING files from previous edits)
-        for (const pendingPath of pathsToDelete) {
-          admin.storage.from('dokumen-lampiran').remove([pendingPath]).then(({ error }) => {
-            if (error) console.warn('[resubmit] Failed to delete orphan pending:', pendingPath, error.message)
-            else console.log('[resubmit] Deleted orphan pending:', pendingPath)
-          })
-        }
+        // Delete orphaned files (fire and forget)
+        deleteOrphanFiles(admin, pathsToDelete)
 
         console.log('[API/ppk/resubmit/:id] POST SUCCESS')
         return Response.json({ success: true })
