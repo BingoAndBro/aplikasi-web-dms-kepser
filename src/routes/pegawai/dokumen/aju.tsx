@@ -372,7 +372,9 @@ function AjukanDokumenPage() {
   async function handleSubmit() {
     // Validate based on document type
     if (!isNonMaterial) {
-      const nominal = parseFloat(nominalRealisasi.replace(/[^\d.-]/g, ''))
+      // Strip dots before validation (e.g., "1.000.000" -> "1000000")
+      const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
+      const nominal = parseInt(rawNominal, 10)
       if (isNaN(nominal) || nominal <= 0) {
         setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0 untuk dokumen Material')
         return
@@ -399,7 +401,9 @@ function AjukanDokumenPage() {
     setSubmitError('')
 
     try {
-      const nominalValue = isNonMaterial ? null : parseFloat(nominalRealisasi.replace(/[^\d.-]/g, ''))
+      // Strip dots from formatted number (e.g., "1.000.000" -> "1000000") before parsing
+      const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
+      const nominalValue = isNonMaterial ? null : (parseInt(rawNominal, 10) || null)
 
       const res = await fetch('/api/dokumen/submit', {
         method: 'POST',
