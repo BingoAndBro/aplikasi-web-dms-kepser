@@ -4,62 +4,20 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sanitizeFilename, extractExtension, extractFilenameFromPath, isPendingFile } from './utils/file'
+import { parseDokumen, parseDokumenWithNames } from './dokumen/parse'
+import type {
+  DokumenLaporanRow,
+  DokumenRow,
+  KelengkapanRequired,
+  LampiranUrl,
+  LogRow,
+} from './dokumen/types'
+
+export * from './dokumen'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-export type LampiranUrl = {
-  kelengkapan_id: string
-  nama: string
-  url: string
-  uploaded_at: string
-}
-
-export type DokumenRow = {
-  id: string
-  judul: string
-  fungsi_id: string
-  kegiatan_jenis_id: string
-  is_ketua_tim: boolean
-  status: string
-  current_step: string | null
-  revision_target: string | null
-  revision_notes: string | null
-  lampiran_urls: LampiranUrl[]
-  tahun: number
-  tanggal: string
-  created_by: string
-  nominal_realisasi: number | null
-  is_non_material: boolean
-  jenis_dokumen_id: string | null
-  keterangan_detail: string | null
-  created_at: string
-  updated_at: string
-  // Chain fields (for Material)
-  jenis_permintaan_id?: string | null
-  kategori_permintaan_id?: string | null
-  detail_permintaan_id?: string | null
-  // Joined fields
-  fungsi_nama?: string
-  kegiatan_nama?: string
-  jenis_permintaan_nama?: string
-  kategori_permintaan_nama?: string
-  detail_permintaan_nama?: string
-  jenis_dokumen_nama?: string
-}
-
-export type LogRow = {
-  id: string
-  dokumen_id: string
-  user_id: string
-  aksi: string
-  catatan: string | null
-  step_urutan: number | null
-  timestamp: string
-  // Joined
-  user_nama?: string
-}
 
 // ---------------------------------------------------------------------------
 // Dokumen CRUD Helpers
@@ -429,12 +387,6 @@ export async function getLogsByDokumen(
 // Kelengkapan validation helpers
 // ---------------------------------------------------------------------------
 
-export type KelengkapanRequired = {
-  id: string
-  nama_dokumen: string
-  required: boolean
-}
-
 /**
  * Get required kelengkapan for a kegiatan + role + optional chain.
  * Uses dynamic match: only filters on chain columns if provided.
@@ -554,12 +506,6 @@ export async function resolveLeafNodeName(
 // Laporan Helpers
 // ---------------------------------------------------------------------------
 
-export type DokumenLaporanRow = DokumenRow & {
-  pengaju_nama?: string
-  pengaju_id?: string
-  leaf_node_nama?: string
-}
-
 /**
  * Ambil semua dokumen berstatus COMPLETED atau TERSIMPAN milik user, dengan full join nama.
  * TERSIMPAN = dokumen Non-Material yang tersimpan
@@ -675,100 +621,6 @@ async function _enrichDokumenRows(
       pengaju_id: raw.created_by,
     }
   })
-}
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-function parseDokumen(raw: any): DokumenRow {
-  let lampiranUrls: LampiranUrl[] = []
-  if (raw.lampiran_urls) {
-    if (typeof raw.lampiran_urls === 'string') {
-      try {
-        lampiranUrls = JSON.parse(raw.lampiran_urls)
-      } catch {
-        lampiranUrls = []
-      }
-    } else {
-      lampiranUrls = raw.lampiran_urls
-    }
-  }
-
-  return {
-    id: raw.id,
-    judul: raw.judul,
-    fungsi_id: raw.fungsi_id,
-    kegiatan_jenis_id: raw.kegiatan_jenis_id,
-    is_ketua_tim: raw.is_ketua_tim,
-    status: raw.status,
-    current_step: raw.current_step,
-    revision_target: raw.revision_target,
-    revision_notes: raw.revision_notes,
-    lampiran_urls: lampiranUrls,
-    tahun: raw.tahun,
-    tanggal: raw.tanggal,
-    created_by: raw.created_by,
-    nominal_realisasi: raw.nominal_realisasi ?? null,
-    is_non_material: raw.is_non_material ?? false,
-    jenis_dokumen_id: raw.jenis_dokumen_id ?? null,
-    keterangan_detail: raw.keterangan_detail ?? null,
-    created_at: raw.created_at,
-    updated_at: raw.updated_at,
-    fungsi_nama: raw.fungsi_nama,
-    kegiatan_nama: raw.kegiatan_nama,
-    jenis_permintaan_id: raw.jenis_permintaan_id,
-    kategori_permintaan_id: raw.kategori_permintaan_id,
-    detail_permintaan_id: raw.detail_permintaan_id,
-    jenis_permintaan_nama: raw.jenis_permintaan_nama,
-    kategori_permintaan_nama: raw.kategori_permintaan_nama,
-    detail_permintaan_nama: raw.detail_permintaan_nama,
-    jenis_dokumen_nama: raw.jenis_dokumen_nama,
-  }
-}
-
-function parseDokumenWithNames(
-  raw: any,
-  fungsiMap: Record<string, string>,
-  kegMap: Record<string, string>
-): DokumenRow {
-  let lampiranUrls: LampiranUrl[] = []
-  if (raw.lampiran_urls) {
-    if (typeof raw.lampiran_urls === 'string') {
-      try {
-        lampiranUrls = JSON.parse(raw.lampiran_urls)
-      } catch {
-        lampiranUrls = []
-      }
-    } else {
-      lampiranUrls = raw.lampiran_urls
-    }
-  }
-
-  return {
-    id: raw.id,
-    judul: raw.judul,
-    fungsi_id: raw.fungsi_id,
-    kegiatan_jenis_id: raw.kegiatan_jenis_id,
-    is_ketua_tim: raw.is_ketua_tim,
-    status: raw.status,
-    current_step: raw.current_step,
-    revision_target: raw.revision_target,
-    revision_notes: raw.revision_notes,
-    lampiran_urls: lampiranUrls,
-    tahun: raw.tahun,
-    tanggal: raw.tanggal,
-    created_by: raw.created_by,
-    nominal_realisasi: raw.nominal_realisasi ?? null,
-    is_non_material: raw.is_non_material ?? false,
-    jenis_dokumen_id: raw.jenis_dokumen_id ?? null,
-    keterangan_detail: raw.keterangan_detail ?? null,
-    created_at: raw.created_at,
-    updated_at: raw.updated_at,
-    fungsi_nama: fungsiMap[raw.fungsi_id] ?? raw.fungsi_nama ?? undefined,
-    kegiatan_nama: kegMap[raw.kegiatan_jenis_id] ?? raw.kegiatan_nama ?? undefined,
-    jenis_dokumen_nama: raw.jenis_dokumen_nama,
-  }
 }
 
 // ---------------------------------------------------------------------------
