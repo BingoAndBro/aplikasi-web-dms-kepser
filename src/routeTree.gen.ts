@@ -50,6 +50,7 @@ import { Route as ArsiparisUsulMusnahIndexRouteImport } from './routes/arsiparis
 import { Route as ArsiparisInaktifIndexRouteImport } from './routes/arsiparis/inaktif/index'
 import { Route as ArsiparisAktifIndexRouteImport } from './routes/arsiparis/aktif/index'
 import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
+import { Route as ApiKetuaTimIndexRouteImport } from './routes/api/ketua-tim/index'
 import { Route as ApiDokumenIndexRouteImport } from './routes/api/dokumen/index'
 import { Route as AdminMasterDataIndexRouteImport } from './routes/admin.master-data.index'
 import { Route as PpkDokumenIdRouteImport } from './routes/ppk/dokumen/$id'
@@ -77,6 +78,7 @@ import { Route as ApiMasterFungsiIdRouteImport } from './routes/api/master-fungs
 import { Route as ApiMasterDetailIdRouteImport } from './routes/api/master-detail.$id'
 import { Route as ApiLaporanSayaRouteImport } from './routes/api/laporan/saya'
 import { Route as ApiLaporanKegiatanRouteImport } from './routes/api/laporan/kegiatan'
+import { Route as ApiKetuaTimIdRouteImport } from './routes/api/ketua-tim/$id'
 import { Route as ApiDokumenSubmitRouteImport } from './routes/api/dokumen/submit'
 import { Route as ApiDokumenRenamePendingRouteImport } from './routes/api/dokumen/rename-pending'
 import { Route as ApiDokumenPreviewUrlRouteImport } from './routes/api/dokumen/preview-url'
@@ -119,6 +121,8 @@ import { Route as ApiUsersIdActivateRouteImport } from './routes/api/users/$id/a
 import { Route as ApiPpkResubmitIdRouteImport } from './routes/api/ppk/resubmit/$id'
 import { Route as ApiPpkKembalikanIdRouteImport } from './routes/api/ppk/kembalikan/$id'
 import { Route as ApiPpkDokumenIdRouteImport } from './routes/api/ppk/dokumen/$id'
+import { Route as ApiKetuaTimUserUserIdRouteImport } from './routes/api/ketua-tim/user/$userId'
+import { Route as ApiKetuaTimKegiatanKegiatanIdRouteImport } from './routes/api/ketua-tim/kegiatan/$kegiatanId'
 import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id.submit'
 import { Route as ApiDokumenIdNominalRouteImport } from './routes/api/dokumen/$id.nominal'
 import { Route as ApiDokumenIdLogRouteImport } from './routes/api/dokumen.$id.log'
@@ -349,6 +353,11 @@ const ApiUsersIndexRoute = ApiUsersIndexRouteImport.update({
   path: '/api/users/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiKetuaTimIndexRoute = ApiKetuaTimIndexRouteImport.update({
+  id: '/api/ketua-tim/',
+  path: '/api/ketua-tim/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDokumenIndexRoute = ApiDokumenIndexRouteImport.update({
   id: '/api/dokumen/',
   path: '/api/dokumen/',
@@ -482,6 +491,11 @@ const ApiLaporanSayaRoute = ApiLaporanSayaRouteImport.update({
 const ApiLaporanKegiatanRoute = ApiLaporanKegiatanRouteImport.update({
   id: '/api/laporan/kegiatan',
   path: '/api/laporan/kegiatan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiKetuaTimIdRoute = ApiKetuaTimIdRouteImport.update({
+  id: '/api/ketua-tim/$id',
+  path: '/api/ketua-tim/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDokumenSubmitRoute = ApiDokumenSubmitRouteImport.update({
@@ -699,6 +713,17 @@ const ApiPpkDokumenIdRoute = ApiPpkDokumenIdRouteImport.update({
   path: '/api/ppk/dokumen/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiKetuaTimUserUserIdRoute = ApiKetuaTimUserUserIdRouteImport.update({
+  id: '/api/ketua-tim/user/$userId',
+  path: '/api/ketua-tim/user/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiKetuaTimKegiatanKegiatanIdRoute =
+  ApiKetuaTimKegiatanKegiatanIdRouteImport.update({
+    id: '/api/ketua-tim/kegiatan/$kegiatanId',
+    path: '/api/ketua-tim/kegiatan/$kegiatanId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDokumenIdSubmitRoute = ApiDokumenIdSubmitRouteImport.update({
   id: '/submit',
   path: '/submit',
@@ -892,6 +917,7 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
@@ -919,6 +945,7 @@ export interface FileRoutesByFullPath {
   '/ppk/dokumen/$id': typeof PpkDokumenIdRouteWithChildren
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
   '/api/dokumen/': typeof ApiDokumenIndexRoute
+  '/api/ketua-tim/': typeof ApiKetuaTimIndexRoute
   '/api/users/': typeof ApiUsersIndexRoute
   '/arsiparis/aktif/': typeof ArsiparisAktifIndexRoute
   '/arsiparis/inaktif/': typeof ArsiparisInaktifIndexRoute
@@ -934,6 +961,8 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
+  '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
+  '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
@@ -1023,6 +1052,7 @@ export interface FileRoutesByTo {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
@@ -1048,6 +1078,7 @@ export interface FileRoutesByTo {
   '/pegawai/laporan/saya': typeof PegawaiLaporanSayaRoute
   '/admin/master-data': typeof AdminMasterDataIndexRoute
   '/api/dokumen': typeof ApiDokumenIndexRoute
+  '/api/ketua-tim': typeof ApiKetuaTimIndexRoute
   '/api/users': typeof ApiUsersIndexRoute
   '/arsiparis/aktif': typeof ArsiparisAktifIndexRoute
   '/arsiparis/inaktif': typeof ArsiparisInaktifIndexRoute
@@ -1063,6 +1094,8 @@ export interface FileRoutesByTo {
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
+  '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
+  '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
@@ -1157,6 +1190,7 @@ export interface FileRoutesById {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
@@ -1184,6 +1218,7 @@ export interface FileRoutesById {
   '/ppk/dokumen/$id': typeof PpkDokumenIdRouteWithChildren
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
   '/api/dokumen/': typeof ApiDokumenIndexRoute
+  '/api/ketua-tim/': typeof ApiKetuaTimIndexRoute
   '/api/users/': typeof ApiUsersIndexRoute
   '/arsiparis/aktif/': typeof ArsiparisAktifIndexRoute
   '/arsiparis/inaktif/': typeof ArsiparisInaktifIndexRoute
@@ -1199,6 +1234,8 @@ export interface FileRoutesById {
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
+  '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
+  '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
@@ -1294,6 +1331,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
+    | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
@@ -1321,6 +1359,7 @@ export interface FileRouteTypes {
     | '/ppk/dokumen/$id'
     | '/admin/master-data/'
     | '/api/dokumen/'
+    | '/api/ketua-tim/'
     | '/api/users/'
     | '/arsiparis/aktif/'
     | '/arsiparis/inaktif/'
@@ -1336,6 +1375,8 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
+    | '/api/ketua-tim/kegiatan/$kegiatanId'
+    | '/api/ketua-tim/user/$userId'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
@@ -1425,6 +1466,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
+    | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
@@ -1450,6 +1492,7 @@ export interface FileRouteTypes {
     | '/pegawai/laporan/saya'
     | '/admin/master-data'
     | '/api/dokumen'
+    | '/api/ketua-tim'
     | '/api/users'
     | '/arsiparis/aktif'
     | '/arsiparis/inaktif'
@@ -1465,6 +1508,8 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
+    | '/api/ketua-tim/kegiatan/$kegiatanId'
+    | '/api/ketua-tim/user/$userId'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
@@ -1558,6 +1603,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
+    | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
@@ -1585,6 +1631,7 @@ export interface FileRouteTypes {
     | '/ppk/dokumen/$id'
     | '/admin/master-data/'
     | '/api/dokumen/'
+    | '/api/ketua-tim/'
     | '/api/users/'
     | '/arsiparis/aktif/'
     | '/arsiparis/inaktif/'
@@ -1600,6 +1647,8 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
+    | '/api/ketua-tim/kegiatan/$kegiatanId'
+    | '/api/ketua-tim/user/$userId'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
@@ -1679,6 +1728,7 @@ export interface RootRouteChildren {
   ApiDokumenPreviewUrlRoute: typeof ApiDokumenPreviewUrlRoute
   ApiDokumenRenamePendingRoute: typeof ApiDokumenRenamePendingRoute
   ApiDokumenSubmitRoute: typeof ApiDokumenSubmitRoute
+  ApiKetuaTimIdRoute: typeof ApiKetuaTimIdRoute
   ApiLaporanKegiatanRoute: typeof ApiLaporanKegiatanRoute
   ApiLaporanSayaRoute: typeof ApiLaporanSayaRoute
   ApiPegawaiRevisiRoute: typeof ApiPegawaiRevisiRoute
@@ -1693,6 +1743,7 @@ export interface RootRouteChildren {
   ArsiparisUsulMusnahIdRoute: typeof ArsiparisUsulMusnahIdRoute
   AdminMasterDataIndexRoute: typeof AdminMasterDataIndexRoute
   ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
+  ApiKetuaTimIndexRoute: typeof ApiKetuaTimIndexRoute
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
   ArsiparisAktifIndexRoute: typeof ArsiparisAktifIndexRoute
   ArsiparisInaktifIndexRoute: typeof ArsiparisInaktifIndexRoute
@@ -1700,6 +1751,8 @@ export interface RootRouteChildren {
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
   ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
   ApiBendaharaDokumenIdRoute: typeof ApiBendaharaDokumenIdRouteWithChildren
+  ApiKetuaTimKegiatanKegiatanIdRoute: typeof ApiKetuaTimKegiatanKegiatanIdRoute
+  ApiKetuaTimUserUserIdRoute: typeof ApiKetuaTimUserUserIdRoute
   ApiPpkDokumenIdRoute: typeof ApiPpkDokumenIdRouteWithChildren
   ApiPpkKembalikanIdRoute: typeof ApiPpkKembalikanIdRoute
   ApiPpkResubmitIdRoute: typeof ApiPpkResubmitIdRoute
@@ -1996,6 +2049,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ketua-tim/': {
+      id: '/api/ketua-tim/'
+      path: '/api/ketua-tim'
+      fullPath: '/api/ketua-tim/'
+      preLoaderRoute: typeof ApiKetuaTimIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/dokumen/': {
       id: '/api/dokumen/'
       path: '/api/dokumen'
@@ -2183,6 +2243,13 @@ declare module '@tanstack/react-router' {
       path: '/api/laporan/kegiatan'
       fullPath: '/api/laporan/kegiatan'
       preLoaderRoute: typeof ApiLaporanKegiatanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ketua-tim/$id': {
+      id: '/api/ketua-tim/$id'
+      path: '/api/ketua-tim/$id'
+      fullPath: '/api/ketua-tim/$id'
+      preLoaderRoute: typeof ApiKetuaTimIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/dokumen/submit': {
@@ -2477,6 +2544,20 @@ declare module '@tanstack/react-router' {
       path: '/api/ppk/dokumen/$id'
       fullPath: '/api/ppk/dokumen/$id'
       preLoaderRoute: typeof ApiPpkDokumenIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ketua-tim/user/$userId': {
+      id: '/api/ketua-tim/user/$userId'
+      path: '/api/ketua-tim/user/$userId'
+      fullPath: '/api/ketua-tim/user/$userId'
+      preLoaderRoute: typeof ApiKetuaTimUserUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ketua-tim/kegiatan/$kegiatanId': {
+      id: '/api/ketua-tim/kegiatan/$kegiatanId'
+      path: '/api/ketua-tim/kegiatan/$kegiatanId'
+      fullPath: '/api/ketua-tim/kegiatan/$kegiatanId'
+      preLoaderRoute: typeof ApiKetuaTimKegiatanKegiatanIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/dokumen/$id/submit': {
@@ -3060,6 +3141,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenPreviewUrlRoute: ApiDokumenPreviewUrlRoute,
   ApiDokumenRenamePendingRoute: ApiDokumenRenamePendingRoute,
   ApiDokumenSubmitRoute: ApiDokumenSubmitRoute,
+  ApiKetuaTimIdRoute: ApiKetuaTimIdRoute,
   ApiLaporanKegiatanRoute: ApiLaporanKegiatanRoute,
   ApiLaporanSayaRoute: ApiLaporanSayaRoute,
   ApiPegawaiRevisiRoute: ApiPegawaiRevisiRoute,
@@ -3074,6 +3156,7 @@ const rootRouteChildren: RootRouteChildren = {
   ArsiparisUsulMusnahIdRoute: ArsiparisUsulMusnahIdRoute,
   AdminMasterDataIndexRoute: AdminMasterDataIndexRoute,
   ApiDokumenIndexRoute: ApiDokumenIndexRoute,
+  ApiKetuaTimIndexRoute: ApiKetuaTimIndexRoute,
   ApiUsersIndexRoute: ApiUsersIndexRoute,
   ArsiparisAktifIndexRoute: ArsiparisAktifIndexRoute,
   ArsiparisInaktifIndexRoute: ArsiparisInaktifIndexRoute,
@@ -3081,6 +3164,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
   ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
   ApiBendaharaDokumenIdRoute: ApiBendaharaDokumenIdRouteWithChildren,
+  ApiKetuaTimKegiatanKegiatanIdRoute: ApiKetuaTimKegiatanKegiatanIdRoute,
+  ApiKetuaTimUserUserIdRoute: ApiKetuaTimUserUserIdRoute,
   ApiPpkDokumenIdRoute: ApiPpkDokumenIdRouteWithChildren,
   ApiPpkKembalikanIdRoute: ApiPpkKembalikanIdRoute,
   ApiPpkResubmitIdRoute: ApiPpkResubmitIdRoute,

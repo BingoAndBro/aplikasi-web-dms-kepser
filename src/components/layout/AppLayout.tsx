@@ -1,35 +1,11 @@
 import * as React from 'react'
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
-  LayoutDashboard,
-  ClipboardList,
-  FileText,
-  FilePlus,
-  BadgeCheck,
-  ClipboardCheck,
-  FileEdit,
-  Banknote,
-  CheckSquare,
-  Archive,
-  ArchiveX,
-  FolderOpen,
-  Network,
-  History,
   Settings,
-  HelpCircle,
   LogOut,
-  Shield,
-  Building2,
-  FileCheck,
-  Tag,
-  Cloud,
   Search,
   Bell,
   ChevronDown,
-  FileX,
-  Trash2,
-  BarChart3,
-  Users,
   UserCircle,
 } from 'lucide-react'
 
@@ -40,169 +16,7 @@ import { ROLES } from '#/lib/constants/roles'
 
 import type { RoleName } from '#/lib/types/auth'
 import { ROLE_DISPLAY } from '#/lib/types/auth'
-
-// ─── Role → Default Route Mapping ─────────────────────────────────────────────
-// Maps each role to its default dashboard path. Used after role switch so the
-// user lands on the correct page for their new role instead of staying on the
-// previous role's page.
-// ─── Nav Config ─────────────────────────────────────────────────────────────
-
-type NavItem = {
-  id: string
-  label: string
-  icon: React.ElementType
-  to?: string
-  badge?: number
-}
-
-type MenuGroup = {
-  title: string
-  items: NavItem[]
-}
-
-const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
-  PEGAWAI: [
-    {
-      title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.HOME }],
-    },
-    {
-      title: 'MANAGEMENT',
-      items: [
-        { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: ROUTES.PEGAWAI.AJU_DOKUMEN },
-        { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: ROUTES.PEGAWAI.DOKUMEN },
-        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: ROUTES.PEGAWAI.REVISI },
-        { id: 'laporan_saya', label: 'Laporan Saya', icon: FileText, to: ROUTES.PEGAWAI.LAPORAN_SAYA },
-        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: ROUTES.PEGAWAI.LAPORAN_KEGIATAN },
-      ],
-    },
-    {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
-      ],
-    },
-    {
-      title: 'SYSTEM',
-      items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings },
-      ],
-    },
-  ],
-  PPK: [
-    {
-      title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.PPK.ROOT }],
-    },
-    {
-      title: 'VALIDASI',
-      items: [
-        { id: 'validasi', label: 'Validasi Dokumen', icon: BadgeCheck, to: ROUTES.PPK.INBOX },
-        { id: 'tervalidasi', label: 'Dokumen Tervalidasi', icon: ClipboardCheck, to: ROUTES.PPK.TERVALIDASI },
-        { id: 'ditolak', label: 'Dokumen Tidak Valid', icon: FileX, to: ROUTES.PPK.DITOLAK },
-        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: ROUTES.PPK.REVISI },
-      ],
-    },
-    {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
-      ],
-    },
-    {
-      title: 'SYSTEM',
-      items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings },
-      ],
-    },
-  ],
-  BENDAHARA: [
-    {
-      title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.BENDAHARA.ROOT }],
-    },
-    {
-      title: 'PERSETUJUAN',
-      items: [
-        { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: ROUTES.BENDAHARA.INBOX },
-        { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: ROUTES.BENDAHARA.DITOLAK },
-        { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: ROUTES.BENDAHARA.SELESAI },
-      ],
-    },
-    {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
-      ],
-    },
-    {
-      title: 'SYSTEM',
-      items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings },
-      ],
-    },
-  ],
-  ARSIPARIS: [
-    {
-      title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.ARSIPARIS.ROOT }],
-    },
-    {
-      title: 'PEMBERKASAN',
-      items: [
-        { id: 'pemberkasan', label: 'Pemberkasan Arsip', icon: Archive, to: ROUTES.ARSIPARIS.INBOX },
-        { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: ROUTES.ARSIPARIS.AKTIF },
-        { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: ROUTES.ARSIPARIS.INAKTIF },
-        { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: ROUTES.ARSIPARIS.USUL_MUSNAH },
-        { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: ROUTES.ARSIPARIS.KLASIFIKASI },
-        { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: ROUTES.ARSIPARIS.SEARCH },
-      ],
-    },
-    {
-      title: 'SYSTEM',
-      items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings },
-      ],
-    },
-  ],
-  ADMIN: [
-    {
-      title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.ADMIN.ROOT }],
-    },
-    {
-      title: 'MANAGEMENT',
-      items: [
-        { id: 'master_user', label: 'Master User', icon: Shield, to: ROUTES.ADMIN.MASTER_USER },
-        { id: 'master_fungsi', label: 'Departemen Fungsi', icon: Building2, to: ROUTES.ADMIN.MASTER_FUNGSI },
-        { id: 'master_kegiatan', label: 'Master Kegiatan', icon: ClipboardList, to: ROUTES.ADMIN.MASTER_KEGIATAN },
-        { id: 'master_jenis', label: 'Jenis Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_JENIS },
-        { id: 'master_jenis_dokumen', label: 'Jenis Dokumen', icon: Tag, to: ROUTES.ADMIN.MASTER_JENIS_DOKUMEN },
-        { id: 'master_kategori', label: 'Kategori Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_KATEGORI },
-        { id: 'master_detail', label: 'Detail Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_DETAIL },
-        { id: 'master_kelengkapan', label: 'Kelengkapan Dokumen', icon: FileCheck, to: ROUTES.ADMIN.MASTER_KELENGKAPAN },
-      ],
-    },
-    {
-      title: 'SYSTEM',
-      items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings },
-      ],
-    },
-  ],
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+import { AppSidebar } from './AppSidebar'
 
 function clearAppState() {
   document.cookie = `${ACTIVE_ROLE_COOKIE}=; path=/; max-age=0`
@@ -218,8 +32,6 @@ function getInitials(name?: string, email?: string): string {
   return '??'
 }
 
-// ─── AppLayout ───────────────────────────────────────────────────────────────
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const routerState = useRouterState()
@@ -231,7 +43,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [chairmanKegiatan, setChairmanKegiatan] = React.useState<{ id: string; nama: string }[]>([])
 
-  // Fetch chairman status
   const fetchChairmanStatus = React.useCallback(async (session: any) => {
     if (!session) return
     try {
@@ -250,7 +61,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const supabase = React.useMemo(() => getBrowserClient(), [])
 
-  // Routes where the mesh background should show
   const pathname = routerState.location.pathname
   const isMeshPage = MESH_ROUTES.includes(pathname)
   const isLoginPage = pathname === ROUTES.LOGIN
@@ -261,19 +71,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setIsLoading(false); setHasSession(false); return }
 
-    // Re-validate with server to eliminate getSession warning
     await supabase.auth.getUser()
 
-    // Check if user is still active
     const { data: statusData } = await supabase
       .from('user_status')
       .select('is_active')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    // Only block if is_active is explicitly false (not null/undefined)
     if (statusData && statusData.is_active === false) {
-      // User is inactive, sign out and redirect
       await supabase.auth.signOut()
       setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
       setUserName(undefined); setEmail(undefined)
@@ -286,7 +92,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setUserName(session.user.user_metadata?.user_name as string | undefined)
     setEmail(session.user.email ?? undefined)
 
-    // Fetch chairman status FIRST so we know if user has KETUA_TIM role
     let isChairman = false
     try {
       const ktRes = await fetch('/api/users/me/ketua-tim', { credentials: 'include' })
@@ -306,7 +111,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
     const roleNames = (rolesData ?? [])
       .map((r: { role?: { nama?: RoleName } }) => r.role?.nama)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .filter((n: any): n is RoleName => n !== undefined && n !== null)
 
     setUserRoles(roleNames)
@@ -334,7 +138,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         setUserName(undefined); setEmail(undefined)
         setHasSession(false); setChairmanKegiatan([])
         clearAppState()
-        // Redirect to login when session expires
         if (!isLoginPage) {
           window.location.href = ROUTES.LOGIN
         }
@@ -345,7 +148,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => { subscription.unsubscribe() }
   }, [fetchSession, isLoginPage])
 
-  // Redirect to login when not authenticated
   React.useEffect(() => {
     if (!isLoading && !hasSession && !isLoginPage) {
       window.location.href = ROUTES.LOGIN
@@ -365,9 +167,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleRoleSwitch = (newRole: RoleName) => {
     document.cookie = `${ACTIVE_ROLE_COOKIE}=${newRole}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
-    // Redirect immediately — page reload resets all local state anyway,
-    // so no need to call setActiveRole / setRoleSwitcherOpen here.
-    // Calling them would trigger React's "setState during render" warning.
     window.location.href = ROLE_DEFAULT_ROUTE[newRole]
   }
 
@@ -381,17 +180,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     navigate({ to: ROUTES.LOGIN })
   }
 
-  // Build nav groups based on active role
-  const navGroups = React.useMemo(() => {
-    return NAV_CONFIG[activeRole] ?? []
-  }, [activeRole])
-
   const isAdmin = activeRole === ROLES.ADMIN
   const initials = getInitials(userName, email)
   const displayName = userName || email?.split('@')[0] || 'User'
   const canSwitchRole = userRoles.length > 1 && !isAdmin
 
-  // Show loading spinner while checking auth
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -403,7 +196,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Redirect to login when not authenticated
   if (!hasSession && !isLoginPage) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -415,14 +207,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Login page: render children without sidebar/header
   if (isLoginPage) {
     return <>{children}</>
   }
 
   return (
     <>
-      {/* Animated Mesh Background — only on dashboard pages */}
       {isMeshPage && (
         <div className="mesh-bg">
           <div className="mesh-blob mesh-blob-1" />
@@ -432,127 +222,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex h-screen overflow-hidden bg-background relative selection:bg-primary-container selection:text-on-primary-container">
-        {/* ── Sidebar ── */}
-        <aside className="w-72 h-full bg-surface-container-lowest/40 backdrop-blur-2xl flex flex-col py-8 px-6 gap-8 border-r border-white/5 shrink-0 z-50">
-          {/* Logo + Title */}
-          <div className="px-2">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white shadow-lg shadow-primary/10">
-                <img src="/bps-logo.png" alt="BPS" className="w-7 h-7 object-contain" />
-              </div>
-              <h2 className="font-headline font-extrabold text-xl tracking-tight text-on-surface">
-                {isAdmin ? 'Curator Admin' : 'DMS Architect'}
-              </h2>
-            </div>
-            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary ml-11">
-              {isAdmin ? 'System Management' : `${activeRole} Workspace`}
-            </p>
-          </div>
+        <AppSidebar
+          activeRole={activeRole}
+          pathname={routerState.location.pathname}
+          searchStr={routerState.location.searchStr}
+          onLogout={handleLogout}
+        />
 
-          {/* Navigation */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2 space-y-8">
-            {navGroups.map((group) => (
-              <div key={group.title} className="space-y-3">
-                <h3 className="text-[10px] font-black text-outline uppercase tracking-[0.25em] px-4">
-                  {group.title}
-                </h3>
-                <nav className="space-y-1">
-                  {group.items.map((item) => {
-                    const Icon = item.icon
-                    // Check if current pathname matches this item
-                    // For paths with query params, also check pathname without query
-                    const itemPath = item.to?.split('?')[0] ?? ''
-                    const itemQuery = item.to?.split('?')[1] ?? ''
-                    const currentPath = routerState.location.pathname
-                    const currentQuery = routerState.location.searchStr?.replace(/^\?/, '') ?? ''
-
-                    // Bug fix: item tanpa query hanya aktif saat exact path match (bukan prefix).
-                    // Item dengan query aktif jika path cocok DAN query mengandung itemQuery.
-                    // Item dengan prefix (seperti detail dokumen) aktif jika path dimulai dengan itemPath.
-                    const isActive = item.to
-                      ? item.to === '/'
-                        ? currentPath === '/'
-                        : itemQuery
-                          // Item punya query (e.g. ?status=NEED_REVISION) → exact path + query match
-                          ? currentPath === itemPath && currentQuery.includes(itemQuery)
-                          // Item tanpa query → exact path + NO query (supaya tidak nabrak item berquery)
-                          : currentPath === itemPath && currentQuery === ''
-                      : false
-                    const isBuilt = !!item.to
-
-                    if (!isBuilt) {
-                      return (
-                        <div
-                          key={item.id}
-                          className="w-full flex items-center justify-between p-3.5 rounded-xl opacity-40 cursor-not-allowed select-none"
-                          title="Fitur belum tersedia"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="text-outline">
-                              <Icon size={18} />
-                            </span>
-                            <span className="text-sm font-medium text-on-surface-variant">{item.label}</span>
-                          </div>
-                          <span className="text-[8px] px-1.5 py-0.5 rounded bg-surface-container text-outline font-black uppercase tracking-widest">
-                            Soon
-                          </span>
-                        </div>
-                      )
-                    }
-
-                    return (
-                      <Link
-                        key={item.id}
-                        to={item.to!}
-                        className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 group ${isActive
-                            ? 'bg-primary text-white shadow-xl shadow-primary/30'
-                            : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                          }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`${isActive ? 'text-white' : 'text-outline group-hover:text-primary'} transition-colors`}>
-                            <Icon size={18} />
-                          </span>
-                          <span className={`text-sm tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}>
-                            {item.label}
-                          </span>
-                        </div>
-                        {item.badge && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black ${isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
-                            }`}>
-                            {item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    )
-                  })}
-                </nav>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom actions */}
-          <div className="flex flex-col gap-1 border-t border-outline-variant/10 pt-6">
-            <button className="flex items-center gap-3 text-outline text-[11px] font-bold p-3 hover:text-primary transition-all group">
-              <HelpCircle size={16} className="group-hover:rotate-12 transition-transform" />
-              Support Center
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 text-outline text-[11px] font-bold p-3 hover:text-error transition-all group"
-            >
-              <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
-              Sign Out
-            </button>
-          </div>
-        </aside>
-
-        {/* ── Main Area ── */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
           <header className="h-20 flex justify-between items-center px-10 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10 z-40">
             <div className="flex items-center gap-12 flex-1">
-              {/* Left title */}
               <div className="flex items-center gap-4">
                 {isAdmin ? (
                   <span className="text-xl font-extrabold tracking-tight text-primary shrink-0">Admin Curator</span>
@@ -563,7 +242,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
 
-              {/* Search */}
               <div className="relative group flex-1 max-w-2xl">
                 <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-outline/40">
                   <Search size={18} />
@@ -577,7 +255,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-8">
-              {/* Icon actions */}
               <div className="flex items-center gap-5">
                 <button className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all relative">
                   <Bell size={22} />
@@ -588,9 +265,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
 
-              {/* User area */}
               <div className="flex items-center gap-4 pl-8 border-l border-outline-variant/10 relative">
-                {/* Role switcher (non-admin, multi-role only) */}
                 {canSwitchRole && (
                   <div className="flex flex-col items-end mr-2 relative">
                     <label className="text-[8px] font-black text-outline uppercase tracking-[0.2em] mb-1">Switch Role</label>
@@ -609,10 +284,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                             <button
                               key={role}
                               onClick={() => handleRoleSwitch(role)}
-                              className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${role === activeRole
+                              className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                                role === activeRole
                                   ? 'bg-primary text-white'
                                   : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                                }`}
+                              }`}
                             >
                               {role}
                             </button>
@@ -623,7 +299,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 )}
 
-                {/* User info */}
                 <div className="text-right hidden sm:block">
                   <p className="text-xs font-black text-on-surface uppercase tracking-wider">{displayName}</p>
                   <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
@@ -631,7 +306,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   </p>
                 </div>
 
-                {/* Avatar with dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
@@ -676,7 +350,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Content */}
           <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <section className="flex-1 overflow-y-auto custom-scrollbar bg-background border-r border-outline-variant/15">
               {children}

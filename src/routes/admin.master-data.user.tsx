@@ -98,6 +98,36 @@ interface ChairmanAssignment {
   kegiatan_nama: string
 }
 
+interface EditSnapshot {
+  form: EditUserForm
+  assignments: ChairmanAssignment[]
+}
+
+function normalizeRoles(roles: RoleName[]) {
+  return [...roles].sort()
+}
+
+function sameRoles(a: RoleName[], b: RoleName[]) {
+  const left = normalizeRoles(a)
+  const right = normalizeRoles(b)
+  return left.length === right.length && left.every((role, i) => role === right[i])
+}
+
+function sameAssignments(a: ChairmanAssignment[], b: ChairmanAssignment[]) {
+  const left = a.map(item => item.kegiatan_id).sort()
+  const right = b.map(item => item.kegiatan_id).sort()
+  return left.length === right.length && left.every((id, i) => id === right[i])
+}
+
+function sameEditForm(a: EditUserForm, b: EditUserForm) {
+  return (
+    a.nama_lengkap === b.nama_lengkap &&
+    a.nip_nrp === b.nip_nrp &&
+    a.departemen === b.departemen &&
+    sameRoles(a.roles, b.roles)
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
@@ -119,6 +149,8 @@ function MasterUserPage() {
   const [availableKegiatan, setAvailableKegiatan] = useState<{ id: string; nama: string }[]>([])
   const [showChairmanConfirm, setShowChairmanConfirm] = useState(false)
   const [pendingChairmanReplace, setPendingChairmanReplace] = useState<{ kegiatan_id: string; kegiatan_nama: string; old_user: string } | null>(null)
+  const [initialEditSnapshot, setInitialEditSnapshot] = useState<EditSnapshot | null>(null)
+  const [showEditCancelConfirm, setShowEditCancelConfirm] = useState(false)
 
   // Dialog states
   const [createOpen, setCreateOpen] = useState(false)
@@ -138,6 +170,11 @@ function MasterUserPage() {
 
   // Loading states for actions
   const [actionLoading, setActionLoading] = useState(false)
+
+  const isEditDirty = initialEditSnapshot !== null && (
+    !sameEditForm(initialEditSnapshot.form, editForm) ||
+    !sameAssignments(initialEditSnapshot.assignments, dialogChairmanAssignments)
+  )
 
   // ---------------------------------------------------------------------------
   // Fetch users
@@ -230,128 +267,146 @@ function MasterUserPage() {
       const data = await res.json()
       // API returns { assignments: [...] } - kegiatan is nested inside
       if (data.assignments) {
-        setDialogChairmanAssignments(data.assignments.map((a: any) => ({
+        const assignments = data.assignments.map((a: any) => ({
           id: a.id,
           kegiatan_id: a.kegiatan_id,
           kegiatan_nama: a.kegiatan?.nama || 'Unknown',
-        })))
+        }))
+        setDialogChairmanAssignments(assignments)
+        console.info('[MasterUser] Ketua tim assignments loaded', {
+          userId,
+          count: assignments.length,
+        })
+        return assignments
       }
     } catch (err) {
-      console.error('Failed to load chairman assignments:', err)
+      console.error('[MasterUser] Failed to load ketua tim assignments', { userId, err })
+    }
+    setDialogChairmanAssignments([])
+    return []
+  }
+
+  const loadAvailableKegiatan = async (assignments: ChairmanAssignment[] = dialogChairmanAssignments) => {
+    try {
+      const res = await fetch('/api/master-kegiatan', { credentials: 'include' })
+      if (!res.ok) throw new Error('Failed to fetch')
+      const data = await res.json()
+      // API returns array directly, not { kegiatan: [...] }
+      if (Array.isArray(data)) {
+        const assignedKegiatanIds = assignments.map(c => c.kegiatan_id)
+        const available = data.filter((k: any) => !assignedKegiatanIds.includes(k.id))
+        setAvailableKegiatan(available)
+        console.info('[MasterUser] Available kegiatan refreshed', {
+          total: data.length,
+          assigned: assignedKegiatanIds.length,
+          available: available.length,
+        })
+      }
+    } catch (err) {
+      console.error('[MasterUser] Failed to load available kegiatan', err)
     }
   }
 
-  const loadAvailableKegiatan = async () => {
-    try {
-      const res = await fetch('/api/master-kegiatan', { credentials: 'include' })
-      console.log('Master kegiatan response status:', res.status)
-      if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
-      console.log('Master kegiatan response data:', data)
-      console.log('Is array:', Array.isArray(data))
-      // API returns array directly, not { kegiatan: [...] }
-      if (Array.isArray(data)) {
-        const assignedKegiatanIds = dialogChairmanAssignments.map(c => c.kegiatan_id)
-        const available = data.filter((k: any) => !assignedKegiatanIds.includes(k.id))
-        console.log('Available kegiatan:', available)
-        setAvailableKegiatan(available)
-      }
-    } catch (err) {
-      console.error('Failed to load kegiatan:', err)
+  const stageChairmanAssignment = async (kegiatanId: string) => {
+    if (dialogChairmanAssignments.some(c => c.kegiatan_id === kegiatanId)) return
+
+    const kegiatan = availableKegiatan.find(k => k.id === kegiatanId)
+    const nextAssignments = [
+      ...dialogChairmanAssignments,
+      {
+        id: `pending-${kegiatanId}`,
+        kegiatan_id: kegiatanId,
+        kegiatan_nama: kegiatan?.nama ?? 'Unknown',
+      },
+    ]
+    setDialogChairmanAssignments(nextAssignments)
+    await loadAvailableKegiatan(nextAssignments)
+    console.info('[MasterUser] Ketua tim assignment staged', {
+      kegiatanId,
+      kegiatan: kegiatan?.nama ?? 'Unknown',
+      totalStaged: nextAssignments.length,
+    })
+  }
+
+  const findExistingChairman = (kegiatanId: string) => {
+    for (const [userId, assignments] of Object.entries(chairmanAssignments)) {
+      const assignment = assignments.find(item => item.kegiatan_id === kegiatanId)
+      if (assignment) return { userId, assignment }
     }
+    return null
+  }
+
+  const getUserDisplayName = (userId: string) => {
+    const user = users.find(item => item.id === userId)
+    return user?.metadata.nama_lengkap || user?.email || 'Ketua tim sebelumnya'
   }
 
   const handleAddChairman = async (kegiatanId: string, userId: string) => {
-    try {
-      const res = await fetch('/api/ketua-tim/', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          kegiatan_id: kegiatanId,
-        })
-      })
+    if (dialogChairmanAssignments.some(c => c.kegiatan_id === kegiatanId)) return
 
-      if (res.status === 409) {
-        const data = await res.json()
+    try {
+      const existingChairman = findExistingChairman(kegiatanId)
+
+      if (existingChairman && existingChairman.userId !== userId) {
         setPendingChairmanReplace({
           kegiatan_id: kegiatanId,
           kegiatan_nama: availableKegiatan.find(k => k.id === kegiatanId)?.nama ?? '',
-          old_user: data.existing_chairman?.name ?? 'Chairman sebelumnya'
+          old_user: getUserDisplayName(existingChairman.userId),
         })
         setShowChairmanConfirm(true)
         return
       }
 
-      if (!res.ok) throw new Error('Failed to add')
-
-      await loadChairmanForUser(userId)
-      await loadAvailableKegiatan()
+      await stageChairmanAssignment(kegiatanId)
     } catch (err) {
-      console.error('Failed to add chairman:', err)
-      alert('Gagal menambahkan kegiatan chairman')
+      console.error('[MasterUser] Failed to stage ketua tim assignment', { kegiatanId, userId, err })
+      alert('Gagal menambahkan kegiatan ketua tim')
     }
   }
 
   const handleRemoveChairman = async (assignmentId: string, userId: string) => {
-    try {
-      const res = await fetch(`/api/ketua-tim/${assignmentId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      })
-      if (!res.ok) throw new Error('Failed to remove')
-      await loadChairmanForUser(userId)
-      await loadAvailableKegiatan()
-    } catch (err) {
-      console.error('Failed to remove chairman:', err)
-      alert('Gagal menghapus kegiatan chairman')
-    }
+    const nextAssignments = dialogChairmanAssignments.filter(c => c.id !== assignmentId)
+    setDialogChairmanAssignments(nextAssignments)
+    loadAvailableKegiatan(nextAssignments)
+    console.info('[MasterUser] Ketua tim assignment removed from draft', {
+      userId,
+      assignmentId,
+      remaining: nextAssignments.length,
+    })
   }
 
   const handleConfirmReplace = async () => {
     if (!pendingChairmanReplace || !selectedUser) return
-    // Remove old first
     try {
-      const oldChairRes = await fetch(`/api/ketua-tim/kegiatan/${pendingChairmanReplace.kegiatan_id}`, { credentials: 'include' })
-      if (oldChairRes.ok) {
-        const oldChairData = await oldChairRes.json()
-        if (oldChairData.chairman?.id) {
-          await fetch(`/api/ketua-tim/${oldChairData.chairman.id}`, { method: 'DELETE', credentials: 'include' })
-        }
-      }
-      // Add new
-      const res = await fetch('/api/ketua-tim/', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: selectedUser.id,
-          kegiatan_id: pendingChairmanReplace.kegiatan_id,
-        })
-      })
-      if (!res.ok) throw new Error('Failed to add')
+      await stageChairmanAssignment(pendingChairmanReplace.kegiatan_id)
       setShowChairmanConfirm(false)
       setPendingChairmanReplace(null)
-      await loadChairmanForUser(selectedUser.id)
-      await loadAvailableKegiatan()
     } catch (err) {
-      console.error('Failed to replace chairman:', err)
-      alert('Gagal mengganti chairman')
+      console.error('[MasterUser] Failed to stage ketua tim replacement', {
+        kegiatanId: pendingChairmanReplace.kegiatan_id,
+        err,
+      })
+      alert('Gagal menyiapkan penggantian ketua tim')
     }
   }
 
-  const openEdit = (user: UserWithRoles) => {
-    setSelectedUser(user)
-    setEditForm({
+  const openEdit = async (user: UserWithRoles) => {
+    const initialForm = {
       nama_lengkap: user.metadata.nama_lengkap || '',
       nip_nrp: user.metadata.nip_nrp || '',
       departemen: user.metadata.departemen || '',
       roles: [...user.roles],
-    })
+    }
+    setSelectedUser(user)
+    setEditForm(initialForm)
     setDialogChairmanAssignments([])
-    loadChairmanForUser(user.id).then(() => loadAvailableKegiatan())
     setEditOpen(true)
+    const assignments = await loadChairmanForUser(user.id)
+    setInitialEditSnapshot({
+      form: initialForm,
+      assignments,
+    })
+    await loadAvailableKegiatan(assignments)
   }
 
   const openCreate = () => {
@@ -359,6 +414,81 @@ function MasterUserPage() {
     setAvailableKegiatan([])
     setCreateOpen(true)
     loadAvailableKegiatan()
+  }
+
+  const resetEditDraft = async (closeDialog: boolean) => {
+    const snapshot = initialEditSnapshot
+
+    if (snapshot) {
+      setEditForm(snapshot.form)
+      setDialogChairmanAssignments(snapshot.assignments)
+      await loadAvailableKegiatan(snapshot.assignments)
+    } else {
+      setEditForm(INITIAL_EDIT_FORM)
+      setDialogChairmanAssignments([])
+      setAvailableKegiatan([])
+    }
+
+    setPendingChairmanReplace(null)
+    setShowChairmanConfirm(false)
+    setShowEditCancelConfirm(false)
+
+    if (closeDialog) {
+      setEditOpen(false)
+      setSelectedUser(null)
+      setInitialEditSnapshot(null)
+    }
+  }
+
+  const requestCloseEdit = () => {
+    if (actionLoading) return
+    if (isEditDirty) {
+      setShowEditCancelConfirm(true)
+      return
+    }
+    resetEditDraft(true)
+  }
+
+  const persistChairmanAssignmentChanges = async (userId: string) => {
+    const initialAssignments = initialEditSnapshot?.assignments ?? []
+    const initialByKegiatan = new Map(initialAssignments.map(item => [item.kegiatan_id, item]))
+    const currentByKegiatan = new Map(dialogChairmanAssignments.map(item => [item.kegiatan_id, item]))
+
+    const removedAssignments = initialAssignments.filter(item => !currentByKegiatan.has(item.kegiatan_id))
+    const addedAssignments = dialogChairmanAssignments.filter(item => !initialByKegiatan.has(item.kegiatan_id))
+
+    for (const assignment of removedAssignments) {
+      const res = await fetch(`/api/ketua-tim/?id=${encodeURIComponent(assignment.id)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `Gagal menghapus ketua tim ${assignment.kegiatan_nama}`)
+      }
+    }
+
+    for (const assignment of addedAssignments) {
+      const res = await fetch('/api/ketua-tim/', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          kegiatan_id: assignment.kegiatan_id,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `Gagal menyimpan ketua tim ${assignment.kegiatan_nama}`)
+      }
+    }
+
+    console.info('[MasterUser] Ketua tim changes saved', {
+      userId,
+      added: addedAssignments.length,
+      removed: removedAssignments.length,
+    })
   }
 
   const openResetPassword = (user: UserWithRoles) => {
@@ -447,9 +577,16 @@ function MasterUserPage() {
       if (!res.ok) {
         throw new Error(data.error || 'Gagal mengupdate user')
       }
+
+      await persistChairmanAssignmentChanges(selectedUser.id)
+
       setEditOpen(false)
       setSelectedUser(null)
+      setInitialEditSnapshot(null)
+      setDialogChairmanAssignments([])
+      setAvailableKegiatan([])
       await fetchUsers()
+      await fetchChairmanAssignments()
     } catch (err: any) {
       alert(err.message || 'Gagal mengupdate user')
     } finally {
@@ -838,7 +975,16 @@ function MasterUserPage() {
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setEditOpen(true)
+            return
+          }
+          requestCloseEdit()
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
@@ -947,10 +1093,30 @@ function MasterUserPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={requestCloseEdit}>Batal</Button>
             <Button onClick={handleEdit} disabled={actionLoading}>
               {actionLoading && <Loader2 size={14} className="animate-spin mr-1" />}
               Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Cancel Confirmation Dialog */}
+      <Dialog open={showEditCancelConfirm} onOpenChange={setShowEditCancelConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Batalkan Perubahan?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-on-surface-variant">
+            Perubahan belum disimpan. Yakin ingin membatalkan?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditCancelConfirm(false)}>
+              Lanjut Edit
+            </Button>
+            <Button variant="destructive" onClick={() => resetEditDraft(true)}>
+              Ya, Batalkan
             </Button>
           </DialogFooter>
         </DialogContent>
