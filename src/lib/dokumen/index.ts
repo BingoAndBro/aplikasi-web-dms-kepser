@@ -32,3 +32,12 @@ export {
   updateDokumen,
   updateDokumenStatus,
 } from './mutations'
+
+export {
+  buildDokumenFilename,
+  buildFormalStoragePath,
+  buildStorageFilename,
+  deleteOrphanFiles,
+  isStoragePathPending,
+  syncDocumentAttachments,
+} from './storage'

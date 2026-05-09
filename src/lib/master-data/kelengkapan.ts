@@ -2,6 +2,63 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createKelengkapanSchema } from '../schemas/master-data'
 import type { KelengkapanRow } from './shared'
 
+type KelengkapanChainPayload = {
+  jenisPermintaanId?: string | null
+  kategoriPermintaanId?: string | null
+  detailPermintaanId?: string | null
+}
+
+async function validateKelengkapanChain(
+  supabase: SupabaseClient,
+  payload: KelengkapanChainPayload
+): Promise<string | undefined> {
+  const jenisPermintaanId = payload.jenisPermintaanId ?? null
+  const kategoriPermintaanId = payload.kategoriPermintaanId ?? null
+  const detailPermintaanId = payload.detailPermintaanId ?? null
+
+  if (detailPermintaanId && !kategoriPermintaanId) {
+    return 'Detail permintaan harus memiliki kategori permintaan'
+  }
+
+  if (kategoriPermintaanId && !jenisPermintaanId) {
+    return 'Kategori permintaan harus memiliki jenis permintaan'
+  }
+
+  if (kategoriPermintaanId) {
+    const { data, error } = await supabase
+      .from('master_kategori_permintaan')
+      .select('jenis_permintaan_id')
+      .eq('id', kategoriPermintaanId)
+      .single()
+
+    if (error || !data) {
+      return 'Kategori permintaan tidak ditemukan'
+    }
+
+    if (data.jenis_permintaan_id !== jenisPermintaanId) {
+      return 'Kategori permintaan tidak sesuai dengan jenis permintaan'
+    }
+  }
+
+  if (detailPermintaanId) {
+    const { data, error } = await supabase
+      .from('master_detail_permintaan')
+      .select('kategori_permintaan_id')
+      .eq('id', detailPermintaanId)
+      .single()
+
+    if (error || !data) {
+      return 'Detail permintaan tidak ditemukan'
+    }
+
+    if (data.kategori_permintaan_id !== kategoriPermintaanId) {
+      return 'Detail permintaan tidak sesuai dengan kategori permintaan'
+    }
+  }
+
+  return undefined
+}
+
 /**
  * Ambil semua kelengkapan dengan info kegiatan dan fungsi.
  */
@@ -153,6 +210,9 @@ export async function createKelengkapan(
     return { error: parsed.error.flatten().formErrors.join(', ') }
   }
 
+  const chainError = await validateKelengkapanChain(supabase, parsed.data)
+  if (chainError) return { error: chainError }
+
   const { data, error } = await supabase
     .from('master_kelengkapan_dokumen')
     .insert({
@@ -184,6 +244,27 @@ export async function updateKelengkapan(
   id: string,
   payload: { isKetuaTim?: boolean; namaDokumen?: string; required?: boolean; jenisPermintaanId?: string | null; kategoriPermintaanId?: string | null; detailPermintaanId?: string | null }
 ): Promise<{ data?: KelengkapanRow; error?: string }> {
+  const { data: existing, error: existingError } = await supabase
+    .from('master_kelengkapan_dokumen')
+    .select('jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
+    .eq('id', id)
+    .single()
+
+  if (existingError || !existing) return { error: 'Kelengkapan tidak ditemukan' }
+
+  const chainError = await validateKelengkapanChain(supabase, {
+    jenisPermintaanId: payload.jenisPermintaanId !== undefined
+      ? payload.jenisPermintaanId
+      : existing.jenis_permintaan_id,
+    kategoriPermintaanId: payload.kategoriPermintaanId !== undefined
+      ? payload.kategoriPermintaanId
+      : existing.kategori_permintaan_id,
+    detailPermintaanId: payload.detailPermintaanId !== undefined
+      ? payload.detailPermintaanId
+      : existing.detail_permintaan_id,
+  })
+  if (chainError) return { error: chainError }
+
   const updatePayload: Record<string, unknown> = {}
   if (payload.isKetuaTim !== undefined) updatePayload.is_ketua_tim = payload.isKetuaTim
   if (payload.namaDokumen !== undefined) updatePayload.nama_dokumen = payload.namaDokumen

@@ -404,6 +404,9 @@ function AjukanDokumenPage() {
       // Strip dots from formatted number (e.g., "1.000.000" -> "1000000") before parsing
       const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
       const nominalValue = isNonMaterial ? null : (parseInt(rawNominal, 10) || null)
+      const selectedJenisPermintaanId = jenisPermintaanId || undefined
+      const selectedKategoriPermintaanId = kategoriPermintaanId || undefined
+      const selectedDetailPermintaanId = detailPermintaanId || undefined
 
       const res = await fetch('/api/dokumen/submit', {
         method: 'POST',
@@ -420,9 +423,9 @@ function AjukanDokumenPage() {
           is_non_material: isNonMaterial,
           jenisDokumenId: isNonMaterial ? jenisDokumenId : undefined,
           keteranganDetail: isNonMaterial ? keteranganDetail : undefined,
-          jenisPermintaanId: !isNonMaterial ? jenisPermintaanId : undefined,
-          kategoriPermintaanId: !isNonMaterial ? kategoriPermintaanId : undefined,
-          detailPermintaanId: !isNonMaterial ? detailPermintaanId : undefined,
+          jenisPermintaanId: !isNonMaterial ? selectedJenisPermintaanId : undefined,
+          kategoriPermintaanId: !isNonMaterial ? selectedKategoriPermintaanId : undefined,
+          detailPermintaanId: !isNonMaterial ? selectedDetailPermintaanId : undefined,
         }),
       })
 
