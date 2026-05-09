@@ -11,3 +11,13 @@ export {
   parseDokumenWithNames,
   parseLampiranUrls,
 } from './parse'
+
+export {
+  getDokumenById,
+  getDokumenByUser,
+  getDokumenKegiatanByKetuaTim,
+  getDokumenSelesaiByUser,
+  getKelengkapanRequired,
+  resolveLeafNodeName,
+  userHasApproverRole,
+} from './queries'
