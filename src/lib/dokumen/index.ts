@@ -26,3 +26,9 @@ export {
   getLogsByDokumen,
   insertLog,
 } from './logs'
+
+export {
+  createDokumen,
+  updateDokumen,
+  updateDokumenStatus,
+} from './mutations'

@@ -98,12 +98,11 @@ function PpkResubmitPage() {
         throw new Error(json.error || 'Gagal menyimpan')
       }
 
-      // Resubmit
+      // Resubmit. Lampiran sudah diproses oleh PATCH di atas; jangan kirim ulang
+      // payload lama karena path pending sudah dipindahkan ke path formal.
       const submitRes = await fetch(`/api/ppk/resubmit/${id}`, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lampiranUrls: data.lampiranUrls }),
       })
 
       if (!submitRes.ok) {
