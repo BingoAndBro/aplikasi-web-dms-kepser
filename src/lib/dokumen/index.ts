@@ -21,3 +21,8 @@ export {
   resolveLeafNodeName,
   userHasApproverRole,
 } from './queries'
+
+export {
+  getLogsByDokumen,
+  insertLog,
+} from './logs'
