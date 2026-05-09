@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/')({
   component: DokumenDetailPage,
@@ -77,10 +78,6 @@ function getWorkflowIndexNonMaterial(status: string): number {
   return WORKFLOW_STEPS_NON_MATERIAL.findIndex(s => s.key === status)
 }
 
-function formatDate(str: string): string {
-  try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return str }
-}
 
 // ---------------------------------------------------------------------------
 // Main page

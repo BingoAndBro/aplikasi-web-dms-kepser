@@ -11,15 +11,12 @@ import {
   Pencil,
 } from 'lucide-react'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/edit')({
   component: EditDokumenPage,
 })
 
-function formatDate(str: string): string {
-  try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return str }
-}
 
 function EditDokumenPage() {
   const { id } = Route.useParams()

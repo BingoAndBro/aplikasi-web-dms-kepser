@@ -4,6 +4,7 @@
 import { FileText, Calendar, Users, Building2, CheckCircle2, Tag, Banknote, FileCheck } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
+import { formatDate } from '#/lib/utils/format'
 
 function formatFileSizeFromUrl(url: string): string {
   return url.split('/').pop() ?? 'File'
@@ -24,14 +25,6 @@ interface ReviewSummaryProps {
   keteranganDetail?: string
 }
 
-function formatDate(dateStr: string): string {
-  try {
-    const [y, m, d] = dateStr.split('-')
-    return `${d}/${m}/${y}`
-  } catch {
-    return dateStr
-  }
-}
 
 export function ReviewSummary({
   fungsiNama,

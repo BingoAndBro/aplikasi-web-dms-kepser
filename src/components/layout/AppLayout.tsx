@@ -35,9 +35,9 @@ import {
 
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
+import { MESH_ROUTES, ROLE_DEFAULT_ROUTE, ROUTES } from '#/lib/constants/routes'
+import { ROLES } from '#/lib/constants/roles'
 
-// Routes where the mesh background should show
-const MESH_ROUTES = ['/', '/ppk', '/bendahara', '/arsiparis', '/admin']
 import type { RoleName } from '#/lib/types/auth'
 import { ROLE_DISPLAY } from '#/lib/types/auth'
 
@@ -45,14 +45,6 @@ import { ROLE_DISPLAY } from '#/lib/types/auth'
 // Maps each role to its default dashboard path. Used after role switch so the
 // user lands on the correct page for their new role instead of staying on the
 // previous role's page.
-const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
-  PEGAWAI: '/',
-  PPK: '/ppk',
-  BENDAHARA: '/bendahara',
-  ARSIPARIS: '/arsiparis',
-  ADMIN: '/admin',
-}
-
 // ─── Nav Config ─────────────────────────────────────────────────────────────
 
 type NavItem = {
@@ -72,28 +64,28 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
   PEGAWAI: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/' }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.HOME }],
     },
     {
       title: 'MANAGEMENT',
       items: [
-        { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: '/pegawai/dokumen/aju' },
-        { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: '/pegawai/dokumen' },
-        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/pegawai/revisi' },
-        { id: 'laporan_saya', label: 'Laporan Saya', icon: FileText, to: '/pegawai/laporan/saya' },
-        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: '/pegawai/laporan/kegiatan' },
+        { id: 'aju', label: 'Ajukan Dokumen', icon: FilePlus, to: ROUTES.PEGAWAI.AJU_DOKUMEN },
+        { id: 'diajukan', label: 'Dokumen Diajukan', icon: ClipboardList, to: ROUTES.PEGAWAI.DOKUMEN },
+        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: ROUTES.PEGAWAI.REVISI },
+        { id: 'laporan_saya', label: 'Laporan Saya', icon: FileText, to: ROUTES.PEGAWAI.LAPORAN_SAYA },
+        { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: ROUTES.PEGAWAI.LAPORAN_KEGIATAN },
       ],
     },
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
       ],
     },
     {
       title: 'SYSTEM',
       items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: '/profile' },
+        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
         { id: 'history', label: 'Activity Log', icon: History },
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
@@ -102,27 +94,27 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
   PPK: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/ppk' }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.PPK.ROOT }],
     },
     {
       title: 'VALIDASI',
       items: [
-        { id: 'validasi', label: 'Validasi Dokumen', icon: BadgeCheck, to: '/ppk/inbox' },
-        { id: 'tervalidasi', label: 'Dokumen Tervalidasi', icon: ClipboardCheck, to: '/ppk/tervalidasi' },
-        { id: 'ditolak', label: 'Dokumen Tidak Valid', icon: FileX, to: '/ppk/ditolak' },
-        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: '/ppk/revisi' },
+        { id: 'validasi', label: 'Validasi Dokumen', icon: BadgeCheck, to: ROUTES.PPK.INBOX },
+        { id: 'tervalidasi', label: 'Dokumen Tervalidasi', icon: ClipboardCheck, to: ROUTES.PPK.TERVALIDASI },
+        { id: 'ditolak', label: 'Dokumen Tidak Valid', icon: FileX, to: ROUTES.PPK.DITOLAK },
+        { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: ROUTES.PPK.REVISI },
       ],
     },
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
       ],
     },
     {
       title: 'SYSTEM',
       items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: '/profile' },
+        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
         { id: 'history', label: 'Activity Log', icon: History },
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
@@ -131,26 +123,26 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
   BENDAHARA: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/bendahara' }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.BENDAHARA.ROOT }],
     },
     {
       title: 'PERSETUJUAN',
       items: [
-        { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: '/bendahara/inbox' },
-        { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: '/bendahara/ditolak' },
-        { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: '/bendahara/selesai' },
+        { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: ROUTES.BENDAHARA.INBOX },
+        { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: ROUTES.BENDAHARA.DITOLAK },
+        { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: ROUTES.BENDAHARA.SELESAI },
       ],
     },
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: '/arsiparis/search' },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
       ],
     },
     {
       title: 'SYSTEM',
       items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: '/profile' },
+        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
         { id: 'history', label: 'Activity Log', icon: History },
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
@@ -159,23 +151,23 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
   ARSIPARIS: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/arsiparis' }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.ARSIPARIS.ROOT }],
     },
     {
       title: 'PEMBERKASAN',
       items: [
-        { id: 'pemberkasan', label: 'Pemberkasan Arsip', icon: Archive, to: '/arsiparis/inbox' },
-        { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: '/arsiparis/aktif' },
-        { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: '/arsiparis/inaktif' },
-        { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: '/arsiparis/usul-musnah' },
-        { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: '/arsiparis/klasifikasi' },
-        { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: '/arsiparis/search' },
+        { id: 'pemberkasan', label: 'Pemberkasan Arsip', icon: Archive, to: ROUTES.ARSIPARIS.INBOX },
+        { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: ROUTES.ARSIPARIS.AKTIF },
+        { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: ROUTES.ARSIPARIS.INAKTIF },
+        { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: ROUTES.ARSIPARIS.USUL_MUSNAH },
+        { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: ROUTES.ARSIPARIS.KLASIFIKASI },
+        { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: ROUTES.ARSIPARIS.SEARCH },
       ],
     },
     {
       title: 'SYSTEM',
       items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: '/profile' },
+        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
         { id: 'history', label: 'Activity Log', icon: History },
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
@@ -184,25 +176,25 @@ const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
   ADMIN: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/admin' }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.ADMIN.ROOT }],
     },
     {
       title: 'MANAGEMENT',
       items: [
-        { id: 'master_user', label: 'Master User', icon: Shield, to: '/admin/master-data/user' },
-        { id: 'master_fungsi', label: 'Departemen Fungsi', icon: Building2, to: '/admin/master-data/fungsi' },
-        { id: 'master_kegiatan', label: 'Master Kegiatan', icon: ClipboardList, to: '/admin/master-data/kegiatan' },
-        { id: 'master_jenis', label: 'Jenis Permintaan', icon: Tag, to: '/admin/master-data/jenis' },
-        { id: 'master_jenis_dokumen', label: 'Jenis Dokumen', icon: Tag, to: '/admin/master-data/jenis-dokumen' },
-        { id: 'master_kategori', label: 'Kategori Permintaan', icon: Tag, to: '/admin/master-data/kategori' },
-        { id: 'master_detail', label: 'Detail Permintaan', icon: Tag, to: '/admin/master-data/detail' },
-        { id: 'master_kelengkapan', label: 'Kelengkapan Dokumen', icon: FileCheck, to: '/admin/master-data/kelengkapan' },
+        { id: 'master_user', label: 'Master User', icon: Shield, to: ROUTES.ADMIN.MASTER_USER },
+        { id: 'master_fungsi', label: 'Departemen Fungsi', icon: Building2, to: ROUTES.ADMIN.MASTER_FUNGSI },
+        { id: 'master_kegiatan', label: 'Master Kegiatan', icon: ClipboardList, to: ROUTES.ADMIN.MASTER_KEGIATAN },
+        { id: 'master_jenis', label: 'Jenis Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_JENIS },
+        { id: 'master_jenis_dokumen', label: 'Jenis Dokumen', icon: Tag, to: ROUTES.ADMIN.MASTER_JENIS_DOKUMEN },
+        { id: 'master_kategori', label: 'Kategori Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_KATEGORI },
+        { id: 'master_detail', label: 'Detail Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_DETAIL },
+        { id: 'master_kelengkapan', label: 'Kelengkapan Dokumen', icon: FileCheck, to: ROUTES.ADMIN.MASTER_KELENGKAPAN },
       ],
     },
     {
       title: 'SYSTEM',
       items: [
-        { id: 'profile', label: 'Profil', icon: UserCircle, to: '/profile' },
+        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
         { id: 'history', label: 'Activity Log', icon: History },
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
@@ -233,7 +225,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const routerState = useRouterState()
 
   const [userRoles, setUserRoles] = React.useState<RoleName[]>([])
-  const [activeRole, setActiveRole] = React.useState<RoleName>('PEGAWAI')
+  const [activeRole, setActiveRole] = React.useState<RoleName>(ROLES.PEGAWAI)
   const [userName, setUserName] = React.useState<string | undefined>()
   const [email, setEmail] = React.useState<string | undefined>()
   const [isLoading, setIsLoading] = React.useState(true)
@@ -261,7 +253,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // Routes where the mesh background should show
   const pathname = routerState.location.pathname
   const isMeshPage = MESH_ROUTES.includes(pathname)
-  const isLoginPage = pathname === '/login'
+  const isLoginPage = pathname === ROUTES.LOGIN
 
   const fetchSession = React.useCallback(async () => {
     if (!supabase) { setIsLoading(false); setHasSession(false); return }
@@ -283,10 +275,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if (statusData && statusData.is_active === false) {
       // User is inactive, sign out and redirect
       await supabase.auth.signOut()
-      setUserRoles([]); setActiveRole('PEGAWAI')
+      setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
       setUserName(undefined); setEmail(undefined)
       setHasSession(false); clearAppState()
-      window.location.href = '/login?reason=inactive'
+      window.location.href = `${ROUTES.LOGIN}?reason=inactive`
       return
     }
 
@@ -338,13 +330,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if (!supabase) return
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: ReturnType<typeof supabase.auth.getSession>['data']) => {
       if (event === 'SIGNED_OUT') {
-        setUserRoles([]); setActiveRole('PEGAWAI')
+        setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
         setUserName(undefined); setEmail(undefined)
         setHasSession(false); setChairmanKegiatan([])
         clearAppState()
         // Redirect to login when session expires
         if (!isLoginPage) {
-          window.location.href = '/login'
+          window.location.href = ROUTES.LOGIN
         }
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         fetchSession()
@@ -356,7 +348,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // Redirect to login when not authenticated
   React.useEffect(() => {
     if (!isLoading && !hasSession && !isLoginPage) {
-      window.location.href = '/login'
+      window.location.href = ROUTES.LOGIN
     }
   }, [isLoading, hasSession, isLoginPage])
 
@@ -381,12 +373,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     setIsLoading(true)
-    setUserRoles([]); setActiveRole('PEGAWAI')
+    setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
     setUserName(undefined); setEmail(undefined)
     setHasSession(false); clearAppState()
     const supabase = getBrowserClient()
     if (supabase) await supabase.auth.signOut()
-    navigate({ to: '/login' })
+    navigate({ to: ROUTES.LOGIN })
   }
 
   // Build nav groups based on active role
@@ -394,7 +386,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return NAV_CONFIG[activeRole] ?? []
   }, [activeRole])
 
-  const isAdmin = activeRole === 'ADMIN'
+  const isAdmin = activeRole === ROLES.ADMIN
   const initials = getInitials(userName, email)
   const displayName = userName || email?.split('@')[0] || 'User'
   const canSwitchRole = userRoles.length > 1 && !isAdmin

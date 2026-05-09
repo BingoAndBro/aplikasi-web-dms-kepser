@@ -10,6 +10,7 @@ import {
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/dokumen/$id/')({
   component: ArsiparisDokumenDetailPage,
@@ -32,10 +33,6 @@ function calcDate(dateStr: string, years: number): string {
   return d.toISOString().split('T')[0]
 }
 
-function formatDate(dateStr: string): string {
-  try { return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return dateStr }
-}
 
 type DokumenDetail = {
   id: string

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 type InboxItem = {
   id: string
@@ -42,15 +43,6 @@ export const Route = createFileRoute('/ppk/inbox')({
 
 const PAGE_SIZE = 10
 
-function formatDate(dateStr: string) {
-  try {
-    return new Date(dateStr).toLocaleDateString('id-ID', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    })
-  } catch {
-    return dateStr
-  }
-}
 
 function PpkInboxPage() {
   const [items, setItems] = useState<InboxItem[]>([])

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RoleName, AppSession } from './types/auth'
+import { ROLE_NAMES, ROLES } from './constants/roles'
 
 export const ACTIVE_ROLE_COOKIE = 'dms_active_role'
 
@@ -114,11 +115,11 @@ export async function hasAnyRole(
  * Tentukan primary role: PEGAWAI priority → fallback ke role pertama
  */
 export function getPrimaryRole(roles: RoleName[]): RoleName {
-  if (roles.length === 0) return 'PEGAWAI'
+  if (roles.length === 0) return ROLES.PEGAWAI
   // ADMIN always takes priority — admin users need admin UI access
-  if (roles.includes('ADMIN')) return 'ADMIN'
+  if (roles.includes(ROLES.ADMIN)) return ROLES.ADMIN
   // Priority order for non-admin users
-  const priority: RoleName[] = ['PEGAWAI', 'PPK', 'BENDAHARA', 'ARSIPARIS']
+  const priority: RoleName[] = [ROLES.PEGAWAI, ROLES.PPK, ROLES.BENDAHARA, ROLES.ARSIPARIS]
   for (const r of priority) {
     if (roles.includes(r)) return r
   }
@@ -162,5 +163,3 @@ export async function buildAppSession(
 function isRoleName(value: string): value is RoleName {
   return ROLE_NAMES.includes(value as RoleName)
 }
-
-const ROLE_NAMES: readonly string[] = ['PEGAWAI', 'PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN']

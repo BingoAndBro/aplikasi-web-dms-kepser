@@ -25,6 +25,7 @@ import {
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/pegawai/dokumen/')({
   validateSearch: z.object({
@@ -151,15 +152,6 @@ function DokumenSayaPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
-  function formatDate(dateStr: string) {
-    try {
-      return new Date(dateStr).toLocaleDateString('id-ID', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      })
-    } catch {
-      return dateStr
-    }
-  }
 
   return (
     <PageLayout>

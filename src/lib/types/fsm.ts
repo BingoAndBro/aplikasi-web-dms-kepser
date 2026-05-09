@@ -1,33 +1,27 @@
 // src/lib/types/fsm.ts
 // Finite State Machine types for document status transitions
-// This file is the single source of truth for FSM types
+// This file re-exports canonical FSM constants/types for compatibility.
 
-/** Status dokumen — 7 kemungkinan status */
-export type StatusDokumen =
-  | 'DRAFT' // Belum diajukan / draft
-  | 'IN_PPK_VALIDATION' // Sedang divalidasi PPK (Material)
-  | 'IN_BENDAHARA_APPROVAL' // Sedang disetujui Bendahara (Material)
-  | 'NEED_REVISION' // Ditolak — ada yang perlu diperbaiki
-  | 'COMPLETED' // Selesai semua persetujuan (Material)
-  | 'TERSIMPAN' // Dokumen Non-Material tersimpan
-  | 'ARCHIVED' // Sudah diarsipkan Arsiparis
+import type {
+  CurrentStep,
+  FSMAction,
+  RevisionTarget,
+  StatusDokumen,
+} from '../constants/document-status'
 
-/** Step saat ini dalam alur berjenjang. null saat DRAFT, COMPLETED, ARCHIVED */
-export type CurrentStep = 'PPK' | 'BENDAHARA' | null
-
-/** Target revisi — siapa yang perlu memperbaiki. null saat tidak ada revision pending */
-export type RevisionTarget = 'USER' | 'PPK' | null
-
-/** Aksi yang bisa dilakukan pada dokumen */
-export type FSMAction =
-  | 'SUBMIT' // Pegawai ajukan dokumen Material
-  | 'APPROVE' // PPK/Bendahara approve
-  | 'REJECT' // PPK/Bendahara reject dari validasi/approval
-  | 'RESUBMIT' // USER resubmit setelah perbaikan (target=USER)
-  | 'RESUBMIT_PPK' // PPK resubmit setelah Bendahara reject (target=PPK)
-  | 'KEMBALIKAN' // PPK kembalikan ke USER dari revision page (target=PPK -> USER)
-  | 'ARCHIVE' // Arsiparis arsipkan
-  | 'SKIP' // Arsiparis skip (tidak arsip, tetap COMPLETED)
+export {
+  CURRENT_STEPS,
+  DOC_STATUS,
+  DOC_STATUS_VALUES,
+  FSM_ACTIONS,
+  REVISION_TARGETS,
+} from '../constants/document-status'
+export type {
+  CurrentStep,
+  FSMAction,
+  RevisionTarget,
+  StatusDokumen,
+} from '../constants/document-status'
 
 /** Return type dari transition() */
 export interface TransitionResult {
@@ -39,3 +33,4 @@ export interface TransitionResult {
   stepUrutan: number | null
   error?: string
 }
+

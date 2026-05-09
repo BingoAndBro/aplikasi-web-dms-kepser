@@ -1,75 +1,78 @@
 // src/lib/fsm.ts
-// Single source of truth for document status transitions
-// Invariant #8: Semua transisi status HARUS lewat fungsi ini
-// Jangan pernah update status dokumen langsung di luar file ini
+// Single source of truth for document status transitions.
+// Invariant #8: all document status transitions must go through this file.
 
 import type {
-  StatusDokumen,
   FSMAction,
+  StatusDokumen,
   TransitionResult,
 } from './types/fsm'
 import type { RoleName } from './types/auth'
+import {
+  CURRENT_STEPS,
+  DOC_STATUS,
+  FSM_ACTIONS,
+  REVISION_TARGETS,
+} from './constants/document-status'
+import { ROLES } from './constants/roles'
 
-// Lookup table — valid transitions
 const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> = {
-  // Material documents
-  'DRAFT:SUBMIT': {
-    newStatus: 'IN_PPK_VALIDATION',
-    newCurrentStep: 'PPK',
+  [`${DOC_STATUS.DRAFT}:${FSM_ACTIONS.SUBMIT}`]: {
+    newStatus: DOC_STATUS.IN_PPK_VALIDATION,
+    newCurrentStep: CURRENT_STEPS.PPK,
     newRevisionTarget: null,
     stepUrutan: 1,
   },
-  'IN_PPK_VALIDATION:APPROVE': {
-    newStatus: 'IN_BENDAHARA_APPROVAL',
-    newCurrentStep: 'BENDAHARA',
+  [`${DOC_STATUS.IN_PPK_VALIDATION}:${FSM_ACTIONS.APPROVE}`]: {
+    newStatus: DOC_STATUS.IN_BENDAHARA_APPROVAL,
+    newCurrentStep: CURRENT_STEPS.BENDAHARA,
     newRevisionTarget: null,
     stepUrutan: 2,
   },
-  'IN_PPK_VALIDATION:REJECT': {
-    newStatus: 'NEED_REVISION',
-    newCurrentStep: 'PPK',
-    newRevisionTarget: 'USER',
+  [`${DOC_STATUS.IN_PPK_VALIDATION}:${FSM_ACTIONS.REJECT}`]: {
+    newStatus: DOC_STATUS.NEED_REVISION,
+    newCurrentStep: CURRENT_STEPS.PPK,
+    newRevisionTarget: REVISION_TARGETS.USER,
     stepUrutan: 1,
   },
-  'IN_BENDAHARA_APPROVAL:APPROVE': {
-    newStatus: 'COMPLETED',
+  [`${DOC_STATUS.IN_BENDAHARA_APPROVAL}:${FSM_ACTIONS.APPROVE}`]: {
+    newStatus: DOC_STATUS.COMPLETED,
     newCurrentStep: null,
     newRevisionTarget: null,
     stepUrutan: 2,
   },
-  'IN_BENDAHARA_APPROVAL:REJECT': {
-    newStatus: 'NEED_REVISION',
-    newCurrentStep: 'BENDAHARA',
-    newRevisionTarget: 'PPK',
+  [`${DOC_STATUS.IN_BENDAHARA_APPROVAL}:${FSM_ACTIONS.REJECT}`]: {
+    newStatus: DOC_STATUS.NEED_REVISION,
+    newCurrentStep: CURRENT_STEPS.BENDAHARA,
+    newRevisionTarget: REVISION_TARGETS.PPK,
     stepUrutan: 1,
   },
-  'NEED_REVISION:RESUBMIT': {
-    newStatus: 'IN_PPK_VALIDATION',
-    newCurrentStep: 'PPK',
+  [`${DOC_STATUS.NEED_REVISION}:${FSM_ACTIONS.RESUBMIT}`]: {
+    newStatus: DOC_STATUS.IN_PPK_VALIDATION,
+    newCurrentStep: CURRENT_STEPS.PPK,
     newRevisionTarget: null,
     stepUrutan: 1,
   },
-  'NEED_REVISION:RESUBMIT_PPK': {
-    newStatus: 'IN_BENDAHARA_APPROVAL',
-    newCurrentStep: 'BENDAHARA',
+  [`${DOC_STATUS.NEED_REVISION}:${FSM_ACTIONS.RESUBMIT_PPK}`]: {
+    newStatus: DOC_STATUS.IN_BENDAHARA_APPROVAL,
+    newCurrentStep: CURRENT_STEPS.BENDAHARA,
     newRevisionTarget: null,
     stepUrutan: 2,
   },
-  // PPK returns document to USER from revision page (NEED_REVISION, target=PPK -> USER)
-  'NEED_REVISION:KEMBALIKAN': {
-    newStatus: 'NEED_REVISION',
-    newCurrentStep: 'PPK',
-    newRevisionTarget: 'USER',
+  [`${DOC_STATUS.NEED_REVISION}:${FSM_ACTIONS.KEMBALIKAN}`]: {
+    newStatus: DOC_STATUS.NEED_REVISION,
+    newCurrentStep: CURRENT_STEPS.PPK,
+    newRevisionTarget: REVISION_TARGETS.USER,
     stepUrutan: 1,
   },
-  'COMPLETED:ARCHIVE': {
-    newStatus: 'ARCHIVED',
+  [`${DOC_STATUS.COMPLETED}:${FSM_ACTIONS.ARCHIVE}`]: {
+    newStatus: DOC_STATUS.ARCHIVED,
     newCurrentStep: null,
     newRevisionTarget: null,
     stepUrutan: null,
   },
-  'COMPLETED:SKIP': {
-    newStatus: 'COMPLETED',
+  [`${DOC_STATUS.COMPLETED}:${FSM_ACTIONS.SKIP}`]: {
+    newStatus: DOC_STATUS.COMPLETED,
     newCurrentStep: null,
     newRevisionTarget: null,
     stepUrutan: null,
@@ -93,7 +96,6 @@ export function transition(
   actorRole: RoleName,
   revisionTarget?: string | null,
 ): TransitionResult {
-  // 1. Validate actor
   const actorValid = isActorValidForAction(currentStatus, action, actorRole)
   if (!actorValid) {
     return makeError(
@@ -102,9 +104,8 @@ export function transition(
     )
   }
 
-  // 2. REJECT requires revisionTarget
-  if (action === 'REJECT') {
-    if (!revisionTarget || (revisionTarget !== 'USER' && revisionTarget !== 'PPK')) {
+  if (action === FSM_ACTIONS.REJECT) {
+    if (!revisionTarget || (revisionTarget !== REVISION_TARGETS.USER && revisionTarget !== REVISION_TARGETS.PPK)) {
       return makeError(
         currentStatus,
         "REJECT requires revisionTarget: 'USER' or 'PPK'",
@@ -112,21 +113,19 @@ export function transition(
     }
   }
 
-  // 3. RESUBMIT requires correct target
-  if (action === 'RESUBMIT' && revisionTarget !== 'USER') {
+  if (action === FSM_ACTIONS.RESUBMIT && revisionTarget !== REVISION_TARGETS.USER) {
     return makeError(
       currentStatus,
       "RESUBMIT only valid when revisionTarget is 'USER'",
     )
   }
-  if (action === 'RESUBMIT_PPK' && revisionTarget !== 'PPK') {
+  if (action === FSM_ACTIONS.RESUBMIT_PPK && revisionTarget !== REVISION_TARGETS.PPK) {
     return makeError(
       currentStatus,
       "RESUBMIT_PPK only valid when revisionTarget is 'PPK'",
     )
   }
 
-  // 4. Lookup transition
   const key = `${currentStatus}:${action}`
   const result = TRANSITIONS[key]
   if (!result) {
@@ -145,28 +144,29 @@ function isActorValidForAction(
   role: RoleName,
 ): boolean {
   switch (action) {
-    case 'SUBMIT':
-      return role === 'PEGAWAI'
-    case 'APPROVE':
+    case FSM_ACTIONS.SUBMIT:
+      return role === ROLES.PEGAWAI
+    case FSM_ACTIONS.APPROVE:
       return (
-        (status === 'IN_PPK_VALIDATION' && role === 'PPK') ||
-        (status === 'IN_BENDAHARA_APPROVAL' && role === 'BENDAHARA')
+        (status === DOC_STATUS.IN_PPK_VALIDATION && role === ROLES.PPK) ||
+        (status === DOC_STATUS.IN_BENDAHARA_APPROVAL && role === ROLES.BENDAHARA)
       )
-    case 'REJECT':
+    case FSM_ACTIONS.REJECT:
       return (
-        (status === 'IN_PPK_VALIDATION' && role === 'PPK') ||
-        (status === 'IN_BENDAHARA_APPROVAL' && role === 'BENDAHARA')
+        (status === DOC_STATUS.IN_PPK_VALIDATION && role === ROLES.PPK) ||
+        (status === DOC_STATUS.IN_BENDAHARA_APPROVAL && role === ROLES.BENDAHARA)
       )
-    case 'RESUBMIT':
-      return role === 'PEGAWAI'
-    case 'RESUBMIT_PPK':
-      return role === 'PPK'
-    case 'KEMBALIKAN':
-      return role === 'PPK' && status === 'NEED_REVISION'
-    case 'ARCHIVE':
-    case 'SKIP':
-      return role === 'ARSIPARIS'
+    case FSM_ACTIONS.RESUBMIT:
+      return role === ROLES.PEGAWAI
+    case FSM_ACTIONS.RESUBMIT_PPK:
+      return role === ROLES.PPK
+    case FSM_ACTIONS.KEMBALIKAN:
+      return role === ROLES.PPK && status === DOC_STATUS.NEED_REVISION
+    case FSM_ACTIONS.ARCHIVE:
+    case FSM_ACTIONS.SKIP:
+      return role === ROLES.ARSIPARIS
     default:
       return false
   }
 }
+

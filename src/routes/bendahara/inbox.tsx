@@ -10,6 +10,7 @@ import {
 import { cn } from '#/lib/utils'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/bendahara/inbox')({ component: BendaharaInboxPage })
 
@@ -47,12 +48,6 @@ function BendaharaInboxPage() {
 
   useEffect(() => { fetchData() }, [fungsiFilter])
 
-  function formatDate(str: string) {
-    try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
-  }
-  function formatDateTime(str: string) {
-    try { return new Date(str).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) } catch { return str }
-  }
 
   return (
     <PageLayout>

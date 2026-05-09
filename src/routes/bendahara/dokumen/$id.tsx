@@ -10,6 +10,7 @@ import {
   CheckCircle2, Loader2, X, Banknote,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/bendahara/dokumen/$id')({ component: BendaharaDokumenDetailPage })
 
@@ -37,7 +38,6 @@ const WORKFLOW_STEPS = [
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 function getWorkflowIdx(status: string) { return WORKFLOW_STEPS.findIndex(s => s.key === status) }
-function formatDate(str: string) { try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str } }
 
 function BendaharaDokumenDetailPage() {
   const { id } = Route.useParams()

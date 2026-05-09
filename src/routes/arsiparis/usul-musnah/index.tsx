@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { formatDate } from '#/lib/utils/format'
 import {
   Trash2, ChevronRight, AlertCircle, Loader2,
   Eye,
@@ -40,9 +41,7 @@ function UsulMusnahPage() {
 
   useEffect(() => { fetchData() }, [])
 
-  function formatDate(str: string) {
-    try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
-  }
+
 
   const statusBadge = (status: MusnahItem['musnah_status']) => {
     if (status === 'MENUNGGU') return <Badge className='bg-amber-100 text-amber-700 border-amber-200 text-xs'>MENUNGGU</Badge>

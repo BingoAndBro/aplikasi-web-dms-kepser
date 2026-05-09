@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/ppk/dokumen/$id/resubmit')({
   component: PpkResubmitPage,
@@ -32,10 +33,6 @@ function getWorkflowIndex(status: string): number {
   return WORKFLOW_STEPS.findIndex(s => s.key === status)
 }
 
-function formatDate(str: string): string {
-  try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return str }
-}
 
 function PpkResubmitPage() {
   const { id } = Route.useParams()

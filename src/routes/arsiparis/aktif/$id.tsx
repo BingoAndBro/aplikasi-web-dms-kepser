@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/aktif/$id')({ component: ArsipAktifDetailPage })
 
@@ -40,9 +41,6 @@ type ArsipDetail = {
   }
 }
 
-function formatDate(str: string) {
-  try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
-}
 
 function ArsipAktifDetailPage() {
   const { id }: { id: string } = Route.useParams()

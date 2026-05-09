@@ -16,6 +16,7 @@ import {
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/revisi')({
   component: DokumenRevisiPage,
@@ -37,10 +38,6 @@ function getWorkflowIndex(status: string): number {
   return WORKFLOW_STEPS.findIndex(s => s.key === status)
 }
 
-function formatDate(str: string): string {
-  try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return str }
-}
 
 // ---------------------------------------------------------------------------
 // Main page

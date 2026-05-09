@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { getBrowserClient } from '#/lib/supabase-browser'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/inbox')({ component: ArsiparisInboxPage })
 
@@ -54,9 +55,6 @@ function ArsiparisInboxPage() {
 
   useEffect(() => { fetchData() }, [fungsiFilter])
 
-  function formatDate(str: string) {
-    try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
-  }
 
   return (
     <PageLayout>

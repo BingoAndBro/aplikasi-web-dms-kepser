@@ -3,6 +3,7 @@
  * Uses Supabase client (not Drizzle ORM) — follows existing project convention.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sanitizeFilename, extractExtension, extractFilenameFromPath, isPendingFile } from './utils/file'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -774,53 +775,7 @@ function parseDokumenWithNames(
 // Storage Filename Helpers (Single Source of Truth)
 // ---------------------------------------------------------------------------
 
-/**
- * Membersihkan karakter berbahaya dari nama file.
- * Karakter seperti / \ * ? " < > | akan diganti dengan underscore.
- */
-function _sanitizeFilename(str: string): string {
-  return str.replace(/[\/\\:*?"<>|]/g, '_').replace(/_+/g, '_')
-}
-
-/**
- * Mengekstrak ekstensi dari nama file.
- * Returns: ekstensi dalam lowercase atau string kosong jika tidak ada.
- */
-function _extractExtension(filename: string): string {
-  const lastDotIdx = filename.lastIndexOf('.')
-  return lastDotIdx > 0 && lastDotIdx < filename.length - 1
-    ? filename.slice(lastDotIdx + 1).toLowerCase()
-    : ''
-}
-
-/**
- * Mengekstrak nama file dari storage path.
- * Handles format: [folder]/[filename.ext] atau dash-style [timestamp]-[random]-[filename]
- */
-function _extractFilenameFromPath(url: string): string {
-  const pathParts = url.split('/')
-  const filenameWithExt = pathParts[pathParts.length - 1] || 'download'
-
-  // Cek apakah dash-format (PENDING file): timestamp-random-filename
-  const dashMatch = filenameWithExt.match(/^\d{13}-[a-zA-Z0-9]+-(.+)$/)
-  if (dashMatch) {
-    return dashMatch[1]
-  }
-
-  return filenameWithExt
-}
-
-/**
- * Cek apakah storage path adalah PENDING file.
- * PENDING = storage path dengan format timestamp-random-filename (dash).
- * File PENDING adalah file yang baru diupload saat edit/revisi.
- * File FORMAL adalah file yang sudah disubmit ke workflow.
- */
-export function isStoragePathPending(lampiranUrl: string): boolean {
-  const pathParts = lampiranUrl.split('/')
-  const filenameWithExt = pathParts[pathParts.length - 1] || 'download'
-  return /^\d{13}-[a-zA-Z0-9]+-.+$/.test(filenameWithExt)
-}
+export { isPendingFile as isStoragePathPending } from './utils/file'
 
 /**
  * Membangun nama file formal berdasarkan metadata dokumen.
@@ -850,10 +805,9 @@ export function buildDokumenFilename(dok: DokumenRow, lamp: LampiranUrl): string
       || kegiatanNama
   }
 
-  // Extract extension dari storage path
-  const ext = _extractExtension(lamp.url)
+  const ext = extractExtension(lamp.url)
 
-  return `${_sanitizeFilename(kelengkapanNama)}_${_sanitizeFilename(leafNode)}_${_sanitizeFilename(kegiatanNama)}_${tanggal}.${ext}`
+  return `${sanitizeFilename(kelengkapanNama)}_${sanitizeFilename(leafNode)}_${sanitizeFilename(kegiatanNama)}_${tanggal}.${ext}`
 }
 
 /**
@@ -862,9 +816,8 @@ export function buildDokumenFilename(dok: DokumenRow, lamp: LampiranUrl): string
  * - Jika file FORMAL, kembalikan formal filename
  */
 export function buildStorageFilename(dok: DokumenRow, lamp: LampiranUrl): string {
-  if (isStoragePathPending(lamp.url)) {
-    // File PENDING - gunakan nama upload asli dari storage path
-    return _extractFilenameFromPath(lamp.url)
+  if (isPendingFile(lamp.url)) {
+    return extractFilenameFromPath(lamp.url)
   }
 
   // File FORMAL - gunakan formal filename
@@ -884,7 +837,7 @@ export function buildFormalStoragePath(
   dokId: string,
   lamp: LampiranUrl
 ): string {
-  const ext = _extractExtension(lamp.url)
+  const ext = extractExtension(lamp.url)
   const uuid = crypto.randomUUID()
   return `${userId}/${dokId}/${uuid}.${ext}`
 }
@@ -931,7 +884,7 @@ export async function syncDocumentAttachments(
     if (!lamp.url) continue
 
     // Skip non-PENDING files (already formal)
-    if (!isStoragePathPending(lamp.url)) {
+    if (!isPendingFile(lamp.url)) {
       console.log('[syncDocumentAttachments] Skipping non-pending:', lamp.url)
       continue
     }
@@ -944,7 +897,7 @@ export async function syncDocumentAttachments(
     }
 
     // Move PENDING file to formal path
-    const ext = _extractExtension(lamp.url)
+    const ext = extractExtension(lamp.url)
     const newPath = `${userId}/${dokumenId}/${crypto.randomUUID()}.${ext}`
 
     console.log('[syncDocumentAttachments] Moving:', lamp.url, '->', newPath)

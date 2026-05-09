@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, CheckCircle2, ClipboardCheck, Info } from 'lucide-react'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 type Item = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
@@ -14,10 +15,6 @@ type Item = {
 
 export const Route = createFileRoute('/ppk/tervalidasi')({ component: PpkTervalidasiPage })
 
-function formatDate(str: string) {
-  try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return str }
-}
 
 function StatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { label: string; cls: string }> = {

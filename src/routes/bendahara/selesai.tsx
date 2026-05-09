@@ -5,10 +5,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, CheckCircle2, Banknote } from 'lucide-react'
+import { formatDate } from '#/lib/utils/format'
 
 type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string }
 
-function formatDate(str: string) { try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str } }
 
 export const Route = createFileRoute('/bendahara/selesai')({ component: BendaharaSelesaiPage })
 

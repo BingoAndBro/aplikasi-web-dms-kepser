@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, FileEdit, ArrowLeft } from 'lucide-react'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 type Item = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
@@ -14,10 +15,6 @@ type Item = {
 
 export const Route = createFileRoute('/ppk/revisi')({ component: PpkRevisiPage })
 
-function formatDate(str: string) {
-  try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return str }
-}
 
 function truncate(str: string | null, len = 50): string {
   if (!str) return '—'

@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/ppk/dokumen/$id/')({
   component: PpkDokumenDetailIndexPage,
@@ -61,10 +62,6 @@ function getWorkflowIndex(status: string): number {
   return WORKFLOW_STEPS.findIndex(s => s.key === status)
 }
 
-function formatDate(dateStr: string): string {
-  try { return new Date(dateStr).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
-  catch { return dateStr }
-}
 
 function PpkDokumenDetailIndexPage() {
   const { id } = Route.useParams()

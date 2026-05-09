@@ -3,11 +3,10 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import { AppLayout } from '../components/layout/AppLayout'
+import { PUBLIC_PATHS } from '../lib/constants/routes'
 import appCss from '../styles.css?url'
 
 const THEME_INIT_SCRIPT = `(function(){try{var root=document.documentElement;root.classList.remove('light','dark');root.classList.add('light');root.style.colorScheme='light';}catch(e){}})();`
-
-const PUBLIC_PATHS = ['/login', '/api/']
 
 export const Route = createRootRoute({
   ssr: false,

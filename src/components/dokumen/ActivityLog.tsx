@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Clock, User, FileText, CheckCircle2, XCircle, AlertTriangle, Upload, ArrowRight } from 'lucide-react'
+import { formatDateTime } from '#/lib/utils/format'
 
 type LogEntry = {
   id: string
@@ -29,20 +30,6 @@ const AKSI_CONFIG: Record<string, { label: string; icon: typeof FileText; color:
   STORE: { label: 'Laporan kegiatan disimpan', icon: Upload, color: 'text-purple-600 bg-purple-50' },
   UPDATE: { label: 'Lampiran diperbarui', icon: FileText, color: 'text-blue-600 bg-blue-50' },
   DELETE: { label: 'Dokumen dihapus', icon: XCircle, color: 'text-red-600 bg-red-50' },
-}
-
-function formatDateTime(str: string) {
-  try {
-    return new Date(str).toLocaleString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return str
-  }
 }
 
 interface ActivityLogProps {

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { getBrowserClient } from '#/lib/supabase-browser'
+import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/search')({ component: ArsipSearchPage })
 
@@ -71,9 +72,6 @@ function ArsipSearchPage() {
     setFungsiFilter(''); setKegiatanFilter(''); setTahun(''); setQ(''); setPage(1)
   }
 
-  function formatDate(str: string) {
-    try { return new Date(str).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return str }
-  }
 
   function statusBadge(s: string) {
     if (s === 'AKTIF') return <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">AKTIF</Badge>
