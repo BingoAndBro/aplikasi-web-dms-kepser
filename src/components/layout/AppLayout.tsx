@@ -1,13 +1,5 @@
 import * as React from 'react'
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
-import {
-  Settings,
-  LogOut,
-  Search,
-  Bell,
-  ChevronDown,
-  UserCircle,
-} from 'lucide-react'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
@@ -15,8 +7,8 @@ import { MESH_ROUTES, ROLE_DEFAULT_ROUTE, ROUTES } from '#/lib/constants/routes'
 import { ROLES } from '#/lib/constants/roles'
 
 import type { RoleName } from '#/lib/types/auth'
-import { ROLE_DISPLAY } from '#/lib/types/auth'
 import { AppSidebar } from './AppSidebar'
+import { AppHeader } from './AppHeader'
 
 function clearAppState() {
   document.cookie = `${ACTIVE_ROLE_COOKIE}=; path=/; max-age=0`
@@ -230,125 +222,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         />
 
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-20 flex justify-between items-center px-10 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10 z-40">
-            <div className="flex items-center gap-12 flex-1">
-              <div className="flex items-center gap-4">
-                {isAdmin ? (
-                  <span className="text-xl font-extrabold tracking-tight text-primary shrink-0">Admin Curator</span>
-                ) : (
-                  <h2 className="text-2xl font-black tracking-tighter text-on-surface font-headline shrink-0">
-                    {ROLE_DISPLAY[activeRole]}
-                  </h2>
-                )}
-              </div>
-
-              <div className="relative group flex-1 max-w-2xl">
-                <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-outline/40">
-                  <Search size={18} />
-                </div>
-                <input
-                  type="text"
-                  placeholder={isAdmin ? 'Quick search users...' : 'Search documents, archives, or tasks...'}
-                  className="pl-14 pr-6 py-3.5 bg-surface-container/30 border border-outline-variant/20 rounded-2xl w-full text-sm focus:ring-2 focus:ring-primary/40 focus:bg-surface-container placeholder:text-outline/40 outline-none transition-all shadow-inner group-hover:border-outline-variant/40"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-5">
-                <button className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all relative">
-                  <Bell size={22} />
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background" />
-                </button>
-                <button className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all">
-                  <Settings size={22} />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-4 pl-8 border-l border-outline-variant/10 relative">
-                {canSwitchRole && (
-                  <div className="flex flex-col items-end mr-2 relative">
-                    <label className="text-[8px] font-black text-outline uppercase tracking-[0.2em] mb-1">Switch Role</label>
-                    <button
-                      onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-                      className="bg-surface-container/50 border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest px-2 py-1 outline-none focus:ring-1 focus:ring-primary/40 cursor-pointer hover:bg-surface-container transition-all flex items-center gap-1"
-                    >
-                      {activeRole}
-                      <ChevronDown size={10} className={`transition-transform ${roleSwitcherOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {roleSwitcherOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setRoleSwitcherOpen(false)} />
-                        <div className="absolute right-0 top-full mt-1 z-50 bg-surface-container-lowest border border-outline-variant/20 rounded-lg shadow-xl py-1 min-w-[160px]">
-                          {userRoles.map((role) => (
-                            <button
-                              key={role}
-                              onClick={() => handleRoleSwitch(role)}
-                              className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                                role === activeRole
-                                  ? 'bg-primary text-white'
-                                  : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                              }`}
-                            >
-                              {role}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-black text-on-surface uppercase tracking-wider">{displayName}</p>
-                  <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
-                    {isAdmin ? 'Super Administrator' : ROLE_DISPLAY[activeRole]}
-                  </p>
-                </div>
-
-                <div className="relative">
-                  <button
-                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="w-11 h-11 rounded-2xl bg-primary/10 p-0.5 shadow-xl cursor-pointer hover:bg-primary/20 transition-all"
-                  >
-                    <div className="w-full h-full rounded-[14px] bg-primary flex items-center justify-center border-2 border-background">
-                      <span className="text-xs font-extrabold text-white">{initials}</span>
-                    </div>
-                  </button>
-                  {userDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-xl py-2 min-w-[200px]">
-                        <div className="px-4 py-2 border-b border-outline-variant/10">
-                          <p className="text-sm font-bold text-on-surface">{displayName}</p>
-                          <p className="text-xs text-outline">{email}</p>
-                        </div>
-                        <div className="py-1">
-                          <Link
-                            to="/profile"
-                            onClick={() => setUserDropdownOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:bg-primary/5 hover:text-primary transition-colors"
-                          >
-                            <UserCircle size={16} />
-                            Profil Saya
-                          </Link>
-                        </div>
-                        <div className="border-t border-outline-variant/10 pt-1">
-                          <button
-                            onClick={() => { setUserDropdownOpen(false); handleLogout() }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-error/5 transition-colors"
-                          >
-                            <LogOut size={16} />
-                            Sign Out
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </header>
+          <AppHeader
+            activeRole={activeRole}
+            canSwitchRole={canSwitchRole}
+            displayName={displayName}
+            email={email}
+            handleLogout={handleLogout}
+            handleRoleSwitch={handleRoleSwitch}
+            initials={initials}
+            isAdmin={isAdmin}
+            roleSwitcherOpen={roleSwitcherOpen}
+            setRoleSwitcherOpen={setRoleSwitcherOpen}
+            setUserDropdownOpen={setUserDropdownOpen}
+            userDropdownOpen={userDropdownOpen}
+            userRoles={userRoles}
+          />
 
           <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <section className="flex-1 overflow-y-auto custom-scrollbar bg-background border-r border-outline-variant/15">
