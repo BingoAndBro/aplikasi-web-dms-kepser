@@ -1,21 +1,19 @@
 import type { DokumenRow, LampiranUrl } from './types'
+import { lampiranUrlsSchema } from '../schemas/dokumen'
 
 export function parseLampiranUrls(rawLampiranUrls: unknown): LampiranUrl[] {
-  let lampiranUrls: LampiranUrl[] = []
+  let rawValue = rawLampiranUrls
 
-  if (rawLampiranUrls) {
-    if (typeof rawLampiranUrls === 'string') {
-      try {
-        lampiranUrls = JSON.parse(rawLampiranUrls)
-      } catch {
-        lampiranUrls = []
-      }
-    } else {
-      lampiranUrls = rawLampiranUrls as LampiranUrl[]
+  if (typeof rawLampiranUrls === 'string') {
+    try {
+      rawValue = JSON.parse(rawLampiranUrls)
+    } catch {
+      return []
     }
   }
 
-  return lampiranUrls
+  const parsed = lampiranUrlsSchema.safeParse(rawValue)
+  return parsed.success ? parsed.data : []
 }
 
 export function parseDokumen(raw: any): DokumenRow {

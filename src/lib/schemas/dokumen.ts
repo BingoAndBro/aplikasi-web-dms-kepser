@@ -14,6 +14,8 @@ export const lampiranUrlSchema = z.object({
   uploaded_at: z.string().min(1, 'Timestamp tidak boleh kosong'),
 })
 
+export const lampiranUrlsSchema = z.array(lampiranUrlSchema)
+
 // ---------------------------------------------------------------------------
 // Create dokumen
 // ---------------------------------------------------------------------------
