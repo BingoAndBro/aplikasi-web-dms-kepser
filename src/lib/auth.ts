@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RoleName, AppSession } from './types/auth'
 import { ROLE_NAMES, ROLES } from './constants/roles'
+import { roleArraySchema } from './schemas/auth'
 
 export const ACTIVE_ROLE_COOKIE = 'dms_active_role'
 
@@ -79,11 +80,9 @@ export async function getUserRole(
 
   if (error || !data) return []
 
-  const roleNames = data
+  return parseRoleArray(data
     .map((row: any) => row.role?.nama as RoleName | undefined)
-    .filter((n): n is RoleName => n !== undefined)
-
-  return roleNames
+    .filter((n): n is string => n !== undefined))
 }
 
 /**
@@ -162,4 +161,9 @@ export async function buildAppSession(
 
 function isRoleName(value: string): value is RoleName {
   return ROLE_NAMES.includes(value as RoleName)
+}
+
+export function parseRoleArray(value: unknown): RoleName[] {
+  const parsed = roleArraySchema.safeParse(value)
+  return parsed.success ? parsed.data : []
 }

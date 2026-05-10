@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ROLE_NAMES } from '../constants/roles'
 
 // Login
 export const loginSchema = z.object({
@@ -9,9 +10,12 @@ export type LoginInput = z.infer<typeof loginSchema>
 
 // Role switch
 export const roleSwitchSchema = z.object({
-  activeRole: z.enum(['PEGAWAI', 'PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN']),
+  activeRole: z.enum(ROLE_NAMES),
 })
 export type RoleSwitchInput = z.infer<typeof roleSwitchSchema>
+
+export const roleSchema = z.enum(ROLE_NAMES)
+export const roleArraySchema = z.array(roleSchema)
 
 // Session response
 export const sessionResponseSchema = z.object({
@@ -20,7 +24,7 @@ export const sessionResponseSchema = z.object({
     email: z.string(),
     userName: z.string().optional(),
   }).nullable(),
-  roles: z.array(z.string()),
+  roles: roleArraySchema,
   activeRole: z.string().nullable(),
 })
 export type SessionResponse = z.infer<typeof sessionResponseSchema>
