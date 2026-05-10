@@ -1,6 +1,5 @@
 import {
   Bell,
-  ChevronDown,
   Search,
   Settings,
 } from 'lucide-react'
@@ -8,6 +7,7 @@ import {
 import { ROLE_DISPLAY } from '#/lib/types/auth'
 
 import type { RoleName } from '#/lib/types/auth'
+import { RoleDropdown } from './RoleDropdown'
 import { UserDropdown } from './UserDropdown'
 
 export function AppHeader({
@@ -77,36 +77,13 @@ export function AppHeader({
 
         <div className="flex items-center gap-4 pl-8 border-l border-outline-variant/10 relative">
           {canSwitchRole && (
-            <div className="flex flex-col items-end mr-2 relative">
-              <label className="text-[8px] font-black text-outline uppercase tracking-[0.2em] mb-1">Switch Role</label>
-              <button
-                onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-                className="bg-surface-container/50 border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest px-2 py-1 outline-none focus:ring-1 focus:ring-primary/40 cursor-pointer hover:bg-surface-container transition-all flex items-center gap-1"
-              >
-                {activeRole}
-                <ChevronDown size={10} className={`transition-transform ${roleSwitcherOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {roleSwitcherOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setRoleSwitcherOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-surface-container-lowest border border-outline-variant/20 rounded-lg shadow-xl py-1 min-w-[160px]">
-                    {userRoles.map((role) => (
-                      <button
-                        key={role}
-                        onClick={() => handleRoleSwitch(role)}
-                        className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                          role === activeRole
-                            ? 'bg-primary text-white'
-                            : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                        }`}
-                      >
-                        {role}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+            <RoleDropdown
+              currentRole={activeRole}
+              handleRoleSwitch={handleRoleSwitch}
+              roleSwitcherOpen={roleSwitcherOpen}
+              setRoleSwitcherOpen={setRoleSwitcherOpen}
+              userRoles={userRoles}
+            />
           )}
 
           <div className="text-right hidden sm:block">

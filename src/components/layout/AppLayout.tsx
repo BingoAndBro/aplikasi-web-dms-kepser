@@ -54,7 +54,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = React.useMemo(() => getBrowserClient(), [])
 
   const pathname = routerState.location.pathname
-  const isMeshPage = MESH_ROUTES.includes(pathname)
+  const isMeshPage = MESH_ROUTES.some((route) => route === pathname)
   const isLoginPage = pathname === ROUTES.LOGIN
 
   const fetchSession = React.useCallback(async () => {
