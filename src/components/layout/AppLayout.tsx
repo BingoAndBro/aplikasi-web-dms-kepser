@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 
+import { ROLE_DEFAULT_ROUTE } from '#/config/navigation'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
-import { MESH_ROUTES, ROLE_DEFAULT_ROUTE, ROUTES } from '#/lib/constants/routes'
+import { MESH_ROUTES, ROUTES } from '#/lib/constants/routes'
 import { ROLES } from '#/lib/constants/roles'
 
 import type { RoleName } from '#/lib/types/auth'
