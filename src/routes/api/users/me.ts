@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession, getUserRole } from '#/lib/auth'
+import { parseUserProfileResponse } from '#/lib/user-response'
 import { parseUserMetadata } from '#/lib/user-metadata'
 
 // ---------------------------------------------------------------------------
@@ -34,14 +35,14 @@ export const Route = createFileRoute('/api/users/me')({
         // Get roles
         const roles = await getUserRole(supabase, session.user.id)
 
-        return Response.json({
+        return Response.json(parseUserProfileResponse({
           user: {
             id: session.user.id,
             email: session.user.email,
             metadata: parseUserMetadata(session.user.user_metadata),
             roles,
           },
-        })
+        }))
       },
     },
   },

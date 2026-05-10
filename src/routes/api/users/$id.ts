@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getUserWithRoles, updateUserWithRoles } from '#/lib/user-helpers'
+import { parseUserResponse } from '#/lib/user-response'
 import type { RoleName } from '#/lib/types/auth'
 
 // ---------------------------------------------------------------------------
@@ -53,7 +54,7 @@ export const Route = createFileRoute('/api/users/$id')({
             return Response.json({ error: 'User tidak ditemukan' }, { status: 404 })
           }
 
-          return Response.json({ user })
+          return Response.json(parseUserResponse({ user }))
         } catch (err: any) {
           console.error('[API] /api/users/[id] GET error:', err)
           return Response.json({ error: 'Gagal mengambil data user' }, { status: 500 })
@@ -125,7 +126,7 @@ export const Route = createFileRoute('/api/users/$id')({
             return Response.json({ error: result.error }, { status: 400 })
           }
 
-          return Response.json({ user: result.data })
+          return Response.json(parseUserResponse({ user: result.data }))
         } catch (err: any) {
           console.error('[API] /api/users/[id] PATCH error:', err)
           return Response.json({ error: 'Gagal mengupdate user' }, { status: 500 })

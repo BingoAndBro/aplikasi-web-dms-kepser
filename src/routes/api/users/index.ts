@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { createAdminClient } from '#/lib/supabase-admin'
+import { parseUserListResponse, parseUserResponse } from '#/lib/user-response'
 import { getUsersWithRoles, createUserWithRoles } from '#/lib/user-helpers'
 import { isValidEmail, isValidPassword, isValidNip } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
@@ -44,10 +45,10 @@ export const Route = createFileRoute('/api/users/')({
           const admin = createAdminClient()
           const users = await getUsersWithRoles(admin)
 
-          return Response.json({
+          return Response.json(parseUserListResponse({
             users,
             total: users.length,
-          })
+          }))
         } catch (err: any) {
           console.error('[API] /api/users GET error:', err)
           return Response.json({ error: 'Gagal mengambil data user' }, { status: 500 })
@@ -119,7 +120,7 @@ export const Route = createFileRoute('/api/users/')({
             return Response.json({ error: result.error }, { status: 400 })
           }
 
-          return Response.json({ user: result.data }, { status: 201 })
+          return Response.json(parseUserResponse({ user: result.data }), { status: 201 })
         } catch (err: any) {
           console.error('[API] /api/users POST error:', err)
           return Response.json({ error: 'Gagal membuat user' }, { status: 500 })
