@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { RoleName } from './types/auth'
 import type { UserWithRoles } from './types/user'
+import { parseUserMetadata } from './user-metadata'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -12,17 +13,13 @@ import type { UserWithRoles } from './types/user'
 
 interface AuthUser {
   id: string
-  email: string
+  email?: string
   created_at: string
   updated_at: string
   banned: boolean
   disabled: boolean
   disabled_at: string | null
-  user_metadata: {
-    nama_lengkap?: string
-    nip_nrp?: string
-    departemen?: string
-  }
+  user_metadata?: unknown
 }
 
 interface AuthUsersResponse {
@@ -99,12 +96,8 @@ export async function getUsersWithRoles(
 
     return {
       id: u.id,
-      email: u.email,
-      metadata: {
-        nama_lengkap: u.user_metadata?.nama_lengkap,
-        nip_nrp: u.user_metadata?.nip_nrp,
-        departemen: u.user_metadata?.departemen,
-      },
+      email: u.email ?? '',
+      metadata: parseUserMetadata(u.user_metadata),
       roles: roleMap[u.id] ?? [],
       isActive,
       disabledAt: u.disabled_at,
@@ -150,12 +143,8 @@ export async function getUserWithRoles(
 
   return {
     id: authUser.id,
-    email: authUser.email,
-    metadata: {
-      nama_lengkap: authUser.user_metadata?.nama_lengkap,
-      nip_nrp: authUser.user_metadata?.nip_nrp,
-      departemen: authUser.user_metadata?.departemen,
-    },
+    email: authUser.email ?? '',
+    metadata: parseUserMetadata(authUser.user_metadata),
     roles,
     isActive: !authUser.disabled && !authUser.banned,
     disabledAt: authUser.disabled_at,
@@ -276,7 +265,7 @@ export async function updateUserWithRoles(
 
   // 2. Update metadata di auth.users
   const metadataUpdate = {
-    ...authUser.user_metadata,
+    ...parseUserMetadata(authUser.user_metadata),
   }
   if (payload.nama_lengkap !== undefined) metadataUpdate.nama_lengkap = payload.nama_lengkap
   if (payload.nip_nrp !== undefined) metadataUpdate.nip_nrp = payload.nip_nrp

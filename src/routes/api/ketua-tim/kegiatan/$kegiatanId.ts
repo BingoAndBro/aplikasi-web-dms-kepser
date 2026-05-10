@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession, hasRole } from '#/lib/auth'
 import { TABLES } from '#/lib/constants/tables'
+import { parseUserMetadata } from '#/lib/user-metadata'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -40,10 +41,10 @@ function getKegiatanId(request: Request, params: Record<string, string | undefin
 async function getUserSummary(userId: string) {
   const admin = createAdminClient()
   const { data } = await admin.auth.admin.getUserById(userId)
-  const metadata = data.user?.user_metadata
+  const metadata = parseUserMetadata(data.user?.user_metadata)
 
   return {
-    user_name: metadata?.nama_lengkap ?? metadata?.user_name ?? null,
+    user_name: metadata.nama_lengkap ?? null,
     user_email: data.user?.email ?? null,
   }
 }

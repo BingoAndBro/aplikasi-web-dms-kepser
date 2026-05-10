@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession, getUserRole } from '#/lib/auth'
+import { parseUserMetadata } from '#/lib/user-metadata'
 
 // ---------------------------------------------------------------------------
 // Helper: create Supabase client with cookie
@@ -37,11 +38,7 @@ export const Route = createFileRoute('/api/users/me')({
           user: {
             id: session.user.id,
             email: session.user.email,
-            metadata: {
-              nama_lengkap: session.user.user_metadata?.nama_lengkap,
-              nip_nrp: session.user.user_metadata?.nip_nrp,
-              departemen: session.user.user_metadata?.departemen,
-            },
+            metadata: parseUserMetadata(session.user.user_metadata),
             roles,
           },
         })
