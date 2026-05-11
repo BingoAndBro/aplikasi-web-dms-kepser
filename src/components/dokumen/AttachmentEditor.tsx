@@ -447,10 +447,6 @@ export function AttachmentEditor({
       return
     }
 
-    if (!confirm('Perubahan belum disimpan. Yakin ingin keluar?')) {
-      return
-    }
-
     await proceedCancel()
   }
 

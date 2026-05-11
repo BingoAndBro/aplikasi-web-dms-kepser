@@ -48,6 +48,10 @@ export function useUnsavedChangesGuard({
     if (typeof window === 'undefined' || !isDirty) return
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (skipNextBlockRef.current) {
+        return
+      }
+
       event.preventDefault()
       event.returnValue = message
       return message

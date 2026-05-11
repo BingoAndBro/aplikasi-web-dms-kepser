@@ -5,6 +5,7 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
+import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import {
   ChevronRight,
@@ -45,6 +46,11 @@ function PpkResubmitPage() {
   const [kembalikanLoading, setKembalikanLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [dokIsNonMaterial, setDokIsNonMaterial] = useState(false)
+  const [attachmentDirty, setAttachmentDirty] = useState(false)
+  const [guardEnabled, setGuardEnabled] = useState(true)
+
+  const isDirty = guardEnabled && attachmentDirty
+  const { confirmIfDirty } = useUnsavedChangesGuard({ isDirty })
 
   useEffect(() => { fetchData() }, [id])
 
@@ -58,6 +64,8 @@ function PpkResubmitPage() {
       setDokumen(json.dokumen)
       setLampiranUrls(json.dokumen.lampiran_urls ?? [])
       setDokIsNonMaterial(json.dokumen.is_non_material === true)
+      setAttachmentDirty(false)
+      setGuardEnabled(true)
 
       // Fetch kelengkapan from master_kelengkapan_dokumen (only for Material documents)
       if (supabase && json.dokumen.kegiatan_jenis_id && !json.dokumen.is_non_material) {
@@ -80,6 +88,7 @@ function PpkResubmitPage() {
 
   async function handleSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
     setSubmitError(null)
+    setGuardEnabled(false)
 
     try {
       // PATCH to save changes
@@ -112,6 +121,7 @@ function PpkResubmitPage() {
 
       navigate({ to: '/ppk/revisi' })
     } catch (err) {
+      setGuardEnabled(true)
       setSubmitError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     }
   }
@@ -121,7 +131,6 @@ function PpkResubmitPage() {
   }
 
   async function handleKembalikan() {
-    if (!confirm('Yakin ingin mengembalikan dokumen ini ke pegawai?')) return
     setKembalikanLoading(true)
     try {
       const res = await fetch(`/api/ppk/kembalikan/${id}`, { method: 'POST', credentials: 'include' })
@@ -225,11 +234,11 @@ function PpkResubmitPage() {
               size="sm"
               variant="outline"
               className="gap-1.5"
-              onClick={() => {
-                if (confirm('Apakah Anda yakin ingin mengembalikan dokumen ini ke pegawai?\n\nPerubahan yang belum disimpan akan hilang.')) {
-                  handleKembalikan()
+              onClick={() => confirmIfDirty(() => {
+                if (confirm('Yakin ingin mengembalikan dokumen ini ke pegawai?')) {
+                  return handleKembalikan()
                 }
-              }}
+              })}
               disabled={kembalikanLoading}
             >
               {kembalikanLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowLeft size={14} />}
@@ -238,6 +247,8 @@ function PpkResubmitPage() {
           }
           onSubmit={handleSubmit}
           onCancel={handleCancel}
+          onDirtyChange={setAttachmentDirty}
+          confirmIfDirty={confirmIfDirty}
         />
 
         <ActivityLog dokumenId={id} />

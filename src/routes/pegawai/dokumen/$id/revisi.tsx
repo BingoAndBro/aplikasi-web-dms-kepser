@@ -6,6 +6,7 @@ import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
+import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
 import {
   FileEdit,
   ChevronRight,
@@ -52,6 +53,11 @@ function DokumenRevisiPage() {
   const [error, setError] = useState<string | null>(null)
   const [isNonMaterial, setIsNonMaterial] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [attachmentDirty, setAttachmentDirty] = useState(false)
+  const [guardEnabled, setGuardEnabled] = useState(true)
+
+  const isDirty = guardEnabled && attachmentDirty
+  const { confirmIfDirty } = useUnsavedChangesGuard({ isDirty })
 
   useEffect(() => { fetchData() }, [id])
 
@@ -80,6 +86,8 @@ function DokumenRevisiPage() {
 
       setDok(dokumen)
       setLampiranUrls(dokumen.lampiran_urls as LampiranUrl[] ?? [])
+      setAttachmentDirty(false)
+      setGuardEnabled(true)
 
       // Check if Non-Material
       const nonMaterial = dokumen.is_non_material === true ||
@@ -112,6 +120,7 @@ function DokumenRevisiPage() {
 
   async function handleSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
     setSubmitError(null)
+    setGuardEnabled(false)
 
     try {
       // PATCH to save changes
@@ -141,6 +150,7 @@ function DokumenRevisiPage() {
 
       window.location.href = '/pegawai/dokumen'
     } catch (err) {
+      setGuardEnabled(true)
       setSubmitError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     }
   }
@@ -306,6 +316,8 @@ function DokumenRevisiPage() {
           submitLabel={isNonMaterial ? 'Ajukan Ulang ke Ketua Tim' : 'Ajukan Ulang ke PPK'}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
+          onDirtyChange={setAttachmentDirty}
+          confirmIfDirty={confirmIfDirty}
         />
 
         {/* Activity Log */}
