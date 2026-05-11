@@ -9,6 +9,7 @@ import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
 import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
 import { StepJenisPermintaan } from '#/components/dokumen/form/StepJenisPermintaan'
+import { StepKategoriPermintaan } from '#/components/dokumen/form/StepKategoriPermintaan'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type {
   LampiranUrl,
@@ -537,57 +538,17 @@ function AjukanDokumenPage() {
 
           {/* STEP 4: Kategori Permintaan (Material only) */}
           {!isNonMaterial && step === 4 && (
-            <div className="space-y-4">
-              <h3 className="font-headline text-base font-bold text-on-surface">
-                4. Pilih Kategori Permintaan
-              </h3>
-
-              <p className="text-xs text-on-surface-variant">
-                Untuk <strong className="text-on-surface">{jenisPermintaanNama}</strong>
-              </p>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-on-surface">
-                  Kategori <span className="text-error">*</span>
-                </label>
-                {loadingKategori ? (
-                  <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                    <Loader2 size={14} className="animate-spin" />Memuat...
-                  </div>
-                ) : kategoriList.length === 0 ? (
-                  <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
-                    Tidak ada kategori untuk jenis yang dipilih.
-                  </p>
-                ) : (
-                  <Select value={kategoriPermintaanId} onValueChange={v => handleKategoriChange(v ?? '')}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih kategori...">
-                        {v => kategoriList.find(k => k.id === v)?.nama ?? ''}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {kategoriList.map(k => (
-                        <SelectItem key={k.id} value={k.id} label={k.nama}>
-                          <div>
-                            <p className="font-medium">{k.nama}</p>
-                            {k.deskripsi && <p className="text-[10px] text-on-surface-variant">{k.deskripsi}</p>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
-                  <ChevronLeft size={14} />Kembali
-                </Button>
-                <Button onClick={handleNext} disabled={!canAdvanceFromStep4} className="gap-1.5 flex-1">
-                  Lanjut <ChevronRight size={14} />
-                </Button>
-              </div>
-            </div>
+            <StepKategoriPermintaan
+              jenisPermintaanId={jenisPermintaanId}
+              jenisPermintaanNama={jenisPermintaanNama}
+              kategoriPermintaanId={kategoriPermintaanId}
+              kategoriList={kategoriList}
+              loadingKategori={loadingKategori}
+              canAdvanceFromStep4={canAdvanceFromStep4}
+              onKategoriChange={handleKategoriChange}
+              onBack={handleBack}
+              onNext={handleNext}
+            />
           )}
 
           {/* STEP 5: Detail Permintaan (Material only, opsional) */}
