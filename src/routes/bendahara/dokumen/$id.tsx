@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/bendahara/dokumen/$id')({ component: BendaharaDokumenDetailPage })
 
@@ -66,25 +67,41 @@ function BendaharaDokumenDetailPage() {
     if (!confirm('Yakin ingin menyetujui pencairan dokumen ini?')) return
     setActionLoading('approve')
     try {
-      const res = await fetch(`/api/bendahara/dokumen/${id}/approve`, { method: 'POST', credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { alert(json.error ?? 'Gagal'); return }
+      await apiMutation(`/api/bendahara/dokumen/${id}/approve`, { method: 'POST' })
       navigate({ to: '/bendahara/selesai' })
-    } catch { alert('Terjadi kesalahan') } finally { setActionLoading(null) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      alert('Terjadi kesalahan')
+    } finally { setActionLoading(null) }
   }
 
   async function handleReject() {
     if (rejectCatatan.trim().length < 10) { setRejectError('Catatan minimal 10 karakter'); return }
     setActionLoading('reject')
     try {
-      const res = await fetch(`/api/bendahara/dokumen/${id}/reject`, {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catatan: rejectCatatan.trim() }),
+      await apiMutation(`/api/bendahara/dokumen/${id}/reject`, {
+        method: 'POST',
+        body: { catatan: rejectCatatan.trim() },
       })
-      const json = await res.json()
-      if (!res.ok) { setRejectError(json.error ?? 'Gagal'); return }
       navigate({ to: '/bendahara/ditolak' })
-    } catch { setRejectError('Terjadi kesalahan') } finally { setActionLoading(null) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setRejectError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      setRejectError('Terjadi kesalahan')
+    } finally { setActionLoading(null) }
   }
 
   if (loading) return <PageLayout><div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-primary" /></div></PageLayout>

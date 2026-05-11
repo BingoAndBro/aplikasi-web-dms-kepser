@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/ppk/dokumen/$id/')({
   component: PpkDokumenDetailIndexPage,
@@ -99,22 +100,41 @@ function PpkDokumenDetailIndexPage() {
     if (!confirm('Yakin ingin menyetujui dokumen ini?')) return
     setActionLoading('approve')
     try {
-      const res = await fetch(`/api/ppk/dokumen/${id}/approve`, { method: 'POST', credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { alert(json.error ?? 'Gagal') ; return }
+      await apiMutation(`/api/ppk/dokumen/${id}/approve`, { method: 'POST' })
       window.location.href = '/ppk/inbox'
-    } catch { alert('Terjadi kesalahan') } finally { setActionLoading(null) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      alert('Terjadi kesalahan')
+    } finally { setActionLoading(null) }
   }
 
   async function handleReject() {
     if (rejectCatatan.trim().length < 10) { setRejectError('Min. 10 karakter'); return }
     setActionLoading('reject')
     try {
-      const res = await fetch(`/api/ppk/dokumen/${id}/reject`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ catatan: rejectCatatan.trim() }) })
-      const json = await res.json()
-      if (!res.ok) { setRejectError(json.error ?? 'Gagal') ; return }
+      await apiMutation(`/api/ppk/dokumen/${id}/reject`, {
+        method: 'POST',
+        body: { catatan: rejectCatatan.trim() },
+      })
       window.location.href = '/ppk/inbox'
-    } catch { setRejectError('Terjadi kesalahan') } finally { setActionLoading(null) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setRejectError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      setRejectError('Terjadi kesalahan')
+    } finally { setActionLoading(null) }
   }
 
   if (loading) return (
