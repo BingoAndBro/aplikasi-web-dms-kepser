@@ -1,8 +1,12 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { getBrowserClient } from '#/lib/supabase-browser'
+import { guardRole } from '#/lib/guards'
 
 export const Route = createFileRoute('/bendahara')({
+  beforeLoad: async ({ event }) => {
+    await guardRole(event, 'BENDAHARA')
+  },
   component: BendaharaLayout,
 })
 

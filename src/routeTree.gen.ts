@@ -16,6 +16,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DokumenRouteImport } from './routes/dokumen'
 import { Route as BendaharaRouteImport } from './routes/bendahara'
+import { Route as ArsiparisRouteImport } from './routes/arsiparis'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PpkIndexRouteImport } from './routes/ppk/index'
 import { Route as BendaharaIndexRouteImport } from './routes/bendahara/index'
@@ -182,6 +184,16 @@ const BendaharaRoute = BendaharaRouteImport.update({
   path: '/bendahara',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ArsiparisRoute = ArsiparisRouteImport.update({
+  id: '/arsiparis',
+  path: '/arsiparis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -198,14 +210,14 @@ const BendaharaIndexRoute = BendaharaIndexRouteImport.update({
   getParentRoute: () => BendaharaRoute,
 } as any)
 const ArsiparisIndexRoute = ArsiparisIndexRouteImport.update({
-  id: '/arsiparis/',
-  path: '/arsiparis/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const PpkTervalidasiRoute = PpkTervalidasiRouteImport.update({
   id: '/tervalidasi',
@@ -273,19 +285,19 @@ const BendaharaDitolakRoute = BendaharaDitolakRouteImport.update({
   getParentRoute: () => BendaharaRoute,
 } as any)
 const ArsiparisSearchRoute = ArsiparisSearchRouteImport.update({
-  id: '/arsiparis/search',
-  path: '/arsiparis/search',
-  getParentRoute: () => rootRouteImport,
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ArsiparisKlasifikasiRoute = ArsiparisKlasifikasiRouteImport.update({
-  id: '/arsiparis/klasifikasi',
-  path: '/arsiparis/klasifikasi',
-  getParentRoute: () => rootRouteImport,
+  id: '/klasifikasi',
+  path: '/klasifikasi',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ArsiparisInboxRoute = ArsiparisInboxRouteImport.update({
-  id: '/arsiparis/inbox',
-  path: '/arsiparis/inbox',
-  getParentRoute: () => rootRouteImport,
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ApiUploadRoute = ApiUploadRouteImport.update({
   id: '/api/upload',
@@ -334,19 +346,19 @@ const DokumenIdIndexRoute = DokumenIdIndexRouteImport.update({
 } as any)
 const ArsiparisUsulMusnahIndexRoute =
   ArsiparisUsulMusnahIndexRouteImport.update({
-    id: '/arsiparis/usul-musnah/',
-    path: '/arsiparis/usul-musnah/',
-    getParentRoute: () => rootRouteImport,
+    id: '/usul-musnah/',
+    path: '/usul-musnah/',
+    getParentRoute: () => ArsiparisRoute,
   } as any)
 const ArsiparisInaktifIndexRoute = ArsiparisInaktifIndexRouteImport.update({
-  id: '/arsiparis/inaktif/',
-  path: '/arsiparis/inaktif/',
-  getParentRoute: () => rootRouteImport,
+  id: '/inaktif/',
+  path: '/inaktif/',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ArsiparisAktifIndexRoute = ArsiparisAktifIndexRouteImport.update({
-  id: '/arsiparis/aktif/',
-  path: '/arsiparis/aktif/',
-  getParentRoute: () => rootRouteImport,
+  id: '/aktif/',
+  path: '/aktif/',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ApiUsersIndexRoute = ApiUsersIndexRouteImport.update({
   id: '/api/users/',
@@ -364,9 +376,9 @@ const ApiDokumenIndexRoute = ApiDokumenIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminMasterDataIndexRoute = AdminMasterDataIndexRouteImport.update({
-  id: '/admin/master-data/',
-  path: '/admin/master-data/',
-  getParentRoute: () => rootRouteImport,
+  id: '/master-data/',
+  path: '/master-data/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const PpkDokumenIdRoute = PpkDokumenIdRouteImport.update({
   id: '/dokumen/$id',
@@ -404,19 +416,19 @@ const BendaharaDokumenIdRoute = BendaharaDokumenIdRouteImport.update({
   getParentRoute: () => BendaharaRoute,
 } as any)
 const ArsiparisUsulMusnahIdRoute = ArsiparisUsulMusnahIdRouteImport.update({
-  id: '/arsiparis/usul-musnah/$id',
-  path: '/arsiparis/usul-musnah/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/usul-musnah/$id',
+  path: '/usul-musnah/$id',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ArsiparisInaktifIdRoute = ArsiparisInaktifIdRouteImport.update({
-  id: '/arsiparis/inaktif/$id',
-  path: '/arsiparis/inaktif/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/inaktif/$id',
+  path: '/inaktif/$id',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ArsiparisAktifIdRoute = ArsiparisAktifIdRouteImport.update({
-  id: '/arsiparis/aktif/$id',
-  path: '/arsiparis/aktif/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/aktif/$id',
+  path: '/aktif/$id',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ApiUsersMeRoute = ApiUsersMeRouteImport.update({
   id: '/api/users/me',
@@ -595,46 +607,46 @@ const ApiAdminAnalyzeStorageRoute = ApiAdminAnalyzeStorageRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminMasterDataUserRoute = AdminMasterDataUserRouteImport.update({
-  id: '/admin/master-data/user',
-  path: '/admin/master-data/user',
-  getParentRoute: () => rootRouteImport,
+  id: '/master-data/user',
+  path: '/master-data/user',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminMasterDataKelengkapanRoute =
   AdminMasterDataKelengkapanRouteImport.update({
-    id: '/admin/master-data/kelengkapan',
-    path: '/admin/master-data/kelengkapan',
-    getParentRoute: () => rootRouteImport,
+    id: '/master-data/kelengkapan',
+    path: '/master-data/kelengkapan',
+    getParentRoute: () => AdminRoute,
   } as any)
 const AdminMasterDataKegiatanRoute = AdminMasterDataKegiatanRouteImport.update({
-  id: '/admin/master-data/kegiatan',
-  path: '/admin/master-data/kegiatan',
-  getParentRoute: () => rootRouteImport,
+  id: '/master-data/kegiatan',
+  path: '/master-data/kegiatan',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminMasterDataKategoriRoute = AdminMasterDataKategoriRouteImport.update({
-  id: '/admin/master-data/kategori',
-  path: '/admin/master-data/kategori',
-  getParentRoute: () => rootRouteImport,
+  id: '/master-data/kategori',
+  path: '/master-data/kategori',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminMasterDataJenisDokumenRoute =
   AdminMasterDataJenisDokumenRouteImport.update({
-    id: '/admin/master-data/jenis-dokumen',
-    path: '/admin/master-data/jenis-dokumen',
-    getParentRoute: () => rootRouteImport,
+    id: '/master-data/jenis-dokumen',
+    path: '/master-data/jenis-dokumen',
+    getParentRoute: () => AdminRoute,
   } as any)
 const AdminMasterDataJenisRoute = AdminMasterDataJenisRouteImport.update({
-  id: '/admin/master-data/jenis',
-  path: '/admin/master-data/jenis',
-  getParentRoute: () => rootRouteImport,
+  id: '/master-data/jenis',
+  path: '/master-data/jenis',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminMasterDataFungsiRoute = AdminMasterDataFungsiRouteImport.update({
-  id: '/admin/master-data/fungsi',
-  path: '/admin/master-data/fungsi',
-  getParentRoute: () => rootRouteImport,
+  id: '/master-data/fungsi',
+  path: '/master-data/fungsi',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminMasterDataDetailRoute = AdminMasterDataDetailRouteImport.update({
-  id: '/admin/master-data/detail',
-  path: '/admin/master-data/detail',
-  getParentRoute: () => rootRouteImport,
+  id: '/master-data/detail',
+  path: '/master-data/detail',
+  getParentRoute: () => AdminRoute,
 } as any)
 const PpkDokumenIdIndexRoute = PpkDokumenIdIndexRouteImport.update({
   id: '/',
@@ -647,9 +659,9 @@ const PegawaiDokumenIdIndexRoute = PegawaiDokumenIdIndexRouteImport.update({
   getParentRoute: () => PegawaiDokumenIdRoute,
 } as any)
 const ArsiparisDokumenIdIndexRoute = ArsiparisDokumenIdIndexRouteImport.update({
-  id: '/arsiparis/dokumen/$id/',
-  path: '/arsiparis/dokumen/$id/',
-  getParentRoute: () => rootRouteImport,
+  id: '/dokumen/$id/',
+  path: '/dokumen/$id/',
+  getParentRoute: () => ArsiparisRoute,
 } as any)
 const ApiArsiparisKlasifikasiIndexRoute =
   ApiArsiparisKlasifikasiIndexRouteImport.update({
@@ -856,6 +868,8 @@ const ApiBendaharaDokumenIdDownloadLampiranIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/arsiparis': typeof ArsiparisRouteWithChildren
   '/bendahara': typeof BendaharaRouteWithChildren
   '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
@@ -1129,6 +1143,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/arsiparis': typeof ArsiparisRouteWithChildren
   '/bendahara': typeof BendaharaRouteWithChildren
   '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
@@ -1270,6 +1286,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/arsiparis'
     | '/bendahara'
     | '/dokumen'
     | '/forbidden'
@@ -1542,6 +1560,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/arsiparis'
     | '/bendahara'
     | '/dokumen'
     | '/forbidden'
@@ -1682,6 +1702,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  ArsiparisRoute: typeof ArsiparisRouteWithChildren
   BendaharaRoute: typeof BendaharaRouteWithChildren
   DokumenRoute: typeof DokumenRouteWithChildren
   ForbiddenRoute: typeof ForbiddenRoute
@@ -1696,19 +1718,6 @@ export interface RootRouteChildren {
   ApiMasterKegiatanRoute: typeof ApiMasterKegiatanRouteWithChildren
   ApiMasterKelengkapanRoute: typeof ApiMasterKelengkapanRouteWithChildren
   ApiUploadRoute: typeof ApiUploadRoute
-  ArsiparisInboxRoute: typeof ArsiparisInboxRoute
-  ArsiparisKlasifikasiRoute: typeof ArsiparisKlasifikasiRoute
-  ArsiparisSearchRoute: typeof ArsiparisSearchRoute
-  AdminIndexRoute: typeof AdminIndexRoute
-  ArsiparisIndexRoute: typeof ArsiparisIndexRoute
-  AdminMasterDataDetailRoute: typeof AdminMasterDataDetailRoute
-  AdminMasterDataFungsiRoute: typeof AdminMasterDataFungsiRoute
-  AdminMasterDataJenisRoute: typeof AdminMasterDataJenisRoute
-  AdminMasterDataJenisDokumenRoute: typeof AdminMasterDataJenisDokumenRoute
-  AdminMasterDataKategoriRoute: typeof AdminMasterDataKategoriRoute
-  AdminMasterDataKegiatanRoute: typeof AdminMasterDataKegiatanRoute
-  AdminMasterDataKelengkapanRoute: typeof AdminMasterDataKelengkapanRoute
-  AdminMasterDataUserRoute: typeof AdminMasterDataUserRoute
   ApiAdminAnalyzeStorageRoute: typeof ApiAdminAnalyzeStorageRoute
   ApiAdminCleanupOrphanFilesRoute: typeof ApiAdminCleanupOrphanFilesRoute
   ApiArsiparisAktifRoute: typeof ApiArsiparisAktifRouteWithChildren
@@ -1738,16 +1747,9 @@ export interface RootRouteChildren {
   ApiPpkTervalidasiRoute: typeof ApiPpkTervalidasiRoute
   ApiUsersIdRoute: typeof ApiUsersIdRouteWithChildren
   ApiUsersMeRoute: typeof ApiUsersMeRouteWithChildren
-  ArsiparisAktifIdRoute: typeof ArsiparisAktifIdRoute
-  ArsiparisInaktifIdRoute: typeof ArsiparisInaktifIdRoute
-  ArsiparisUsulMusnahIdRoute: typeof ArsiparisUsulMusnahIdRoute
-  AdminMasterDataIndexRoute: typeof AdminMasterDataIndexRoute
   ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
   ApiKetuaTimIndexRoute: typeof ApiKetuaTimIndexRoute
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
-  ArsiparisAktifIndexRoute: typeof ArsiparisAktifIndexRoute
-  ArsiparisInaktifIndexRoute: typeof ArsiparisInaktifIndexRoute
-  ArsiparisUsulMusnahIndexRoute: typeof ArsiparisUsulMusnahIndexRoute
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
   ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
   ApiBendaharaDokumenIdRoute: typeof ApiBendaharaDokumenIdRouteWithChildren
@@ -1757,7 +1759,6 @@ export interface RootRouteChildren {
   ApiPpkKembalikanIdRoute: typeof ApiPpkKembalikanIdRoute
   ApiPpkResubmitIdRoute: typeof ApiPpkResubmitIdRoute
   ApiArsiparisKlasifikasiIndexRoute: typeof ApiArsiparisKlasifikasiIndexRoute
-  ArsiparisDokumenIdIndexRoute: typeof ArsiparisDokumenIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1811,6 +1812,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BendaharaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/arsiparis': {
+      id: '/arsiparis'
+      path: '/arsiparis'
+      fullPath: '/arsiparis'
+      preLoaderRoute: typeof ArsiparisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -1834,17 +1849,17 @@ declare module '@tanstack/react-router' {
     }
     '/arsiparis/': {
       id: '/arsiparis/'
-      path: '/arsiparis'
+      path: '/'
       fullPath: '/arsiparis/'
       preLoaderRoute: typeof ArsiparisIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/admin/': {
       id: '/admin/'
-      path: '/admin'
+      path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/ppk/tervalidasi': {
       id: '/ppk/tervalidasi'
@@ -1939,24 +1954,24 @@ declare module '@tanstack/react-router' {
     }
     '/arsiparis/search': {
       id: '/arsiparis/search'
-      path: '/arsiparis/search'
+      path: '/search'
       fullPath: '/arsiparis/search'
       preLoaderRoute: typeof ArsiparisSearchRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/klasifikasi': {
       id: '/arsiparis/klasifikasi'
-      path: '/arsiparis/klasifikasi'
+      path: '/klasifikasi'
       fullPath: '/arsiparis/klasifikasi'
       preLoaderRoute: typeof ArsiparisKlasifikasiRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/inbox': {
       id: '/arsiparis/inbox'
-      path: '/arsiparis/inbox'
+      path: '/inbox'
       fullPath: '/arsiparis/inbox'
       preLoaderRoute: typeof ArsiparisInboxRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/api/upload': {
       id: '/api/upload'
@@ -2023,24 +2038,24 @@ declare module '@tanstack/react-router' {
     }
     '/arsiparis/usul-musnah/': {
       id: '/arsiparis/usul-musnah/'
-      path: '/arsiparis/usul-musnah'
+      path: '/usul-musnah'
       fullPath: '/arsiparis/usul-musnah/'
       preLoaderRoute: typeof ArsiparisUsulMusnahIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/inaktif/': {
       id: '/arsiparis/inaktif/'
-      path: '/arsiparis/inaktif'
+      path: '/inaktif'
       fullPath: '/arsiparis/inaktif/'
       preLoaderRoute: typeof ArsiparisInaktifIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/aktif/': {
       id: '/arsiparis/aktif/'
-      path: '/arsiparis/aktif'
+      path: '/aktif'
       fullPath: '/arsiparis/aktif/'
       preLoaderRoute: typeof ArsiparisAktifIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/api/users/': {
       id: '/api/users/'
@@ -2065,10 +2080,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/master-data/': {
       id: '/admin/master-data/'
-      path: '/admin/master-data'
+      path: '/master-data'
       fullPath: '/admin/master-data/'
       preLoaderRoute: typeof AdminMasterDataIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/ppk/dokumen/$id': {
       id: '/ppk/dokumen/$id'
@@ -2121,24 +2136,24 @@ declare module '@tanstack/react-router' {
     }
     '/arsiparis/usul-musnah/$id': {
       id: '/arsiparis/usul-musnah/$id'
-      path: '/arsiparis/usul-musnah/$id'
+      path: '/usul-musnah/$id'
       fullPath: '/arsiparis/usul-musnah/$id'
       preLoaderRoute: typeof ArsiparisUsulMusnahIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/inaktif/$id': {
       id: '/arsiparis/inaktif/$id'
-      path: '/arsiparis/inaktif/$id'
+      path: '/inaktif/$id'
       fullPath: '/arsiparis/inaktif/$id'
       preLoaderRoute: typeof ArsiparisInaktifIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/aktif/$id': {
       id: '/arsiparis/aktif/$id'
-      path: '/arsiparis/aktif/$id'
+      path: '/aktif/$id'
       fullPath: '/arsiparis/aktif/$id'
       preLoaderRoute: typeof ArsiparisAktifIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/api/users/me': {
       id: '/api/users/me'
@@ -2387,59 +2402,59 @@ declare module '@tanstack/react-router' {
     }
     '/admin/master-data/user': {
       id: '/admin/master-data/user'
-      path: '/admin/master-data/user'
+      path: '/master-data/user'
       fullPath: '/admin/master-data/user'
       preLoaderRoute: typeof AdminMasterDataUserRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/master-data/kelengkapan': {
       id: '/admin/master-data/kelengkapan'
-      path: '/admin/master-data/kelengkapan'
+      path: '/master-data/kelengkapan'
       fullPath: '/admin/master-data/kelengkapan'
       preLoaderRoute: typeof AdminMasterDataKelengkapanRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/master-data/kegiatan': {
       id: '/admin/master-data/kegiatan'
-      path: '/admin/master-data/kegiatan'
+      path: '/master-data/kegiatan'
       fullPath: '/admin/master-data/kegiatan'
       preLoaderRoute: typeof AdminMasterDataKegiatanRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/master-data/kategori': {
       id: '/admin/master-data/kategori'
-      path: '/admin/master-data/kategori'
+      path: '/master-data/kategori'
       fullPath: '/admin/master-data/kategori'
       preLoaderRoute: typeof AdminMasterDataKategoriRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/master-data/jenis-dokumen': {
       id: '/admin/master-data/jenis-dokumen'
-      path: '/admin/master-data/jenis-dokumen'
+      path: '/master-data/jenis-dokumen'
       fullPath: '/admin/master-data/jenis-dokumen'
       preLoaderRoute: typeof AdminMasterDataJenisDokumenRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/master-data/jenis': {
       id: '/admin/master-data/jenis'
-      path: '/admin/master-data/jenis'
+      path: '/master-data/jenis'
       fullPath: '/admin/master-data/jenis'
       preLoaderRoute: typeof AdminMasterDataJenisRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/master-data/fungsi': {
       id: '/admin/master-data/fungsi'
-      path: '/admin/master-data/fungsi'
+      path: '/master-data/fungsi'
       fullPath: '/admin/master-data/fungsi'
       preLoaderRoute: typeof AdminMasterDataFungsiRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/master-data/detail': {
       id: '/admin/master-data/detail'
-      path: '/admin/master-data/detail'
+      path: '/master-data/detail'
       fullPath: '/admin/master-data/detail'
       preLoaderRoute: typeof AdminMasterDataDetailRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/ppk/dokumen/$id/': {
       id: '/ppk/dokumen/$id/'
@@ -2457,10 +2472,10 @@ declare module '@tanstack/react-router' {
     }
     '/arsiparis/dokumen/$id/': {
       id: '/arsiparis/dokumen/$id/'
-      path: '/arsiparis/dokumen/$id'
+      path: '/dokumen/$id'
       fullPath: '/arsiparis/dokumen/$id/'
       preLoaderRoute: typeof ArsiparisDokumenIdIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/api/arsiparis/klasifikasi/': {
       id: '/api/arsiparis/klasifikasi/'
@@ -2723,6 +2738,66 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminMasterDataDetailRoute: typeof AdminMasterDataDetailRoute
+  AdminMasterDataFungsiRoute: typeof AdminMasterDataFungsiRoute
+  AdminMasterDataJenisRoute: typeof AdminMasterDataJenisRoute
+  AdminMasterDataJenisDokumenRoute: typeof AdminMasterDataJenisDokumenRoute
+  AdminMasterDataKategoriRoute: typeof AdminMasterDataKategoriRoute
+  AdminMasterDataKegiatanRoute: typeof AdminMasterDataKegiatanRoute
+  AdminMasterDataKelengkapanRoute: typeof AdminMasterDataKelengkapanRoute
+  AdminMasterDataUserRoute: typeof AdminMasterDataUserRoute
+  AdminMasterDataIndexRoute: typeof AdminMasterDataIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminMasterDataDetailRoute: AdminMasterDataDetailRoute,
+  AdminMasterDataFungsiRoute: AdminMasterDataFungsiRoute,
+  AdminMasterDataJenisRoute: AdminMasterDataJenisRoute,
+  AdminMasterDataJenisDokumenRoute: AdminMasterDataJenisDokumenRoute,
+  AdminMasterDataKategoriRoute: AdminMasterDataKategoriRoute,
+  AdminMasterDataKegiatanRoute: AdminMasterDataKegiatanRoute,
+  AdminMasterDataKelengkapanRoute: AdminMasterDataKelengkapanRoute,
+  AdminMasterDataUserRoute: AdminMasterDataUserRoute,
+  AdminMasterDataIndexRoute: AdminMasterDataIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface ArsiparisRouteChildren {
+  ArsiparisInboxRoute: typeof ArsiparisInboxRoute
+  ArsiparisKlasifikasiRoute: typeof ArsiparisKlasifikasiRoute
+  ArsiparisSearchRoute: typeof ArsiparisSearchRoute
+  ArsiparisIndexRoute: typeof ArsiparisIndexRoute
+  ArsiparisAktifIdRoute: typeof ArsiparisAktifIdRoute
+  ArsiparisInaktifIdRoute: typeof ArsiparisInaktifIdRoute
+  ArsiparisUsulMusnahIdRoute: typeof ArsiparisUsulMusnahIdRoute
+  ArsiparisAktifIndexRoute: typeof ArsiparisAktifIndexRoute
+  ArsiparisInaktifIndexRoute: typeof ArsiparisInaktifIndexRoute
+  ArsiparisUsulMusnahIndexRoute: typeof ArsiparisUsulMusnahIndexRoute
+  ArsiparisDokumenIdIndexRoute: typeof ArsiparisDokumenIdIndexRoute
+}
+
+const ArsiparisRouteChildren: ArsiparisRouteChildren = {
+  ArsiparisInboxRoute: ArsiparisInboxRoute,
+  ArsiparisKlasifikasiRoute: ArsiparisKlasifikasiRoute,
+  ArsiparisSearchRoute: ArsiparisSearchRoute,
+  ArsiparisIndexRoute: ArsiparisIndexRoute,
+  ArsiparisAktifIdRoute: ArsiparisAktifIdRoute,
+  ArsiparisInaktifIdRoute: ArsiparisInaktifIdRoute,
+  ArsiparisUsulMusnahIdRoute: ArsiparisUsulMusnahIdRoute,
+  ArsiparisAktifIndexRoute: ArsiparisAktifIndexRoute,
+  ArsiparisInaktifIndexRoute: ArsiparisInaktifIndexRoute,
+  ArsiparisUsulMusnahIndexRoute: ArsiparisUsulMusnahIndexRoute,
+  ArsiparisDokumenIdIndexRoute: ArsiparisDokumenIdIndexRoute,
+}
+
+const ArsiparisRouteWithChildren = ArsiparisRoute._addFileChildren(
+  ArsiparisRouteChildren,
+)
 
 interface BendaharaRouteChildren {
   BendaharaDitolakRoute: typeof BendaharaDitolakRoute
@@ -3095,6 +3170,8 @@ const ApiPpkDokumenIdRouteWithChildren = ApiPpkDokumenIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  ArsiparisRoute: ArsiparisRouteWithChildren,
   BendaharaRoute: BendaharaRouteWithChildren,
   DokumenRoute: DokumenRouteWithChildren,
   ForbiddenRoute: ForbiddenRoute,
@@ -3109,19 +3186,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMasterKegiatanRoute: ApiMasterKegiatanRouteWithChildren,
   ApiMasterKelengkapanRoute: ApiMasterKelengkapanRouteWithChildren,
   ApiUploadRoute: ApiUploadRoute,
-  ArsiparisInboxRoute: ArsiparisInboxRoute,
-  ArsiparisKlasifikasiRoute: ArsiparisKlasifikasiRoute,
-  ArsiparisSearchRoute: ArsiparisSearchRoute,
-  AdminIndexRoute: AdminIndexRoute,
-  ArsiparisIndexRoute: ArsiparisIndexRoute,
-  AdminMasterDataDetailRoute: AdminMasterDataDetailRoute,
-  AdminMasterDataFungsiRoute: AdminMasterDataFungsiRoute,
-  AdminMasterDataJenisRoute: AdminMasterDataJenisRoute,
-  AdminMasterDataJenisDokumenRoute: AdminMasterDataJenisDokumenRoute,
-  AdminMasterDataKategoriRoute: AdminMasterDataKategoriRoute,
-  AdminMasterDataKegiatanRoute: AdminMasterDataKegiatanRoute,
-  AdminMasterDataKelengkapanRoute: AdminMasterDataKelengkapanRoute,
-  AdminMasterDataUserRoute: AdminMasterDataUserRoute,
   ApiAdminAnalyzeStorageRoute: ApiAdminAnalyzeStorageRoute,
   ApiAdminCleanupOrphanFilesRoute: ApiAdminCleanupOrphanFilesRoute,
   ApiArsiparisAktifRoute: ApiArsiparisAktifRouteWithChildren,
@@ -3151,16 +3215,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpkTervalidasiRoute: ApiPpkTervalidasiRoute,
   ApiUsersIdRoute: ApiUsersIdRouteWithChildren,
   ApiUsersMeRoute: ApiUsersMeRouteWithChildren,
-  ArsiparisAktifIdRoute: ArsiparisAktifIdRoute,
-  ArsiparisInaktifIdRoute: ArsiparisInaktifIdRoute,
-  ArsiparisUsulMusnahIdRoute: ArsiparisUsulMusnahIdRoute,
-  AdminMasterDataIndexRoute: AdminMasterDataIndexRoute,
   ApiDokumenIndexRoute: ApiDokumenIndexRoute,
   ApiKetuaTimIndexRoute: ApiKetuaTimIndexRoute,
   ApiUsersIndexRoute: ApiUsersIndexRoute,
-  ArsiparisAktifIndexRoute: ArsiparisAktifIndexRoute,
-  ArsiparisInaktifIndexRoute: ArsiparisInaktifIndexRoute,
-  ArsiparisUsulMusnahIndexRoute: ArsiparisUsulMusnahIndexRoute,
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
   ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
   ApiBendaharaDokumenIdRoute: ApiBendaharaDokumenIdRouteWithChildren,
@@ -3170,7 +3227,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpkKembalikanIdRoute: ApiPpkKembalikanIdRoute,
   ApiPpkResubmitIdRoute: ApiPpkResubmitIdRoute,
   ApiArsiparisKlasifikasiIndexRoute: ApiArsiparisKlasifikasiIndexRoute,
-  ArsiparisDokumenIdIndexRoute: ArsiparisDokumenIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
