@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getBrowserClient } from '#/lib/supabase-browser'
+import { apiFetch } from '#/lib/api-client'
 import { DashboardShell } from '#/components/dashboard/DashboardShell'
 import { motion } from 'framer-motion'
 import { Clock, FolderOpen, Archive, XCircle, Search, Loader2 } from 'lucide-react'
@@ -14,6 +15,22 @@ type Stats = {
   aktif: number
   inaktif: number
   usulMusnah: number
+}
+
+type InboxStatsResponse = {
+  inbox?: unknown[]
+}
+
+type AktifStatsResponse = {
+  aktif?: unknown[]
+}
+
+type InaktifStatsResponse = {
+  inaktif?: unknown[]
+}
+
+type UsulMusnahStatsResponse = {
+  usul_musnah?: unknown[]
 }
 
 function ArsiparisDashboard() {
@@ -40,17 +57,11 @@ function ArsiparisDashboard() {
     async function fetchStats() {
       setLoading(true)
       try {
-        const [inboxRes, aktifRes, inaktifRes, musnahRes] = await Promise.all([
-          fetch('/api/arsiparis/inbox', { credentials: 'include' }),
-          fetch('/api/arsiparis/aktif', { credentials: 'include' }),
-          fetch('/api/arsiparis/inaktif', { credentials: 'include' }),
-          fetch('/api/arsiparis/usul-musnah', { credentials: 'include' }),
-        ])
         const [inboxJson, aktifJson, inaktifJson, musnahJson] = await Promise.all([
-          inboxRes.json().catch(() => ({ inbox: [] })),
-          aktifRes.json().catch(() => ({ aktif: [] })),
-          inaktifRes.json().catch(() => ({ inaktif: [] })),
-          musnahRes.json().catch(() => ({ usul_musnah: [] })),
+          apiFetch<InboxStatsResponse>('/arsiparis/inbox').catch(() => ({ inbox: [] })),
+          apiFetch<AktifStatsResponse>('/arsiparis/aktif').catch(() => ({ aktif: [] })),
+          apiFetch<InaktifStatsResponse>('/arsiparis/inaktif').catch(() => ({ inaktif: [] })),
+          apiFetch<UsulMusnahStatsResponse>('/arsiparis/usul-musnah').catch(() => ({ usul_musnah: [] })),
         ])
         setStats({
           inbox: (inboxJson.inbox ?? []).length,
