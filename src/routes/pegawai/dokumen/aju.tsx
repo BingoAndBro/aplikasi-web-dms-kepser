@@ -1,15 +1,14 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState, useCallback } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
-import { Button } from '#/components/ui/button'
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
-import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
 import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
 import { StepJenisPermintaan } from '#/components/dokumen/form/StepJenisPermintaan'
 import { StepKategoriPermintaan } from '#/components/dokumen/form/StepKategoriPermintaan'
 import { StepDetailPermintaan } from '#/components/dokumen/form/StepDetailPermintaan'
 import { StepUploadLampiran } from '#/components/dokumen/form/StepUploadLampiran'
+import { StepReview } from '#/components/dokumen/form/StepReview'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type {
   LampiranUrl,
@@ -28,12 +27,7 @@ import {
   getDetailByKategori,
   getAllJenisDokumen,
 } from '#/lib/master-data'
-import {
-  ChevronLeft,
-  FileText,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react'
+import { FileText } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
   component: AjukanDokumenPage,
@@ -609,53 +603,26 @@ function AjukanDokumenPage() {
 
           {/* STEP: Review */}
           {step === stepLabels.length && (
-            <div className="space-y-4">
-              <h3 className="font-headline text-base font-bold text-on-surface">
-                {stepLabels.length}. Review & Ajukan
-              </h3>
-
-              <ReviewSummary
-                fungsiNama={fungsiNama}
-                kegiatanNama={kegiatanNama}
-                tahun={tahun}
-                tanggal={tanggal}
-                isKetuaTim={isKetuaTim}
-                lampiranUrls={lampiranUrls}
-                nominalRealisasi={isNonMaterial ? null : nominalRealisasi || null}
-                isNonMaterial={isNonMaterial}
-                jenisPermintaanNama={isNonMaterial ? jenisDokumenNama : jenisPermintaanNama}
-                kategoriPermintaanNama={isNonMaterial ? undefined : kategoriPermintaanNama}
-                detailPermintaanNama={isNonMaterial ? undefined : detailPermintaanNama}
-                keteranganDetail={isNonMaterial ? keteranganDetail : undefined}
-              />
-
-              {submitError && (
-                <div className="flex items-start gap-2 text-error text-xs p-3 bg-error/10 rounded-lg">
-                  <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                  {submitError}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1" disabled={submitting}>
-                  <ChevronLeft size={14} />Kembali
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting || missingRequired.length > 0 || lampiranUrls.length === 0}
-                  className="gap-1.5 flex-1"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      Mengajukan...
-                    </>
-                  ) : (
-                    'Ajukan Dokumen'
-                  )}
-                </Button>
-              </div>
-            </div>
+            <StepReview
+              stepCount={stepLabels.length}
+              fungsiNama={fungsiNama}
+              kegiatanNama={kegiatanNama}
+              tahun={tahun}
+              tanggal={tanggal}
+              isKetuaTim={isKetuaTim}
+              lampiranUrls={lampiranUrls}
+              nominalRealisasi={isNonMaterial ? null : nominalRealisasi || null}
+              isNonMaterial={isNonMaterial}
+              jenisPermintaanNama={isNonMaterial ? jenisDokumenNama : jenisPermintaanNama}
+              kategoriPermintaanNama={isNonMaterial ? undefined : kategoriPermintaanNama}
+              detailPermintaanNama={isNonMaterial ? undefined : detailPermintaanNama}
+              keteranganDetail={isNonMaterial ? keteranganDetail : undefined}
+              submitError={submitError}
+              submitting={submitting}
+              submitDisabled={submitting || missingRequired.length > 0 || lampiranUrls.length === 0}
+              onBack={handleBack}
+              onSubmit={handleSubmit}
+            />
           )}
         </div>
       </div>
