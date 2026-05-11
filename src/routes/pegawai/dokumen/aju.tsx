@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState, useCallback } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#/components/ui/select'
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
 import { KelengkapanChecklist } from '#/components/dokumen/KelengkapanChecklist'
 import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
@@ -10,6 +9,7 @@ import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
 import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
 import { StepJenisPermintaan } from '#/components/dokumen/form/StepJenisPermintaan'
 import { StepKategoriPermintaan } from '#/components/dokumen/form/StepKategoriPermintaan'
+import { StepDetailPermintaan } from '#/components/dokumen/form/StepDetailPermintaan'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type {
   LampiranUrl,
@@ -247,6 +247,12 @@ function AjukanDokumenPage() {
     const kn = kategoriList.find(k => k.id === id)
     setKategoriPermintaanNama(kn?.nama ?? '')
     setDetailPermintaanId(''); setDetailPermintaanNama('')
+  }
+
+  function handleDetailChange(id: string) {
+    setDetailPermintaanId(id)
+    const dn = detailList.find(d => d.id === id)
+    setDetailPermintaanNama(dn?.nama ?? '')
   }
 
   // Toggle Non-Material - changes flow
@@ -553,51 +559,16 @@ function AjukanDokumenPage() {
 
           {/* STEP 5: Detail Permintaan (Material only, opsional) */}
           {!isNonMaterial && step === 5 && kategoriHasDetail && (
-            <div className="space-y-4">
-              <h3 className="font-headline text-base font-bold text-on-surface">
-                5. Pilih Detail Permintaan
-              </h3>
-
-              <p className="text-xs text-on-surface-variant">
-                Untuk kategori <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
-              </p>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-on-surface">
-                  Detail <span className="text-error">*</span>
-                </label>
-                <Select value={detailPermintaanId} onValueChange={v => {
-                  setDetailPermintaanId(v ?? '')
-                  const dn = detailList.find(d => d.id === v)
-                  setDetailPermintaanNama(dn?.nama ?? '')
-                }}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih detail...">
-                      {v => detailList.find(d => d.id === v)?.nama ?? ''}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {detailList.map(d => (
-                      <SelectItem key={d.id} value={d.id} label={d.nama}>
-                        <div>
-                          <p className="font-medium">{d.nama}</p>
-                          {d.deskripsi && <p className="text-[10px] text-on-surface-variant">{d.deskripsi}</p>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
-                  <ChevronLeft size={14} />Kembali
-                </Button>
-                <Button onClick={handleNext} disabled={!canAdvanceFromStep5} className="gap-1.5 flex-1">
-                  Lanjut <ChevronRight size={14} />
-                </Button>
-              </div>
-            </div>
+            <StepDetailPermintaan
+              kategoriPermintaanId={kategoriPermintaanId}
+              kategoriPermintaanNama={kategoriPermintaanNama}
+              detailPermintaanId={detailPermintaanId}
+              detailList={detailList}
+              canAdvanceFromStep5={canAdvanceFromStep5}
+              onDetailChange={handleDetailChange}
+              onBack={handleBack}
+              onNext={handleNext}
+            />
           )}
 
           {/* STEP: Unggah + Nominal/Keterangan */}
