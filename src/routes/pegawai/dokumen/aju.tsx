@@ -7,6 +7,7 @@ import { StepIndicator } from '#/components/dokumen/StepIndicator'
 import { KelengkapanChecklist } from '#/components/dokumen/KelengkapanChecklist'
 import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
+import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type {
   LampiranUrl,
@@ -502,50 +503,16 @@ function AjukanDokumenPage() {
 
           {/* STEP 2: Kegiatan */}
           {step === 2 && (
-            <div className="space-y-4">
-              <h3 className="font-headline text-base font-bold text-on-surface">
-                2. Pilih Kegiatan
-              </h3>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-on-surface">
-                  Kegiatan <span className="text-error">*</span>
-                </label>
-                {loadingKegiatan ? (
-                  <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                    <Loader2 size={14} className="animate-spin" />Memuat...
-                  </div>
-                ) : kegiatanList.length === 0 ? (
-                  <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
-                    Tidak ada kegiatan untuk fungsi yang dipilih.
-                  </p>
-                ) : (
-                  <Select value={kegiatanId} onValueChange={v => handleKegiatanChange(v ?? '')}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih kegiatan...">
-                        {v => kegiatanList.find(k => k.id === v)?.nama ?? ''}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {kegiatanList.map(k => (
-                        <SelectItem key={k.id} value={k.id} label={k.nama}>
-                          {k.nama}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
-                  <ChevronLeft size={14} />Kembali
-                </Button>
-                <Button onClick={handleNext} disabled={!canAdvanceFromStep2} className="gap-1.5 flex-1">
-                  Lanjut <ChevronRight size={14} />
-                </Button>
-              </div>
-            </div>
+            <StepKegiatan
+              fungsiId={fungsiId}
+              kegiatanId={kegiatanId}
+              kegiatanList={kegiatanList}
+              loadingKegiatan={loadingKegiatan}
+              canAdvanceFromStep2={canAdvanceFromStep2}
+              onKegiatanChange={handleKegiatanChange}
+              onBack={handleBack}
+              onNext={handleNext}
+            />
           )}
 
           {/* STEP 3: Jenis Permintaan (Material) / Jenis Dokumen (Non-Material) */}
