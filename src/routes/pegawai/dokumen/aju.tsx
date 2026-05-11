@@ -8,7 +8,15 @@ import { StepIndicator } from '#/components/dokumen/StepIndicator'
 import { KelengkapanChecklist } from '#/components/dokumen/KelengkapanChecklist'
 import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import { getBrowserClient } from '#/lib/supabase-browser'
-import type { LampiranUrl } from '#/lib/dokumen-helpers'
+import type {
+  LampiranUrl,
+  FungsiRow,
+  KegiatanRow,
+  JenisRow,
+  KategoriRow,
+  DetailRow,
+  JenisDokumenRow,
+} from '#/components/dokumen/form/dokumen-form-types'
 import {
   getAllFungsi,
   getKegiatanByFungsi,
@@ -16,12 +24,6 @@ import {
   getKategoriByJenis,
   getDetailByKategori,
   getAllJenisDokumen,
-  type FungsiRow,
-  type KegiatanRow,
-  type JenisRow,
-  type KategoriRow,
-  type DetailRow,
-  type JenisDokumenRow,
 } from '#/lib/master-data'
 import {
   ChevronLeft,
