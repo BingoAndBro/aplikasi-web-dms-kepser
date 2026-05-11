@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import {
   ChevronRight, AlertCircle,
   Loader2, CheckCircle2,
+  Search, ChevronDown, ChevronLeft,
 } from 'lucide-react'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
@@ -16,7 +17,21 @@ export const Route = createFileRoute('/arsiparis/dokumen/$id/')({
   component: ArsiparisDokumenDetailPage,
 })
 
-type Klasifikasi = { id: string; nama: string }
+type Klasifikasi = {
+  id: string
+  nama: string
+  kode?: string | null
+  is_root?: boolean
+  children?: Klasifikasi[]
+}
+
+type FlatKlasifikasiOption = {
+  id: string
+  kode: string | null
+  nama: string
+  label: string
+  node: Klasifikasi
+}
 
 const RETENSI_OPTIONS = ['1 Tahun', '3 Tahun', '5 Tahun', '10 Tahun', 'Permanen'] as const
 
@@ -31,6 +46,105 @@ function calcDate(dateStr: string, years: number): string {
   if (years === 999) return '9999-12-31'
   d.setFullYear(d.getFullYear() + years)
   return d.toISOString().split('T')[0]
+}
+
+function compareKode(a: string | null | undefined, b: string | null | undefined): number {
+  const aParts = (a ?? '').split('.')
+  const bParts = (b ?? '').split('.')
+  const maxLength = Math.max(aParts.length, bParts.length)
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const aPart = aParts[index] ?? ''
+    const bPart = bParts[index] ?? ''
+    const comparison = aPart.localeCompare(bPart, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+
+    if (comparison !== 0) {
+      return comparison
+    }
+  }
+
+  return 0
+}
+
+function sortByKode(nodes: Klasifikasi[]): Klasifikasi[] {
+  return [...nodes].sort((left, right) => {
+    const kodeComparison = compareKode(left.kode, right.kode)
+    if (kodeComparison !== 0) {
+      return kodeComparison
+    }
+
+    return left.nama.localeCompare(right.nama, undefined, { sensitivity: 'base' })
+  })
+}
+
+function flattenKlasifikasiTree(
+  nodes: Klasifikasi[],
+  depth = 0,
+): FlatKlasifikasiOption[] {
+  const flattened: FlatKlasifikasiOption[] = []
+
+  for (const node of sortByKode(nodes)) {
+    const indent = depth > 0 ? `${'  '.repeat(depth)} ` : ''
+    flattened.push({
+      id: node.id,
+      kode: node.kode ?? null,
+      nama: node.nama,
+      label: `${indent}${node.nama}`,
+      node,
+    })
+
+    if (node.children?.length) {
+      flattened.push(...flattenKlasifikasiTree(node.children, depth + 1))
+    }
+  }
+
+  return flattened
+}
+
+function findRootNode(nodes: Klasifikasi[]): Klasifikasi | null {
+  if (nodes.length === 1 && nodes[0]?.is_root) {
+    return nodes[0]
+  }
+
+  return nodes.find(node => node.is_root) ?? null
+}
+
+function buildInitialKlasifikasiNodes(nodes: Klasifikasi[]): Klasifikasi[] {
+  const rootNode = findRootNode(nodes)
+  return sortByKode(rootNode?.children ?? nodes)
+}
+
+function findNodeById(nodes: Klasifikasi[], targetId: string): Klasifikasi | null {
+  for (const node of nodes) {
+    if (node.id === targetId) {
+      return node
+    }
+
+    const childMatch = findNodeById(node.children ?? [], targetId)
+    if (childMatch) {
+      return childMatch
+    }
+  }
+
+  return null
+}
+
+function findPathToNode(nodes: Klasifikasi[], targetId: string): Klasifikasi[] {
+  for (const node of nodes) {
+    if (node.id === targetId) {
+      return [node]
+    }
+
+    const childPath = findPathToNode(node.children ?? [], targetId)
+    if (childPath.length > 0) {
+      return [node, ...childPath]
+    }
+  }
+
+  return []
 }
 
 
@@ -71,6 +185,11 @@ function ArsiparisDokumenDetailPage() {
   const [klasifikasiList, setKlasifikasiList] = useState<Klasifikasi[]>([])
   const [nomorSurat, setNomorSurat] = useState('')
   const [klasifikasi, setKlasifikasi] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [currentNodes, setCurrentNodes] = useState<Klasifikasi[]>([])
+  const [selectedNode, setSelectedNode] = useState<Klasifikasi | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [currentPath, setCurrentPath] = useState<Klasifikasi[]>([])
   const [retensiAktif, setRetensiAktif] = useState<string>(RETENSI_OPTIONS[0])
   const [retensiInaktif, setRetensiInaktif] = useState<string>(RETENSI_OPTIONS[0])
   const [masaAktifBerakhir, setMasaAktifBerakhir] = useState('')
@@ -79,6 +198,24 @@ function ArsiparisDokumenDetailPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [formLoading, setFormLoading] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const allKlasifikasiOptions = useMemo(() => {
+    const rootNode = findRootNode(klasifikasiList)
+    return flattenKlasifikasiTree(rootNode?.children ?? klasifikasiList)
+  }, [klasifikasiList])
+  const filteredSearchResults = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    if (!normalizedQuery) {
+      return []
+    }
+
+    return allKlasifikasiOptions.filter((option) => {
+      const kode = option.kode?.toLowerCase() ?? ''
+      return option.nama.toLowerCase().includes(normalizedQuery) || kode.includes(normalizedQuery)
+    })
+  }, [allKlasifikasiOptions, searchQuery])
+  const visibleNodes = searchQuery.trim() ? [] : currentNodes
+  const breadcrumbPath = currentPath.map(node => node.nama).join(' / ')
 
   useEffect(() => { fetchData() }, [id])
 
@@ -103,6 +240,36 @@ function ArsiparisDokumenDetailPage() {
       .then(json => setKlasifikasiList(json.klasifikasi ?? []))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const initialNodes = buildInitialKlasifikasiNodes(klasifikasiList)
+    setCurrentNodes(initialNodes)
+    setCurrentPath([])
+
+    if (!klasifikasi) {
+      setSelectedNode(null)
+      return
+    }
+
+    const matchedNode = findNodeById(klasifikasiList, klasifikasi)
+    setSelectedNode(matchedNode)
+  }, [klasifikasiList])
+
+  useEffect(() => {
+    if (!dropdownOpen) {
+      return
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setDropdownOpen(false)
+        setSearchQuery('')
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [dropdownOpen])
 
   function recalcDates() {
     if (!dokumen) return
@@ -132,7 +299,7 @@ function ArsiparisDokumenDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nomor_surat: nomorSurat.trim(),
-          klasifikasi,
+          klasifikasi: selectedNode?.nama ?? '',
           retensi_aktif: retensiAktif,
           retensi_inaktif: retensiInaktif,
           masa_aktif_berakhir: masaAktifBerakhir,
@@ -144,6 +311,54 @@ function ArsiparisDokumenDetailPage() {
       if (!res.ok) { setFormSubmitError(json.error ?? 'Gagal'); setFormLoading(false); return }
       window.location.href = '/arsiparis/aktif'
     } catch { setFormSubmitError('Terjadi kesalahan'); setFormLoading(false) }
+  }
+
+  function openKlasifikasiDropdown() {
+    setDropdownOpen(true)
+    setSearchQuery('')
+
+    if (selectedNode) {
+      const path = findPathToNode(klasifikasiList, selectedNode.id)
+      if (path.length > 0) {
+        const parentPath = path.slice(0, -1)
+        const parentNode = parentPath[parentPath.length - 1] ?? null
+        setCurrentPath(parentPath)
+        setCurrentNodes(sortByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiList)))
+        return
+      }
+    }
+
+    setCurrentPath([])
+    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+  }
+
+  function handleKlasifikasiNodeClick(node: Klasifikasi) {
+    const children = sortByKode(node.children ?? [])
+
+    if (children.length > 0) {
+      setSearchQuery('')
+      setCurrentPath(prev => [...prev, node])
+      setCurrentNodes(children)
+      return
+    }
+
+    setSelectedNode(node)
+    setKlasifikasi(node.id)
+    setDropdownOpen(false)
+    setSearchQuery('')
+    setFormErrors(prev => ({ ...prev, klasifikasi: '' }))
+  }
+
+  function handleKlasifikasiBack() {
+    if (currentPath.length === 0) {
+      setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+      return
+    }
+
+    const nextPath = currentPath.slice(0, -1)
+    const parentNode = nextPath[nextPath.length - 1] ?? null
+    setCurrentPath(nextPath)
+    setCurrentNodes(sortByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiList)))
   }
 
   if (loading) return (
@@ -238,14 +453,128 @@ function ArsiparisDokumenDetailPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-on-surface mb-1.5">Klasifikasi <span className="text-error">*</span></label>
-                <select
-                  value={klasifikasi}
-                  onChange={e => { setKlasifikasi(e.target.value); setFormErrors(p => ({ ...p, klasifikasi: '' })) }}
-                  className={cn('w-full px-3 py-2 border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring cursor-pointer', formErrors.klasifikasi ? 'border-error' : 'border-border')}
-                >
-                  <option value="">Pilih Klasifikasi</option>
-                  {klasifikasiList.map(k => <option key={k.id} value={k.nama}>{k.nama}</option>)}
-                </select>
+                <div ref={dropdownRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (dropdownOpen) {
+                        setDropdownOpen(false)
+                        setSearchQuery('')
+                        return
+                      }
+
+                      openKlasifikasiDropdown()
+                    }}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 text-left text-sm text-foreground outline-none focus:ring-1 focus:ring-ring',
+                      formErrors.klasifikasi ? 'border-error' : 'border-border',
+                    )}
+                  >
+                    <div className="min-w-0">
+                      {selectedNode ? (
+                        <>
+                          <p className="truncate font-medium text-on-surface">
+                            {selectedNode.nama}
+                          </p>
+                          <p className="truncate text-[10px] text-on-surface-variant">
+                            {selectedNode.kode ?? 'Tanpa kode'}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-on-surface-variant">Pilih Klasifikasi</p>
+                      )}
+                    </div>
+                    <ChevronDown
+                      size={16}
+                      className={cn('shrink-0 text-outline transition-transform', dropdownOpen && 'rotate-180')}
+                    />
+                  </button>
+
+                  {dropdownOpen && (
+                    <div className="absolute z-20 mt-2 w-full rounded-xl border border-outline-variant/30 bg-white shadow-lg">
+                      <div className="border-b border-outline-variant/20 p-3">
+                        <div className="relative">
+                          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/50" />
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Cari nama atau kode klasifikasi"
+                            className="w-full rounded-lg border border-border bg-white py-2 pr-3 pl-9 text-xs outline-none focus:ring-1 focus:ring-ring"
+                          />
+                        </div>
+
+                        {!searchQuery.trim() && (
+                          <div className="mt-3 flex items-center justify-between gap-3">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleKlasifikasiBack}
+                              disabled={currentPath.length === 0}
+                              className="gap-1.5 px-2 text-xs"
+                            >
+                              <ChevronLeft size={14} />
+                              Back
+                            </Button>
+                            <p className="truncate text-[10px] text-on-surface-variant">
+                              {breadcrumbPath || 'Root'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="max-h-72 overflow-y-auto p-2">
+                        {searchQuery.trim() ? (
+                          filteredSearchResults.length === 0 ? (
+                            <div className="px-3 py-6 text-center text-xs text-on-surface-variant">
+                              Tidak ada hasil pencarian.
+                            </div>
+                          ) : (
+                            filteredSearchResults.map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => handleKlasifikasiNodeClick(option.node)}
+                                className="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-container-low/40"
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-on-surface">{option.nama}</p>
+                                  <p className="truncate text-[10px] text-on-surface-variant">{option.kode ?? 'Tanpa kode'}</p>
+                                </div>
+                              </button>
+                            ))
+                          )
+                        ) : visibleNodes.length === 0 ? (
+                          <div className="px-3 py-6 text-center text-xs text-on-surface-variant">
+                            Tidak ada klasifikasi pada level ini.
+                          </div>
+                        ) : (
+                          visibleNodes.map((node) => {
+                            const hasChildren = (node.children?.length ?? 0) > 0
+
+                            return (
+                              <button
+                                key={node.id}
+                                type="button"
+                                onClick={() => handleKlasifikasiNodeClick(node)}
+                                className="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-container-low/40"
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-on-surface">{node.nama}</p>
+                                  <p className="truncate text-[10px] text-on-surface-variant">{node.kode ?? 'Tanpa kode'}</p>
+                                </div>
+                                {hasChildren && (
+                                  <ChevronRight size={14} className="mt-0.5 shrink-0 text-outline" />
+                                )}
+                              </button>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {formErrors.klasifikasi && <p className="text-[10px] text-error mt-1">{formErrors.klasifikasi}</p>}
               </div>
 

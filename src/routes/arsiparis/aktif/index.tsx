@@ -6,6 +6,7 @@ import {
   FolderOpen, ChevronRight, AlertCircle, Loader2,
   Eye,
 } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import { cn } from '#/lib/utils'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { formatDate } from '#/lib/utils/format'
@@ -20,6 +21,11 @@ type ArsipAktifItem = {
   kegiatan_nama: string
   archived_at: string
   masa_aktif_berakhir: string
+}
+
+type ArsipAktifResponse = {
+  aktif?: ArsipAktifItem[]
+  error?: string
 }
 
 function ArsipAktifPage() {
@@ -44,11 +50,20 @@ function ArsipAktifPage() {
       const params = new URLSearchParams()
       if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
       if (q) params.set('q', q)
-      const res = await fetch(`/api/arsiparis/aktif?${params}`, { credentials: `include` })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
+      const json = await apiFetch<ArsipAktifResponse>('/arsiparis/aktif', { query: params })
       setItems(json.aktif ?? [])
-    } catch { setError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const payload = error.payload
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
+        } else {
+          setError('Gagal')
+        }
+      } else {
+        setError('Terjadi kesalahan')
+      }
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [fungsiFilter, q])
