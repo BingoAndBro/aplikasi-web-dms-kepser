@@ -33,6 +33,7 @@ import {
   Loader2,
   X,
 } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import type { UserWithRoles } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -101,6 +102,30 @@ interface ChairmanAssignment {
 interface EditSnapshot {
   form: EditUserForm
   assignments: ChairmanAssignment[]
+}
+
+interface UsersListResponse {
+  users?: UserWithRoles[]
+  error?: string
+}
+
+interface KetuaTimAssignmentApiItem {
+  id: string
+  user_id: string
+  kegiatan_id: string
+  kegiatan?: {
+    nama?: string
+  } | null
+}
+
+interface KetuaTimAssignmentsResponse {
+  assignments?: KetuaTimAssignmentApiItem[]
+  error?: string
+}
+
+interface MasterKegiatanItem {
+  id: string
+  nama: string
 }
 
 function normalizeRoles(roles: RoleName[]) {
@@ -184,15 +209,19 @@ function MasterUserPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/users/')
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Gagal memuat data')
-      }
-      const data = await res.json()
+      const data = await apiFetch<UsersListResponse>('/users/')
       setUsers(data.users || [])
-    } catch (err: any) {
-      setError(err.message || 'Gagal memuat data user')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string') {
+          setError(payload.error)
+        } else {
+          setError('Gagal memuat data')
+        }
+      } else {
+        setError('Gagal memuat data user')
+      }
     } finally {
       setLoading(false)
     }
@@ -209,13 +238,11 @@ function MasterUserPage() {
   const fetchChairmanAssignments = useCallback(async () => {
     setLoadingChairmen(true)
     try {
-      const res = await fetch('/api/ketua-tim/', { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await apiFetch<KetuaTimAssignmentsResponse>('/ketua-tim/')
 
       if (data.assignments) {
         const grouped: Record<string, ChairmanAssignment[]> = {}
-        data.assignments.forEach((a: any) => {
+        data.assignments.forEach((a) => {
           const userId = a.user_id
           if (!grouped[userId]) grouped[userId] = []
           grouped[userId].push({
@@ -262,12 +289,10 @@ function MasterUserPage() {
 
   const loadChairmanForUser = async (userId: string) => {
     try {
-      const res = await fetch(`/api/ketua-tim/user/${userId}`, { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await apiFetch<KetuaTimAssignmentsResponse>(`/ketua-tim/user/${userId}`)
       // API returns { assignments: [...] } - kegiatan is nested inside
       if (data.assignments) {
-        const assignments = data.assignments.map((a: any) => ({
+        const assignments = data.assignments.map((a) => ({
           id: a.id,
           kegiatan_id: a.kegiatan_id,
           kegiatan_nama: a.kegiatan?.nama || 'Unknown',
@@ -288,13 +313,11 @@ function MasterUserPage() {
 
   const loadAvailableKegiatan = async (assignments: ChairmanAssignment[] = dialogChairmanAssignments) => {
     try {
-      const res = await fetch('/api/master-kegiatan', { credentials: 'include' })
-      if (!res.ok) throw new Error('Failed to fetch')
-      const data = await res.json()
+      const data = await apiFetch<MasterKegiatanItem[]>('/master-kegiatan')
       // API returns array directly, not { kegiatan: [...] }
       if (Array.isArray(data)) {
         const assignedKegiatanIds = assignments.map(c => c.kegiatan_id)
-        const available = data.filter((k: any) => !assignedKegiatanIds.includes(k.id))
+        const available = data.filter((k) => !assignedKegiatanIds.includes(k.id))
         setAvailableKegiatan(available)
         console.info('[MasterUser] Available kegiatan refreshed', {
           total: data.length,
