@@ -5,6 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#
 import { Button } from '#/components/ui/button'
 import { FileText, ChevronRight, AlertCircle, FileEdit } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
 
 type Item = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
@@ -25,10 +26,20 @@ function PegawaiRevisiPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/pegawai/revisi', { credentials: 'include' })
-      .then(r => r.json())
+    apiFetch<{ dokumen?: Item[] }>('/pegawai/revisi')
       .then(d => { setItems(d.dokumen ?? []); setLoading(false) })
-      .catch(() => { setError('Gagal memuat data'); setLoading(false) })
+      .catch((err) => {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          setItems(payload && typeof payload === 'object' && 'dokumen' in payload
+            ? (payload as { dokumen?: Item[] }).dokumen ?? []
+            : [])
+          setLoading(false)
+          return
+        }
+
+        setError('Gagal memuat data'); setLoading(false)
+      })
   }, [])
 
   return (

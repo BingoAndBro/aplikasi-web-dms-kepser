@@ -11,6 +11,7 @@ import { cn } from '#/lib/utils'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/bendahara/inbox')({ component: BendaharaInboxPage })
 
@@ -39,11 +40,19 @@ function BendaharaInboxPage() {
     try {
       const params = new URLSearchParams()
       if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      const res = await fetch(`/api/bendahara/inbox?${params}`, { credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
+      const json = await apiFetch<{ dokumen?: InboxItem[]; error?: string }>('/bendahara/inbox', { query: params })
       setItems(json.dokumen ?? [])
-    } catch { setError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      setError('Terjadi kesalahan')
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [fungsiFilter])

@@ -16,6 +16,7 @@ import {
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/ppk/dokumen/$id/')({
   component: PpkDokumenDetailIndexPage,
@@ -80,16 +81,17 @@ function PpkDokumenDetailIndexPage() {
     setLoading(true)
     setFetchError(null)
     try {
-      const res = await fetch(`/api/ppk/dokumen/${id}`, { credentials: 'include' })
-      if (!res.ok) {
-        const json = await res.json()
-        setFetchError(json.error ?? 'Dokumen tidak dapat diakses')
-        setLoading(false)
+      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/ppk/dokumen/${id}`)
+      setDokumen(json.dokumen)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setFetchError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Dokumen tidak dapat diakses'
+          : 'Dokumen tidak dapat diakses')
         return
       }
-      const json = await res.json()
-      setDokumen(json.dokumen)
-    } catch {
+
       setFetchError('Terjadi kesalahan saat mengambil data')
     } finally {
       setLoading(false)

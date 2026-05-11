@@ -20,6 +20,7 @@ import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/revisi')({
   component: DokumenRevisiPage,
@@ -71,14 +72,7 @@ function DokumenRevisiPage() {
       const supabase = getBrowserClient()
       if (!supabase) { setError('Gagal menginisialisasi Supabase'); setLoading(false); return }
 
-      const res = await fetch(`/api/dokumen/${id}`, { credentials: 'include' })
-      if (!res.ok) {
-        const json = await res.json()
-        setError(json.error || `HTTP ${res.status}`)
-        setLoading(false)
-        return
-      }
-      const json = await res.json()
+      const json = await apiFetch<{ dokumen: DokumenRow }>(`/dokumen/${id}`)
       const dokumen = json.dokumen as DokumenRow
 
       if (dokumen.status !== 'NEED_REVISION' || dokumen.revision_target !== 'USER') {
@@ -115,6 +109,14 @@ function DokumenRevisiPage() {
       const { data: kelData } = await query
       if (kelData) setKelengkapan(kelData as KelengkapanItem[])
     } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || `HTTP ${err.status}`
+          : `HTTP ${err.status}`)
+        return
+      }
+
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {
       setLoading(false)

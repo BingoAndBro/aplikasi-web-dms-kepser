@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
+import { apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/edit')({
   component: EditDokumenPage,
@@ -48,14 +50,7 @@ function EditDokumenPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/dokumen/${id}`, { credentials: 'include' })
-      if (!res.ok) {
-        const json = await res.json()
-        setError(json.error || `HTTP ${res.status}`)
-        setLoading(false)
-        return
-      }
-      const json = await res.json()
+      const json = await apiFetch<{ dokumen: DokumenRow }>(`/dokumen/${id}`)
       const dokumen = json.dokumen as DokumenRow
 
       // Check if Non-Material and TERSIMPAN
@@ -77,6 +72,14 @@ function EditDokumenPage() {
       setAttachmentDirty(false)
       setGuardEnabled(true)
     } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || `HTTP ${err.status}`
+          : `HTTP ${err.status}`)
+        return
+      }
+
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {
       setLoading(false)
@@ -87,20 +90,13 @@ function EditDokumenPage() {
     setLoading(true)
     setGuardEnabled(false)
     try {
-      const res = await fetch(`/api/dokumen/${id}`, {
+      await apiMutation(`/api/dokumen/${id}`, {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           lampiranUrls: data.lampiranUrls,
           keteranganDetail: keteranganDetail || null,
-        }),
+        },
       })
-
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.error || 'Gagal menyimpan')
-      }
 
       setOriginalKeteranganDetail(keteranganDetail)
       setAttachmentDirty(false)
@@ -108,6 +104,14 @@ function EditDokumenPage() {
       navigate({ to: '/pegawai/dokumen/$id', params: { id } })
     } catch (err) {
       setGuardEnabled(true)
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal menyimpan'
+          : 'Gagal menyimpan')
+        return
+      }
+
       alert(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {
       setLoading(false)

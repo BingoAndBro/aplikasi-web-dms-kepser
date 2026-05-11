@@ -28,6 +28,7 @@ import {
   getAllJenisDokumen,
 } from '#/lib/master-data'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { apiFetch } from '#/lib/api-client'
 import { FileText } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -368,19 +369,16 @@ function AjukanDokumenPage() {
     setChairmanBadgeVisible(false)
 
     try {
-      const res = await fetch(`/api/users/me/is-ketua-tim/${kegId}`, {
-        credentials: 'include'
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setIsKetuaTim(data.is_ketua_tim === true)
-        setChairmanBadgeVisible(true)
-      } else {
+      const data = await apiFetch<{ is_ketua_tim?: boolean }>(`/users/me/is-ketua-tim/${kegId}`)
+      setIsKetuaTim(data.is_ketua_tim === true)
+      setChairmanBadgeVisible(true)
+    } catch (err) {
+      if (err instanceof ApiError) {
         setIsKetuaTim(false)
         setChairmanBadgeVisible(true)
+        return
       }
-    } catch (err) {
+
       console.error('Failed to check chairman status:', err)
       setIsKetuaTim(false)
       setChairmanBadgeVisible(true)

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
+import { apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/')({
   component: DokumenDetailPage,
@@ -96,28 +98,38 @@ function DokumenDetailPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const res = await fetch(`/api/dokumen/${id}`, { credentials: 'include' })
-      if (!res.ok) { const json = await res.json(); setFetchError(json.error ?? 'Gagal'); setLoading(false); return }
-      const json = await res.json()
+      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/dokumen/${id}`)
       setDok(json.dokumen)
-    } catch { setFetchError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setFetchError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      setFetchError('Terjadi kesalahan')
+    } finally { setLoading(false) }
   }
 
   async function handleDelete() {
     if (!confirm('Yakin ingin menghapus dokumen ini?')) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/dokumen/${id}`, {
+      await apiMutation(`/api/dokumen/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
       })
-      if (!res.ok) {
-        const json = await res.json()
-        alert(json.error || 'Gagal menghapus dokumen')
+      navigate({ to: '/pegawai/dokumen' })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal menghapus dokumen'
+          : 'Gagal menghapus dokumen')
         return
       }
-      navigate({ to: '/pegawai/dokumen' })
-    } catch {
+
       alert('Gagal menghapus dokumen')
     } finally {
       setDeleting(false)

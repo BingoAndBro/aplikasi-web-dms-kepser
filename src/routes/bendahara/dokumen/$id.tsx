@@ -12,6 +12,7 @@ import {
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/bendahara/dokumen/$id')({ component: BendaharaDokumenDetailPage })
 
@@ -56,11 +57,19 @@ function BendaharaDokumenDetailPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const res = await fetch(`/api/bendahara/dokumen/${id}`, { credentials: 'include' })
-      if (!res.ok) { const json = await res.json(); setFetchError(json.error ?? 'Gagal'); setLoading(false); return }
-      const json = await res.json()
+      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/bendahara/dokumen/${id}`)
       setDokumen(json.dokumen)
-    } catch { setFetchError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setFetchError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      setFetchError('Terjadi kesalahan')
+    } finally { setLoading(false) }
   }
 
   async function handleApprove() {

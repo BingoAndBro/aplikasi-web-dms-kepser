@@ -11,6 +11,8 @@ import {
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
+import { apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/arsiparis/aktif/$id')({ component: ArsipAktifDetailPage })
 
@@ -69,31 +71,42 @@ function ArsipAktifDetailPage() {
   async function fetchData() {
     setLoading(true); setFetchError(null)
     try {
-      const res = await fetch('/api/arsiparis/aktif/' + id, { credentials: 'include' })
-      if (!res.ok) {
-        const json = await res.json()
-        setFetchError(json.error ?? 'Arsip tidak ditemukan')
-        setLoading(false); return
-      }
-      const json = await res.json()
+      const json = await apiFetch<{ arsip: ArsipDetail }>('/arsiparis/aktif/' + id)
       setArsip(json.arsip)
-    } catch { setFetchError('Terjadi kesalahan saat mengambil data') }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setFetchError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Arsip tidak ditemukan'
+          : 'Arsip tidak ditemukan')
+        return
+      }
+
+      setFetchError('Terjadi kesalahan saat mengambil data')
+    }
     finally { setLoading(false) }
   }
 
   async function handlePindahkan() {
     setActionLoading(true); setActionError(null)
     try {
-      const res = await fetch('/api/arsiparis/aktif/' + id + '/pindahkan', {
+      await apiMutation('/api/arsiparis/aktif/' + id + '/pindahkan', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catatan: catatan.trim() || undefined }),
+        body: { catatan: catatan.trim() || undefined },
       })
-      const json = await res.json()
-      if (!res.ok) { setActionError(json.error ?? 'Gagal'); setActionLoading(false); return }
       window.location.href = '/arsiparis/inaktif'
-    } catch { setActionError('Terjadi kesalahan'); setActionLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setActionError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        setActionLoading(false)
+        return
+      }
+
+      setActionError('Terjadi kesalahan'); setActionLoading(false)
+    }
   }
 
   async function handlePreview(index: number) {

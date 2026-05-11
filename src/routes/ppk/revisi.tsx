@@ -7,6 +7,7 @@ import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, FileEdit, ArrowLeft } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
 
 type Item = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
@@ -27,10 +28,20 @@ function PpkRevisiPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/ppk/revisi', { credentials: 'include' })
-      .then(r => r.json())
+    apiFetch<{ dokumen?: Item[] }>('/ppk/revisi')
       .then(d => { setItems(d.dokumen ?? []); setLoading(false) })
-      .catch(() => { setError('Gagal memuat data'); setLoading(false) })
+      .catch((err) => {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          setItems(payload && typeof payload === 'object' && 'dokumen' in payload
+            ? (payload as { dokumen?: Item[] }).dokumen ?? []
+            : [])
+          setLoading(false)
+          return
+        }
+
+        setError('Gagal memuat data'); setLoading(false)
+      })
   }, [])
 
   return (

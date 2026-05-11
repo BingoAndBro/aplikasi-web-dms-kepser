@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { ApiError, apiFetch } from '#/lib/api-client'
+import { apiMutation } from '#/lib/api-mutation'
 import {
   Network, ChevronRight, ChevronDown, AlertCircle, Loader2,
   Plus, Pencil, Trash2, X, Folder, FolderOpen, FileText, CornerDownRight,
@@ -281,16 +282,23 @@ function AddKlasifikasiModal({
         deskripsi: deskripsi.trim() || undefined,
         parent_id: parentNode?.id ?? null,
       }
-      const res = await fetch('/api/arsiparis/klasifikasi', {
+      await apiMutation('/api/arsiparis/klasifikasi', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body,
       })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
       onSuccess(); onClose()
-    } catch { setError('Terjadi kesalahan'); setLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        setLoading(false)
+        return
+      }
+
+      setError('Terjadi kesalahan'); setLoading(false)
+    }
   }
 
   if (!isOpen) return null
@@ -412,16 +420,23 @@ function EditKlasifikasiModal({
         kode: kode.trim(),
         deskripsi: deskripsi.trim() || null,
       }
-      const res = await fetch(`/api/arsiparis/klasifikasi/${node.id}`, {
+      await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
         method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body,
       })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
       onSuccess(); onClose()
-    } catch { setError('Terjadi kesalahan'); setLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        setLoading(false)
+        return
+      }
+
+      setError('Terjadi kesalahan'); setLoading(false)
+    }
   }
 
   if (!isOpen) return null
@@ -506,14 +521,22 @@ function DeleteKlasifikasiModal({
     if (!node) return
     setLoading(true); setError(null)
     try {
-      const res = await fetch(`/api/arsiparis/klasifikasi/${node.id}`, {
+      await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
         method: 'DELETE',
-        credentials: 'include',
       })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
       onSuccess(); onClose()
-    } catch { setError('Terjadi kesalahan'); setLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        setLoading(false)
+        return
+      }
+
+      setError('Terjadi kesalahan'); setLoading(false)
+    }
   }
 
   if (!isOpen) return null

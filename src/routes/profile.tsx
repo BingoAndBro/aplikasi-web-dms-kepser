@@ -7,7 +7,8 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Badge } from '#/components/ui/badge'
 import { User, Mail, CreditCard, Building2, Shield, KeyRound, Loader2, Check } from 'lucide-react'
-import { ApiError, apiFetch } from '#/lib/api-client'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 import type { RoleName } from '#/lib/types/auth'
 
 export const Route = createFileRoute('/profile')({
@@ -120,23 +121,26 @@ function ProfilePage() {
 
     setPasswordLoading(true)
     try {
-      const res = await fetch('/api/users/me/change-password', {
+      await apiMutation('/api/users/me/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
-        }),
+        },
       })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal mengubah password')
-      }
       setPasswordSuccess(true)
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       setTimeout(() => setPasswordSuccess(false), 3000)
-    } catch (err: any) {
-      setPasswordError(err.message || 'Gagal mengubah password')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setPasswordError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal mengubah password'
+          : 'Gagal mengubah password')
+        return
+      }
+
+      setPasswordError(err instanceof Error ? err.message || 'Gagal mengubah password' : 'Gagal mengubah password')
     } finally {
       setPasswordLoading(false)
     }

@@ -26,6 +26,7 @@ import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/pegawai/dokumen/')({
   validateSearch: z.object({
@@ -126,14 +127,15 @@ function DokumenSayaPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { setFetchError('Sesi tidak ditemukan. Silakan login ulang.'); setLoading(false); return }
 
-      const res = await fetch('/api/dokumen', {
-        credentials: 'include',
-      })
-      if (!res.ok) { setFetchError(`Gagal mengambil data (HTTP ${res.status})`); setLoading(false); return }
-      const json = await res.json()
+      const json = await apiFetch<{ dokumen?: DokumenRow[]; error?: string }>('/dokumen')
       if (json.error) { setFetchError(json.error); setLoading(false); return }
       setItems(json.dokumen ?? [])
     } catch (err) {
+      if (err instanceof ApiError) {
+        setFetchError(`Gagal mengambil data (HTTP ${err.status})`)
+        return
+      }
+
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat mengambil data'
       setFetchError(msg)
     } finally { setLoading(false) }

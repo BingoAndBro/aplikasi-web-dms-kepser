@@ -12,6 +12,8 @@ import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
+import { apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/arsiparis/dokumen/$id/')({
   component: ArsiparisDokumenDetailPage,
@@ -222,21 +224,24 @@ function ArsiparisDokumenDetailPage() {
   async function fetchData() {
     setLoading(true); setFetchError(null)
     try {
-      const res = await fetch(`/api/arsiparis/dokumen/${id}`, { credentials: 'include' })
-      if (!res.ok) {
-        const json = await res.json()
-        setFetchError(json.error ?? 'Dokumen tidak dapat diakses')
-        setLoading(false); return
-      }
-      const json = await res.json()
+      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/arsiparis/dokumen/${id}`)
       setDokumen(json.dokumen)
-    } catch { setFetchError('Terjadi kesalahan saat mengambil data') }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setFetchError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Dokumen tidak dapat diakses'
+          : 'Dokumen tidak dapat diakses')
+        return
+      }
+
+      setFetchError('Terjadi kesalahan saat mengambil data')
+    }
     finally { setLoading(false) }
   }
 
   useEffect(() => {
-    fetch('/api/arsiparis/klasifikasi', { credentials: 'include' })
-      .then(r => r.json())
+    apiFetch<{ klasifikasi?: Klasifikasi[] }>('/arsiparis/klasifikasi')
       .then(json => setKlasifikasiList(json.klasifikasi ?? []))
       .catch(() => {})
   }, [])
@@ -293,11 +298,9 @@ function ArsiparisDokumenDetailPage() {
 
     setFormLoading(true); setFormSubmitError(null)
     try {
-      const res = await fetch(`/api/arsiparis/dokumen/${id}/archive`, {
+      await apiMutation(`/api/arsiparis/dokumen/${id}/archive`, {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           nomor_surat: nomorSurat.trim(),
           klasifikasi: selectedNode?.nama ?? '',
           retensi_aktif: retensiAktif,
@@ -305,12 +308,21 @@ function ArsiparisDokumenDetailPage() {
           masa_aktif_berakhir: masaAktifBerakhir,
           masa_inaktif_berakhir: masaInaktifBerakhir,
           catatan_arsiparis: catatan.trim() || undefined,
-        }),
+        },
       })
-      const json = await res.json()
-      if (!res.ok) { setFormSubmitError(json.error ?? 'Gagal'); setFormLoading(false); return }
       window.location.href = '/arsiparis/aktif'
-    } catch { setFormSubmitError('Terjadi kesalahan'); setFormLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setFormSubmitError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        setFormLoading(false)
+        return
+      }
+
+      setFormSubmitError('Terjadi kesalahan'); setFormLoading(false)
+    }
   }
 
   function openKlasifikasiDropdown() {

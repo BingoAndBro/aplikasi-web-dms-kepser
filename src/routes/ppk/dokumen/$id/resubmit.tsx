@@ -19,6 +19,7 @@ import { cn } from '#/lib/utils'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/ppk/dokumen/$id/resubmit')({
   component: PpkResubmitPage,
@@ -61,9 +62,7 @@ function PpkResubmitPage() {
     setLoading(true)
     try {
       const supabase = getBrowserClient()
-      const res = await fetch(`/api/ppk/resubmit/${id}`, { credentials: 'include' })
-      if (!res.ok) { const json = await res.json(); setFetchError(json.error ?? 'Gagal'); setLoading(false); return }
-      const json = await res.json()
+      const json = await apiFetch<{ dokumen: DokumenRow }>(`/ppk/resubmit/${id}`)
       setDokumen(json.dokumen)
       setLampiranUrls(json.dokumen.lampiran_urls ?? [])
       setDokIsNonMaterial(json.dokumen.is_non_material === true)
@@ -86,7 +85,17 @@ function PpkResubmitPage() {
         const { data: kelData } = await query
         if (kelData) setKelengkapan(kelData as KelengkapanItem[])
       }
-    } catch { setFetchError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setFetchError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      setFetchError('Terjadi kesalahan')
+    } finally { setLoading(false) }
   }
 
   async function handleSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
