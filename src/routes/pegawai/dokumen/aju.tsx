@@ -27,6 +27,7 @@ import {
   getDetailByKategori,
   getAllJenisDokumen,
 } from '#/lib/master-data'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { FileText } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -427,11 +428,9 @@ function AjukanDokumenPage() {
       const selectedKategoriPermintaanId = kategoriPermintaanId || undefined
       const selectedDetailPermintaanId = detailPermintaanId || undefined
 
-      const res = await fetch('/api/dokumen/submit', {
+      await apiMutation('/api/dokumen/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
+        body: {
           fungsiId,
           kegiatanJenisId: kegiatanId,
           isKetuaTim,
@@ -445,18 +444,21 @@ function AjukanDokumenPage() {
           jenisPermintaanId: !isNonMaterial ? selectedJenisPermintaanId : undefined,
           kategoriPermintaanId: !isNonMaterial ? selectedKategoriPermintaanId : undefined,
           detailPermintaanId: !isNonMaterial ? selectedDetailPermintaanId : undefined,
-        }),
+        },
       })
 
-      const json = await res.json()
+      navigate({ to: '/pegawai/dokumen' })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        const errorMessage = payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal mengajukan dokumen'
+          : 'Gagal mengajukan dokumen'
 
-      if (!res.ok) {
-        setSubmitError(json.error ?? 'Gagal mengajukan dokumen')
+        setSubmitError(errorMessage)
         return
       }
 
-      navigate({ to: '/pegawai/dokumen' })
-    } catch {
       setSubmitError('Terjadi kesalahan. Coba lagi.')
     } finally {
       setSubmitting(false)
