@@ -6,6 +6,7 @@ import { Badge } from '#/components/ui/badge'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
 import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
+import { useNoChangeSubmitGuard } from '#/hooks/useNoChangeSubmitGuard'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import {
   ChevronRight,
@@ -52,6 +53,7 @@ function PpkResubmitPage() {
 
   const isDirty = guardEnabled && attachmentDirty
   const { confirmIfDirty } = useUnsavedChangesGuard({ isDirty })
+  const { confirmIfNoChange } = useNoChangeSubmitGuard({ isDirty })
 
   useEffect(() => { fetchData() }, [id])
 
@@ -138,6 +140,14 @@ function PpkResubmitPage() {
       setGuardEnabled(true)
       setSubmitError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     }
+  }
+
+  function handleGuardedSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
+    if (isDirty) {
+      return handleSubmit(data)
+    }
+
+    return confirmIfDirty(() => confirmIfNoChange(() => handleSubmit(data)))
   }
 
   function handleCancel() {
@@ -267,7 +277,7 @@ function PpkResubmitPage() {
               Kembalikan ke Pegawai
             </Button>
           }
-          onSubmit={handleSubmit}
+          onSubmit={handleGuardedSubmit}
           onCancel={handleCancel}
           onDirtyChange={setAttachmentDirty}
           confirmIfDirty={confirmIfDirty}

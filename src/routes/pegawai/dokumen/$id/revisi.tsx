@@ -7,6 +7,7 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
 import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
+import { useNoChangeSubmitGuard } from '#/hooks/useNoChangeSubmitGuard'
 import {
   FileEdit,
   ChevronRight,
@@ -59,6 +60,7 @@ function DokumenRevisiPage() {
 
   const isDirty = guardEnabled && attachmentDirty
   const { confirmIfDirty } = useUnsavedChangesGuard({ isDirty })
+  const { confirmIfNoChange } = useNoChangeSubmitGuard({ isDirty })
 
   useEffect(() => { fetchData() }, [id])
 
@@ -167,6 +169,14 @@ function DokumenRevisiPage() {
       setGuardEnabled(true)
       setSubmitError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     }
+  }
+
+  function handleGuardedSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
+    if (isDirty) {
+      return handleSubmit(data)
+    }
+
+    return confirmIfDirty(() => confirmIfNoChange(() => handleSubmit(data)))
   }
 
   function handleCancel() {
@@ -328,7 +338,7 @@ function DokumenRevisiPage() {
           isNonMaterial={isNonMaterial}
           nominalValue={dok.nominal_realisasi}
           submitLabel={isNonMaterial ? 'Ajukan Ulang ke Ketua Tim' : 'Ajukan Ulang ke PPK'}
-          onSubmit={handleSubmit}
+          onSubmit={handleGuardedSubmit}
           onCancel={handleCancel}
           onDirtyChange={setAttachmentDirty}
           confirmIfDirty={confirmIfDirty}

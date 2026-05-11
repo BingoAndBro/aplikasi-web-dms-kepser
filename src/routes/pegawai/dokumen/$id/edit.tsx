@@ -5,6 +5,7 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { AttachmentEditor } from '#/components/dokumen/AttachmentEditor'
 import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
+import { useNoChangeSubmitGuard } from '#/hooks/useNoChangeSubmitGuard'
 import {
   FileText,
   ChevronRight,
@@ -39,6 +40,7 @@ function EditDokumenPage() {
   const { confirmIfDirty } = useUnsavedChangesGuard({
     isDirty,
   })
+  const { confirmIfNoChange } = useNoChangeSubmitGuard({ isDirty })
 
   useEffect(() => { fetchData() }, [id])
 
@@ -110,6 +112,14 @@ function EditDokumenPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleGuardedSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
+    if (isDirty) {
+      return handleSubmit(data)
+    }
+
+    return confirmIfDirty(() => confirmIfNoChange(() => handleSubmit(data)))
   }
 
   function handleCancel() {
@@ -201,7 +211,7 @@ function EditDokumenPage() {
           lampiranUrls={dok.lampiran_urls as LampiranUrl[] ?? []}
           isNonMaterial={true}
           submitLabel="Simpan Perubahan"
-          onSubmit={handleSubmit}
+          onSubmit={handleGuardedSubmit}
           onCancel={handleCancel}
           onDirtyChange={setAttachmentDirty}
           confirmIfDirty={confirmIfDirty}
