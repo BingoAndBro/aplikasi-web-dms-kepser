@@ -8,6 +8,7 @@ import { KelengkapanChecklist } from '#/components/dokumen/KelengkapanChecklist'
 import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
 import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
+import { StepJenisPermintaan } from '#/components/dokumen/form/StepJenisPermintaan'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type {
   LampiranUrl,
@@ -517,103 +518,21 @@ function AjukanDokumenPage() {
 
           {/* STEP 3: Jenis Permintaan (Material) / Jenis Dokumen (Non-Material) */}
           {step === 3 && (
-            <div className="space-y-4">
-              <h3 className="font-headline text-base font-bold text-on-surface">
-                3. {isNonMaterial ? 'Pilih Jenis Dokumen' : 'Pilih Jenis Permintaan'}
-              </h3>
-
-              {/* Non-Material Toggle */}
-              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="isNonMaterial"
-                  checked={isNonMaterial}
-                  onChange={(e) => handleToggleNonMaterial(e.target.checked)}
-                  className="w-4 h-4 rounded border-blue-400 text-primary focus:ring-primary"
-                />
-                <label htmlFor="isNonMaterial" className="text-sm text-blue-800 cursor-pointer flex-1">
-                  <span className="font-semibold">Dokumen Non-Material</span>
-                  <span className="text-xs text-blue-600 block">
-                    Centang jika dokumen tidak memerlukan nominal (misalnya: rapat, perjalanan non-SPD)
-                  </span>
-                </label>
-              </div>
-
-              {isNonMaterial ? (
-                // Non-Material: Jenis Dokumen dropdown
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-on-surface">
-                    Jenis Dokumen <span className="text-error">*</span>
-                  </label>
-                  {jenisDokumenList.length === 0 ? (
-                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                      <Loader2 size={14} className="animate-spin" />Memuat jenis dokumen...
-                    </div>
-                  ) : (
-                    <Select value={jenisDokumenId} onValueChange={v => handleJenisDokumenChange(v ?? '')}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih jenis dokumen...">
-                          {v => jenisDokumenList.find(j => j.id === v)?.nama ?? ''}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {jenisDokumenList.map(j => (
-                          <SelectItem key={j.id} value={j.id} label={j.nama}>
-                            <div>
-                              <p className="font-medium">{j.nama}</p>
-                              {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              ) : (
-                // Material: Jenis Permintaan dropdown
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-on-surface">
-                    Jenis Permintaan <span className="text-error">*</span>
-                  </label>
-                  {loadingJenis ? (
-                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                      <Loader2 size={14} className="animate-spin" />Memuat...
-                    </div>
-                  ) : jenisList.length === 0 ? (
-                    <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
-                      Tidak ada jenis permintaan tersedia.
-                    </p>
-                  ) : (
-                    <Select value={jenisPermintaanId} onValueChange={v => handleJenisChange(v ?? '')}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih jenis permintaan...">
-                          {v => jenisList.find(j => j.id === v)?.nama ?? ''}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {jenisList.map(j => (
-                          <SelectItem key={j.id} value={j.id} label={j.nama}>
-                            <div>
-                              <p className="font-medium">{j.nama}</p>
-                              {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleBack} className="gap-1.5 flex-1">
-                  <ChevronLeft size={14} />Kembali
-                </Button>
-                <Button onClick={handleNext} disabled={!canAdvanceFromStep3} className="gap-1.5 flex-1">
-                  Lanjut <ChevronRight size={14} />
-                </Button>
-              </div>
-            </div>
+            <StepJenisPermintaan
+              kegiatanId={kegiatanId}
+              isNonMaterial={isNonMaterial}
+              jenisPermintaanId={jenisPermintaanId}
+              jenisList={jenisList}
+              loadingJenis={loadingJenis}
+              jenisDokumenId={jenisDokumenId}
+              jenisDokumenList={jenisDokumenList}
+              canAdvanceFromStep3={canAdvanceFromStep3}
+              onToggleNonMaterial={handleToggleNonMaterial}
+              onJenisChange={handleJenisChange}
+              onJenisDokumenChange={handleJenisDokumenChange}
+              onBack={handleBack}
+              onNext={handleNext}
+            />
           )}
 
           {/* STEP 4: Kategori Permintaan (Material only) */}
