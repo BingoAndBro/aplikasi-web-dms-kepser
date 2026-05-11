@@ -18,6 +18,7 @@ import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/revisi')({
   component: DokumenRevisiPage,
@@ -124,28 +125,41 @@ function DokumenRevisiPage() {
 
     try {
       // PATCH to save changes
-      const patchRes = await fetch(`/api/dokumen/${id}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lampiranUrls: data.lampiranUrls, nominalRealisasi: data.nominalRealisasi }),
-      })
+      try {
+        await apiMutation(`/api/dokumen/${id}`, {
+          method: 'PATCH',
+          body: { lampiranUrls: data.lampiranUrls, nominalRealisasi: data.nominalRealisasi },
+        })
+      } catch (err) {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          const errorMessage = payload && typeof payload === 'object' && 'error' in payload
+            ? (payload as { error?: string }).error || 'Gagal menyimpan'
+            : 'Gagal menyimpan'
 
-      if (!patchRes.ok) {
-        const json = await patchRes.json()
-        throw new Error(json.error || 'Gagal menyimpan')
+          throw new Error(errorMessage)
+        }
+
+        throw err
       }
 
       // Submit to next workflow step
-      const submitRes = await fetch(`/api/dokumen/${id}/submit`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      try {
+        await apiMutation(`/api/dokumen/${id}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      } catch (err) {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          const errorMessage = payload && typeof payload === 'object' && 'error' in payload
+            ? (payload as { error?: string }).error || 'Gagal mengajukan ulang'
+            : 'Gagal mengajukan ulang'
 
-      if (!submitRes.ok) {
-        const json = await submitRes.json()
-        throw new Error(json.error || 'Gagal mengajukan ulang')
+          throw new Error(errorMessage)
+        }
+
+        throw err
       }
 
       window.location.href = '/pegawai/dokumen'
