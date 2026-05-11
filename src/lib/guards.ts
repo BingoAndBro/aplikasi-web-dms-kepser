@@ -1,71 +1,77 @@
 import { redirect } from '@tanstack/react-router'
 import type { RoleName } from './types/auth'
-import { createServerSupabaseClient, type ServerEventContext } from './supabase-server'
-import { getServerSession, hasRole, hasAnyRole } from './auth'
-import { getBrowserClient } from './supabase-browser'
+import type { ServerEventContext } from './supabase-server'
+import { getClientAuthState, type ClientAuthState } from './auth-state'
+import { logDev, warnDev } from './dev-logger'
 
 type GuardContext = Partial<ServerEventContext> | null | undefined
 
-function hasServerRequest(event: GuardContext): event is ServerEventContext {
+function shouldDeferToAppLayout(event: GuardContext) {
   return !!event?.request
-}
-
-async function getClientSession() {
-  if (typeof window === 'undefined') return null
-  const supabase = getBrowserClient()
-  if (!supabase) return null
-
-  const { data: { session } } = await supabase.auth.getSession()
-  return session
 }
 
 /**
  * Route guard: require authenticated user.
  * Throw redirect ke /login jika tidak ada session.
  */
-export async function requireAuth(event?: GuardContext) {
-  if (!hasServerRequest(event)) {
-    const session = await getClientSession()
-    if (!session) {
-      throw redirect({ to: '/login' })
-    }
-    return session
+export function requireAuth(
+  event?: GuardContext,
+  currentAuthState?: ClientAuthState | null,
+): ClientAuthState | null {
+  if (shouldDeferToAppLayout(event)) return null
+
+  const authState = currentAuthState ?? getClientAuthState()
+  logDev('[GUARD] requireAuth', {
+    userId: authState?.userId,
+    role: authState?.activeRole,
+    isReady: authState?.isReady,
+  }, `requireAuth:${authState?.userId ?? 'none'}:${authState?.activeRole ?? 'none'}:${authState?.isReady ? '1' : '0'}`)
+
+  if (!authState || !authState.isReady) {
+    warnDev('[GUARD] skip requireAuth karena belum ready', {
+      isReady: authState?.isReady ?? null,
+      userId: authState?.userId ?? null,
+    }, `requireAuth-skip:${authState?.userId ?? 'none'}:${authState?.isReady ? '1' : '0'}`)
+    return null
   }
 
-  const cookieHeader = event.request.headers.get('cookie') ?? null
-  const supabase = createServerSupabaseClient(event, cookieHeader)
-  const session = await getServerSession(supabase)
-  if (!session) {
+  if (!authState.userId || authState.status !== 'authenticated') {
     throw redirect({ to: '/login' })
   }
-  return session
+
+  return authState
 }
 
 /**
  * Route guard: require specific role.
  * Throw 403 jika tidak punya role.
  */
-export async function guardRole(event: GuardContext, role: RoleName): Promise<void> {
-  const session = await requireAuth(event)
+export function guardRole(role: RoleName) {
+  return (event?: GuardContext): void => {
+    if (shouldDeferToAppLayout(event)) return
 
-  if (!hasServerRequest(event)) {
-    const supabase = getBrowserClient()
-    if (!supabase) {
-      throw redirect({ to: '/login' })
+    const authState = getClientAuthState()
+
+    if (!authState || !authState.isReady) {
+      warnDev('[GUARD] skip guardRole karena belum ready', {
+        isReady: authState?.isReady ?? null,
+        userId: authState?.userId ?? null,
+      }, `guardRole-skip:${authState?.userId ?? 'none'}:${authState?.isReady ? '1' : '0'}`)
+      return
     }
 
-    const hasTheRole = await hasRole(supabase, session.user.id, role)
-    if (!hasTheRole) {
+    const authenticatedState = requireAuth(event, authState)
+    if (!authenticatedState) return
+
+    logDev('[GUARD] guardRole', {
+      requiredRole: role,
+      userId: authenticatedState.userId,
+      activeRole: authenticatedState.activeRole,
+    }, `guardRole:${role}:${authenticatedState.userId ?? 'none'}:${authenticatedState.activeRole ?? 'none'}`)
+
+    if (!authenticatedState.roles?.includes(role)) {
       throw redirect({ to: '/forbidden' })
     }
-    return
-  }
-
-  const cookieHeader = event.request.headers.get('cookie') ?? null
-  const supabase = createServerSupabaseClient(event, cookieHeader)
-  const hasTheRole = await hasRole(supabase, session.user.id, role)
-  if (!hasTheRole) {
-    throw redirect({ to: '/forbidden' })
   }
 }
 
@@ -73,26 +79,13 @@ export async function guardRole(event: GuardContext, role: RoleName): Promise<vo
  * Route guard: require any of the specified roles.
  * Throw redirect ke /forbidden jika tidak punya satupun role.
  */
-export async function guardAnyRole(event: GuardContext, roles: RoleName[]): Promise<void> {
-  const session = await requireAuth(event)
+export function guardAnyRole(event: GuardContext, roles: RoleName[]): void {
+  const authState = requireAuth(event)
+  if (!authState) return
 
-  if (!hasServerRequest(event)) {
-    const supabase = getBrowserClient()
-    if (!supabase) {
-      throw redirect({ to: '/login' })
-    }
+  if (!authState.isReady) return
 
-    const hasAny = await hasAnyRole(supabase, session.user.id, roles)
-    if (!hasAny) {
-      throw redirect({ to: '/forbidden' })
-    }
-    return
-  }
-
-  const cookieHeader = event.request.headers.get('cookie') ?? null
-  const supabase = createServerSupabaseClient(event, cookieHeader)
-  const hasAny = await hasAnyRole(supabase, session.user.id, roles)
-  if (!hasAny) {
+  if (!roles.some((role) => authState.roles.includes(role))) {
     throw redirect({ to: '/forbidden' })
   }
 }

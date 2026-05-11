@@ -4,8 +4,8 @@ import { getBrowserClient } from '#/lib/supabase-browser'
 import { guardRole } from '#/lib/guards'
 
 export const Route = createFileRoute('/ppk')({
-  beforeLoad: async ({ event }) => {
-    await guardRole(event, 'PPK')
+  beforeLoad: ({ event }) => {
+    guardRole('PPK')(event)
   },
   component: PpkLayout,
 })

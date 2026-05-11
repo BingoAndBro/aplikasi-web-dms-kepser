@@ -15,6 +15,7 @@ import { getSignedUrl, downloadWithSignedUrl, formatDateTime } from '#/lib/stora
 import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
+import { logDev, warnDev } from '#/lib/dev-logger'
 
 // ============================================================================
 // TYPES
@@ -95,7 +96,7 @@ export function AttachmentEditor({
   // Effect: Initialize
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    console.log('[AttachmentEditor] Mounted:', {
+    logDev('[AttachmentEditor] Mounted', {
       lampiranCount: initialLampirans.length,
       kelengkapanCount: kelengkapan.length,
       isNonMaterial
@@ -149,7 +150,7 @@ export function AttachmentEditor({
     const lamp = getLampByDocId(docId)
     if (!lamp?.url) return
 
-    console.log('[AttachmentEditor] Preview:', { kelengkapan_id: lamp.kelengkapan_id, nama: lamp.nama, url: lamp.url })
+    logDev('[AttachmentEditor] Preview', { docId, nama: lamp.nama })
 
     setPreviewingUrl(null)
     setPreviewLoading(true)
@@ -190,7 +191,7 @@ export function AttachmentEditor({
     const lamp = getLampByDocId(docId)
     if (!lamp?.url) return
 
-    console.log('[AttachmentEditor] Download:', { kelengkapan_id: lamp.kelengkapan_id, nama: lamp.nama })
+    logDev('[AttachmentEditor] Download', { docId, nama: lamp.nama })
 
     try {
       const signedUrl = await getSignedUrl(lamp.url)
@@ -215,12 +216,12 @@ export function AttachmentEditor({
     const pending = pendingFiles.get(docId)
     const isUserDoc = docId.startsWith('user-custom-')
 
-    console.log('[AttachmentEditor] Reset file:', { docId, lamp, pending, isUserDoc })
+    logDev('[AttachmentEditor] Reset file', { docId, isUserDoc, hasPending: !!pending, hasLamp: !!lamp })
 
     if (pending?.url) {
       const supabase = getBrowserClient()
       if (supabase) {
-        console.log('[AttachmentEditor] Deleting uploaded file:', pending.url)
+        logDev('[AttachmentEditor] Delete uploaded file', { docId, url: pending.url })
         await supabase.storage.from('dokumen-lampiran').remove([pending.url])
       }
     }
@@ -279,7 +280,7 @@ export function AttachmentEditor({
     if (!file) return
     e.target.value = ''
 
-    console.log('[AttachmentEditor] Upload:', { docId, filename: file.name })
+    logDev('[AttachmentEditor] Upload', { docId, filename: file.name })
 
     try {
       const supabase = getBrowserClient()
@@ -297,7 +298,7 @@ export function AttachmentEditor({
 
       if (error || !data) throw new Error(`Upload failed: ${error?.message}`)
 
-      console.log('[AttachmentEditor] Upload success:', path)
+      logDev('[AttachmentEditor] Upload success', { docId, path })
 
       const kel = kelengkapan.find(k => k.id === docId)
       const doc = userDocs.find(d => d.id === docId)
@@ -335,7 +336,10 @@ export function AttachmentEditor({
       }
 
     } catch (err) {
-      console.error('[AttachmentEditor] Upload error:', err)
+      warnDev('[AttachmentEditor] Upload error', {
+        docId,
+        message: err instanceof Error ? err.message : 'unknown',
+      })
       alert('Gagal mengupload file')
     }
   }
@@ -346,7 +350,7 @@ export function AttachmentEditor({
   function handleAddUserDoc() {
     if (!newDocTitle.trim()) return
     const docId = `user-custom-${crypto.randomUUID()}`
-    console.log('[AttachmentEditor] Added user doc:', { id: docId, nama: newDocTitle.trim() })
+    logDev('[AttachmentEditor] Added user doc', { docId, nama: newDocTitle.trim() })
     setUserDocs(prev => [...prev, { id: docId, nama: newDocTitle.trim() }])
     setNewDocTitle('')
     setShowAddForm(false)
@@ -360,11 +364,11 @@ export function AttachmentEditor({
     const lamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
     const pending = pendingFiles.get(docId)
 
-    console.log('[AttachmentEditor] Removing user doc:', { docId, nama: doc?.nama, lamp, pending })
+    logDev('[AttachmentEditor] Removing user doc', { docId, nama: doc?.nama, hasLamp: !!lamp, hasPending: !!pending })
 
     // Only allow removal if no file has been uploaded
     if (lamp || pending) {
-      console.log('[AttachmentEditor] Cannot remove: file exists, use Reset instead')
+      warnDev('[AttachmentEditor] Cannot remove because file exists', { docId })
       return
     }
 
@@ -411,7 +415,7 @@ export function AttachmentEditor({
   // Handler: Cancel
   // ---------------------------------------------------------------------------
   async function handleCancel() {
-    console.log('[AttachmentEditor] Cancel:', { hasFileChanges, hasNominalChanged, hasUserDocChanges })
+    logDev('[AttachmentEditor] Cancel', { hasFileChanges, hasNominalChanged, hasUserDocChanges })
 
     const proceedCancel = async () => {
       setIsCancelling(true)
@@ -420,10 +424,10 @@ export function AttachmentEditor({
         if (hasFileChanges) {
           const supabase = getBrowserClient()
           if (supabase) {
-            console.log('[AttachmentEditor] Cleaning up pending files...')
+            logDev('[AttachmentEditor] Cleaning up pending files', { count: pendingFiles.size })
             for (const [, pending] of pendingFiles) {
               if (pending?.url) {
-                console.log('[AttachmentEditor] Deleting:', pending.url)
+                logDev('[AttachmentEditor] Delete pending file', { url: pending.url })
                 await supabase.storage.from('dokumen-lampiran').remove([pending.url])
               }
             }
@@ -454,7 +458,7 @@ export function AttachmentEditor({
   // Handler: Submit
   // ---------------------------------------------------------------------------
   async function handleSubmit() {
-    console.log('[AttachmentEditor] Submit requested')
+    logDev('[AttachmentEditor] Submit requested', { isNonMaterial })
 
     if (!isNonMaterial) {
       const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
@@ -476,7 +480,7 @@ export function AttachmentEditor({
         ? parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) || null
         : null
 
-      console.log('[AttachmentEditor] Submit:', { lampiranCount: finalLampirans.length, nominal: nominalValueFinal })
+      logDev('[AttachmentEditor] Submit', { lampiranCount: finalLampirans.length, nominal: nominalValueFinal })
 
       await onSubmit({
         lampiranUrls: finalLampirans,

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sanitizeFilename, extractExtension, extractFilenameFromPath, isPendingFile } from '../utils/file'
 import type { DokumenRow, LampiranUrl } from './types'
+import { logDev, warnDev } from '../dev-logger'
 
 export { isPendingFile as isStoragePathPending } from '../utils/file'
 
@@ -131,7 +132,7 @@ export async function syncDocumentAttachments(
   const updated = [...lampiranUrlsBaru]
   const pathsToDelete: string[] = []
 
-  console.log('[syncDocumentAttachments] Starting sync for dokId:', dokumenId, 'lampirans:', lampiranUrlsBaru.length)
+  logDev('[syncDocumentAttachments] Start', { dokumenId, lampiranCount: lampiranUrlsBaru.length })
 
   for (let i = 0; i < updated.length; i++) {
     const lamp = updated[i]
@@ -139,14 +140,14 @@ export async function syncDocumentAttachments(
 
     // Skip non-PENDING files (already formal)
     if (!isPendingFile(lamp.url)) {
-      console.log('[syncDocumentAttachments] Skipping non-pending:', lamp.url)
+      logDev('[syncDocumentAttachments] Skip non-pending', { dokumenId, url: lamp.url })
       continue
     }
 
     // Check if this lampiran is replacing an old file
     const oldLamp = lampiranUrlsLama.find(l => l.kelengkapan_id === lamp.kelengkapan_id)
     if (oldLamp && oldLamp.url !== lamp.url) {
-      console.log('[syncDocumentAttachments] Will delete replaced file:', oldLamp.url)
+      logDev('[syncDocumentAttachments] Replace old file', { dokumenId, url: oldLamp.url })
       pathsToDelete.push(oldLamp.url)
     }
 
@@ -154,7 +155,7 @@ export async function syncDocumentAttachments(
     const ext = extractExtension(lamp.url)
     const newPath = `${userId}/${dokumenId}/${crypto.randomUUID()}.${ext}`
 
-    console.log('[syncDocumentAttachments] Moving:', lamp.url, '->', newPath)
+    logDev('[syncDocumentAttachments] Move', { dokumenId, from: lamp.url, to: newPath })
     const { error: moveError } = await supabaseAdmin.storage
       .from('dokumen-lampiran')
       .move(lamp.url, newPath)
@@ -166,7 +167,7 @@ export async function syncDocumentAttachments(
 
     // Track PENDING path for cleanup
     pathsToDelete.push(lamp.url)
-    console.log('[syncDocumentAttachments] Move success, new path:', newPath)
+    logDev('[syncDocumentAttachments] Move success', { dokumenId, to: newPath })
 
     // Update lampiran with new path
     updated[i] = { ...lamp, url: newPath }
@@ -176,12 +177,12 @@ export async function syncDocumentAttachments(
   for (const oldLamp of lampiranUrlsLama) {
     const stillExists = updated.some(l => l.kelengkapan_id === oldLamp.kelengkapan_id)
     if (!stillExists && oldLamp.url) {
-      console.log('[syncDocumentAttachments] Will delete removed lampiran:', oldLamp.url)
+      logDev('[syncDocumentAttachments] Remove old lampiran', { dokumenId, url: oldLamp.url })
       pathsToDelete.push(oldLamp.url)
     }
   }
 
-  console.log('[syncDocumentAttachments] Done. Updated:', updated.length, 'pathsToDelete:', pathsToDelete.length)
+  logDev('[syncDocumentAttachments] Done', { dokumenId, updated: updated.length, pathsToDelete: pathsToDelete.length })
 
   return { updatedLampirans: updated, pathsToDelete }
 }
@@ -199,9 +200,9 @@ export async function deleteOrphanFiles(
       .from('dokumen-lampiran')
       .remove([path])
     if (error) {
-      console.warn('[deleteOrphanFiles] Failed to delete:', path, error.message)
+      warnDev('[deleteOrphanFiles] Failed to delete', { path, message: error.message })
     } else {
-      console.log('[deleteOrphanFiles] Deleted:', path)
+      logDev('[deleteOrphanFiles] Deleted', { path })
     }
   }
 }

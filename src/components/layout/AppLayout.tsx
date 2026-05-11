@@ -5,6 +5,8 @@ import { ROLE_DEFAULT_ROUTE } from '#/config/navigation'
 import { apiFetch } from '#/lib/api-client'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
+import { clearClientAuthState, setClientAuthState, updateClientAuthState } from '#/lib/auth-state'
+import { logDev } from '#/lib/dev-logger'
 import { MESH_ROUTES, ROUTES } from '#/lib/constants/routes'
 import { ROLES } from '#/lib/constants/roles'
 
@@ -14,6 +16,7 @@ import { AppHeader } from './AppHeader'
 
 function clearAppState() {
   document.cookie = `${ACTIVE_ROLE_COOKIE}=; path=/; max-age=0`
+  clearClientAuthState('unauthenticated', true)
 }
 
 function getInitials(name?: string, email?: string): string {
@@ -33,6 +36,7 @@ type ChairmanStatusResponse = {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const routerState = useRouterState()
+  const lastAuthLogRef = React.useRef<string>('')
 
   const [userRoles, setUserRoles] = React.useState<RoleName[]>([])
   const [activeRole, setActiveRole] = React.useState<RoleName>(ROLES.PEGAWAI)
@@ -63,10 +67,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const isLoginPage = pathname === ROUTES.LOGIN
 
   const fetchSession = React.useCallback(async () => {
-    if (!supabase) { setIsLoading(false); setHasSession(false); return }
+    if (!supabase) {
+      clearClientAuthState('unauthenticated', true)
+      setIsLoading(false)
+      setHasSession(false)
+      return
+    }
 
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { setIsLoading(false); setHasSession(false); return }
+    if (!session) {
+      clearClientAuthState('unauthenticated', true)
+      setIsLoading(false)
+      setHasSession(false)
+      return
+    }
 
     await supabase.auth.getUser()
 
@@ -121,6 +135,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       : getPrimaryRole(roleNames)
 
     setActiveRole(effectiveRole)
+    const nextAuthState = {
+      status: 'authenticated',
+      userId: session.user.id,
+      email: session.user.email ?? undefined,
+      roles: roleNames,
+      activeRole: effectiveRole,
+      isReady: true,
+    } as const
+    setClientAuthState(nextAuthState)
+    const authLogKey = `${nextAuthState.userId ?? 'none'}:${nextAuthState.activeRole ?? 'none'}:${nextAuthState.isReady ? '1' : '0'}`
+    if (authLogKey !== lastAuthLogRef.current) {
+      lastAuthLogRef.current = authLogKey
+      logDev('[AUTH] setAuthState', {
+        userId: nextAuthState.userId,
+        roles: nextAuthState.roles,
+        activeRole: nextAuthState.activeRole,
+        isReady: nextAuthState.isReady,
+      }, `auth:${nextAuthState.userId}:${nextAuthState.activeRole}:${nextAuthState.isReady ? '1' : '0'}`)
+    }
     setIsLoading(false)
   }, [supabase])
 
@@ -154,7 +187,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === ACTIVE_ROLE_COOKIE) {
         const newRole = e.newValue as RoleName | null
-        if (newRole && userRoles.includes(newRole)) setActiveRole(newRole)
+        if (newRole && userRoles.includes(newRole)) {
+          setActiveRole(newRole)
+          updateClientAuthState({ activeRole: newRole })
+        }
       }
     }
     window.addEventListener('storage', handleStorageChange)
@@ -163,6 +199,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleRoleSwitch = (newRole: RoleName) => {
     document.cookie = `${ACTIVE_ROLE_COOKIE}=${newRole}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
+    updateClientAuthState({ activeRole: newRole })
     window.location.href = ROLE_DEFAULT_ROUTE[newRole]
   }
 
