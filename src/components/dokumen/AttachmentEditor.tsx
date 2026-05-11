@@ -44,6 +44,8 @@ interface AttachmentEditorProps {
     nominalRealisasi: number | null
   }) => Promise<void> | void
   onCancel: () => void
+  onDirtyChange?: (isDirty: boolean) => void
+  confirmIfDirty?: (callback: () => void | Promise<void>) => void | Promise<void>
 }
 
 // ============================================================================
@@ -59,6 +61,8 @@ export function AttachmentEditor({
   extraActions,
   onSubmit,
   onCancel,
+  onDirtyChange,
+  confirmIfDirty,
 }: AttachmentEditorProps) {
   // ---------------------------------------------------------------------------
   // State
@@ -407,39 +411,47 @@ export function AttachmentEditor({
   // Handler: Cancel
   // ---------------------------------------------------------------------------
   async function handleCancel() {
-    const hasFileChanges = pendingFiles.size > 0
-    const hasNominalChange = !isNonMaterial && nominalValue !== undefined && nominalRealisasi !== String(nominalValue ?? '').replace(/[^\d]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-    const hasUserDocChanges = userDocs.length !== originalLampirans.filter(l => l.kelengkapan_id.startsWith('user-custom-')).length
+    console.log('[AttachmentEditor] Cancel:', { hasFileChanges, hasNominalChanged, hasUserDocChanges })
 
-    console.log('[AttachmentEditor] Cancel:', { hasFileChanges, hasNominalChange, hasUserDocChanges })
+    const proceedCancel = async () => {
+      setIsCancelling(true)
 
-    if (!hasFileChanges && !hasNominalChange && !hasUserDocChanges) {
+      try {
+        if (hasFileChanges) {
+          const supabase = getBrowserClient()
+          if (supabase) {
+            console.log('[AttachmentEditor] Cleaning up pending files...')
+            for (const [, pending] of pendingFiles) {
+              if (pending?.url) {
+                console.log('[AttachmentEditor] Deleting:', pending.url)
+                await supabase.storage.from('dokumen-lampiran').remove([pending.url])
+              }
+            }
+          }
+        }
+
+        setPendingFiles(new Map())
+        onCancel()
+      } finally {
+        setIsCancelling(false)
+      }
+    }
+
+    if (confirmIfDirty) {
+      await confirmIfDirty(proceedCancel)
+      return
+    }
+
+    if (!hasUnsavedChanges) {
       onCancel()
       return
     }
 
-    if (!confirm('Apakah Anda yakin ingin membatalkan?\n\nPerubahan yang belum disimpan akan terhapus.')) {
+    if (!confirm('Perubahan belum disimpan. Yakin ingin keluar?')) {
       return
     }
 
-    setIsCancelling(true)
-
-    if (hasFileChanges) {
-      const supabase = getBrowserClient()
-      if (supabase) {
-        console.log('[AttachmentEditor] Cleaning up pending files...')
-        for (const [docId, pending] of pendingFiles) {
-          if (pending?.url) {
-            console.log('[AttachmentEditor] Deleting:', pending.url)
-            await supabase.storage.from('dokumen-lampiran').remove([pending.url])
-          }
-        }
-      }
-    }
-
-    setIsCancelling(false)
-    setPendingFiles(new Map())
-    onCancel()
+    await proceedCancel()
   }
 
   // ---------------------------------------------------------------------------
@@ -492,10 +504,26 @@ export function AttachmentEditor({
     ? (typeof nominalValue === 'number' ? nominalValue.toLocaleString('id-ID') : String(nominalValue ?? '').replace(/[^\d]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.'))
     : ''
   const hasNominalChanged = nominalRealisasi !== originalNominalFormatted
+  const originalUserDocSignature = originalLampirans
+    .filter(l => l.kelengkapan_id.startsWith('user-custom-'))
+    .map(l => `${l.kelengkapan_id}:${l.nama}`)
+    .sort()
+    .join('|')
+  const currentUserDocSignature = userDocs
+    .map(d => `${d.id}:${d.nama}`)
+    .sort()
+    .join('|')
+  const hasFileChanges = pendingFiles.size > 0
+  const hasUserDocChanges = currentUserDocSignature !== originalUserDocSignature
+  const hasUnsavedChanges = hasFileChanges || hasNominalChanged || hasUserDocChanges
 
   const requiredItems = kelengkapan.filter(k => k.required)
   const uploadedIds = new Set(lampiranUrls.map(l => l.kelengkapan_id))
   const missingRequired = requiredItems.filter(r => !uploadedIds.has(r.id))
+
+  useEffect(() => {
+    onDirtyChange?.(hasUnsavedChanges)
+  }, [hasUnsavedChanges, onDirtyChange])
 
   // ---------------------------------------------------------------------------
   // Render: Preview Modal

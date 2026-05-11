@@ -4,6 +4,7 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { AttachmentEditor } from '#/components/dokumen/AttachmentEditor'
+import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
 import {
   FileText,
   ChevronRight,
@@ -27,6 +28,17 @@ function EditDokumenPage() {
   const [error, setError] = useState<string | null>(null)
   const [keteranganDetail, setKeteranganDetail] = useState('')
   const [originalKeteranganDetail, setOriginalKeteranganDetail] = useState('')
+  const [attachmentDirty, setAttachmentDirty] = useState(false)
+  const [guardEnabled, setGuardEnabled] = useState(true)
+
+  const isDirty = guardEnabled && (
+    keteranganDetail !== originalKeteranganDetail ||
+    attachmentDirty
+  )
+
+  const { confirmIfDirty } = useUnsavedChangesGuard({
+    isDirty,
+  })
 
   useEffect(() => { fetchData() }, [id])
 
@@ -60,6 +72,8 @@ function EditDokumenPage() {
       const ketDetail = dokumen.keterangan_detail ?? ''
       setKeteranganDetail(ketDetail)
       setOriginalKeteranganDetail(ketDetail)
+      setAttachmentDirty(false)
+      setGuardEnabled(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {
@@ -69,6 +83,7 @@ function EditDokumenPage() {
 
   async function handleSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
     setLoading(true)
+    setGuardEnabled(false)
     try {
       const res = await fetch(`/api/dokumen/${id}`, {
         method: 'PATCH',
@@ -85,8 +100,12 @@ function EditDokumenPage() {
         throw new Error(json.error || 'Gagal menyimpan')
       }
 
+      setOriginalKeteranganDetail(keteranganDetail)
+      setAttachmentDirty(false)
+      setGuardEnabled(false)
       navigate({ to: '/pegawai/dokumen/$id', params: { id } })
     } catch (err) {
+      setGuardEnabled(true)
       alert(err instanceof Error ? err.message : 'Terjadi kesalahan')
     } finally {
       setLoading(false)
@@ -184,6 +203,8 @@ function EditDokumenPage() {
           submitLabel="Simpan Perubahan"
           onSubmit={handleSubmit}
           onCancel={handleCancel}
+          onDirtyChange={setAttachmentDirty}
+          confirmIfDirty={confirmIfDirty}
         />
       </div>
     </PageLayout>
