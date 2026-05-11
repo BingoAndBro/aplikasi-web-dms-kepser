@@ -7,6 +7,7 @@ export const Route = createFileRoute('/api/master-kategori')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
+        // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
         const cookieHeader = request.headers.get('cookie')
         const mockEvent = {
           request,

@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession } from '#/lib/auth'
+import { getDokumenById, storagePathBelongsToUser } from '#/lib/dokumen-helpers'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -44,6 +45,10 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
           return Response.json({ error: 'Missing dokId or lampiranUrls' }, { status: 400 })
         }
 
+        if (userId !== session.user.id) {
+          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+        }
+
         console.log('[API/dokumen/rename-pending] Processing dokId:', dokId, 'lampiranCount:', lampiranUrls.length)
 
         // Helper: check if path is PENDING format
@@ -68,6 +73,14 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
         }
 
         const admin = createAdminClient()
+        const dokumen = await getDokumenById(admin, dokId)
+        if (!dokumen) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
+        if (dokumen.created_by !== session.user.id) {
+          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+        }
+
         const renamed: { oldPath: string; newPath: string }[] = []
         const errors: { path: string; error: string }[] = []
 
@@ -78,6 +91,10 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
           }
 
           const oldPath = lamp.url
+          if (!storagePathBelongsToUser(oldPath, session.user.id)) {
+            return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+          }
+
           const newPath = buildFormalPath(lamp)
 
           console.log('[API/dokumen/rename-pending] Renaming:', { oldPath, newPath })

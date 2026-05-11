@@ -4,6 +4,33 @@ import type { DokumenRow, LampiranUrl } from './types'
 
 export { isPendingFile as isStoragePathPending } from '../utils/file'
 
+export function storagePathBelongsToUser(path: string, userId: string): boolean {
+  const ownerId = path.split('/').filter(Boolean)[0]
+  return ownerId === userId
+}
+
+export async function canAccessStoragePath(
+  supabase: SupabaseClient,
+  userId: string,
+  path: string
+): Promise<boolean> {
+  if (!path) return false
+  if (storagePathBelongsToUser(path, userId)) return true
+
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role:roles(nama)')
+    .eq('user_id', userId)
+
+  if (error || !data) return false
+
+  const roleNames = data
+    .map((r: any) => r.role?.nama as string | undefined)
+    .filter(Boolean)
+
+  return ['PPK', 'BENDAHARA', 'ARSIPARIS'].some(role => roleNames.includes(role))
+}
+
 /**
  * Membangun nama file formal berdasarkan metadata dokumen.
  *

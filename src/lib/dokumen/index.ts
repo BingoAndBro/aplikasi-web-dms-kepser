@@ -37,7 +37,9 @@ export {
   buildDokumenFilename,
   buildFormalStoragePath,
   buildStorageFilename,
+  canAccessStoragePath,
   deleteOrphanFiles,
   isStoragePathPending,
+  storagePathBelongsToUser,
   syncDocumentAttachments,
 } from './storage'

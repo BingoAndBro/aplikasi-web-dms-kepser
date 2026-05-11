@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession } from '#/lib/auth'
+import { canAccessStoragePath } from '#/lib/dokumen-helpers'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -32,6 +33,11 @@ export const Route = createFileRoute('/api/dokumen/preview-url')({
         const url = new URL(request.url).searchParams.get('url')
         if (!url) {
           return Response.json({ error: 'URL parameter required' }, { status: 400 })
+        }
+
+        const canAccess = await canAccessStoragePath(supabase, session.user.id, url)
+        if (!canAccess) {
+          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
         }
 
         const supabaseAdmin = createAdminClient()
