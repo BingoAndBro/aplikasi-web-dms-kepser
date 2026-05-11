@@ -17,6 +17,7 @@ import {
 import { cn } from '#/lib/utils'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/ppk/dokumen/$id/resubmit')({
   component: PpkResubmitPage,
@@ -92,31 +93,44 @@ function PpkResubmitPage() {
 
     try {
       // PATCH to save changes
-      const patchRes = await fetch(`/api/ppk/resubmit/${id}`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lampiranUrls: data.lampiranUrls,
-          nominalRealisasi: data.nominalRealisasi,
-        }),
-      })
+      try {
+        await apiMutation(`/api/ppk/resubmit/${id}`, {
+          method: 'PATCH',
+          body: {
+            lampiranUrls: data.lampiranUrls,
+            nominalRealisasi: data.nominalRealisasi,
+          },
+        })
+      } catch (err) {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          const errorMessage = payload && typeof payload === 'object' && 'error' in payload
+            ? (payload as { error?: string }).error || 'Gagal menyimpan'
+            : 'Gagal menyimpan'
 
-      if (!patchRes.ok) {
-        const json = await patchRes.json()
-        throw new Error(json.error || 'Gagal menyimpan')
+          throw new Error(errorMessage)
+        }
+
+        throw err
       }
 
       // Resubmit. Lampiran sudah diproses oleh PATCH di atas; jangan kirim ulang
       // payload lama karena path pending sudah dipindahkan ke path formal.
-      const submitRes = await fetch(`/api/ppk/resubmit/${id}`, {
-        method: 'POST',
-        credentials: 'include',
-      })
+      try {
+        await apiMutation(`/api/ppk/resubmit/${id}`, {
+          method: 'POST',
+        })
+      } catch (err) {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          const errorMessage = payload && typeof payload === 'object' && 'error' in payload
+            ? (payload as { error?: string }).error || 'Gagal mengajukan ulang'
+            : 'Gagal mengajukan ulang'
 
-      if (!submitRes.ok) {
-        const json = await submitRes.json()
-        throw new Error(json.error || 'Gagal mengajukan ulang')
+          throw new Error(errorMessage)
+        }
+
+        throw err
       }
 
       navigate({ to: '/ppk/revisi' })
@@ -133,11 +147,19 @@ function PpkResubmitPage() {
   async function handleKembalikan() {
     setKembalikanLoading(true)
     try {
-      const res = await fetch(`/api/ppk/kembalikan/${id}`, { method: 'POST', credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { alert(json.error ?? 'Gagal'); return }
+      await apiMutation(`/api/ppk/kembalikan/${id}`, { method: 'POST' })
       navigate({ to: '/ppk/revisi' })
-    } catch { alert('Terjadi kesalahan') } finally { setKembalikanLoading(false) }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
+
+      alert('Terjadi kesalahan')
+    } finally { setKembalikanLoading(false) }
   }
 
   if (loading) return (
