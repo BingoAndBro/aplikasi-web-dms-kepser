@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import {
   FileText, ChevronRight, Eye, AlertCircle, Loader2,
   Banknote, Clock,
@@ -26,6 +27,11 @@ type InboxItem = {
   bendahara_approve_at: string | null
 }
 
+type ArsiparisInboxResponse = {
+  inbox?: InboxItem[]
+  error?: string
+}
+
 function ArsiparisInboxPage() {
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,11 +52,20 @@ function ArsiparisInboxPage() {
     try {
       const params = new URLSearchParams()
       if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      const res = await fetch(`/api/arsiparis/inbox?${params}`, { credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
+      const json = await apiFetch<ArsiparisInboxResponse>('/arsiparis/inbox', { query: params })
       setItems(json.inbox ?? [])
-    } catch { setError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const payload = error.payload
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
+        } else {
+          setError('Gagal')
+        }
+      } else {
+        setError('Terjadi kesalahan')
+      }
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [fungsiFilter])

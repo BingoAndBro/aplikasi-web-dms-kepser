@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import {
   Archive, ChevronRight, AlertCircle, Loader2,
   Search, Eye,
@@ -21,6 +22,12 @@ type ArsipItem = {
   klasifikasi: string
   archived_at: string
   status_arsip: string
+}
+
+type ArsipSearchResponse = {
+  arsip?: ArsipItem[]
+  total?: number
+  error?: string
 }
 
 const PER_PAGE = 20
@@ -58,12 +65,21 @@ function ArsipSearchPage() {
       if (tahun) params.set('tahun', tahun)
       if (q) params.set('q', q)
       params.set('page', String(page))
-      const res = await fetch(`/api/arsiparis/search?${params}`, { credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
+      const json = await apiFetch<ArsipSearchResponse>('/arsiparis/search', { query: params })
       setItems(json.arsip ?? [])
       setTotal(json.total ?? 0)
-    } catch { setError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const payload = error.payload
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
+        } else {
+          setError('Gagal')
+        }
+      } else {
+        setError('Terjadi kesalahan')
+      }
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [fungsiFilter, kegiatanFilter, tahun, q, page])

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState, useCallback } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import {
   Network, ChevronRight, ChevronDown, AlertCircle, Loader2,
   Plus, Pencil, Trash2, X, Folder, FolderOpen, FileText, CornerDownRight,
@@ -23,6 +24,11 @@ type KlasifikasiNode = {
 }
 
 type FlatNode = KlasifikasiNode & { level: number; isExpanded?: boolean }
+
+type KlasifikasiResponse = {
+  klasifikasi?: KlasifikasiNode[]
+  error?: string
+}
 
 // Tree View Component
 function KlasifikasiTree({
@@ -577,9 +583,7 @@ function KlasifikasiPage() {
   async function fetchData() {
     setLoading(true); setError(null)
     try {
-      const res = await fetch('/api/arsiparis/klasifikasi', { credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
+      const json = await apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi')
       const data = json.klasifikasi ?? []
 
       // Mark root node (kode = '000') as fixed
@@ -591,7 +595,18 @@ function KlasifikasiPage() {
         }))
       }
       setItems(markRoot(data))
-    } catch { setError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const payload = error.payload
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
+        } else {
+          setError('Gagal')
+        }
+      } else {
+        setError('Terjadi kesalahan')
+      }
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [])

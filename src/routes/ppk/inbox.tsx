@@ -20,6 +20,7 @@ import {
   AlertCircle,
   ClipboardList,
 } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
@@ -35,6 +36,11 @@ type InboxItem = {
   tahun: number
   tanggal: string
   created_at: string
+}
+
+type PpkInboxResponse = {
+  dokumen?: InboxItem[]
+  error?: string
 }
 
 export const Route = createFileRoute('/ppk/inbox')({
@@ -77,19 +83,19 @@ function PpkInboxPage() {
       if (startDate) params.set('start_date', startDate)
       if (endDate) params.set('end_date', endDate)
 
-      const res = await fetch(`/api/ppk/inbox?${params}`, {
-        credentials: 'include',
-      })
-      if (!res.ok) {
-        const json = await res.json()
-        setFetchError(json.error ?? `HTTP ${res.status}`)
-        setLoading(false)
-        return
-      }
-      const json = await res.json()
+      const json = await apiFetch<PpkInboxResponse>('/ppk/inbox', { query: params })
       setItems(json.dokumen ?? [])
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Terjadi kesalahan')
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+          setFetchError(typeof payload.error === 'string' ? payload.error : `HTTP ${err.status}`)
+        } else {
+          setFetchError(`HTTP ${err.status}`)
+        }
+      } else {
+        setFetchError(err instanceof Error ? err.message : 'Terjadi kesalahan')
+      }
     } finally {
       setLoading(false)
     }

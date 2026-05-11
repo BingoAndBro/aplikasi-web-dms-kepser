@@ -7,6 +7,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Badge } from '#/components/ui/badge'
 import { User, Mail, CreditCard, Building2, Shield, KeyRound, Loader2, Check } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import type { RoleName } from '#/lib/types/auth'
 
 export const Route = createFileRoute('/profile')({
@@ -40,6 +41,11 @@ interface ProfileUser {
   roles: RoleName[]
 }
 
+type ProfileResponse = {
+  user: ProfileUser
+  error?: string
+}
+
 // ---------------------------------------------------------------------------
 // Page Component
 // ---------------------------------------------------------------------------
@@ -68,19 +74,18 @@ function ProfilePage() {
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch('/api/users/me/')
-        if (!res.ok) {
-          if (res.status === 401) {
-            window.location.href = '/login'
-            return
-          }
-          const data = await res.json()
-          throw new Error(data.error || 'Gagal memuat profil')
-        }
-        const data = await res.json()
+        const data = await apiFetch<ProfileResponse>('/users/me/')
         setUser(data.user)
-      } catch (err: any) {
-        setError(err.message || 'Gagal memuat profil')
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          window.location.href = '/login'
+          return
+        }
+        if (err instanceof Error) {
+          setError(err.message || 'Gagal memuat profil')
+        } else {
+          setError('Gagal memuat profil')
+        }
       } finally {
         setLoading(false)
       }

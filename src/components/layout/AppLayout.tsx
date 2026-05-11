@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 
 import { ROLE_DEFAULT_ROUTE } from '#/config/navigation'
+import { apiFetch } from '#/lib/api-client'
 import { getBrowserClient } from '#/lib/supabase-browser'
 import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
 import { MESH_ROUTES, ROUTES } from '#/lib/constants/routes'
@@ -25,6 +26,10 @@ function getInitials(name?: string, email?: string): string {
   return '??'
 }
 
+type ChairmanStatusResponse = {
+  kegiatan?: { id: string; nama: string }[]
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const routerState = useRouterState()
@@ -39,13 +44,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const fetchChairmanStatus = React.useCallback(async (session: any) => {
     if (!session) return
     try {
-      const res = await fetch('/api/users/me/ketua-tim', { credentials: 'include' })
-      if (res.ok) {
-        const data = await res.json()
-        setChairmanKegiatan(data.kegiatan || [])
-      }
+      const data = await apiFetch<ChairmanStatusResponse>('/users/me/ketua-tim')
+      setChairmanKegiatan(data.kegiatan || [])
     } catch (err) {
-      console.error('Failed to fetch chairman status:', err)
+      if (!(err instanceof Error && err.name === 'ApiError')) {
+        console.error('Failed to fetch chairman status:', err)
+      }
     }
   }, [])
   const [hasSession, setHasSession] = React.useState(false)
@@ -87,14 +91,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
     let isChairman = false
     try {
-      const ktRes = await fetch('/api/users/me/ketua-tim', { credentials: 'include' })
-      if (ktRes.ok) {
-        const ktData = await ktRes.json()
-        setChairmanKegiatan(ktData.kegiatan || [])
-        isChairman = (ktData.kegiatan || []).length > 0
-      }
+      const ktData = await apiFetch<ChairmanStatusResponse>('/users/me/ketua-tim')
+      setChairmanKegiatan(ktData.kegiatan || [])
+      isChairman = (ktData.kegiatan || []).length > 0
     } catch (err) {
-      console.error('Failed to fetch chairman status:', err)
+      if (!(err instanceof Error && err.name === 'ApiError')) {
+        console.error('Failed to fetch chairman status:', err)
+      }
     }
 
     const { data: rolesData } = await supabase

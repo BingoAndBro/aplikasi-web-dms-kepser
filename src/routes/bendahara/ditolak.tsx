@@ -5,9 +5,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, Banknote } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 
 type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string; revision_notes: string | null }
+type BendaharaDitolakResponse = { dokumen?: Item[]; error?: string }
 
 function truncate(str: string | null, len = 50): string { if (!str) return '—'; return str.length > len ? str.slice(0, len) + '...' : str }
 
@@ -20,9 +22,14 @@ function BendaharaDitolakPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/bendahara/ditolak', { credentials: 'include' })
-      .then(r => r.json()).then(d => { setItems(d.dokumen ?? []); setLoading(false) })
-      .catch(() => { setError('Gagal memuat data'); setLoading(false) })
+    apiFetch<BendaharaDitolakResponse>('/bendahara/ditolak')
+      .then(d => { setItems(d.dokumen ?? []); setLoading(false) })
+      .catch((error) => {
+        if (!(error instanceof ApiError)) {
+          setError('Gagal memuat data')
+        }
+        setLoading(false)
+      })
   }, [])
 
   return (

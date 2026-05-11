@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Clock, User, FileText, CheckCircle2, XCircle, AlertTriangle, Upload, ArrowRight } from 'lucide-react'
+import { apiFetch } from '#/lib/api-client'
 import { formatDateTime } from '#/lib/utils/format'
 
 type LogEntry = {
@@ -37,6 +38,11 @@ interface ActivityLogProps {
   className?: string
 }
 
+type ActivityLogResponse = {
+  logs?: LogEntry[]
+  error?: string
+}
+
 export function ActivityLog({ dokumenId, className = '' }: ActivityLogProps) {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,8 +52,7 @@ export function ActivityLog({ dokumenId, className = '' }: ActivityLogProps) {
     if (!dokumenId) return
 
     setLoading(true)
-    fetch(`/api/dokumen/${dokumenId}/log`, { credentials: 'include' })
-      .then(r => r.json())
+    apiFetch<ActivityLogResponse>(`/dokumen/${dokumenId}/log`)
       .then(d => {
         if (d.error) {
           setError(d.error)

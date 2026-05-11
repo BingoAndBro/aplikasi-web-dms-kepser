@@ -3,12 +3,18 @@ import { useEffect, useState, useMemo } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { FileText, ExternalLink, Inbox, ChevronRight } from 'lucide-react'
 import { Button } from '#/components/ui/button'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 
 export const Route = createFileRoute('/pegawai/laporan/saya')({
   component: LaporanSayaPage,
 })
+
+type LaporanSayaResponse = {
+  dokumen?: DokumenLaporanRow[]
+  error?: string
+}
 
 function LaporanSayaPage() {
   const [dokumen, setDokumen] = useState<DokumenLaporanRow[]>([])
@@ -17,13 +23,21 @@ function LaporanSayaPage() {
   const [filter, setFilter] = useState<HierarchicalFilterValue>({})
 
   useEffect(() => {
-    fetch('/api/laporan/saya', { credentials: 'include' })
-      .then(r => r.json())
+    apiFetch<LaporanSayaResponse>('/laporan/saya')
       .then(d => {
         if (d.error) { setError(d.error); return }
         setDokumen(d.dokumen ?? [])
       })
-      .catch(() => setError('Gagal memuat data. Coba muat ulang halaman.'))
+      .catch((error) => {
+        if (error instanceof ApiError) {
+          const payload = error.payload
+          if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string') {
+            setError(payload.error)
+            return
+          }
+        }
+        setError('Gagal memuat data. Coba muat ulang halaman.')
+      })
       .finally(() => setLoading(false))
   }, [])
 

@@ -4,12 +4,29 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { BarChart3, ExternalLink, Users, ChevronRight, ShieldX } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 
 export const Route = createFileRoute('/pegawai/laporan/kegiatan')({
   component: LaporanKegiatanPage,
 })
+
+type CurrentUserResponse = {
+  user: {
+    id: string
+  }
+}
+
+type KetuaTimKegiatanResponse = {
+  is_ketua_tim?: boolean
+  kegiatan?: { id: string; nama: string }[]
+}
+
+type LaporanKegiatanResponse = {
+  dokumen?: DokumenLaporanRow[]
+  error?: string
+}
 
 function LaporanKegiatanPage() {
   const [dokumen, setDokumen] = useState<DokumenLaporanRow[]>([])
@@ -27,20 +44,17 @@ function LaporanKegiatanPage() {
       setCheckingAuth(true)
       try {
         // Get current user ID from session
-        const meRes = await fetch('/api/users/me', { credentials: 'include' })
-        if (!meRes.ok) throw new Error('Not authenticated')
-        const meData = await meRes.json()
+        const meData = await apiFetch<CurrentUserResponse>('/users/me')
         setCurrentUserId(meData.user.id)
 
-        const res = await fetch('/api/users/me/ketua-tim', { credentials: 'include' })
-
-        if (!res.ok) {
+        let data: KetuaTimKegiatanResponse
+        try {
+          data = await apiFetch<KetuaTimKegiatanResponse>('/users/me/ketua-tim')
+        } catch {
           setIsAuthorized(false)
           setLoading(false)
           return
         }
-
-        const data = await res.json()
 
         if (!data.is_ketua_tim || !data.kegiatan || data.kegiatan.length === 0) {
           setIsAuthorized(false)
@@ -51,10 +65,20 @@ function LaporanKegiatanPage() {
         setIsAuthorized(true)
         setAllowedKegiatan(data.kegiatan)
 
-        const docRes = await fetch('/api/laporan/kegiatan', { credentials: 'include' })
-        const d = await docRes.json()
-        if (d.error) { setError(d.error); return }
-        setDokumen(d.dokumen ?? [])
+        try {
+          const d = await apiFetch<LaporanKegiatanResponse>('/laporan/kegiatan')
+          if (d.error) { setError(d.error); return }
+          setDokumen(d.dokumen ?? [])
+        } catch (err) {
+          if (err instanceof Error && err.name === 'ApiError') {
+            const payload = (err as { payload?: unknown }).payload
+            if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string') {
+              setError(payload.error)
+              return
+            }
+          }
+          throw err
+        }
       } catch (err) {
         console.error('Permission check failed:', err)
         setIsAuthorized(false)

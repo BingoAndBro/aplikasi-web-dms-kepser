@@ -5,6 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, FileX } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 
@@ -12,6 +13,7 @@ type Item = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
   tahun: number; tanggal: string; created_at: string; updated_at: string; revision_notes: string | null
 }
+type PpkDitolakResponse = { dokumen?: Item[]; error?: string }
 
 export const Route = createFileRoute('/ppk/ditolak')({ component: PpkDitolakPage })
 
@@ -27,10 +29,14 @@ function PpkDitolakPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/ppk/ditolak', { credentials: 'include' })
-      .then(r => r.json())
+    apiFetch<PpkDitolakResponse>('/ppk/ditolak')
       .then(d => { setItems(d.dokumen ?? []); setLoading(false) })
-      .catch(() => { setError('Gagal memuat data'); setLoading(false) })
+      .catch((error) => {
+        if (!(error instanceof ApiError)) {
+          setError('Gagal memuat data')
+        }
+        setLoading(false)
+      })
   }, [])
 
   return (

@@ -5,9 +5,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, CheckCircle2, Banknote } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 
 type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string }
+type BendaharaSelesaiResponse = { dokumen?: Item[]; error?: string }
 
 
 export const Route = createFileRoute('/bendahara/selesai')({ component: BendaharaSelesaiPage })
@@ -18,9 +20,14 @@ function BendaharaSelesaiPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/bendahara/selesai', { credentials: 'include' })
-      .then(r => r.json()).then(d => { setItems(d.dokumen ?? []); setLoading(false) })
-      .catch(() => { setError('Gagal memuat data'); setLoading(false) })
+    apiFetch<BendaharaSelesaiResponse>('/bendahara/selesai')
+      .then(d => { setItems(d.dokumen ?? []); setLoading(false) })
+      .catch((error) => {
+        if (!(error instanceof ApiError)) {
+          setError('Gagal memuat data')
+        }
+        setLoading(false)
+      })
   }, [])
 
   return (

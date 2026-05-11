@@ -5,6 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { FileText, ChevronRight, Eye, AlertCircle, CheckCircle2, ClipboardCheck, Info } from 'lucide-react'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 
@@ -12,6 +13,7 @@ type Item = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
   tahun: number; tanggal: string; created_at: string; status: string
 }
+type PpkTervalidasiResponse = { dokumen?: Item[]; error?: string }
 
 export const Route = createFileRoute('/ppk/tervalidasi')({ component: PpkTervalidasiPage })
 
@@ -32,10 +34,14 @@ function PpkTervalidasiPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/ppk/tervalidasi', { credentials: 'include' })
-      .then(r => r.json())
+    apiFetch<PpkTervalidasiResponse>('/ppk/tervalidasi')
       .then(d => { setItems(d.dokumen ?? []); setLoading(false) })
-      .catch(() => { setError('Gagal memuat data'); setLoading(false) })
+      .catch((error) => {
+        if (!(error instanceof ApiError)) {
+          setError('Gagal memuat data')
+        }
+        setLoading(false)
+      })
   }, [])
 
   return (
