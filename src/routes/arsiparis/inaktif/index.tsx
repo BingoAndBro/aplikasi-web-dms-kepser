@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { ApiError, apiFetch } from '#/lib/api-client'
 import {
   ArchiveX, ChevronRight, AlertCircle, Loader2,
   Eye,
@@ -21,6 +22,11 @@ type ArsipInaktifItem = {
   archived_at: string
   masa_aktif_berakhir: string
   masa_inaktif_berakhir: string
+}
+
+type ArsipInaktifResponse = {
+  inaktif?: ArsipInaktifItem[]
+  error?: string
 }
 
 function ArsipInaktifPage() {
@@ -43,11 +49,20 @@ function ArsipInaktifPage() {
     try {
       const params = new URLSearchParams()
       if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      const res = await fetch(`/api/arsiparis/inaktif?${params}`, { credentials: `include` })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
+      const json = await apiFetch<ArsipInaktifResponse>('/arsiparis/inaktif', { query: params })
       setItems(json.inaktif ?? [])
-    } catch { setError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const payload = error.payload
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
+        } else {
+          setError('Gagal')
+        }
+      } else {
+        setError('Terjadi kesalahan')
+      }
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [fungsiFilter])

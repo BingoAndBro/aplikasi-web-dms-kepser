@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { ApiError, apiFetch } from '#/lib/api-client'
+import { getBrowserClient } from '#/lib/supabase-browser'
 import { formatDate } from '#/lib/utils/format'
 import {
   Trash2, ChevronRight, AlertCircle, Loader2,
@@ -24,22 +26,48 @@ type MusnahItem = {
   catatan: string | null
 }
 
+type UsulMusnahResponse = {
+  usul_musnah?: MusnahItem[]
+  error?: string
+}
+
 function UsulMusnahPage() {
   const [items, setItems] = useState<MusnahItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fungsiList, setFungsiList] = useState<{ id: string; nama: string }[]>([])
+  const [fungsiFilter, setFungsiFilter] = useState('')
+
+  useEffect(() => {
+    const supabase = getBrowserClient()
+    if (!supabase) return
+    supabase.from('master_fungsi').select('id, nama').eq('is_active', true).order('nama').then(({ data }: { data: { id: string; nama: string }[] | null }) => {
+      setFungsiList(data ?? [])
+    })
+  }, [])
 
   async function fetchData() {
     setLoading(true); setError(null)
     try {
-      const res = await fetch('/api/arsiparis/usul-musnah', { credentials: 'include' })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error ?? 'Gagal'); setLoading(false); return }
+      const params = new URLSearchParams()
+      if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
+      const json = await apiFetch<UsulMusnahResponse>('/arsiparis/usul-musnah', { query: params })
       setItems(json.usul_musnah ?? [])
-    } catch { setError('Terjadi kesalahan') } finally { setLoading(false) }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const payload = error.payload
+        if (payload && typeof payload === 'object' && 'error' in payload) {
+          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
+        } else {
+          setError('Gagal')
+        }
+      } else {
+        setError('Terjadi kesalahan')
+      }
+    } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fungsiFilter])
 
 
 
@@ -60,6 +88,14 @@ function UsulMusnahPage() {
           </div>
           <h2 className="font-headline text-2xl font-extrabold text-on-surface">Usul Musnah</h2>
           <p className="text-on-surface-variant text-xs mt-1">{items.length} pengajuan pemusnahan.</p>
+        </div>
+
+        <div className="flex gap-3">
+          <select value={fungsiFilter} onChange={e => setFungsiFilter(e.target.value)} className="px-3 py-2 bg-white border border-border rounded-lg text-xs cursor-pointer">
+            <option value="">Semua Fungsi</option>
+            {fungsiList.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
+          </select>
+          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter('')}>Reset</Button>}
         </div>
 
         {loading ? (
