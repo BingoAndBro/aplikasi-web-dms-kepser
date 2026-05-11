@@ -33,7 +33,8 @@ import {
   Loader2,
   X,
 } from 'lucide-react'
-import { ApiError, apiFetch } from '#/lib/api-client'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 import type { UserWithRoles } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -481,29 +482,40 @@ function MasterUserPage() {
     const addedAssignments = dialogChairmanAssignments.filter(item => !initialByKegiatan.has(item.kegiatan_id))
 
     for (const assignment of removedAssignments) {
-      const res = await fetch(`/api/ketua-tim/?id=${encodeURIComponent(assignment.id)}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || `Gagal menghapus ketua tim ${assignment.kegiatan_nama}`)
+      try {
+        await apiMutation(`/api/ketua-tim/?id=${encodeURIComponent(assignment.id)}`, {
+          method: 'DELETE',
+        })
+      } catch (err) {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          throw new Error(payload && typeof payload === 'object' && 'error' in payload
+            ? (payload as { error?: string }).error || `Gagal menghapus ketua tim ${assignment.kegiatan_nama}`
+            : `Gagal menghapus ketua tim ${assignment.kegiatan_nama}`)
+        }
+
+        throw err
       }
     }
 
     for (const assignment of addedAssignments) {
-      const res = await fetch('/api/ketua-tim/', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          kegiatan_id: assignment.kegiatan_id,
-        }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || `Gagal menyimpan ketua tim ${assignment.kegiatan_nama}`)
+      try {
+        await apiMutation('/api/ketua-tim/', {
+          method: 'POST',
+          body: {
+            user_id: userId,
+            kegiatan_id: assignment.kegiatan_id,
+          },
+        })
+      } catch (err) {
+        if (err instanceof ApiError) {
+          const payload = err.payload
+          throw new Error(payload && typeof payload === 'object' && 'error' in payload
+            ? (payload as { error?: string }).error || `Gagal menyimpan ketua tim ${assignment.kegiatan_nama}`
+            : `Gagal menyimpan ketua tim ${assignment.kegiatan_nama}`)
+        }
+
+        throw err
       }
     }
 
@@ -551,27 +563,30 @@ function MasterUserPage() {
 
     setActionLoading(true)
     try {
-      const res = await fetch('/api/users/', {
+      await apiMutation('/api/users/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           email: createForm.email,
           password: createForm.password,
           nama_lengkap: createForm.nama_lengkap,
           nip_nrp: createForm.nip_nrp,
           departemen: createForm.departemen || undefined,
           roles: createForm.roles,
-        }),
+        },
       })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal membuat user')
-      }
       setCreateOpen(false)
       setCreateForm(INITIAL_CREATE_FORM)
       await fetchUsers()
-    } catch (err: any) {
-      alert(err.message || 'Gagal membuat user')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal membuat user'
+          : 'Gagal membuat user')
+        return
+      }
+
+      alert(err instanceof Error ? err.message || 'Gagal membuat user' : 'Gagal membuat user')
     } finally {
       setActionLoading(false)
     }
@@ -586,20 +601,15 @@ function MasterUserPage() {
 
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/users/${selectedUser.id}`, {
+      await apiMutation(`/api/users/${selectedUser.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           nama_lengkap: editForm.nama_lengkap,
           nip_nrp: editForm.nip_nrp,
           departemen: editForm.departemen || undefined,
           roles: editForm.roles,
-        }),
+        },
       })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal mengupdate user')
-      }
 
       await persistChairmanAssignmentChanges(selectedUser.id)
 
@@ -610,8 +620,16 @@ function MasterUserPage() {
       setAvailableKegiatan([])
       await fetchUsers()
       await fetchChairmanAssignments()
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengupdate user')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal mengupdate user'
+          : 'Gagal mengupdate user')
+        return
+      }
+
+      alert(err instanceof Error ? err.message || 'Gagal mengupdate user' : 'Gagal mengupdate user')
     } finally {
       setActionLoading(false)
     }
@@ -634,20 +652,23 @@ function MasterUserPage() {
 
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/users/${selectedUser.id}/reset-password`, {
+      await apiMutation(`/api/users/${selectedUser.id}/reset-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: resetPassword }),
+        body: { password: resetPassword },
       })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal mereset password')
-      }
       alert('Password berhasil direset')
       setResetPasswordOpen(false)
       setSelectedUser(null)
-    } catch (err: any) {
-      alert(err.message || 'Gagal mereset password')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal mereset password'
+          : 'Gagal mereset password')
+        return
+      }
+
+      alert(err instanceof Error ? err.message || 'Gagal mereset password' : 'Gagal mereset password')
     } finally {
       setActionLoading(false)
     }
@@ -658,18 +679,22 @@ function MasterUserPage() {
 
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/users/${selectedUser.id}/deactivate`, {
+      await apiMutation(`/api/users/${selectedUser.id}/deactivate`, {
         method: 'POST',
       })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal menonaktifkan user')
-      }
       setDeactivateOpen(false)
       setSelectedUser(null)
       await fetchUsers()
-    } catch (err: any) {
-      alert(err.message || 'Gagal menonaktifkan user')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal menonaktifkan user'
+          : 'Gagal menonaktifkan user')
+        return
+      }
+
+      alert(err instanceof Error ? err.message || 'Gagal menonaktifkan user' : 'Gagal menonaktifkan user')
     } finally {
       setActionLoading(false)
     }
@@ -680,18 +705,22 @@ function MasterUserPage() {
 
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/users/${selectedUser.id}/activate`, {
+      await apiMutation(`/api/users/${selectedUser.id}/activate`, {
         method: 'POST',
       })
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || 'Gagal mengaktifkan user')
-      }
       setActivateOpen(false)
       setSelectedUser(null)
       await fetchUsers()
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengaktifkan user')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        alert(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error || 'Gagal mengaktifkan user'
+          : 'Gagal mengaktifkan user')
+        return
+      }
+
+      alert(err instanceof Error ? err.message || 'Gagal mengaktifkan user' : 'Gagal mengaktifkan user')
     } finally {
       setActionLoading(false)
     }
