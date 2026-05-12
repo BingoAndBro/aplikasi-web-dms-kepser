@@ -1,1 +1,4 @@
-// Auth namespace tables will be added in later Phase 3 iterations.
+export * from './users'
+export * from './roles'
+export * from './user-roles'
+export * from './sessions'
