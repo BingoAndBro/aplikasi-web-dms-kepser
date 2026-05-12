@@ -1,1 +1,8 @@
-// Master-data namespace tables will be added in later Phase 3 iterations.
+export * from './fungsi'
+export * from './kegiatan'
+export * from './jenis-permintaan'
+export * from './kategori-permintaan'
+export * from './detail-permintaan'
+export * from './jenis-dokumen'
+export * from './kelengkapan-dokumen'
+export * from './ketua-tim-assignments'
