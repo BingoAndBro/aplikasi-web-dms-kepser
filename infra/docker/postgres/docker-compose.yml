@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: kepser-postgres
+    environment:
+      POSTGRES_DB: kepser
+      POSTGRES_USER: kepser
+      POSTGRES_PASSWORD: kepser_dev_password
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - kepser_postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kepser -d kepser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  kepser_postgres_data:
+    name: kepser_postgres_data
