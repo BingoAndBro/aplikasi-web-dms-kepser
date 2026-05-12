@@ -11,3 +11,15 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# Local migration storage
+storage/*
+!storage/.gitkeep
+!storage/temp/
+!storage/temp/.gitkeep
+!storage/documents/
+!storage/documents/.gitkeep
+
+# Local env variants
+.env.migration
+.env.postgres
