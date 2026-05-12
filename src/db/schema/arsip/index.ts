@@ -1,1 +1,3 @@
-// Arsip namespace tables will be added in later Phase 3 iterations.
+export * from './arsip'
+export * from './klasifikasi-arsip'
+export * from './usul-musnah'
