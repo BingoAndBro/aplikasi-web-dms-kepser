@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775756753277,
-      "tag": "0000_handy_next_avengers",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1776272757937,
-      "tag": "0001_003_dokumen_transaksi",
+      "when": 1778657947265,
+      "tag": "0000_dry_roland_deschain",
       "breakpoints": true
     }
   ]

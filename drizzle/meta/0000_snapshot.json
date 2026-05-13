@@ -1,12 +1,179 @@
 {
-  "id": "51840591-08a3-44c7-9b7b-3a9db80f3b5c",
+  "id": "f5f3e343-3fa6-4cfb-af41-ec9d417f366a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.roles": {
+    "auth.users": {
+      "name": "users",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash_algorithm": {
+          "name": "password_hash_algorithm",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'argon2id'"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nama_lengkap": {
+          "name": "nama_lengkap",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nip_nrp": {
+          "name": "nip_nrp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "departemen": {
+          "name": "departemen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "inactive_reason": {
+          "name": "inactive_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deactivated_at": {
+          "name": "deactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deactivated_by": {
+          "name": "deactivated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_login_at": {
+          "name": "last_login_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password_updated_at": {
+          "name": "password_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "auth_users_email_unique": {
+          "name": "auth_users_email_unique",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_auth_users_is_active": {
+          "name": "idx_auth_users_is_active",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_auth_users_deactivated_by": {
+          "name": "idx_auth_users_deactivated_by",
+          "columns": [
+            {
+              "expression": "deactivated_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.roles": {
       "name": "roles",
-      "schema": "",
+      "schema": "auth",
       "columns": {
         "id": {
           "name": "id",
@@ -21,8 +188,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "deskripsi": {
-          "name": "deskripsi",
+        "description": {
+          "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -33,35 +200,43 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "auth_roles_nama_unique": {
+          "name": "auth_roles_nama_unique",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "roles_nama_unique": {
-          "name": "roles_nama_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "nama"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.user_roles": {
+    "auth.user_roles": {
       "name": "user_roles",
-      "schema": "",
+      "schema": "auth",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
         "user_id": {
           "name": "user_id",
           "type": "uuid",
@@ -82,12 +257,58 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_auth_user_roles_user_id": {
+          "name": "idx_auth_user_roles_user_id",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_auth_user_roles_role_id": {
+          "name": "idx_auth_user_roles_role_id",
+          "columns": [
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
+        "user_roles_user_id_users_id_fk": {
+          "name": "user_roles_user_id_users_id_fk",
+          "tableFrom": "user_roles",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "user_roles_role_id_roles_id_fk": {
           "name": "user_roles_role_id_roles_id_fk",
           "tableFrom": "user_roles",
           "tableTo": "roles",
+          "schemaTo": "auth",
           "columnsFrom": [
             "role_id"
           ],
@@ -98,19 +319,2453 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_roles_user_id_role_id_unique": {
-          "name": "user_roles_user_id_role_id_unique",
-          "nullsNotDistinct": false,
+      "compositePrimaryKeys": {
+        "auth_user_roles_user_id_role_id_pk": {
+          "name": "auth_user_roles_user_id_role_id_pk",
           "columns": [
             "user_id",
             "role_id"
           ]
         }
       },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "auth.sessions": {
+      "name": "sessions",
+      "schema": "auth",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_used_at": {
+          "name": "last_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "remember_me": {
+          "name": "remember_me",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "auth_sessions_token_hash_unique": {
+          "name": "auth_sessions_token_hash_unique",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_auth_sessions_user_id": {
+          "name": "idx_auth_sessions_user_id",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_auth_sessions_expires_at": {
+          "name": "idx_auth_sessions_expires_at",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_auth_sessions_revoked_at": {
+          "name": "idx_auth_sessions_revoked_at",
+          "columns": [
+            {
+              "expression": "revoked_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "master.master_fungsi": {
+      "name": "master_fungsi",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "master_fungsi_nama_unique": {
+          "name": "master_fungsi_nama_unique",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_fungsi_is_active": {
+          "name": "idx_master_fungsi_is_active",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_fungsi_nama": {
+          "name": "idx_master_fungsi_nama",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "master.master_kegiatan": {
+      "name": "master_kegiatan",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "fungsi_id": {
+          "name": "fungsi_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_master_kegiatan_fungsi_id": {
+          "name": "idx_master_kegiatan_fungsi_id",
+          "columns": [
+            {
+              "expression": "fungsi_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_kegiatan_is_active": {
+          "name": "idx_master_kegiatan_is_active",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_kegiatan_fungsi_active": {
+          "name": "idx_master_kegiatan_fungsi_active",
+          "columns": [
+            {
+              "expression": "fungsi_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "master_kegiatan_fungsi_id_nama_active_unique": {
+          "name": "master_kegiatan_fungsi_id_nama_active_unique",
+          "columns": [
+            {
+              "expression": "fungsi_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"master\".\"master_kegiatan\".\"is_active\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "master_kegiatan_fungsi_id_master_fungsi_id_fk": {
+          "name": "master_kegiatan_fungsi_id_master_fungsi_id_fk",
+          "tableFrom": "master_kegiatan",
+          "tableTo": "master_fungsi",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "fungsi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "master.master_jenis_permintaan": {
+      "name": "master_jenis_permintaan",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_master_jenis_permintaan_is_active": {
+          "name": "idx_master_jenis_permintaan_is_active",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_jenis_permintaan_nama": {
+          "name": "idx_master_jenis_permintaan_nama",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "master_jenis_permintaan_nama_active_unique": {
+          "name": "master_jenis_permintaan_nama_active_unique",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"master\".\"master_jenis_permintaan\".\"is_active\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "master.master_kategori_permintaan": {
+      "name": "master_kategori_permintaan",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "jenis_permintaan_id": {
+          "name": "jenis_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_master_kategori_permintaan_jenis_id": {
+          "name": "idx_master_kategori_permintaan_jenis_id",
+          "columns": [
+            {
+              "expression": "jenis_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_kategori_permintaan_jenis_active": {
+          "name": "idx_master_kategori_permintaan_jenis_active",
+          "columns": [
+            {
+              "expression": "jenis_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "master_kategori_permintaan_jenis_id_nama_active_unique": {
+          "name": "master_kategori_permintaan_jenis_id_nama_active_unique",
+          "columns": [
+            {
+              "expression": "jenis_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"master\".\"master_kategori_permintaan\".\"is_active\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "master_kategori_permintaan_jenis_permintaan_id_master_jenis_permintaan_id_fk": {
+          "name": "master_kategori_permintaan_jenis_permintaan_id_master_jenis_permintaan_id_fk",
+          "tableFrom": "master_kategori_permintaan",
+          "tableTo": "master_jenis_permintaan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "jenis_permintaan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "master.master_detail_permintaan": {
+      "name": "master_detail_permintaan",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kategori_permintaan_id": {
+          "name": "kategori_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_master_detail_permintaan_kategori_id": {
+          "name": "idx_master_detail_permintaan_kategori_id",
+          "columns": [
+            {
+              "expression": "kategori_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_detail_permintaan_kategori_active": {
+          "name": "idx_master_detail_permintaan_kategori_active",
+          "columns": [
+            {
+              "expression": "kategori_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "master_detail_permintaan_kategori_id_nama_active_unique": {
+          "name": "master_detail_permintaan_kategori_id_nama_active_unique",
+          "columns": [
+            {
+              "expression": "kategori_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"master\".\"master_detail_permintaan\".\"is_active\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "master_detail_permintaan_kategori_permintaan_id_master_kategori_permintaan_id_fk": {
+          "name": "master_detail_permintaan_kategori_permintaan_id_master_kategori_permintaan_id_fk",
+          "tableFrom": "master_detail_permintaan",
+          "tableTo": "master_kategori_permintaan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "kategori_permintaan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "master.master_jenis_dokumen": {
+      "name": "master_jenis_dokumen",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_master_jenis_dokumen_is_active": {
+          "name": "idx_master_jenis_dokumen_is_active",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_jenis_dokumen_nama": {
+          "name": "idx_master_jenis_dokumen_nama",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "master_jenis_dokumen_nama_active_unique": {
+          "name": "master_jenis_dokumen_nama_active_unique",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"master\".\"master_jenis_dokumen\".\"is_active\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "master.master_kelengkapan_dokumen": {
+      "name": "master_kelengkapan_dokumen",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kegiatan_id": {
+          "name": "kegiatan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_ketua_tim": {
+          "name": "is_ketua_tim",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama_dokumen": {
+          "name": "nama_dokumen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required": {
+          "name": "required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "jenis_permintaan_id": {
+          "name": "jenis_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kategori_permintaan_id": {
+          "name": "kategori_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detail_permintaan_id": {
+          "name": "detail_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_master_kelengkapan_kegiatan_id": {
+          "name": "idx_master_kelengkapan_kegiatan_id",
+          "columns": [
+            {
+              "expression": "kegiatan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_kelengkapan_is_ketua_tim": {
+          "name": "idx_master_kelengkapan_is_ketua_tim",
+          "columns": [
+            {
+              "expression": "is_ketua_tim",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_kelengkapan_chain": {
+          "name": "idx_master_kelengkapan_chain",
+          "columns": [
+            {
+              "expression": "kegiatan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_ketua_tim",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "jenis_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kategori_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "detail_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "master_kelengkapan_dokumen_kegiatan_id_master_kegiatan_id_fk": {
+          "name": "master_kelengkapan_dokumen_kegiatan_id_master_kegiatan_id_fk",
+          "tableFrom": "master_kelengkapan_dokumen",
+          "tableTo": "master_kegiatan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "kegiatan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "master_kelengkapan_dokumen_jenis_permintaan_id_master_jenis_permintaan_id_fk": {
+          "name": "master_kelengkapan_dokumen_jenis_permintaan_id_master_jenis_permintaan_id_fk",
+          "tableFrom": "master_kelengkapan_dokumen",
+          "tableTo": "master_jenis_permintaan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "jenis_permintaan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "master_kelengkapan_dokumen_kategori_permintaan_id_master_kategori_permintaan_id_fk": {
+          "name": "master_kelengkapan_dokumen_kategori_permintaan_id_master_kategori_permintaan_id_fk",
+          "tableFrom": "master_kelengkapan_dokumen",
+          "tableTo": "master_kategori_permintaan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "kategori_permintaan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "master_kelengkapan_dokumen_detail_permintaan_id_master_detail_permintaan_id_fk": {
+          "name": "master_kelengkapan_dokumen_detail_permintaan_id_master_detail_permintaan_id_fk",
+          "tableFrom": "master_kelengkapan_dokumen",
+          "tableTo": "master_detail_permintaan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "detail_permintaan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "master_kelengkapan_kategori_requires_jenis_check": {
+          "name": "master_kelengkapan_kategori_requires_jenis_check",
+          "value": "\"master\".\"master_kelengkapan_dokumen\".\"kategori_permintaan_id\" is null or \"master\".\"master_kelengkapan_dokumen\".\"jenis_permintaan_id\" is not null"
+        },
+        "master_kelengkapan_detail_requires_kategori_check": {
+          "name": "master_kelengkapan_detail_requires_kategori_check",
+          "value": "\"master\".\"master_kelengkapan_dokumen\".\"detail_permintaan_id\" is null or \"master\".\"master_kelengkapan_dokumen\".\"kategori_permintaan_id\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "master.ketua_tim_assignments": {
+      "name": "ketua_tim_assignments",
+      "schema": "master",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kegiatan_id": {
+          "name": "kegiatan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ketua_tim_kegiatan_unique": {
+          "name": "ketua_tim_kegiatan_unique",
+          "columns": [
+            {
+              "expression": "kegiatan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_ketua_tim_user_id": {
+          "name": "idx_ketua_tim_user_id",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_ketua_tim_kegiatan_id": {
+          "name": "idx_ketua_tim_kegiatan_id",
+          "columns": [
+            {
+              "expression": "kegiatan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ketua_tim_assignments_user_id_users_id_fk": {
+          "name": "ketua_tim_assignments_user_id_users_id_fk",
+          "tableFrom": "ketua_tim_assignments",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ketua_tim_assignments_kegiatan_id_master_kegiatan_id_fk": {
+          "name": "ketua_tim_assignments_kegiatan_id_master_kegiatan_id_fk",
+          "tableFrom": "ketua_tim_assignments",
+          "tableTo": "master_kegiatan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "kegiatan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ketua_tim_assignments_created_by_users_id_fk": {
+          "name": "ketua_tim_assignments_created_by_users_id_fk",
+          "tableFrom": "ketua_tim_assignments",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "dokumen.dokumen_transaksi": {
+      "name": "dokumen_transaksi",
+      "schema": "dokumen",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "judul": {
+          "name": "judul",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fungsi_id": {
+          "name": "fungsi_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kegiatan_jenis_id": {
+          "name": "kegiatan_jenis_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_ketua_tim": {
+          "name": "is_ketua_tim",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "current_step": {
+          "name": "current_step",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision_target": {
+          "name": "revision_target",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision_notes": {
+          "name": "revision_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lampiran_urls": {
+          "name": "lampiran_urls",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "tahun": {
+          "name": "tahun",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "jenis_permintaan_id": {
+          "name": "jenis_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kategori_permintaan_id": {
+          "name": "kategori_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detail_permintaan_id": {
+          "name": "detail_permintaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nominal_realisasi": {
+          "name": "nominal_realisasi",
+          "type": "numeric(15, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
+        },
+        "is_non_material": {
+          "name": "is_non_material",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "keterangan_detail": {
+          "name": "keterangan_detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jenis_dokumen_id": {
+          "name": "jenis_dokumen_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_dokumen_transaksi_created_by": {
+          "name": "idx_dokumen_transaksi_created_by",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_created_by_status": {
+          "name": "idx_dokumen_transaksi_created_by_status",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_status": {
+          "name": "idx_dokumen_transaksi_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_status_current_step": {
+          "name": "idx_dokumen_transaksi_status_current_step",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "current_step",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_revision_target": {
+          "name": "idx_dokumen_transaksi_revision_target",
+          "columns": [
+            {
+              "expression": "revision_target",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_fungsi_id": {
+          "name": "idx_dokumen_transaksi_fungsi_id",
+          "columns": [
+            {
+              "expression": "fungsi_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_kegiatan_jenis_id": {
+          "name": "idx_dokumen_transaksi_kegiatan_jenis_id",
+          "columns": [
+            {
+              "expression": "kegiatan_jenis_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_created_at": {
+          "name": "idx_dokumen_transaksi_created_at",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_updated_at": {
+          "name": "idx_dokumen_transaksi_updated_at",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_status_updated_at": {
+          "name": "idx_dokumen_transaksi_status_updated_at",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_laporan_saya": {
+          "name": "idx_dokumen_transaksi_laporan_saya",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tahun",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_laporan_kegiatan": {
+          "name": "idx_dokumen_transaksi_laporan_kegiatan",
+          "columns": [
+            {
+              "expression": "kegiatan_jenis_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tahun",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_jenis_permintaan_id": {
+          "name": "idx_dokumen_transaksi_jenis_permintaan_id",
+          "columns": [
+            {
+              "expression": "jenis_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_kategori_permintaan_id": {
+          "name": "idx_dokumen_transaksi_kategori_permintaan_id",
+          "columns": [
+            {
+              "expression": "kategori_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_dokumen_transaksi_detail_permintaan_id": {
+          "name": "idx_dokumen_transaksi_detail_permintaan_id",
+          "columns": [
+            {
+              "expression": "detail_permintaan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "dokumen_transaksi_fungsi_id_master_fungsi_id_fk": {
+          "name": "dokumen_transaksi_fungsi_id_master_fungsi_id_fk",
+          "tableFrom": "dokumen_transaksi",
+          "tableTo": "master_fungsi",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "fungsi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "dokumen_transaksi_kegiatan_jenis_id_master_kegiatan_id_fk": {
+          "name": "dokumen_transaksi_kegiatan_jenis_id_master_kegiatan_id_fk",
+          "tableFrom": "dokumen_transaksi",
+          "tableTo": "master_kegiatan",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "kegiatan_jenis_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "dokumen_transaksi_created_by_users_id_fk": {
+          "name": "dokumen_transaksi_created_by_users_id_fk",
+          "tableFrom": "dokumen_transaksi",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "dokumen_transaksi_jenis_dokumen_id_master_jenis_dokumen_id_fk": {
+          "name": "dokumen_transaksi_jenis_dokumen_id_master_jenis_dokumen_id_fk",
+          "tableFrom": "dokumen_transaksi",
+          "tableTo": "master_jenis_dokumen",
+          "schemaTo": "master",
+          "columnsFrom": [
+            "jenis_dokumen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "dokumen_nominal_realisasi_positive": {
+          "name": "dokumen_nominal_realisasi_positive",
+          "value": "\"dokumen\".\"dokumen_transaksi\".\"nominal_realisasi\" is null or \"dokumen\".\"dokumen_transaksi\".\"nominal_realisasi\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "dokumen.log_aktivitas": {
+      "name": "log_aktivitas",
+      "schema": "dokumen",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "dokumen_id": {
+          "name": "dokumen_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aksi": {
+          "name": "aksi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "step_urutan": {
+          "name": "step_urutan",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "log_aktivitas_dokumen_id_idx": {
+          "name": "log_aktivitas_dokumen_id_idx",
+          "columns": [
+            {
+              "expression": "dokumen_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "log_aktivitas_user_id_idx": {
+          "name": "log_aktivitas_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_log_aktivitas_dokumen_timestamp": {
+          "name": "idx_log_aktivitas_dokumen_timestamp",
+          "columns": [
+            {
+              "expression": "dokumen_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "timestamp",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_log_aktivitas_dokumen_aksi": {
+          "name": "idx_log_aktivitas_dokumen_aksi",
+          "columns": [
+            {
+              "expression": "dokumen_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "aksi",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "log_aktivitas_dokumen_id_dokumen_transaksi_id_fk": {
+          "name": "log_aktivitas_dokumen_id_dokumen_transaksi_id_fk",
+          "tableFrom": "log_aktivitas",
+          "tableTo": "dokumen_transaksi",
+          "schemaTo": "dokumen",
+          "columnsFrom": [
+            "dokumen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "log_aktivitas_user_id_users_id_fk": {
+          "name": "log_aktivitas_user_id_users_id_fk",
+          "tableFrom": "log_aktivitas",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "arsip.arsip": {
+      "name": "arsip",
+      "schema": "arsip",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "dokumen_id": {
+          "name": "dokumen_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nomor_surat": {
+          "name": "nomor_surat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "klasifikasi": {
+          "name": "klasifikasi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retensi_aktif": {
+          "name": "retensi_aktif",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retensi_inaktif": {
+          "name": "retensi_inaktif",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "masa_aktif_berakhir": {
+          "name": "masa_aktif_berakhir",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "masa_inaktif_berakhir": {
+          "name": "masa_inaktif_berakhir",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_arsip": {
+          "name": "status_arsip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'AKTIF'"
+        },
+        "is_ditolak": {
+          "name": "is_ditolak",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "catatan_arsiparis": {
+          "name": "catatan_arsiparis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archived_by": {
+          "name": "archived_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "lampiran_snapshot": {
+          "name": "lampiran_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "musnah_at": {
+          "name": "musnah_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "musnah_by": {
+          "name": "musnah_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "musnah_catatan": {
+          "name": "musnah_catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nominal_realisasi": {
+          "name": "nominal_realisasi",
+          "type": "numeric(15, 2)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_arsip_status_arsip": {
+          "name": "idx_arsip_status_arsip",
+          "columns": [
+            {
+              "expression": "status_arsip",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_dokumen_id": {
+          "name": "idx_arsip_dokumen_id",
+          "columns": [
+            {
+              "expression": "dokumen_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_masa_aktif_berakhir": {
+          "name": "idx_arsip_masa_aktif_berakhir",
+          "columns": [
+            {
+              "expression": "masa_aktif_berakhir",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"arsip\".\"arsip\".\"status_arsip\" = 'AKTIF'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_masa_inaktif_berakhir": {
+          "name": "idx_arsip_masa_inaktif_berakhir",
+          "columns": [
+            {
+              "expression": "masa_inaktif_berakhir",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"arsip\".\"arsip\".\"status_arsip\" = 'INAKTIF'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_archived_at": {
+          "name": "idx_arsip_archived_at",
+          "columns": [
+            {
+              "expression": "archived_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_musnah_by": {
+          "name": "idx_arsip_musnah_by",
+          "columns": [
+            {
+              "expression": "musnah_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "arsip_dokumen_id_dokumen_transaksi_id_fk": {
+          "name": "arsip_dokumen_id_dokumen_transaksi_id_fk",
+          "tableFrom": "arsip",
+          "tableTo": "dokumen_transaksi",
+          "schemaTo": "dokumen",
+          "columnsFrom": [
+            "dokumen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "arsip_archived_by_users_id_fk": {
+          "name": "arsip_archived_by_users_id_fk",
+          "tableFrom": "arsip",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "archived_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "arsip_musnah_by_users_id_fk": {
+          "name": "arsip_musnah_by_users_id_fk",
+          "tableFrom": "arsip",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "musnah_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "arsip.master_klasifikasi_arsip": {
+      "name": "master_klasifikasi_arsip",
+      "schema": "arsip",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nama": {
+          "name": "nama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "parent_id": {
+          "name": "parent_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kode": {
+          "name": "kode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "master_klasifikasi_arsip_nama_unique": {
+          "name": "master_klasifikasi_arsip_nama_unique",
+          "columns": [
+            {
+              "expression": "nama",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_klasifikasi_kode_unique": {
+          "name": "idx_master_klasifikasi_kode_unique",
+          "columns": [
+            {
+              "expression": "kode",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"arsip\".\"master_klasifikasi_arsip\".\"kode\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_klasifikasi_active": {
+          "name": "idx_master_klasifikasi_active",
+          "columns": [
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"arsip\".\"master_klasifikasi_arsip\".\"is_active\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_master_klasifikasi_parent_id": {
+          "name": "idx_master_klasifikasi_parent_id",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"arsip\".\"master_klasifikasi_arsip\".\"parent_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "master_klasifikasi_arsip_parent_id_master_klasifikasi_arsip_id_fk": {
+          "name": "master_klasifikasi_arsip_parent_id_master_klasifikasi_arsip_id_fk",
+          "tableFrom": "master_klasifikasi_arsip",
+          "tableTo": "master_klasifikasi_arsip",
+          "schemaTo": "arsip",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "arsip.arsip_usul_musnah": {
+      "name": "arsip_usul_musnah",
+      "schema": "arsip",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "arsip_id": {
+          "name": "arsip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'MENUNGGU'"
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diusulkan_oleh": {
+          "name": "diusulkan_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_by": {
+          "name": "decided_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "arsip_usul_musnah_arsip_id_unique": {
+          "name": "arsip_usul_musnah_arsip_id_unique",
+          "columns": [
+            {
+              "expression": "arsip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_usul_musnah_arsip_id": {
+          "name": "idx_arsip_usul_musnah_arsip_id",
+          "columns": [
+            {
+              "expression": "arsip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_usul_musnah_status": {
+          "name": "idx_arsip_usul_musnah_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_usul_musnah_diusulkan_oleh": {
+          "name": "idx_arsip_usul_musnah_diusulkan_oleh",
+          "columns": [
+            {
+              "expression": "diusulkan_oleh",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_arsip_usul_musnah_created_at": {
+          "name": "idx_arsip_usul_musnah_created_at",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "arsip_usul_musnah_arsip_id_arsip_id_fk": {
+          "name": "arsip_usul_musnah_arsip_id_arsip_id_fk",
+          "tableFrom": "arsip_usul_musnah",
+          "tableTo": "arsip",
+          "schemaTo": "arsip",
+          "columnsFrom": [
+            "arsip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "arsip_usul_musnah_diusulkan_oleh_users_id_fk": {
+          "name": "arsip_usul_musnah_diusulkan_oleh_users_id_fk",
+          "tableFrom": "arsip_usul_musnah",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "diusulkan_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "arsip_usul_musnah_decided_by_users_id_fk": {
+          "name": "arsip_usul_musnah_decided_by_users_id_fk",
+          "tableFrom": "arsip_usul_musnah",
+          "tableTo": "users",
+          "schemaTo": "auth",
+          "columnsFrom": [
+            "decided_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "arsip_usul_musnah_status_check": {
+          "name": "arsip_usul_musnah_status_check",
+          "value": "\"arsip\".\"arsip_usul_musnah\".\"status\" in ('MENUNGGU', 'DISETUJUI', 'DITOLAK')"
+        }
+      },
       "isRLSEnabled": false
     }
   },

@@ -10,7 +10,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-export const authSchema = pgSchema('auth')
+const authSchema = pgSchema('auth')
 
 export const users = authSchema.table(
   'users',
