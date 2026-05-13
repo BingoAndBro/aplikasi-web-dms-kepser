@@ -12,7 +12,10 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx src/db/seed/index.ts"
+    "db:seed": "tsx src/db/seed/index.ts",
+    "db:local:generate": "dotenv -e .env.migration --override -- drizzle-kit generate",
+    "db:local:migrate": "dotenv -e .env.migration --override -- drizzle-kit migrate",
+    "db:local:seed": "dotenv -e .env.migration --override -- tsx src/db/seed/index.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -52,6 +55,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.4",
+    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "jsdom": "^28.1.0",
