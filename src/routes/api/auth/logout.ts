@@ -1,26 +1,36 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { clearActiveRoleCookieHeader } from '#/lib/auth'
+import { revokeSessionByTokenHash } from '#/lib/auth/session-repository'
+import { hashSessionToken } from '#/lib/auth/session-token'
+import { SESSION_COOKIE_NAME } from '#/lib/auth/session-constants'
+import {
+  appendSetCookieHeaders,
+  clearActiveRoleCookieHeader,
+  clearSessionCookieHeader,
+  getCookieValue,
+} from '#/lib/auth/session-cookies'
 
 export const Route = createFileRoute('/api/auth/logout')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const rawToken = getCookieValue(cookieHeader, SESSION_COOKIE_NAME)
 
-        await supabase.auth.signOut()
+        if (rawToken) {
+          try {
+            await revokeSessionByTokenHash(hashSessionToken(rawToken))
+          } catch {
+            // Logout remains idempotent for malformed or already-revoked sessions.
+          }
+        }
 
-        const newCookie = clearActiveRoleCookieHeader(cookieHeader)
+        const headers = appendSetCookieHeaders(new Headers(), [
+          clearSessionCookieHeader(request),
+          clearActiveRoleCookieHeader(),
+        ])
 
         return Response.json({ success: true }, {
-          headers: {
-            'Set-Cookie': newCookie,
-          },
+          headers,
         })
       },
     },

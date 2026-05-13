@@ -1,8 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { loginSchema } from '#/lib/schemas/auth'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getPrimaryRole, getUserRole, setActiveRoleCookieHeader } from '#/lib/auth'
-import type { RoleName } from '#/lib/types/auth'
+import { loginWithLocalCredentials } from '#/lib/auth/local-auth-service'
+import {
+  appendSetCookieHeaders,
+  createActiveRoleCookieHeader,
+  createSessionCookieHeader,
+} from '#/lib/auth/session-cookies'
 
 export const Route = createFileRoute('/api/auth/login')({
   server: {
@@ -25,45 +28,46 @@ export const Route = createFileRoute('/api/auth/login')({
 
         const { email, password } = result.data
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: {
-            get: () => undefined,
-            set: () => {},
-            delete: () => {},
-          },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const loginResult = await loginWithLocalCredentials({
+          email,
+          password,
+          userAgent: request.headers.get('user-agent'),
+          ipAddress: getRequestIpAddress(request),
+        })
 
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
-        if (error) {
+        if (!loginResult.ok) {
           return Response.json({
-            error: 'Email atau password salah',
-            code: error.code,
-          }, { status: 401 })
+            error: loginResult.error,
+            ...(loginResult.code ? { code: loginResult.code } : {}),
+          }, { status: loginResult.status })
         }
 
-        const roles = await getUserRole(supabase, data.user.id)
-        const activeRole: RoleName = getPrimaryRole(roles)
-
-        const newCookie = setActiveRoleCookieHeader(cookieHeader, activeRole)
+        const headers = appendSetCookieHeaders(new Headers(), [
+          createSessionCookieHeader(
+            request,
+            loginResult.rawToken,
+            loginResult.sessionMaxAgeSeconds,
+          ),
+          createActiveRoleCookieHeader(loginResult.activeRole),
+        ])
 
         return Response.json({
-          user: {
-            id: data.user.id,
-            email: data.user.email,
-            userName: data.user.user_metadata?.user_name as string | undefined,
-          },
-          roles,
-          activeRole,
+          user: loginResult.user,
+          roles: loginResult.roles,
+          activeRole: loginResult.activeRole,
         }, {
-          headers: {
-            'Set-Cookie': newCookie,
-          },
+          headers,
         })
       },
     },
   },
 })
+
+function getRequestIpAddress(request: Request): string | null {
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0]?.trim() || null
+  }
+
+  return request.headers.get('x-real-ip')
+}

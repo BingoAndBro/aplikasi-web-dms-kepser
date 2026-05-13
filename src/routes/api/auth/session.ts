@@ -1,22 +1,28 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession, getUserRole, getActiveRoleFromCookies, getPrimaryRole } from '#/lib/auth'
-import type { RoleName } from '#/lib/types/auth'
+import { toLocalAuthUser } from '#/lib/auth/local-auth-service'
+import {
+  resolveActiveRole,
+  validateAssignedRoles,
+} from '#/lib/auth/role-resolution'
+import { SESSION_COOKIE_NAME } from '#/lib/auth/session-constants'
+import {
+  findSessionByTokenHash,
+  type SessionWithUserAndRoles,
+} from '#/lib/auth/session-repository'
+import { hashSessionToken } from '#/lib/auth/session-token'
+import {
+  getActiveRoleCookieValue,
+  getCookieValue,
+} from '#/lib/auth/session-cookies'
 
 export const Route = createFileRoute('/api/auth/session')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => { }, delete: () => { } },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const rawToken = getCookieValue(cookieHeader, SESSION_COOKIE_NAME)
 
-        const session = await getServerSession(supabase)
-
-        if (!session) {
+        if (!rawToken) {
           return Response.json({
             session: null,
             roles: [],
@@ -24,19 +30,42 @@ export const Route = createFileRoute('/api/auth/session')({
           })
         }
 
-        const roles = await getUserRole(supabase, session.user.id)
-        const cookieRole = getActiveRoleFromCookies(cookieHeader)
-        const activeRole: RoleName = cookieRole && roles.includes(cookieRole)
-          ? cookieRole
-          : getPrimaryRole(roles)
+        let currentSession: SessionWithUserAndRoles | null
+        try {
+          currentSession = await findSessionByTokenHash(hashSessionToken(rawToken))
+        } catch {
+          currentSession = null
+        }
+
+        if (!currentSession) {
+          return Response.json({
+            session: null,
+            roles: [],
+            activeRole: null,
+          })
+        }
+
+        const roleValidation = validateAssignedRoles(currentSession.roles)
+        if (!roleValidation.ok) {
+          return Response.json({
+            session: null,
+            roles: [],
+            activeRole: null,
+          })
+        }
+
+        const activeRole = resolveActiveRole(
+          currentSession.roles,
+          getActiveRoleCookieValue(cookieHeader),
+        )
 
         return Response.json({
           session: {
-            userId: session.user.id,
-            email: session.user.email,
-            userName: session.user.user_metadata?.user_name as string | undefined,
+            userId: currentSession.user.id,
+            email: currentSession.user.email,
+            userName: toLocalAuthUser(currentSession.user).userName,
           },
-          roles,
+          roles: currentSession.roles,
           activeRole,
         })
       },
