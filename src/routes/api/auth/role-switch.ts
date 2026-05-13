@@ -1,8 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ROLES } from '#/lib/constants/roles'
 import { roleSwitchSchema } from '#/lib/schemas/auth'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getUserRole, setActiveRoleCookieHeader, getServerSession } from '#/lib/auth'
-import type { RoleName } from '#/lib/types/auth'
+import { validateAssignedRoles } from '#/lib/auth/role-resolution'
+import { SESSION_COOKIE_NAME } from '#/lib/auth/session-constants'
+import {
+  findSessionByTokenHash,
+  type SessionWithUserAndRoles,
+} from '#/lib/auth/session-repository'
+import { hashSessionToken } from '#/lib/auth/session-token'
+import {
+  createActiveRoleCookieHeader,
+  getCookieValue,
+} from '#/lib/auth/session-cookies'
 
 export const Route = createFileRoute('/api/auth/role-switch')({
   server: {
@@ -25,36 +34,43 @@ export const Route = createFileRoute('/api/auth/role-switch')({
 
         const { activeRole } = result.data
         const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const rawToken = getCookieValue(cookieHeader, SESSION_COOKIE_NAME)
 
-        const session = await getServerSession(supabase)
-        if (!session) {
+        if (!rawToken) {
           return Response.json({ error: 'Not authenticated' }, { status: 401 })
         }
 
-        const userRoles = await getUserRole(supabase, session.user.id)
+        let currentSession: SessionWithUserAndRoles | null
+        try {
+          currentSession = await findSessionByTokenHash(hashSessionToken(rawToken))
+        } catch {
+          currentSession = null
+        }
 
-        if (userRoles.includes('ADMIN')) {
+        if (!currentSession) {
+          return Response.json({ error: 'Not authenticated' }, { status: 401 })
+        }
+
+        const roleValidation = validateAssignedRoles(currentSession.roles)
+        if (!roleValidation.ok) {
+          return Response.json({ error: roleValidation.error }, { status: 403 })
+        }
+
+        if (currentSession.roles.includes(ROLES.ADMIN)) {
           return Response.json({
-            error: 'ADMIN tidak bisa switch role — akun dedicated',
+            error: 'ADMIN tidak bisa switch role \u2014 akun dedicated',
           }, { status: 403 })
         }
 
-        if (!userRoles.includes(activeRole as RoleName)) {
+        if (!currentSession.roles.includes(activeRole)) {
           return Response.json({
             error: `Role '${activeRole}' tidak tersedia untuk akun Anda`,
           }, { status: 403 })
         }
 
-        const newCookie = setActiveRoleCookieHeader(cookieHeader, activeRole as RoleName)
-
         return Response.json({ success: true, activeRole }, {
           headers: {
-            'Set-Cookie': newCookie,
+            'Set-Cookie': createActiveRoleCookieHeader(activeRole),
           },
         })
       },
