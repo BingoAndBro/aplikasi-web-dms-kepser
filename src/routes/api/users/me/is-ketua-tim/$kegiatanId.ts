@@ -1,19 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession } from '#/lib/auth'
-
-// ---------------------------------------------------------------------------
-// Helper: create Supabase client with cookie
-// ---------------------------------------------------------------------------
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
+import { and, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { ketuaTimAssignments } from '#/db/schema/master'
+import {
+  createUnauthorizedResponse,
+  getLocalServerSession,
+} from '#/lib/auth/local-server-auth'
 
 // ---------------------------------------------------------------------------
 // GET /api/users/me/is-ketua-tim/$kegiatanId — Check if user is chairman for kegiatan
@@ -23,11 +15,10 @@ export const Route = createFileRoute('/api/users/me/is-ketua-tim/$kegiatanId')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: { kegiatanId: string } }) => {
-        const supabase = createClient(request)
-        const session = await getServerSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+          return createUnauthorizedResponse('Unauthorized')
         }
 
         const { kegiatanId } = params
@@ -42,21 +33,23 @@ export const Route = createFileRoute('/api/users/me/is-ketua-tim/$kegiatanId')({
           return Response.json({ error: 'Format kegiatanId tidak valid' }, { status: 400 })
         }
 
-        // Use function is_user_chairman(user_id, kegiatan_id)
-        const { data, error } = await supabase
-          .rpc('is_user_chairman', {
-            p_user_id: session.user.id,
-            p_kegiatan_id: kegiatanId
-          })
+        try {
+          const assignments = await db
+            .select({ id: ketuaTimAssignments.id })
+            .from(ketuaTimAssignments)
+            .where(and(
+              eq(ketuaTimAssignments.userId, session.user.id),
+              eq(ketuaTimAssignments.kegiatanId, kegiatanId),
+            ))
+            .limit(1)
 
-        if (error) {
+          return Response.json({
+            is_ketua_tim: assignments.length > 0,
+          })
+        } catch (error) {
           console.error('[API] /api/users/me/is-ketua-tim/$kegiatanId GET error:', error)
           return Response.json({ error: 'Gagal memeriksa status chairman' }, { status: 500 })
         }
-
-        return Response.json({
-          is_ketua_tim: data === true,
-        })
       }
     }
   }
