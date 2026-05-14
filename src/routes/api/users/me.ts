@@ -1,21 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession, getUserRole } from '#/lib/auth'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { users } from '#/db/schema/auth'
+import {
+  createUnauthorizedResponse,
+  getLocalServerSession,
+} from '#/lib/auth/local-server-auth'
 import { parseUserProfileResponse } from '#/lib/user-response'
 import { parseUserMetadata } from '#/lib/user-metadata'
-
-// ---------------------------------------------------------------------------
-// Helper: create Supabase client with cookie
-// ---------------------------------------------------------------------------
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
 
 // ---------------------------------------------------------------------------
 // GET /api/users/me — Get current user profile
@@ -25,22 +17,36 @@ export const Route = createFileRoute('/api/users/me')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getServerSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+          return createUnauthorizedResponse('Unauthorized')
         }
 
-        // Get roles
-        const roles = await getUserRole(supabase, session.user.id)
+        const [profile] = await db
+          .select({
+            namaLengkap: users.namaLengkap,
+            nipNrp: users.nipNrp,
+            departemen: users.departemen,
+          })
+          .from(users)
+          .where(eq(users.id, session.user.id))
+          .limit(1)
+
+        if (!profile) {
+          return createUnauthorizedResponse('Unauthorized')
+        }
 
         return Response.json(parseUserProfileResponse({
           user: {
             id: session.user.id,
             email: session.user.email,
-            metadata: parseUserMetadata(session.user.user_metadata),
-            roles,
+            metadata: parseUserMetadata({
+              nama_lengkap: profile.namaLengkap,
+              nip_nrp: profile.nipNrp,
+              departemen: profile.departemen,
+            }),
+            roles: session.roles,
           },
         }))
       },
