@@ -3,8 +3,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router'
 
 import { ROLE_DEFAULT_ROUTE } from '#/config/navigation'
 import { apiFetch } from '#/lib/api-client'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import { ACTIVE_ROLE_COOKIE, getPrimaryRole } from '#/lib/auth'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { clearClientAuthState, setClientAuthState, updateClientAuthState } from '#/lib/auth-state'
 import { logDev } from '#/lib/dev-logger'
 import { MESH_ROUTES, ROUTES } from '#/lib/constants/routes'
@@ -13,6 +12,8 @@ import { ROLES } from '#/lib/constants/roles'
 import type { RoleName } from '#/lib/types/auth'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
+
+const ACTIVE_ROLE_COOKIE = 'dms_active_role'
 
 function clearAppState() {
   document.cookie = `${ACTIVE_ROLE_COOKIE}=; path=/; max-age=0`
@@ -33,6 +34,21 @@ type ChairmanStatusResponse = {
   kegiatan?: { id: string; nama: string }[]
 }
 
+type AuthSessionResponse = {
+  session: {
+    userId: string
+    email: string
+    userName?: string
+  } | null
+  roles: RoleName[]
+  activeRole: RoleName | null
+}
+
+type RoleSwitchResponse = {
+  success: true
+  activeRole: RoleName
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const routerState = useRouterState()
@@ -45,102 +61,66 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [chairmanKegiatan, setChairmanKegiatan] = React.useState<{ id: string; nama: string }[]>([])
 
-  const fetchChairmanStatus = React.useCallback(async (session: any) => {
-    if (!session) return
-    try {
-      const data = await apiFetch<ChairmanStatusResponse>('/users/me/ketua-tim')
-      setChairmanKegiatan(data.kegiatan || [])
-    } catch (err) {
-      if (!(err instanceof Error && err.name === 'ApiError')) {
-        console.error('Failed to fetch chairman status:', err)
-      }
-    }
-  }, [])
   const [hasSession, setHasSession] = React.useState(false)
   const [roleSwitcherOpen, setRoleSwitcherOpen] = React.useState(false)
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false)
-
-  const supabase = React.useMemo(() => getBrowserClient(), [])
 
   const pathname = routerState.location.pathname
   const isMeshPage = MESH_ROUTES.some((route) => route === pathname)
   const isLoginPage = pathname === ROUTES.LOGIN
 
   const fetchSession = React.useCallback(async () => {
-    if (!supabase) {
+    let data: AuthSessionResponse
+    try {
+      data = await apiFetch<AuthSessionResponse>('/auth/session')
+    } catch (err) {
+      if (!(err instanceof Error && err.name === 'ApiError')) {
+        console.error('Failed to fetch auth session:', err)
+      }
       clearClientAuthState('unauthenticated', true)
-      setIsLoading(false)
+      setUserRoles([])
+      setActiveRole(ROLES.PEGAWAI)
+      setUserName(undefined)
+      setEmail(undefined)
       setHasSession(false)
+      setChairmanKegiatan([])
+      setIsLoading(false)
       return
     }
 
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    if (!data.session || data.roles.length === 0 || !data.activeRole) {
       clearClientAuthState('unauthenticated', true)
-      setIsLoading(false)
+      setUserRoles([])
+      setActiveRole(ROLES.PEGAWAI)
+      setUserName(undefined)
+      setEmail(undefined)
       setHasSession(false)
-      return
-    }
-
-    await supabase.auth.getUser()
-
-    const { data: statusData } = await supabase
-      .from('user_status')
-      .select('is_active')
-      .eq('user_id', session.user.id)
-      .maybeSingle()
-
-    if (statusData && statusData.is_active === false) {
-      await supabase.auth.signOut()
-      setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
-      setUserName(undefined); setEmail(undefined)
-      setHasSession(false); clearAppState()
-      window.location.href = `${ROUTES.LOGIN}?reason=inactive`
+      setChairmanKegiatan([])
+      setIsLoading(false)
       return
     }
 
     setHasSession(true)
-    setUserName(session.user.user_metadata?.user_name as string | undefined)
-    setEmail(session.user.email ?? undefined)
+    setUserName(data.session.userName)
+    setEmail(data.session.email)
 
-    let isChairman = false
     try {
       const ktData = await apiFetch<ChairmanStatusResponse>('/users/me/ketua-tim')
       setChairmanKegiatan(ktData.kegiatan || [])
-      isChairman = (ktData.kegiatan || []).length > 0
     } catch (err) {
       if (!(err instanceof Error && err.name === 'ApiError')) {
         console.error('Failed to fetch chairman status:', err)
       }
     }
 
-    const { data: rolesData } = await supabase
-      .from('user_roles')
-      .select('role:roles(nama)')
-      .eq('user_id', session.user.id)
-
-    const roleNames = (rolesData ?? [])
-      .map((r: { role?: { nama?: RoleName } }) => r.role?.nama)
-      .filter((n: any): n is RoleName => n !== undefined && n !== null)
-
-    setUserRoles(roleNames)
-
-    const cookieRole = document.cookie
-      .split('; ')
-      .find(c => c.startsWith(`${ACTIVE_ROLE_COOKIE}=`))
-      ?.split('=')[1] as RoleName | undefined
-
-    const effectiveRole = cookieRole && roleNames.includes(cookieRole)
-      ? cookieRole
-      : getPrimaryRole(roleNames)
-
-    setActiveRole(effectiveRole)
+    setUserRoles(data.roles)
+    setActiveRole(data.activeRole)
     const nextAuthState = {
       status: 'authenticated',
-      userId: session.user.id,
-      email: session.user.email ?? undefined,
-      roles: roleNames,
-      activeRole: effectiveRole,
+      userId: data.session.userId,
+      email: data.session.email,
+      roles: data.roles,
+      activeRole: data.activeRole,
       isReady: true,
     } as const
     setClientAuthState(nextAuthState)
@@ -155,27 +135,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       }, `auth:${nextAuthState.userId}:${nextAuthState.activeRole}:${nextAuthState.isReady ? '1' : '0'}`)
     }
     setIsLoading(false)
-  }, [supabase])
+  }, [])
 
   React.useEffect(() => {
     fetchSession()
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: ReturnType<typeof supabase.auth.getSession>['data']) => {
-      if (event === 'SIGNED_OUT') {
-        setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
-        setUserName(undefined); setEmail(undefined)
-        setHasSession(false); setChairmanKegiatan([])
-        clearAppState()
-        if (!isLoginPage) {
-          window.location.href = ROUTES.LOGIN
-        }
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        fetchSession()
-      }
-    })
-    return () => { subscription.unsubscribe() }
-  }, [fetchSession, isLoginPage])
+  }, [fetchSession])
 
   React.useEffect(() => {
     if (!isLoading && !hasSession && !isLoginPage) {
@@ -197,19 +161,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [userRoles, chairmanKegiatan])
 
-  const handleRoleSwitch = (newRole: RoleName) => {
-    document.cookie = `${ACTIVE_ROLE_COOKIE}=${newRole}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
-    updateClientAuthState({ activeRole: newRole })
-    window.location.href = ROLE_DEFAULT_ROUTE[newRole]
+  const handleRoleSwitch = async (newRole: RoleName) => {
+    try {
+      const data = await apiMutation<RoleSwitchResponse>('/auth/role-switch', {
+        body: { activeRole: newRole },
+      })
+      setActiveRole(data.activeRole)
+      updateClientAuthState({ activeRole: data.activeRole })
+      window.location.href = ROLE_DEFAULT_ROUTE[data.activeRole]
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        console.error('Failed to switch role:', err)
+      }
+    }
   }
 
   const handleLogout = async () => {
     setIsLoading(true)
+    try {
+      await apiMutation('/auth/logout')
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        console.error('Failed to logout:', err)
+      }
+    }
     setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
     setUserName(undefined); setEmail(undefined)
     setHasSession(false); clearAppState()
-    const supabase = getBrowserClient()
-    if (supabase) await supabase.auth.signOut()
     navigate({ to: ROUTES.LOGIN })
   }
 

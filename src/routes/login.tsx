@@ -1,13 +1,24 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import { getPrimaryRole, getUserRole, ACTIVE_ROLE_COOKIE } from '#/lib/auth'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { setClientAuthState } from '#/lib/auth-state'
 import { z } from 'zod'
+import type { RoleName } from '#/lib/types/auth'
 
 const loginSchema = z.object({
   email: z.string().email('Format email tidak valid'),
   password: z.string().min(1, 'Password wajib diisi'),
 })
+
+type LoginResponse = {
+  user: {
+    id: string
+    email: string
+    userName?: string
+  }
+  roles: RoleName[]
+  activeRole: RoleName
+}
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -46,52 +57,32 @@ function LoginPage() {
 
     setIsLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) {
-        setError('Terjadi kesalahan saat login. Silakan coba lagi.')
-        return
-      }
-
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: result.data.email,
-        password: result.data.password,
+      const data = await apiMutation<LoginResponse>('/auth/login', {
+        body: {
+          email: result.data.email,
+          password: result.data.password,
+        },
       })
 
-      if (authError) {
-        if (authError.code === 'invalid_credentials' || authError.code === 'user_not_found') {
-          setError('Email atau password salah')
-        } else if (authError.code === 'email_not_confirmed') {
-          setError('Silakan verifikasi email Anda terlebih dahulu. Cek inbox atau folder spam.')
-        } else {
-          setError('Terjadi kesalahan saat login. Silakan coba lagi.')
-        }
+      setClientAuthState({
+        status: 'authenticated',
+        userId: data.user.id,
+        email: data.user.email,
+        roles: data.roles,
+        activeRole: data.activeRole,
+        isReady: true,
+      })
+
+      // ADMIN -> redirect ke /admin, yang lain ke /
+      window.location.href = data.activeRole === 'ADMIN' ? '/admin' : '/'
+
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setError(error.status === 401 ? 'Email atau password salah' : error.message)
         return
       }
 
-      // Login berhasil — check if user is still active
-      const { data: statusData } = await supabase
-        .from('user_status')
-        .select('is_active')
-        .eq('user_id', data.user.id)
-        .maybeSingle()
-
-      // If is_active is explicitly false, block login
-      if (statusData && statusData.is_active === false) {
-        // User is inactive, sign out and show error
-        await supabase.auth.signOut()
-        setError('Akun Anda tidak aktif. Hubungi Administrator.')
-        setIsLoading(false)
-        return
-      }
-
-      // Get roles & set active_role cookie
-      const roles = await getUserRole(supabase, data.user.id)
-      const primaryRole = getPrimaryRole(roles)
-
-      document.cookie = `${ACTIVE_ROLE_COOKIE}=${primaryRole}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
-
-      // ADMIN → redirect ke /admin, yang lain ke /
-      window.location.href = primaryRole === 'ADMIN' ? '/admin' : '/'
+      setError('Terjadi kesalahan saat login. Silakan coba lagi.')
     } finally {
       setIsLoading(false)
     }
