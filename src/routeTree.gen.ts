@@ -81,6 +81,7 @@ import { Route as ApiMasterDetailIdRouteImport } from './routes/api/master-detai
 import { Route as ApiLaporanSayaRouteImport } from './routes/api/laporan/saya'
 import { Route as ApiLaporanKegiatanRouteImport } from './routes/api/laporan/kegiatan'
 import { Route as ApiKetuaTimIdRouteImport } from './routes/api/ketua-tim/$id'
+import { Route as ApiFilesAccessRouteImport } from './routes/api/files/access'
 import { Route as ApiDokumenSubmitRouteImport } from './routes/api/dokumen/submit'
 import { Route as ApiDokumenRenamePendingRouteImport } from './routes/api/dokumen/rename-pending'
 import { Route as ApiDokumenPreviewUrlRouteImport } from './routes/api/dokumen/preview-url'
@@ -510,6 +511,11 @@ const ApiKetuaTimIdRoute = ApiKetuaTimIdRouteImport.update({
   path: '/api/ketua-tim/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFilesAccessRoute = ApiFilesAccessRouteImport.update({
+  id: '/api/files/access',
+  path: '/api/files/access',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiDokumenSubmitRoute = ApiDokumenSubmitRouteImport.update({
   id: '/api/dokumen/submit',
   path: '/api/dokumen/submit',
@@ -931,6 +937,7 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
@@ -1066,6 +1073,7 @@ export interface FileRoutesByTo {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
@@ -1206,6 +1214,7 @@ export interface FileRoutesById {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
+  '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
@@ -1349,6 +1358,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
+    | '/api/files/access'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
@@ -1484,6 +1494,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
+    | '/api/files/access'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
@@ -1623,6 +1634,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
+    | '/api/files/access'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
     | '/api/laporan/saya'
@@ -1737,6 +1749,7 @@ export interface RootRouteChildren {
   ApiDokumenPreviewUrlRoute: typeof ApiDokumenPreviewUrlRoute
   ApiDokumenRenamePendingRoute: typeof ApiDokumenRenamePendingRoute
   ApiDokumenSubmitRoute: typeof ApiDokumenSubmitRoute
+  ApiFilesAccessRoute: typeof ApiFilesAccessRoute
   ApiKetuaTimIdRoute: typeof ApiKetuaTimIdRoute
   ApiLaporanKegiatanRoute: typeof ApiLaporanKegiatanRoute
   ApiLaporanSayaRoute: typeof ApiLaporanSayaRoute
@@ -2265,6 +2278,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ketua-tim/$id'
       fullPath: '/api/ketua-tim/$id'
       preLoaderRoute: typeof ApiKetuaTimIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/files/access': {
+      id: '/api/files/access'
+      path: '/api/files/access'
+      fullPath: '/api/files/access'
+      preLoaderRoute: typeof ApiFilesAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/dokumen/submit': {
@@ -3205,6 +3225,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenPreviewUrlRoute: ApiDokumenPreviewUrlRoute,
   ApiDokumenRenamePendingRoute: ApiDokumenRenamePendingRoute,
   ApiDokumenSubmitRoute: ApiDokumenSubmitRoute,
+  ApiFilesAccessRoute: ApiFilesAccessRoute,
   ApiKetuaTimIdRoute: ApiKetuaTimIdRoute,
   ApiLaporanKegiatanRoute: ApiLaporanKegiatanRoute,
   ApiLaporanSayaRoute: ApiLaporanSayaRoute,
