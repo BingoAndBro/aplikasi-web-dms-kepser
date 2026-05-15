@@ -1,5 +1,7 @@
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { createHmac } from 'node:crypto'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ROLES, type RoleName } from '#/lib/constants/roles'
 import {
@@ -16,6 +18,7 @@ const TEST_SECRET = 'unit-test-internal-file-access-secret'
 const NOW = Date.now()
 const FUTURE = NOW + 15 * 60 * 1000
 const TEST_ROOT = path.resolve('.tmp', 'internal-file-access-root')
+const PDF_CONTENT = '%PDF-1.4 local test file'
 
 function logicalPathPayload(
   overrides: Partial<FileAccessTokenPayload> = {},
@@ -35,6 +38,15 @@ function signedToken(payload: FileAccessTokenPayload): string {
   return signFileAccessToken(payload, TEST_SECRET)
 }
 
+function manuallySignedToken(payload: Record<string, unknown>): string {
+  const encodedPayload = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url')
+  const signature = createHmac('sha256', TEST_SECRET)
+    .update(`v1.${encodedPayload}`)
+    .digest('base64url')
+
+  return `v1.${encodedPayload}.${signature}`
+}
+
 function requestWithToken(token?: string): Request {
   const url = token
     ? `http://localhost/api/files/access?token=${encodeURIComponent(token)}`
@@ -52,6 +64,14 @@ async function json(response: Response): Promise<Record<string, unknown>> {
 }
 
 describe('internal file access foundation', () => {
+  beforeEach(async () => {
+    await rm(TEST_ROOT, { force: true, recursive: true })
+  })
+
+  afterEach(async () => {
+    await rm(TEST_ROOT, { force: true, recursive: true })
+  })
+
   it('rejects requests without a token query parameter', async () => {
     const response = await handleInternalFileAccessRequest({
       request: requestWithToken(),
@@ -88,7 +108,9 @@ describe('internal file access foundation', () => {
     expect(await json(response)).toEqual({ error: 'Unauthorized' })
   })
 
-  it('allows owner logical-path access through validation but does not stream yet', async () => {
+  it('streams local PDF file content for an owner raw preview token', async () => {
+    await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
+
     const response = await handleInternalFileAccessRequest({
       request: requestWithToken(signedToken(logicalPathPayload())),
       session: session('owner-user'),
@@ -96,10 +118,61 @@ describe('internal file access foundation', () => {
       root: TEST_ROOT,
     })
 
-    expect(response.status).toBe(501)
-    expect(await json(response)).toEqual({
-      error: 'Local file streaming is not implemented yet',
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    expect(response.headers.get('Content-Type')).toBe('application/pdf')
+    expect(response.headers.get('Content-Disposition')).toBe('inline; filename="file.pdf"')
+    expect(await response.text()).toBe(PDF_CONTENT)
+  })
+
+  it('uses attachment disposition and a safe download filename for raw download tokens', async () => {
+    await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload({
+        purpose: 'download',
+        contentDisposition: 'attachment',
+        downloadFilename: 'safe-report.pdf',
+      }))),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
     })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="safe-report.pdf"',
+    )
+    expect(await response.text()).toBe(PDF_CONTENT)
+  })
+
+  it('does not reflect CR, LF, or quote injection from an unsafe download filename', async () => {
+    const response = await responseWithMockedVerifiedDownloadFilename(
+      'unsafe"\r\nContent-Type: text/html.pdf',
+    )
+    const contentDisposition = response.headers.get('Content-Disposition')
+    const filename = expectSafeAttachmentFilename(contentDisposition)
+
+    expect(response.status).toBe(200)
+    expect(filename).toBe('file.pdf')
+    expect(contentDisposition).not.toContain('unsafe')
+    expect(contentDisposition).not.toContain('Content-Type')
+  })
+
+  it('falls back for unsafe path-like, traversal, Windows, and URL-like download filenames', async () => {
+    for (const unsafeFilename of [
+      'folder/report.pdf',
+      '..\\report.pdf',
+      'C:\\storage\\report.pdf',
+      'https://example.test/report.pdf',
+    ]) {
+      const response = await responseWithMockedVerifiedDownloadFilename(unsafeFilename)
+      const filename = expectSafeAttachmentFilename(response.headers.get('Content-Disposition'))
+
+      expect(response.status).toBe(200)
+      expect(filename).toBe('file.pdf')
+    }
   })
 
   it('rejects non-owner logical-path access without a compatibility role', async () => {
@@ -114,7 +187,9 @@ describe('internal file access foundation', () => {
     expect(await json(response)).toEqual({ error: 'Akses ditolak' })
   })
 
-  it('allows raw-path compatibility roles through validation but does not stream yet', async () => {
+  it('allows raw-path compatibility roles to stream local files', async () => {
+    await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
+
     for (const role of [ROLES.PPK, ROLES.BENDAHARA, ROLES.ARSIPARIS]) {
       const response = await handleInternalFileAccessRequest({
         request: requestWithToken(signedToken(logicalPathPayload())),
@@ -123,10 +198,8 @@ describe('internal file access foundation', () => {
         root: TEST_ROOT,
       })
 
-      expect(response.status).toBe(501)
-      expect(await json(response)).toEqual({
-        error: 'Local file streaming is not implemented yet',
-      })
+      expect(response.status).toBe(200)
+      expect(await response.text()).toBe(PDF_CONTENT)
     }
   })
 
@@ -164,15 +237,53 @@ describe('internal file access foundation', () => {
     })
   })
 
-  it('does not expose the resolved root in error responses', async () => {
+  it('returns a generic 404 for missing local files without path details', async () => {
     const response = await handleInternalFileAccessRequest({
       request: requestWithToken(signedToken(logicalPathPayload())),
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
     })
+    const bodyText = JSON.stringify(await json(response))
 
-    expect(JSON.stringify(await json(response))).not.toContain(TEST_ROOT)
+    expect(response.status).toBe(404)
+    expect(bodyText).toBe('{"error":"File not found"}')
+    expect(bodyText).not.toContain('owner-user')
+    expect(bodyText).not.toContain('file.pdf')
+    expect(bodyText).not.toContain(TEST_ROOT)
+  })
+
+  it('rejects unauthorized non-owner PEGAWAI before checking file existence', async () => {
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload())),
+      session: session('other-user', [ROLES.PEGAWAI]),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+    })
+
+    expect(response.status).toBe(403)
+    expect(await json(response)).toEqual({ error: 'Akses ditolak' })
+  })
+
+  it('rejects traversal logical paths before file access', async () => {
+    const token = manuallySignedToken({
+      version: 1,
+      purpose: 'preview',
+      expiresAt: FUTURE,
+      issuedAt: NOW,
+      logicalPath: 'owner-user/../file.pdf',
+      contentDisposition: 'inline',
+    })
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(token),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+    })
+
+    expect(response.status).toBe(401)
+    expect(await json(response)).toEqual({ error: 'Invalid or expired token' })
   })
 
   it('checks owner and role policy as pure helper logic', () => {
@@ -186,3 +297,64 @@ describe('internal file access foundation', () => {
     expect(() => getFileTokenSecret({})).toThrow('not configured')
   })
 })
+
+async function writeTestFile(logicalPath: string, content: string): Promise<void> {
+  const targetPath = path.join(TEST_ROOT, ...logicalPath.split('/'))
+
+  await mkdir(path.dirname(targetPath), { recursive: true })
+  await writeFile(targetPath, content)
+}
+
+async function responseWithMockedVerifiedDownloadFilename(
+  downloadFilename: string,
+): Promise<Response> {
+  await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
+  vi.resetModules()
+  vi.doMock('#/lib/storage/file-access-token', async importOriginal => {
+    const actual = await importOriginal<typeof import('#/lib/storage/file-access-token')>()
+
+    return {
+      ...actual,
+      verifyFileAccessToken: vi.fn(() => logicalPathPayload({
+        purpose: 'download',
+        contentDisposition: 'attachment',
+        downloadFilename,
+      })),
+    }
+  })
+
+  try {
+    const { handleInternalFileAccessRequest: mockedHandler } = await import(
+      '#/lib/storage/internal-file-access'
+    )
+
+    return await mockedHandler({
+      request: requestWithToken('opaque-test-token'),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+    })
+  } finally {
+    vi.doUnmock('#/lib/storage/file-access-token')
+    vi.resetModules()
+  }
+}
+
+function expectSafeAttachmentFilename(contentDisposition: string | null): string {
+  expect(contentDisposition).toMatch(/^attachment; filename="[^"]+"$/)
+
+  const filename = contentDisposition?.match(/^attachment; filename="([^"]+)"$/)?.[1] ?? ''
+
+  expect(filename).not.toContain('\r')
+  expect(filename).not.toContain('\n')
+  expect(filename).not.toContain('"')
+  expect(filename).not.toContain('/')
+  expect(filename).not.toContain('\\')
+  expect(filename).not.toContain('..')
+  expect(filename).not.toContain(TEST_ROOT)
+  expect(filename).not.toMatch(/^[a-z][a-z0-9+.-]*:/i)
+  expect(filename).not.toMatch(/^[a-z]:[\\/]/i)
+  expect(path.isAbsolute(filename)).toBe(false)
+
+  return filename
+}
