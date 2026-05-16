@@ -17,10 +17,12 @@ let currentJenisDokumenRow: { nama: string } | null
 let currentKetuaTimAssignmentRow: { id: string } | null
 let preflightCheckSourceExists: ReturnType<typeof vi.fn>
 let preflightCheckTargetAvailable: ReturnType<typeof vi.fn>
+let localSubmitAdapterCalls: unknown[]
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   createDokumen: vi.fn(),
+  createLiveLocalSubmitDrizzleAdapter: vi.fn(),
   createSubmitDiskPreflightChecker: vi.fn(),
   createServerSupabaseClient: vi.fn(),
   getKelengkapanRequired: vi.fn(),
@@ -49,6 +51,10 @@ vi.mock('#/lib/auth/local-server-auth', () => ({
 
 vi.mock('#/lib/dokumen/submit-disk-preflight-checker', () => ({
   createSubmitDiskPreflightChecker: mocks.createSubmitDiskPreflightChecker,
+}))
+
+vi.mock('#/lib/dokumen/local-submit-drizzle-adapter', () => ({
+  createLiveLocalSubmitDrizzleAdapter: mocks.createLiveLocalSubmitDrizzleAdapter,
 }))
 
 vi.mock('#/lib/dokumen-helpers', () => ({
@@ -84,6 +90,7 @@ describe('/api/dokumen/submit legacy route parity', () => {
     storageFrom = vi.fn(() => ({ move: storageMove }))
     preflightCheckSourceExists = vi.fn(async () => true)
     preflightCheckTargetAvailable = vi.fn(async () => true)
+    localSubmitAdapterCalls = []
     supabaseClient = createSupabaseClientMock()
     adminClient = { storage: { from: storageFrom } }
 
@@ -93,6 +100,9 @@ describe('/api/dokumen/submit legacy route parity', () => {
       checkSourceExists: preflightCheckSourceExists,
       checkTargetAvailable: preflightCheckTargetAvailable,
     })
+    mocks.createLiveLocalSubmitDrizzleAdapter.mockResolvedValue(
+      createLocalSubmitAdapter(),
+    )
     mocks.getLocalServerSession.mockResolvedValue(null)
     mocks.getServerSession.mockResolvedValue(createSession())
     mocks.getKelengkapanRequired.mockResolvedValue([])
@@ -425,6 +435,7 @@ describe('/api/dokumen/submit legacy route parity', () => {
     expect(response.status).toBe(201)
     expect(mocks.getLocalServerSession).not.toHaveBeenCalled()
     expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
     expect(mocks.createServerSupabaseClient).toHaveBeenCalledTimes(1)
     expect(mocks.createDokumen).toHaveBeenCalledTimes(1)
     expect(mocks.updateDokumenStatus).toHaveBeenCalledTimes(1)
@@ -840,6 +851,317 @@ describe('/api/dokumen/submit legacy route parity', () => {
     expect(serializedBody).not.toMatch(/[A-Za-z]:\\|\\\\/)
     expectNoWriteOrMoveCalls(storageMove)
   })
+
+  it('returns 401 Unauthorized for local DB submit without a local session', async () => {
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload(),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.getLocalServerSession).toHaveBeenCalledTimes(1)
+    expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns 403 for local DB submit when the local actor is not PEGAWAI-compatible', async () => {
+    for (const localSession of [
+      createLocalSession({ roles: ['ADMIN'], activeRole: 'ADMIN' }),
+      createLocalSession({ roles: ['PPK'], activeRole: 'PPK' }),
+    ]) {
+      vi.clearAllMocks()
+      mocks.createSubmitDiskPreflightChecker.mockReturnValue({
+        checkSourceExists: preflightCheckSourceExists,
+        checkTargetAvailable: preflightCheckTargetAvailable,
+      })
+      mocks.createLiveLocalSubmitDrizzleAdapter.mockResolvedValue(
+        createLocalSubmitAdapter(),
+      )
+      mocks.getLocalServerSession.mockResolvedValue(localSession)
+
+      const response = await submitHandler({
+        request: createJsonRequest(
+          createValidMaterialSubmitPayload(),
+          'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+        ),
+      })
+
+      expect(response.status).toBe(403)
+      expect(await response.json()).toEqual({ error: 'Akses ditolak' })
+      expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
+      expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
+      expectNoWriteOrMoveCalls(storageMove)
+    }
+  })
+
+  it('blocks local DB submit for move-required preflight success before any DB write', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(409)
+    expect(body).toEqual({
+      error: 'Local DB submit is blocked until local file movement is implemented.',
+      code: 'local-file-movement-required',
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+    })
+    expect(body).not.toHaveProperty('success', true)
+    expect(body).not.toHaveProperty('dokumen')
+    expect(preflightCheckSourceExists).toHaveBeenCalledWith(UNDERSCORE_PENDING_PATH)
+    expect(preflightCheckTargetAvailable).toHaveBeenCalledTimes(1)
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns controlled 400 for local DB submit when the local source is missing before any DB write', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    preflightCheckSourceExists.mockResolvedValue(false)
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: DASH_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body).toMatchObject({
+      error: 'Local submit preflight failed; submit write path was not executed.',
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+      issues: [
+        expect.objectContaining({
+          code: 'source-missing',
+          clientCategory: 'local-storage-missing',
+          sourceLogicalPath: DASH_PENDING_PATH,
+        }),
+      ],
+    })
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns controlled 400 for local DB submit when the target conflicts before any DB write', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    preflightCheckTargetAvailable.mockResolvedValue(false)
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body).toMatchObject({
+      error: 'Local submit preflight failed; submit write path was not executed.',
+      issues: [
+        expect.objectContaining({
+          code: 'target-already-exists',
+          clientCategory: 'local-storage-conflict',
+          sourceLogicalPath: UNDERSCORE_PENDING_PATH,
+        }),
+      ],
+    })
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns 201 for formal/no-move local DB material submit with workflow parity fields', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: FORMAL_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(201)
+    expect(body).toMatchObject({
+      success: true,
+      dokumen: {
+        id: DOKUMEN_ID,
+        status: 'IN_PPK_VALIDATION',
+        current_step: 'PPK',
+        revision_target: null,
+        lampiran_urls: [createLampiran({ url: FORMAL_PATH })],
+      },
+    })
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).toHaveBeenCalledTimes(1)
+    expect(localSubmitAdapterCalls).toContainEqual(['insertLog', expect.objectContaining({
+      dokumenId: DOKUMEN_ID,
+      userId: OWNER_ID,
+      aksi: 'SUBMIT',
+      stepUrutan: 1,
+    })])
+    expect(preflightCheckSourceExists).not.toHaveBeenCalled()
+    expect(preflightCheckTargetAvailable).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns 201 for formal/no-move local DB non-material submit with TERSIMPAN parity fields', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidNonMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: FORMAL_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(201)
+    expect(body).toMatchObject({
+      success: true,
+      dokumen: {
+        id: DOKUMEN_ID,
+        status: 'TERSIMPAN',
+        current_step: null,
+        revision_target: null,
+        lampiran_urls: [createLampiran({ url: FORMAL_PATH })],
+      },
+    })
+    expect(localSubmitAdapterCalls).toContainEqual(['insertLog', expect.objectContaining({
+      dokumenId: DOKUMEN_ID,
+      userId: OWNER_ID,
+      aksi: 'STORE',
+      stepUrutan: 1,
+    })])
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns a safe non-success response when the local DB transaction fails', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    mocks.createLiveLocalSubmitDrizzleAdapter.mockResolvedValue(
+      createLocalSubmitAdapter({ failStatusUpdate: true }),
+    )
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: FORMAL_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body).toEqual({ error: 'Gagal mengajukan dokumen' })
+    expect(JSON.stringify(body)).not.toContain('status update failed')
+    expect(localSubmitAdapterCalls).toEqual(expect.arrayContaining([
+      ['transaction:begin'],
+      ['transaction:rollback'],
+    ]))
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('fails local DB submit when audit insert fails inside the local transaction', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    mocks.createLiveLocalSubmitDrizzleAdapter.mockResolvedValue(
+      createLocalSubmitAdapter({ failAuditInsert: true }),
+    )
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: FORMAL_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body).toEqual({ error: 'Gagal mengajukan dokumen' })
+    expect(JSON.stringify(body)).not.toContain('audit insert failed')
+    expect(localSubmitAdapterCalls).toEqual(expect.arrayContaining([
+      ['insertLog', expect.any(Object)],
+      ['transaction:rollback'],
+    ]))
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('does not expose sensitive values in local DB submit responses', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: FORMAL_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const serializedBody = JSON.stringify(await response.json())
+    const forbiddenFragments = [
+      'tok' + 'en',
+      'ha' + 'sh',
+      'DATABASE' + '_URL',
+      'DMS_LOCAL_STORAGE' + '_ROOT',
+      'signed' + 'Url',
+      'signed URL',
+      'storage' + ' root',
+      'physical' + ' path',
+      'sec' + 'ret',
+      'password' + '_hash',
+    ]
+
+    for (const fragment of forbiddenFragments) {
+      expect(serializedBody.toLowerCase()).not.toContain(fragment.toLowerCase())
+    }
+    expect(serializedBody).not.toMatch(/[A-Za-z]:\\|\\\\/)
+    expectNoWriteOrMoveCalls(storageMove)
+  })
 })
 
 function createJsonRequest(
@@ -950,11 +1272,113 @@ function createLocalSession(overrides: {
 function expectNoWriteOrMoveCalls(storageMove: ReturnType<typeof vi.fn>) {
   expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
   expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  expect(mocks.getServerSession).not.toHaveBeenCalled()
   expect(mocks.getKelengkapanRequired).not.toHaveBeenCalled()
   expect(mocks.createDokumen).not.toHaveBeenCalled()
   expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
   expect(mocks.insertLog).not.toHaveBeenCalled()
   expect(storageMove).not.toHaveBeenCalled()
+}
+
+function createLocalSubmitAdapter(options: {
+  failStatusUpdate?: boolean
+  failAuditInsert?: boolean
+} = {}) {
+  return {
+    async selectKegiatanById(kegiatanId: string) {
+      localSubmitAdapterCalls.push(['selectKegiatanById', kegiatanId])
+      return { id: kegiatanId, nama: 'Kegiatan Pengujian', fungsiId: FUNGSI_ID }
+    },
+    async selectRequiredKelengkapan(input: unknown) {
+      localSubmitAdapterCalls.push(['selectRequiredKelengkapan', input])
+      return [{ id: KELENGKAPAN_ID, namaDokumen: 'Laporan', required: true }]
+    },
+    async selectJenisDokumenById(id: string) {
+      localSubmitAdapterCalls.push(['selectJenisDokumenById', id])
+      return { id, nama: 'Dokumen Non Material' }
+    },
+    async selectJenisPermintaanById(id: string) {
+      localSubmitAdapterCalls.push(['selectJenisPermintaanById', id])
+      return { id, nama: 'Jenis Permintaan' }
+    },
+    async selectKategoriPermintaanById(id: string) {
+      localSubmitAdapterCalls.push(['selectKategoriPermintaanById', id])
+      return { id, nama: 'Kategori Permintaan' }
+    },
+    async selectDetailPermintaanById(id: string) {
+      localSubmitAdapterCalls.push(['selectDetailPermintaanById', id])
+      return { id, nama: 'Detail Permintaan' }
+    },
+    async selectKetuaTimAssignmentExists(input: unknown) {
+      localSubmitAdapterCalls.push(['selectKetuaTimAssignmentExists', input])
+      return true
+    },
+    async withSubmitTransaction(operation: (tx: unknown) => Promise<unknown>) {
+      localSubmitAdapterCalls.push(['transaction:begin'])
+      try {
+        const result = await operation(createLocalSubmitTransactionAdapter(options))
+        localSubmitAdapterCalls.push(['transaction:commit'])
+        return result
+      } catch (error) {
+        localSubmitAdapterCalls.push(['transaction:rollback'])
+        throw error
+      }
+    },
+  }
+}
+
+function createLocalSubmitTransactionAdapter(options: {
+  failStatusUpdate?: boolean
+  failAuditInsert?: boolean
+}) {
+  return {
+    async insertDokumen(values: Record<string, unknown>) {
+      localSubmitAdapterCalls.push(['insertDokumen', values])
+      return createLocalDokumenRow(values)
+    },
+    async updateDokumenStatus(dokumenId: string, values: Record<string, unknown>) {
+      localSubmitAdapterCalls.push(['updateDokumenStatus', dokumenId, values])
+      if (options.failStatusUpdate) {
+        throw new Error('status update failed with DATABASE' + '_URL and physical ' + 'path')
+      }
+    },
+    async insertLog(values: Record<string, unknown>) {
+      localSubmitAdapterCalls.push(['insertLog', values])
+      if (options.failAuditInsert) {
+        throw new Error('audit insert failed with secret' + '-token and storage ' + 'root')
+      }
+    },
+  }
+}
+
+function createLocalDokumenRow(values: Record<string, unknown>) {
+  return {
+    id: DOKUMEN_ID,
+    judul: values.judul,
+    fungsiId: values.fungsiId,
+    kegiatanJenisId: values.kegiatanJenisId,
+    isKetuaTim: values.isKetuaTim,
+    status: values.status,
+    currentStep: values.currentStep,
+    revisionTarget: values.revisionTarget,
+    revisionNotes: values.revisionNotes,
+    lampiranUrls: values.lampiranUrls,
+    tahun: values.tahun,
+    tanggal: values.tanggal,
+    createdBy: values.createdBy,
+    nominalRealisasi: values.nominalRealisasi,
+    isNonMaterial: values.isNonMaterial,
+    jenisDokumenId: values.jenisDokumenId,
+    keteranganDetail: values.keteranganDetail,
+    jenisPermintaanId: values.jenisPermintaanId,
+    kategoriPermintaanId: values.kategoriPermintaanId,
+    detailPermintaanId: values.detailPermintaanId,
+    createdAt: '2024-01-15T00:00:00.000Z',
+    updatedAt: '2024-01-15T00:00:00.000Z',
+    fungsiNama: 'Fungsi Pengujian',
+    kegiatanNama: 'Kegiatan Pengujian',
+    jenisDokumenNama: values.jenisDokumenId ? 'Dokumen Non Material' : undefined,
+  }
 }
 
 function createDokumenRow(input: Record<string, unknown>) {

@@ -9,6 +9,15 @@ import { ROLES } from '#/lib/constants/roles'
 import { preflightSubmitFiles, type SubmitFilePreflightIssue } from '#/lib/dokumen/submit-file-preflight'
 import { createSubmitDiskPreflightChecker } from '#/lib/dokumen/submit-disk-preflight-checker'
 import {
+  createLocalSubmitActorFromSession,
+  executeLocalSubmitWritePlan,
+  prepareLocalSubmitWriteBridge,
+  type LocalSubmitBridgeIssue,
+} from '#/lib/dokumen/local-submit-write-bridge'
+import { createLocalSubmitBridgeRepository } from '#/lib/dokumen/local-submit-repository'
+import { createLiveLocalSubmitDrizzleAdapter } from '#/lib/dokumen/local-submit-drizzle-adapter'
+import type { LampiranUrl } from '#/lib/dokumen/types'
+import {
   getKelengkapanRequired,
   createDokumen,
   updateDokumenStatus,
@@ -36,6 +45,10 @@ function isLocalPreflightDryRunRequest(request: Request): boolean {
   return new URL(request.url).searchParams.get('useLocalPreflightDryRun') === 'true'
 }
 
+function isLocalDbSubmitRequest(request: Request): boolean {
+  return new URL(request.url).searchParams.get('useLocalDbSubmit') === 'true'
+}
+
 async function handleLocalAuthDryRun(request: Request): Promise<Response> {
   const localSession = await getLocalServerSession(request)
 
@@ -55,6 +68,71 @@ async function handleLocalAuthDryRun(request: Request): Promise<Response> {
     filesystemMovementExecuted: false,
     message: 'Local auth boundary validated; submit write path was not executed.',
   }, { status: 200 })
+}
+
+async function handleLocalDbSubmit(
+  request: Request,
+  payload: ReturnType<typeof createAndSubmitDokumenSchema.parse>,
+): Promise<Response> {
+  const localSession = await getLocalServerSession(request)
+
+  if (!localSession?.userId || !localSession.user?.id) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const actorResult = createLocalSubmitActorFromSession(localSession)
+  if (!actorResult.ok) {
+    return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+  }
+
+  const movePlan = buildSubmitMovePlan({
+    ownerUserId: localSession.userId,
+    attachments: payload.lampiranUrls,
+  })
+  const preflight = await preflightSubmitFiles({
+    actorUserId: localSession.userId,
+    movePlan,
+    existenceChecker: createSubmitDiskPreflightChecker(),
+  })
+
+  if (!preflight.ok) {
+    return Response.json({
+      error: 'Local submit preflight failed; submit write path was not executed.',
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+      issues: preflight.issues.map(toSafePreflightIssue),
+    }, { status: 400 })
+  }
+
+  if (preflight.operations.some(operation => operation.action === 'move-required')) {
+    return Response.json({
+      error: 'Local DB submit is blocked until local file movement is implemented.',
+      code: 'local-file-movement-required',
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+    }, { status: 409 })
+  }
+
+  try {
+    const adapter = await createLiveLocalSubmitDrizzleAdapter()
+    const repository = createLocalSubmitBridgeRepository(adapter)
+    const prepared = await prepareLocalSubmitWriteBridge({
+      actor: actorResult.actor,
+      payload,
+      repository,
+      lampiranUrls: preflight.plannedAttachments as LampiranUrl[],
+    })
+
+    if (!prepared.ok) {
+      return localSubmitBridgeIssueResponse(prepared.issue)
+    }
+
+    const result = await executeLocalSubmitWritePlan(repository, prepared.plan)
+
+    return Response.json({ success: true, dokumen: result.dokumen }, { status: 201 })
+  } catch {
+    return Response.json({ error: 'Gagal mengajukan dokumen' }, { status: 500 })
+  }
 }
 
 async function handleLocalPreflightDryRun(
@@ -103,6 +181,18 @@ async function handleLocalPreflightDryRun(
     filesystemMovementExecuted: false,
     message: 'Local submit preflight validated; submit write path was not executed.',
   }, { status: 200 })
+}
+
+function localSubmitBridgeIssueResponse(issue: LocalSubmitBridgeIssue): Response {
+  if (issue.code === 'ketua-tim-assignment-missing') {
+    return Response.json({ error: issue.message }, { status: 403 })
+  }
+
+  if (issue.code === 'transition-failed') {
+    return Response.json({ error: issue.message }, { status: 500 })
+  }
+
+  return Response.json({ error: issue.message }, { status: 400 })
 }
 
 function toSafePreflightIssue(issue: SubmitFilePreflightIssue) {
@@ -171,6 +261,10 @@ export const Route = createFileRoute('/api/dokumen/submit')({
 
         if (isLocalPreflightDryRunRequest(request)) {
           return handleLocalPreflightDryRun(request, parsed.data.lampiranUrls)
+        }
+
+        if (isLocalDbSubmitRequest(request)) {
+          return handleLocalDbSubmit(request, parsed.data)
         }
 
         const supabase = createAuthClient(request)
