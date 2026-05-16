@@ -6,7 +6,11 @@ import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
 import type { TransitionResult } from '#/lib/types/fsm'
 import { ROLES } from '#/lib/constants/roles'
-import { preflightSubmitFiles, type SubmitFilePreflightIssue } from '#/lib/dokumen/submit-file-preflight'
+import {
+  preflightSubmitFiles,
+  type SubmitFilePreflightIssue,
+  type SubmitFilePreflightOperation,
+} from '#/lib/dokumen/submit-file-preflight'
 import { createSubmitDiskPreflightChecker } from '#/lib/dokumen/submit-disk-preflight-checker'
 import {
   createLocalSubmitActorFromSession,
@@ -27,6 +31,10 @@ import {
 import { createAndSubmitDokumenSchema, validateNominalForMaterial } from '#/lib/schemas/dokumen'
 import { buildSubmitMovePlan } from '#/lib/storage/submit-move-plan'
 import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
+import {
+  LocalPendingMoveError,
+  moveLocalPendingFileToFormal,
+} from '#/lib/storage/local-pending-move'
 
 function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -104,14 +112,8 @@ async function handleLocalDbSubmit(
     }, { status: 400 })
   }
 
-  if (preflight.operations.some(operation => operation.action === 'move-required')) {
-    return Response.json({
-      error: 'Local DB submit is blocked until local file movement is implemented.',
-      code: 'local-file-movement-required',
-      writePathExecuted: false,
-      filesystemMovementExecuted: false,
-    }, { status: 409 })
-  }
+  const moveRequiredOperations = preflight.operations.filter(isMoveRequiredOperation)
+  let result: Awaited<ReturnType<typeof executeLocalSubmitWritePlan>>
 
   try {
     const adapter = await createLiveLocalSubmitDrizzleAdapter()
@@ -127,12 +129,32 @@ async function handleLocalDbSubmit(
       return localSubmitBridgeIssueResponse(prepared.issue)
     }
 
-    const result = await executeLocalSubmitWritePlan(repository, prepared.plan)
-
-    return Response.json({ success: true, dokumen: result.dokumen }, { status: 201 })
+    result = await executeLocalSubmitWritePlan(repository, prepared.plan)
   } catch {
     return Response.json({ error: 'Gagal mengajukan dokumen' }, { status: 500 })
   }
+
+  if (moveRequiredOperations.length > 0) {
+    const movement = await executeLocalSubmitMovements({
+      ownerUserId: localSession.userId,
+      operations: moveRequiredOperations,
+    })
+
+    if (!movement.ok) {
+      return Response.json({
+        error: 'Local file movement failed after local DB submit.',
+        code: 'local-file-movement-failed',
+        writePathExecuted: true,
+        filesystemMovementExecuted: movement.attempted,
+        compensationRequired: true,
+        partialMovement: movement.partialMovement,
+        movedCount: movement.movedCount,
+        issues: [movement.issue],
+      }, { status: 500 })
+    }
+  }
+
+  return Response.json({ success: true, dokumen: result.dokumen }, { status: 201 })
 }
 
 async function handleLocalPreflightDryRun(
@@ -218,6 +240,181 @@ function safeLogicalPathForResponse(logicalPath: string | null): string | null {
       : null
   } catch {
     return null
+  }
+}
+
+function isMoveRequiredOperation(
+  operation: SubmitFilePreflightOperation,
+): operation is SubmitFilePreflightOperation & { action: 'move-required' } {
+  return operation.action === 'move-required'
+}
+
+async function executeLocalSubmitMovements({
+  ownerUserId,
+  operations,
+}: {
+  ownerUserId: string
+  operations: Array<SubmitFilePreflightOperation & { action: 'move-required' }>
+}): Promise<
+  | { ok: true }
+  | {
+    ok: false
+    attempted: boolean
+    partialMovement: boolean
+    movedCount: number
+    issue: LocalSubmitMovementIssue
+  }
+> {
+  let movedCount = 0
+
+  for (const operation of operations) {
+    const target = parsePlannedSubmitTarget(operation.targetLogicalPath)
+    if (!target) {
+      return {
+        ok: false,
+        attempted: false,
+        partialMovement: movedCount > 0,
+        movedCount,
+        issue: createLocalSubmitMovementIssue({
+          code: 'invalid-target-path',
+          index: operation.index,
+          sourceLogicalPath: operation.sourceLogicalPath,
+          targetLogicalPath: operation.targetLogicalPath,
+        }),
+      }
+    }
+
+    try {
+      const result = await moveLocalPendingFileToFormal({
+        sourceLogicalPath: operation.sourceLogicalPath,
+        ownerUserId,
+        dokumenId: target.dokumenId,
+        targetUuid: target.targetUuid,
+      })
+
+      if (
+        result.action !== 'moved'
+        || result.sourceLogicalPath !== operation.sourceLogicalPath
+        || result.targetLogicalPath !== operation.targetLogicalPath
+      ) {
+        return {
+          ok: false,
+          attempted: true,
+          partialMovement: movedCount > 0,
+          movedCount,
+          issue: createLocalSubmitMovementIssue({
+            code: 'move-result-mismatch',
+            index: operation.index,
+            sourceLogicalPath: operation.sourceLogicalPath,
+            targetLogicalPath: operation.targetLogicalPath,
+          }),
+        }
+      }
+
+      movedCount += 1
+    } catch (error) {
+      return {
+        ok: false,
+        attempted: true,
+        partialMovement: movedCount > 0,
+        movedCount,
+        issue: createLocalSubmitMovementIssue({
+          code: mapLocalSubmitMovementErrorCode(error),
+          index: operation.index,
+          sourceLogicalPath: operation.sourceLogicalPath,
+          targetLogicalPath: operation.targetLogicalPath,
+        }),
+      }
+    }
+  }
+
+  return { ok: true }
+}
+
+type LocalSubmitMovementIssue = {
+  code:
+    | 'invalid-target-path'
+    | 'missing-source'
+    | 'move-failed'
+    | 'move-result-mismatch'
+    | 'target-exists'
+    | 'unsupported-source-path'
+  index: number
+  clientCategory:
+    | 'local-storage-conflict'
+    | 'local-storage-missing'
+    | 'preflight-unavailable'
+    | 'validation'
+  sourceLogicalPath: string | null
+  targetLogicalPath: string | null
+}
+
+function createLocalSubmitMovementIssue({
+  code,
+  index,
+  sourceLogicalPath,
+  targetLogicalPath,
+}: {
+  code: LocalSubmitMovementIssue['code']
+  index: number
+  sourceLogicalPath: string
+  targetLogicalPath: string
+}): LocalSubmitMovementIssue {
+  return {
+    code,
+    index,
+    clientCategory: localSubmitMovementClientCategory(code),
+    sourceLogicalPath: safeLogicalPathForResponse(sourceLogicalPath),
+    targetLogicalPath: safeLogicalPathForResponse(targetLogicalPath),
+  }
+}
+
+function localSubmitMovementClientCategory(
+  code: LocalSubmitMovementIssue['code'],
+): LocalSubmitMovementIssue['clientCategory'] {
+  if (code === 'missing-source') return 'local-storage-missing'
+  if (code === 'target-exists') return 'local-storage-conflict'
+  if (code === 'invalid-target-path' || code === 'unsupported-source-path') return 'validation'
+  return 'preflight-unavailable'
+}
+
+function mapLocalSubmitMovementErrorCode(error: unknown): LocalSubmitMovementIssue['code'] {
+  if (error instanceof LocalPendingMoveError) {
+    if (error.code === 'missing-source') return 'missing-source'
+    if (error.code === 'target-exists') return 'target-exists'
+    if (error.code === 'unsupported-source-path') return 'unsupported-source-path'
+  }
+
+  return 'move-failed'
+}
+
+function parsePlannedSubmitTarget(
+  targetLogicalPath: string,
+): { dokumenId: string; targetUuid: string } | null {
+  let safePath: string
+
+  try {
+    safePath = assertSafeLogicalStoragePath(targetLogicalPath)
+  } catch {
+    return null
+  }
+
+  const parts = safePath.split('/')
+  if (parts.length !== 3) return null
+
+  const dokumenId = parts[1]
+  const fileName = parts[2]
+  const dotIndex = fileName.lastIndexOf('.')
+  if (dotIndex <= 0) return null
+
+  const targetUuid = fileName.slice(0, dotIndex)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUuid)) {
+    return null
+  }
+
+  return {
+    dokumenId,
+    targetUuid: targetUuid.toLowerCase(),
   }
 }
 

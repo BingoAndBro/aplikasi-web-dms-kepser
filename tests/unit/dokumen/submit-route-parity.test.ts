@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
   getServerSession: vi.fn(),
   insertLog: vi.fn(),
+  moveLocalPendingFileToFormal: vi.fn(),
   resolveLeafNodeName: vi.fn(),
   updateDokumenStatus: vi.fn(),
 }))
@@ -55,6 +56,16 @@ vi.mock('#/lib/dokumen/submit-disk-preflight-checker', () => ({
 
 vi.mock('#/lib/dokumen/local-submit-drizzle-adapter', () => ({
   createLiveLocalSubmitDrizzleAdapter: mocks.createLiveLocalSubmitDrizzleAdapter,
+}))
+
+vi.mock('#/lib/storage/local-pending-move', () => ({
+  LocalPendingMoveError: class LocalPendingMoveError extends Error {
+    constructor(message: string, readonly code: string) {
+      super(message)
+      this.name = 'LocalPendingMoveError'
+    }
+  },
+  moveLocalPendingFileToFormal: mocks.moveLocalPendingFileToFormal,
 }))
 
 vi.mock('#/lib/dokumen-helpers', () => ({
@@ -103,6 +114,19 @@ describe('/api/dokumen/submit legacy route parity', () => {
     mocks.createLiveLocalSubmitDrizzleAdapter.mockResolvedValue(
       createLocalSubmitAdapter(),
     )
+    mocks.moveLocalPendingFileToFormal.mockImplementation(async (input: {
+      sourceLogicalPath: string
+      ownerUserId: string
+      dokumenId: string
+      targetUuid: string
+    }) => ({
+      action: 'moved',
+      sourceLogicalPath: input.sourceLogicalPath,
+      targetLogicalPath: `${input.ownerUserId}/${input.dokumenId}/${input.targetUuid}.pdf`,
+      sourceClassification: input.sourceLogicalPath === DASH_PENDING_PATH
+        ? 'pending-dash'
+        : 'pending-upload-api',
+    }))
     mocks.getLocalServerSession.mockResolvedValue(null)
     mocks.getServerSession.mockResolvedValue(createSession())
     mocks.getKelengkapanRequired.mockResolvedValue([])
@@ -898,35 +922,53 @@ describe('/api/dokumen/submit legacy route parity', () => {
     }
   })
 
-  it('blocks local DB submit for move-required preflight success before any DB write', async () => {
+  it('returns 201 for move-required local DB submit after successful local movement', async () => {
     mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
       roles: ['PEGAWAI'],
       activeRole: 'PEGAWAI',
     }))
 
+    const sourceLampiran = createLampiran({ url: UNDERSCORE_PENDING_PATH })
     const response = await submitHandler({
       request: createJsonRequest(
         createValidMaterialSubmitPayload({
-          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+          lampiranUrls: [sourceLampiran],
         }),
         'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
       ),
     })
     const body = await response.json()
+    const returnedPath = body.dokumen.lampiran_urls[0].url
 
-    expect(response.status).toBe(409)
-    expect(body).toEqual({
-      error: 'Local DB submit is blocked until local file movement is implemented.',
-      code: 'local-file-movement-required',
-      writePathExecuted: false,
-      filesystemMovementExecuted: false,
+    expect(response.status).toBe(201)
+    expect(body).toMatchObject({
+      success: true,
+      dokumen: {
+        id: DOKUMEN_ID,
+        status: 'IN_PPK_VALIDATION',
+        current_step: 'PPK',
+        revision_target: null,
+      },
     })
-    expect(body).not.toHaveProperty('success', true)
-    expect(body).not.toHaveProperty('dokumen')
+    expect(returnedPath).not.toBe(UNDERSCORE_PENDING_PATH)
+    expect(returnedPath).toMatch(new RegExp(`^${OWNER_ID}/temp-id/[0-9a-f-]{36}\\.pdf$`))
     expect(preflightCheckSourceExists).toHaveBeenCalledWith(UNDERSCORE_PENDING_PATH)
     expect(preflightCheckTargetAvailable).toHaveBeenCalledTimes(1)
-    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
-    expectNoWriteOrMoveCalls(storageMove)
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).toHaveBeenCalledTimes(1)
+    expect(mocks.moveLocalPendingFileToFormal).toHaveBeenCalledWith({
+      sourceLogicalPath: UNDERSCORE_PENDING_PATH,
+      ownerUserId: OWNER_ID,
+      dokumenId: 'temp-id',
+      targetUuid: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    })
+    expect(localSubmitAdapterCalls).toContainEqual(['insertDokumen', expect.objectContaining({
+      lampiranUrls: [expect.objectContaining({
+        url: returnedPath,
+      })],
+    })])
+    expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(storageMove).not.toHaveBeenCalled()
   })
 
   it('returns controlled 400 for local DB submit when the local source is missing before any DB write', async () => {
@@ -1128,6 +1170,141 @@ describe('/api/dokumen/submit legacy route parity', () => {
     expectNoWriteOrMoveCalls(storageMove)
   })
 
+  it('does not execute local movement when the local DB transaction fails for a move-required payload', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    mocks.createLiveLocalSubmitDrizzleAdapter.mockResolvedValue(
+      createLocalSubmitAdapter({ failStatusUpdate: true }),
+    )
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body).toEqual({ error: 'Gagal mengajukan dokumen' })
+    expect(mocks.moveLocalPendingFileToFormal).not.toHaveBeenCalled()
+    expect(storageMove).not.toHaveBeenCalled()
+  })
+
+  it('returns safe non-success when local movement fails after DB success', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    mocks.moveLocalPendingFileToFormal.mockRejectedValue(
+      new Error('raw ' + 'filesystem failure at C:\\' + 'private\\storage with secret' + '-token'),
+    )
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+    const serializedBody = JSON.stringify(body)
+
+    expect(response.status).toBe(500)
+    expect(body).toMatchObject({
+      error: 'Local file movement failed after local DB submit.',
+      code: 'local-file-movement-failed',
+      writePathExecuted: true,
+      filesystemMovementExecuted: true,
+      compensationRequired: true,
+      partialMovement: false,
+      movedCount: 0,
+      issues: [
+        expect.objectContaining({
+          code: 'move-failed',
+          clientCategory: 'preflight-unavailable',
+          index: 0,
+          sourceLogicalPath: UNDERSCORE_PENDING_PATH,
+        }),
+      ],
+    })
+    expect(body).not.toHaveProperty('success', true)
+    expect(body).not.toHaveProperty('dokumen')
+    expect(localSubmitAdapterCalls).toEqual(expect.arrayContaining([
+      ['transaction:commit'],
+    ]))
+    expect(mocks.moveLocalPendingFileToFormal).toHaveBeenCalledTimes(1)
+    expect(serializedBody).not.toContain('C:\\' + 'private')
+    expect(serializedBody).not.toContain('secret' + '-token')
+    expect(serializedBody).not.toContain('raw ' + 'filesystem failure')
+    expect(storageMove).not.toHaveBeenCalled()
+  })
+
+  it('returns safe non-success for partial local movement failure after DB success', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    mocks.moveLocalPendingFileToFormal
+      .mockImplementationOnce(async (input: {
+        sourceLogicalPath: string
+        ownerUserId: string
+        dokumenId: string
+        targetUuid: string
+      }) => ({
+        action: 'moved',
+        sourceLogicalPath: input.sourceLogicalPath,
+        targetLogicalPath: `${input.ownerUserId}/${input.dokumenId}/${input.targetUuid}.pdf`,
+        sourceClassification: 'pending-upload-api',
+      }))
+      .mockRejectedValueOnce(
+        new Error('partial failure with DATABASE' + '_URL and storage' + ' root'),
+      )
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [
+            createLampiran({ url: UNDERSCORE_PENDING_PATH }),
+            createLampiran({ url: DASH_PENDING_PATH }),
+          ],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalDbSubmit=true',
+      ),
+    })
+    const body = await response.json()
+    const serializedBody = JSON.stringify(body)
+
+    expect(response.status).toBe(500)
+    expect(body).toMatchObject({
+      error: 'Local file movement failed after local DB submit.',
+      code: 'local-file-movement-failed',
+      writePathExecuted: true,
+      filesystemMovementExecuted: true,
+      compensationRequired: true,
+      partialMovement: true,
+      movedCount: 1,
+      issues: [
+        expect.objectContaining({
+          code: 'move-failed',
+          index: 1,
+          sourceLogicalPath: DASH_PENDING_PATH,
+        }),
+      ],
+    })
+    expect(body).not.toHaveProperty('success', true)
+    expect(mocks.moveLocalPendingFileToFormal).toHaveBeenCalledTimes(2)
+    expect(serializedBody).not.toContain('DATABASE' + '_URL')
+    expect(serializedBody).not.toContain('storage' + ' root')
+    expect(serializedBody).not.toContain('partial failure')
+    expect(storageMove).not.toHaveBeenCalled()
+  })
+
   it('does not expose sensitive values in local DB submit responses', async () => {
     mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
       roles: ['PEGAWAI'],
@@ -1277,6 +1454,7 @@ function expectNoWriteOrMoveCalls(storageMove: ReturnType<typeof vi.fn>) {
   expect(mocks.createDokumen).not.toHaveBeenCalled()
   expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
   expect(mocks.insertLog).not.toHaveBeenCalled()
+  expect(mocks.moveLocalPendingFileToFormal).not.toHaveBeenCalled()
   expect(storageMove).not.toHaveBeenCalled()
 }
 
