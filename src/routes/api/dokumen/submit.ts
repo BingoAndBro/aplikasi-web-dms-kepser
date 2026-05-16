@@ -6,6 +6,8 @@ import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
 import type { TransitionResult } from '#/lib/types/fsm'
 import { ROLES } from '#/lib/constants/roles'
+import { preflightSubmitFiles, type SubmitFilePreflightIssue } from '#/lib/dokumen/submit-file-preflight'
+import { createSubmitDiskPreflightChecker } from '#/lib/dokumen/submit-disk-preflight-checker'
 import {
   getKelengkapanRequired,
   createDokumen,
@@ -14,6 +16,8 @@ import {
   resolveLeafNodeName,
 } from '#/lib/dokumen-helpers'
 import { createAndSubmitDokumenSchema, validateNominalForMaterial } from '#/lib/schemas/dokumen'
+import { buildSubmitMovePlan } from '#/lib/storage/submit-move-plan'
+import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
 
 function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -26,6 +30,10 @@ function createAuthClient(request: Request) {
 
 function isLocalAuthDryRunRequest(request: Request): boolean {
   return new URL(request.url).searchParams.get('useLocalAuthDryRun') === 'true'
+}
+
+function isLocalPreflightDryRunRequest(request: Request): boolean {
+  return new URL(request.url).searchParams.get('useLocalPreflightDryRun') === 'true'
 }
 
 async function handleLocalAuthDryRun(request: Request): Promise<Response> {
@@ -47,6 +55,80 @@ async function handleLocalAuthDryRun(request: Request): Promise<Response> {
     filesystemMovementExecuted: false,
     message: 'Local auth boundary validated; submit write path was not executed.',
   }, { status: 200 })
+}
+
+async function handleLocalPreflightDryRun(
+  request: Request,
+  attachments: Array<{ url: string; [key: string]: unknown }>,
+): Promise<Response> {
+  const localSession = await getLocalServerSession(request)
+
+  if (!localSession?.userId || !localSession.user?.id) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!localSession.roles.includes(ROLES.PEGAWAI)) {
+    return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+  }
+
+  const movePlan = buildSubmitMovePlan({
+    ownerUserId: localSession.userId,
+    attachments,
+  })
+  const preflight = await preflightSubmitFiles({
+    actorUserId: localSession.userId,
+    movePlan,
+    existenceChecker: createSubmitDiskPreflightChecker(),
+  })
+
+  if (!preflight.ok) {
+    return Response.json({
+      dryRun: true,
+      boundary: 'local-preflight',
+      submitCompatible: true,
+      preflightOk: false,
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+      error: 'Local submit preflight failed; submit write path was not executed.',
+      issues: preflight.issues.map(toSafePreflightIssue),
+    }, { status: 400 })
+  }
+
+  return Response.json({
+    dryRun: true,
+    boundary: 'local-preflight',
+    submitCompatible: true,
+    preflightOk: true,
+    writePathExecuted: false,
+    filesystemMovementExecuted: false,
+    message: 'Local submit preflight validated; submit write path was not executed.',
+  }, { status: 200 })
+}
+
+function toSafePreflightIssue(issue: SubmitFilePreflightIssue) {
+  return {
+    code: issue.code,
+    message: issue.message,
+    index: issue.index,
+    clientCategory: issue.clientCategory,
+    sourceClassification: issue.sourceClassification,
+    movePlanIssueCode: issue.movePlanIssueCode,
+    checkKind: issue.checkKind,
+    sourceLogicalPath: safeLogicalPathForResponse(issue.sourceLogicalPath),
+    targetLogicalPath: safeLogicalPathForResponse(issue.targetLogicalPath),
+  }
+}
+
+function safeLogicalPathForResponse(logicalPath: string | null): string | null {
+  if (!logicalPath) return null
+
+  try {
+    return assertSafeLogicalStoragePath(logicalPath) === logicalPath
+      ? logicalPath
+      : null
+  } catch {
+    return null
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -85,6 +167,10 @@ export const Route = createFileRoute('/api/dokumen/submit')({
 
         if (isLocalAuthDryRunRequest(request)) {
           return handleLocalAuthDryRun(request)
+        }
+
+        if (isLocalPreflightDryRunRequest(request)) {
+          return handleLocalPreflightDryRun(request, parsed.data.lampiranUrls)
         }
 
         const supabase = createAuthClient(request)

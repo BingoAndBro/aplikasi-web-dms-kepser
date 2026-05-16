@@ -15,10 +15,13 @@ const FORMAL_PATH = `${OWNER_ID}/${DOKUMEN_ID}/${TARGET_UUID}.pdf`
 let currentKegiatanRow: { nama: string } | null
 let currentJenisDokumenRow: { nama: string } | null
 let currentKetuaTimAssignmentRow: { id: string } | null
+let preflightCheckSourceExists: ReturnType<typeof vi.fn>
+let preflightCheckTargetAvailable: ReturnType<typeof vi.fn>
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   createDokumen: vi.fn(),
+  createSubmitDiskPreflightChecker: vi.fn(),
   createServerSupabaseClient: vi.fn(),
   getKelengkapanRequired: vi.fn(),
   getLocalServerSession: vi.fn(),
@@ -42,6 +45,10 @@ vi.mock('#/lib/auth', () => ({
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
+}))
+
+vi.mock('#/lib/dokumen/submit-disk-preflight-checker', () => ({
+  createSubmitDiskPreflightChecker: mocks.createSubmitDiskPreflightChecker,
 }))
 
 vi.mock('#/lib/dokumen-helpers', () => ({
@@ -75,11 +82,17 @@ describe('/api/dokumen/submit legacy route parity', () => {
     currentKetuaTimAssignmentRow = { id: 'ketua-tim-assignment-id' }
     storageMove = vi.fn(async () => ({ error: null }))
     storageFrom = vi.fn(() => ({ move: storageMove }))
+    preflightCheckSourceExists = vi.fn(async () => true)
+    preflightCheckTargetAvailable = vi.fn(async () => true)
     supabaseClient = createSupabaseClientMock()
     adminClient = { storage: { from: storageFrom } }
 
     mocks.createServerSupabaseClient.mockReturnValue(supabaseClient)
     mocks.createAdminClient.mockReturnValue(adminClient)
+    mocks.createSubmitDiskPreflightChecker.mockReturnValue({
+      checkSourceExists: preflightCheckSourceExists,
+      checkTargetAvailable: preflightCheckTargetAvailable,
+    })
     mocks.getLocalServerSession.mockResolvedValue(null)
     mocks.getServerSession.mockResolvedValue(createSession())
     mocks.getKelengkapanRequired.mockResolvedValue([])
@@ -411,6 +424,7 @@ describe('/api/dokumen/submit legacy route parity', () => {
 
     expect(response.status).toBe(201)
     expect(mocks.getLocalServerSession).not.toHaveBeenCalled()
+    expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
     expect(mocks.createServerSupabaseClient).toHaveBeenCalledTimes(1)
     expect(mocks.createDokumen).toHaveBeenCalledTimes(1)
     expect(mocks.updateDokumenStatus).toHaveBeenCalledTimes(1)
@@ -428,6 +442,7 @@ describe('/api/dokumen/submit legacy route parity', () => {
     expect(response.status).toBe(401)
     expect(await response.json()).toEqual({ error: 'Unauthorized' })
     expect(mocks.getLocalServerSession).toHaveBeenCalledTimes(1)
+    expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
     expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
     expect(mocks.createDokumen).not.toHaveBeenCalled()
@@ -453,6 +468,7 @@ describe('/api/dokumen/submit legacy route parity', () => {
 
       expect(response.status).toBe(403)
       expect(await response.json()).toEqual({ error: 'Akses ditolak' })
+      expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
       expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
       expect(mocks.createAdminClient).not.toHaveBeenCalled()
       expect(mocks.createDokumen).not.toHaveBeenCalled()
@@ -491,6 +507,7 @@ describe('/api/dokumen/submit legacy route parity', () => {
     expect(body).not.toHaveProperty('dokumen')
     expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
     expect(mocks.getKelengkapanRequired).not.toHaveBeenCalled()
     expect(mocks.createDokumen).not.toHaveBeenCalled()
     expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
@@ -527,6 +544,301 @@ describe('/api/dokumen/submit legacy route parity', () => {
       expect(serializedBody.toLowerCase()).not.toContain(fragment.toLowerCase())
     }
     expect(serializedBody).not.toMatch(/[A-Za-z]:\\|\\\\/)
+  })
+
+  it('returns 401 Unauthorized for local preflight dry-run without a local session', async () => {
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload(),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.getLocalServerSession).toHaveBeenCalledTimes(1)
+    expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
+    expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.createDokumen).not.toHaveBeenCalled()
+    expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
+    expect(mocks.insertLog).not.toHaveBeenCalled()
+    expect(storageMove).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for local preflight dry-run when the local actor is not PEGAWAI-compatible', async () => {
+    for (const localSession of [
+      createLocalSession({ roles: ['ADMIN'], activeRole: 'ADMIN' }),
+      createLocalSession({ roles: ['PPK'], activeRole: 'PPK' }),
+    ]) {
+      vi.clearAllMocks()
+      mocks.createSubmitDiskPreflightChecker.mockReturnValue({
+        checkSourceExists: preflightCheckSourceExists,
+        checkTargetAvailable: preflightCheckTargetAvailable,
+      })
+      mocks.getLocalServerSession.mockResolvedValue(localSession)
+
+      const response = await submitHandler({
+        request: createJsonRequest(
+          createValidMaterialSubmitPayload(),
+          'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+        ),
+      })
+
+      expect(response.status).toBe(403)
+      expect(await response.json()).toEqual({ error: 'Akses ditolak' })
+      expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
+      expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
+      expect(mocks.createAdminClient).not.toHaveBeenCalled()
+      expect(mocks.createDokumen).not.toHaveBeenCalled()
+      expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
+      expect(mocks.insertLog).not.toHaveBeenCalled()
+      expect(storageMove).not.toHaveBeenCalled()
+    }
+  })
+
+  it('returns controlled 400 for local preflight dry-run when the local source is missing', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    preflightCheckSourceExists.mockResolvedValue(false)
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: DASH_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body).toMatchObject({
+      dryRun: true,
+      boundary: 'local-preflight',
+      submitCompatible: true,
+      preflightOk: false,
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+      error: 'Local submit preflight failed; submit write path was not executed.',
+      issues: [
+        expect.objectContaining({
+          code: 'source-missing',
+          clientCategory: 'local-storage-missing',
+          sourceLogicalPath: DASH_PENDING_PATH,
+          checkKind: 'source',
+        }),
+      ],
+    })
+    expect(body).not.toHaveProperty('success', true)
+    expect(body).not.toHaveProperty('dokumen')
+    expect(preflightCheckSourceExists).toHaveBeenCalledWith(DASH_PENDING_PATH)
+    expect(preflightCheckTargetAvailable).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns controlled 400 for local preflight dry-run when the target already exists', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    preflightCheckTargetAvailable.mockResolvedValue(false)
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body).toMatchObject({
+      dryRun: true,
+      boundary: 'local-preflight',
+      preflightOk: false,
+      issues: [
+        expect.objectContaining({
+          code: 'target-already-exists',
+          clientCategory: 'local-storage-conflict',
+          sourceLogicalPath: UNDERSCORE_PENDING_PATH,
+          checkKind: 'target',
+        }),
+      ],
+    })
+    expect(body.issues[0].targetLogicalPath).toEqual(expect.stringMatching(
+      new RegExp(`^${OWNER_ID}/temp-id/[0-9a-f-]{36}\\.pdf$`),
+    ))
+    expect(preflightCheckSourceExists).toHaveBeenCalledWith(UNDERSCORE_PENDING_PATH)
+    expect(preflightCheckTargetAvailable).toHaveBeenCalledTimes(1)
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns controlled 400 for local preflight dry-run when an attachment path is unsupported', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: `${OWNER_ID}/safe/existing.pdf` })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body).toMatchObject({
+      dryRun: true,
+      boundary: 'local-preflight',
+      preflightOk: false,
+      issues: [
+        expect.objectContaining({
+          code: 'unsupported-source-path',
+          sourceLogicalPath: `${OWNER_ID}/safe/existing.pdf`,
+          sourceClassification: 'unsupported',
+        }),
+      ],
+    })
+    expect(preflightCheckSourceExists).not.toHaveBeenCalled()
+    expect(preflightCheckTargetAvailable).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('does not echo unsafe logical paths in local preflight dry-run failures', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: 'C:\\storage\\secret.pdf' })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.issues).toEqual([
+      expect.objectContaining({
+        code: 'unsafe-logical-path',
+        sourceLogicalPath: null,
+        targetLogicalPath: null,
+      }),
+    ])
+    expect(JSON.stringify(body)).not.toContain('C:\\storage\\secret.pdf')
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns successful local preflight dry-run for already formal attachments without movement', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: FORMAL_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({
+      dryRun: true,
+      boundary: 'local-preflight',
+      submitCompatible: true,
+      preflightOk: true,
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+      message: 'Local submit preflight validated; submit write path was not executed.',
+    })
+    expect(body).not.toHaveProperty('success', true)
+    expect(body).not.toHaveProperty('dokumen')
+    expect(mocks.createSubmitDiskPreflightChecker).toHaveBeenCalledTimes(1)
+    expect(preflightCheckSourceExists).not.toHaveBeenCalled()
+    expect(preflightCheckTargetAvailable).not.toHaveBeenCalled()
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('returns successful local preflight dry-run for a valid local pending source and available target', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({
+      dryRun: true,
+      boundary: 'local-preflight',
+      submitCompatible: true,
+      preflightOk: true,
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+      message: 'Local submit preflight validated; submit write path was not executed.',
+    })
+    expect(preflightCheckSourceExists).toHaveBeenCalledWith(UNDERSCORE_PENDING_PATH)
+    expect(preflightCheckTargetAvailable).toHaveBeenCalledTimes(1)
+    expectNoWriteOrMoveCalls(storageMove)
+  })
+
+  it('does not expose sensitive values in the local preflight dry-run response', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+    preflightCheckSourceExists.mockResolvedValue(false)
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: DASH_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
+      ),
+    })
+    const serializedBody = JSON.stringify(await response.json())
+    const forbiddenFragments = [
+      'tok' + 'en',
+      'ha' + 'sh',
+      'DATABASE' + '_URL',
+      'DMS_LOCAL_STORAGE' + '_ROOT',
+      'signed' + 'Url',
+      'signed URL',
+      'storage' + ' root',
+      'physical' + ' path',
+      'sec' + 'ret',
+      'password' + '_hash',
+    ]
+
+    for (const fragment of forbiddenFragments) {
+      expect(serializedBody.toLowerCase()).not.toContain(fragment.toLowerCase())
+    }
+    expect(serializedBody).not.toMatch(/[A-Za-z]:\\|\\\\/)
+    expectNoWriteOrMoveCalls(storageMove)
   })
 })
 
@@ -633,6 +945,16 @@ function createLocalSession(overrides: {
     activeRole: overrides.activeRole,
     sessionId: 'local-session-id',
   }
+}
+
+function expectNoWriteOrMoveCalls(storageMove: ReturnType<typeof vi.fn>) {
+  expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
+  expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  expect(mocks.getKelengkapanRequired).not.toHaveBeenCalled()
+  expect(mocks.createDokumen).not.toHaveBeenCalled()
+  expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
+  expect(mocks.insertLog).not.toHaveBeenCalled()
+  expect(storageMove).not.toHaveBeenCalled()
 }
 
 function createDokumenRow(input: Record<string, unknown>) {
