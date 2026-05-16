@@ -1,14 +1,20 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
+import { z } from 'zod'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession } from '#/lib/auth'
-import { getDokumenById, storagePathBelongsToUser } from '#/lib/dokumen-helpers'
+import { getLocalServerSession } from '#/lib/auth/local-server-auth'
+import { getDokumenById } from '#/lib/dokumen-helpers'
+import {
+  classifyLocalPendingMovePath,
+  generateLocalFormalTargetLogicalPath,
+  LocalPendingMoveError,
+  moveLocalPendingFileToFormal,
+} from '#/lib/storage/local-pending-move'
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
+const renamePendingBodySchema = z.object({
+  dokId: z.string().min(1),
+  lampiranUrls: z.array(z.any()),
+  userId: z.string().optional(),
+}).passthrough()
 
 // ---------------------------------------------------------------------------
 // POST /api/dokumen/rename-pending
@@ -23,53 +29,28 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getServerSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) {
-          console.error('[API/dokumen/rename-pending] Unauthorized')
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        let body: { dokId: string; lampiranUrls: any[]; userId: string }
+        let bodyJson: unknown
         try {
-          body = await request.json()
-        } catch (e) {
-          console.error('[API/dokumen/rename-pending] Invalid JSON body:', e)
+          bodyJson = await request.json()
+        } catch {
           return Response.json({ error: 'Invalid request body' }, { status: 400 })
         }
 
-        const { dokId, lampiranUrls, userId } = body
-
-        if (!dokId || !lampiranUrls || !Array.isArray(lampiranUrls)) {
-          console.error('[API/dokumen/rename-pending] Missing required fields:', { dokId, lampiranUrls })
+        const parsedBody = renamePendingBodySchema.safeParse(bodyJson)
+        if (!parsedBody.success) {
           return Response.json({ error: 'Missing dokId or lampiranUrls' }, { status: 400 })
         }
 
-        if (userId !== session.user.id) {
+        const body = parsedBody.data
+        const { dokId, lampiranUrls, userId } = body
+
+        if (userId !== session.userId) {
           return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
-        }
-
-        console.log('[API/dokumen/rename-pending] Processing dokId:', dokId, 'lampiranCount:', lampiranUrls.length)
-
-        // Helper: check if path is PENDING format
-        function isPendingPath(url: string): boolean {
-          const pathParts = url.split('/')
-          const filenameWithExt = pathParts[pathParts.length - 1] || ''
-          return /^\d{13}-[a-zA-Z0-9]+-.+$/.test(filenameWithExt)
-        }
-
-        // Helper: extract extension
-        function extractExtension(url: string): string {
-          const filename = url.split('/').pop() || ''
-          const parts = filename.split('.')
-          return parts.length > 1 ? parts[parts.length - 1] : ''
-        }
-
-        // Helper: build formal path
-        function buildFormalPath(lamp: any): string {
-          const ext = extractExtension(lamp.url)
-          const uuid = crypto.randomUUID()
-          return `${userId}/${dokId}/${uuid}.${ext}`
         }
 
         const admin = createAdminClient()
@@ -77,7 +58,7 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
         if (!dokumen) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
-        if (dokumen.created_by !== session.user.id) {
+        if (dokumen.created_by !== session.userId) {
           return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
         }
 
@@ -85,43 +66,54 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
         const errors: { path: string; error: string }[] = []
 
         for (const lamp of lampiranUrls) {
-          if (!lamp.url || !isPendingPath(lamp.url)) {
-            console.log('[API/dokumen/rename-pending] Skipping non-pending:', lamp.url)
+          if (!lamp.url || typeof lamp.url !== 'string') {
             continue
           }
 
           const oldPath = lamp.url
-          if (!storagePathBelongsToUser(oldPath, session.user.id)) {
-            return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+
+          let classification: ReturnType<typeof classifyLocalPendingMovePath>
+          try {
+            classification = classifyLocalPendingMovePath(oldPath)
+          } catch {
+            return Response.json({ error: 'Path lampiran tidak valid' }, { status: 400 })
           }
 
-          const newPath = buildFormalPath(lamp)
-
-          console.log('[API/dokumen/rename-pending] Renaming:', { oldPath, newPath })
-
-          const { data, error } = await admin.storage
-            .from('dokumen-lampiran')
-            .move(oldPath, newPath)
-
-          if (error) {
-            console.error('[API/dokumen/rename-pending] Move failed for:', oldPath, 'error:', error.message)
-            errors.push({ path: oldPath, error: error.message })
-            // Option 1: Fail entire operation if any rename fails
-            return Response.json({
-              error: `Gagal memproses file: ${error.message}`,
-              details: {
-                failedPath: oldPath,
-                newPath: newPath,
-                reason: error.message,
-              },
-            }, { status: 500 })
+          if (classification === 'formal' || classification === 'unsupported') {
+            continue
           }
 
-          console.log('[API/dokumen/rename-pending] Move success:', oldPath, '->', newPath)
-          renamed.push({ oldPath, newPath })
+          const targetUuid = crypto.randomUUID()
+          let newPath: string
+
+          try {
+            newPath = generateLocalFormalTargetLogicalPath({
+              sourceLogicalPath: oldPath,
+              ownerUserId: session.userId,
+              dokumenId: dokId,
+              targetUuid,
+            })
+          } catch (error) {
+            return localPendingMoveErrorResponse(error, oldPath)
+          }
+
+          try {
+            const result = await moveLocalPendingFileToFormal({
+              sourceLogicalPath: oldPath,
+              ownerUserId: session.userId,
+              dokumenId: dokId,
+              targetUuid,
+            })
+
+            if (result.action === 'moved') {
+              renamed.push({ oldPath: result.sourceLogicalPath, newPath: result.targetLogicalPath })
+            }
+          } catch (error) {
+            const message = pendingMoveErrorMessage(error)
+            errors.push({ path: oldPath, error: message })
+            return localPendingMoveErrorResponse(error, oldPath, newPath)
+          }
         }
-
-        console.log('[API/dokumen/rename-pending] Done. Renamed:', renamed.length, 'errors:', errors.length)
 
         return Response.json({
           success: true,
@@ -132,3 +124,66 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
     },
   },
 })
+
+function localPendingMoveErrorResponse(error: unknown, oldPath: string, newPath?: string): Response {
+  if (error instanceof LocalPendingMoveError) {
+    switch (error.code) {
+      case 'owner-mismatch':
+        return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+      case 'invalid-source-path':
+        return Response.json({ error: 'Path lampiran tidak valid' }, { status: 400 })
+      case 'invalid-document-id':
+      case 'invalid-owner-id':
+      case 'invalid-target-path':
+      case 'invalid-target-uuid':
+      case 'source-not-file':
+      case 'missing-source':
+      case 'move-failed':
+      case 'target-exists':
+      case 'unsupported-source-path':
+        return Response.json({
+          error: `Gagal memproses file: ${pendingMoveErrorMessage(error)}`,
+          details: {
+            failedPath: oldPath,
+            newPath,
+            reason: pendingMoveErrorMessage(error),
+          },
+        }, { status: 500 })
+    }
+  }
+
+  return Response.json({
+    error: 'Gagal memproses file: Terjadi kesalahan',
+    details: {
+      failedPath: oldPath,
+      newPath,
+      reason: 'Terjadi kesalahan',
+    },
+  }, { status: 500 })
+}
+
+function pendingMoveErrorMessage(error: unknown): string {
+  if (!(error instanceof LocalPendingMoveError)) {
+    return 'Terjadi kesalahan'
+  }
+
+  switch (error.code) {
+    case 'missing-source':
+      return 'File lokal tidak ditemukan'
+    case 'target-exists':
+      return 'Target file sudah ada'
+    case 'source-not-file':
+      return 'File sumber tidak valid'
+    case 'move-failed':
+      return 'Pemindahan file gagal'
+    case 'unsupported-source-path':
+      return 'Path lampiran tidak didukung'
+    case 'invalid-document-id':
+    case 'invalid-owner-id':
+    case 'invalid-source-path':
+    case 'invalid-target-path':
+    case 'invalid-target-uuid':
+    case 'owner-mismatch':
+      return 'Path lampiran tidak valid'
+  }
+}
