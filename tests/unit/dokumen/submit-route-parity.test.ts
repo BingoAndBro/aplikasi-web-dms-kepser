@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   createDokumen: vi.fn(),
   createServerSupabaseClient: vi.fn(),
   getKelengkapanRequired: vi.fn(),
+  getLocalServerSession: vi.fn(),
   getServerSession: vi.fn(),
   insertLog: vi.fn(),
   resolveLeafNodeName: vi.fn(),
@@ -37,6 +38,10 @@ vi.mock('#/lib/supabase-admin', () => ({
 
 vi.mock('#/lib/auth', () => ({
   getServerSession: mocks.getServerSession,
+}))
+
+vi.mock('#/lib/auth/local-server-auth', () => ({
+  getLocalServerSession: mocks.getLocalServerSession,
 }))
 
 vi.mock('#/lib/dokumen-helpers', () => ({
@@ -75,6 +80,7 @@ describe('/api/dokumen/submit legacy route parity', () => {
 
     mocks.createServerSupabaseClient.mockReturnValue(supabaseClient)
     mocks.createAdminClient.mockReturnValue(adminClient)
+    mocks.getLocalServerSession.mockResolvedValue(null)
     mocks.getServerSession.mockResolvedValue(createSession())
     mocks.getKelengkapanRequired.mockResolvedValue([])
     mocks.resolveLeafNodeName.mockResolvedValue('Detail Permintaan')
@@ -397,10 +403,138 @@ describe('/api/dokumen/submit legacy route parity', () => {
     })
     expect(mocks.insertLog).toHaveBeenCalledTimes(1)
   })
+
+  it('preserves the default legacy path when useLocalAuthDryRun is absent', async () => {
+    const response = await submitHandler({
+      request: createJsonRequest(createValidMaterialSubmitPayload()),
+    })
+
+    expect(response.status).toBe(201)
+    expect(mocks.getLocalServerSession).not.toHaveBeenCalled()
+    expect(mocks.createServerSupabaseClient).toHaveBeenCalledTimes(1)
+    expect(mocks.createDokumen).toHaveBeenCalledTimes(1)
+    expect(mocks.updateDokumenStatus).toHaveBeenCalledTimes(1)
+    expect(mocks.insertLog).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 401 Unauthorized for local auth dry-run without a local session', async () => {
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload(),
+        'http://localhost/api/dokumen/submit?useLocalAuthDryRun=true',
+      ),
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.getLocalServerSession).toHaveBeenCalledTimes(1)
+    expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.createDokumen).not.toHaveBeenCalled()
+    expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
+    expect(mocks.insertLog).not.toHaveBeenCalled()
+    expect(storageMove).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for local auth dry-run when the local actor is not PEGAWAI-compatible', async () => {
+    for (const localSession of [
+      createLocalSession({ roles: ['ADMIN'], activeRole: 'ADMIN' }),
+      createLocalSession({ roles: ['PPK'], activeRole: 'PPK' }),
+    ]) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(localSession)
+
+      const response = await submitHandler({
+        request: createJsonRequest(
+          createValidMaterialSubmitPayload(),
+          'http://localhost/api/dokumen/submit?useLocalAuthDryRun=true',
+        ),
+      })
+
+      expect(response.status).toBe(403)
+      expect(await response.json()).toEqual({ error: 'Akses ditolak' })
+      expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
+      expect(mocks.createAdminClient).not.toHaveBeenCalled()
+      expect(mocks.createDokumen).not.toHaveBeenCalled()
+      expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
+      expect(mocks.insertLog).not.toHaveBeenCalled()
+      expect(storageMove).not.toHaveBeenCalled()
+    }
+  })
+
+  it('returns a non-success local auth dry-run response for a valid PEGAWAI session without writes or moves', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload({
+          lampiranUrls: [createLampiran({ url: DASH_PENDING_PATH })],
+        }),
+        'http://localhost/api/dokumen/submit?useLocalAuthDryRun=true',
+      ),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({
+      dryRun: true,
+      boundary: 'local-auth',
+      submitCompatible: true,
+      writePathExecuted: false,
+      filesystemMovementExecuted: false,
+      message: 'Local auth boundary validated; submit write path was not executed.',
+    })
+    expect(body).not.toHaveProperty('success', true)
+    expect(body).not.toHaveProperty('dokumen')
+    expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.getKelengkapanRequired).not.toHaveBeenCalled()
+    expect(mocks.createDokumen).not.toHaveBeenCalled()
+    expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()
+    expect(mocks.insertLog).not.toHaveBeenCalled()
+    expect(storageMove).not.toHaveBeenCalled()
+  })
+
+  it('does not expose sensitive values in the local auth dry-run response', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createLocalSession({
+      roles: ['PEGAWAI'],
+      activeRole: 'PEGAWAI',
+    }))
+
+    const response = await submitHandler({
+      request: createJsonRequest(
+        createValidMaterialSubmitPayload(),
+        'http://localhost/api/dokumen/submit?useLocalAuthDryRun=true',
+      ),
+    })
+    const serializedBody = JSON.stringify(await response.json())
+    const forbiddenFragments = [
+      'tok' + 'en',
+      'ha' + 'sh',
+      'DATABASE' + '_URL',
+      'DMS_LOCAL_STORAGE' + '_ROOT',
+      'signed' + 'Url',
+      'signed URL',
+      'storage' + ' root',
+      'sec' + 'ret',
+      'password' + '_hash',
+    ]
+
+    for (const fragment of forbiddenFragments) {
+      expect(serializedBody.toLowerCase()).not.toContain(fragment.toLowerCase())
+    }
+    expect(serializedBody).not.toMatch(/[A-Za-z]:\\|\\\\/)
+  })
 })
 
-function createJsonRequest(body: unknown): Request {
-  return new Request('http://localhost/api/dokumen/submit', {
+function createJsonRequest(
+  body: unknown,
+  url = 'http://localhost/api/dokumen/submit',
+): Request {
+  return new Request(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -480,6 +614,24 @@ function createSession() {
         nama_lengkap: 'Pegawai Test',
       },
     },
+  }
+}
+
+function createLocalSession(overrides: {
+  roles: Array<'PEGAWAI' | 'PPK' | 'BENDAHARA' | 'ARSIPARIS' | 'ADMIN'>
+  activeRole: 'PEGAWAI' | 'PPK' | 'BENDAHARA' | 'ARSIPARIS' | 'ADMIN'
+}) {
+  return {
+    user: {
+      id: OWNER_ID,
+      email: 'pegawai@example.test',
+      userName: 'Pegawai Test',
+    },
+    userId: OWNER_ID,
+    email: 'pegawai@example.test',
+    roles: overrides.roles,
+    activeRole: overrides.activeRole,
+    sessionId: 'local-session-id',
   }
 }
 

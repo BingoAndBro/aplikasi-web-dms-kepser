@@ -2,8 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession } from '#/lib/auth'
+import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
 import type { TransitionResult } from '#/lib/types/fsm'
+import { ROLES } from '#/lib/constants/roles'
 import {
   getKelengkapanRequired,
   createDokumen,
@@ -20,6 +22,31 @@ function createAuthClient(request: Request) {
     cookie: { get: () => undefined, set: () => {}, delete: () => {} },
   } as any
   return createServerSupabaseClient(mockEvent, cookieHeader)
+}
+
+function isLocalAuthDryRunRequest(request: Request): boolean {
+  return new URL(request.url).searchParams.get('useLocalAuthDryRun') === 'true'
+}
+
+async function handleLocalAuthDryRun(request: Request): Promise<Response> {
+  const localSession = await getLocalServerSession(request)
+
+  if (!localSession?.userId || !localSession.user?.id) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!localSession.roles.includes(ROLES.PEGAWAI)) {
+    return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+  }
+
+  return Response.json({
+    dryRun: true,
+    boundary: 'local-auth',
+    submitCompatible: true,
+    writePathExecuted: false,
+    filesystemMovementExecuted: false,
+    message: 'Local auth boundary validated; submit write path was not executed.',
+  }, { status: 200 })
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +81,10 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         )
         if (!nominalValidation.valid) {
           return Response.json({ error: nominalValidation.error }, { status: 400 })
+        }
+
+        if (isLocalAuthDryRunRequest(request)) {
+          return handleLocalAuthDryRun(request)
         }
 
         const supabase = createAuthClient(request)
