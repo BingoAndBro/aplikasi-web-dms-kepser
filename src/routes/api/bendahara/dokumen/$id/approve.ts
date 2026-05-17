@@ -1,15 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession as getSession } from '#/lib/auth'
+import { and, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { approveDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
-import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
+import type { StatusDokumen } from '#/lib/types/fsm'
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ---------------------------------------------------------------------------
@@ -20,42 +19,90 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('BENDAHARA')) return Response.json({ error: 'Akses ditolak — bukan Bendahara' }, { status: 403 })
+        if (!hasLocalRole(session, 'BENDAHARA')) {
+          return Response.json({ error: 'Akses ditolak — bukan Bendahara' }, { status: 403 })
+        }
 
         let body: unknown = {}
         try { body = await request.json() } catch { /* empty ok */ }
         const parsed = approveDokumenSchema.safeParse(body)
         if (!parsed.success) return Response.json({ error: 'Validasi gagal' }, { status: 400 })
 
-        const { data: dok, error: dokError } = await supabase.from('dokumen_transaksi').select('id, status').eq('id', params.id).single()
-        if (dokError || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
+
+        let dokRows: Array<{ id: string; status: string }>
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              status: dokumenTransaksi.status,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/bendahara/dokumen/:id/approve] local lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
+        if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         if (dok.status !== 'IN_BENDAHARA_APPROVAL') return Response.json({ error: 'Dokumen sudah tidak dalam tahap persetujuan' }, { status: 400 })
 
-        // Idempotency: block only double approval (not rejection/resubmit cycles).
-        // If Bendahara previously rejected → document went to NEED_REVISION → PPK resubmitted
-        // → it re-entered IN_BENDAHARA_APPROVAL → a fresh approval is allowed.
-        const { data: existingApprove } = await supabase.from('log_aktivitas')
-          .select('id').eq('dokumen_id', params.id)
-          .eq('aksi', 'BENDAHARA_APPROVE').single()
-        if (existingApprove) return Response.json({ error: 'Dokumen sudah pernah disetujui' }, { status: 400 })
+        // Preserve legacy duplicate approval guard.
+        let existingApproveRows: Array<{ id: string }>
+        try {
+          existingApproveRows = await db
+            .select({ id: logAktivitas.id })
+            .from(logAktivitas)
+            .where(and(
+              eq(logAktivitas.dokumenId, params.id),
+              eq(logAktivitas.aksi, 'BENDAHARA_APPROVE'),
+            ))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/bendahara/dokumen/:id/approve] local audit lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
+        if (existingApproveRows.length > 0) return Response.json({ error: 'Dokumen sudah pernah disetujui' }, { status: 400 })
 
-        const result = transition(dok.status, 'APPROVE', 'BENDAHARA')
+        const result = transition(dok.status as StatusDokumen, 'APPROVE', 'BENDAHARA')
         if (!result.success) return Response.json({ error: result.error ?? 'Transisi gagal' }, { status: 400 })
 
-        // Use admin client to bypass RLS for UPDATE
-        const admin = createAdminClient()
-        const updateErr = await updateDokumenStatus(admin, params.id, {
-          status: result.newStatus, currentStep: result.newCurrentStep, revisionTarget: result.newRevisionTarget,
-        })
-        if (updateErr.error) return Response.json({ error: updateErr.error }, { status: 500 })
+        try {
+          await db.transaction(async (tx) => {
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set({
+                status: result.newStatus,
+                currentStep: result.newCurrentStep,
+                revisionTarget: result.newRevisionTarget,
+                revisionNotes: null,
+                updatedAt: new Date(),
+              })
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
 
-        await insertLog(admin, { dokumenId: params.id, userId: session.user.id, aksi: 'BENDAHARA_APPROVE', stepUrutan: result.stepUrutan ?? 2 })
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+            }
+
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi: 'BENDAHARA_APPROVE',
+              stepUrutan: result.stepUrutan ?? 2,
+            })
+          })
+        } catch (err) {
+          console.error('[API/bendahara/dokumen/:id/approve] local transaction error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
 
         return Response.json({ success: true, message: 'Dokumen disetujui', redirectTo: '/bendahara/selesai' })
       },
