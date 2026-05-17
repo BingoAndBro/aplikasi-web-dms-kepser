@@ -1,19 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession } from '#/lib/auth'
-
-function createAuthClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
+import { and, desc, eq, sql, type SQL } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
+import { masterFungsi, masterKegiatan } from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 // ---------------------------------------------------------------------------
-// GET /api/ppk/inbox — list dokumen IN_PPK_VALIDATION
+// GET /api/ppk/inbox - list dokumen IN_PPK_VALIDATION
 // Query params: fungsi_id (optional), start_date (optional), end_date (optional)
 // ---------------------------------------------------------------------------
 
@@ -21,103 +14,64 @@ export const Route = createFileRoute('/api/ppk/inbox')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        // 1. Verifikasi auth via session (anon client + cookies)
-        const authClient = createAuthClient(request)
-        const session = await getServerSession(authClient)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // 2. Role check: must be PPK
-        const { data: rolesData } = await authClient
-          .from('user_roles')
-          .select('role:roles(nama)')
-          .eq('user_id', session.user.id)
-
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('PPK')) {
-          return Response.json({ error: 'Akses ditolak — bukan PPK' }, { status: 403 })
+        if (!hasLocalRole(session, 'PPK')) {
+          return Response.json({ error: 'Akses ditolak \u2014 bukan PPK' }, { status: 403 })
         }
 
-        // 3. Data fetch menggunakan admin client (bypass RLS) karena PPK
-        //    perlu melihat dokumen milik pegawai lain
-        const admin = createAdminClient()
-
-        // Parse query params
         const url = new URL(request.url)
         const fungsiId = url.searchParams.get('fungsi_id') ?? undefined
         const startDate = url.searchParams.get('start_date') ?? undefined
         const endDate = url.searchParams.get('end_date') ?? undefined
 
-        // Build query
-        let query = admin
-          .from('dokumen_transaksi')
-          .select('id, judul, fungsi_id, kegiatan_jenis_id, created_by, tahun, tanggal, created_at, status')
-          .eq('status', 'IN_PPK_VALIDATION')
+        const filters: SQL[] = [eq(dokumenTransaksi.status, 'IN_PPK_VALIDATION')]
+        if (fungsiId) filters.push(eq(dokumenTransaksi.fungsiId, fungsiId))
+        if (startDate) filters.push(sql`${dokumenTransaksi.createdAt} >= ${startDate}`)
+        if (endDate) filters.push(sql`${dokumenTransaksi.createdAt} <= ${endDate + 'T23:59:59'}`)
 
-        if (fungsiId) {
-          query = query.eq('fungsi_id', fungsiId)
-        }
-        if (startDate) {
-          query = query.gte('created_at', startDate)
-        }
-        if (endDate) {
-          query = query.lte('created_at', endDate + 'T23:59:59')
-        }
-        query = query.order('created_at', { ascending: false })
+        try {
+          const docs = await db
+            .select({
+              id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_id: dokumenTransaksi.fungsiId,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              kegiatan_nama: masterKegiatan.nama,
+              created_by: dokumenTransaksi.createdBy,
+              tahun: dokumenTransaksi.tahun,
+              tanggal: dokumenTransaksi.tanggal,
+              created_at: dokumenTransaksi.createdAt,
+            })
+            .from(dokumenTransaksi)
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .where(and(...filters))
+            .orderBy(desc(dokumenTransaksi.createdAt))
 
-        const { data: docs, error } = await query
-
-        if (error) {
-          console.error('[ppk/inbox] query error:', error)
+          return Response.json({
+            dokumen: docs.map((d) => ({
+              id: d.id,
+              judul: d.judul,
+              fungsi_id: d.fungsi_id,
+              fungsi_nama: d.fungsi_nama ?? '\u2014',
+              kegiatan_jenis_id: d.kegiatan_jenis_id,
+              kegiatan_nama: d.kegiatan_nama ?? '\u2014',
+              created_by: d.created_by,
+              tahun: d.tahun,
+              tanggal: d.tanggal,
+              created_at: d.created_at,
+            })),
+          })
+        } catch (err) {
+          console.error('[ppk/inbox] query error:', err)
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
-
-        if (!docs || docs.length === 0) {
-          return Response.json({ dokumen: [] })
-        }
-
-        // Manual join: fungsi_nama
-        const fungsiIds = [...new Set(docs.map(d => d.fungsi_id).filter(Boolean))]
-        const fungsiMap: Record<string, string> = {}
-        if (fungsiIds.length > 0) {
-          const { data: fungsiRows } = await admin
-            .from('master_fungsi')
-            .select('id, nama')
-            .in('id', fungsiIds)
-          for (const row of fungsiRows ?? []) {
-            fungsiMap[row.id] = row.nama
-          }
-        }
-
-        // Manual join: kegiatan_nama
-        const kegIds = [...new Set(docs.map(d => d.kegiatan_jenis_id).filter(Boolean))]
-        const kegMap: Record<string, string> = {}
-        if (kegIds.length > 0) {
-          const { data: kegRows } = await admin
-            .from('master_kegiatan')
-            .select('id, nama')
-            .in('id', kegIds)
-          for (const row of kegRows ?? []) {
-            kegMap[row.id] = row.nama
-          }
-        }
-
-        const result = docs.map(d => ({
-          id: d.id,
-          judul: d.judul,
-          fungsi_id: d.fungsi_id,
-          fungsi_nama: fungsiMap[d.fungsi_id] ?? '—',
-          kegiatan_jenis_id: d.kegiatan_jenis_id,
-          kegiatan_nama: kegMap[d.kegiatan_jenis_id] ?? '—',
-          created_by: d.created_by,
-          tahun: d.tahun,
-          tanggal: d.tanggal,
-          created_at: d.created_at,
-        }))
-
-        return Response.json({ dokumen: result })
       },
     },
   },

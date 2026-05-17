@@ -1,11 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { desc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
+import { masterFungsi, masterKegiatan } from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createDokumenSchema } from '#/lib/schemas/dokumen'
 import {
-  getDokumenByUser,
   createDokumen,
 } from '#/lib/dokumen-helpers'
+import { parseDokumenWithNames } from '#/lib/dokumen'
 
 // ---------------------------------------------------------------------------
 // Helper: create Supabase client with cookie
@@ -29,15 +34,54 @@ export const Route = createFileRoute('/api/dokumen/')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const list = await getDokumenByUser(supabase, session.user.id)
-        return Response.json({ dokumen: list })
+        if (!hasLocalRole(session, 'PEGAWAI')) {
+          return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        }
+
+        try {
+          const rows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_id: dokumenTransaksi.fungsiId,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+              status: dokumenTransaksi.status,
+              current_step: dokumenTransaksi.currentStep,
+              revision_target: dokumenTransaksi.revisionTarget,
+              revision_notes: dokumenTransaksi.revisionNotes,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              tahun: dokumenTransaksi.tahun,
+              tanggal: dokumenTransaksi.tanggal,
+              created_by: dokumenTransaksi.createdBy,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
+              keterangan_detail: dokumenTransaksi.keteranganDetail,
+              created_at: dokumenTransaksi.createdAt,
+              updated_at: dokumenTransaksi.updatedAt,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_nama: masterKegiatan.nama,
+            })
+            .from(dokumenTransaksi)
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .where(eq(dokumenTransaksi.createdBy, session.user.id))
+            .orderBy(desc(dokumenTransaksi.createdAt))
+
+          return Response.json({
+            dokumen: rows.map((row) => parseDokumenWithNames(row, {}, {})),
+          })
+        } catch (err) {
+          console.error('[dokumen/index] GET local query error:', err)
+          return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+        }
       },
 
       POST: async ({ request }: { request: Request }) => {
