@@ -1,120 +1,135 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
-import type { LampiranUrl } from '#/lib/dokumen-helpers'
+import { and, asc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { arsip } from '#/db/schema/arsip'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import {
+  masterDetailPermintaan,
+  masterFungsi,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
+  masterKegiatan,
+} from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { parseLampiranUrls } from '#/lib/dokumen'
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value)
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/arsiparis/dokumen/[id] — detail dokumen untuk review arsip
+// GET /api/arsiparis/dokumen/[id] - detail dokumen untuk review arsip
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!isUuid(params.id)) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-        const { data: dok, error } = await supabase.from('dokumen_transaksi').select('*').eq('id', params.id).single()
-        if (error || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        try {
+          const rows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_id: dokumenTransaksi.fungsiId,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              kegiatan_nama: masterKegiatan.nama,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+              status: dokumenTransaksi.status,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              tahun: dokumenTransaksi.tahun,
+              tanggal: dokumenTransaksi.tanggal,
+              created_by: dokumenTransaksi.createdBy,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+              jenis_permintaan_nama: masterJenisPermintaan.nama,
+              kategori_permintaan_nama: masterKategoriPermintaan.nama,
+              detail_permintaan_nama: masterDetailPermintaan.nama,
+            })
+            .from(dokumenTransaksi)
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
+            .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
+            .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
 
-        // Hanya bisa lihat dokumen berstatus COMPLETED
-        if (dok.status !== 'COMPLETED') {
-          return Response.json({ error: 'Dokumen belum menyelesaikan approval' }, { status: 400 })
+          const dok = rows[0]
+          if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+
+          if (dok.status !== 'COMPLETED') {
+            return Response.json({ error: 'Dokumen belum menyelesaikan approval' }, { status: 400 })
+          }
+
+          const bendaharaLogs = await db
+            .select({
+              user_id: logAktivitas.userId,
+              timestamp: logAktivitas.timestamp,
+            })
+            .from(logAktivitas)
+            .where(and(
+              eq(logAktivitas.dokumenId, params.id),
+              eq(logAktivitas.aksi, 'BENDAHARA_APPROVE'),
+            ))
+            .orderBy(asc(logAktivitas.timestamp))
+            .limit(1)
+
+          const arsipRows = await db
+            .select({
+              id: arsip.id,
+              status_arsip: arsip.statusArsip,
+              nomor_surat: arsip.nomorSurat,
+            })
+            .from(arsip)
+            .where(eq(arsip.dokumenId, params.id))
+            .limit(1)
+
+          const bendaharaLog = bendaharaLogs[0]
+          const arsipRecord = arsipRows[0]
+
+          return Response.json({
+            dokumen: {
+              id: dok.id,
+              judul: dok.judul,
+              fungsi: { id: dok.fungsi_id ?? '', nama: dok.fungsi_nama ?? '\u2014' },
+              kegiatan: { id: dok.kegiatan_jenis_id ?? '', nama: dok.kegiatan_nama ?? '\u2014' },
+              jenis_permintaan_id: dok.jenis_permintaan_id,
+              jenis_permintaan_nama: dok.jenis_permintaan_nama ?? undefined,
+              kategori_permintaan_id: dok.kategori_permintaan_id,
+              kategori_permintaan_nama: dok.kategori_permintaan_nama ?? undefined,
+              detail_permintaan_id: dok.detail_permintaan_id,
+              detail_permintaan_nama: dok.detail_permintaan_nama ?? undefined,
+              tanggal: dok.tanggal,
+              tahun: dok.tahun,
+              is_ketua_tim: dok.is_ketua_tim,
+              lampiran_urls: parseLampiranUrls(dok.lampiran_urls),
+              created_by: { id: dok.created_by, nama: 'Pegawai' },
+              status: dok.status,
+              is_archived: !!arsipRecord,
+            },
+            bendahara_approve: bendaharaLog
+              ? { nama: 'Bendahara', tanggal: bendaharaLog.timestamp }
+              : null,
+            arsip: arsipRecord
+              ? {
+                  id: arsipRecord.id,
+                  status_arsip: arsipRecord.status_arsip,
+                  nomor_surat: arsipRecord.nomor_surat,
+                }
+              : null,
+          })
+        } catch (err) {
+          console.error('[arsiparis/dokumen/:id] GET local query error:', err)
+          return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
-
-        // Get fungsi & kegiatan names
-        let fungsiNama = '—', fungsiId = ''
-        if (dok.fungsi_id) {
-          const { data: f } = await supabase.from('master_fungsi').select('id, nama').eq('id', dok.fungsi_id).single()
-          if (f) { fungsiNama = f.nama; fungsiId = f.id }
-        }
-
-        let kegiatanNama = '—', kegiatanId = ''
-        if (dok.kegiatan_jenis_id) {
-          const { data: k } = await supabase.from('master_kegiatan').select('id, nama').eq('id', dok.kegiatan_jenis_id).single()
-          if (k) { kegiatanNama = k.nama; kegiatanId = k.id }
-        }
-
-        // Get chain names
-        let jenisPermintaanNama: string | undefined
-        if (dok.jenis_permintaan_id) {
-          const { data: j } = await supabase.from('master_jenis_permintaan').select('nama').eq('id', dok.jenis_permintaan_id).single()
-          if (j) jenisPermintaanNama = j.nama
-        }
-
-        let kategoriPermintaanNama: string | undefined
-        if (dok.kategori_permintaan_id) {
-          const { data: k } = await supabase.from('master_kategori_permintaan').select('nama').eq('id', dok.kategori_permintaan_id).single()
-          if (k) kategoriPermintaanNama = k.nama
-        }
-
-        let detailPermintaanNama: string | undefined
-        if (dok.detail_permintaan_id) {
-          const { data: d } = await supabase.from('master_detail_permintaan').select('nama').eq('id', dok.detail_permintaan_id).single()
-          if (d) detailPermintaanNama = d.nama
-        }
-
-        // Parse lampiran_urls
-        let lampiranUrls: LampiranUrl[] = []
-        if (dok.lampiran_urls) {
-          lampiranUrls = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
-        }
-
-        // Get BENDAHARA_APPROVE log
-        const { data: bendaharaLog } = await supabase
-          .from('log_aktivitas')
-          .select('user_id, timestamp')
-          .eq('dokumen_id', params.id)
-          .eq('aksi', 'BENDAHARA_APPROVE')
-          .single()
-
-        const bendaharaApprove = bendaharaLog
-          ? { nama: 'Bendahara', tanggal: bendaharaLog.timestamp }
-          : null
-
-        // Check apakah sudah ada record arsip
-        const { data: arsipRecord } = await supabase
-          .from('arsip')
-          .select('id, status_arsip, nomor_surat')
-          .eq('dokumen_id', params.id)
-          .single()
-
-        return Response.json({
-          dokumen: {
-            id: dok.id,
-            judul: dok.judul,
-            fungsi: { id: fungsiId, nama: fungsiNama },
-            kegiatan: { id: kegiatanId, nama: kegiatanNama },
-            jenis_permintaan_id: dok.jenis_permintaan_id,
-            jenis_permintaan_nama: jenisPermintaanNama,
-            kategori_permintaan_id: dok.kategori_permintaan_id,
-            kategori_permintaan_nama: kategoriPermintaanNama,
-            detail_permintaan_id: dok.detail_permintaan_id,
-            detail_permintaan_nama: detailPermintaanNama,
-            tanggal: dok.tanggal,
-            tahun: dok.tahun,
-            is_ketua_tim: dok.is_ketua_tim,
-            lampiran_urls: lampiranUrls,
-            created_by: { id: dok.created_by, nama: 'Pegawai' },
-            status: dok.status,
-            is_archived: !!arsipRecord,
-          },
-          bendahara_approve: bendaharaApprove,
-          arsip: arsipRecord
-            ? { id: arsipRecord.id, status_arsip: arsipRecord.status_arsip, nomor_surat: arsipRecord.nomor_surat }
-            : null,
-        })
       },
     },
   },

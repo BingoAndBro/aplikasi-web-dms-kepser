@@ -1,100 +1,156 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
-import type { LampiranUrl } from '#/lib/dokumen-helpers'
+import { and, asc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import {
+  masterDetailPermintaan,
+  masterFungsi,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
+  masterKegiatan,
+} from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { parseLampiranUrls } from '#/lib/dokumen'
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value)
+}
+
+function normalizeNumericValue(value: string | number | null): number | null {
+  if (value === null) return null
+  if (typeof value === 'number') return value
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function canBendaharaRead(status: string, revisionTarget: string | null): boolean {
+  return status === 'IN_BENDAHARA_APPROVAL'
+    || status === 'COMPLETED'
+    || status === 'ARCHIVED'
+    || (status === 'NEED_REVISION' && revisionTarget === 'PPK')
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/bendahara/dokumen/[id] — get dokumen detail for Bendahara
+// GET /api/bendahara/dokumen/[id] - get dokumen detail for Bendahara
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        if (!hasLocalRole(session, 'BENDAHARA')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('BENDAHARA')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!isUuid(params.id)) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-        const { data: dok, error } = await supabase.from('dokumen_transaksi').select('*').eq('id', params.id).single()
-        if (error || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        try {
+          const rows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_id: dokumenTransaksi.fungsiId,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              kegiatan_nama: masterKegiatan.nama,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+              status: dokumenTransaksi.status,
+              current_step: dokumenTransaksi.currentStep,
+              revision_target: dokumenTransaksi.revisionTarget,
+              revision_notes: dokumenTransaksi.revisionNotes,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              tahun: dokumenTransaksi.tahun,
+              tanggal: dokumenTransaksi.tanggal,
+              created_by: dokumenTransaksi.createdBy,
+              created_at: dokumenTransaksi.createdAt,
+              updated_at: dokumenTransaksi.updatedAt,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+              jenis_permintaan_nama: masterJenisPermintaan.nama,
+              kategori_permintaan_nama: masterKategoriPermintaan.nama,
+              detail_permintaan_nama: masterDetailPermintaan.nama,
+            })
+            .from(dokumenTransaksi)
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
+            .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
+            .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
 
-        let fungsiNama = '—'
-        if (dok.fungsi_id) {
-          const { data: f } = await supabase.from('master_fungsi').select('nama').eq('id', dok.fungsi_id).single()
-          if (f) fungsiNama = f.nama
+          const dok = rows[0]
+          if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+
+          if (!canBendaharaRead(dok.status, dok.revision_target)) {
+            return Response.json({ error: 'Dokumen tidak tersedia untuk Bendahara' }, { status: 400 })
+          }
+
+          const ppkLogs = await db
+            .select({
+              user_id: logAktivitas.userId,
+              timestamp: logAktivitas.timestamp,
+            })
+            .from(logAktivitas)
+            .where(and(
+              eq(logAktivitas.dokumenId, params.id),
+              eq(logAktivitas.aksi, 'PPK_APPROVE'),
+            ))
+            .orderBy(asc(logAktivitas.timestamp))
+            .limit(1)
+
+          const logs = await db
+            .select({
+              id: logAktivitas.id,
+              dokumen_id: logAktivitas.dokumenId,
+              user_id: logAktivitas.userId,
+              aksi: logAktivitas.aksi,
+              catatan: logAktivitas.catatan,
+              step_urutan: logAktivitas.stepUrutan,
+              timestamp: logAktivitas.timestamp,
+            })
+            .from(logAktivitas)
+            .where(eq(logAktivitas.dokumenId, params.id))
+            .orderBy(asc(logAktivitas.timestamp))
+
+          const ppkValidation = ppkLogs[0]
+
+          return Response.json({
+            dokumen: {
+              id: dok.id,
+              judul: dok.judul,
+              fungsi_id: dok.fungsi_id,
+              fungsi_nama: dok.fungsi_nama ?? '\u2014',
+              kegiatan_jenis_id: dok.kegiatan_jenis_id,
+              kegiatan_nama: dok.kegiatan_nama ?? '\u2014',
+              is_ketua_tim: dok.is_ketua_tim,
+              status: dok.status,
+              lampiran_urls: parseLampiranUrls(dok.lampiran_urls),
+              tahun: dok.tahun,
+              tanggal: dok.tanggal,
+              created_by: dok.created_by,
+              created_at: dok.created_at,
+              revision_notes: dok.revision_notes,
+              nominal_realisasi: normalizeNumericValue(dok.nominal_realisasi),
+              jenis_permintaan_id: dok.jenis_permintaan_id,
+              kategori_permintaan_id: dok.kategori_permintaan_id,
+              detail_permintaan_id: dok.detail_permintaan_id,
+              jenis_permintaan_nama: dok.jenis_permintaan_nama ?? undefined,
+              kategori_permintaan_nama: dok.kategori_permintaan_nama ?? undefined,
+              detail_permintaan_nama: dok.detail_permintaan_nama ?? undefined,
+            },
+            ppkValidation: ppkValidation
+              ? { user_id: ppkValidation.user_id, timestamp: ppkValidation.timestamp }
+              : null,
+            logs,
+          })
+        } catch (err) {
+          console.error('[bendahara/dokumen/:id] GET local query error:', err)
+          return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
-
-        let kegiatanNama = '—'
-        if (dok.kegiatan_jenis_id) {
-          const { data: k } = await supabase.from('master_kegiatan').select('nama').eq('id', dok.kegiatan_jenis_id).single()
-          if (k) kegiatanNama = k.nama
-        }
-
-        let jenisPermintaanNama: string | undefined
-        if (dok.jenis_permintaan_id) {
-          const { data: j } = await supabase.from('master_jenis_permintaan').select('nama').eq('id', dok.jenis_permintaan_id).single()
-          if (j) jenisPermintaanNama = j.nama
-        }
-
-        let kategoriPermintaanNama: string | undefined
-        if (dok.kategori_permintaan_id) {
-          const { data: k } = await supabase.from('master_kategori_permintaan').select('nama').eq('id', dok.kategori_permintaan_id).single()
-          if (k) kategoriPermintaanNama = k.nama
-        }
-
-        let detailPermintaanNama: string | undefined
-        if (dok.detail_permintaan_id) {
-          const { data: d } = await supabase.from('master_detail_permintaan').select('nama').eq('id', dok.detail_permintaan_id).single()
-          if (d) detailPermintaanNama = d.nama
-        }
-
-        let lampiranUrls: LampiranUrl[] = []
-        if (dok.lampiran_urls) {
-          lampiranUrls = typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls
-        }
-
-        // Get PPK validation info
-        const { data: logs } = await supabase
-          .from('log_aktivitas')
-          .select('*')
-          .eq('dokumen_id', params.id)
-          .eq('aksi', 'PPK_APPROVE')
-          .single()
-
-        const { data: logs2 } = await supabase
-          .from('log_aktivitas')
-          .select('*')
-          .eq('dokumen_id', params.id)
-          .order('timestamp', { ascending: true })
-
-        return Response.json({
-          dokumen: {
-            id: dok.id, judul: dok.judul, fungsi_id: dok.fungsi_id, fungsi_nama: fungsiNama,
-            kegiatan_jenis_id: dok.kegiatan_jenis_id, kegiatan_nama: kegiatanNama,
-            is_ketua_tim: dok.is_ketua_tim, status: dok.status, lampiran_urls: lampiranUrls,
-            tahun: dok.tahun, tanggal: dok.tanggal, created_by: dok.created_by,
-            created_at: dok.created_at, revision_notes: dok.revision_notes,
-            nominal_realisasi: dok.nominal_realisasi,
-            jenis_permintaan_id: dok.jenis_permintaan_id,
-            kategori_permintaan_id: dok.kategori_permintaan_id,
-            detail_permintaan_id: dok.detail_permintaan_id,
-            jenis_permintaan_nama: jenisPermintaanNama,
-            kategori_permintaan_nama: kategoriPermintaanNama,
-            detail_permintaan_nama: detailPermintaanNama,
-          },
-          ppkValidation: logs ? { user_id: logs.user_id, timestamp: logs.timestamp } : null,
-          logs: logs2 ?? [],
-        })
       },
     },
   },
