@@ -1,18 +1,20 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
+import { db } from '#/db/client'
+import { arsip } from '#/db/schema/arsip'
+import type { LampiranSnapshotJson } from '#/db/schema/arsip'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
-import { insertLog } from '#/lib/dokumen-helpers'
+import type { StatusDokumen } from '#/lib/types/fsm'
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/arsiparis/dokumen/[id]/archive — arsipkan dokumen
+// POST /api/arsiparis/dokumen/[id]/archive - arsipkan dokumen
 // ---------------------------------------------------------------------------
 
 const RETENSI_OPTIONS = ['1 Tahun', '3 Tahun', '5 Tahun', '10 Tahun', 'Permanen'] as const
@@ -21,16 +23,11 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        // Role check
-        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        // Validate body
         const body = await request.json().catch(() => null)
         if (!body) return Response.json({ error: 'Body tidak valid' }, { status: 400 })
 
@@ -51,87 +48,108 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
 
         const data = parsed.data
 
-        // Verify dokumen exists + status = COMPLETED
-        const { data: dok, error: dokError } = await supabase
-          .from('dokumen_transaksi')
-          .select('id, status, nominal_realisasi')
-          .eq('id', params.id)
-          .single()
+        if (!isUuid(params.id)) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-        if (dokError || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        let dokRows: Array<{
+          id: string
+          status: string
+          nominal_realisasi: string | null
+          lampiran_urls: unknown
+        }>
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              status: dokumenTransaksi.status,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[archive] dokumen lookup error:', err)
+          return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
+        if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         if (dok.status !== 'COMPLETED') return Response.json({ error: 'Dokumen belum berada di tahap final' }, { status: 400 })
 
-        // Check belum diarsipkan
-        const { data: existingArsip } = await supabase
-          .from('arsip')
-          .select('id')
-          .eq('dokumen_id', params.id)
-          .single()
+        let existingArsipRows: Array<{ id: string }>
+        try {
+          existingArsipRows = await db
+            .select({ id: arsip.id })
+            .from(arsip)
+            .where(eq(arsip.dokumenId, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[archive] existing arsip lookup error:', err)
+          return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
+        }
 
-        if (existingArsip) return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
+        if (existingArsipRows.length > 0) return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
 
-        // Ambil lampiran_urls dari dokumen_transaksi — snapshot on archive
-        const { data: dokWithLampiran } = await supabase
-          .from('dokumen_transaksi')
-          .select('lampiran_urls')
-          .eq('id', params.id)
-          .single()
-
-        let lampiranSnapshot: unknown[] = []
-        if (dokWithLampiran?.lampiran_urls) {
-          if (typeof dokWithLampiran.lampiran_urls === 'string') {
-            lampiranSnapshot = JSON.parse(dokWithLampiran.lampiran_urls)
+        let lampiranSnapshot: LampiranSnapshotJson = []
+        if (dok.lampiran_urls) {
+          if (typeof dok.lampiran_urls === 'string') {
+            lampiranSnapshot = JSON.parse(dok.lampiran_urls) as LampiranSnapshotJson
           } else {
-            lampiranSnapshot = dokWithLampiran.lampiran_urls
+            lampiranSnapshot = Array.isArray(dok.lampiran_urls)
+              ? dok.lampiran_urls as LampiranSnapshotJson
+              : []
           }
         }
 
-        // FSM transition: COMPLETED → ARCHIVED
-        const fsResult = transition(dok.status, 'ARCHIVE', 'ARSIPARIS')
+        const fsResult = transition(dok.status as StatusDokumen, 'ARCHIVE', 'ARSIPARIS')
         if (!fsResult.success) {
           return Response.json({ error: fsResult.error ?? 'Transisi status gagal' }, { status: 400 })
         }
 
-        // Insert arsip record with snapshot + nominal_realisasi
-        const { error: arsipError } = await supabase.from('arsip').insert({
-          dokumen_id: params.id,
-          nomor_surat: data.nomor_surat,
-          klasifikasi: data.klasifikasi,
-          retensi_aktif: data.retensi_aktif,
-          retensi_inaktif: data.retensi_inaktif,
-          masa_aktif_berakhir: data.masa_aktif_berakhir,
-          masa_inaktif_berakhir: data.masa_inaktif_berakhir,
-          catatan_arsiparis: data.catatan_arsiparis ?? null,
-          archived_by: session.user.id,
-          status_arsip: 'AKTIF',
-          lampiran_snapshot: lampiranSnapshot,
-          nominal_realisasi: dok.nominal_realisasi ?? null,
-        })
+        try {
+          await db.transaction(async (tx) => {
+            await tx.insert(arsip).values({
+              dokumenId: params.id,
+              nomorSurat: data.nomor_surat,
+              klasifikasi: data.klasifikasi,
+              retensiAktif: data.retensi_aktif,
+              retensiInaktif: data.retensi_inaktif,
+              masaAktifBerakhir: data.masa_aktif_berakhir,
+              masaInaktifBerakhir: data.masa_inaktif_berakhir,
+              catatanArsiparis: data.catatan_arsiparis ?? null,
+              archivedBy: session.user.id,
+              statusArsip: 'AKTIF',
+              lampiranSnapshot,
+              nominalRealisasi: dok.nominal_realisasi ?? null,
+            })
 
-        if (arsipError) {
-          console.error('[archive] arsip insert error:', arsipError)
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set({
+                status: fsResult.newStatus,
+                currentStep: fsResult.newCurrentStep,
+                revisionTarget: fsResult.newRevisionTarget,
+                updatedAt: new Date(),
+              })
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
+
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+            }
+
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi: 'ARCHIVE',
+              catatan: data.catatan_arsiparis ?? null,
+              stepUrutan: null,
+            })
+          })
+        } catch (err) {
+          console.error('[archive] local transaction error:', err)
           return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
         }
-
-        // Update dokumen status via FSM
-        const { error: updateError } = await supabase
-          .from('dokumen_transaksi')
-          .update({ status: fsResult.newStatus })
-          .eq('id', params.id)
-
-        if (updateError) {
-          console.error('[archive] status update error:', updateError)
-          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
-        }
-
-        // Insert log
-        await insertLog(supabase, {
-          dokumenId: params.id,
-          userId: session.user.id,
-          aksi: 'ARCHIVE',
-          catatan: data.catatan_arsiparis ?? null,
-          stepUrutan: null,
-        })
 
         return Response.json({ success: true, message: 'Dokumen berhasil diarsipkan' })
       },
