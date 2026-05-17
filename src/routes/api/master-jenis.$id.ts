@@ -1,4 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { masterJenisPermintaan } from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { updateJenisSchema } from '#/lib/schemas/master-data'
@@ -6,26 +9,31 @@ import { updateJenisSchema } from '#/lib/schemas/master-data'
 export const Route = createFileRoute('/api/master-jenis/$id')({
   server: {
     handlers: {
-      GET: async ({ request, params }: { request: Request; params: { id: string } }) => {
+      GET: async ({ params }: { request: Request; params: { id: string } }) => {
         // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        try {
+          const [data] = await db
+            .select({
+              id: masterJenisPermintaan.id,
+              nama: masterJenisPermintaan.nama,
+              deskripsi: masterJenisPermintaan.deskripsi,
+              is_active: masterJenisPermintaan.isActive,
+              created_at: masterJenisPermintaan.createdAt,
+              updated_at: masterJenisPermintaan.updatedAt,
+            })
+            .from(masterJenisPermintaan)
+            .where(eq(masterJenisPermintaan.id, params.id))
+            .limit(1)
 
-        const { data, error } = await supabase
-          .from('master_jenis_permintaan')
-          .select('*')
-          .eq('id', params.id)
-          .single()
+          if (!data) {
+            return Response.json({ error: 'Jenis permintaan tidak ditemukan' }, { status: 404 })
+          }
 
-        if (error || !data) {
-          return Response.json({ error: 'Jenis permintaan tidak ditemukan' }, { status: 404 })
+          return Response.json(data)
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-jenis/$id GET:', err)
+          return Response.json({ error: 'Gagal mengambil data jenis permintaan' }, { status: 500 })
         }
-
-        return Response.json(data)
       },
 
       PATCH: async ({ request, params }: { request: Request; params: { id: string } }) => {

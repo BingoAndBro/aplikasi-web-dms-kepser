@@ -1,8 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { desc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { ketuaTimAssignments, masterKegiatan } from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession, hasRole } from '#/lib/auth'
 import { TABLES } from '#/lib/constants/tables'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -29,6 +33,20 @@ async function requireAdmin(request: Request) {
   return { session }
 }
 
+async function requireLocalAdmin(request: Request) {
+  const session = await getLocalServerSession(request)
+
+  if (!session) {
+    return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return { error: Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 }) }
+  }
+
+  return { session }
+}
+
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function isUuid(value: unknown): value is string {
@@ -39,29 +57,36 @@ export const Route = createFileRoute('/api/ketua-tim/')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const auth = await requireAdmin(request)
+        const auth = await requireLocalAdmin(request)
         if ('error' in auth) return auth.error
 
         try {
-          const admin = createAdminClient()
-          const { data, error } = await admin
-            .from(TABLES.KETUA_TIM_ASSIGNMENTS)
-            .select(`
-              id,
-              user_id,
-              kegiatan_id,
-              created_at,
-              created_by,
-              kegiatan:master_kegiatan(id, nama)
-            `)
-            .order('created_at', { ascending: false })
+          const rows = await db
+            .select({
+              id: ketuaTimAssignments.id,
+              user_id: ketuaTimAssignments.userId,
+              kegiatan_id: ketuaTimAssignments.kegiatanId,
+              created_at: ketuaTimAssignments.createdAt,
+              created_by: ketuaTimAssignments.createdBy,
+              kegiatan_id_join: masterKegiatan.id,
+              kegiatan_nama: masterKegiatan.nama,
+            })
+            .from(ketuaTimAssignments)
+            .leftJoin(masterKegiatan, eq(ketuaTimAssignments.kegiatanId, masterKegiatan.id))
+            .orderBy(desc(ketuaTimAssignments.createdAt))
 
-          if (error) {
-            console.error('[API] /api/ketua-tim GET error:', error)
-            return Response.json({ error: 'Gagal mengambil data ketua tim' }, { status: 500 })
-          }
-
-          return Response.json({ assignments: data ?? [] })
+          return Response.json({
+            assignments: rows.map((row) => ({
+              id: row.id,
+              user_id: row.user_id,
+              kegiatan_id: row.kegiatan_id,
+              created_at: row.created_at,
+              created_by: row.created_by,
+              kegiatan: row.kegiatan_id_join
+                ? { id: row.kegiatan_id_join, nama: row.kegiatan_nama }
+                : null,
+            })),
+          })
         } catch (err) {
           console.error('[API] /api/ketua-tim GET error:', err)
           return Response.json({ error: 'Gagal mengambil data ketua tim' }, { status: 500 })

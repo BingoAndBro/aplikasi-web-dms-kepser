@@ -1,4 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { masterJenisPermintaan, masterKategoriPermintaan } from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { updateKategoriSchema } from '#/lib/schemas/master-data'
@@ -6,30 +9,50 @@ import { updateKategoriSchema } from '#/lib/schemas/master-data'
 export const Route = createFileRoute('/api/master-kategori/$id')({
   server: {
     handlers: {
-      GET: async ({ request, params }: { request: Request; params: { id: string } }) => {
+      GET: async ({ params }: { request: Request; params: { id: string } }) => {
         // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        try {
+          const [row] = await db
+            .select({
+              id: masterKategoriPermintaan.id,
+              jenis_permintaan_id: masterKategoriPermintaan.jenisPermintaanId,
+              nama: masterKategoriPermintaan.nama,
+              deskripsi: masterKategoriPermintaan.deskripsi,
+              is_active: masterKategoriPermintaan.isActive,
+              created_at: masterKategoriPermintaan.createdAt,
+              updated_at: masterKategoriPermintaan.updatedAt,
+              master_jenis_permintaan_id: masterJenisPermintaan.id,
+              master_jenis_permintaan_nama: masterJenisPermintaan.nama,
+            })
+            .from(masterKategoriPermintaan)
+            .leftJoin(
+              masterJenisPermintaan,
+              eq(masterKategoriPermintaan.jenisPermintaanId, masterJenisPermintaan.id),
+            )
+            .where(eq(masterKategoriPermintaan.id, params.id))
+            .limit(1)
 
-        const { data, error } = await supabase
-          .from('master_kategori_permintaan')
-          .select('*, master_jenis_permintaan(id, nama)')
-          .eq('id', params.id)
-          .single()
+          if (!row) {
+            return Response.json({ error: 'Kategori permintaan tidak ditemukan' }, { status: 404 })
+          }
 
-        if (error || !data) {
-          return Response.json({ error: 'Kategori permintaan tidak ditemukan' }, { status: 404 })
+          return Response.json({
+            id: row.id,
+            jenis_permintaan_id: row.jenis_permintaan_id,
+            nama: row.nama,
+            deskripsi: row.deskripsi,
+            is_active: row.is_active,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            master_jenis_permintaan: row.master_jenis_permintaan_id
+              ? { id: row.master_jenis_permintaan_id, nama: row.master_jenis_permintaan_nama }
+              : null,
+            jenis_nama: row.master_jenis_permintaan_nama ?? undefined,
+          })
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-kategori/$id GET:', err)
+          return Response.json({ error: 'Gagal mengambil data kategori permintaan' }, { status: 500 })
         }
-
-        const row = data as any
-        return Response.json({
-          ...row,
-          jenis_nama: row.master_jenis_permintaan?.nama,
-        })
       },
 
       PATCH: async ({ request, params }: { request: Request; params: { id: string } }) => {

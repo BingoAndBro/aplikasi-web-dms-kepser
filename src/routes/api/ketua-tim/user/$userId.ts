@@ -1,28 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession, hasRole } from '#/lib/auth'
-import { TABLES } from '#/lib/constants/tables'
+import { desc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { ketuaTimAssignments, masterKegiatan } from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
-
-async function requireAdmin(request: Request) {
-  const supabase = createClient(request)
-  const session = await getServerSession(supabase)
+async function requireLocalAdmin(request: Request) {
+  const session = await getLocalServerSession(request)
 
   if (!session) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-  if (!isAdmin) {
+  if (!hasLocalRole(session, 'ADMIN')) {
     return Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 })
   }
 
@@ -35,7 +24,7 @@ export const Route = createFileRoute('/api/ketua-tim/user/$userId')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: { userId: string } }) => {
-        const authError = await requireAdmin(request)
+        const authError = await requireLocalAdmin(request)
         if (authError) return authError
 
         const { userId } = params
@@ -44,25 +33,31 @@ export const Route = createFileRoute('/api/ketua-tim/user/$userId')({
         }
 
         try {
-          const admin = createAdminClient()
-          const { data, error } = await admin
-            .from(TABLES.KETUA_TIM_ASSIGNMENTS)
-            .select(`
-              id,
-              user_id,
-              kegiatan_id,
-              created_at,
-              kegiatan:master_kegiatan(id, nama)
-            `)
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
+          const rows = await db
+            .select({
+              id: ketuaTimAssignments.id,
+              user_id: ketuaTimAssignments.userId,
+              kegiatan_id: ketuaTimAssignments.kegiatanId,
+              created_at: ketuaTimAssignments.createdAt,
+              kegiatan_id_join: masterKegiatan.id,
+              kegiatan_nama: masterKegiatan.nama,
+            })
+            .from(ketuaTimAssignments)
+            .leftJoin(masterKegiatan, eq(ketuaTimAssignments.kegiatanId, masterKegiatan.id))
+            .where(eq(ketuaTimAssignments.userId, userId))
+            .orderBy(desc(ketuaTimAssignments.createdAt))
 
-          if (error) {
-            console.error('[API] /api/ketua-tim/user/$userId GET error:', error)
-            return Response.json({ error: 'Gagal mengambil data ketua tim user' }, { status: 500 })
-          }
-
-          return Response.json({ assignments: data ?? [] })
+          return Response.json({
+            assignments: rows.map((row) => ({
+              id: row.id,
+              user_id: row.user_id,
+              kegiatan_id: row.kegiatan_id,
+              created_at: row.created_at,
+              kegiatan: row.kegiatan_id_join
+                ? { id: row.kegiatan_id_join, nama: row.kegiatan_nama }
+                : null,
+            })),
+          })
         } catch (err) {
           console.error('[API] /api/ketua-tim/user/$userId GET error:', err)
           return Response.json({ error: 'Gagal mengambil data ketua tim user' }, { status: 500 })

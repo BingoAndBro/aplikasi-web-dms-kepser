@@ -1,9 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { users } from '#/db/schema/auth'
+import { ketuaTimAssignments } from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession, hasRole } from '#/lib/auth'
 import { TABLES } from '#/lib/constants/tables'
-import { parseUserMetadata } from '#/lib/user-metadata'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -30,6 +34,20 @@ async function requireAdmin(request: Request) {
   return { session }
 }
 
+async function requireLocalAdmin(request: Request) {
+  const session = await getLocalServerSession(request)
+
+  if (!session) {
+    return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return { error: Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 }) }
+  }
+
+  return { session }
+}
+
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function getKegiatanId(request: Request, params: Record<string, string | undefined>) {
@@ -38,22 +56,11 @@ function getKegiatanId(request: Request, params: Record<string, string | undefin
   return params.kegiatanId ?? params.$kegiatanId ?? pathId
 }
 
-async function getUserSummary(userId: string) {
-  const admin = createAdminClient()
-  const { data } = await admin.auth.admin.getUserById(userId)
-  const metadata = parseUserMetadata(data.user?.user_metadata)
-
-  return {
-    user_name: metadata.nama_lengkap ?? null,
-    user_email: data.user?.email ?? null,
-  }
-}
-
 export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string | undefined> }) => {
-        const auth = await requireAdmin(request)
+        const auth = await requireLocalAdmin(request)
         if ('error' in auth) return auth.error
 
         const kegiatanId = getKegiatanId(request, params)
@@ -62,30 +69,33 @@ export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
         }
 
         try {
-          const admin = createAdminClient()
-          const { data, error } = await admin
-            .from(TABLES.KETUA_TIM_ASSIGNMENTS)
-            .select('id, user_id, kegiatan_id, created_at')
-            .eq('kegiatan_id', kegiatanId)
-            .maybeSingle()
+          const [row] = await db
+            .select({
+              id: ketuaTimAssignments.id,
+              user_id: ketuaTimAssignments.userId,
+              kegiatan_id: ketuaTimAssignments.kegiatanId,
+              created_at: ketuaTimAssignments.createdAt,
+              user_name: users.namaLengkap,
+              user_display_name: users.displayName,
+              user_email: users.email,
+            })
+            .from(ketuaTimAssignments)
+            .leftJoin(users, eq(ketuaTimAssignments.userId, users.id))
+            .where(eq(ketuaTimAssignments.kegiatanId, kegiatanId))
+            .limit(1)
 
-          if (error) {
-            console.error('[API] /api/ketua-tim/kegiatan/$kegiatanId GET error:', error)
-            return Response.json({ error: 'Gagal mengambil ketua tim kegiatan' }, { status: 500 })
-          }
-
-          if (!data) {
+          if (!row) {
             return Response.json({ chairman: null })
           }
 
-          const user = await getUserSummary(data.user_id)
           return Response.json({
             chairman: {
-              id: data.id,
-              user_id: data.user_id,
-              kegiatan_id: data.kegiatan_id,
-              created_at: data.created_at,
-              ...user,
+              id: row.id,
+              user_id: row.user_id,
+              kegiatan_id: row.kegiatan_id,
+              created_at: row.created_at,
+              user_name: row.user_name ?? row.user_display_name ?? null,
+              user_email: row.user_email ?? null,
             },
           })
         } catch (err) {
