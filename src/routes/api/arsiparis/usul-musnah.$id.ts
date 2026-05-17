@@ -1,8 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
+import { db } from '#/db/client'
+import { users } from '#/db/schema/auth'
+import { arsip as arsipTable, arsipUsulMusnah } from '#/db/schema/arsip'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
+import {
+  masterDetailPermintaan,
+  masterFungsi,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
+  masterKegiatan,
+} from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession as getSession } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { insertLog } from '#/lib/dokumen-helpers'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 
@@ -12,135 +25,158 @@ function createClient(request: Request) {
   return createServerSupabaseClient(mockEvent, cookieHeader)
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function parseLampiranSnapshot(value: unknown): LampiranUrl[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value as LampiranUrl[]
+  if (typeof value !== 'string') return []
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed as LampiranUrl[] : []
+  } catch {
+    return []
+  }
+}
+
+function displayUserName(user: {
+  displayName: string | null
+  namaLengkap: string | null
+  email: string | null
+} | null): string {
+  return user?.displayName
+    ?? user?.namaLengkap
+    ?? user?.email
+    ?? '\u2014'
+}
+
 // ---------------------------------------------------------------------------
-// GET  /api/arsiparis/usul-musnah/[id]   — detail usul musnah
-// PATCH /api/arsiparis/usul-musnah/[id]  — setuju musnah (destroy)
+// GET  /api/arsiparis/usul-musnah/[id]   - detail usul musnah
+// PATCH /api/arsiparis/usul-musnah/[id]  - setuju musnah (destroy)
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/arsiparis/usul-musnah/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!isUuid(params.id)) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
 
-        const { data: musnah, error } = await supabase
-          .from('arsip_usul_musnah')
-          .select('*')
-          .eq('id', params.id)
-          .single()
+        try {
+          const rows = await db
+            .select({
+              musnah_id: arsipUsulMusnah.id,
+              musnah_arsip_id: arsipUsulMusnah.arsipId,
+              musnah_status: arsipUsulMusnah.status,
+              musnah_catatan: arsipUsulMusnah.catatan,
+              musnah_created_at: arsipUsulMusnah.createdAt,
+              diusulkan_oleh: arsipUsulMusnah.diusulkanOleh,
+              arsip_id: arsipTable.id,
+              nomor_surat: arsipTable.nomorSurat,
+              klasifikasi: arsipTable.klasifikasi,
+              retensi_aktif: arsipTable.retensiAktif,
+              retensi_inaktif: arsipTable.retensiInaktif,
+              masa_aktif_berakhir: arsipTable.masaAktifBerakhir,
+              masa_inaktif_berakhir: arsipTable.masaInaktifBerakhir,
+              status_arsip: arsipTable.statusArsip,
+              archived_at: arsipTable.archivedAt,
+              archived_by: arsipTable.archivedBy,
+              lampiran_snapshot: arsipTable.lampiranSnapshot,
+              musnah_at: arsipTable.musnahAt,
+              musnah_by: arsipTable.musnahBy,
+              arsip_musnah_catatan: arsipTable.musnahCatatan,
+              dokumen_id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_nama: masterKegiatan.nama,
+              jenis_permintaan_nama: masterJenisPermintaan.nama,
+              kategori_permintaan_nama: masterKategoriPermintaan.nama,
+              detail_permintaan_nama: masterDetailPermintaan.nama,
+              tahun: dokumenTransaksi.tahun,
+            })
+            .from(arsipUsulMusnah)
+            .innerJoin(arsipTable, eq(arsipUsulMusnah.arsipId, arsipTable.id))
+            .leftJoin(dokumenTransaksi, eq(arsipTable.dokumenId, dokumenTransaksi.id))
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
+            .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
+            .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
+            .where(eq(arsipUsulMusnah.id, params.id))
+            .limit(1)
 
-        if (error || !musnah) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
+          const row = rows[0]
+          if (!row) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
 
-        const { data: arsip } = await supabase
-          .from('arsip')
-          .select('id, nomor_surat, klasifikasi, retensi_aktif, retensi_inaktif, masa_aktif_berakhir, masa_inaktif_berakhir, status_arsip, archived_at, archived_by, dokumen_id, lampiran_snapshot, musnah_at, musnah_by, musnah_catatan')
-          .eq('id', musnah.arsip_id)
-          .single()
+          const userIds = [
+            row.diusulkan_oleh,
+            row.archived_by,
+            row.musnah_by,
+          ].filter(Boolean) as string[]
+          const userRows = userIds.length > 0
+            ? await db
+                .select({
+                  id: users.id,
+                  displayName: users.displayName,
+                  namaLengkap: users.namaLengkap,
+                  email: users.email,
+                })
+                .from(users)
+                .where(inArray(users.id, userIds))
+            : []
+          const userMap = new Map(userRows.map((user) => [user.id, user]))
 
-        if (!arsip) return Response.json({ error: 'Arsip tidak ditemukan' }, { status: 404 })
-
-        const { data: dok } = await supabase
-          .from('dokumen_transaksi')
-          .select('id, judul, fungsi_id, kegiatan_jenis_id, tahun, created_by, jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
-          .eq('id', arsip.dokumen_id)
-          .single()
-
-        let fungsiNama = '—'
-        if (dok?.fungsi_id) {
-          const { data: f } = await supabase.from('master_fungsi').select('nama').eq('id', dok.fungsi_id).single()
-          if (f) fungsiNama = f.nama
+          return Response.json({
+            musnah: {
+              id: row.musnah_id,
+              arsip_id: row.musnah_arsip_id,
+              status: row.musnah_status,
+              catatan: row.musnah_catatan,
+              created_at: row.musnah_created_at,
+              diusulkan_oleh: row.diusulkan_oleh,
+              diusulkan_oleh_nama: displayUserName(row.diusulkan_oleh ? userMap.get(row.diusulkan_oleh) ?? null : null),
+            },
+            arsip: {
+              id: row.arsip_id,
+              nomor_surat: row.nomor_surat ?? '\u2014',
+              klasifikasi: row.klasifikasi ?? '\u2014',
+              retensi_aktif: row.retensi_aktif ?? '\u2014',
+              retensi_inaktif: row.retensi_inaktif ?? '\u2014',
+              masa_aktif_berakhir: row.masa_aktif_berakhir,
+              masa_inaktif_berakhir: row.masa_inaktif_berakhir,
+              status_arsip: row.status_arsip,
+              archived_at: row.archived_at,
+              archived_by: row.archived_by,
+              archived_by_nama: displayUserName(row.archived_by ? userMap.get(row.archived_by) ?? null : null),
+              dokumen_id: row.dokumen_id ?? '\u2014',
+              lampiran_urls: parseLampiranSnapshot(row.lampiran_snapshot),
+              lampiran_snapshot: row.lampiran_snapshot,
+              musnah_at: row.musnah_at,
+              musnah_by: row.musnah_by,
+              musnah_by_nama: row.musnah_by ? displayUserName(userMap.get(row.musnah_by) ?? null) : '\u2014',
+              musnah_catatan: row.arsip_musnah_catatan,
+              dokumen: row.dokumen_id ? {
+                id: row.dokumen_id,
+                judul: row.judul,
+                fungsi_nama: row.fungsi_nama ?? '\u2014',
+                kegiatan_nama: row.kegiatan_nama ?? '\u2014',
+                jenis_permintaan: row.jenis_permintaan_nama ?? '\u2014',
+                kategori_permintaan: row.kategori_permintaan_nama ?? '\u2014',
+                detail_permintaan: row.detail_permintaan_nama ?? '\u2014',
+                tahun: row.tahun,
+              } : null,
+            },
+          })
+        } catch (err) {
+          console.error('[usul-musnah/:id] GET local query error:', err)
+          return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
-
-        let kegiatanNama = '—'
-        if (dok?.kegiatan_jenis_id) {
-          const { data: k } = await supabase.from('master_kegiatan').select('nama').eq('id', dok.kegiatan_jenis_id).single()
-          if (k) kegiatanNama = k.nama
-        }
-
-        let jenisPermintaanNama = '—'
-        if (dok?.jenis_permintaan_id) {
-          const { data: j } = await supabase.from('master_jenis_permintaan').select('nama').eq('id', dok.jenis_permintaan_id).single()
-          if (j) jenisPermintaanNama = j.nama
-        }
-
-        let kategoriPermintaanNama = '—'
-        if (dok?.kategori_permintaan_id) {
-          const { data: k } = await supabase.from('master_kategori_permintaan').select('nama').eq('id', dok.kategori_permintaan_id).single()
-          if (k) kategoriPermintaanNama = k.nama
-        }
-
-        let detailPermintaanNama = '—'
-        if (dok?.detail_permintaan_id) {
-          const { data: d } = await supabase.from('master_detail_permintaan').select('nama').eq('id', dok.detail_permintaan_id).single()
-          if (d) detailPermintaanNama = d.nama
-        }
-
-        // Use lampiran_snapshot from arsip, not from dokumen_transaksi
-        let lampiranUrls: LampiranUrl[] = []
-        if (arsip.lampiran_snapshot) {
-          lampiranUrls = typeof arsip.lampiran_snapshot === 'string' ? JSON.parse(arsip.lampiran_snapshot) : arsip.lampiran_snapshot
-        }
-
-        const { data: allUsers } = await supabase.auth.admin.listUsers()
-        const diusulkanUser = allUsers?.users.find(u => u.id === musnah.diusulkan_oleh)
-        const diusulkanNama = diusulkanUser?.user_metadata?.nama ?? diusulkanUser?.email ?? '—'
-
-        const archivedByUser = allUsers?.users.find(u => u.id === arsip.archived_by)
-        const archivedByNama = archivedByUser?.user_metadata?.nama ?? archivedByUser?.email ?? '—'
-
-        let musnahByNama = '—'
-        if (arsip.musnah_by) {
-          const musnahUser = allUsers?.users.find(u => u.id === arsip.musnah_by)
-          musnahByNama = musnahUser?.user_metadata?.nama ?? musnahUser?.email ?? '—'
-        }
-
-        return Response.json({
-          musnah: {
-            id: musnah.id,
-            arsip_id: musnah.arsip_id,
-            status: musnah.status,
-            catatan: musnah.catatan,
-            created_at: musnah.created_at,
-            diusulkan_oleh: musnah.diusulkan_oleh,
-            diusulkan_oleh_nama: diusulkanNama,
-          },
-          arsip: {
-            id: arsip.id,
-            nomor_surat: arsip.nomor_surat ?? '—',
-            klasifikasi: arsip.klasifikasi ?? '—',
-            retensi_aktif: arsip.retensi_aktif ?? '—',
-            retensi_inaktif: arsip.retensi_inaktif ?? '—',
-            masa_aktif_berakhir: arsip.masa_aktif_berakhir,
-            masa_inaktif_berakhir: arsip.masa_inaktif_berakhir,
-            status_arsip: arsip.status_arsip,
-            archived_at: arsip.archived_at,
-            archived_by: arsip.archived_by,
-            archived_by_nama: archivedByNama,
-            dokumen_id: dok?.id ?? '—',
-            lampiran_urls: lampiranUrls,
-            lampiran_snapshot: arsip.lampiran_snapshot,
-            musnah_at: arsip.musnah_at,
-            musnah_by: arsip.musnah_by,
-            musnah_by_nama: musnahByNama,
-            musnah_catatan: arsip.musnah_catatan,
-            dokumen: dok ? {
-              id: dok.id,
-              judul: dok.judul,
-              fungsi_nama: fungsiNama,
-              kegiatan_nama: kegiatanNama,
-              jenis_permintaan: jenisPermintaanNama,
-              kategori_permintaan: kategoriPermintaanNama,
-              detail_permintaan: detailPermintaanNama,
-              tahun: dok.tahun,
-            } : null,
-          },
-        })
       },
 
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -206,7 +242,6 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah/$id')({
           }
         }
 
-        // Keep arsip record, set DIMUSNAHKAN, clear snapshot
         const { error: updateArsipError } = await supabase.from('arsip').update({
           status_arsip: 'DIMUSNAHKAN',
           lampiran_snapshot: [],

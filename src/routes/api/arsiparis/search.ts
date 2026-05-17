@@ -1,30 +1,32 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession } from '#/lib/auth'
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
+import { desc, eq, inArray, sql } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { arsip } from '#/db/schema/arsip'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
+import { masterFungsi, masterKegiatan } from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 // ---------------------------------------------------------------------------
-// GET /api/arsiparis/search — search arsip (semua authenticated user)
+// GET /api/arsiparis/search - search arsip (semua authenticated user)
 // Hasil difilter berdasarkan role:
 //   - ADMIN/ARSIPARIS: semua arsip
-//   - PPK: arsip dari dokumen yang ada di workflow PPK
+//   - PPK: arsip dari dokumen yang pernah masuk workflow PPK (status-based local approximation)
 //   - Bendahara: arsip dari dokumen COMPLETED
 //   - Pegawai: arsip dari dokumen miliknya sendiri
 // ---------------------------------------------------------------------------
 
 const PER_PAGE = 20
 
+function parseTahunFilter(value: string): number | null {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 export const Route = createFileRoute('/api/arsiparis/search')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
         const url = new URL(request.url)
@@ -34,105 +36,103 @@ export const Route = createFileRoute('/api/arsiparis/search')({
         const q = url.searchParams.get('q') ?? undefined
         const page = Math.max(1, Number(url.searchParams.get('page') ?? 1))
         const offset = (page - 1) * PER_PAGE
+        const parsedTahun = tahun ? parseTahunFilter(tahun) : null
 
-        // Get user roles
-        const { data: rolesData } = await supabase
-          .from('user_roles')
-          .select('role:roles(nama)')
-          .eq('user_id', session.user.id)
-        const roleNames = (rolesData ?? []).map((r: any) => r.role?.nama as string).filter(Boolean)
-        const isAdmin = roleNames.includes('ADMIN')
-        const isArsiparis = roleNames.includes('ARSIPARIS')
-        const isPPK = roleNames.includes('PPK')
-        const isBendahara = roleNames.includes('BENDAHARA')
+        const isAdmin = hasLocalRole(session, 'ADMIN')
+        const isArsiparis = hasLocalRole(session, 'ARSIPARIS')
+        const isPPK = hasLocalRole(session, 'PPK')
+        const isBendahara = hasLocalRole(session, 'BENDAHARA')
 
-        // Base query for arsip
-        let baseQuery = supabase
-          .from('arsip')
-          .select('id, dokumen_id, nomor_surat, klasifikasi, archived_at, status_arsip', { count: 'exact' })
-          .eq('is_ditolak', false)
-          .order('archived_at', { ascending: false })
-          .range(offset, offset + PER_PAGE - 1)
+        try {
+          const totalRows = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(arsip)
+            .where(eq(arsip.isDitolak, false))
+          const total = Number(totalRows[0]?.count ?? 0)
 
-        const { data: arsipList, error, count } = await baseQuery
-        if (error) return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+          const arsipRows = await db
+            .select({
+              id: arsip.id,
+              dokumen_id: arsip.dokumenId,
+              nomor_surat: arsip.nomorSurat,
+              klasifikasi: arsip.klasifikasi,
+              archived_at: arsip.archivedAt,
+              status_arsip: arsip.statusArsip,
+            })
+            .from(arsip)
+            .where(eq(arsip.isDitolak, false))
+            .orderBy(desc(arsip.archivedAt))
+            .limit(PER_PAGE)
+            .offset(offset)
 
-        if (!arsipList || arsipList.length === 0) {
-          return Response.json({ arsip: [], total: 0, page, per_page: PER_PAGE })
-        }
-
-        const docIds = arsipList.map(a => a.dokumen_id)
-
-        // Role-based document filtering
-        let docsQuery = supabase
-          .from('dokumen_transaksi')
-          .select('id, judul, fungsi_id, kegiatan_jenis_id, tahun, created_by, status, step_urutan')
-          .in('id', docIds)
-
-        if (isPPK && !isAdmin && !isArsiparis) {
-          // PPK hanya lihat dokumen yang sudah sampai di step PPK
-          docsQuery = docsQuery.gte('step_urutan', 5)
-        } else if (isBendahara && !isAdmin && !isArsiparis) {
-          // Bendahara hanya lihat dokumen COMPLETED
-          docsQuery = docsQuery.eq('status', 'COMPLETED')
-        } else if (!isAdmin && !isArsiparis && !isPPK && !isBendahara) {
-          // Pegawai hanya lihat dokumen miliknya sendiri
-          docsQuery = docsQuery.eq('created_by', session.user.id)
-        }
-
-        const { data: docs } = await docsQuery
-
-        // Filter arsip by accessible documents
-        const allowedDocIds = new Set((docs ?? []).map(d => d.id))
-        let filteredArsip = arsipList.filter(a => allowedDocIds.has(a.dokumen_id))
-
-        // Document-level filtering
-        const docMap: Record<string, { judul: string; fungsi_id: string; kegiatan_jenis_id: string; tahun: number }> = {}
-        for (const d of docs ?? []) docMap[d.id] = d
-
-        if (fungsiId) filteredArsip = filteredArsip.filter(a => docMap[a.dokumen_id]?.fungsi_id === fungsiId)
-        if (kegiatanId) filteredArsip = filteredArsip.filter(a => docMap[a.dokumen_id]?.kegiatan_jenis_id === kegiatanId)
-        if (tahun) filteredArsip = filteredArsip.filter(a => docMap[a.dokumen_id]?.tahun === Number(tahun))
-        if (q) {
-          const lowerQ = q.toLowerCase()
-          filteredArsip = filteredArsip.filter(a => {
-            const d = docMap[a.dokumen_id]
-            return (a.nomor_surat?.toLowerCase().includes(lowerQ) ?? false)
-              || (d?.judul.toLowerCase().includes(lowerQ) ?? false)
-          })
-        }
-
-        // Join fungsi & kegiatan
-        const fungsiIds = [...new Set(filteredArsip.map(a => docMap[a.dokumen_id]?.fungsi_id).filter(Boolean))]
-        const kegIds = [...new Set(filteredArsip.map(a => docMap[a.dokumen_id]?.kegiatan_jenis_id).filter(Boolean))]
-
-        const fungsiMap: Record<string, string> = {}
-        if (fungsiIds.length > 0) {
-          const { data: rows } = await supabase.from('master_fungsi').select('id, nama').in('id', fungsiIds)
-          for (const r of rows ?? []) fungsiMap[r.id] = r.nama
-        }
-
-        const kegMap: Record<string, string> = {}
-        if (kegIds.length > 0) {
-          const { data: rows } = await supabase.from('master_kegiatan').select('id, nama').in('id', kegIds)
-          for (const r of rows ?? []) kegMap[r.id] = r.nama
-        }
-
-        const result = filteredArsip.map(a => {
-          const d = docMap[a.dokumen_id]
-          return {
-            id: a.id,
-            nomor_surat: a.nomor_surat ?? '—',
-            judul: d?.judul ?? '—',
-            fungsi_nama: fungsiMap[d?.fungsi_id] ?? '—',
-            kegiatan_nama: kegMap[d?.kegiatan_jenis_id] ?? '—',
-            klasifikasi: a.klasifikasi ?? '—',
-            archived_at: a.archived_at,
-            status_arsip: a.status_arsip,
+          if (arsipRows.length === 0) {
+            return Response.json({ arsip: [], total: 0, page, per_page: PER_PAGE })
           }
-        })
 
-        return Response.json({ arsip: result, total: count ?? result.length, page, per_page: PER_PAGE })
+          const docIds = arsipRows.map((row) => row.dokumen_id)
+          const docs = await db
+            .select({
+              id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_id: dokumenTransaksi.fungsiId,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              tahun: dokumenTransaksi.tahun,
+              created_by: dokumenTransaksi.createdBy,
+              status: dokumenTransaksi.status,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_nama: masterKegiatan.nama,
+            })
+            .from(dokumenTransaksi)
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .where(inArray(dokumenTransaksi.id, docIds))
+
+          const allowedDocs = docs.filter((doc) => {
+            if (isAdmin || isArsiparis) return true
+            if (isPPK) {
+              return ['IN_BENDAHARA_APPROVAL', 'COMPLETED', 'ARCHIVED'].includes(doc.status)
+            }
+            if (isBendahara) return doc.status === 'COMPLETED'
+            return doc.created_by === session.user.id
+          })
+          const docMap = new Map(allowedDocs.map((doc) => [doc.id, doc]))
+
+          let filteredArsip = arsipRows.filter((row) => docMap.has(row.dokumen_id))
+          if (fungsiId) filteredArsip = filteredArsip.filter((row) => docMap.get(row.dokumen_id)?.fungsi_id === fungsiId)
+          if (kegiatanId) filteredArsip = filteredArsip.filter((row) => docMap.get(row.dokumen_id)?.kegiatan_jenis_id === kegiatanId)
+          if (tahun) {
+            filteredArsip = parsedTahun === null
+              ? []
+              : filteredArsip.filter((row) => docMap.get(row.dokumen_id)?.tahun === parsedTahun)
+          }
+          if (q) {
+            const lowerQ = q.toLowerCase()
+            filteredArsip = filteredArsip.filter((row) => {
+              const doc = docMap.get(row.dokumen_id)
+              return (row.nomor_surat?.toLowerCase().includes(lowerQ) ?? false)
+                || (doc?.judul.toLowerCase().includes(lowerQ) ?? false)
+            })
+          }
+
+          const result = filteredArsip.map((row) => {
+            const doc = docMap.get(row.dokumen_id)
+            return {
+              id: row.id,
+              nomor_surat: row.nomor_surat ?? '\u2014',
+              judul: doc?.judul ?? '\u2014',
+              fungsi_nama: doc?.fungsi_nama ?? '\u2014',
+              kegiatan_nama: doc?.kegiatan_nama ?? '\u2014',
+              klasifikasi: row.klasifikasi ?? '\u2014',
+              archived_at: row.archived_at,
+              status_arsip: row.status_arsip,
+            }
+          })
+
+          return Response.json({ arsip: result, total, page, per_page: PER_PAGE })
+        } catch (err) {
+          console.error('[arsiparis/search] local query error:', err)
+          return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+        }
       },
     },
   },

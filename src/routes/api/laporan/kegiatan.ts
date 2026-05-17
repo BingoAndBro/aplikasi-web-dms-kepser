@@ -1,26 +1,40 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession as getSession } from '#/lib/auth'
-import { getDokumenKegiatanByKetuaTim } from '#/lib/dokumen-helpers'
-import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
+import { and, eq, inArray } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { users } from '#/db/schema/auth'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
+import {
+  ketuaTimAssignments,
+  masterDetailPermintaan,
+  masterFungsi,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
+  masterKegiatan,
+} from '#/db/schema/master'
+import { getLocalServerSession } from '#/lib/auth/local-server-auth'
+import { parseLampiranUrls } from '#/lib/dokumen'
 
-// ---------------------------------------------------------------------------
-// Helper: buat Supabase client dengan cookie
-// ---------------------------------------------------------------------------
+function normalizeNumericValue(value: string | number | null): number | null {
+  if (value === null) return null
+  if (typeof value === 'number') return value
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function displayUserName(user: {
+  displayName: string | null
+  namaLengkap: string | null
+  email: string | null
+} | null): string {
+  return user?.displayName
+    ?? user?.namaLengkap
+    ?? user?.email?.split('@')[0]
+    ?? 'Unknown'
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/laporan/kegiatan — Semua dokumen dari proyek yang dipimpin user
-// Gunakan admin client karena perlu baca dokumen user lain (bypass RLS)
+// GET /api/laporan/kegiatan - Semua dokumen dari kegiatan yang dipimpin user
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/laporan/kegiatan')({
@@ -28,60 +42,117 @@ export const Route = createFileRoute('/api/laporan/kegiatan')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const admin = createAdminClient()
-        const list = await getDokumenKegiatanByKetuaTim(admin, session.user.id)
+        try {
+          const assignments = await db
+            .select({ kegiatan_id: ketuaTimAssignments.kegiatanId })
+            .from(ketuaTimAssignments)
+            .where(eq(ketuaTimAssignments.userId, session.user.id))
 
-        if (list.length === 0) {
-          return Response.json({ dokumen: [], isKetuaTim: false })
-        }
-
-        // Enrich dengan nama pengaju — ambil user metadata via admin
-        // Kumpulkan unique user IDs
-        const userIds = [...new Set(list.map((d: DokumenLaporanRow) => d.created_by).filter(Boolean))]
-
-        // Query user metadata dari tabel auth.users via admin
-        // Supabase admin API: auth.admin.listUsers() tidak support filter,
-        // gunakan raw query ke profiles jika ada, atau fallback ke email
-        const userNameMap: Record<string, string> = {}
-        if (userIds.length > 0) {
-          // Coba ambil dari user_metadata via RPC atau profiles
-          // Fallback: gunakan user_id sebagai key, nama dari session
-          userNameMap[session.user.id] =
-            (session.user.user_metadata?.nama_lengkap as string | undefined)
-            || (session.user.user_metadata?.user_name as string | undefined)
-            || session.user.email?.split('@')[0]
-            || 'Unknown'
-
-          // Untuk user lain, coba query auth.users via admin
-          try {
-            const { data: { users } } = await admin.auth.admin.listUsers({
-              perPage: 1000,
-            })
-            for (const u of users) {
-              userNameMap[u.id] =
-                (u.user_metadata?.nama_lengkap as string | undefined)
-                || (u.user_metadata?.user_name as string | undefined)
-                || u.email?.split('@')[0]
-                || 'Unknown'
-            }
-          } catch {
-            // Silent fallback — nama pengaju mungkin tidak tersedia
+          if (assignments.length === 0) {
+            return Response.json({ dokumen: [], isKetuaTim: false })
           }
+
+          const kegiatanIds = assignments.map((assignment) => assignment.kegiatan_id)
+
+          const rows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_id: dokumenTransaksi.fungsiId,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+              status: dokumenTransaksi.status,
+              current_step: dokumenTransaksi.currentStep,
+              revision_target: dokumenTransaksi.revisionTarget,
+              revision_notes: dokumenTransaksi.revisionNotes,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              tahun: dokumenTransaksi.tahun,
+              tanggal: dokumenTransaksi.tanggal,
+              created_by: dokumenTransaksi.createdBy,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
+              keterangan_detail: dokumenTransaksi.keteranganDetail,
+              created_at: dokumenTransaksi.createdAt,
+              updated_at: dokumenTransaksi.updatedAt,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_nama: masterKegiatan.nama,
+              jenis_permintaan_nama: masterJenisPermintaan.nama,
+              kategori_permintaan_nama: masterKategoriPermintaan.nama,
+              detail_permintaan_nama: masterDetailPermintaan.nama,
+              pengaju_display_name: users.displayName,
+              pengaju_nama_lengkap: users.namaLengkap,
+              pengaju_email: users.email,
+            })
+            .from(dokumenTransaksi)
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
+            .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
+            .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
+            .leftJoin(users, eq(dokumenTransaksi.createdBy, users.id))
+            .where(and(
+              inArray(dokumenTransaksi.kegiatanJenisId, kegiatanIds),
+              inArray(dokumenTransaksi.status, ['COMPLETED', 'TERSIMPAN']),
+            ))
+
+          return Response.json({
+            dokumen: rows.map((row) => ({
+              id: row.id,
+              judul: row.judul,
+              fungsi_id: row.fungsi_id,
+              kegiatan_jenis_id: row.kegiatan_jenis_id,
+              is_ketua_tim: row.is_ketua_tim,
+              status: row.status,
+              current_step: row.current_step,
+              revision_target: row.revision_target,
+              revision_notes: row.revision_notes,
+              lampiran_urls: parseLampiranUrls(row.lampiran_urls),
+              tahun: row.tahun,
+              tanggal: row.tanggal,
+              created_by: row.created_by,
+              nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
+              is_non_material: row.is_non_material ?? false,
+              jenis_dokumen_id: row.jenis_dokumen_id ?? null,
+              keterangan_detail: row.keterangan_detail ?? null,
+              created_at: row.created_at,
+              updated_at: row.updated_at,
+              jenis_permintaan_id: row.jenis_permintaan_id,
+              kategori_permintaan_id: row.kategori_permintaan_id,
+              detail_permintaan_id: row.detail_permintaan_id,
+              fungsi_nama: row.fungsi_nama ?? undefined,
+              kegiatan_nama: row.kegiatan_nama ?? undefined,
+              jenis_permintaan_nama: row.jenis_permintaan_nama ?? undefined,
+              kategori_permintaan_nama: row.kategori_permintaan_nama ?? undefined,
+              detail_permintaan_nama: row.detail_permintaan_nama ?? undefined,
+              leaf_node_nama:
+                row.detail_permintaan_nama
+                ?? row.kategori_permintaan_nama
+                ?? row.jenis_permintaan_nama
+                ?? row.kegiatan_nama
+                ?? '',
+              pengaju_id: row.created_by,
+              pengaju_nama: displayUserName({
+                displayName: row.pengaju_display_name,
+                namaLengkap: row.pengaju_nama_lengkap,
+                email: row.pengaju_email,
+              }),
+            })),
+            isKetuaTim: true,
+          })
+        } catch (err) {
+          console.error('[laporan/kegiatan] GET local query error:', err)
+          return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
-
-        const enriched: DokumenLaporanRow[] = list.map((d: DokumenLaporanRow) => ({
-          ...d,
-          pengaju_nama: userNameMap[d.created_by] ?? 'Unknown',
-        }))
-
-        return Response.json({ dokumen: enriched, isKetuaTim: true })
       },
     },
   },

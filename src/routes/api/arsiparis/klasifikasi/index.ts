@@ -1,4 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { asc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { masterKlasifikasiArsip } from '#/db/schema/arsip'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { z } from 'zod'
@@ -71,26 +74,34 @@ function buildTree(items: Omit<KlasifikasiNode, 'children'>[]): KlasifikasiNode[
 export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
   server: {
     handlers: {
-      GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
+      GET: async () => {
+        try {
+          const data = await db
+            .select({
+              id: masterKlasifikasiArsip.id,
+              nama: masterKlasifikasiArsip.nama,
+              kode: masterKlasifikasiArsip.kode,
+              deskripsi: masterKlasifikasiArsip.deskripsi,
+              parent_id: masterKlasifikasiArsip.parentId,
+              created_at: masterKlasifikasiArsip.createdAt,
+            })
+            .from(masterKlasifikasiArsip)
+            .where(eq(masterKlasifikasiArsip.isActive, true))
+            .orderBy(asc(masterKlasifikasiArsip.nama))
 
-        const { data, error } = await supabase
-          .from('master_klasifikasi_arsip')
-          .select('id, nama, kode, deskripsi, parent_id, created_at, is_active')
-          .eq('is_active', true)
-          .order('nama', { ascending: true })
+          const itemsWithRoot = data.map(item => ({
+            ...item,
+            created_at: item.created_at as unknown as string,
+            is_root: item.kode === '000',
+          }))
 
-        if (error) return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+          const tree = buildTree(itemsWithRoot)
 
-        // Mark root node (kode = '000')
-        const itemsWithRoot = (data ?? []).map(item => ({
-          ...item,
-          is_root: item.kode === '000',
-        }))
-
-        const tree = buildTree(itemsWithRoot)
-
-        return Response.json({ klasifikasi: tree })
+          return Response.json({ klasifikasi: tree })
+        } catch (err) {
+          console.error('[arsiparis/klasifikasi] GET local query error:', err)
+          return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
+        }
       },
 
       POST: async ({ request }: { request: Request }) => {
