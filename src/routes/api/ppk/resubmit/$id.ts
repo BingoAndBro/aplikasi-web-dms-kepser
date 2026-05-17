@@ -1,16 +1,34 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { getServerSession } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
-import { updateDokumenStatus, insertLog, syncDocumentAttachments, deleteOrphanFiles } from '#/lib/dokumen-helpers'
+import { isStoragePathPending, syncDocumentAttachments, deleteOrphanFiles } from '#/lib/dokumen-helpers'
 import { resubmitDokumenSchema } from '#/lib/schemas/dokumen'
+import { parseLampiranUrls } from '#/lib/dokumen'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
+import type { StatusDokumen } from '#/lib/types/fsm'
 
 function createAuthClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
   const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
   return createServerSupabaseClient(mockEvent, cookieHeader)
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function sameLampiranUrlSet(current: LampiranUrl[], next: LampiranUrl[]): boolean {
+  if (current.length !== next.length) return false
+
+  const currentUrls = current.map(lamp => lamp.url).sort()
+  const nextUrls = next.map(lamp => lamp.url).sort()
+  return currentUrls.every((url, index) => url === nextUrls[index])
 }
 
 // ---------------------------------------------------------------------------
@@ -182,15 +200,10 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
       },
 
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        console.log('[API/ppk/resubmit/:id] POST START id:', params.id)
-        const authClient = createAuthClient(request)
-        const session = await getServerSession(authClient)
-        console.log('[API/ppk/resubmit/:id] session user:', session?.user?.id)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        const { data: rolesData } = await authClient.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('PPK')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'PPK')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         // Parse optional body for lampiran update
         let body: { lampiranUrls?: LampiranUrl[]; nominalRealisasi?: number | null } = {}
@@ -206,90 +219,104 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
           }
         }
 
-        const admin = createAdminClient()
-        const { data: dok, error } = await admin
-          .from('dokumen_transaksi')
-          .select('*')
-          .eq('id', params.id)
-          .single()
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
 
-        if (error || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        let dokRows: Array<{
+          id: string
+          status: string
+          revision_target: string | null
+          lampiran_urls: unknown
+        }>
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              status: dokumenTransaksi.status,
+              revision_target: dokumenTransaksi.revisionTarget,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/ppk/resubmit/:id] local lookup error:', err)
+          return Response.json({ error: 'Gagal resubmit' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
+        if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
         if (dok.status !== 'NEED_REVISION' || dok.revision_target !== 'PPK') {
           return Response.json({ error: 'Dokumen ini tidak memerlukan revisi oleh PPK' }, { status: 400 })
         }
 
         // FSM transition: NEED_REVISION:RESUBMIT_PPK -> IN_BENDAHARA_APPROVAL
-        const result = transition(dok.status, 'RESUBMIT_PPK', 'PPK', dok.revision_target)
-        console.log('[API/ppk/resubmit/:id] FSM result:', result.success ? 'success' : result.error)
+        const result = transition(dok.status as StatusDokumen, 'RESUBMIT_PPK', 'PPK', dok.revision_target)
         if (!result.success) return Response.json({ error: result.error || 'Transisi gagal' }, { status: 400 })
 
         // Parse existing lampirans from database
-        const existingLampirans: LampiranUrl[] = dok.lampiran_urls
-          ? (typeof dok.lampiran_urls === 'string' ? JSON.parse(dok.lampiran_urls) : dok.lampiran_urls)
-          : []
+        const existingLampirans = parseLampiranUrls(dok.lampiran_urls)
 
-        // Sync attachments: move PENDING files + track old files for deletion
-        let pathsToDelete: string[] = []
         let updatedLampirans: LampiranUrl[] | undefined = body.lampiranUrls
 
         if (body.lampiranUrls && Array.isArray(body.lampiranUrls)) {
-          try {
-            const syncResult = await syncDocumentAttachments(
-              admin,
-              session.user.id,
-              params.id,
-              body.lampiranUrls,
-              existingLampirans
-            )
-            updatedLampirans = syncResult.updatedLampirans
-            pathsToDelete = syncResult.pathsToDelete
-          } catch (err) {
-            console.error('[API/ppk/resubmit/:id] syncDocumentAttachments error:', err)
+          if (body.lampiranUrls.some(lamp => isStoragePathPending(lamp.url))) {
             return Response.json({
-              error: `Gagal menyimpan perubahan: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`,
-            }, { status: 500 })
+              error: 'Perubahan lampiran dengan file baru belum didukung pada fase migrasi ini',
+            }, { status: 400 })
+          }
+
+          if (!sameLampiranUrlSet(existingLampirans, body.lampiranUrls)) {
+            return Response.json({
+              error: 'Perubahan lampiran yang memerlukan sinkronisasi file belum didukung pada fase migrasi ini',
+            }, { status: 400 })
           }
         }
 
-        // Build update payload
-        const updatePayload: Record<string, any> = {
-          status: result.newStatus,
-          current_step: result.newCurrentStep,
-          revision_target: result.newRevisionTarget,
-          updated_at: new Date().toISOString(),
-        }
+        try {
+          await db.transaction(async (tx) => {
+            const updatePayload: Partial<typeof dokumenTransaksi.$inferInsert> = {
+              status: result.newStatus,
+              currentStep: result.newCurrentStep,
+              revisionTarget: result.newRevisionTarget,
+              updatedAt: new Date(),
+            }
 
-        if (updatedLampirans) {
-          updatePayload.lampiran_urls = JSON.stringify(updatedLampirans)
-        }
+            if (updatedLampirans) {
+              updatePayload.lampiranUrls = updatedLampirans
+            }
 
-        // Update nominal_realisasi if provided
-        if (body.nominalRealisasi !== undefined) {
-          updatePayload.nominal_realisasi = body.nominalRealisasi
-        }
+            if (body.nominalRealisasi !== undefined) {
+              updatePayload.nominalRealisasi =
+                body.nominalRealisasi === null
+                  ? null
+                  : String(body.nominalRealisasi)
+            }
 
-        const { error: updateErr } = await admin
-          .from('dokumen_transaksi')
-          .update(updatePayload)
-          .eq('id', params.id)
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set(updatePayload)
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
 
-        if (updateErr) {
-          console.error('[API/ppk/resubmit/:id] update error:', updateErr)
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+            }
+
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi: 'RESUBMIT_PPK',
+              stepUrutan: result.stepUrutan,
+            })
+          })
+        } catch (err) {
+          console.error('[API/ppk/resubmit/:id] local transaction error:', err)
           return Response.json({ error: 'Gagal resubmit' }, { status: 500 })
         }
 
-        await insertLog(admin, {
-          dokumenId: params.id,
-          userId: session.user.id,
-          aksi: 'RESUBMIT_PPK',
-          stepUrutan: result.stepUrutan,
-        })
-
-        // Delete orphaned files (fire and forget)
-        deleteOrphanFiles(admin, pathsToDelete)
-
-        console.log('[API/ppk/resubmit/:id] POST SUCCESS')
         return Response.json({ success: true })
       },
     },

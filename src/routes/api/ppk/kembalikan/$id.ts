@@ -1,18 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession } from '#/lib/auth'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
-import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
+import type { StatusDokumen } from '#/lib/types/fsm'
 
-function createAuthClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+const KEMBALIKAN_CATATAN = 'Dikembalikan ke pegawai oleh PPK'
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/ppk/kembalikan/[id] — Return document to Pegawai
+// POST /api/ppk/kembalikan/[id] - Return document to Pegawai
 // Transitions from NEED_REVISION (target=PPK) back to Pegawai for revision
 // ---------------------------------------------------------------------------
 
@@ -20,58 +21,76 @@ export const Route = createFileRoute('/api/ppk/kembalikan/$id')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        console.log('[API/ppk/kembalikan/:id] POST START id:', params.id)
-        const authClient = createAuthClient(request)
-        const session = await getServerSession(authClient)
-        console.log('[API/ppk/kembalikan/:id] session user:', session?.user?.id)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        const { data: rolesData } = await authClient.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('PPK')) return Response.json({ error: 'Akses ditolak — bukan PPK' }, { status: 403 })
+        if (!hasLocalRole(session, 'PPK')) {
+          return Response.json({ error: 'Akses ditolak — bukan PPK' }, { status: 403 })
+        }
 
-        const admin = createAdminClient()
-        const { data: dok, error } = await admin
-          .from('dokumen_transaksi')
-          .select('id, status, revision_target')
-          .eq('id', params.id)
-          .single()
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
 
-        if (error || !dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        let dokRows: Array<{ id: string; status: string; revision_target: string | null }>
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              status: dokumenTransaksi.status,
+              revision_target: dokumenTransaksi.revisionTarget,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/ppk/kembalikan/:id] local lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
 
-        console.log('[API/ppk/kembalikan/:id] dok status:', dok.status, 'target:', dok.revision_target)
+        const dok = dokRows[0]
+        if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+
         if (dok.status !== 'NEED_REVISION' || dok.revision_target !== 'PPK') {
           return Response.json({ error: 'Dokumen ini tidak dalam status revisi PPK' }, { status: 400 })
         }
 
         // FSM transition: NEED_REVISION:KEMBALIKAN with target=USER
         // Returns document to Pegawai for revision (from revision page)
-        const result = transition(dok.status, 'KEMBALIKAN', 'PPK', 'USER')
-        console.log('[API/ppk/kembalikan/:id] FSM result:', result.success ? 'success' : result.error)
+        const result = transition(dok.status as StatusDokumen, 'KEMBALIKAN', 'PPK', 'USER')
         if (!result.success) return Response.json({ error: result.error || 'Transisi gagal' }, { status: 400 })
 
-        // Update status - document goes back to Pegawai
-        const updateErr = await updateDokumenStatus(admin, params.id, {
-          status: result.newStatus,
-          currentStep: result.newCurrentStep,
-          revisionTarget: result.newRevisionTarget,
-          revisionNotes: 'Dikembalikan ke pegawai oleh PPK',
-        })
+        try {
+          await db.transaction(async (tx) => {
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set({
+                status: result.newStatus,
+                currentStep: result.newCurrentStep,
+                revisionTarget: result.newRevisionTarget,
+                revisionNotes: KEMBALIKAN_CATATAN,
+                updatedAt: new Date(),
+              })
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
 
-        if (updateErr.error) {
-          console.error('[API/ppk/kembalikan/:id] update error:', updateErr.error)
-          return Response.json({ error: updateErr.error }, { status: 500 })
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+            }
+
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi: 'PPK_KEMBALIKAN',
+              catatan: KEMBALIKAN_CATATAN,
+              stepUrutan: result.stepUrutan ?? 1,
+            })
+          })
+        } catch (err) {
+          console.error('[API/ppk/kembalikan/:id] local transaction error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }
 
-        await insertLog(admin, {
-          dokumenId: params.id,
-          userId: session.user.id,
-          aksi: 'PPK_KEMBALIKAN',
-          catatan: 'Dikembalikan ke pegawai oleh PPK',
-          stepUrutan: result.stepUrutan ?? 1,
-        })
-
-        console.log('[API/ppk/kembalikan/:id] POST SUCCESS')
         return Response.json({ success: true })
       },
     },

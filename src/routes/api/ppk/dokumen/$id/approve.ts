@@ -1,18 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession } from '#/lib/auth'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { approveDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
-import { updateDokumenStatus, insertLog } from '#/lib/dokumen-helpers'
+import type { StatusDokumen } from '#/lib/types/fsm'
 
-function createAuthClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ---------------------------------------------------------------------------
@@ -23,21 +19,13 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/approve')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const authClient = createAuthClient(request)
-        const session = await getServerSession(authClient)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Role check
-        const { data: rolesData } = await authClient
-          .from('user_roles')
-          .select('role:roles(nama)')
-          .eq('user_id', session.user.id)
-
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('PPK')) {
+        if (!hasLocalRole(session, 'PPK')) {
           return Response.json({ error: 'Akses ditolak — bukan PPK' }, { status: 403 })
         }
 
@@ -56,15 +44,27 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/approve')({
           }, { status: 400 })
         }
 
-        // Fetch dokumen via admin client (bypass RLS)
-        const admin = createAdminClient()
-        const { data: dok, error: dokError } = await admin
-          .from('dokumen_transaksi')
-          .select('id, status')
-          .eq('id', params.id)
-          .single()
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
 
-        if (dokError || !dok) {
+        let dokRows: Array<{ id: string; status: string }>
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              status: dokumenTransaksi.status,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/ppk/dokumen/:id/approve] local lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
+        if (!dok) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
 
@@ -76,28 +76,41 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/approve')({
         }
 
         // FSM transition
-        const result = transition(dok.status, 'APPROVE', 'PPK')
+        const result = transition(dok.status as StatusDokumen, 'APPROVE', 'PPK')
         if (!result.success) {
           return Response.json({ error: result.error ?? 'Transisi gagal' }, { status: 400 })
         }
 
-        // Update status
-        const updateErr = await updateDokumenStatus(admin, params.id, {
-          status: result.newStatus,
-          currentStep: result.newCurrentStep,
-          revisionTarget: result.newRevisionTarget,
-        })
-        if (updateErr.error) {
-          return Response.json({ error: updateErr.error }, { status: 500 })
-        }
+        try {
+          await db.transaction(async (tx) => {
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set({
+                status: result.newStatus,
+                currentStep: result.newCurrentStep,
+                revisionTarget: result.newRevisionTarget,
+                revisionNotes: null,
+                updatedAt: new Date(),
+              })
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
 
-        // Insert log (menggunakan user ID dari sesi — bukan admin impersonate)
-        await insertLog(admin, {
-          dokumenId: params.id,
-          userId: session.user.id,
-          aksi: 'PPK_APPROVE',
-          stepUrutan: result.stepUrutan ?? 2,
-        })
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+            }
+
+            // User ID comes from the local session, not an admin impersonation.
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi: 'PPK_APPROVE',
+              stepUrutan: result.stepUrutan ?? 2,
+            })
+          })
+        } catch (err) {
+          console.error('[API/ppk/dokumen/:id/approve] local transaction error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
 
         return Response.json({
           success: true,
