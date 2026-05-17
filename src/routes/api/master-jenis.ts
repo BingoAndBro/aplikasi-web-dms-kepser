@@ -1,4 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { asc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { masterJenisPermintaan } from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { createJenisSchema } from '#/lib/schemas/master-data'
@@ -8,24 +11,25 @@ export const Route = createFileRoute('/api/master-jenis')({
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        try {
+          const data = await db
+            .select({
+              id: masterJenisPermintaan.id,
+              nama: masterJenisPermintaan.nama,
+              deskripsi: masterJenisPermintaan.deskripsi,
+              is_active: masterJenisPermintaan.isActive,
+              created_at: masterJenisPermintaan.createdAt,
+              updated_at: masterJenisPermintaan.updatedAt,
+            })
+            .from(masterJenisPermintaan)
+            .where(eq(masterJenisPermintaan.isActive, true))
+            .orderBy(asc(masterJenisPermintaan.nama))
 
-        const { data, error } = await supabase
-          .from('master_jenis_permintaan')
-          .select('*')
-          .eq('is_active', true)
-          .order('nama', { ascending: true })
-
-        if (error) {
+          return Response.json(data)
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-jenis GET:', err)
           return Response.json({ error: 'Gagal mengambil data jenis permintaan' }, { status: 500 })
         }
-
-        return Response.json(data ?? [])
       },
 
       POST: async ({ request }: { request: Request }) => {

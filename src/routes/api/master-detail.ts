@@ -1,4 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { and, asc, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import {
+  masterDetailPermintaan,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
+} from '#/db/schema/master'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { createDetailSchema } from '#/lib/schemas/master-data'
@@ -8,39 +15,66 @@ export const Route = createFileRoute('/api/master-detail')({
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        try {
+          const url = new URL(request.url)
+          const kategoriId = url.searchParams.get('kategori_id')
+          const filters = [eq(masterDetailPermintaan.isActive, true)]
 
-        const url = new URL(request.url)
-        const kategoriId = url.searchParams.get('kategori_id')
+          if (kategoriId) {
+            filters.push(eq(masterDetailPermintaan.kategoriPermintaanId, kategoriId))
+          }
 
-        let query = supabase
-          .from('master_detail_permintaan')
-          .select('*, master_kategori_permintaan(id, nama, master_jenis_permintaan(nama))')
-          .eq('is_active', true)
-          .order('nama', { ascending: true })
+          const rows = await db
+            .select({
+              id: masterDetailPermintaan.id,
+              kategori_permintaan_id: masterDetailPermintaan.kategoriPermintaanId,
+              nama: masterDetailPermintaan.nama,
+              deskripsi: masterDetailPermintaan.deskripsi,
+              is_active: masterDetailPermintaan.isActive,
+              created_at: masterDetailPermintaan.createdAt,
+              updated_at: masterDetailPermintaan.updatedAt,
+              master_kategori_permintaan_id: masterKategoriPermintaan.id,
+              master_kategori_permintaan_nama: masterKategoriPermintaan.nama,
+              master_jenis_permintaan_nama: masterJenisPermintaan.nama,
+            })
+            .from(masterDetailPermintaan)
+            .leftJoin(
+              masterKategoriPermintaan,
+              eq(masterDetailPermintaan.kategoriPermintaanId, masterKategoriPermintaan.id),
+            )
+            .leftJoin(
+              masterJenisPermintaan,
+              eq(masterKategoriPermintaan.jenisPermintaanId, masterJenisPermintaan.id),
+            )
+            .where(and(...filters))
+            .orderBy(asc(masterDetailPermintaan.nama))
 
-        if (kategoriId) {
-          query = query.eq('kategori_permintaan_id', kategoriId)
-        }
+          const result = rows.map((row) => ({
+            id: row.id,
+            kategori_permintaan_id: row.kategori_permintaan_id,
+            nama: row.nama,
+            deskripsi: row.deskripsi,
+            is_active: row.is_active,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            master_kategori_permintaan: row.master_kategori_permintaan_id
+              ? {
+                  id: row.master_kategori_permintaan_id,
+                  nama: row.master_kategori_permintaan_nama,
+                  master_jenis_permintaan: row.master_jenis_permintaan_nama
+                    ? { nama: row.master_jenis_permintaan_nama }
+                    : null,
+                }
+              : null,
+            kategori_nama: row.master_kategori_permintaan_nama ?? undefined,
+            jenis_nama: row.master_jenis_permintaan_nama ?? undefined,
+          }))
 
-        const { data, error } = await query
-
-        if (error) {
+          return Response.json(result)
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-detail GET:', err)
           return Response.json({ error: 'Gagal mengambil data detail permintaan' }, { status: 500 })
         }
-
-        const result = (data ?? []).map((row: any) => ({
-          ...row,
-          kategori_nama: row.master_kategori_permintaan?.nama,
-          jenis_nama: row.master_kategori_permintaan?.master_jenis_permintaan?.nama,
-        }))
-
-        return Response.json(result)
       },
 
       POST: async ({ request }: { request: Request }) => {
