@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { dokumenTransaksi } from '#/db/schema/dokumen'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
   masterFungsi,
@@ -17,13 +17,11 @@ import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-aut
 import { updateDokumenSchema } from '#/lib/schemas/dokumen'
 import {
   getDokumenById,
-  updateDokumen,
   insertLog,
-  syncDocumentAttachments,
-  deleteOrphanFiles,
+  isStoragePathPending,
   type LampiranUrl,
 } from '#/lib/dokumen-helpers'
-import { parseDokumen } from '#/lib/dokumen'
+import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -172,16 +170,53 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           }, { status: 400 })
         }
 
-        // Session-scoped client for auth check (SELECT operations)
-        const supabase = createClient(request)
-        const session = await getServerSession(supabase)
-
+        const session = await getLocalServerSession(request)
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const dok = await getDokumenById(supabase, params.id)
+        if (!hasLocalRole(session, 'PEGAWAI')) {
+          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+        }
 
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
+
+        let dokRows: Array<{
+          id: string
+          created_by: string
+          status: string
+          revision_target: string | null
+          lampiran_urls: unknown
+          is_non_material: boolean | null
+          jenis_permintaan_id: string | null
+          kategori_permintaan_id: string | null
+          detail_permintaan_id: string | null
+        }>
+
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              created_by: dokumenTransaksi.createdBy,
+              status: dokumenTransaksi.status,
+              revision_target: dokumenTransaksi.revisionTarget,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/dokumen/:id] PATCH local lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
         if (!dok) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
@@ -207,66 +242,108 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           return Response.json({ error: 'Dokumen tidak bisa diedit — status bukan NEED_REVISION' }, { status: 400 })
         }
 
-        // lampiran_urls may come back as JSON string from DB
-        const storedLampirans = dok.lampiran_urls
-          ? (typeof dok.lampiran_urls === 'string'
-              ? JSON.parse(dok.lampiran_urls) as LampiranUrl[]
-              : dok.lampiran_urls as LampiranUrl[])
-          : []
-
-        const admin = createAdminClient()
-        let processedLampirans = parsed.data.lampiranUrls ?? storedLampirans
-
-        // Sync attachments: move PENDING files + track old files for deletion
-        let pathsToDelete: string[] = []
-        if (parsed.data.lampiranUrls && parsed.data.lampiranUrls.length > 0) {
-          try {
-            const syncResult = await syncDocumentAttachments(
-              admin,
-              session.user.id,
-              params.id,
-              parsed.data.lampiranUrls,
-              storedLampirans
-            )
-            processedLampirans = syncResult.updatedLampirans
-            pathsToDelete = syncResult.pathsToDelete
-          } catch (err) {
-            console.error('[PATCH] syncDocumentAttachments error:', err)
-            return Response.json({
-              error: `Gagal menyimpan perubahan: ${err instanceof Error ? err.message : 'Terjadi kesalahan'}`,
-            }, { status: 500 })
-          }
+        const storedLampirans = parseLampiranUrls(dok.lampiran_urls)
+        if (parsed.data.lampiranUrls?.some(lamp => isStoragePathPending(lamp.url))) {
+          return Response.json({
+            error: 'Perubahan lampiran dengan file baru belum didukung pada fase migrasi ini',
+          }, { status: 400 })
         }
 
-        const result = await updateDokumen(admin, params.id, {
-          lampiranUrls: processedLampirans,
-          judul: parsed.data.judul,
-          tahun: parsed.data.tahun,
-          fungsiId: parsed.data.fungsiId,
-          kegiatanId: parsed.data.kegiatanId,
-          tanggal: parsed.data.tanggal,
-          nominalRealisasi: parsed.data.nominalRealisasi,
-          keteranganDetail: parsed.data.keteranganDetail,
-        })
+        const processedLampirans: LampiranUrl[] = parsed.data.lampiranUrls ?? storedLampirans
 
-        if (result.error) {
-          return Response.json({ error: result.error }, { status: 500 })
-        }
+        try {
+          await db.transaction(async (tx) => {
+            const updatePayload: Partial<typeof dokumenTransaksi.$inferInsert> = {
+              updatedAt: new Date(),
+              lampiranUrls: processedLampirans,
+            }
 
-        // Insert log for Non-Material edit
-        if (isNonMaterial) {
-          await insertLog(admin, {
-            dokumenId: params.id,
-            userId: session.user.id,
-            aksi: 'UPDATE',
-            stepUrutan: null,
+            if (parsed.data.judul !== undefined) updatePayload.judul = parsed.data.judul
+            if (parsed.data.tahun !== undefined) updatePayload.tahun = parsed.data.tahun
+            if (parsed.data.fungsiId !== undefined) updatePayload.fungsiId = parsed.data.fungsiId
+            if (parsed.data.kegiatanId !== undefined) updatePayload.kegiatanJenisId = parsed.data.kegiatanId
+            if (parsed.data.tanggal !== undefined) updatePayload.tanggal = parsed.data.tanggal
+            if (parsed.data.nominalRealisasi !== undefined) {
+              updatePayload.nominalRealisasi =
+                parsed.data.nominalRealisasi === null
+                  ? null
+                  : String(parsed.data.nominalRealisasi)
+            }
+            if (parsed.data.keteranganDetail !== undefined) {
+              updatePayload.keteranganDetail = parsed.data.keteranganDetail
+            }
+
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set(updatePayload)
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
+
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_UPDATE_NOT_FOUND')
+            }
+
+            if (isNonMaterial) {
+              await tx.insert(logAktivitas).values({
+                dokumenId: params.id,
+                userId: session.user.id,
+                aksi: 'UPDATE',
+                stepUrutan: null,
+              })
+            }
           })
+        } catch (err) {
+          console.error('[API/dokumen/:id] PATCH local update error:', err)
+          return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
         }
 
-        // Delete orphaned files (fire and forget)
-        deleteOrphanFiles(admin, pathsToDelete)
+        let updatedRows: Array<Record<string, unknown>>
+        try {
+          updatedRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              fungsi_id: dokumenTransaksi.fungsiId,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+              status: dokumenTransaksi.status,
+              current_step: dokumenTransaksi.currentStep,
+              revision_target: dokumenTransaksi.revisionTarget,
+              revision_notes: dokumenTransaksi.revisionNotes,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              tahun: dokumenTransaksi.tahun,
+              tanggal: dokumenTransaksi.tanggal,
+              created_by: dokumenTransaksi.createdBy,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
+              keterangan_detail: dokumenTransaksi.keteranganDetail,
+              created_at: dokumenTransaksi.createdAt,
+              updated_at: dokumenTransaksi.updatedAt,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_nama: masterKegiatan.nama,
+            })
+            .from(dokumenTransaksi)
+            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/dokumen/:id] PATCH local response lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
+        }
 
-        return Response.json({ dokumen: result.data })
+        const updated = updatedRows[0] as { nominal_realisasi: string | number | null } & Record<string, unknown>
+        if (!updated) {
+          return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
+        }
+
+        return Response.json({
+          dokumen: parseDokumenWithNames({
+            ...updated,
+            nominal_realisasi: normalizeNumericValue(updated.nominal_realisasi),
+          }, {}, {}),
+        })
       },
 
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

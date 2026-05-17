@@ -1,27 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession as getSession } from '#/lib/auth'
+import { and, eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import { masterKelengkapanDokumen } from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
-import type { TransitionResult } from '#/lib/types/fsm'
-import {
-  getDokumenById,
-  updateDokumenStatus,
-  insertLog,
-  getKelengkapanRequired,
-} from '#/lib/dokumen-helpers'
+import { parseLampiranUrls } from '#/lib/dokumen'
+import type { StatusDokumen, TransitionResult } from '#/lib/types/fsm'
 
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/dokumen/[id]/submit — Submit or Resubmit dokumen
+// POST /api/dokumen/[id]/submit - Submit or Resubmit dokumen
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/$id/submit')({
@@ -29,15 +21,58 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const dok = await getDokumenById(supabase, params.id)
+        if (!hasLocalRole(session, 'PEGAWAI')) {
+          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+        }
 
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
+
+        let dokRows: Array<{
+          id: string
+          created_by: string
+          status: string
+          revision_target: string | null
+          lampiran_urls: unknown
+          is_non_material: boolean | null
+          jenis_permintaan_id: string | null
+          kategori_permintaan_id: string | null
+          detail_permintaan_id: string | null
+          kegiatan_jenis_id: string
+          is_ketua_tim: boolean
+        }>
+
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              created_by: dokumenTransaksi.createdBy,
+              status: dokumenTransaksi.status,
+              revision_target: dokumenTransaksi.revisionTarget,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/dokumen/:id/submit] local lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
         if (!dok) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
@@ -46,22 +81,34 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
         }
 
-        // Check if Non-Material document
         const isNonMaterial = dok.is_non_material === true ||
-          (dok.is_non_material === undefined && !dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+          (dok.is_non_material == null && !dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+        const lampiranUrls = parseLampiranUrls(dok.lampiran_urls)
 
         let transitionResult: TransitionResult
         let aksi: string
 
         if (dok.status === 'DRAFT') {
-          // Validate: all required lampiran must be uploaded (only for Material)
           if (!isNonMaterial) {
-            const requiredItems = await getKelengkapanRequired(
-              supabase,
-              dok.kegiatan_jenis_id,
-              dok.is_ketua_tim
-            )
-            const uploadedIds = dok.lampiran_urls.map(l => l.kelengkapan_id)
+            let requiredItems: Array<{ id: string; nama_dokumen: string; required: boolean }>
+            try {
+              requiredItems = await db
+                .select({
+                  id: masterKelengkapanDokumen.id,
+                  nama_dokumen: masterKelengkapanDokumen.namaDokumen,
+                  required: masterKelengkapanDokumen.required,
+                })
+                .from(masterKelengkapanDokumen)
+                .where(and(
+                  eq(masterKelengkapanDokumen.kegiatanId, dok.kegiatan_jenis_id),
+                  eq(masterKelengkapanDokumen.isKetuaTim, dok.is_ketua_tim),
+                ))
+            } catch (err) {
+              console.error('[API/dokumen/:id/submit] local kelengkapan lookup error:', err)
+              return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+            }
+
+            const uploadedIds = lampiranUrls.map(l => l.kelengkapan_id)
             const missing = requiredItems.filter(r => r.required && !uploadedIds.includes(r.id))
 
             if (missing.length > 0) {
@@ -71,14 +118,12 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
             }
           }
 
-          // Validate lampiran_urls is not empty
-          if (dok.lampiran_urls.length === 0) {
+          if (lampiranUrls.length === 0) {
             return Response.json({
               error: 'Minimal upload satu lampiran sebelum mengajukan dokumen',
             }, { status: 400 })
           }
 
-          // Non-Material: langsung selesai
           if (isNonMaterial) {
             transitionResult = {
               success: true,
@@ -88,17 +133,16 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
               stepUrutan: 1,
             }
           } else {
-            transitionResult = transition(dok.status, 'SUBMIT', 'PEGAWAI')
+            transitionResult = transition(dok.status as StatusDokumen, 'SUBMIT', 'PEGAWAI')
           }
           aksi = 'SUBMIT'
         } else if (dok.status === 'NEED_REVISION' && dok.revision_target === 'USER') {
-          // Non-Material tidak bisa di-revisi (sudah langsung selesai)
           if (isNonMaterial) {
             return Response.json({
               error: 'Dokumen Non-Material tidak memerlukan revisi',
             }, { status: 400 })
           }
-          transitionResult = transition(dok.status, 'RESUBMIT', 'PEGAWAI', dok.revision_target)
+          transitionResult = transition(dok.status as StatusDokumen, 'RESUBMIT', 'PEGAWAI', dok.revision_target)
           aksi = 'RESUBMIT'
         } else {
           return Response.json({
@@ -110,27 +154,35 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           return Response.json({ error: transitionResult.error || 'Transisi status gagal' }, { status: 400 })
         }
 
-        // Admin client for UPDATE operations (bypass RLS)
-        const admin = createAdminClient()
+        try {
+          await db.transaction(async (tx) => {
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set({
+                status: transitionResult.newStatus,
+                currentStep: transitionResult.newCurrentStep,
+                revisionTarget: transitionResult.newRevisionTarget,
+                revisionNotes: null,
+                updatedAt: new Date(),
+              })
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
 
-        // Update status via FSM result
-        const updateRes = await updateDokumenStatus(admin, params.id, {
-          status: transitionResult.newStatus,
-          currentStep: transitionResult.newCurrentStep,
-          revisionTarget: transitionResult.newRevisionTarget,
-        })
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+            }
 
-        if (updateRes.error) {
-          return Response.json({ error: updateRes.error }, { status: 500 })
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi,
+              stepUrutan: transitionResult.stepUrutan,
+            })
+          })
+        } catch (err) {
+          console.error('[API/dokumen/:id/submit] local submit error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }
-
-        // Insert log — append-only
-        await insertLog(admin, {
-          dokumenId: params.id,
-          userId: session.user.id,
-          aksi,
-          stepUrutan: transitionResult.stepUrutan,
-        })
 
         return Response.json({ success: true })
       },
