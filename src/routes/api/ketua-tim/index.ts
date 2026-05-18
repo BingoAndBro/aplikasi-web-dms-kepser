@@ -2,36 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { desc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { ketuaTimAssignments, masterKegiatan } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession, hasRole } from '#/lib/auth'
-import { TABLES } from '#/lib/constants/tables'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
-
-async function requireAdmin(request: Request) {
-  const supabase = createClient(request)
-  const session = await getServerSession(supabase)
-
-  if (!session) {
-    return { error: Response.json({ error: 'Unauthorized' }, { status: 401 }) }
-  }
-
-  const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-  if (!isAdmin) {
-    return { error: Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 }) }
-  }
-
-  return { session }
-}
 
 async function requireLocalAdmin(request: Request) {
   const session = await getLocalServerSession(request)
@@ -45,6 +16,36 @@ async function requireLocalAdmin(request: Request) {
   }
 
   return { session }
+}
+
+async function getAssignmentResponse(id: string) {
+  const [row] = await db
+    .select({
+      id: ketuaTimAssignments.id,
+      user_id: ketuaTimAssignments.userId,
+      kegiatan_id: ketuaTimAssignments.kegiatanId,
+      created_at: ketuaTimAssignments.createdAt,
+      created_by: ketuaTimAssignments.createdBy,
+      kegiatan_id_join: masterKegiatan.id,
+      kegiatan_nama: masterKegiatan.nama,
+    })
+    .from(ketuaTimAssignments)
+    .leftJoin(masterKegiatan, eq(ketuaTimAssignments.kegiatanId, masterKegiatan.id))
+    .where(eq(ketuaTimAssignments.id, id))
+    .limit(1)
+
+  if (!row) return null
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    kegiatan_id: row.kegiatan_id,
+    created_at: row.created_at,
+    created_by: row.created_by,
+    kegiatan: row.kegiatan_id_join
+      ? { id: row.kegiatan_id_join, nama: row.kegiatan_nama }
+      : null,
+  }
 }
 
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -94,7 +95,7 @@ export const Route = createFileRoute('/api/ketua-tim/')({
       },
 
       POST: async ({ request }: { request: Request }) => {
-        const auth = await requireAdmin(request)
+        const auth = await requireLocalAdmin(request)
         if ('error' in auth) return auth.error
 
         let body: unknown
@@ -110,32 +111,28 @@ export const Route = createFileRoute('/api/ketua-tim/')({
         }
 
         try {
-          const admin = createAdminClient()
-          const { data, error } = await admin
-            .from(TABLES.KETUA_TIM_ASSIGNMENTS)
-            .upsert({
-              user_id,
-              kegiatan_id,
-              created_by: auth.session.user.id,
-            }, {
-              onConflict: 'kegiatan_id',
+          const [saved] = await db
+            .insert(ketuaTimAssignments)
+            .values({
+              userId: user_id,
+              kegiatanId: kegiatan_id,
+              createdBy: auth.session.user.id,
             })
-            .select(`
-              id,
-              user_id,
-              kegiatan_id,
-              created_at,
-              created_by,
-              kegiatan:master_kegiatan(id, nama)
-            `)
-            .single()
+            .onConflictDoUpdate({
+              target: ketuaTimAssignments.kegiatanId,
+              set: {
+                userId: user_id,
+                createdBy: auth.session.user.id,
+              },
+            })
+            .returning({ id: ketuaTimAssignments.id })
 
-          if (error) {
-            console.error('[API] /api/ketua-tim POST error:', error)
+          const assignment = saved ? await getAssignmentResponse(saved.id) : null
+          if (!assignment) {
             return Response.json({ error: 'Gagal menyimpan assignment ketua tim' }, { status: 500 })
           }
 
-          return Response.json({ assignment: data }, { status: 201 })
+          return Response.json({ assignment }, { status: 201 })
         } catch (err) {
           console.error('[API] /api/ketua-tim POST error:', err)
           return Response.json({ error: 'Gagal menyimpan assignment ketua tim' }, { status: 500 })
@@ -143,7 +140,7 @@ export const Route = createFileRoute('/api/ketua-tim/')({
       },
 
       DELETE: async ({ request }: { request: Request }) => {
-        const auth = await requireAdmin(request)
+        const auth = await requireLocalAdmin(request)
         if ('error' in auth) return auth.error
 
         const id = new URL(request.url).searchParams.get('id')
@@ -152,18 +149,12 @@ export const Route = createFileRoute('/api/ketua-tim/')({
         }
 
         try {
-          const admin = createAdminClient()
-          const { error, count } = await admin
-            .from(TABLES.KETUA_TIM_ASSIGNMENTS)
-            .delete({ count: 'exact' })
-            .eq('id', id)
+          const deleted = await db
+            .delete(ketuaTimAssignments)
+            .where(eq(ketuaTimAssignments.id, id))
+            .returning({ id: ketuaTimAssignments.id })
 
-          if (error) {
-            console.error('[API] /api/ketua-tim DELETE error:', error)
-            return Response.json({ error: 'Gagal menghapus assignment ketua tim' }, { status: 500 })
-          }
-
-          if (count === 0) {
+          if (deleted.length === 0) {
             return Response.json({ error: 'Assignment ketua tim tidak ditemukan' }, { status: 404 })
           }
 

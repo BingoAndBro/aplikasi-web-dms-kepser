@@ -1,10 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterJenisPermintaan } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createJenisSchema } from '#/lib/schemas/master-data'
+
+async function requireAdmin(request: Request) {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return Response.json({ error: 'Hanya ADMIN yang bisa menambah jenis permintaan' }, { status: 403 })
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/master-jenis')({
   server: {
@@ -48,29 +56,17 @@ export const Route = createFileRoute('/api/master-jenis')({
           }, { status: 400 })
         }
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request)
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa menambah jenis permintaan' }, { status: 403 })
-        }
-
-        const { data: existing } = await supabase
-          .from('master_jenis_permintaan')
-          .select('id')
-          .eq('nama', result.data.nama)
-          .eq('is_active', true)
-          .maybeSingle()
+        const [existing] = await db
+          .select({ id: masterJenisPermintaan.id })
+          .from(masterJenisPermintaan)
+          .where(and(
+            eq(masterJenisPermintaan.nama, result.data.nama),
+            eq(masterJenisPermintaan.isActive, true),
+          ))
+          .limit(1)
 
         if (existing) {
           return Response.json({
@@ -78,20 +74,31 @@ export const Route = createFileRoute('/api/master-jenis')({
           }, { status: 409 })
         }
 
-        const { data, error } = await supabase
-          .from('master_jenis_permintaan')
-          .insert({
-            nama: result.data.nama,
-            deskripsi: result.data.deskripsi ?? null,
-          })
-          .select()
-          .single()
+        try {
+          const [data] = await db
+            .insert(masterJenisPermintaan)
+            .values({
+              nama: result.data.nama,
+              deskripsi: result.data.deskripsi ?? null,
+            })
+            .returning({
+              id: masterJenisPermintaan.id,
+              nama: masterJenisPermintaan.nama,
+              deskripsi: masterJenisPermintaan.deskripsi,
+              is_active: masterJenisPermintaan.isActive,
+              created_at: masterJenisPermintaan.createdAt,
+              updated_at: masterJenisPermintaan.updatedAt,
+            })
 
-        if (error) {
+          if (!data) {
+            return Response.json({ error: 'Gagal membuat jenis permintaan' }, { status: 500 })
+          }
+
+          return Response.json(data, { status: 201 })
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-jenis POST:', err)
           return Response.json({ error: 'Gagal membuat jenis permintaan' }, { status: 500 })
         }
-
-        return Response.json(data, { status: 201 })
       },
     },
   },

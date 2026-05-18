@@ -2,9 +2,17 @@ import { createFileRoute } from '@tanstack/react-router'
 import { and, asc, eq, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterFungsi, masterKegiatan, masterKelengkapanDokumen } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createKelengkapanSchema } from '#/lib/schemas/master-data'
+
+async function requireAdmin(request: Request) {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return Response.json({ error: 'Hanya ADMIN yang bisa menambah kelengkapan' }, { status: 403 })
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/master-kelengkapan')({
   server: {
@@ -95,55 +103,66 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
           }, { status: 400 })
         }
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request)
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa menambah kelengkapan' }, { status: 403 })
-        }
-
-        const { data: kegiatan } = await supabase
-          .from('master_kegiatan')
-          .select('id')
-          .eq('id', result.data.kegiatanId)
-          .eq('is_active', true)
-          .single()
+        const [kegiatan] = await db
+          .select({
+            id: masterKegiatan.id,
+            nama: masterKegiatan.nama,
+            fungsi_nama: masterFungsi.nama,
+          })
+          .from(masterKegiatan)
+          .leftJoin(masterFungsi, eq(masterKegiatan.fungsiId, masterFungsi.id))
+          .where(and(
+            eq(masterKegiatan.id, result.data.kegiatanId),
+            eq(masterKegiatan.isActive, true),
+          ))
+          .limit(1)
 
         if (!kegiatan) {
           return Response.json({ error: 'Kegiatan tidak ditemukan atau tidak aktif' }, { status: 400 })
         }
 
-        const { data, error } = await supabase
-          .from('master_kelengkapan_dokumen')
-          .insert({
-            kegiatan_id: result.data.kegiatanId,
-            is_ketua_tim: result.data.isKetuaTim,
-            nama_dokumen: result.data.namaDokumen,
-            required: result.data.required,
-          })
-          .select('*, master_kegiatan(nama, master_fungsi(nama))')
-          .single()
+        try {
+          const [row] = await db
+            .insert(masterKelengkapanDokumen)
+            .values({
+              kegiatanId: result.data.kegiatanId,
+              isKetuaTim: result.data.isKetuaTim,
+              namaDokumen: result.data.namaDokumen,
+              required: result.data.required,
+            })
+            .returning({
+              id: masterKelengkapanDokumen.id,
+              kegiatan_id: masterKelengkapanDokumen.kegiatanId,
+              is_ketua_tim: masterKelengkapanDokumen.isKetuaTim,
+              nama_dokumen: masterKelengkapanDokumen.namaDokumen,
+              required: masterKelengkapanDokumen.required,
+              jenis_permintaan_id: masterKelengkapanDokumen.jenisPermintaanId,
+              kategori_permintaan_id: masterKelengkapanDokumen.kategoriPermintaanId,
+              detail_permintaan_id: masterKelengkapanDokumen.detailPermintaanId,
+              created_at: masterKelengkapanDokumen.createdAt,
+              updated_at: masterKelengkapanDokumen.updatedAt,
+            })
 
-        if (error) {
+          if (!row) {
+            return Response.json({ error: 'Gagal menambah kelengkapan' }, { status: 500 })
+          }
+
+          return Response.json({
+            ...row,
+            master_kegiatan: {
+              nama: kegiatan.nama,
+              master_fungsi: kegiatan.fungsi_nama ? { nama: kegiatan.fungsi_nama } : null,
+            },
+            kegiatan_nama: kegiatan.nama,
+            fungsi_nama: kegiatan.fungsi_nama,
+          }, { status: 201 })
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-kelengkapan POST:', err)
           return Response.json({ error: 'Gagal menambah kelengkapan' }, { status: 500 })
         }
-
-        const row = data as any
-        return Response.json({
-          ...row,
-          kegiatan_nama: row.master_kegiatan?.nama,
-          fungsi_nama: row.master_kegiatan?.master_fungsi?.nama,
-        }, { status: 201 })
       },
     },
   },

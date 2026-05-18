@@ -2,9 +2,17 @@ import { createFileRoute } from '@tanstack/react-router'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterFungsi, masterKegiatan } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createKegiatanSchema } from '#/lib/schemas/master-data'
+
+async function requireAdmin(request: Request) {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return Response.json({ error: 'Hanya ADMIN yang bisa menambah kegiatan' }, { status: 403 })
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/master-kegiatan')({
   server: {
@@ -74,41 +82,31 @@ export const Route = createFileRoute('/api/master-kegiatan')({
           }, { status: 400 })
         }
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request)
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa menambah kegiatan' }, { status: 403 })
-        }
-
-        const { data: fungsi } = await supabase
-          .from('master_fungsi')
-          .select('id, nama')
-          .eq('id', result.data.fungsiId)
-          .eq('is_active', true)
-          .single()
+        const [fungsi] = await db
+          .select({ id: masterFungsi.id, nama: masterFungsi.nama })
+          .from(masterFungsi)
+          .where(and(
+            eq(masterFungsi.id, result.data.fungsiId),
+            eq(masterFungsi.isActive, true),
+          ))
+          .limit(1)
 
         if (!fungsi) {
           return Response.json({ error: 'Fungsi tidak ditemukan atau tidak aktif' }, { status: 400 })
         }
 
-        const { data: existing } = await supabase
-          .from('master_kegiatan')
-          .select('id')
-          .eq('nama', result.data.nama)
-          .eq('fungsi_id', result.data.fungsiId)
-          .eq('is_active', true)
-          .single()
+        const [existing] = await db
+          .select({ id: masterKegiatan.id })
+          .from(masterKegiatan)
+          .where(and(
+            eq(masterKegiatan.nama, result.data.nama),
+            eq(masterKegiatan.fungsiId, result.data.fungsiId),
+            eq(masterKegiatan.isActive, true),
+          ))
+          .limit(1)
 
         if (existing) {
           return Response.json({
@@ -116,25 +114,37 @@ export const Route = createFileRoute('/api/master-kegiatan')({
           }, { status: 409 })
         }
 
-        const { data, error } = await supabase
-          .from('master_kegiatan')
-          .insert({
-            fungsi_id: result.data.fungsiId,
-            nama: result.data.nama,
-            deskripsi: result.data.deskripsi ?? null,
-          })
-          .select('*, master_fungsi(nama)')
-          .single()
+        try {
+          const [row] = await db
+            .insert(masterKegiatan)
+            .values({
+              fungsiId: result.data.fungsiId,
+              nama: result.data.nama,
+              deskripsi: result.data.deskripsi ?? null,
+            })
+            .returning({
+              id: masterKegiatan.id,
+              fungsi_id: masterKegiatan.fungsiId,
+              nama: masterKegiatan.nama,
+              deskripsi: masterKegiatan.deskripsi,
+              is_active: masterKegiatan.isActive,
+              created_at: masterKegiatan.createdAt,
+              updated_at: masterKegiatan.updatedAt,
+            })
 
-        if (error) {
+          if (!row) {
+            return Response.json({ error: 'Gagal membuat kegiatan' }, { status: 500 })
+          }
+
+          return Response.json({
+            ...row,
+            master_fungsi: { nama: fungsi.nama },
+            fungsi_nama: fungsi.nama,
+          }, { status: 201 })
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-kegiatan POST:', err)
           return Response.json({ error: 'Gagal membuat kegiatan' }, { status: 500 })
         }
-
-        const row = data as any
-        return Response.json({
-          ...row,
-          fungsi_nama: row.master_fungsi?.nama,
-        }, { status: 201 })
       },
     },
   },

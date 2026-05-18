@@ -1,13 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { and, eq, inArray, ne } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { masterKlasifikasiArsip } from '#/db/schema/arsip'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { z } from 'zod'
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
 
 // ---------------------------------------------------------------------------
 // PATCH /api/arsiparis/klasifikasi/$id — update klasifikasi (ADMIN only)
@@ -21,18 +17,29 @@ const updateKlasifikasiSchema = z.object({
   parent_id: z.string().uuid().nullable().optional(),
 })
 
+async function requireAdminOrArsiparis(request: Request, action: 'mengubah' | 'menghapus') {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN') && !hasLocalRole(session, 'ARSIPARIS')) {
+    return Response.json({ error: `Hanya ADMIN atau ARSIPARIS yang bisa ${action} klasifikasi` }, { status: 403 })
+  }
+  return null
+}
+
 // Helper: get all descendant IDs of a node (for cascade soft delete)
-async function getDescendantIds(supabase: any, nodeId: string): Promise<string[]> {
+async function getDescendantIds(nodeId: string): Promise<string[]> {
   const descendants: string[] = []
   const queue = [nodeId]
 
   while (queue.length > 0) {
     const currentId = queue.shift()!
-    const { data: children } = await supabase
-      .from('master_klasifikasi_arsip')
-      .select('id')
-      .eq('parent_id', currentId)
-      .eq('is_active', true)
+    const children = await db
+      .select({ id: masterKlasifikasiArsip.id })
+      .from(masterKlasifikasiArsip)
+      .where(and(
+        eq(masterKlasifikasiArsip.parentId, currentId),
+        eq(masterKlasifikasiArsip.isActive, true),
+      ))
 
     if (children) {
       for (const child of children) {
@@ -46,8 +53,8 @@ async function getDescendantIds(supabase: any, nodeId: string): Promise<string[]
 }
 
 // Helper: check if targetId is a descendant of ancestorId
-async function isDescendantOf(supabase: any, targetId: string, ancestorId: string): Promise<boolean> {
-  const descendants = await getDescendantIds(supabase, targetId)
+async function isDescendantOf(targetId: string, ancestorId: string): Promise<boolean> {
+  const descendants = await getDescendantIds(targetId)
   return descendants.includes(ancestorId)
 }
 
@@ -55,13 +62,8 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
   server: {
     handlers: {
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
-        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-
-        const isAdminOrArsiparis = (await hasRole(supabase, session.user.id, 'ADMIN')) ||
-          (await hasRole(supabase, session.user.id, 'ARSIPARIS'))
-        if (!isAdminOrArsiparis) return Response.json({ error: 'Hanya ADMIN atau ARSIPARIS yang bisa mengubah klasifikasi' }, { status: 403 })
+        const authError = await requireAdminOrArsiparis(request, 'mengubah')
+        if (authError) return authError
 
         const body = await request.json().catch(() => null)
         if (!body) return Response.json({ error: 'Body tidak valid' }, { status: 400 })
@@ -70,14 +72,20 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
         if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
         // Verify exists and get current data
-        const { data: existing, error: existError } = await supabase
-          .from('master_klasifikasi_arsip')
-          .select('id, nama, kode')
-          .eq('id', params.id)
-          .eq('is_active', true)
-          .single()
+        const [existing] = await db
+          .select({
+            id: masterKlasifikasiArsip.id,
+            nama: masterKlasifikasiArsip.nama,
+            kode: masterKlasifikasiArsip.kode,
+          })
+          .from(masterKlasifikasiArsip)
+          .where(and(
+            eq(masterKlasifikasiArsip.id, params.id),
+            eq(masterKlasifikasiArsip.isActive, true),
+          ))
+          .limit(1)
 
-        if (existError || !existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
+        if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
 
         // Prevent modifying root "000"
         if (existing.kode === '000') {
@@ -89,26 +97,30 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
 
         // Cek nama unique jika diupdate
         if (parsed.data.nama && parsed.data.nama !== existing.nama) {
-          const { data: duplicate } = await supabase
-            .from('master_klasifikasi_arsip')
-            .select('id')
-            .eq('nama', parsed.data.nama)
-            .eq('is_active', true)
-            .neq('id', params.id)
-            .single()
+          const [duplicate] = await db
+            .select({ id: masterKlasifikasiArsip.id })
+            .from(masterKlasifikasiArsip)
+            .where(and(
+              eq(masterKlasifikasiArsip.nama, parsed.data.nama),
+              eq(masterKlasifikasiArsip.isActive, true),
+              ne(masterKlasifikasiArsip.id, params.id),
+            ))
+            .limit(1)
 
           if (duplicate) return Response.json({ error: "Nama klasifikasi `" + parsed.data.nama + "` sudah ada" }, { status: 409 })
         }
 
         // Cek kode unique jika diupdate
         if (parsed.data.kode && parsed.data.kode !== existing.kode) {
-          const { data: duplicateKode } = await supabase
-            .from('master_klasifikasi_arsip')
-            .select('id')
-            .eq('kode', parsed.data.kode)
-            .eq('is_active', true)
-            .neq('id', params.id)
-            .single()
+          const [duplicateKode] = await db
+            .select({ id: masterKlasifikasiArsip.id })
+            .from(masterKlasifikasiArsip)
+            .where(and(
+              eq(masterKlasifikasiArsip.kode, parsed.data.kode),
+              eq(masterKlasifikasiArsip.isActive, true),
+              ne(masterKlasifikasiArsip.id, params.id),
+            ))
+            .limit(1)
 
           if (duplicateKode) return Response.json({ error: "Kode klasifikasi `" + parsed.data.kode + "` sudah ada" }, { status: 409 })
         }
@@ -127,57 +139,68 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
 
           // Check circular reference - cannot move to own descendant
           if (parsed.data.parent_id) {
-            const isCircular = await isDescendantOf(supabase, params.id, parsed.data.parent_id)
+            const isCircular = await isDescendantOf(params.id, parsed.data.parent_id)
             if (isCircular) {
               return Response.json({ error: 'Tidak bisa memindahkan ke subclass-nya sendiri (circular reference)' }, { status: 400 })
             }
           }
 
           // Verify parent exists
-          const { data: parent } = await supabase
-            .from('master_klasifikasi_arsip')
-            .select('id')
-            .eq('id', parsed.data.parent_id)
-            .eq('is_active', true)
-            .single()
+          const [parent] = await db
+            .select({ id: masterKlasifikasiArsip.id })
+            .from(masterKlasifikasiArsip)
+            .where(and(
+              eq(masterKlasifikasiArsip.id, parsed.data.parent_id),
+              eq(masterKlasifikasiArsip.isActive, true),
+            ))
+            .limit(1)
 
           if (!parent) return Response.json({ error: 'Induk klasifikasi tidak ditemukan' }, { status: 400 })
         }
 
-        const updateData: Record<string, unknown> = {}
+        const updateData: Partial<typeof masterKlasifikasiArsip.$inferInsert> = {}
         if (parsed.data.nama !== undefined) updateData.nama = parsed.data.nama
         if (parsed.data.deskripsi !== undefined) updateData.deskripsi = parsed.data.deskripsi
         if (parsed.data.kode !== undefined) updateData.kode = parsed.data.kode
-        if (parsed.data.parent_id !== undefined) updateData.parent_id = parsed.data.parent_id
+        if (parsed.data.parent_id !== undefined) updateData.parentId = parsed.data.parent_id
 
-        const { data, error } = await supabase
-          .from('master_klasifikasi_arsip')
-          .update(updateData)
-          .eq('id', params.id)
-          .select()
-          .single()
+        try {
+          const [data] = await db
+            .update(masterKlasifikasiArsip)
+            .set(updateData)
+            .where(eq(masterKlasifikasiArsip.id, params.id))
+            .returning({
+              id: masterKlasifikasiArsip.id,
+              nama: masterKlasifikasiArsip.nama,
+              deskripsi: masterKlasifikasiArsip.deskripsi,
+              is_active: masterKlasifikasiArsip.isActive,
+              created_at: masterKlasifikasiArsip.createdAt,
+              parent_id: masterKlasifikasiArsip.parentId,
+              kode: masterKlasifikasiArsip.kode,
+            })
 
-        if (error) return Response.json({ error: 'Gagal memperbarui klasifikasi: ' + error.message }, { status: 500 })
+          if (!data) return Response.json({ error: 'Gagal memperbarui klasifikasi' }, { status: 500 })
 
-        return Response.json(data)
+          return Response.json(data)
+        } catch (err) {
+          console.error('[arsiparis/klasifikasi/$id] PATCH local query error:', err)
+          return Response.json({ error: 'Gagal memperbarui klasifikasi' }, { status: 500 })
+        }
       },
 
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
-        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-
-        const isAdminOrArsiparis = (await hasRole(supabase, session.user.id, 'ADMIN')) ||
-          (await hasRole(supabase, session.user.id, 'ARSIPARIS'))
-        if (!isAdminOrArsiparis) return Response.json({ error: 'Hanya ADMIN atau ARSIPARIS yang bisa menghapus klasifikasi' }, { status: 403 })
+        const authError = await requireAdminOrArsiparis(request, 'menghapus')
+        if (authError) return authError
 
         // Verify exists and check if root
-        const { data: existing } = await supabase
-          .from('master_klasifikasi_arsip')
-          .select('id, kode')
-          .eq('id', params.id)
-          .eq('is_active', true)
-          .single()
+        const [existing] = await db
+          .select({ id: masterKlasifikasiArsip.id, kode: masterKlasifikasiArsip.kode })
+          .from(masterKlasifikasiArsip)
+          .where(and(
+            eq(masterKlasifikasiArsip.id, params.id),
+            eq(masterKlasifikasiArsip.isActive, true),
+          ))
+          .limit(1)
 
         if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
 
@@ -187,16 +210,19 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
         }
 
         // Get all descendants to cascade soft delete
-        const descendantIds = await getDescendantIds(supabase, params.id)
+        const descendantIds = await getDescendantIds(params.id)
         const allIdsToDelete = [params.id, ...descendantIds]
 
         // Soft delete all
-        const { error } = await supabase
-          .from('master_klasifikasi_arsip')
-          .update({ is_active: false })
-          .in('id', allIdsToDelete)
-
-        if (error) return Response.json({ error: 'Gagal menghapus klasifikasi: ' + error.message }, { status: 500 })
+        try {
+          await db
+            .update(masterKlasifikasiArsip)
+            .set({ isActive: false })
+            .where(inArray(masterKlasifikasiArsip.id, allIdsToDelete))
+        } catch (err) {
+          console.error('[arsiparis/klasifikasi/$id] DELETE local query error:', err)
+          return Response.json({ error: 'Gagal menghapus klasifikasi' }, { status: 500 })
+        }
 
         const deletedCount = allIdsToDelete.length
         return Response.json({

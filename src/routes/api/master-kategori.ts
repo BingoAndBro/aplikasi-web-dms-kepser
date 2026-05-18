@@ -2,9 +2,17 @@ import { createFileRoute } from '@tanstack/react-router'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterJenisPermintaan, masterKategoriPermintaan } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createKategoriSchema } from '#/lib/schemas/master-data'
+
+async function requireAdmin(request: Request) {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return Response.json({ error: 'Hanya ADMIN yang bisa menambah kategori permintaan' }, { status: 403 })
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/master-kategori')({
   server: {
@@ -77,41 +85,31 @@ export const Route = createFileRoute('/api/master-kategori')({
           }, { status: 400 })
         }
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request)
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa menambah kategori permintaan' }, { status: 403 })
-        }
-
-        const { data: jenis } = await supabase
-          .from('master_jenis_permintaan')
-          .select('id, nama')
-          .eq('id', result.data.jenisPermintaanId)
-          .eq('is_active', true)
-          .single()
+        const [jenis] = await db
+          .select({ id: masterJenisPermintaan.id, nama: masterJenisPermintaan.nama })
+          .from(masterJenisPermintaan)
+          .where(and(
+            eq(masterJenisPermintaan.id, result.data.jenisPermintaanId),
+            eq(masterJenisPermintaan.isActive, true),
+          ))
+          .limit(1)
 
         if (!jenis) {
           return Response.json({ error: 'Jenis permintaan tidak ditemukan atau tidak aktif' }, { status: 400 })
         }
 
-        const { data: existing } = await supabase
-          .from('master_kategori_permintaan')
-          .select('id')
-          .eq('nama', result.data.nama)
-          .eq('jenis_permintaan_id', result.data.jenisPermintaanId)
-          .eq('is_active', true)
-          .maybeSingle()
+        const [existing] = await db
+          .select({ id: masterKategoriPermintaan.id })
+          .from(masterKategoriPermintaan)
+          .where(and(
+            eq(masterKategoriPermintaan.nama, result.data.nama),
+            eq(masterKategoriPermintaan.jenisPermintaanId, result.data.jenisPermintaanId),
+            eq(masterKategoriPermintaan.isActive, true),
+          ))
+          .limit(1)
 
         if (existing) {
           return Response.json({
@@ -119,25 +117,37 @@ export const Route = createFileRoute('/api/master-kategori')({
           }, { status: 409 })
         }
 
-        const { data, error } = await supabase
-          .from('master_kategori_permintaan')
-          .insert({
-            jenis_permintaan_id: result.data.jenisPermintaanId,
-            nama: result.data.nama,
-            deskripsi: result.data.deskripsi ?? null,
-          })
-          .select('*, master_jenis_permintaan(nama)')
-          .single()
+        try {
+          const [row] = await db
+            .insert(masterKategoriPermintaan)
+            .values({
+              jenisPermintaanId: result.data.jenisPermintaanId,
+              nama: result.data.nama,
+              deskripsi: result.data.deskripsi ?? null,
+            })
+            .returning({
+              id: masterKategoriPermintaan.id,
+              jenis_permintaan_id: masterKategoriPermintaan.jenisPermintaanId,
+              nama: masterKategoriPermintaan.nama,
+              deskripsi: masterKategoriPermintaan.deskripsi,
+              is_active: masterKategoriPermintaan.isActive,
+              created_at: masterKategoriPermintaan.createdAt,
+              updated_at: masterKategoriPermintaan.updatedAt,
+            })
 
-        if (error) {
+          if (!row) {
+            return Response.json({ error: 'Gagal membuat kategori permintaan' }, { status: 500 })
+          }
+
+          return Response.json({
+            ...row,
+            master_jenis_permintaan: { nama: jenis.nama },
+            jenis_nama: jenis.nama,
+          }, { status: 201 })
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-kategori POST:', err)
           return Response.json({ error: 'Gagal membuat kategori permintaan' }, { status: 500 })
         }
-
-        const row = data as any
-        return Response.json({
-          ...row,
-          jenis_nama: row.master_jenis_permintaan?.nama,
-        }, { status: 201 })
       },
     },
   },

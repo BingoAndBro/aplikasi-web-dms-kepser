@@ -2,9 +2,17 @@ import { createFileRoute } from '@tanstack/react-router'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterJenisPermintaan } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { updateJenisSchema } from '#/lib/schemas/master-data'
+
+async function requireAdmin(request: Request, action: 'mengubah' | 'menghapus') {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return Response.json({ error: `Hanya ADMIN yang bisa ${action} jenis permintaan` }, { status: 403 })
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/master-jenis/$id')({
   server: {
@@ -52,67 +60,51 @@ export const Route = createFileRoute('/api/master-jenis/$id')({
           }, { status: 400 })
         }
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request, 'mengubah')
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa mengubah jenis permintaan' }, { status: 403 })
-        }
-
-        const updates: Record<string, any> = {}
+        const updates: Partial<typeof masterJenisPermintaan.$inferInsert> = {}
         if (result.data.nama !== undefined) updates.nama = result.data.nama
         if (result.data.deskripsi !== undefined) updates.deskripsi = result.data.deskripsi
-        if (result.data.isActive !== undefined) updates.is_active = result.data.isActive
+        if (result.data.isActive !== undefined) updates.isActive = result.data.isActive
 
-        const { data, error } = await supabase
-          .from('master_jenis_permintaan')
-          .update(updates)
-          .eq('id', params.id)
-          .select()
-          .single()
+        try {
+          const [data] = await db
+            .update(masterJenisPermintaan)
+            .set(updates)
+            .where(eq(masterJenisPermintaan.id, params.id))
+            .returning({
+              id: masterJenisPermintaan.id,
+              nama: masterJenisPermintaan.nama,
+              deskripsi: masterJenisPermintaan.deskripsi,
+              is_active: masterJenisPermintaan.isActive,
+              created_at: masterJenisPermintaan.createdAt,
+              updated_at: masterJenisPermintaan.updatedAt,
+            })
 
-        if (error) {
+          if (!data) {
+            return Response.json({ error: 'Gagal mengubah jenis permintaan' }, { status: 500 })
+          }
+
+          return Response.json(data)
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-jenis/$id PATCH:', err)
           return Response.json({ error: 'Gagal mengubah jenis permintaan' }, { status: 500 })
         }
-
-        return Response.json(data)
       },
 
       DELETE: async ({ request, params }: { request: Request; params: { id: string } }) => {
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
-
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa menghapus jenis permintaan' }, { status: 403 })
-        }
+        const authError = await requireAdmin(request, 'menghapus')
+        if (authError) return authError
 
         // Soft delete: set is_active = false
-        const { error } = await supabase
-          .from('master_jenis_permintaan')
-          .update({ is_active: false })
-          .eq('id', params.id)
-
-        if (error) {
+        try {
+          await db
+            .update(masterJenisPermintaan)
+            .set({ isActive: false })
+            .where(eq(masterJenisPermintaan.id, params.id))
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-jenis/$id DELETE:', err)
           return Response.json({ error: 'Gagal menghapus jenis permintaan' }, { status: 500 })
         }
 

@@ -1,7 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { masterFungsi, masterKegiatan, masterKelengkapanDokumen } from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { updateKelengkapanSchema } from '#/lib/schemas/master-data'
+
+async function requireAdmin(request: Request, action: 'mengubah' | 'menghapus') {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return Response.json({ error: `Hanya ADMIN yang bisa ${action} kelengkapan` }, { status: 403 })
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/master-kelengkapan/$id')({
   server: {
@@ -24,92 +35,98 @@ export const Route = createFileRoute('/api/master-kelengkapan/$id')({
           }, { status: 400 })
         }
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request, 'mengubah')
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa mengubah kelengkapan' }, { status: 403 })
-        }
-
-        const { data: existing } = await supabase
-          .from('master_kelengkapan_dokumen')
-          .select('id')
-          .eq('id', id)
-          .single()
+        const [existing] = await db
+          .select({ id: masterKelengkapanDokumen.id })
+          .from(masterKelengkapanDokumen)
+          .where(eq(masterKelengkapanDokumen.id, id))
+          .limit(1)
 
         if (!existing) {
           return Response.json({ error: 'Kelengkapan tidak ditemukan' }, { status: 404 })
         }
 
-        const { data, error } = await supabase
-          .from('master_kelengkapan_dokumen')
-          .update({
-            is_ketua_tim: result.data.isKetuaTim,
-            nama_dokumen: result.data.namaDokumen,
-            required: result.data.required,
-          })
-          .eq('id', id)
-          .select('*, master_kegiatan(nama, master_fungsi(nama))')
-          .single()
+        try {
+          const updates: Partial<typeof masterKelengkapanDokumen.$inferInsert> = {}
+          if (result.data.isKetuaTim !== undefined) updates.isKetuaTim = result.data.isKetuaTim
+          if (result.data.namaDokumen !== undefined) updates.namaDokumen = result.data.namaDokumen
+          if (result.data.required !== undefined) updates.required = result.data.required
 
-        if (error) {
+          const [row] = await db
+            .update(masterKelengkapanDokumen)
+            .set(updates)
+            .where(eq(masterKelengkapanDokumen.id, id))
+            .returning({
+              id: masterKelengkapanDokumen.id,
+              kegiatan_id: masterKelengkapanDokumen.kegiatanId,
+              is_ketua_tim: masterKelengkapanDokumen.isKetuaTim,
+              nama_dokumen: masterKelengkapanDokumen.namaDokumen,
+              required: masterKelengkapanDokumen.required,
+              jenis_permintaan_id: masterKelengkapanDokumen.jenisPermintaanId,
+              kategori_permintaan_id: masterKelengkapanDokumen.kategoriPermintaanId,
+              detail_permintaan_id: masterKelengkapanDokumen.detailPermintaanId,
+              created_at: masterKelengkapanDokumen.createdAt,
+              updated_at: masterKelengkapanDokumen.updatedAt,
+            })
+
+          if (!row) {
+            return Response.json({ error: 'Gagal mengupdate kelengkapan' }, { status: 500 })
+          }
+
+          const [kegiatan] = await db
+            .select({
+              nama: masterKegiatan.nama,
+              fungsi_nama: masterFungsi.nama,
+            })
+            .from(masterKegiatan)
+            .leftJoin(masterFungsi, eq(masterKegiatan.fungsiId, masterFungsi.id))
+            .where(eq(masterKegiatan.id, row.kegiatan_id))
+            .limit(1)
+
+          return Response.json({
+            ...row,
+            master_kegiatan: kegiatan
+              ? {
+                  nama: kegiatan.nama,
+                  master_fungsi: kegiatan.fungsi_nama ? { nama: kegiatan.fungsi_nama } : null,
+                }
+              : null,
+            kegiatan_nama: kegiatan?.nama,
+            fungsi_nama: kegiatan?.fungsi_nama,
+          }, { status: 200 })
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-kelengkapan/$id PATCH:', err)
           return Response.json({ error: 'Gagal mengupdate kelengkapan' }, { status: 500 })
         }
-
-        const row = data as any
-        return Response.json({
-          ...row,
-          kegiatan_nama: row.master_kegiatan?.nama,
-          fungsi_nama: row.master_kegiatan?.master_fungsi?.nama,
-        }, { status: 200 })
       },
 
       DELETE: async ({ params, request }: { params: Record<string, string>; request: Request }) => {
         const { id } = params
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request, 'menghapus')
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa menghapus kelengkapan' }, { status: 403 })
-        }
-
-        const { data: existing } = await supabase
-          .from('master_kelengkapan_dokumen')
-          .select('id, nama_dokumen')
-          .eq('id', id)
-          .single()
+        const [existing] = await db
+          .select({
+            id: masterKelengkapanDokumen.id,
+            nama_dokumen: masterKelengkapanDokumen.namaDokumen,
+          })
+          .from(masterKelengkapanDokumen)
+          .where(eq(masterKelengkapanDokumen.id, id))
+          .limit(1)
 
         if (!existing) {
           return Response.json({ error: 'Kelengkapan tidak ditemukan' }, { status: 404 })
         }
 
-        const { error } = await supabase
-          .from('master_kelengkapan_dokumen')
-          .delete()
-          .eq('id', id)
-
-        if (error) {
+        try {
+          await db
+            .delete(masterKelengkapanDokumen)
+            .where(eq(masterKelengkapanDokumen.id, id))
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-kelengkapan/$id DELETE:', err)
           return Response.json({ error: 'Gagal menghapus kelengkapan' }, { status: 500 })
         }
 

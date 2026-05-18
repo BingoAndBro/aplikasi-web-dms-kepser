@@ -1,28 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession, hasRole } from '#/lib/auth'
-import { TABLES } from '#/lib/constants/tables'
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { ketuaTimAssignments } from '#/db/schema/master'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 async function requireAdmin(request: Request) {
-  const supabase = createClient(request)
-  const session = await getServerSession(supabase)
+  const session = await getLocalServerSession(request)
 
   if (!session) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-  if (!isAdmin) {
+  if (!hasLocalRole(session, 'ADMIN')) {
     return Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 })
   }
 
@@ -55,18 +44,12 @@ export const Route = createFileRoute('/api/ketua-tim/$id')({
         }
 
         try {
-          const admin = createAdminClient()
-          const { error, count } = await admin
-            .from(TABLES.KETUA_TIM_ASSIGNMENTS)
-            .delete({ count: 'exact' })
-            .eq('id', id)
+          const deleted = await db
+            .delete(ketuaTimAssignments)
+            .where(eq(ketuaTimAssignments.id, id))
+            .returning({ id: ketuaTimAssignments.id })
 
-          if (error) {
-            console.error('[API] /api/ketua-tim/$id DELETE error:', error)
-            return Response.json({ error: 'Gagal menghapus assignment ketua tim' }, { status: 500 })
-          }
-
-          if (count === 0) {
+          if (deleted.length === 0) {
             return Response.json({ error: 'Assignment ketua tim tidak ditemukan' }, { status: 404 })
           }
 

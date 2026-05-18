@@ -6,9 +6,17 @@ import {
   masterJenisPermintaan,
   masterKategoriPermintaan,
 } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { updateDetailSchema } from '#/lib/schemas/master-data'
+
+async function requireAdmin(request: Request, action: 'mengubah' | 'menghapus') {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN')) {
+    return Response.json({ error: `Hanya ADMIN yang bisa ${action} detail permintaan` }, { status: 403 })
+  }
+  return null
+}
 
 export const Route = createFileRoute('/api/master-detail/$id')({
   server: {
@@ -87,72 +95,75 @@ export const Route = createFileRoute('/api/master-detail/$id')({
           }, { status: 400 })
         }
 
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request, 'mengubah')
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa mengubah detail permintaan' }, { status: 403 })
-        }
-
-        const updates: Record<string, any> = {}
-        if (result.data.kategoriPermintaanId !== undefined) updates.kategori_permintaan_id = result.data.kategoriPermintaanId
+        const updates: Partial<typeof masterDetailPermintaan.$inferInsert> = {}
+        if (result.data.kategoriPermintaanId !== undefined) updates.kategoriPermintaanId = result.data.kategoriPermintaanId
         if (result.data.nama !== undefined) updates.nama = result.data.nama
         if (result.data.deskripsi !== undefined) updates.deskripsi = result.data.deskripsi
-        if (result.data.isActive !== undefined) updates.is_active = result.data.isActive
+        if (result.data.isActive !== undefined) updates.isActive = result.data.isActive
 
-        const { data, error } = await supabase
-          .from('master_detail_permintaan')
-          .update(updates)
-          .eq('id', params.id)
-          .select('*, master_kategori_permintaan(nama, master_jenis_permintaan(nama))')
-          .single()
+        try {
+          const [row] = await db
+            .update(masterDetailPermintaan)
+            .set(updates)
+            .where(eq(masterDetailPermintaan.id, params.id))
+            .returning({
+              id: masterDetailPermintaan.id,
+              kategori_permintaan_id: masterDetailPermintaan.kategoriPermintaanId,
+              nama: masterDetailPermintaan.nama,
+              deskripsi: masterDetailPermintaan.deskripsi,
+              is_active: masterDetailPermintaan.isActive,
+              created_at: masterDetailPermintaan.createdAt,
+              updated_at: masterDetailPermintaan.updatedAt,
+            })
 
-        if (error) {
+          if (!row) {
+            return Response.json({ error: 'Gagal mengubah detail permintaan' }, { status: 500 })
+          }
+
+          const [kategori] = await db
+            .select({
+              nama: masterKategoriPermintaan.nama,
+              jenis_nama: masterJenisPermintaan.nama,
+            })
+            .from(masterKategoriPermintaan)
+            .leftJoin(
+              masterJenisPermintaan,
+              eq(masterKategoriPermintaan.jenisPermintaanId, masterJenisPermintaan.id),
+            )
+            .where(eq(masterKategoriPermintaan.id, row.kategori_permintaan_id))
+            .limit(1)
+
+          return Response.json({
+            ...row,
+            master_kategori_permintaan: kategori
+              ? {
+                  nama: kategori.nama,
+                  master_jenis_permintaan: kategori.jenis_nama ? { nama: kategori.jenis_nama } : null,
+                }
+              : null,
+            kategori_nama: kategori?.nama,
+            jenis_nama: kategori?.jenis_nama,
+          })
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-detail/$id PATCH:', err)
           return Response.json({ error: 'Gagal mengubah detail permintaan' }, { status: 500 })
         }
-
-        const row = data as any
-        return Response.json({
-          ...row,
-          kategori_nama: row.master_kategori_permintaan?.nama,
-          jenis_nama: row.master_kategori_permintaan?.master_jenis_permintaan?.nama,
-        })
       },
 
       DELETE: async ({ request, params }: { request: Request; params: { id: string } }) => {
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
+        const authError = await requireAdmin(request, 'menghapus')
+        if (authError) return authError
 
-        const session = await getSession(supabase)
-        if (!session) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
-          return Response.json({ error: 'Hanya ADMIN yang bisa menghapus detail permintaan' }, { status: 403 })
-        }
-
-        const { error } = await supabase
-          .from('master_detail_permintaan')
-          .update({ is_active: false })
-          .eq('id', params.id)
-
-        if (error) {
+        try {
+          await db
+            .update(masterDetailPermintaan)
+            .set({ isActive: false })
+            .where(eq(masterDetailPermintaan.id, params.id))
+        } catch (err) {
+          console.error('[API DEBUG] Error in master-detail/$id DELETE:', err)
           return Response.json({ error: 'Gagal menghapus detail permintaan' }, { status: 500 })
         }
 

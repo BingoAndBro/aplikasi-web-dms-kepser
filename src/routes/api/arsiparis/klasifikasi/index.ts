@@ -1,16 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterKlasifikasiArsip } from '#/db/schema/arsip'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { z } from 'zod'
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
 
 // Types
 export type KlasifikasiNode = {
@@ -35,6 +28,15 @@ const createKlasifikasiSchema = z.object({
   kode: z.string().min(1, 'Kode klasifikasi wajib diisi').max(50),
   parent_id: z.string().uuid().optional().nullable(),
 })
+
+async function requireAdminOrArsiparis(request: Request) {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasLocalRole(session, 'ADMIN') && !hasLocalRole(session, 'ARSIPARIS')) {
+    return Response.json({ error: 'Hanya ADMIN atau ARSIPARIS yang bisa menambah klasifikasi' }, { status: 403 })
+  }
+  return null
+}
 
 function buildTree(items: Omit<KlasifikasiNode, 'children'>[]): KlasifikasiNode[] {
   const map = new Map<string, KlasifikasiNode>()
@@ -105,13 +107,8 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
       },
 
       POST: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
-        if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-
-        const isAdminOrArsiparis = await hasRole(supabase, session.user.id, 'ADMIN') ||
-          await hasRole(supabase, session.user.id, 'ARSIPARIS')
-        if (!isAdminOrArsiparis) return Response.json({ error: 'Hanya ADMIN atau ARSIPARIS yang bisa menambah klasifikasi' }, { status: 403 })
+        const authError = await requireAdminOrArsiparis(request)
+        if (authError) return authError
 
         const body = await request.json().catch(() => null)
         if (!body) return Response.json({ error: 'Body tidak valid' }, { status: 400 })
@@ -120,35 +117,41 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
         if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
         // Cek duplikat nama
-        const { data: existingName } = await supabase
-          .from('master_klasifikasi_arsip')
-          .select('id')
-          .eq('nama', parsed.data.nama)
-          .eq('is_active', true)
-          .single()
+        const [existingName] = await db
+          .select({ id: masterKlasifikasiArsip.id })
+          .from(masterKlasifikasiArsip)
+          .where(and(
+            eq(masterKlasifikasiArsip.nama, parsed.data.nama),
+            eq(masterKlasifikasiArsip.isActive, true),
+          ))
+          .limit(1)
 
         if (existingName) return Response.json({ error: `Nama klasifikasi "${parsed.data.nama}" sudah ada` }, { status: 409 })
 
         // Cek duplikat kode
         if (parsed.data.kode) {
-          const { data: existingKode } = await supabase
-            .from('master_klasifikasi_arsip')
-            .select('id')
-            .eq('kode', parsed.data.kode)
-            .eq('is_active', true)
-            .single()
+          const [existingKode] = await db
+            .select({ id: masterKlasifikasiArsip.id })
+            .from(masterKlasifikasiArsip)
+            .where(and(
+              eq(masterKlasifikasiArsip.kode, parsed.data.kode),
+              eq(masterKlasifikasiArsip.isActive, true),
+            ))
+            .limit(1)
 
           if (existingKode) return Response.json({ error: `Kode klasifikasi "${parsed.data.kode}" sudah ada` }, { status: 409 })
         }
 
         // Validate parent exists if provided
         if (parsed.data.parent_id) {
-          const { data: parent } = await supabase
-            .from('master_klasifikasi_arsip')
-            .select('id, kode')
-            .eq('id', parsed.data.parent_id)
-            .eq('is_active', true)
-            .single()
+          const [parent] = await db
+            .select({ id: masterKlasifikasiArsip.id, kode: masterKlasifikasiArsip.kode })
+            .from(masterKlasifikasiArsip)
+            .where(and(
+              eq(masterKlasifikasiArsip.id, parsed.data.parent_id),
+              eq(masterKlasifikasiArsip.isActive, true),
+            ))
+            .limit(1)
 
           if (!parent) return Response.json({ error: 'Induk klasifikasi tidak ditemukan' }, { status: 400 })
 
@@ -156,20 +159,32 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
           // Actually, root can have children, so this is fine
         }
 
-        const { data, error } = await supabase
-          .from('master_klasifikasi_arsip')
-          .insert({
-            nama: parsed.data.nama,
-            deskripsi: parsed.data.deskripsi ?? null,
-            kode: parsed.data.kode,
-            parent_id: parsed.data.parent_id ?? null,
-          })
-          .select()
-          .single()
+        try {
+          const [data] = await db
+            .insert(masterKlasifikasiArsip)
+            .values({
+              nama: parsed.data.nama,
+              deskripsi: parsed.data.deskripsi ?? null,
+              kode: parsed.data.kode,
+              parentId: parsed.data.parent_id ?? null,
+            })
+            .returning({
+              id: masterKlasifikasiArsip.id,
+              nama: masterKlasifikasiArsip.nama,
+              deskripsi: masterKlasifikasiArsip.deskripsi,
+              is_active: masterKlasifikasiArsip.isActive,
+              created_at: masterKlasifikasiArsip.createdAt,
+              parent_id: masterKlasifikasiArsip.parentId,
+              kode: masterKlasifikasiArsip.kode,
+            })
 
-        if (error) return Response.json({ error: 'Gagal membuat klasifikasi: ' + error.message }, { status: 500 })
+          if (!data) return Response.json({ error: 'Gagal membuat klasifikasi' }, { status: 500 })
 
-        return Response.json(data, { status: 201 })
+          return Response.json(data, { status: 201 })
+        } catch (err) {
+          console.error('[arsiparis/klasifikasi] POST local query error:', err)
+          return Response.json({ error: 'Gagal membuat klasifikasi' }, { status: 500 })
+        }
       },
     },
   },
