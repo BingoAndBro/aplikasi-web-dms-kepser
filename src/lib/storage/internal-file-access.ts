@@ -14,6 +14,7 @@ import {
   verifyFileAccessToken,
   type FileAccessTokenPayload,
 } from '#/lib/storage/file-access-token'
+import { resolveDocumentLampiranAccessForToken } from '#/lib/storage/document-file-access'
 
 const FILE_TOKEN_SECRET_ENV = 'DMS_FILE_TOKEN_SECRET'
 const RAW_PATH_COMPATIBILITY_ROLES: readonly RoleName[] = [
@@ -32,7 +33,7 @@ const WINDOWS_DRIVE_PATTERN = /^[a-z]:[\\/]/i
 const URL_LIKE_PATTERN = /^[a-z][a-z0-9+.-]*:/i
 const FALLBACK_FILENAME = 'download'
 
-type FileAccessSession = Pick<LocalServerSession, 'userId' | 'roles'>
+type FileAccessSession = Pick<LocalServerSession, 'userId' | 'roles' | 'sessionId'>
 
 export type InternalFileAccessOptions = {
   request: Request
@@ -72,21 +73,28 @@ export async function handleInternalFileAccessRequest({
     return jsonError('Unauthorized', 401)
   }
 
-  if (!isSupportedLogicalPathToken(payload)) {
+  let logicalPath: string
+  if (isSupportedLogicalPathToken(payload)) {
+    logicalPath = payload.logicalPath
+    if (!canAccessLogicalFilePath(session, logicalPath)) {
+      return jsonError('Akses ditolak', 403)
+    }
+  } else if (isSupportedDocumentToken(payload)) {
+    const resolved = await resolveDocumentLampiranAccessForToken({ payload, session })
+    if (!resolved.ok) {
+      return jsonError(resolved.message, resolved.status)
+    }
+    logicalPath = resolved.logicalPath
+  } else {
     return jsonError('Token type is not supported by this access route foundation yet', 501)
   }
 
-  let logicalPath: string
   let physicalPath: string
   try {
-    logicalPath = assertSafeLogicalStoragePath(payload.logicalPath)
+    logicalPath = assertSafeLogicalStoragePath(logicalPath)
     physicalPath = resolvePhysicalStoragePath(root ?? getLocalStorageRoot(), logicalPath)
   } catch {
     return jsonError('File access path is not available', 500)
-  }
-
-  if (!canAccessLogicalFilePath(session, logicalPath)) {
-    return jsonError('Akses ditolak', 403)
   }
 
   return await readLocalLogicalPathFile({
@@ -115,6 +123,16 @@ function isSupportedLogicalPathToken(
     && payload.lampiranIndex === undefined
     && !payload.archiveId
     && !payload.statusCheck
+}
+
+function isSupportedDocumentToken(
+  payload: FileAccessTokenPayload,
+): payload is FileAccessTokenPayload & { documentId: string; lampiranIndex: number } {
+  return Boolean(payload.documentId)
+    && payload.lampiranIndex !== undefined
+    && payload.statusCheck === 'document'
+    && !payload.logicalPath
+    && !payload.archiveId
 }
 
 function jsonError(message: string, status: number): Response {
