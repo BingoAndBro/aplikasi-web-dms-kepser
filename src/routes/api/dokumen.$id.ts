@@ -18,10 +18,19 @@ import { updateDokumenSchema } from '#/lib/schemas/dokumen'
 import {
   getDokumenById,
   insertLog,
-  isStoragePathPending,
   type LampiranUrl,
 } from '#/lib/dokumen-helpers'
 import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
+import {
+  executeLocalAttachmentMovements,
+  localAttachmentIssueMessage,
+  localAttachmentIssueStatus,
+  prepareLocalAttachmentReplacement,
+  rollbackLocalAttachmentMovements,
+  toSafeLocalAttachmentIssue,
+  type LocalAttachmentMovedFile,
+  type LocalAttachmentReplacementIssue,
+} from '#/lib/storage/local-attachment-replacement'
 
 function createClient(request: Request) {
   const cookieHeader = request.headers.get('cookie')
@@ -70,6 +79,40 @@ function canSessionReadDokumen(
   }
 
   return false
+}
+
+function localAttachmentFailureResponse(
+  issue: LocalAttachmentReplacementIssue | undefined,
+  messagePrefix = 'Gagal memproses file',
+): Response {
+  if (!issue) {
+    return Response.json({ error: `${messagePrefix}: Pemindahan file gagal` }, { status: 500 })
+  }
+
+  const message = localAttachmentIssueMessage(issue)
+  const status = localAttachmentIssueStatus(issue)
+
+  if (status === 403) {
+    return Response.json({ error: message }, { status })
+  }
+
+  if (status === 400) {
+    return Response.json({ error: message }, { status })
+  }
+
+  return Response.json({
+    error: `${messagePrefix}: ${message}`,
+    details: toSafeLocalAttachmentIssue(issue),
+  }, { status })
+}
+
+async function rollbackMovedAttachmentsForDbFailure(
+  moved: LocalAttachmentMovedFile[],
+): Promise<boolean> {
+  if (moved.length === 0) return true
+
+  const rollback = await rollbackLocalAttachmentMovements(moved)
+  return rollback.ok
 }
 
 // ---------------------------------------------------------------------------
@@ -243,13 +286,41 @@ export const Route = createFileRoute('/api/dokumen/$id')({
         }
 
         const storedLampirans = parseLampiranUrls(dok.lampiran_urls)
-        if (parsed.data.lampiranUrls?.some(lamp => isStoragePathPending(lamp.url))) {
-          return Response.json({
-            error: 'Perubahan lampiran dengan file baru belum didukung pada fase migrasi ini',
-          }, { status: 400 })
-        }
+        let processedLampirans: LampiranUrl[] = parsed.data.lampiranUrls ?? storedLampirans
+        let movedAttachments: LocalAttachmentMovedFile[] = []
 
-        const processedLampirans: LampiranUrl[] = parsed.data.lampiranUrls ?? storedLampirans
+        if (parsed.data.lampiranUrls !== undefined) {
+          const attachmentPlan = await prepareLocalAttachmentReplacement({
+            ownerUserId: session.userId,
+            dokumenId: params.id,
+            nextAttachments: parsed.data.lampiranUrls,
+            existingAttachments: storedLampirans,
+          })
+
+          if (!attachmentPlan.ok) {
+            return localAttachmentFailureResponse(attachmentPlan.issues[0])
+          }
+
+          const movement = await executeLocalAttachmentMovements({
+            ownerUserId: session.userId,
+            dokumenId: params.id,
+            operations: attachmentPlan.operations,
+          })
+
+          if (!movement.ok) {
+            return Response.json({
+              error: `Gagal memproses file: ${localAttachmentIssueMessage(movement.issue)}`,
+              details: toSafeLocalAttachmentIssue(movement.issue),
+              filesystemMovementExecuted: movement.moved.length > 0,
+              partialMovement: movement.moved.length > 0,
+              compensationAttempted: movement.rollbackAttempted,
+              compensationSucceeded: movement.rollbackOk,
+            }, { status: 500 })
+          }
+
+          processedLampirans = attachmentPlan.plannedAttachments
+          movedAttachments = movement.moved
+        }
 
         try {
           await db.transaction(async (tx) => {
@@ -294,6 +365,15 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           })
         } catch (err) {
           console.error('[API/dokumen/:id] PATCH local update error:', err)
+          const rollbackOk = await rollbackMovedAttachmentsForDbFailure(movedAttachments)
+          if (!rollbackOk) {
+            return Response.json({
+              error: 'Gagal memperbarui dokumen setelah file dipindahkan; pemulihan file gagal',
+              code: 'local-file-compensation-failed',
+              compensationRequired: true,
+            }, { status: 500 })
+          }
+
           return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
         }
 
