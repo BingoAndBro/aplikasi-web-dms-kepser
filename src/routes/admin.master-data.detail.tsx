@@ -27,24 +27,18 @@ import {
   Tag,
   ChevronRight,
 } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getAllDetailWithInfo,
-  getAllJenis,
-  getAllKategoriWithCount,
-  getKategoriByJenis,
-  createDetail,
-  updateDetail,
-  deleteDetail,
-  type DetailRow,
-  type JenisRow,
-  type KategoriRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+import type { DetailRow, JenisRow, KategoriRow } from '#/lib/master-data/shared'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#/components/ui/select'
 
 export const Route = createFileRoute('/admin/master-data/detail')({
   component: DetailPage,
 })
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback
+}
 
 function DetailPage() {
   const [items, setItems] = useState<DetailRow[]>([])
@@ -76,25 +70,23 @@ function DetailPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
-      const data = await getAllDetailWithInfo(supabase)
+      const data = await apiFetch<DetailRow[]>('/master-detail')
       setItems(data)
     } catch { /* silent */ } finally { setLoading(false) }
   }
 
   async function fetchJenis() {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const data = await getAllJenis(supabase)
-    setJenisList(data)
+    try {
+      const data = await apiFetch<JenisRow[]>('/master-jenis')
+      setJenisList(data)
+    } catch { /* silent */ }
   }
 
   async function fetchKategoriList() {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const data = await getAllKategoriWithCount(supabase)
-    setKategoriList(data)
+    try {
+      const data = await apiFetch<KategoriRow[]>('/master-kategori')
+      setKategoriList(data)
+    } catch { /* silent */ }
   }
 
   const filtered = items.filter(f =>
@@ -129,42 +121,43 @@ function DetailPage() {
     if (!formKategoriId) { setError('Kategori permintaan harus dipilih'); return }
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Koneksi database tidak tersedia'); return }
       if (editing) {
-        const result = await updateDetail(supabase, editing.id, {
-          kategoriPermintaanId: formKategoriId,
-          nama: formNama.trim(),
-          deskripsi: formDeskripsi.trim() || undefined,
+        await apiMutation(`/master-detail/${editing.id}`, {
+          method: 'PATCH',
+          body: {
+            kategoriPermintaanId: formKategoriId,
+            nama: formNama.trim(),
+            deskripsi: formDeskripsi.trim() || undefined,
+          },
         })
-        if (result.error) { setError(result.error); return }
       } else {
-        const result = await createDetail(supabase, {
-          kategoriPermintaanId: formKategoriId,
-          nama: formNama.trim(),
-          deskripsi: formDeskripsi.trim() || undefined,
+        await apiMutation('/master-detail', {
+          method: 'POST',
+          body: {
+            kategoriPermintaanId: formKategoriId,
+            nama: formNama.trim(),
+            deskripsi: formDeskripsi.trim() || undefined,
+          },
         })
-        if (result.error) { setError(result.error); return }
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Detail berhasil diperbarui.' : 'Detail berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
-    } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
+    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { alert('Koneksi database tidak tersedia'); return }
-      const result = await deleteDetail(supabase, deleteTarget.id)
-      if (result.error) { alert(result.error); return }
+      await apiMutation(`/master-detail/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
       setSuccessMsg('Detail berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus detail'))
     } finally { setSaving(false) }
   }
 

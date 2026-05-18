@@ -27,18 +27,17 @@ import {
   Tag,
   ChevronRight,
 } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getAllJenisWithCount,
-  createJenis,
-  updateJenis,
-  deleteJenis,
-  type JenisRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+import type { JenisRow, KategoriRow } from '#/lib/master-data/shared'
 
 export const Route = createFileRoute('/admin/master-data/jenis')({
   component: JenisPage,
 })
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback
+}
 
 function JenisPage() {
   const [items, setItems] = useState<JenisRow[]>([])
@@ -58,10 +57,18 @@ function JenisPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
-      const data = await getAllJenisWithCount(supabase)
-      setItems(data)
+      const [jenis, kategoris] = await Promise.all([
+        apiFetch<JenisRow[]>('/master-jenis'),
+        apiFetch<KategoriRow[]>('/master-kategori'),
+      ])
+      const counts = new Map<string, number>()
+      for (const kategori of kategoris) {
+        counts.set(kategori.jenis_permintaan_id, (counts.get(kategori.jenis_permintaan_id) ?? 0) + 1)
+      }
+      setItems(jenis.map(item => ({
+        ...item,
+        jumlah_kategori: counts.get(item.id) ?? 0,
+      })))
     } catch { /* silent */ } finally { setLoading(false) }
   }
 
@@ -77,34 +84,35 @@ function JenisPage() {
     if (!formNama.trim()) { setError('Nama tidak boleh kosong'); return }
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Koneksi database tidak tersedia'); return }
       if (editing) {
-        const result = await updateJenis(supabase, editing.id, { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation(`/master-jenis/${editing.id}`, {
+          method: 'PATCH',
+          body: { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined },
+        })
       } else {
-        const result = await createJenis(supabase, { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation('/master-jenis', {
+          method: 'POST',
+          body: { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined },
+        })
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Jenis permintaan berhasil diperbarui.' : 'Jenis permintaan berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
-    } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
+    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { alert('Koneksi database tidak tersedia'); return }
-      const result = await deleteJenis(supabase, deleteTarget.id)
-      if (result.error) { alert(result.error); return }
+      await apiMutation(`/master-jenis/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
       setSuccessMsg('Jenis permintaan berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus jenis permintaan'))
     } finally { setSaving(false) }
   }
 

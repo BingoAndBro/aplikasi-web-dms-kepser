@@ -27,21 +27,18 @@ import {
   Tag,
   ChevronRight,
 } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getAllKategoriWithCount,
-  getAllJenis,
-  createKategori,
-  updateKategori,
-  deleteKategori,
-  type KategoriRow,
-  type JenisRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+import type { DetailRow, KategoriRow, JenisRow } from '#/lib/master-data/shared'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#/components/ui/select'
 
 export const Route = createFileRoute('/admin/master-data/kategori')({
   component: KategoriPage,
 })
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback
+}
 
 function KategoriPage() {
   const [items, setItems] = useState<KategoriRow[]>([])
@@ -64,18 +61,26 @@ function KategoriPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
-      const data = await getAllKategoriWithCount(supabase)
-      setItems(data)
+      const [kategoris, details] = await Promise.all([
+        apiFetch<KategoriRow[]>('/master-kategori'),
+        apiFetch<DetailRow[]>('/master-detail'),
+      ])
+      const counts = new Map<string, number>()
+      for (const detail of details) {
+        counts.set(detail.kategori_permintaan_id, (counts.get(detail.kategori_permintaan_id) ?? 0) + 1)
+      }
+      setItems(kategoris.map(kategori => ({
+        ...kategori,
+        jumlah_detail: counts.get(kategori.id) ?? 0,
+      })))
     } catch { /* silent */ } finally { setLoading(false) }
   }
 
   async function fetchJenis() {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const data = await getAllJenis(supabase)
-    setJenisList(data)
+    try {
+      const data = await apiFetch<JenisRow[]>('/master-jenis')
+      setJenisList(data)
+    } catch { /* silent */ }
   }
 
   const filtered = items.filter(f =>
@@ -106,42 +111,43 @@ function KategoriPage() {
     if (!formJenisId) { setError('Jenis permintaan harus dipilih'); return }
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Koneksi database tidak tersedia'); return }
       if (editing) {
-        const result = await updateKategori(supabase, editing.id, {
-          jenisPermintaanId: formJenisId,
-          nama: formNama.trim(),
-          deskripsi: formDeskripsi.trim() || undefined,
+        await apiMutation(`/master-kategori/${editing.id}`, {
+          method: 'PATCH',
+          body: {
+            jenisPermintaanId: formJenisId,
+            nama: formNama.trim(),
+            deskripsi: formDeskripsi.trim() || undefined,
+          },
         })
-        if (result.error) { setError(result.error); return }
       } else {
-        const result = await createKategori(supabase, {
-          jenisPermintaanId: formJenisId,
-          nama: formNama.trim(),
-          deskripsi: formDeskripsi.trim() || undefined,
+        await apiMutation('/master-kategori', {
+          method: 'POST',
+          body: {
+            jenisPermintaanId: formJenisId,
+            nama: formNama.trim(),
+            deskripsi: formDeskripsi.trim() || undefined,
+          },
         })
-        if (result.error) { setError(result.error); return }
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Kategori berhasil diperbarui.' : 'Kategori berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
-    } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
+    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { alert('Koneksi database tidak tersedia'); return }
-      const result = await deleteKategori(supabase, deleteTarget.id)
-      if (result.error) { alert(result.error); return }
+      await apiMutation(`/master-kategori/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
       setSuccessMsg('Kategori berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus kategori'))
     } finally { setSaving(false) }
   }
 

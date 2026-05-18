@@ -6,28 +6,38 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { FileCheck, ChevronRight, Plus, Edit2, Trash2, CheckCircle2, Circle, Lock } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getAllFungsi,
-  getKegiatanByFungsi,
-  getKelengkapanByChain,
-  createKelengkapan,
-  updateKelengkapan,
-  deleteKelengkapan,
-  getAllJenis,
-  getKategoriByJenis,
-  getDetailByKategori,
-  type FungsiRow,
-  type KegiatanRow,
-  type KelengkapanRow,
-  type JenisRow,
-  type KategoriRow,
-  type DetailRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+import type {
+  DetailRow,
+  FungsiRow,
+  JenisRow,
+  KategoriRow,
+  KegiatanRow,
+  KelengkapanRow,
+} from '#/lib/master-data/shared'
 
 export const Route = createFileRoute('/admin/master-data/kelengkapan')({
   component: KelengkapanPage,
 })
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback
+}
+
+function matchesSelectedChain(
+  row: KelengkapanRow,
+  jenisId?: string,
+  kategoriId?: string,
+  detailId?: string,
+): boolean {
+  const isLegacy = !row.jenis_permintaan_id && !row.kategori_permintaan_id && !row.detail_permintaan_id
+  if (isLegacy) return true
+  if (jenisId && row.jenis_permintaan_id && row.jenis_permintaan_id !== jenisId) return false
+  if (kategoriId && row.kategori_permintaan_id && row.kategori_permintaan_id !== kategoriId) return false
+  if (detailId && row.detail_permintaan_id && row.detail_permintaan_id !== detailId) return false
+  return true
+}
 
 function KelengkapanPage() {
   const [fungsis, setFungsis] = useState<FungsiRow[]>([])
@@ -83,60 +93,63 @@ function KelengkapanPage() {
   }, [filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, chainComplete])
 
   async function fetchFungsis() {
-    const supabase = getBrowserClient()
-    if (!supabase) { setLoading(false); return }
-    const data = await getAllFungsi(supabase)
-    setFungsis(data)
-    setLoading(false)
+    try {
+      const data = await apiFetch<FungsiRow[]>('/master-fungsi')
+      setFungsis(data)
+    } catch { /* silent */ } finally { setLoading(false) }
   }
 
   async function fetchJenis() {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const data = await getAllJenis(supabase)
-    setJenisList(data)
+    try {
+      const data = await apiFetch<JenisRow[]>('/master-jenis')
+      setJenisList(data)
+    } catch { /* silent */ }
   }
 
   async function fetchKegiatans(fungsiId: string) {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const data = await getKegiatanByFungsi(supabase, fungsiId)
-    setKegiatans(data)
-    setFilterKegiatan(''); setItems([])
-    // reset chain
-    setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
+    try {
+      const data = await apiFetch<KegiatanRow[]>('/master-kegiatan', {
+        query: { fungsi_id: fungsiId },
+      })
+      setKegiatans(data)
+      setFilterKegiatan(''); setItems([])
+      // reset chain
+      setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
+    } catch { /* silent */ }
   }
 
   async function fetchKategori(jenisId: string) {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const data = await getKategoriByJenis(supabase, jenisId)
-    setKategoriList(data)
-    setFilterKategori(''); setFilterDetail(''); setDetailList([])
+    try {
+      const data = await apiFetch<KategoriRow[]>('/master-kategori', {
+        query: { jenis_id: jenisId },
+      })
+      setKategoriList(data)
+      setFilterKategori(''); setFilterDetail(''); setDetailList([])
+    } catch { /* silent */ }
   }
 
   async function fetchDetail(kategoriId: string) {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const data = await getDetailByKategori(supabase, kategoriId)
-    setDetailList(data)
-    setFilterDetail('')
+    try {
+      const data = await apiFetch<DetailRow[]>('/master-detail', {
+        query: { kategori_id: kategoriId },
+      })
+      setDetailList(data)
+      setFilterDetail('')
+    } catch { /* silent */ }
   }
 
   async function fetchKelengkapan() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
-      const data = await getKelengkapanByChain(
-        supabase,
-        filterFungsi,
-        filterKegiatan,
+      const data = await apiFetch<KelengkapanRow[]>('/master-kelengkapan', {
+        query: { kegiatan_id: filterKegiatan },
+      })
+      setItems(data.filter(row => matchesSelectedChain(
+        row,
         filterJenis || undefined,
         filterKategori || undefined,
         filterDetail || undefined,
-      )
-      setItems(data)
+      )))
     } catch { /* silent */ } finally { setLoading(false) }
   }
 
@@ -170,48 +183,49 @@ function KelengkapanPage() {
     if (!formNamaDokumen.trim()) { setError('Nama dokumen tidak boleh kosong'); return }
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Koneksi database tidak tersedia'); return }
       if (editing) {
-        const result = await updateKelengkapan(supabase, editing.id, {
-          namaDokumen: formNamaDokumen.trim(),
-          required: formRequired,
-          jenisPermintaanId: formJenisId || null,
-          kategoriPermintaanId: formKategoriId || null,
-          detailPermintaanId: formDetailId || null,
+        await apiMutation(`/master-kelengkapan/${editing.id}`, {
+          method: 'PATCH',
+          body: {
+            namaDokumen: formNamaDokumen.trim(),
+            required: formRequired,
+            jenisPermintaanId: formJenisId || null,
+            kategoriPermintaanId: formKategoriId || null,
+            detailPermintaanId: formDetailId || null,
+          },
         })
-        if (result.error) { setError(result.error); return }
       } else {
-        const result = await createKelengkapan(supabase, {
-          kegiatanId: filterKegiatan,
-          isKetuaTim: formIsKetuaTim,
-          namaDokumen: formNamaDokumen.trim(),
-          required: formRequired,
-          jenisPermintaanId: formJenisId || undefined,
-          kategoriPermintaanId: formKategoriId || undefined,
-          detailPermintaanId: formDetailId || undefined,
+        await apiMutation('/master-kelengkapan', {
+          method: 'POST',
+          body: {
+            kegiatanId: filterKegiatan,
+            isKetuaTim: formIsKetuaTim,
+            namaDokumen: formNamaDokumen.trim(),
+            required: formRequired,
+            jenisPermintaanId: formJenisId || undefined,
+            kategoriPermintaanId: formKategoriId || undefined,
+            detailPermintaanId: formDetailId || undefined,
+          },
         })
-        if (result.error) { setError(result.error); return }
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Item kelengkapan berhasil diperbarui.' : 'Item kelengkapan berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchKelengkapan()
-    } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
+    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { alert('Koneksi database tidak tersedia'); return }
-      const result = await deleteKelengkapan(supabase, deleteTarget.id)
-      if (result.error) { alert(result.error); return }
+      await apiMutation(`/master-kelengkapan/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
       setSuccessMsg('Item kelengkapan berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchKelengkapan()
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus kelengkapan'))
     } finally { setSaving(false) }
   }
 

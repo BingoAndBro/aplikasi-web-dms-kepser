@@ -1,7 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { masterFungsi, masterKegiatan, masterKelengkapanDokumen } from '#/db/schema/master'
+import {
+  masterDetailPermintaan,
+  masterFungsi,
+  masterKegiatan,
+  masterKategoriPermintaan,
+  masterKelengkapanDokumen,
+} from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { updateKelengkapanSchema } from '#/lib/schemas/master-data'
 
@@ -11,6 +17,58 @@ async function requireAdmin(request: Request, action: 'mengubah' | 'menghapus') 
   if (!hasLocalRole(session, 'ADMIN')) {
     return Response.json({ error: `Hanya ADMIN yang bisa ${action} kelengkapan` }, { status: 403 })
   }
+  return null
+}
+
+async function validateKelengkapanChain(payload: {
+  jenisPermintaanId?: string | null
+  kategoriPermintaanId?: string | null
+  detailPermintaanId?: string | null
+}): Promise<string | null> {
+  const jenisPermintaanId = payload.jenisPermintaanId ?? null
+  const kategoriPermintaanId = payload.kategoriPermintaanId ?? null
+  const detailPermintaanId = payload.detailPermintaanId ?? null
+
+  if (detailPermintaanId && !kategoriPermintaanId) {
+    return 'Detail permintaan harus memiliki kategori permintaan'
+  }
+
+  if (kategoriPermintaanId && !jenisPermintaanId) {
+    return 'Kategori permintaan harus memiliki jenis permintaan'
+  }
+
+  if (kategoriPermintaanId) {
+    const [kategori] = await db
+      .select({ jenis_permintaan_id: masterKategoriPermintaan.jenisPermintaanId })
+      .from(masterKategoriPermintaan)
+      .where(eq(masterKategoriPermintaan.id, kategoriPermintaanId))
+      .limit(1)
+
+    if (!kategori) {
+      return 'Kategori permintaan tidak ditemukan'
+    }
+
+    if (kategori.jenis_permintaan_id !== jenisPermintaanId) {
+      return 'Kategori permintaan tidak sesuai dengan jenis permintaan'
+    }
+  }
+
+  if (detailPermintaanId) {
+    const [detail] = await db
+      .select({ kategori_permintaan_id: masterDetailPermintaan.kategoriPermintaanId })
+      .from(masterDetailPermintaan)
+      .where(eq(masterDetailPermintaan.id, detailPermintaanId))
+      .limit(1)
+
+    if (!detail) {
+      return 'Detail permintaan tidak ditemukan'
+    }
+
+    if (detail.kategori_permintaan_id !== kategoriPermintaanId) {
+      return 'Detail permintaan tidak sesuai dengan kategori permintaan'
+    }
+  }
+
   return null
 }
 
@@ -39,7 +97,12 @@ export const Route = createFileRoute('/api/master-kelengkapan/$id')({
         if (authError) return authError
 
         const [existing] = await db
-          .select({ id: masterKelengkapanDokumen.id })
+          .select({
+            id: masterKelengkapanDokumen.id,
+            jenis_permintaan_id: masterKelengkapanDokumen.jenisPermintaanId,
+            kategori_permintaan_id: masterKelengkapanDokumen.kategoriPermintaanId,
+            detail_permintaan_id: masterKelengkapanDokumen.detailPermintaanId,
+          })
           .from(masterKelengkapanDokumen)
           .where(eq(masterKelengkapanDokumen.id, id))
           .limit(1)
@@ -48,11 +111,29 @@ export const Route = createFileRoute('/api/master-kelengkapan/$id')({
           return Response.json({ error: 'Kelengkapan tidak ditemukan' }, { status: 404 })
         }
 
+        const chainError = await validateKelengkapanChain({
+          jenisPermintaanId: result.data.jenisPermintaanId !== undefined
+            ? result.data.jenisPermintaanId
+            : existing.jenis_permintaan_id,
+          kategoriPermintaanId: result.data.kategoriPermintaanId !== undefined
+            ? result.data.kategoriPermintaanId
+            : existing.kategori_permintaan_id,
+          detailPermintaanId: result.data.detailPermintaanId !== undefined
+            ? result.data.detailPermintaanId
+            : existing.detail_permintaan_id,
+        })
+        if (chainError) {
+          return Response.json({ error: chainError }, { status: 400 })
+        }
+
         try {
           const updates: Partial<typeof masterKelengkapanDokumen.$inferInsert> = {}
           if (result.data.isKetuaTim !== undefined) updates.isKetuaTim = result.data.isKetuaTim
           if (result.data.namaDokumen !== undefined) updates.namaDokumen = result.data.namaDokumen
           if (result.data.required !== undefined) updates.required = result.data.required
+          if (result.data.jenisPermintaanId !== undefined) updates.jenisPermintaanId = result.data.jenisPermintaanId
+          if (result.data.kategoriPermintaanId !== undefined) updates.kategoriPermintaanId = result.data.kategoriPermintaanId
+          if (result.data.detailPermintaanId !== undefined) updates.detailPermintaanId = result.data.detailPermintaanId
 
           const [row] = await db
             .update(masterKelengkapanDokumen)

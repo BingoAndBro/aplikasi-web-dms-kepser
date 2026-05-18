@@ -1,7 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { and, asc, eq, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { masterFungsi, masterKegiatan, masterKelengkapanDokumen } from '#/db/schema/master'
+import {
+  masterDetailPermintaan,
+  masterFungsi,
+  masterKegiatan,
+  masterKategoriPermintaan,
+  masterKelengkapanDokumen,
+} from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createKelengkapanSchema } from '#/lib/schemas/master-data'
 
@@ -11,6 +17,58 @@ async function requireAdmin(request: Request) {
   if (!hasLocalRole(session, 'ADMIN')) {
     return Response.json({ error: 'Hanya ADMIN yang bisa menambah kelengkapan' }, { status: 403 })
   }
+  return null
+}
+
+async function validateKelengkapanChain(payload: {
+  jenisPermintaanId?: string | null
+  kategoriPermintaanId?: string | null
+  detailPermintaanId?: string | null
+}): Promise<string | null> {
+  const jenisPermintaanId = payload.jenisPermintaanId ?? null
+  const kategoriPermintaanId = payload.kategoriPermintaanId ?? null
+  const detailPermintaanId = payload.detailPermintaanId ?? null
+
+  if (detailPermintaanId && !kategoriPermintaanId) {
+    return 'Detail permintaan harus memiliki kategori permintaan'
+  }
+
+  if (kategoriPermintaanId && !jenisPermintaanId) {
+    return 'Kategori permintaan harus memiliki jenis permintaan'
+  }
+
+  if (kategoriPermintaanId) {
+    const [kategori] = await db
+      .select({ jenis_permintaan_id: masterKategoriPermintaan.jenisPermintaanId })
+      .from(masterKategoriPermintaan)
+      .where(eq(masterKategoriPermintaan.id, kategoriPermintaanId))
+      .limit(1)
+
+    if (!kategori) {
+      return 'Kategori permintaan tidak ditemukan'
+    }
+
+    if (kategori.jenis_permintaan_id !== jenisPermintaanId) {
+      return 'Kategori permintaan tidak sesuai dengan jenis permintaan'
+    }
+  }
+
+  if (detailPermintaanId) {
+    const [detail] = await db
+      .select({ kategori_permintaan_id: masterDetailPermintaan.kategoriPermintaanId })
+      .from(masterDetailPermintaan)
+      .where(eq(masterDetailPermintaan.id, detailPermintaanId))
+      .limit(1)
+
+    if (!detail) {
+      return 'Detail permintaan tidak ditemukan'
+    }
+
+    if (detail.kategori_permintaan_id !== kategoriPermintaanId) {
+      return 'Detail permintaan tidak sesuai dengan kategori permintaan'
+    }
+  }
+
   return null
 }
 
@@ -106,6 +164,11 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
         const authError = await requireAdmin(request)
         if (authError) return authError
 
+        const chainError = await validateKelengkapanChain(result.data)
+        if (chainError) {
+          return Response.json({ error: chainError }, { status: 400 })
+        }
+
         const [kegiatan] = await db
           .select({
             id: masterKegiatan.id,
@@ -132,6 +195,9 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
               isKetuaTim: result.data.isKetuaTim,
               namaDokumen: result.data.namaDokumen,
               required: result.data.required,
+              jenisPermintaanId: result.data.jenisPermintaanId ?? null,
+              kategoriPermintaanId: result.data.kategoriPermintaanId ?? null,
+              detailPermintaanId: result.data.detailPermintaanId ?? null,
             })
             .returning({
               id: masterKelengkapanDokumen.id,

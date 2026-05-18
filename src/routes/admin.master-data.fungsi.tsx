@@ -27,19 +27,18 @@ import {
   Building2,
   ChevronRight,
 } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getFungsiWithKegiatanCount,
-  createFungsi,
-  updateFungsi,
-  deleteFungsi,
-  type FungsiRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+import type { FungsiRow, KegiatanRow } from '#/lib/master-data/shared'
 
 
 export const Route = createFileRoute('/admin/master-data/fungsi')({
   component: FungsiPage,
 })
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback
+}
 
 function FungsiPage() {
   const [items, setItems] = useState<FungsiRow[]>([])
@@ -59,10 +58,18 @@ function FungsiPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
-      const fungsis = await getFungsiWithKegiatanCount(supabase)
-      setItems(fungsis)
+      const [fungsis, kegiatans] = await Promise.all([
+        apiFetch<FungsiRow[]>('/master-fungsi'),
+        apiFetch<KegiatanRow[]>('/master-kegiatan'),
+      ])
+      const counts = new Map<string, number>()
+      for (const kegiatan of kegiatans) {
+        counts.set(kegiatan.fungsi_id, (counts.get(kegiatan.fungsi_id) ?? 0) + 1)
+      }
+      setItems(fungsis.map(fungsi => ({
+        ...fungsi,
+        jumlah_kegiatan: counts.get(fungsi.id) ?? 0,
+      })))
     } catch { /* silent */ } finally { setLoading(false) }
   }
 
@@ -78,34 +85,35 @@ function FungsiPage() {
     if (!formNama.trim()) { setError('Nama tidak boleh kosong'); return }
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Koneksi database tidak tersedia'); return }
       if (editing) {
-        const result = await updateFungsi(supabase, editing.id, { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation(`/master-fungsi/${editing.id}`, {
+          method: 'PATCH',
+          body: { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined },
+        })
       } else {
-        const result = await createFungsi(supabase, { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation('/master-fungsi', {
+          method: 'POST',
+          body: { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined },
+        })
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Fungsi berhasil diperbarui.' : 'Fungsi berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
-    } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
+    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { alert('Koneksi database tidak tersedia'); return }
-      const result = await deleteFungsi(supabase, deleteTarget.id)
-      if (result.error) { alert(result.error); return }
+      await apiMutation(`/master-fungsi/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
       setSuccessMsg('Fungsi berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus fungsi'))
     } finally { setSaving(false) }
   }
 

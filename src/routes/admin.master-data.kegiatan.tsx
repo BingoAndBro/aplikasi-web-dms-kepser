@@ -7,20 +7,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Plus, Edit2, Trash2, Search, ClipboardList, ChevronRight } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getAllFungsi,
-  getAllKegiatan,
-  createKegiatan,
-  updateKegiatan,
-  deleteKegiatan,
-  type FungsiRow,
-  type KegiatanRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+import type { FungsiRow, KegiatanRow } from '#/lib/master-data/shared'
 
 export const Route = createFileRoute('/admin/master-data/kegiatan')({
   component: KegiatanPage,
 })
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback
+}
 
 function KegiatanPage() {
   const [items, setItems] = useState<KegiatanRow[]>([])
@@ -43,11 +40,9 @@ function KegiatanPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
       const [fs, ks] = await Promise.all([
-        getAllFungsi(supabase),
-        getAllKegiatan(supabase),
+        apiFetch<FungsiRow[]>('/master-fungsi'),
+        apiFetch<KegiatanRow[]>('/master-kegiatan'),
       ])
       setFungsis(fs)
       setItems(ks)
@@ -68,34 +63,39 @@ function KegiatanPage() {
     if (!formNama.trim()) { setError('Nama tidak boleh kosong'); return }
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Koneksi database tidak tersedia'); return }
       if (editing) {
-        const result = await updateKegiatan(supabase, editing.id, { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation(`/master-kegiatan/${editing.id}`, {
+          method: 'PATCH',
+          body: {
+            fungsiId: formFungsiId,
+            nama: formNama.trim(),
+            deskripsi: formDeskripsi.trim() || undefined,
+          },
+        })
       } else {
-        const result = await createKegiatan(supabase, { fungsiId: formFungsiId, nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation('/master-kegiatan', {
+          method: 'POST',
+          body: { fungsiId: formFungsiId, nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined },
+        })
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Kegiatan berhasil diperbarui.' : 'Kegiatan berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
-    } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
+    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { alert('Koneksi database tidak tersedia'); return }
-      const result = await deleteKegiatan(supabase, deleteTarget.id)
-      if (result.error) { alert(result.error); return }
+      await apiMutation(`/master-kegiatan/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
       setSuccessMsg('Kegiatan berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
+    } catch (err) {
+      alert(getErrorMessage(err, 'Gagal menghapus kegiatan'))
     } finally { setSaving(false) }
   }
 
