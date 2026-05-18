@@ -3,7 +3,9 @@ import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { createAdminClient } from '#/lib/supabase-admin'
 import { parseUserListResponse, parseUserResponse } from '#/lib/user-response'
-import { getUsersWithRoles, createUserWithRoles } from '#/lib/user-helpers'
+import { createUserWithRoles } from '#/lib/user-helpers'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { getLocalUsersWithRoles } from '#/lib/users/local-user-queries'
 import { isValidEmail, isValidPassword, isValidNip } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -29,21 +31,18 @@ export const Route = createFileRoute('/api/users/')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
+        if (!hasLocalRole(session, 'ADMIN')) {
           return Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 })
         }
 
         try {
-          const admin = createAdminClient()
-          const users = await getUsersWithRoles(admin)
+          const users = await getLocalUsersWithRoles()
 
           return Response.json(parseUserListResponse({
             users,

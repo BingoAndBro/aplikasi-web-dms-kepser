@@ -2,8 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createServerSupabaseClient } from '#/lib/supabase-server'
 import { getServerSession as getSession, hasRole } from '#/lib/auth'
 import { createAdminClient } from '#/lib/supabase-admin'
-import { getUserWithRoles, updateUserWithRoles } from '#/lib/user-helpers'
+import { updateUserWithRoles } from '#/lib/user-helpers'
 import { parseUserResponse } from '#/lib/user-response'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { getLocalUserWithRoles } from '#/lib/users/local-user-queries'
 import type { RoleName } from '#/lib/types/auth'
 
 // ---------------------------------------------------------------------------
@@ -24,31 +26,30 @@ function createClient(request: Request) {
 // PATCH /api/users/[id] — Update user metadata & roles
 // ---------------------------------------------------------------------------
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export const Route = createFileRoute('/api/users/$id')({
   server: {
     handlers: {
       GET: async ({ params, request }: { params: Record<string, string>; request: Request }) => {
         const { id } = params
 
-        if (!id || typeof id !== 'string') {
+        if (!id || typeof id !== 'string' || !UUID_RE.test(id)) {
           return Response.json({ error: 'User ID tidak valid' }, { status: 400 })
         }
 
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
+        if (!hasLocalRole(session, 'ADMIN')) {
           return Response.json({ error: 'Hanya ADMIN yang bisa mengakses' }, { status: 403 })
         }
 
         try {
-          const admin = createAdminClient()
-          const user = await getUserWithRoles(admin, id)
+          const user = await getLocalUserWithRoles(id)
 
           if (!user) {
             return Response.json({ error: 'User tidak ditemukan' }, { status: 404 })
