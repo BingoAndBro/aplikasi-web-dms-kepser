@@ -1,6 +1,9 @@
+import { lstat, realpath, unlink } from 'node:fs/promises'
+import path from 'node:path'
 import { createFileRoute } from '@tanstack/react-router'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
+import { arsip as arsipTable } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
@@ -10,17 +13,15 @@ import {
   masterKategoriPermintaan,
   masterKegiatan,
 } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession } from '#/lib/auth'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { updateDokumenSchema } from '#/lib/schemas/dokumen'
-import {
-  getDokumenById,
-  insertLog,
-  type LampiranUrl,
-} from '#/lib/dokumen-helpers'
+import { type LampiranUrl } from '#/lib/dokumen-helpers'
 import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
+import {
+  assertSafeLogicalStoragePath,
+  getLocalStorageRoot,
+  resolvePhysicalStoragePath,
+} from '#/lib/storage/local-storage-paths'
 import {
   executeLocalAttachmentMovements,
   localAttachmentIssueMessage,
@@ -31,15 +32,6 @@ import {
   type LocalAttachmentMovedFile,
   type LocalAttachmentReplacementIssue,
 } from '#/lib/storage/local-attachment-replacement'
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -113,6 +105,194 @@ async function rollbackMovedAttachmentsForDbFailure(
 
   const rollback = await rollbackLocalAttachmentMovements(moved)
   return rollback.ok
+}
+
+type LocalDeleteCandidate = {
+  index: number
+  physicalPath: string
+}
+
+type LocalDeleteIssueCode =
+  | 'invalid-local-path'
+  | 'not-a-file'
+  | 'path-outside-root'
+  | 'delete-failed'
+
+type LocalDeleteIssue = {
+  index: number
+  code: LocalDeleteIssueCode
+}
+
+type LocalDeletePlan = {
+  ok: true
+  candidates: LocalDeleteCandidate[]
+  missingCount: number
+  skippedLegacyCount: number
+} | {
+  ok: false
+  issue: LocalDeleteIssue
+}
+
+type LocalDeleteExecutionResult = {
+  ok: boolean
+  deletedCount: number
+  missingCount: number
+  skippedLegacyCount: number
+  failures: LocalDeleteIssue[]
+}
+
+async function prepareDocumentAttachmentDeletePlan(
+  lampiranUrls: LampiranUrl[],
+): Promise<LocalDeletePlan> {
+  const candidates: LocalDeleteCandidate[] = []
+  let missingCount = 0
+  let skippedLegacyCount = 0
+  const storageRoot = getLocalStorageRoot()
+
+  for (const [index, lampiran] of lampiranUrls.entries()) {
+    const rawPath = lampiran.url
+    if (!rawPath) continue
+
+    if (isUrlLikeStoragePath(rawPath)) {
+      skippedLegacyCount += 1
+      continue
+    }
+
+    let logicalPath: string
+    let physicalPath: string
+
+    try {
+      logicalPath = assertSafeLogicalStoragePath(rawPath)
+      physicalPath = resolvePhysicalStoragePath(storageRoot, logicalPath)
+    } catch {
+      return { ok: false, issue: { index, code: 'invalid-local-path' } }
+    }
+
+    const inspection = await inspectDeletableLocalFile(storageRoot, physicalPath)
+
+    if (inspection === 'missing') {
+      missingCount += 1
+      continue
+    }
+
+    if (inspection !== 'ok') {
+      return { ok: false, issue: { index, code: inspection } }
+    }
+
+    candidates.push({ index, physicalPath })
+  }
+
+  return { ok: true, candidates, missingCount, skippedLegacyCount }
+}
+
+async function deleteDocumentAttachmentFiles(
+  plan: Extract<LocalDeletePlan, { ok: true }>,
+): Promise<LocalDeleteExecutionResult> {
+  let deletedCount = 0
+  let missingCount = plan.missingCount
+  const failures: LocalDeleteIssue[] = []
+  const storageRoot = getLocalStorageRoot()
+
+  for (const candidate of plan.candidates) {
+    const inspection = await inspectDeletableLocalFile(storageRoot, candidate.physicalPath)
+
+    if (inspection === 'missing') {
+      missingCount += 1
+      continue
+    }
+
+    if (inspection !== 'ok') {
+      failures.push({ index: candidate.index, code: inspection })
+      continue
+    }
+
+    try {
+      await unlink(candidate.physicalPath)
+      deletedCount += 1
+    } catch (error) {
+      if (isNodeErrorCode(error, 'ENOENT')) {
+        missingCount += 1
+        continue
+      }
+
+      failures.push({ index: candidate.index, code: 'delete-failed' })
+    }
+  }
+
+  return {
+    ok: failures.length === 0,
+    deletedCount,
+    missingCount,
+    skippedLegacyCount: plan.skippedLegacyCount,
+    failures,
+  }
+}
+
+async function inspectDeletableLocalFile(
+  storageRoot: string,
+  physicalPath: string,
+): Promise<'ok' | 'missing' | 'not-a-file' | 'path-outside-root'> {
+  try {
+    const stats = await lstat(physicalPath)
+    if (!stats.isFile()) return 'not-a-file'
+
+    const [resolvedRoot, resolvedFile] = await Promise.all([
+      realpath(storageRoot),
+      realpath(physicalPath),
+    ])
+
+    return isPhysicalPathInsideRoot(resolvedRoot, resolvedFile)
+      ? 'ok'
+      : 'path-outside-root'
+  } catch (error) {
+    if (isNodeErrorCode(error, 'ENOENT')) return 'missing'
+    return 'not-a-file'
+  }
+}
+
+function isPhysicalPathInsideRoot(storageRoot: string, physicalPath: string): boolean {
+  const relativePath = path.relative(storageRoot, physicalPath)
+
+  return relativePath !== ''
+    && !relativePath.startsWith('..')
+    && !path.isAbsolute(relativePath)
+}
+
+function isUrlLikeStoragePath(storagePath: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(storagePath.trim())
+}
+
+function localDeletePreconditionResponse(issue: LocalDeleteIssue): Response {
+  if (issue.code === 'invalid-local-path') {
+    return Response.json({ error: 'Path lampiran tidak valid' }, { status: 400 })
+  }
+
+  return Response.json({
+    error: 'File lampiran tidak aman untuk dihapus',
+    details: { code: issue.code, index: issue.index },
+  }, { status: 500 })
+}
+
+function localDeleteFailureResponse(result: LocalDeleteExecutionResult): Response {
+  return Response.json({
+    error: 'Dokumen terhapus, tetapi sebagian file lampiran gagal dihapus',
+    documentDeleted: true,
+    fileDeletion: {
+      deletedCount: result.deletedCount,
+      missingCount: result.missingCount,
+      skippedLegacyCount: result.skippedLegacyCount,
+      failedCount: result.failures.length,
+      failures: result.failures,
+    },
+    compensationRequired: true,
+  }, { status: 500 })
+}
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === code
 }
 
 // ---------------------------------------------------------------------------
@@ -427,16 +607,52 @@ export const Route = createFileRoute('/api/dokumen/$id')({
       },
 
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getServerSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // Use admin client to bypass RLS
-        const admin = createAdminClient()
-        const dok = await getDokumenById(admin, params.id)
+        if (!hasLocalRole(session, 'PEGAWAI')) {
+          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+        }
+
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
+
+        let dokRows: Array<{
+          id: string
+          created_by: string
+          status: string
+          lampiran_urls: unknown
+          is_non_material: boolean | null
+          jenis_permintaan_id: string | null
+          kategori_permintaan_id: string | null
+          detail_permintaan_id: string | null
+        }>
+
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              created_by: dokumenTransaksi.createdBy,
+              status: dokumenTransaksi.status,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/dokumen/:id] DELETE local lookup error:', err)
+          return Response.json({ error: 'Gagal menghapus dokumen' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
 
         if (!dok) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
@@ -447,57 +663,93 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
         }
 
-        // Check if Non-Material and TERSIMPAN
-        const isNonMaterial = dok.is_non_material === true ||
-          (!dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+        const isNonMaterial = dok.is_non_material === true
+          && !dok.jenis_permintaan_id
+          && !dok.kategori_permintaan_id
+          && !dok.detail_permintaan_id
 
         if (!isNonMaterial || dok.status !== 'TERSIMPAN') {
           return Response.json({ error: 'Dokumen tidak bisa dihapus' }, { status: 400 })
         }
 
-        // Get lampiran URLs for file deletion
-        const lampiranUrls = dok.lampiran_urls || []
-        console.log('[DELETE] Deleting dokumen:', {
-          dokumenId: params.id,
-          judul: dok.judul,
-          lampiranFiles: lampiranUrls.map(l => l.url)
-        })
-
-        // Insert log before delete (so it records who deleted)
-        await insertLog(admin, {
-          dokumenId: params.id,
-          userId: session.user.id,
-          aksi: 'DELETE',
-          stepUrutan: null,
-        })
-
-        // Delete dokumen from database
-        const { error: deleteError } = await admin
-          .from('dokumen_transaksi')
-          .delete()
-          .eq('id', params.id)
-
-        if (deleteError) {
-          console.error('[API/dokumen/:id] DELETE error:', deleteError)
+        let archiveRows: Array<{ id: string }>
+        try {
+          archiveRows = await db
+            .select({
+              id: arsipTable.id,
+            })
+            .from(arsipTable)
+            .where(eq(arsipTable.dokumenId, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[API/dokumen/:id] DELETE archive lookup error:', err)
           return Response.json({ error: 'Gagal menghapus dokumen' }, { status: 500 })
         }
 
-        console.log('[DELETE] Dokumen metadata deleted from database:', params.id)
+        if (archiveRows.length > 0) {
+          return Response.json({ error: 'Dokumen tidak bisa dihapus' }, { status: 400 })
+        }
 
-        // Delete files from storage
-        for (const lamp of lampiranUrls) {
-          console.log('[DELETE] Deleting file from storage:', lamp.url)
-          admin.storage.from('dokumen-lampiran').remove([lamp.url]).then(({ error }) => {
-            if (error) console.warn('[dokumen] Failed to delete file:', lamp.url, error.message)
-            else console.log('[DELETE] File deleted from storage:', lamp.url)
+        const lampiranUrls = parseLampiranUrls(dok.lampiran_urls)
+        let deletePlan: LocalDeletePlan
+        try {
+          deletePlan = await prepareDocumentAttachmentDeletePlan(lampiranUrls)
+        } catch {
+          console.error('[API/dokumen/:id] DELETE local file preflight error')
+          return Response.json({ error: 'Gagal menghapus dokumen' }, { status: 500 })
+        }
+
+        if (!deletePlan.ok) {
+          return localDeletePreconditionResponse(deletePlan.issue)
+        }
+
+        try {
+          await db.transaction(async (tx) => {
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi: 'DELETE',
+              stepUrutan: null,
+            })
+
+            const deletedRows = await tx
+              .delete(dokumenTransaksi)
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
+
+            if (deletedRows.length === 0) {
+              throw new Error('DOCUMENT_DELETE_NOT_FOUND')
+            }
+          })
+        } catch (err) {
+          console.error('[API/dokumen/:id] DELETE local DB error:', err)
+          return Response.json({ error: 'Gagal menghapus dokumen' }, { status: 500 })
+        }
+
+        let deleteResult: LocalDeleteExecutionResult
+        try {
+          deleteResult = await deleteDocumentAttachmentFiles(deletePlan)
+        } catch {
+          console.error('[API/dokumen/:id] DELETE local file cleanup error')
+          return localDeleteFailureResponse({
+            ok: false,
+            deletedCount: 0,
+            missingCount: deletePlan.missingCount,
+            skippedLegacyCount: deletePlan.skippedLegacyCount,
+            failures: [{ index: -1, code: 'delete-failed' }],
           })
         }
 
-        console.log('[DELETE] Complete:', {
-          dokumenId: params.id,
-          judul: dok.judul,
-          filesDeleted: lampiranUrls.length
-        })
+        if (!deleteResult.ok) {
+          console.warn('[API/dokumen/:id] DELETE local file cleanup incomplete:', {
+            dokumenId: params.id,
+            deletedCount: deleteResult.deletedCount,
+            missingCount: deleteResult.missingCount,
+            skippedLegacyCount: deleteResult.skippedLegacyCount,
+            failedCount: deleteResult.failures.length,
+          })
+          return localDeleteFailureResponse(deleteResult)
+        }
 
         return Response.json({ success: true })
       },
