@@ -11,7 +11,6 @@ const TEST_SECRET = 'unit-test-raw-preview-runtime-secret'
 const TEST_ROOT = path.resolve('.tmp', 'raw-preview-internal-url-runtime-root')
 const LOGICAL_PATH = 'owner-user/document-id/1777964598700-random-report.pdf'
 const LOCAL_FILE_CONTENT = '%PDF-1.4 runtime preview content'
-const SUPABASE_REFERENCE_OUTPUT = 'reference-preview-output'
 
 const mocks = vi.hoisted(() => {
   const createSignedUrl = vi.fn()
@@ -20,7 +19,7 @@ const mocks = vi.hoisted(() => {
     storage: { from: storageFrom },
   }))
   const createServerSupabaseClient = vi.fn(() => ({ client: 'supabase' }))
-  const getServerSession = vi.fn()
+  const getLocalServerSession = vi.fn()
   const canAccessStoragePath = vi.fn()
 
   return {
@@ -28,7 +27,7 @@ const mocks = vi.hoisted(() => {
     createAdminClient,
     createServerSupabaseClient,
     createSignedUrl,
-    getServerSession,
+    getLocalServerSession,
     storageFrom,
   }
 })
@@ -41,8 +40,8 @@ vi.mock('#/lib/supabase-admin', () => ({
   createAdminClient: mocks.createAdminClient,
 }))
 
-vi.mock('#/lib/auth', () => ({
-  getServerSession: mocks.getServerSession,
+vi.mock('#/lib/auth/local-server-auth', () => ({
+  getLocalServerSession: mocks.getLocalServerSession,
 }))
 
 vi.mock('#/lib/dokumen-helpers', () => ({
@@ -66,7 +65,14 @@ function accessRequest(token: string): Request {
 }
 
 function session(userId = 'owner-user', roles: RoleName[] = [ROLES.PEGAWAI]) {
-  return { userId, roles }
+  return {
+    user: { id: userId, email: `${userId}@example.test` },
+    userId,
+    email: `${userId}@example.test`,
+    roles,
+    activeRole: roles[0],
+    sessionId: 'unit-test-session',
+  }
 }
 
 async function responseJson(response: Response): Promise<Record<string, unknown>> {
@@ -110,12 +116,10 @@ describe('raw preview internal URL runtime verification', () => {
     process.env.DMS_FILE_TOKEN_SECRET = TEST_SECRET
     await rm(TEST_ROOT, { force: true, recursive: true })
 
-    mocks.getServerSession.mockResolvedValue({
-      user: { id: 'owner-user' },
-    })
+    mocks.getLocalServerSession.mockResolvedValue(session())
     mocks.canAccessStoragePath.mockResolvedValue(true)
     mocks.createSignedUrl.mockResolvedValue({
-      data: { signedUrl: SUPABASE_REFERENCE_OUTPUT },
+      data: { signedUrl: 'unused-supabase-output' },
       error: null,
     })
   })
@@ -153,20 +157,18 @@ describe('raw preview internal URL runtime verification', () => {
     expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 
-  it('preserves the default raw preview behavior as Supabase-backed', async () => {
+  it('returns an internal raw preview URL without Supabase fallback', async () => {
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}`),
     })
     const body = await responseJson(response)
 
     expect(response.status).toBe(200)
-    expect(body).toEqual({
-      signedUrl: SUPABASE_REFERENCE_OUTPUT,
-      filename: 'report.pdf',
-    })
-    expect((body.signedUrl as string).startsWith(`${INTERNAL_FILE_ACCESS_PATH}?token=`)).toBe(false)
-    expect(mocks.storageFrom).toHaveBeenCalledWith('dokumen-lampiran')
-    expect(mocks.createSignedUrl).toHaveBeenCalledWith(LOGICAL_PATH, 900)
+    expect(body.filename).toBe('report.pdf')
+    expect(typeof body.signedUrl).toBe('string')
+    expect((body.signedUrl as string).startsWith(`${INTERNAL_FILE_ACCESS_PATH}?token=`)).toBe(true)
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 
   it('generates the opt-in URL but rejects final access without a local session', async () => {
@@ -196,7 +198,7 @@ describe('raw preview internal URL runtime verification', () => {
   })
 
   it('does not generate an internal token before raw preview session authorization passes', async () => {
-    mocks.getServerSession.mockResolvedValue(null)
+    mocks.getLocalServerSession.mockResolvedValue(null)
 
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}&useInternal=true`),
@@ -210,7 +212,7 @@ describe('raw preview internal URL runtime verification', () => {
   })
 
   it('does not generate an internal token before raw preview path authorization passes', async () => {
-    mocks.canAccessStoragePath.mockResolvedValue(false)
+    mocks.getLocalServerSession.mockResolvedValue(session('other-user'))
 
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}&useInternal=true`),

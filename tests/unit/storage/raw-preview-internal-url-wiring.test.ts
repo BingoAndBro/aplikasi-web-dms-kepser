@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Route } from '#/routes/api/dokumen/preview-url'
+import { ROLES, type RoleName } from '#/lib/constants/roles'
 import { verifyFileAccessToken } from '#/lib/storage/file-access-token'
 import { INTERNAL_FILE_ACCESS_PATH } from '#/lib/storage/internal-file-access-url'
 
@@ -15,7 +16,7 @@ const mocks = vi.hoisted(() => {
     storage: { from: storageFrom },
   }))
   const createServerSupabaseClient = vi.fn(() => ({ client: 'supabase' }))
-  const getServerSession = vi.fn()
+  const getLocalServerSession = vi.fn()
   const canAccessStoragePath = vi.fn()
   const getFileTokenSecret = vi.fn()
 
@@ -25,7 +26,7 @@ const mocks = vi.hoisted(() => {
     createServerSupabaseClient,
     createSignedUrl,
     getFileTokenSecret,
-    getServerSession,
+    getLocalServerSession,
     storageFrom,
   }
 })
@@ -38,17 +39,22 @@ vi.mock('#/lib/supabase-admin', () => ({
   createAdminClient: mocks.createAdminClient,
 }))
 
-vi.mock('#/lib/auth', () => ({
-  getServerSession: mocks.getServerSession,
+vi.mock('#/lib/auth/local-server-auth', () => ({
+  getLocalServerSession: mocks.getLocalServerSession,
 }))
 
 vi.mock('#/lib/dokumen-helpers', () => ({
   canAccessStoragePath: mocks.canAccessStoragePath,
 }))
 
-vi.mock('#/lib/storage/internal-file-access', () => ({
-  getFileTokenSecret: mocks.getFileTokenSecret,
-}))
+vi.mock('#/lib/storage/internal-file-access', async importOriginal => {
+  const actual = await importOriginal<typeof import('#/lib/storage/internal-file-access')>()
+
+  return {
+    ...actual,
+    getFileTokenSecret: mocks.getFileTokenSecret,
+  }
+})
 
 type PreviewHandler = (args: { request: Request }) => Promise<Response>
 
@@ -70,14 +76,23 @@ function extractToken(internalUrl: string): string {
   return token ?? ''
 }
 
+function session(userId = 'owner-user', roles: RoleName[] = [ROLES.PEGAWAI]) {
+  return {
+    user: { id: userId, email: `${userId}@example.test` },
+    userId,
+    email: `${userId}@example.test`,
+    roles,
+    activeRole: roles[0],
+    sessionId: 'unit-test-session',
+  }
+}
+
 describe('raw preview internal URL wiring', () => {
   beforeEach(() => {
     vi.useRealTimers()
     vi.clearAllMocks()
 
-    mocks.getServerSession.mockResolvedValue({
-      user: { id: 'owner-user' },
-    })
+    mocks.getLocalServerSession.mockResolvedValue(session())
     mocks.canAccessStoragePath.mockResolvedValue(true)
     mocks.getFileTokenSecret.mockReturnValue(TEST_SECRET)
     mocks.createSignedUrl.mockResolvedValue({
@@ -90,24 +105,37 @@ describe('raw preview internal URL wiring', () => {
     vi.useRealTimers()
   })
 
-  it('keeps the default request path Supabase-backed', async () => {
+  it('returns an internal preview URL on the default request path', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(NOW)
+
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}`),
     })
+    const body = await responseJson(response)
 
     expect(response.status).toBe(200)
-    expect(await responseJson(response)).toEqual({
-      signedUrl: 'reference-preview-output',
-      filename: 'report.pdf',
-    })
-    expect(mocks.canAccessStoragePath).toHaveBeenCalledWith(
-      expect.anything(),
-      'owner-user',
-      LOGICAL_PATH,
+    expect(body.filename).toBe('report.pdf')
+    expect(typeof body.signedUrl).toBe('string')
+    expect((body.signedUrl as string).startsWith(`${INTERNAL_FILE_ACCESS_PATH}?token=`)).toBe(true)
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
+    expect(mocks.getFileTokenSecret).toHaveBeenCalledTimes(1)
+
+    const payload = verifyFileAccessToken(
+      extractToken(body.signedUrl as string),
+      TEST_SECRET,
+      NOW,
     )
-    expect(mocks.storageFrom).toHaveBeenCalledWith('dokumen-lampiran')
-    expect(mocks.createSignedUrl).toHaveBeenCalledWith(LOGICAL_PATH, 900)
-    expect(mocks.getFileTokenSecret).not.toHaveBeenCalled()
+
+    expect(payload).toEqual({
+      version: 1,
+      purpose: 'preview',
+      logicalPath: LOGICAL_PATH,
+      contentDisposition: 'inline',
+      issuedAt: NOW.getTime(),
+      expiresAt: NOW.getTime() + 900 * 1000,
+    })
   })
 
   it('returns a compatible internal preview URL when useInternal=true', async () => {
@@ -143,7 +171,7 @@ describe('raw preview internal URL wiring', () => {
   })
 
   it('does not create an internal URL before session authorization passes', async () => {
-    mocks.getServerSession.mockResolvedValue(null)
+    mocks.getLocalServerSession.mockResolvedValue(null)
 
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}&useInternal=true`),
@@ -151,13 +179,12 @@ describe('raw preview internal URL wiring', () => {
 
     expect(response.status).toBe(401)
     expect(await responseJson(response)).toEqual({ error: 'Unauthorized' })
-    expect(mocks.canAccessStoragePath).not.toHaveBeenCalled()
     expect(mocks.getFileTokenSecret).not.toHaveBeenCalled()
     expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 
   it('does not create an internal URL before storage path authorization passes', async () => {
-    mocks.canAccessStoragePath.mockResolvedValue(false)
+    mocks.getLocalServerSession.mockResolvedValue(session('other-user'))
 
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}&useInternal=true`),
@@ -179,7 +206,7 @@ describe('raw preview internal URL wiring', () => {
     })
 
     expect(response.status).toBe(500)
-    expect(await responseJson(response)).toEqual({ error: 'Gagal membuat URL preview' })
+    expect(await responseJson(response)).toEqual({ error: 'Gagal membuat link pratinjau' })
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
     expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })

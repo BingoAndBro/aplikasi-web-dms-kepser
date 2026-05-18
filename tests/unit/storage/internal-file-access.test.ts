@@ -56,7 +56,7 @@ function requestWithToken(token?: string): Request {
 }
 
 function session(userId = 'owner-user', roles: RoleName[] = [ROLES.PEGAWAI]) {
-  return { userId, roles }
+  return { userId, roles, sessionId: 'unit-test-session' }
 }
 
 async function json(response: Response): Promise<Record<string, unknown>> {
@@ -203,19 +203,7 @@ describe('internal file access foundation', () => {
     }
   })
 
-  it('keeps document and archive token access unsupported in this phase', async () => {
-    const documentResponse = await handleInternalFileAccessRequest({
-      request: requestWithToken(signedToken(logicalPathPayload({
-        logicalPath: undefined,
-        documentId: 'document-123',
-        lampiranIndex: 0,
-        statusCheck: 'document',
-      }))),
-      session: session(),
-      secret: TEST_SECRET,
-      root: TEST_ROOT,
-    })
-
+  it('keeps archive token access unsupported in this raw access foundation', async () => {
     const archiveResponse = await handleInternalFileAccessRequest({
       request: requestWithToken(signedToken(logicalPathPayload({
         logicalPath: undefined,
@@ -227,11 +215,7 @@ describe('internal file access foundation', () => {
       root: TEST_ROOT,
     })
 
-    expect(documentResponse.status).toBe(501)
     expect(archiveResponse.status).toBe(501)
-    expect(await json(documentResponse)).toEqual({
-      error: 'Token type is not supported by this access route foundation yet',
-    })
     expect(await json(archiveResponse)).toEqual({
       error: 'Token type is not supported by this access route foundation yet',
     })

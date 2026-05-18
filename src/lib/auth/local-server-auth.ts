@@ -5,10 +5,7 @@ import {
   validateAssignedRoles,
 } from './role-resolution'
 import { SESSION_COOKIE_NAME } from './session-constants'
-import {
-  findSessionByTokenHash,
-  type SessionWithUserAndRoles,
-} from './session-repository'
+import type { SessionWithUserAndRoles } from './session-repository'
 import { hashSessionToken } from './session-token'
 import {
   getActiveRoleCookieValue,
@@ -38,6 +35,7 @@ export async function getLocalServerSession(
 
   let currentSession: SessionWithUserAndRoles | null
   try {
+    const { findSessionByTokenHash } = await import('./session-repository')
     currentSession = await findSessionByTokenHash(hashSessionToken(rawToken))
   } catch {
     currentSession = null
