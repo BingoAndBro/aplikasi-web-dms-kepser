@@ -15,19 +15,7 @@ import {
   SelectValue,
 } from '#/components/ui/select'
 import { Button } from '#/components/ui/button'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getAllFungsi,
-  getKegiatanByFungsi,
-  getAllJenis,
-  getKategoriByJenis,
-  getDetailByKategori,
-  type FungsiRow,
-  type KegiatanRow,
-  type JenisRow,
-  type KategoriRow,
-  type DetailRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
 import { X } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -50,29 +38,80 @@ interface Props {
   showDateRange?: boolean
 }
 
+type MasterOptionRow = {
+  id: string
+  nama: string
+  deskripsi?: string | null
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type FungsiOption = MasterOptionRow
+
+type KegiatanOption = MasterOptionRow & {
+  fungsi_id: string
+  fungsi_nama?: string
+  master_fungsi?: { id?: string; nama: string | null } | null
+}
+
+type JenisOption = MasterOptionRow
+
+type KategoriOption = MasterOptionRow & {
+  jenis_permintaan_id: string
+  jenis_nama?: string
+  master_jenis_permintaan?: { id?: string; nama: string | null } | null
+}
+
+type DetailOption = MasterOptionRow & {
+  kategori_permintaan_id: string
+  kategori_nama?: string
+  jenis_nama?: string
+  master_kategori_permintaan?: {
+    id?: string
+    nama: string | null
+    master_jenis_permintaan?: { nama: string | null } | null
+  } | null
+}
+
+async function fetchMasterList<T>(
+  endpoint: string,
+  label: string,
+  query?: Record<string, string>,
+): Promise<T[]> {
+  try {
+    return await apiFetch<T[]>(endpoint, query ? { query } : undefined)
+  } catch (error) {
+    console.error(`[HierarchicalFilter] Gagal mengambil ${label}:`, error)
+    return []
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function HierarchicalFilter({ value, onChange, showDateRange = true }: Props) {
-  const supabase = getBrowserClient()
-
-  const [fungsis, setFungsis] = useState<FungsiRow[]>([])
-  const [kegiatans, setKegiatans] = useState<KegiatanRow[]>([])
-  const [jenisList, setJenisList] = useState<JenisRow[]>([])
-  const [kategoriList, setKategoriList] = useState<KategoriRow[]>([])
-  const [detailList, setDetailList] = useState<DetailRow[]>([])
+  const [fungsis, setFungsis] = useState<FungsiOption[]>([])
+  const [kegiatans, setKegiatans] = useState<KegiatanOption[]>([])
+  const [jenisList, setJenisList] = useState<JenisOption[]>([])
+  const [kategoriList, setKategoriList] = useState<KategoriOption[]>([])
+  const [detailList, setDetailList] = useState<DetailOption[]>([])
 
   // Init: load Fungsi & Jenis
   useEffect(() => {
-    getAllFungsi(supabase).then(data => setFungsis(data))
-    getAllJenis(supabase).then(data => setJenisList(data))
+    fetchMasterList<FungsiOption>('/master-fungsi', 'fungsi').then(data => setFungsis(data))
+    fetchMasterList<JenisOption>('/master-jenis', 'jenis permintaan').then(data => setJenisList(data))
   }, [])
 
   // Kegiatan: muncul setelah Fungsi dipilih
   useEffect(() => {
     if (value.fungsiId) {
-      getKegiatanByFungsi(supabase, value.fungsiId).then(data => setKegiatans(data ?? []))
+      fetchMasterList<KegiatanOption>(
+        '/master-kegiatan',
+        'kegiatan',
+        { fungsi_id: value.fungsiId },
+      ).then(data => setKegiatans(data))
     } else {
       setKegiatans([])
     }
@@ -81,7 +120,11 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
   // Kategori: muncul setelah Jenis dipilih
   useEffect(() => {
     if (value.jenisId) {
-      getKategoriByJenis(supabase, value.jenisId).then(data => setKategoriList(data ?? []))
+      fetchMasterList<KategoriOption>(
+        '/master-kategori',
+        'kategori permintaan',
+        { jenis_id: value.jenisId },
+      ).then(data => setKategoriList(data))
     } else {
       setKategoriList([])
       setDetailList([])
@@ -91,7 +134,11 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
   // Detail: muncul setelah Kategori dipilih
   useEffect(() => {
     if (value.kategoriId) {
-      getDetailByKategori(supabase, value.kategoriId).then(data => setDetailList(data ?? []))
+      fetchMasterList<DetailOption>(
+        '/master-detail',
+        'detail permintaan',
+        { kategori_id: value.kategoriId },
+      ).then(data => setDetailList(data))
     } else {
       setDetailList([])
     }
