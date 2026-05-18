@@ -27,14 +27,17 @@ import {
   Tag,
   ChevronRight,
 } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
-import {
-  getAllJenisDokumen,
-  createJenisDokumen,
-  updateJenisDokumen,
-  deleteJenisDokumen,
-  type JenisDokumenRow,
-} from '#/lib/master-data'
+import { apiFetch } from '#/lib/api-client'
+import { ApiError, apiMutation } from '#/lib/api-mutation'
+
+type JenisDokumenRow = {
+  id: string
+  nama: string
+  deskripsi: string | null
+  is_active: boolean
+  created_at: string
+  updated_at?: string
+}
 
 export const Route = createFileRoute('/admin/master-data/jenis-dokumen')({
   component: JenisDokumenPage,
@@ -58,9 +61,7 @@ function JenisDokumenPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoading(false); return }
-      const data = await getAllJenisDokumen(supabase)
+      const data = await apiFetch<JenisDokumenRow[]>('/master-jenis-dokumen')
       setItems(data)
     } catch { /* silent */ } finally { setLoading(false) }
   }
@@ -77,34 +78,39 @@ function JenisDokumenPage() {
     if (!formNama.trim()) { setError('Nama tidak boleh kosong'); return }
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Koneksi database tidak tersedia'); return }
+      const payload = { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || null }
       if (editing) {
-        const result = await updateJenisDokumen(supabase, editing.id, { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation<JenisDokumenRow>(`/master-jenis-dokumen/${editing.id}`, {
+          method: 'PATCH',
+          body: payload,
+        })
       } else {
-        const result = await createJenisDokumen(supabase, { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined })
-        if (result.error) { setError(result.error); return }
+        await apiMutation<JenisDokumenRow>('/master-jenis-dokumen', {
+          body: payload,
+        })
       }
       setModalOpen(false)
       setSuccessMsg(editing ? 'Jenis dokumen berhasil diperbarui.' : 'Jenis dokumen berhasil ditambahkan.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
-    } catch { setError('Gagal menyimpan') } finally { setSaving(false) }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Gagal menyimpan')
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
     setSaving(true)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { alert('Koneksi database tidak tersedia'); return }
-      const result = await deleteJenisDokumen(supabase, deleteTarget.id)
-      if (result.error) { alert(result.error); return }
+      await apiMutation(`/master-jenis-dokumen/${deleteTarget.id}`, {
+        method: 'DELETE',
+      })
       setDeleteTarget(null)
       setSuccessMsg('Jenis dokumen berhasil dihapus.')
       setTimeout(() => setSuccessMsg(''), 3000)
       fetchData()
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Gagal menghapus jenis dokumen')
     } finally { setSaving(false) }
   }
 
