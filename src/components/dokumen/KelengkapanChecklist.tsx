@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, AlertCircle, Plus, X, User, Trash2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
-import { getBrowserClient } from '#/lib/supabase-browser'
+import { apiFetch } from '#/lib/api-client'
 import { FileUploadButton } from './FileUploadButton'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import { Button } from '#/components/ui/button'
@@ -18,6 +18,13 @@ type KelengkapanItem = {
   nama_dokumen: string
   is_ketua_tim: boolean
   required: boolean
+}
+
+type KelengkapanApiItem = KelengkapanItem & {
+  kegiatan_id?: string | null
+  jenis_permintaan_id?: string | null
+  kategori_permintaan_id?: string | null
+  detail_permintaan_id?: string | null
 }
 
 type UserOptionalDoc = {
@@ -35,6 +42,38 @@ interface KelengkapanChecklistProps {
   kategoriPermintaanId?: string
   detailPermintaanId?: string
   isNonMaterial?: boolean  // NEW: jika true, skip admin kelengkapan
+}
+
+function matchesCurrentChain(
+  item: KelengkapanApiItem,
+  filters: {
+    jenisPermintaanId?: string
+    kategoriPermintaanId?: string
+    detailPermintaanId?: string
+  },
+): boolean {
+  const {
+    jenisPermintaanId,
+    kategoriPermintaanId,
+    detailPermintaanId,
+  } = filters
+
+  if (detailPermintaanId) {
+    return item.detail_permintaan_id === detailPermintaanId
+  }
+
+  if (kategoriPermintaanId) {
+    return item.kategori_permintaan_id === kategoriPermintaanId
+      && item.detail_permintaan_id == null
+  }
+
+  if (jenisPermintaanId) {
+    return item.jenis_permintaan_id === jenisPermintaanId
+      && item.kategori_permintaan_id == null
+      && item.detail_permintaan_id == null
+  }
+
+  return true
 }
 
 export function KelengkapanChecklist({
@@ -69,40 +108,27 @@ export function KelengkapanChecklist({
       setLoading(true)
       setError('')
       try {
-        const supabase = getBrowserClient()
-        if (!supabase) { setLoading(false); return }
+        const data = await apiFetch<KelengkapanApiItem[]>('/master-kelengkapan', {
+          query: {
+            kegiatan_id: kegiatanId,
+            is_ketua_tim: isKetuaTim,
+          },
+        })
 
-        let query = supabase
-          .from('master_kelengkapan_dokumen')
-          .select('id, nama_dokumen, is_ketua_tim, required')
-          .eq('kegiatan_id', kegiatanId)
-          .eq('is_ketua_tim', isKetuaTim)
-          .order('nama_dokumen', { ascending: true })
+        const filtered = data
+          .filter(item => matchesCurrentChain(item, {
+            jenisPermintaanId,
+            kategoriPermintaanId,
+            detailPermintaanId,
+          }))
+          .map(({ id, nama_dokumen, is_ketua_tim, required }) => ({
+            id,
+            nama_dokumen,
+            is_ketua_tim,
+            required,
+          }))
 
-        // Apply chain filters — kelengkapan melekat ke leaf node.
-        // When only a parent ID is provided, ensure child chain columns are NULL.
-        if (detailPermintaanId) {
-          query = query.eq('detail_permintaan_id', detailPermintaanId)
-        } else if (kategoriPermintaanId) {
-          query = query
-            .eq('kategori_permintaan_id', kategoriPermintaanId)
-            .is('detail_permintaan_id', null)
-        } else if (jenisPermintaanId) {
-          query = query
-            .eq('jenis_permintaan_id', jenisPermintaanId)
-            .is('kategori_permintaan_id', null)
-            .is('detail_permintaan_id', null)
-        }
-        // else: no chain selected → match legacy items (all chain cols NULL)
-
-        const { data, error: fetchError } = await query
-
-        if (fetchError) {
-          setError('Gagal mengambil daftar kelengkapan')
-          return
-        }
-
-        setItems(data ?? [])
+        setItems(filtered)
       } catch {
         setError('Gagal mengambil daftar kelengkapan')
       } finally {
