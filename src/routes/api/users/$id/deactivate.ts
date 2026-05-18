@@ -1,21 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession as getSession, hasRole } from '#/lib/auth'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { deactivateUser } from '#/lib/user-helpers'
-
-// ---------------------------------------------------------------------------
-// Helper: create Supabase client with cookie
-// ---------------------------------------------------------------------------
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = {
-    request,
-    cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-  } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { deactivateLocalUser, isValidUserId } from '#/lib/users/local-user-mutations'
 
 // ---------------------------------------------------------------------------
 // POST /api/users/[id]/deactivate — Deactivate user
@@ -27,33 +12,30 @@ export const Route = createFileRoute('/api/users/$id/deactivate')({
       POST: async ({ params, request }: { params: Record<string, string>; request: Request }) => {
         const { id } = params
 
-        if (!id || typeof id !== 'string') {
+        if (!isValidUserId(id)) {
           return Response.json({ error: 'User ID tidak valid' }, { status: 400 })
         }
 
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const isAdmin = await hasRole(supabase, session.user.id, 'ADMIN')
-        if (!isAdmin) {
+        if (!hasLocalRole(session, 'ADMIN')) {
           return Response.json({ error: 'Hanya ADMIN yang bisa menonaktifkan user' }, { status: 403 })
         }
 
         // Self-deactivation prevention
-        if (session.user.id === id) {
+        if (session.userId === id) {
           return Response.json({ error: 'Tidak bisa menonaktifkan akun sendiri' }, { status: 400 })
         }
 
         try {
-          const admin = createAdminClient()
-          const result = await deactivateUser(admin, id)
+          const result = await deactivateLocalUser(id, session.userId)
 
           if (result.error) {
-            return Response.json({ error: result.error }, { status: 400 })
+            return Response.json({ error: result.error }, { status: result.status ?? 400 })
           }
 
           return Response.json({ success: true, message: 'User berhasil dinonaktifkan' })
