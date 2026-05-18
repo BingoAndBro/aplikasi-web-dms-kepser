@@ -1,10 +1,45 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { lstat, realpath, unlink } from 'node:fs/promises'
+import path from 'node:path'
+import { z } from 'zod'
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import {
   createLocalUploadDescriptor,
   LocalUploadError,
   writeLocalUploadContent,
 } from '#/lib/storage/local-upload'
+import {
+  assertSafeLogicalStoragePath,
+  classifyStoragePath,
+  getLocalStorageRoot,
+  resolvePhysicalStoragePath,
+  storagePathBelongsToUser,
+} from '#/lib/storage/local-storage-paths'
+
+const CLEANUP_PENDING_QUERY_VALUE = 'pending'
+const ABSOLUTE_PATH_PREFIX_PATTERN = /^[\\/]+/
+
+const cleanupPendingBodySchema = z.union([
+  z.object({ url: z.string().min(1) }),
+  z.object({ urls: z.array(z.string().min(1)).max(50) }),
+])
+
+type PendingCleanupEntry = {
+  url: string
+  reason?: string
+}
+
+type PendingCleanupCandidate =
+  | {
+    ok: true
+    logicalPath: string
+    physicalPath: string
+  }
+  | {
+    ok: false
+    logicalPath: string
+    error: string
+  }
 
 // ---------------------------------------------------------------------------
 // POST /api/upload - Upload lampiran file to local filesystem storage.
@@ -19,6 +54,11 @@ export const Route = createFileRoute('/api/upload')({
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const searchParams = new URL(request.url).searchParams
+        if (searchParams.get('cleanup') === CLEANUP_PENDING_QUERY_VALUE) {
+          return handlePendingCleanupRequest(request, session.userId)
         }
 
         let formData: FormData
@@ -118,4 +158,133 @@ function localUploadErrorResponse(error: unknown): Response {
     case 'write-failed':
       return Response.json({ error: 'Gagal mengunggah file. Silakan coba lagi.' }, { status: 500 })
   }
+}
+
+async function handlePendingCleanupRequest(request: Request, ownerUserId: string): Promise<Response> {
+  let bodyJson: unknown
+  try {
+    bodyJson = await request.json()
+  } catch {
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const parsed = cleanupPendingBodySchema.safeParse(bodyJson)
+  if (!parsed.success) {
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const requestedUrls = 'urls' in parsed.data ? parsed.data.urls : [parsed.data.url]
+  const uniqueUrls = [...new Set(requestedUrls)]
+  const deleted: string[] = []
+  const skipped: PendingCleanupEntry[] = []
+  const errors: PendingCleanupEntry[] = []
+
+  for (const url of uniqueUrls) {
+    const candidate = preparePendingCleanupCandidate(url, ownerUserId)
+
+    if (!candidate.ok) {
+      errors.push({ url: candidate.logicalPath, reason: candidate.error })
+      continue
+    }
+
+    const inspection = await inspectPendingCleanupFile(candidate.physicalPath)
+    if (inspection === 'missing') {
+      skipped.push({ url: candidate.logicalPath, reason: 'missing' })
+      continue
+    }
+
+    if (inspection !== 'ok') {
+      errors.push({ url: candidate.logicalPath, reason: inspection })
+      continue
+    }
+
+    try {
+      await unlink(candidate.physicalPath)
+      deleted.push(candidate.logicalPath)
+    } catch (error) {
+      if (isNodeErrorCode(error, 'ENOENT')) {
+        skipped.push({ url: candidate.logicalPath, reason: 'missing' })
+        continue
+      }
+
+      errors.push({ url: candidate.logicalPath, reason: 'delete-failed' })
+    }
+  }
+
+  return Response.json({
+    success: errors.length === 0,
+    deleted,
+    skipped,
+    errors,
+  })
+}
+
+function preparePendingCleanupCandidate(url: string, ownerUserId: string): PendingCleanupCandidate {
+  let logicalPath: string
+  const rawUrl = url.trim()
+
+  if (ABSOLUTE_PATH_PREFIX_PATTERN.test(rawUrl)) {
+    return { ok: false, logicalPath: '[unsafe-path]', error: 'invalid-path' }
+  }
+
+  try {
+    logicalPath = assertSafeLogicalStoragePath(rawUrl)
+  } catch {
+    return { ok: false, logicalPath: '[unsafe-path]', error: 'invalid-path' }
+  }
+
+  const classification = classifyStoragePath(logicalPath)
+  if (classification !== 'pending-upload-api' && classification !== 'pending-dash') {
+    return { ok: false, logicalPath, error: 'not-pending' }
+  }
+
+  if (!storagePathBelongsToUser(logicalPath, ownerUserId)) {
+    return { ok: false, logicalPath, error: 'owner-mismatch' }
+  }
+
+  try {
+    return {
+      ok: true,
+      logicalPath,
+      physicalPath: resolvePhysicalStoragePath(getLocalStorageRoot(), logicalPath),
+    }
+  } catch {
+    return { ok: false, logicalPath, error: 'invalid-path' }
+  }
+}
+
+async function inspectPendingCleanupFile(
+  physicalPath: string,
+): Promise<'ok' | 'missing' | 'not-a-file' | 'path-outside-root'> {
+  try {
+    const stats = await lstat(physicalPath)
+    if (!stats.isFile()) return 'not-a-file'
+
+    const [resolvedRoot, resolvedFile] = await Promise.all([
+      realpath(getLocalStorageRoot()),
+      realpath(physicalPath),
+    ])
+
+    return isPhysicalPathInsideRoot(resolvedRoot, resolvedFile)
+      ? 'ok'
+      : 'path-outside-root'
+  } catch (error) {
+    if (isNodeErrorCode(error, 'ENOENT')) return 'missing'
+    return 'not-a-file'
+  }
+}
+
+function isPhysicalPathInsideRoot(storageRoot: string, physicalPath: string): boolean {
+  const relativePath = path.relative(storageRoot, physicalPath)
+
+  return relativePath !== ''
+    && !relativePath.startsWith('..')
+    && !path.isAbsolute(relativePath)
+}
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === code
 }

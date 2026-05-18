@@ -7,15 +7,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { CheckCircle2, XCircle, Eye, Download, Upload, RotateCcw, X, Loader2, Plus, AlertCircle } from 'lucide-react'
 import { Button } from '#/components/ui/button'
-import {
-  buildStorageFilename,
-  isStoragePathPending,
-} from '#/lib/dokumen-helpers'
-import { getSignedUrl, downloadWithSignedUrl, formatDateTime } from '#/lib/storage-client'
-import { getBrowserClient } from '#/lib/supabase-browser'
+import { buildStorageFilename } from '#/lib/dokumen-helpers'
+import { getSignedUrl, downloadWithSignedUrl } from '#/lib/storage-client'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { logDev, warnDev } from '#/lib/dev-logger'
+
+const ACCEPTED_ATTACHMENT_FILE_TYPES = '.pdf,.doc,.docx,.xls,.xlsx'
+const PENDING_CLEANUP_ENDPOINT = '/api/upload?cleanup=pending'
+const PENDING_CLEANUP_TIMEOUT_MS = 10_000
 
 // ============================================================================
 // TYPES
@@ -30,6 +30,14 @@ export interface KelengkapanItem {
 interface PendingFile {
   url: string
   filename: string
+}
+
+type UploadResponse = {
+  url?: unknown
+  nama?: unknown
+  kelengkapan_id?: unknown
+  uploaded_at?: unknown
+  error?: unknown
 }
 
 interface AttachmentEditorProps {
@@ -143,6 +151,44 @@ export function AttachmentEditor({
     return lampiranUrls.find(l => l.kelengkapan_id === docId)
   }
 
+  async function cleanupPendingUrls(urls: string[], context: string): Promise<boolean> {
+    const uniqueUrls = [...new Set(urls.filter(Boolean))]
+    if (uniqueUrls.length === 0) return true
+
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), PENDING_CLEANUP_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(PENDING_CLEANUP_ENDPOINT, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: uniqueUrls }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        warnDev('[AttachmentEditor] Pending cleanup request failed', { context, status: response.status })
+        return false
+      }
+
+      const json = await response.json().catch(() => null) as { success?: unknown } | null
+      const success = json?.success === true
+      if (!success) {
+        warnDev('[AttachmentEditor] Pending cleanup completed with errors', { context })
+      }
+      return success
+    } catch (error) {
+      warnDev('[AttachmentEditor] Pending cleanup error', {
+        context,
+        message: error instanceof Error ? error.message : 'unknown',
+      })
+      return false
+    } finally {
+      window.clearTimeout(timeoutId)
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Handler: Preview (modal popup) - build filename client-side
   // ---------------------------------------------------------------------------
@@ -219,11 +265,8 @@ export function AttachmentEditor({
     logDev('[AttachmentEditor] Reset file', { docId, isUserDoc, hasPending: !!pending, hasLamp: !!lamp })
 
     if (pending?.url) {
-      const supabase = getBrowserClient()
-      if (supabase) {
-        logDev('[AttachmentEditor] Delete uploaded file', { docId, url: pending.url })
-        await supabase.storage.from('dokumen-lampiran').remove([pending.url])
-      }
+      logDev('[AttachmentEditor] Cleanup pending uploaded file', { docId, url: pending.url })
+      await cleanupPendingUrls([pending.url], 'reset')
     }
 
     if (isUserDoc) {
@@ -283,35 +326,44 @@ export function AttachmentEditor({
     logDev('[AttachmentEditor] Upload', { docId, filename: file.name })
 
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) throw new Error('Supabase not initialized')
-
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
-
-      const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const path = `${session.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeFilename}`
-
-      const { data, error } = await supabase.storage
-        .from('dokumen-lampiran')
-        .upload(path, file, { cacheControl: '3600', upsert: false })
-
-      if (error || !data) throw new Error(`Upload failed: ${error?.message}`)
-
-      logDev('[AttachmentEditor] Upload success', { docId, path })
-
       const kel = kelengkapan.find(k => k.id === docId)
       const doc = userDocs.find(d => d.id === docId)
       const lampName = kel?.nama_dokumen ?? doc?.nama ?? file.name
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('kelengkapan_id', docId)
+      formData.append('nama_dokumen', lampName)
 
-      const newLamp: LampiranUrl = {
-        kelengkapan_id: docId,
-        nama: lampName,
-        url: path,
-        uploaded_at: new Date().toISOString(),
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      const json = await response.json().catch(() => ({})) as UploadResponse
+
+      if (!response.ok) {
+        throw new Error(typeof json.error === 'string' ? json.error : 'Upload failed')
       }
 
-      setPendingFiles(prev => new Map(prev).set(docId, { url: path, filename: file.name }))
+      if (
+        typeof json.url !== 'string'
+        || typeof json.nama !== 'string'
+        || typeof json.kelengkapan_id !== 'string'
+        || typeof json.uploaded_at !== 'string'
+      ) {
+        throw new Error('Invalid upload response')
+      }
+
+      const newLamp: LampiranUrl = {
+        kelengkapan_id: json.kelengkapan_id,
+        nama: json.nama,
+        url: json.url,
+        uploaded_at: json.uploaded_at,
+      }
+
+      logDev('[AttachmentEditor] Upload success', { docId, path: json.url })
+
+      setPendingFiles(prev => new Map(prev).set(docId, { url: json.url, filename: file.name }))
 
       setLampiranUrls(prev => {
         const idx = prev.findIndex(l => l.kelengkapan_id === docId)
@@ -340,7 +392,7 @@ export function AttachmentEditor({
         docId,
         message: err instanceof Error ? err.message : 'unknown',
       })
-      alert('Gagal mengupload file')
+      alert(err instanceof Error && err.message ? err.message : 'Gagal mengupload file')
     }
   }
 
@@ -422,16 +474,9 @@ export function AttachmentEditor({
 
       try {
         if (hasFileChanges) {
-          const supabase = getBrowserClient()
-          if (supabase) {
-            logDev('[AttachmentEditor] Cleaning up pending files', { count: pendingFiles.size })
-            for (const [, pending] of pendingFiles) {
-              if (pending?.url) {
-                logDev('[AttachmentEditor] Delete pending file', { url: pending.url })
-                await supabase.storage.from('dokumen-lampiran').remove([pending.url])
-              }
-            }
-          }
+          const pendingUrls = [...pendingFiles.values()].map(pending => pending.url)
+          logDev('[AttachmentEditor] Cleaning up pending files', { count: pendingUrls.length })
+          await cleanupPendingUrls(pendingUrls, 'cancel')
         }
 
         setPendingFiles(new Map())
@@ -673,7 +718,7 @@ export function AttachmentEditor({
                         <input
                           ref={el => { if (el) fileInputRefs.current.set(kel.id, el) }}
                           type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                          accept={ACCEPTED_ATTACHMENT_FILE_TYPES}
                           className="hidden"
                           onChange={e => handleFileChange(kel.id, e)}
                         />
@@ -769,7 +814,7 @@ export function AttachmentEditor({
                       <input
                         ref={el => { if (el) fileInputRefs.current.set(doc.id, el) }}
                         type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                        accept={ACCEPTED_ATTACHMENT_FILE_TYPES}
                         className="hidden"
                         onChange={e => handleFileChange(doc.id, e)}
                       />
