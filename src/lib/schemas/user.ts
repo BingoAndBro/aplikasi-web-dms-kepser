@@ -50,4 +50,13 @@ export const updateUserRequestBoundarySchema = z.object({
   roles: z.unknown().optional(),
 })
 
+export const resetPasswordRequestBoundarySchema = z.object({
+  password: z.unknown().optional(),
+})
+
+export const changePasswordRequestBoundarySchema = z.object({
+  currentPassword: z.unknown().optional(),
+  newPassword: z.unknown().optional(),
+})
+
 export type UserMetadataInput = z.infer<typeof userMetadataSchema>
