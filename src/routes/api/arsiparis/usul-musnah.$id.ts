@@ -1,10 +1,12 @@
+import { lstat, realpath, unlink } from 'node:fs/promises'
+import path from 'node:path'
 import { createFileRoute } from '@tanstack/react-router'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db/client'
 import { users } from '#/db/schema/auth'
 import { arsip as arsipTable, arsipUsulMusnah } from '#/db/schema/arsip'
-import { dokumenTransaksi } from '#/db/schema/dokumen'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
   masterFungsi,
@@ -12,18 +14,13 @@ import {
   masterKategoriPermintaan,
   masterKegiatan,
 } from '#/db/schema/master'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { createAdminClient } from '#/lib/supabase-admin'
-import { getServerSession as getSession } from '#/lib/auth'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
-import { insertLog } from '#/lib/dokumen-helpers'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
-
-function createClient(request: Request) {
-  const cookieHeader = request.headers.get('cookie')
-  const mockEvent = { request, cookie: { get: () => undefined, set: () => {}, delete: () => {} } } as any
-  return createServerSupabaseClient(mockEvent, cookieHeader)
-}
+import {
+  assertSafeLogicalStoragePath,
+  getLocalStorageRoot,
+  resolvePhysicalStoragePath,
+} from '#/lib/storage/local-storage-paths'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -51,6 +48,197 @@ function displayUserName(user: {
     ?? user?.namaLengkap
     ?? user?.email
     ?? '\u2014'
+}
+
+type LocalArchiveDeleteCandidate = {
+  index: number
+  physicalPath: string
+}
+
+type LocalArchiveDeleteIssueCode =
+  | 'invalid-local-path'
+  | 'not-a-file'
+  | 'path-outside-root'
+  | 'delete-failed'
+
+type LocalArchiveDeleteIssue = {
+  index: number
+  code: LocalArchiveDeleteIssueCode
+}
+
+type LocalArchiveDeletePlan = {
+  ok: true
+  candidates: LocalArchiveDeleteCandidate[]
+  missingCount: number
+  skippedLegacyCount: number
+} | {
+  ok: false
+  issue: LocalArchiveDeleteIssue
+}
+
+type LocalArchiveDeleteExecutionResult = {
+  ok: boolean
+  deletedCount: number
+  missingCount: number
+  skippedLegacyCount: number
+  failures: LocalArchiveDeleteIssue[]
+}
+
+async function prepareArchiveSnapshotDeletePlan(
+  lampiranUrls: LampiranUrl[],
+): Promise<LocalArchiveDeletePlan> {
+  const candidates: LocalArchiveDeleteCandidate[] = []
+  let missingCount = 0
+  let skippedLegacyCount = 0
+  const storageRoot = getLocalStorageRoot()
+
+  for (const [index, lampiran] of lampiranUrls.entries()) {
+    const rawPath = (lampiran as { url?: unknown }).url
+    if (!rawPath) continue
+    if (typeof rawPath !== 'string') {
+      return { ok: false, issue: { index, code: 'invalid-local-path' } }
+    }
+
+    if (isUrlLikeStoragePath(rawPath)) {
+      skippedLegacyCount += 1
+      continue
+    }
+
+    let logicalPath: string
+    let physicalPath: string
+
+    try {
+      logicalPath = assertSafeLogicalStoragePath(rawPath)
+      physicalPath = resolvePhysicalStoragePath(storageRoot, logicalPath)
+    } catch {
+      return { ok: false, issue: { index, code: 'invalid-local-path' } }
+    }
+
+    const inspection = await inspectDeletableLocalFile(storageRoot, physicalPath)
+
+    if (inspection === 'missing') {
+      missingCount += 1
+      continue
+    }
+
+    if (inspection !== 'ok') {
+      return { ok: false, issue: { index, code: inspection } }
+    }
+
+    candidates.push({ index, physicalPath })
+  }
+
+  return { ok: true, candidates, missingCount, skippedLegacyCount }
+}
+
+async function deleteArchiveSnapshotFiles(
+  plan: Extract<LocalArchiveDeletePlan, { ok: true }>,
+): Promise<LocalArchiveDeleteExecutionResult> {
+  let deletedCount = 0
+  let missingCount = plan.missingCount
+  const failures: LocalArchiveDeleteIssue[] = []
+  const storageRoot = getLocalStorageRoot()
+
+  for (const candidate of plan.candidates) {
+    const inspection = await inspectDeletableLocalFile(storageRoot, candidate.physicalPath)
+
+    if (inspection === 'missing') {
+      missingCount += 1
+      continue
+    }
+
+    if (inspection !== 'ok') {
+      failures.push({ index: candidate.index, code: inspection })
+      continue
+    }
+
+    try {
+      await unlink(candidate.physicalPath)
+      deletedCount += 1
+    } catch (error) {
+      if (isNodeErrorCode(error, 'ENOENT')) {
+        missingCount += 1
+        continue
+      }
+
+      failures.push({ index: candidate.index, code: 'delete-failed' })
+    }
+  }
+
+  return {
+    ok: failures.length === 0,
+    deletedCount,
+    missingCount,
+    skippedLegacyCount: plan.skippedLegacyCount,
+    failures,
+  }
+}
+
+async function inspectDeletableLocalFile(
+  storageRoot: string,
+  physicalPath: string,
+): Promise<'ok' | 'missing' | 'not-a-file' | 'path-outside-root'> {
+  try {
+    const stats = await lstat(physicalPath)
+    if (!stats.isFile()) return 'not-a-file'
+
+    const [resolvedRoot, resolvedFile] = await Promise.all([
+      realpath(storageRoot),
+      realpath(physicalPath),
+    ])
+
+    return isPhysicalPathInsideRoot(resolvedRoot, resolvedFile)
+      ? 'ok'
+      : 'path-outside-root'
+  } catch (error) {
+    if (isNodeErrorCode(error, 'ENOENT')) return 'missing'
+    return 'not-a-file'
+  }
+}
+
+function isPhysicalPathInsideRoot(storageRoot: string, physicalPath: string): boolean {
+  const relativePath = path.relative(storageRoot, physicalPath)
+
+  return relativePath !== ''
+    && !relativePath.startsWith('..')
+    && !path.isAbsolute(relativePath)
+}
+
+function isUrlLikeStoragePath(storagePath: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(storagePath.trim())
+}
+
+function localArchiveDeletePreconditionResponse(issue: LocalArchiveDeleteIssue): Response {
+  if (issue.code === 'invalid-local-path') {
+    return Response.json({ error: 'Path lampiran arsip tidak valid' }, { status: 400 })
+  }
+
+  return Response.json({
+    error: 'File lampiran arsip tidak aman untuk dimusnahkan',
+    details: { code: issue.code, index: issue.index },
+  }, { status: 500 })
+}
+
+function localArchiveDeleteFailureResponse(result: LocalArchiveDeleteExecutionResult): Response {
+  return Response.json({
+    error: 'Arsip dimusnahkan, tetapi sebagian file lampiran gagal dihapus',
+    archiveDestroyed: true,
+    fileDeletion: {
+      deletedCount: result.deletedCount,
+      missingCount: result.missingCount,
+      skippedLegacyCount: result.skippedLegacyCount,
+      failedCount: result.failures.length,
+      failures: result.failures,
+    },
+    compensationRequired: true,
+  }, { status: 500 })
+}
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && error.code === code
 }
 
 // ---------------------------------------------------------------------------
@@ -180,13 +368,11 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah/$id')({
       },
 
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
-        const supabase = createClient(request)
-        const session = await getSession(supabase)
+        const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        const { data: rolesData } = await supabase.from('user_roles').select('role:roles(nama)').eq('user_id', session.user.id)
-        const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-        if (!roleNames.includes('ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!isUuid(params.id)) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
 
         const body = await request.json().catch(() => null)
         if (!body) return Response.json({ error: 'Body tidak valid' }, { status: 400 })
@@ -197,71 +383,151 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah/$id')({
 
         if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
-        const { data: musnah, error: musnahError } = await supabase
-          .from('arsip_usul_musnah')
-          .select('id, arsip_id, status, catatan')
-          .eq('id', params.id)
-          .single()
+        let musnahRows: Array<{
+          musnah_id: string
+          musnah_arsip_id: string
+          musnah_status: string
+          musnah_catatan: string | null
+        }>
 
-        if (musnahError || !musnah) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
-        if (musnah.status !== 'MENUNGGU') return Response.json({ error: 'Usul musnah sudah diputuskan' }, { status: 400 })
-
-        const { data: arsip, error: arsipError } = await supabase
-          .from('arsip')
-          .select('id, dokumen_id, lampiran_snapshot')
-          .eq('id', musnah.arsip_id)
-          .single()
-
-        if (arsipError || !arsip) return Response.json({ error: 'Arsip tidak ditemukan' }, { status: 404 })
-
-        let lampiranUrls: LampiranUrl[] = []
-        if (arsip.lampiran_snapshot) {
-          lampiranUrls = typeof arsip.lampiran_snapshot === 'string' ? JSON.parse(arsip.lampiran_snapshot) : arsip.lampiran_snapshot
-        }
-
-        const { error: updateMusnahError } = await supabase
-          .from('arsip_usul_musnah')
-          .update({
-            status: 'DISETUJUI',
-            decided_by: session.user.id,
-            decided_at: new Date().toISOString(),
-          })
-          .eq('id', musnah.id)
-
-        if (updateMusnahError) {
-          console.error('[usul-musnah-patch] update musnah error:', updateMusnahError)
+        try {
+          musnahRows = await db
+            .select({
+              musnah_id: arsipUsulMusnah.id,
+              musnah_arsip_id: arsipUsulMusnah.arsipId,
+              musnah_status: arsipUsulMusnah.status,
+              musnah_catatan: arsipUsulMusnah.catatan,
+            })
+            .from(arsipUsulMusnah)
+            .where(eq(arsipUsulMusnah.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[usul-musnah-patch] local musnah lookup error:', err)
           return Response.json({ error: 'Gagal memperbarui usul musnah' }, { status: 500 })
         }
 
-        const supabaseAdmin = createAdminClient()
-        for (const lamp of lampiranUrls) {
-          try {
-            await supabaseAdmin.storage.from('dokumen-lampiran').remove([lamp.url])
-          } catch (e) {
-            console.warn('[usul-musnah-patch] file deletion warning:', e)
-          }
-        }
+        const musnahRow = musnahRows[0]
+        if (!musnahRow) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
+        if (musnahRow.musnah_status !== 'MENUNGGU') return Response.json({ error: 'Usul musnah sudah diputuskan' }, { status: 400 })
 
-        const { error: updateArsipError } = await supabase.from('arsip').update({
-          status_arsip: 'DIMUSNAHKAN',
-          lampiran_snapshot: [],
-          musnah_at: new Date().toISOString(),
-          musnah_by: session.user.id,
-          musnah_catatan: musnah.catatan ?? null,
-        }).eq('id', arsip.id)
+        let arsipRows: Array<{
+          arsip_id: string
+          dokumen_id: string
+          status_arsip: string
+          lampiran_snapshot: unknown
+        }>
 
-        if (updateArsipError) {
-          console.error('[usul-musnah-patch] update arsip error:', updateArsipError)
+        try {
+          arsipRows = await db
+            .select({
+              arsip_id: arsipTable.id,
+              dokumen_id: arsipTable.dokumenId,
+              status_arsip: arsipTable.statusArsip,
+              lampiran_snapshot: arsipTable.lampiranSnapshot,
+            })
+            .from(arsipTable)
+            .where(eq(arsipTable.id, musnahRow.musnah_arsip_id))
+            .limit(1)
+        } catch (err) {
+          console.error('[usul-musnah-patch] local arsip lookup error:', err)
           return Response.json({ error: 'Gagal memperbarui status arsip' }, { status: 500 })
         }
 
-        await insertLog(supabase, {
-          dokumenId: arsip.dokumen_id,
-          userId: session.user.id,
-          aksi: 'USUL_MUSNAH_SETUJUI',
-          catatan: null,
-          stepUrutan: null,
-        })
+        const row = arsipRows[0]
+        if (!row) return Response.json({ error: 'Arsip tidak ditemukan' }, { status: 404 })
+        if (row.status_arsip !== 'USUL_MUSNAH') return Response.json({ error: 'Arsip bukan dalam status usul musnah' }, { status: 400 })
+
+        const lampiranUrls = parseLampiranSnapshot(row.lampiran_snapshot)
+        let deletePlan: LocalArchiveDeletePlan
+        try {
+          deletePlan = await prepareArchiveSnapshotDeletePlan(lampiranUrls)
+        } catch {
+          console.error('[usul-musnah-patch] local file preflight error')
+          return Response.json({ error: 'Gagal memproses file arsip' }, { status: 500 })
+        }
+
+        if (!deletePlan.ok) {
+          return localArchiveDeletePreconditionResponse(deletePlan.issue)
+        }
+
+        try {
+          await db.transaction(async (tx) => {
+            const decidedAt = new Date()
+
+            const updatedMusnahRows = await tx
+              .update(arsipUsulMusnah)
+              .set({
+                status: 'DISETUJUI',
+                decidedBy: session.user.id,
+                decidedAt,
+              })
+              .where(and(
+                eq(arsipUsulMusnah.id, musnahRow.musnah_id),
+                eq(arsipUsulMusnah.status, 'MENUNGGU'),
+              ))
+              .returning({ id: arsipUsulMusnah.id })
+
+            if (updatedMusnahRows.length === 0) {
+              throw new Error('USUL_MUSNAH_UPDATE_NOT_FOUND')
+            }
+
+            const updatedArsipRows = await tx
+              .update(arsipTable)
+              .set({
+                statusArsip: 'DIMUSNAHKAN',
+                lampiranSnapshot: [],
+                musnahAt: decidedAt,
+                musnahBy: session.user.id,
+                musnahCatatan: musnahRow.musnah_catatan ?? null,
+              })
+              .where(and(
+                eq(arsipTable.id, row.arsip_id),
+                eq(arsipTable.statusArsip, 'USUL_MUSNAH'),
+              ))
+              .returning({ id: arsipTable.id })
+
+            if (updatedArsipRows.length === 0) {
+              throw new Error('ARSIP_UPDATE_NOT_FOUND')
+            }
+
+            await tx.insert(logAktivitas).values({
+              dokumenId: row.dokumen_id,
+              userId: session.user.id,
+              aksi: 'USUL_MUSNAH_SETUJUI',
+              catatan: null,
+              stepUrutan: null,
+            })
+          })
+        } catch (err) {
+          console.error('[usul-musnah-patch] local transaction error:', err)
+          return Response.json({ error: 'Gagal memperbarui status arsip' }, { status: 500 })
+        }
+
+        let deleteResult: LocalArchiveDeleteExecutionResult
+        try {
+          deleteResult = await deleteArchiveSnapshotFiles(deletePlan)
+        } catch {
+          console.error('[usul-musnah-patch] local file cleanup error')
+          return localArchiveDeleteFailureResponse({
+            ok: false,
+            deletedCount: 0,
+            missingCount: deletePlan.missingCount,
+            skippedLegacyCount: deletePlan.skippedLegacyCount,
+            failures: [{ index: -1, code: 'delete-failed' }],
+          })
+        }
+
+        if (!deleteResult.ok) {
+          console.warn('[usul-musnah-patch] local file cleanup incomplete:', {
+            usulMusnahId: params.id,
+            arsipId: row.arsip_id,
+            deletedCount: deleteResult.deletedCount,
+            missingCount: deleteResult.missingCount,
+            skippedLegacyCount: deleteResult.skippedLegacyCount,
+            failedCount: deleteResult.failures.length,
+          })
+          return localArchiveDeleteFailureResponse(deleteResult)
+        }
 
         return Response.json({ success: true, message: 'Arsip berhasil dimusnahkan' })
       },
