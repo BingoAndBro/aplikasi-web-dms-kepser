@@ -1,8 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import { DashboardShell } from '#/components/dashboard/DashboardShell'
 import { StatsBento } from '#/components/dashboard/StatsBento'
+import { apiFetch } from '#/lib/api-client'
+import { ROLES } from '#/lib/constants/roles'
+
+type AuthSessionResponse = {
+  session: { userId: string; email: string; userName?: string | null } | null
+  roles: string[]
+  activeRole: string | null
+}
 
 export const Route = createFileRoute('/admin/')({
   component: AdminDashboard,
@@ -11,16 +18,13 @@ export const Route = createFileRoute('/admin/')({
 function AdminDashboard() {
   useEffect(() => {
     async function checkAuth() {
-      const supabase = getBrowserClient()
-      if (!supabase) { window.location.href = '/login'; return }
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { window.location.href = '/login'; return }
-      const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('role:roles(nama)')
-        .eq('user_id', session.user.id)
-      const roleNames = rolesData?.map((r: any) => r.role?.nama).filter(Boolean) ?? []
-      if (!roleNames.includes('ADMIN')) { window.location.href = '/forbidden'; return }
+      try {
+        const auth = await apiFetch<AuthSessionResponse>('/auth/session')
+        if (!auth.session) { window.location.href = '/login'; return }
+        if (!auth.roles.includes(ROLES.ADMIN)) { window.location.href = '/forbidden'; return }
+      } catch {
+        window.location.href = '/login'
+      }
     }
     checkAuth()
   }, [])

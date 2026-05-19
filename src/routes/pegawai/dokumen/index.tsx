@@ -22,7 +22,6 @@ import {
   FileEdit,
   AlertCircle,
 } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
@@ -104,6 +103,12 @@ function StepBadge({ step }: { step: string | null }) {
 
 const PAGE_SIZE = 10
 
+type AuthSessionResponse = {
+  session: { userId: string; email: string; userName?: string | null } | null
+  roles: string[]
+  activeRole: string | null
+}
+
 function DokumenSayaPage() {
   const { status: statusParam } = Route.useSearch()
   const [items, setItems] = useState<DokumenRow[]>([])
@@ -122,10 +127,8 @@ function DokumenSayaPage() {
     setLoading(true)
     setFetchError(null)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setFetchError('Gagal menginisialisasi Supabase. Refresh halaman.'); setLoading(false); return }
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setFetchError('Sesi tidak ditemukan. Silakan login ulang.'); setLoading(false); return }
+      const auth = await apiFetch<AuthSessionResponse>('/auth/session')
+      if (!auth.session) { setFetchError('Sesi tidak ditemukan. Silakan login ulang.'); setLoading(false); return }
 
       const json = await apiFetch<{ dokumen?: DokumenRow[]; error?: string }>('/dokumen')
       if (json.error) { setFetchError(json.error); setLoading(false); return }
