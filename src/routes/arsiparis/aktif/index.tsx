@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { cn } from '#/lib/utils'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/aktif/')({ component: ArsipAktifPage })
@@ -28,6 +27,8 @@ type ArsipAktifResponse = {
   error?: string
 }
 
+type FungsiOption = { id: string; nama: string }
+
 function ArsipAktifPage() {
   const [items, setItems] = useState<ArsipAktifItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,11 +38,9 @@ function ArsipAktifPage() {
   const [q, setQ] = useState('')
 
   useEffect(() => {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    supabase.from('master_fungsi').select('id, nama').eq('is_active', true).order('nama').then(({ data }: { data: { id: string; nama: string }[] | null }) => {
-      setFungsiList(data ?? [])
-    })
+    apiFetch<FungsiOption[]>('/master-fungsi')
+      .then(data => { setFungsiList(data) })
+      .catch(() => { setFungsiList([]) })
   }, [])
 
   async function fetchData() {

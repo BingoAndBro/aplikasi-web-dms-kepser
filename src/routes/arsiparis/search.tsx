@@ -8,7 +8,6 @@ import {
   Search, Eye,
 } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/search')({ component: ArsipSearchPage })
@@ -30,6 +29,9 @@ type ArsipSearchResponse = {
   error?: string
 }
 
+type FungsiOption = { id: string; nama: string }
+type KegiatanOption = { id: string; nama: string }
+
 const PER_PAGE = 20
 
 function ArsipSearchPage() {
@@ -46,14 +48,12 @@ function ArsipSearchPage() {
   const [q, setQ] = useState('')
 
   useEffect(() => {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    supabase.from('master_fungsi').select('id, nama').eq('is_active', true).order('nama').then(({ data }: { data: { id: string; nama: string }[] | null }) => {
-      setFungsiList(data ?? [])
-    })
-    supabase.from('master_kegiatan').select('id, nama').eq('is_active', true).order('nama').then(({ data }: { data: { id: string; nama: string }[] | null }) => {
-      setKegiatanList(data ?? [])
-    })
+    apiFetch<FungsiOption[]>('/master-fungsi')
+      .then(data => { setFungsiList(data) })
+      .catch(() => { setFungsiList([]) })
+    apiFetch<KegiatanOption[]>('/master-kegiatan')
+      .then(data => { setKegiatanList(data) })
+      .catch(() => { setKegiatanList([]) })
   }, [])
 
   async function fetchData() {

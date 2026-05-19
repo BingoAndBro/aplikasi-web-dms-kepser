@@ -8,7 +8,6 @@ import {
   CheckCircle2, Banknote,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -21,6 +20,8 @@ type InboxItem = {
   ppk_user_id: string | null; ppk_validated_at: string | null
 }
 
+type FungsiOption = { id: string; nama: string }
+
 function BendaharaInboxPage() {
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -29,10 +30,9 @@ function BendaharaInboxPage() {
   const [fungsiFilter, setFungsiFilter] = useState('')
 
   useEffect(() => {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    const fungsiRows: { id: string; nama: string }[] = []
-    supabase.from('master_fungsi').select('id, nama').eq('is_active', true).order('nama').then(({ data: fungsiData }: { data: { id: string; nama: string }[] | null }) => setFungsiList(fungsiData ?? []))
+    apiFetch<FungsiOption[]>('/master-fungsi')
+      .then(data => { setFungsiList(data) })
+      .catch(() => { setFungsiList([]) })
   }, [])
 
   async function fetchData() {

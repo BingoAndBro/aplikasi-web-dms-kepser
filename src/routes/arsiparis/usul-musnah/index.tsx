@@ -4,7 +4,6 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { ApiError, apiFetch } from '#/lib/api-client'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import { formatDate } from '#/lib/utils/format'
 import {
   Trash2, ChevronRight, AlertCircle, Loader2,
@@ -31,6 +30,8 @@ type UsulMusnahResponse = {
   error?: string
 }
 
+type FungsiOption = { id: string; nama: string }
+
 function UsulMusnahPage() {
   const [items, setItems] = useState<MusnahItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,11 +40,9 @@ function UsulMusnahPage() {
   const [fungsiFilter, setFungsiFilter] = useState('')
 
   useEffect(() => {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    supabase.from('master_fungsi').select('id, nama').eq('is_active', true).order('nama').then(({ data }: { data: { id: string; nama: string }[] | null }) => {
-      setFungsiList(data ?? [])
-    })
+    apiFetch<FungsiOption[]>('/master-fungsi')
+      .then(data => { setFungsiList(data) })
+      .catch(() => { setFungsiList([]) })
   }, [])
 
   async function fetchData() {

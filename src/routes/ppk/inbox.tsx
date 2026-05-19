@@ -21,7 +21,6 @@ import {
   ClipboardList,
 } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 
@@ -41,6 +40,11 @@ type InboxItem = {
 type PpkInboxResponse = {
   dokumen?: InboxItem[]
   error?: string
+}
+
+type FungsiOption = {
+  id: string
+  nama: string
 }
 
 export const Route = createFileRoute('/ppk/inbox')({
@@ -63,14 +67,9 @@ function PpkInboxPage() {
 
   // Fetch fungsi list for filter dropdown
   useEffect(() => {
-    const supabase = getBrowserClient()
-    if (!supabase) return
-    supabase
-      .from('master_fungsi')
-      .select('id, nama')
-      .eq('is_active', true)
-      .order('nama', { ascending: true })
-      .then(({ data }: { data: { id: string; nama: string }[] | null }) => { setFungsiList(data ?? []) })
+    apiFetch<FungsiOption[]>('/master-fungsi')
+      .then(data => { setFungsiList(data) })
+      .catch(() => { setFungsiList([]) })
   }, [])
 
   // Fetch inbox data
