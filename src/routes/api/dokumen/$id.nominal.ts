@@ -1,12 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerSupabaseClient } from '#/lib/supabase-server'
-import { getServerSession } from '#/lib/auth'
+import { eq } from 'drizzle-orm'
+import { db } from '#/db/client'
+import { arsip as arsipTable } from '#/db/schema/arsip'
+import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { updateNominalSchema, validateNominalForMaterial } from '#/lib/schemas/dokumen'
-import { insertLog } from '#/lib/dokumen-helpers'
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value)
+}
+
+function normalizeNumericValue(value: string | number | null | undefined): number | null | undefined {
+  if (value === null || value === undefined) return value
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
 
 // ---------------------------------------------------------------------------
 // PATCH /api/dokumen/$id/nominal — Update nominal_realisasi
-// Allowed: creator, arsiparis, SUPERADMIN/ADMIN
+// Allowed: creator, arsiparis, ADMIN
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/$id/nominal')({
@@ -14,42 +28,51 @@ export const Route = createFileRoute('/api/dokumen/$id/nominal')({
     handlers: {
       PATCH: async ({ request, params }: { request: Request; params: { id: string } }) => {
         // 1. Auth check
-        const cookieHeader = request.headers.get('cookie')
-        const mockEvent = {
-          request,
-          cookie: { get: () => undefined, set: () => {}, delete: () => {} },
-        } as any
-        const supabase = createServerSupabaseClient(mockEvent, cookieHeader)
-        const session = await getServerSession(supabase)
+        const session = await getLocalServerSession(request)
 
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // 2. Get dokumen
-        const { data: dok } = await supabase
-          .from('dokumen_transaksi')
-          .select('id, created_by, status, is_non_material, nominal_realisasi')
-          .eq('id', params.id)
-          .single()
+        if (!isUuid(params.id)) {
+          return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        }
 
+        // 2. Get dokumen
+        let dokRows: Array<{
+          id: string
+          created_by: string
+          status: string
+          is_non_material: boolean | null
+          nominal_realisasi: string | null
+        }>
+
+        try {
+          dokRows = await db
+            .select({
+              id: dokumenTransaksi.id,
+              created_by: dokumenTransaksi.createdBy,
+              status: dokumenTransaksi.status,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+            })
+            .from(dokumenTransaksi)
+            .where(eq(dokumenTransaksi.id, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[dokumen-nominal] local lookup error:', err)
+          return Response.json({ error: 'Update gagal' }, { status: 500 })
+        }
+
+        const dok = dokRows[0]
         if (!dok) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
 
         // 3. Authorization check
-        const { data: rolesData } = await supabase
-          .from('user_roles')
-          .select('role:roles(nama)')
-          .eq('user_id', session.user.id)
-
-        const roleNames = (rolesData ?? [])
-          .map((r: any) => r.role?.nama as string | undefined)
-          .filter(Boolean) as string[]
-
         const isCreator = dok.created_by === session.user.id
-        const isArsiparis = roleNames.includes('ARSIPARIS')
-        const isAdmin = roleNames.includes('SUPERADMIN') || roleNames.includes('ADMIN')
+        const isArsiparis = hasLocalRole(session, 'ARSIPARIS')
+        const isAdmin = hasLocalRole(session, 'ADMIN')
 
         if (!isCreator && !isArsiparis && !isAdmin) {
           return Response.json({ error: 'Akses ditolak' }, { status: 403 })
@@ -79,46 +102,80 @@ export const Route = createFileRoute('/api/dokumen/$id/nominal')({
           )
         }
 
+        let archiveRows: Array<{ status_arsip: string }>
+        try {
+          archiveRows = await db
+            .select({
+              status_arsip: arsipTable.statusArsip,
+            })
+            .from(arsipTable)
+            .where(eq(arsipTable.dokumenId, params.id))
+            .limit(1)
+        } catch (err) {
+          console.error('[dokumen-nominal] archive lookup error:', err)
+          return Response.json({ error: 'Update gagal' }, { status: 500 })
+        }
+
+        if (archiveRows.some((row) => row.status_arsip === 'DIMUSNAHKAN')) {
+          return Response.json(
+            { error: 'Tidak bisa update dokumen yang sudah dimusnahkan' },
+            { status: 400 },
+          )
+        }
+
         // 6. Validate material requirement
-        const isNonMaterial = parsed.data.is_non_material ?? dok.is_non_material
+        const isNonMaterial = dok.is_non_material === true
         const nominalRealisasi = parsed.data.nominal_realisasi ?? dok.nominal_realisasi
 
-        const validation = validateNominalForMaterial(isNonMaterial, nominalRealisasi)
+        if (isNonMaterial && parsed.data.nominal_realisasi !== undefined && parsed.data.nominal_realisasi !== null) {
+          return Response.json(
+            { error: 'Dokumen Non-Material tidak memiliki nominal_realisasi' },
+            { status: 400 },
+          )
+        }
+
+        const validation = validateNominalForMaterial(
+          isNonMaterial,
+          normalizeNumericValue(nominalRealisasi),
+        )
         if (!validation.valid) {
           return Response.json({ error: validation.error }, { status: 400 })
         }
 
         // 7. Update
-        const updatePayload: Record<string, unknown> = {}
-        if (parsed.data.nominal_realisasi !== undefined) {
-          updatePayload.nominal_realisasi = parsed.data.nominal_realisasi
-        }
-        if (parsed.data.is_non_material !== undefined) {
-          updatePayload.is_non_material = parsed.data.is_non_material
-        }
-
         // Nothing to update
-        if (Object.keys(updatePayload).length === 0) {
+        if (parsed.data.nominal_realisasi === undefined) {
           return Response.json({ success: true, message: 'Tidak ada perubahan' })
         }
 
-        const { error } = await supabase
-          .from('dokumen_transaksi')
-          .update(updatePayload)
-          .eq('id', params.id)
+        try {
+          await db.transaction(async (tx) => {
+            const updatedRows = await tx
+              .update(dokumenTransaksi)
+              .set({
+                nominalRealisasi: parsed.data.nominal_realisasi === null
+                  ? null
+                  : String(parsed.data.nominal_realisasi),
+              })
+              .where(eq(dokumenTransaksi.id, params.id))
+              .returning({ id: dokumenTransaksi.id })
 
-        if (error) {
-          console.error('[dokumen-nominal] update error:', error)
+            if (updatedRows.length === 0) {
+              throw new Error('DOCUMENT_NOMINAL_UPDATE_NOT_FOUND')
+            }
+
+            await tx.insert(logAktivitas).values({
+              dokumenId: params.id,
+              userId: session.user.id,
+              aksi: 'UPDATE_NOMINAL',
+              catatan: `Update nominal: ${nominalRealisasi}`,
+              stepUrutan: null,
+            })
+          })
+        } catch (err) {
+          console.error('[dokumen-nominal] local transaction error:', err)
           return Response.json({ error: 'Update gagal' }, { status: 500 })
         }
-
-        // 8. Log aktivitas
-        await insertLog(supabase, {
-          dokumenId: params.id,
-          userId: session.user.id,
-          aksi: 'UPDATE_NOMINAL',
-          catatan: `Update nominal: ${nominalRealisasi}`,
-        })
 
         return Response.json({ success: true })
       },
