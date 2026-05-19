@@ -13,39 +13,15 @@ const LOGICAL_PATH = 'owner-user/document-id/1777964598700-random-report.pdf'
 const LOCAL_FILE_CONTENT = '%PDF-1.4 runtime preview content'
 
 const mocks = vi.hoisted(() => {
-  const createSignedUrl = vi.fn()
-  const storageFrom = vi.fn(() => ({ createSignedUrl }))
-  const createAdminClient = vi.fn(() => ({
-    storage: { from: storageFrom },
-  }))
-  const createServerSupabaseClient = vi.fn(() => ({ client: 'supabase' }))
   const getLocalServerSession = vi.fn()
-  const canAccessStoragePath = vi.fn()
 
   return {
-    canAccessStoragePath,
-    createAdminClient,
-    createServerSupabaseClient,
-    createSignedUrl,
     getLocalServerSession,
-    storageFrom,
   }
 })
 
-vi.mock('#/lib/supabase-server', () => ({
-  createServerSupabaseClient: mocks.createServerSupabaseClient,
-}))
-
-vi.mock('#/lib/supabase-admin', () => ({
-  createAdminClient: mocks.createAdminClient,
-}))
-
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
-}))
-
-vi.mock('#/lib/dokumen-helpers', () => ({
-  canAccessStoragePath: mocks.canAccessStoragePath,
 }))
 
 type PreviewHandler = (args: { request: Request }) => Promise<Response>
@@ -117,11 +93,6 @@ describe('raw preview internal URL runtime verification', () => {
     await rm(TEST_ROOT, { force: true, recursive: true })
 
     mocks.getLocalServerSession.mockResolvedValue(session())
-    mocks.canAccessStoragePath.mockResolvedValue(true)
-    mocks.createSignedUrl.mockResolvedValue({
-      data: { signedUrl: 'unused-supabase-output' },
-      error: null,
-    })
   })
 
   afterEach(async () => {
@@ -153,8 +124,6 @@ describe('raw preview internal URL runtime verification', () => {
       'inline; filename="1777964598700-random-report.pdf"',
     )
     expect(await fileResponse.text()).toBe(LOCAL_FILE_CONTENT)
-    expect(mocks.createAdminClient).not.toHaveBeenCalled()
-    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 
   it('returns an internal raw preview URL without Supabase fallback', async () => {
@@ -167,8 +136,6 @@ describe('raw preview internal URL runtime verification', () => {
     expect(body.filename).toBe('report.pdf')
     expect(typeof body.signedUrl).toBe('string')
     expect((body.signedUrl as string).startsWith(`${INTERNAL_FILE_ACCESS_PATH}?token=`)).toBe(true)
-    expect(mocks.createAdminClient).not.toHaveBeenCalled()
-    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 
   it('generates the opt-in URL but rejects final access without a local session', async () => {
@@ -206,9 +173,6 @@ describe('raw preview internal URL runtime verification', () => {
 
     expect(response.status).toBe(401)
     expect(await responseJson(response)).toEqual({ error: 'Unauthorized' })
-    expect(mocks.canAccessStoragePath).not.toHaveBeenCalled()
-    expect(mocks.createAdminClient).not.toHaveBeenCalled()
-    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 
   it('does not generate an internal token before raw preview path authorization passes', async () => {
@@ -220,7 +184,5 @@ describe('raw preview internal URL runtime verification', () => {
 
     expect(response.status).toBe(403)
     expect(await responseJson(response)).toEqual({ error: 'Anda tidak memiliki akses' })
-    expect(mocks.createAdminClient).not.toHaveBeenCalled()
-    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
   })
 })

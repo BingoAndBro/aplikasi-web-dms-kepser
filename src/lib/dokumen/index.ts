@@ -13,33 +13,8 @@ export {
 } from './parse'
 
 export {
-  getDokumenById,
-  getDokumenByUser,
-  getDokumenKegiatanByKetuaTim,
-  getDokumenSelesaiByUser,
-  getKelengkapanRequired,
-  resolveLeafNodeName,
-  userHasApproverRole,
-} from './queries'
-
-export {
-  getLogsByDokumen,
-  insertLog,
-} from './logs'
-
-export {
-  createDokumen,
-  updateDokumen,
-  updateDokumenStatus,
-} from './mutations'
-
-export {
   buildDokumenFilename,
-  buildFormalStoragePath,
   buildStorageFilename,
-  canAccessStoragePath,
-  deleteOrphanFiles,
   isStoragePathPending,
   storagePathBelongsToUser,
-  syncDocumentAttachments,
 } from './storage'

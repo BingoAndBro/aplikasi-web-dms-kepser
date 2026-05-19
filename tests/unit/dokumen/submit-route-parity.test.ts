@@ -16,30 +16,15 @@ let preflightCheckTargetAvailable: ReturnType<typeof vi.fn>
 let localSubmitAdapterCalls: unknown[]
 
 const mocks = vi.hoisted(() => ({
-  createAdminClient: vi.fn(),
   createDokumen: vi.fn(),
   createLiveLocalSubmitDrizzleAdapter: vi.fn(),
   createSubmitDiskPreflightChecker: vi.fn(),
-  createServerSupabaseClient: vi.fn(),
   getKelengkapanRequired: vi.fn(),
   getLocalServerSession: vi.fn(),
-  getServerSession: vi.fn(),
   insertLog: vi.fn(),
   moveLocalPendingFileToFormal: vi.fn(),
   resolveLeafNodeName: vi.fn(),
   updateDokumenStatus: vi.fn(),
-}))
-
-vi.mock('#/lib/supabase-server', () => ({
-  createServerSupabaseClient: mocks.createServerSupabaseClient,
-}))
-
-vi.mock('#/lib/supabase-admin', () => ({
-  createAdminClient: mocks.createAdminClient,
-}))
-
-vi.mock('#/lib/auth', () => ({
-  getServerSession: mocks.getServerSession,
 }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
@@ -711,9 +696,6 @@ function createLocalSession(overrides: {
 }
 
 function expectNoLegacySubmitCalls() {
-  expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled()
-  expect(mocks.createAdminClient).not.toHaveBeenCalled()
-  expect(mocks.getServerSession).not.toHaveBeenCalled()
   expect(mocks.getKelengkapanRequired).not.toHaveBeenCalled()
   expect(mocks.createDokumen).not.toHaveBeenCalled()
   expect(mocks.updateDokumenStatus).not.toHaveBeenCalled()

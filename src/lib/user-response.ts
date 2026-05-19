@@ -1,4 +1,4 @@
-import { parseRoleArray } from './auth'
+import { roleArraySchema } from './schemas/auth'
 import {
   userListResponseSchema,
   userProfileResponseSchema,
@@ -18,6 +18,11 @@ function normalizeUser(value: unknown): unknown {
     metadata: parseUserMetadata(value.metadata),
     roles: parseRoleArray(value.roles),
   }
+}
+
+function parseRoleArray(value: unknown) {
+  const parsed = roleArraySchema.safeParse(value)
+  return parsed.success ? parsed.data : []
 }
 
 export function parseUserProfileResponse(value: unknown): unknown {
