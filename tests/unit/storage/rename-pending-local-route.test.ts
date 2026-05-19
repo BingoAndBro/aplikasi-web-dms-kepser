@@ -18,21 +18,21 @@ const FORMAL_PATH = `${OWNER_ID}/${DOKUMEN_ID}/${TARGET_UUID}.pdf`
 const UNSUPPORTED_PATH = `${OWNER_ID}/notes/readme.txt`
 
 const mocks = vi.hoisted(() => ({
-  createAdminClient: vi.fn(),
-  getDokumenById: vi.fn(),
   getLocalServerSession: vi.fn(),
+  dbSelect: vi.fn(),
+  dbFrom: vi.fn(),
+  dbWhere: vi.fn(),
+  dbLimit: vi.fn(),
 }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
 }))
 
-vi.mock('#/lib/supabase-admin', () => ({
-  createAdminClient: mocks.createAdminClient,
-}))
-
-vi.mock('#/lib/dokumen-helpers', () => ({
-  getDokumenById: mocks.getDokumenById,
+vi.mock('#/db/client', () => ({
+  db: {
+    select: mocks.dbSelect,
+  },
 }))
 
 type RenamePendingHandler = (args: { request: Request }) => Promise<Response>
@@ -50,7 +50,13 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
     process.env.DMS_LOCAL_STORAGE_ROOT = TEST_ROOT
     await rm(TEST_ROOT, { force: true, recursive: true })
 
-    mocks.createAdminClient.mockReturnValue({ admin: true })
+    mocks.dbSelect.mockReturnValue({ from: mocks.dbFrom })
+    mocks.dbFrom.mockReturnValue({ where: mocks.dbWhere })
+    mocks.dbWhere.mockReturnValue({ limit: mocks.dbLimit })
+    mocks.dbLimit.mockResolvedValue([{
+      id: DOKUMEN_ID,
+      created_by: OWNER_ID,
+    }])
     mocks.getLocalServerSession.mockResolvedValue({
       user: {
         id: OWNER_ID,
@@ -61,10 +67,6 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
       roles: ['PEGAWAI'],
       activeRole: 'PEGAWAI',
       sessionId: 'test-session-id',
-    })
-    mocks.getDokumenById.mockResolvedValue({
-      id: DOKUMEN_ID,
-      created_by: OWNER_ID,
     })
   })
 
@@ -94,8 +96,7 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
 
     expect(response.status).toBe(401)
     expect(await response.json()).toEqual({ error: 'Unauthorized' })
-    expect(mocks.createAdminClient).not.toHaveBeenCalled()
-    expect(mocks.getDokumenById).not.toHaveBeenCalled()
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
   })
 
   it('preserves invalid body and missing field error responses', async () => {
@@ -131,11 +132,11 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
 
     expect(response.status).toBe(403)
     expect(await response.json()).toEqual({ error: 'Anda tidak memiliki akses' })
-    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
   })
 
   it('preserves document not found and owner mismatch responses', async () => {
-    mocks.getDokumenById.mockResolvedValueOnce(null)
+    mocks.dbLimit.mockResolvedValueOnce([])
 
     const notFoundResponse = await renamePendingHandler({
       request: createJsonRequest({
@@ -148,10 +149,10 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
     expect(notFoundResponse.status).toBe(404)
     expect(await notFoundResponse.json()).toEqual({ error: 'Dokumen tidak ditemukan' })
 
-    mocks.getDokumenById.mockResolvedValueOnce({
+    mocks.dbLimit.mockResolvedValueOnce([{
       id: DOKUMEN_ID,
       created_by: OTHER_OWNER_ID,
-    })
+    }])
 
     const forbiddenResponse = await renamePendingHandler({
       request: createJsonRequest({
@@ -282,7 +283,7 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
       },
     })
     expectNoStorageRootExposure(body)
-    expect(mocks.createAdminClient).toHaveBeenCalledTimes(1)
+    expect(mocks.dbSelect).toHaveBeenCalledTimes(1)
   })
 
   it('returns a controlled no-overwrite error without exposing physical paths', async () => {

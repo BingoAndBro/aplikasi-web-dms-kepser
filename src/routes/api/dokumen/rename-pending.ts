@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { createAdminClient } from '#/lib/supabase-admin'
+import { db } from '#/db/client'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
-import { getDokumenById } from '#/lib/dokumen-helpers'
 import {
   classifyLocalPendingMovePath,
   generateLocalFormalTargetLogicalPath,
@@ -53,8 +54,7 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
           return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
         }
 
-        const admin = createAdminClient()
-        const dokumen = await getDokumenById(admin, dokId)
+        const dokumen = await getRenamePendingDokumen(dokId)
         if (!dokumen) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
@@ -124,6 +124,26 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
     },
   },
 })
+
+async function getRenamePendingDokumen(
+  dokId: string,
+): Promise<{ id: string; created_by: string } | null> {
+  try {
+    const rows = await db
+      .select({
+        id: dokumenTransaksi.id,
+        created_by: dokumenTransaksi.createdBy,
+      })
+      .from(dokumenTransaksi)
+      .where(eq(dokumenTransaksi.id, dokId))
+      .limit(1)
+
+    return rows[0] ?? null
+  } catch (error) {
+    console.error('[rename-pending] local document lookup error:', error)
+    return null
+  }
+}
 
 function localPendingMoveErrorResponse(error: unknown, oldPath: string, newPath?: string): Response {
   if (error instanceof LocalPendingMoveError) {
