@@ -7,7 +7,6 @@ import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
 import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
 import { useNoChangeSubmitGuard } from '#/hooks/useNoChangeSubmitGuard'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import {
   ChevronRight,
   AlertTriangle,
@@ -37,6 +36,45 @@ function getWorkflowIndex(status: string): number {
   return WORKFLOW_STEPS.findIndex(s => s.key === status)
 }
 
+type KelengkapanApiItem = KelengkapanItem & {
+  kegiatan_id?: string | null
+  is_ketua_tim?: boolean
+  jenis_permintaan_id?: string | null
+  kategori_permintaan_id?: string | null
+  detail_permintaan_id?: string | null
+}
+
+function matchesCurrentChain(item: KelengkapanApiItem, dokumen: DokumenRow): boolean {
+  if (dokumen.detail_permintaan_id) {
+    return item.detail_permintaan_id === dokumen.detail_permintaan_id
+  }
+
+  if (dokumen.kategori_permintaan_id) {
+    return item.kategori_permintaan_id === dokumen.kategori_permintaan_id
+      && item.detail_permintaan_id == null
+  }
+
+  if (dokumen.jenis_permintaan_id) {
+    return item.jenis_permintaan_id === dokumen.jenis_permintaan_id
+      && item.kategori_permintaan_id == null
+      && item.detail_permintaan_id == null
+  }
+
+  return true
+}
+
+async function fetchKelengkapanForDokumen(dokumen: DokumenRow): Promise<KelengkapanItem[]> {
+  const data = await apiFetch<KelengkapanApiItem[]>('/master-kelengkapan', {
+    query: {
+      kegiatan_id: dokumen.kegiatan_jenis_id,
+      is_ketua_tim: dokumen.is_ketua_tim,
+    },
+  })
+
+  return data
+    .filter(item => matchesCurrentChain(item, dokumen))
+    .map(({ id, nama_dokumen, required }) => ({ id, nama_dokumen, required }))
+}
 
 function PpkResubmitPage() {
   const { id } = Route.useParams()
@@ -61,29 +99,23 @@ function PpkResubmitPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const supabase = getBrowserClient()
       const json = await apiFetch<{ dokumen: DokumenRow }>(`/ppk/resubmit/${id}`)
       setDokumen(json.dokumen)
       setLampiranUrls(json.dokumen.lampiran_urls ?? [])
       setDokIsNonMaterial(json.dokumen.is_non_material === true)
       setAttachmentDirty(false)
       setGuardEnabled(true)
+      setKelengkapan([])
 
-      // Fetch kelengkapan from master_kelengkapan_dokumen (only for Material documents)
-      if (supabase && json.dokumen.kegiatan_jenis_id && !json.dokumen.is_non_material) {
-        const dokData = json.dokumen
-        let query = supabase.from('master_kelengkapan_dokumen').select('id, nama_dokumen, required, jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
-          .eq('kegiatan_id', dokData.kegiatan_jenis_id)
-          .eq('is_ketua_tim', dokData.is_ketua_tim)
-        if (dokData.detail_permintaan_id) {
-          query = query.eq('detail_permintaan_id', dokData.detail_permintaan_id)
-        } else if (dokData.kategori_permintaan_id) {
-          query = query.eq('kategori_permintaan_id', dokData.kategori_permintaan_id).is('detail_permintaan_id', null)
-        } else if (dokData.jenis_permintaan_id) {
-          query = query.eq('jenis_permintaan_id', dokData.jenis_permintaan_id).is('kategori_permintaan_id', null).is('detail_permintaan_id', null)
+      // Fetch kelengkapan only for Material documents; Non-Material uses supporting docs only.
+      if (json.dokumen.kegiatan_jenis_id && !json.dokumen.is_non_material) {
+        try {
+          const kelData = await fetchKelengkapanForDokumen(json.dokumen)
+          setKelengkapan(kelData)
+        } catch (err) {
+          console.error('Failed to load kelengkapan for PPK resubmit:', err)
+          setKelengkapan([])
         }
-        const { data: kelData } = await query
-        if (kelData) setKelengkapan(kelData as KelengkapanItem[])
       }
     } catch (err) {
       if (err instanceof ApiError) {

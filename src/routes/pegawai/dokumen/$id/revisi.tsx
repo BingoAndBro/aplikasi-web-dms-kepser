@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
@@ -42,6 +41,45 @@ function getWorkflowIndex(status: string): number {
   return WORKFLOW_STEPS.findIndex(s => s.key === status)
 }
 
+type KelengkapanApiItem = KelengkapanItem & {
+  kegiatan_id?: string | null
+  is_ketua_tim?: boolean
+  jenis_permintaan_id?: string | null
+  kategori_permintaan_id?: string | null
+  detail_permintaan_id?: string | null
+}
+
+function matchesCurrentChain(item: KelengkapanApiItem, dokumen: DokumenRow): boolean {
+  if (dokumen.detail_permintaan_id) {
+    return item.detail_permintaan_id === dokumen.detail_permintaan_id
+  }
+
+  if (dokumen.kategori_permintaan_id) {
+    return item.kategori_permintaan_id === dokumen.kategori_permintaan_id
+      && item.detail_permintaan_id == null
+  }
+
+  if (dokumen.jenis_permintaan_id) {
+    return item.jenis_permintaan_id === dokumen.jenis_permintaan_id
+      && item.kategori_permintaan_id == null
+      && item.detail_permintaan_id == null
+  }
+
+  return true
+}
+
+async function fetchKelengkapanForDokumen(dokumen: DokumenRow): Promise<KelengkapanItem[]> {
+  const data = await apiFetch<KelengkapanApiItem[]>('/master-kelengkapan', {
+    query: {
+      kegiatan_id: dokumen.kegiatan_jenis_id,
+      is_ketua_tim: dokumen.is_ketua_tim,
+    },
+  })
+
+  return data
+    .filter(item => matchesCurrentChain(item, dokumen))
+    .map(({ id, nama_dokumen, required }) => ({ id, nama_dokumen, required }))
+}
 
 // ---------------------------------------------------------------------------
 // Main page
@@ -69,9 +107,6 @@ function DokumenRevisiPage() {
     setLoading(true)
     setError(null)
     try {
-      const supabase = getBrowserClient()
-      if (!supabase) { setError('Gagal menginisialisasi Supabase'); setLoading(false); return }
-
       const json = await apiFetch<{ dokumen: DokumenRow }>(`/dokumen/${id}`)
       const dokumen = json.dokumen as DokumenRow
 
@@ -90,24 +125,17 @@ function DokumenRevisiPage() {
       const nonMaterial = dokumen.is_non_material === true ||
         (!dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)
       setIsNonMaterial(nonMaterial)
+      setKelengkapan([])
 
-      // Build kelengkapan query
-      let query = supabase
-        .from('master_kelengkapan_dokumen')
-        .select('id, nama_dokumen, required, jenis_permintaan_id, kategori_permintaan_id, detail_permintaan_id')
-        .eq('kegiatan_id', dokumen.kegiatan_jenis_id)
-        .eq('is_ketua_tim', dokumen.is_ketua_tim)
-
-      if (dokumen.detail_permintaan_id) {
-        query = query.eq('detail_permintaan_id', dokumen.detail_permintaan_id)
-      } else if (dokumen.kategori_permintaan_id) {
-        query = query.eq('kategori_permintaan_id', dokumen.kategori_permintaan_id).is('detail_permintaan_id', null)
-      } else if (dokumen.jenis_permintaan_id) {
-        query = query.eq('jenis_permintaan_id', dokumen.jenis_permintaan_id).is('kategori_permintaan_id', null).is('detail_permintaan_id', null)
+      if (!nonMaterial && dokumen.kegiatan_jenis_id) {
+        try {
+          const kelData = await fetchKelengkapanForDokumen(dokumen)
+          setKelengkapan(kelData)
+        } catch (err) {
+          console.error('Failed to load kelengkapan for revisi:', err)
+          setKelengkapan([])
+        }
       }
-
-      const { data: kelData } = await query
-      if (kelData) setKelengkapan(kelData as KelengkapanItem[])
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload

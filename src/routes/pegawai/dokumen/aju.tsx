@@ -9,7 +9,6 @@ import { StepKategoriPermintaan } from '#/components/dokumen/form/StepKategoriPe
 import { StepDetailPermintaan } from '#/components/dokumen/form/StepDetailPermintaan'
 import { StepUploadLampiran } from '#/components/dokumen/form/StepUploadLampiran'
 import { StepReview } from '#/components/dokumen/form/StepReview'
-import { getBrowserClient } from '#/lib/supabase-browser'
 import type {
   LampiranUrl,
   FungsiRow,
@@ -19,14 +18,6 @@ import type {
   DetailRow,
   JenisDokumenRow,
 } from '#/components/dokumen/form/dokumen-form-types'
-import {
-  getAllFungsi,
-  getKegiatanByFungsi,
-  getAllJenis,
-  getKategoriByJenis,
-  getDetailByKategori,
-  getAllJenisDokumen,
-} from '#/lib/master-data'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { apiFetch } from '#/lib/api-client'
 import { FileText } from 'lucide-react'
@@ -112,11 +103,16 @@ function AjukanDokumenPage() {
   // Load fungsi on mount
   useEffect(() => {
     async function load() {
-      const supabase = getBrowserClient()
-      if (!supabase) return
-      const data = await getAllFungsi(supabase)
-      setFungsiList(data)
-      setLoadingFungsi(false)
+      setLoadingFungsi(true)
+      try {
+        const data = await apiFetch<FungsiRow[]>('/master-fungsi')
+        setFungsiList(data)
+      } catch (err) {
+        console.error('Failed to load fungsi:', err)
+        setFungsiList([])
+      } finally {
+        setLoadingFungsi(false)
+      }
     }
     load()
   }, [])
@@ -126,11 +122,17 @@ function AjukanDokumenPage() {
     if (!fungsiId) { setKegiatanList([]); return }
     async function load() {
       setLoadingKegiatan(true)
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoadingKegiatan(false); return }
-      const data = await getKegiatanByFungsi(supabase, fungsiId)
-      setKegiatanList(data)
-      setLoadingKegiatan(false)
+      try {
+        const data = await apiFetch<KegiatanRow[]>('/master-kegiatan', {
+          query: { fungsi_id: fungsiId },
+        })
+        setKegiatanList(data)
+      } catch (err) {
+        console.error('Failed to load kegiatan:', err)
+        setKegiatanList([])
+      } finally {
+        setLoadingKegiatan(false)
+      }
     }
     load()
   }, [fungsiId])
@@ -140,11 +142,15 @@ function AjukanDokumenPage() {
     if (!kegiatanId) { setJenisList([]); return }
     async function load() {
       setLoadingJenis(true)
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoadingJenis(false); return }
-      const data = await getAllJenis(supabase)
-      setJenisList(data)
-      setLoadingJenis(false)
+      try {
+        const data = await apiFetch<JenisRow[]>('/master-jenis')
+        setJenisList(data)
+      } catch (err) {
+        console.error('Failed to load jenis permintaan:', err)
+        setJenisList([])
+      } finally {
+        setLoadingJenis(false)
+      }
     }
     load()
   }, [kegiatanId])
@@ -153,10 +159,13 @@ function AjukanDokumenPage() {
   useEffect(() => {
     if (!isNonMaterial) { setJenisDokumenList([]); return }
     async function load() {
-      const supabase = getBrowserClient()
-      if (!supabase) return
-      const data = await getAllJenisDokumen(supabase)
-      setJenisDokumenList(data)
+      try {
+        const data = await apiFetch<JenisDokumenRow[]>('/master-jenis-dokumen')
+        setJenisDokumenList(data)
+      } catch (err) {
+        console.error('Failed to load jenis dokumen:', err)
+        setJenisDokumenList([])
+      }
     }
     load()
   }, [isNonMaterial])
@@ -166,11 +175,17 @@ function AjukanDokumenPage() {
     if (!jenisPermintaanId || isNonMaterial) { setKategoriList([]); return }
     async function load() {
       setLoadingKategori(true)
-      const supabase = getBrowserClient()
-      if (!supabase) { setLoadingKategori(false); return }
-      const data = await getKategoriByJenis(supabase, jenisPermintaanId)
-      setKategoriList(data)
-      setLoadingKategori(false)
+      try {
+        const data = await apiFetch<KategoriRow[]>('/master-kategori', {
+          query: { jenis_id: jenisPermintaanId },
+        })
+        setKategoriList(data)
+      } catch (err) {
+        console.error('Failed to load kategori permintaan:', err)
+        setKategoriList([])
+      } finally {
+        setLoadingKategori(false)
+      }
     }
     load()
   }, [jenisPermintaanId, isNonMaterial])
@@ -179,11 +194,17 @@ function AjukanDokumenPage() {
   useEffect(() => {
     if (!kategoriPermintaanId) { setDetailList([]); setKategoriHasDetail(false); return }
     async function load() {
-      const supabase = getBrowserClient()
-      if (!supabase) return
-      const data = await getDetailByKategori(supabase, kategoriPermintaanId)
-      setDetailList(data)
-      setKategoriHasDetail(data.length > 0)
+      try {
+        const data = await apiFetch<DetailRow[]>('/master-detail', {
+          query: { kategori_id: kategoriPermintaanId },
+        })
+        setDetailList(data)
+        setKategoriHasDetail(data.length > 0)
+      } catch (err) {
+        console.error('Failed to load detail permintaan:', err)
+        setDetailList([])
+        setKategoriHasDetail(false)
+      }
     }
     load()
   }, [kategoriPermintaanId])
