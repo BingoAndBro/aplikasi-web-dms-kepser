@@ -210,7 +210,7 @@ function DokumenRevisiPage() {
   }
 
   function handleCancel() {
-    window.location.href = '/pegawai/dokumen'
+    window.location.href = '/pegawai/revisi'
   }
 
   if (loading) return (
@@ -230,7 +230,7 @@ function DokumenRevisiPage() {
           <p className="font-headline text-base font-bold text-error">Tidak bisa merevisi</p>
           <p className="text-on-surface-variant text-xs mt-1">{error}</p>
         </div>
-        <Link to="/pegawai/dokumen">
+        <Link to="/pegawai/revisi">
           <Button variant="outline" size="sm">Kembali ke Daftar</Button>
         </Link>
       </div>
@@ -247,7 +247,7 @@ function DokumenRevisiPage() {
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
           <FileEdit size={12} />
-          <Link to="/pegawai/dokumen" className="hover:text-primary">Dokumen</Link>
+          <Link to="/pegawai/revisi" className="hover:text-primary">Revisi Dokumen</Link>
           <ChevronRight size={10} />
           <span className="text-primary">Revisi</span>
         </div>

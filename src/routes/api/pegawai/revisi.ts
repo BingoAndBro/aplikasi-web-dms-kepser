@@ -25,6 +25,9 @@ export const Route = createFileRoute('/api/pegawai/revisi')({
             .select({
               id: dokumenTransaksi.id,
               judul: dokumenTransaksi.judul,
+              status: dokumenTransaksi.status,
+              current_step: dokumenTransaksi.currentStep,
+              revision_target: dokumenTransaksi.revisionTarget,
               fungsi_nama: masterFungsi.nama,
               kegiatan_nama: masterKegiatan.nama,
               tahun: dokumenTransaksi.tahun,
@@ -47,6 +50,9 @@ export const Route = createFileRoute('/api/pegawai/revisi')({
             dokumen: docs.map((d) => ({
               id: d.id,
               judul: d.judul,
+              status: d.status,
+              current_step: d.current_step,
+              revision_target: d.revision_target,
               fungsi_nama: d.fungsi_nama ?? '\u2014',
               kegiatan_nama: d.kegiatan_nama ?? '\u2014',
               tahun: d.tahun,

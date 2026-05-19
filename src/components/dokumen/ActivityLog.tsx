@@ -21,6 +21,8 @@ const AKSI_CONFIG: Record<string, { label: string; icon: typeof FileText; color:
   SUBMIT: { label: 'Diajukan ke PPK', icon: Upload, color: 'text-amber-600 bg-amber-50' },
   APPROVE: { label: 'Disetujui', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
   REJECT: { label: 'Ditolak', icon: XCircle, color: 'text-red-600 bg-red-50' },
+  PPK_APPROVE: { label: 'Divalidasi oleh PPK', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
+  PPK_REJECT: { label: 'Ditolak oleh PPK', icon: XCircle, color: 'text-red-600 bg-red-50' },
   BENDAHARA_APPROVE: { label: 'Disetujui Bendahara', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
   BENDAHARA_REJECT: { label: 'Dikembalikan Bendahara', icon: XCircle, color: 'text-red-600 bg-red-50' },
   RESUBMIT: { label: 'Diajukan ulang ke PPK', icon: Upload, color: 'text-amber-600 bg-amber-50' },
