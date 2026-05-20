@@ -30,7 +30,6 @@ import {
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import type { DetailRow, JenisRow, KategoriRow } from '#/lib/master-data/shared'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#/components/ui/select'
 
 export const Route = createFileRoute('/admin/master-data/detail')({
   component: DetailPage,
@@ -62,8 +61,10 @@ function DetailPage() {
   useEffect(() => { fetchData(); fetchJenis(); fetchKategoriList() }, [])
 
   useEffect(() => {
-    if (filterJenis) { fetchKategoriList() } else { setKategoriList([]); setFilterKategori('') }
-  }, [filterJenis])
+    if (filterKategori && !kategoriList.some(k => k.id === filterKategori && (!filterJenis || k.jenis_permintaan_id === filterJenis))) {
+      setFilterKategori('')
+    }
+  }, [filterJenis, filterKategori, kategoriList])
 
   useEffect(() => { /* filter is client-side, no refetch needed */ }, [filterJenis, filterKategori])
 
@@ -92,14 +93,27 @@ function DetailPage() {
   const filtered = items.filter(f =>
     (f.nama.toLowerCase().includes(search.toLowerCase()) ||
     (f.deskripsi ?? '').toLowerCase().includes(search.toLowerCase())) &&
-    (!filterJenis || f.jenis_nama === jenisList.find(j => j.id === filterJenis)?.nama) &&
+    (!filterJenis || kategoriList.some(k => k.id === f.kategori_permintaan_id && k.jenis_permintaan_id === filterJenis)) &&
     (!filterKategori || f.kategori_permintaan_id === filterKategori)
   )
 
+  function getDefaultJenisId() {
+    const kategori = kategoriList.find(k => k.id === filterKategori)
+    return kategori?.jenis_permintaan_id ?? (filterJenis || kategoriList[0]?.jenis_permintaan_id || (jenisList[0]?.id ?? ''))
+  }
+
+  function getDefaultKategoriId(jenisId: string) {
+    if (filterKategori && kategoriList.some(k => k.id === filterKategori && (!jenisId || k.jenis_permintaan_id === jenisId))) {
+      return filterKategori
+    }
+    return kategoriList.find(k => k.jenis_permintaan_id === jenisId)?.id ?? ''
+  }
+
   function openCreate() {
     setEditing(null)
-    setFormJenisId(jenisList[0]?.id ?? '')
-    setFormKategoriId(kategoriList.filter(k => k.jenis_permintaan_id === jenisList[0]?.id)[0]?.id ?? '')
+    const nextJenisId = getDefaultJenisId()
+    setFormJenisId(nextJenisId)
+    setFormKategoriId(getDefaultKategoriId(nextJenisId))
     setFormNama('')
     setFormDeskripsi('')
     setError('')
@@ -173,7 +187,7 @@ function DetailPage() {
             <h2 className="font-headline text-2xl font-extrabold text-on-surface">Detail Permintaan</h2>
             <p className="text-on-surface-variant text-xs mt-1">Kelola detail permintaan (opsional — tidak semua kategori memiliki detail).</p>
           </div>
-          <Button onClick={openCreate} size="sm" className="gap-1.5"><Plus size={14} />Tambah Detail</Button>
+          <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={jenisList.length === 0 || kategoriList.length === 0}><Plus size={14} />Tambah Detail</Button>
         </div>
 
         {successMsg && (
@@ -181,7 +195,19 @@ function DetailPage() {
             {successMsg}
           </div>
         )}
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex flex-wrap gap-3">
+          <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori('') }}
+            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
+            <option value="">Semua Jenis</option>
+            {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
+          </select>
+          <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)} disabled={!filterJenis}
+            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px] disabled:opacity-50">
+            <option value="">Semua Kategori</option>
+            {kategoriList.filter(k => !filterJenis || k.jenis_permintaan_id === filterJenis).map(k => (
+              <option key={k.id} value={k.id}>{k.nama}</option>
+            ))}
+          </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
             <input type="text" placeholder="Cari detail..." value={search}
@@ -189,32 +215,6 @@ function DetailPage() {
               className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
             />
           </div>
-          <Select value={filterJenis} onValueChange={v => { setFilterJenis(v ?? ''); setFilterKategori(''); setSearch('') }}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter Jenis...">
-                {v => v ? (jenisList.find(j => j.id === v)?.nama ?? 'Filter Jenis') : 'Filter Jenis'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua Jenis</SelectItem>
-              {jenisList.map(j => (
-                <SelectItem key={j.id} value={j.id} label={j.nama}>{j.nama}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterKategori} onValueChange={v => { setFilterKategori(v ?? ''); setSearch('') }} disabled={!filterJenis}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter Kategori...">
-                {v => v ? (kategoriList.find(k => k.id === v)?.nama ?? 'Filter Kategori') : 'Filter Kategori'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua Kategori</SelectItem>
-              {kategoriList.filter(k => !filterJenis || k.jenis_permintaan_id === filterJenis).map(k => (
-                <SelectItem key={k.id} value={k.id} label={k.nama}>{k.nama}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {loading ? (
@@ -226,7 +226,7 @@ function DetailPage() {
               <p className="font-headline text-lg font-bold text-on-surface">Belum ada detail</p>
               <p className="text-on-surface-variant text-xs mt-1">Pilih jenis dan kategori, lalu tambahkan detail.</p>
             </div>
-            <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Detail</Button>
+            {jenisList.length > 0 && kategoriList.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Detail</Button>}
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">

@@ -91,7 +91,7 @@ function KategoriPage() {
 
   function openCreate() {
     setEditing(null)
-    setFormJenisId(jenisList[0]?.id ?? '')
+    setFormJenisId(filterJenis || (jenisList[0]?.id ?? ''))
     setFormNama('')
     setFormDeskripsi('')
     setError('')
@@ -163,7 +163,7 @@ function KategoriPage() {
             <h2 className="font-headline text-2xl font-extrabold text-on-surface">Kategori Permintaan</h2>
             <p className="text-on-surface-variant text-xs mt-1">Kelola kategori permintaan yang bergantung pada jenis permintaan.</p>
           </div>
-          <Button onClick={openCreate} size="sm" className="gap-1.5"><Plus size={14} />Tambah Kategori</Button>
+          <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={jenisList.length === 0}><Plus size={14} />Tambah Kategori</Button>
         </div>
 
         {successMsg && (
@@ -171,7 +171,12 @@ function KategoriPage() {
             {successMsg}
           </div>
         )}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          <select value={filterJenis} onChange={e => setFilterJenis(e.target.value)}
+            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
+            <option value="">Semua Jenis</option>
+            {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
+          </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
             <input type="text" placeholder="Cari kategori..." value={search}
@@ -179,19 +184,6 @@ function KategoriPage() {
               className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
             />
           </div>
-          <Select value={filterJenis} onValueChange={v => { setFilterJenis(v ?? ''); setSearch('') }}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter Jenis...">
-                {v => v ? (jenisList.find(j => j.id === v)?.nama ?? 'Filter Jenis') : 'Filter Jenis'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua Jenis</SelectItem>
-              {jenisList.map(j => (
-                <SelectItem key={j.id} value={j.id} label={j.nama}>{j.nama}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {loading ? (
@@ -203,7 +195,7 @@ function KategoriPage() {
               <p className="font-headline text-lg font-bold text-on-surface">Belum ada kategori</p>
               <p className="text-on-surface-variant text-xs mt-1">Pilih jenis dan tambahkan kategori pertama.</p>
             </div>
-            <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kategori</Button>
+            {jenisList.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kategori</Button>}
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
