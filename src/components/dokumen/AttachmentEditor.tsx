@@ -17,6 +17,13 @@ import {
   findDuplicateAdditionalKelengkapanName,
   normalizeKelengkapanName,
 } from '#/lib/kelengkapan-validation'
+import {
+  addPendingUploadUrl,
+  collectUnreferencedPendingUploadUrls,
+  removePendingUploadUrls,
+  replaceLampiranByKelengkapanId,
+  resetLampiranByKelengkapanId,
+} from '#/lib/storage/pending-upload-session'
 
 const ACCEPTED_ATTACHMENT_FILE_TYPES = '.pdf,.doc,.docx,.xls,.xlsx'
 const PENDING_CLEANUP_ENDPOINT = '/api/upload?cleanup=pending'
@@ -84,6 +91,7 @@ export function AttachmentEditor({
   const [lampiranUrls, setLampiranUrls] = useState<LampiranUrl[]>(initialLampirans)
   const [originalLampirans, setOriginalLampirans] = useState<LampiranUrl[]>(initialLampirans)
   const [pendingFiles, setPendingFiles] = useState<Map<string, PendingFile>>(new Map())
+  const [sessionPendingUrls, setSessionPendingUrls] = useState<Set<string>>(new Set())
   const [userDocs, setUserDocs] = useState<{ id: string; nama: string; lamp?: LampiranUrl }[]>([])
   const [uploadStatuses, setUploadStatuses] = useState<Map<string, string>>(new Map()) // docId -> success message
 
@@ -105,6 +113,9 @@ export function AttachmentEditor({
 
   // Refs for file inputs
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  const lampiranUrlsRef = useRef<LampiranUrl[]>(initialLampirans)
+  const pendingFilesRef = useRef<Map<string, PendingFile>>(new Map())
+  const sessionPendingUrlsRef = useRef<Set<string>>(new Set())
 
   // ---------------------------------------------------------------------------
   // Effect: Initialize
@@ -130,14 +141,18 @@ export function AttachmentEditor({
       }
     }
     setUserDocs(userCreated)
-    setLampiranUrls(initialLampirans)
+    setTrackedLampiranUrls(initialLampirans)
     setOriginalLampirans(initialLampirans)
   }, [])
 
   useEffect(() => {
-    setLampiranUrls(initialLampirans)
+    setTrackedLampiranUrls(initialLampirans)
     setOriginalLampirans(initialLampirans)
   }, [initialLampirans])
+
+  useEffect(() => {
+    pendingFilesRef.current = pendingFiles
+  }, [pendingFiles])
 
   // ---------------------------------------------------------------------------
   // Effect: ESC to close preview
@@ -155,6 +170,54 @@ export function AttachmentEditor({
   // ---------------------------------------------------------------------------
   function getLampByDocId(docId: string): LampiranUrl | undefined {
     return lampiranUrls.find(l => l.kelengkapan_id === docId)
+  }
+
+  function setTrackedLampiranUrls(nextLampirans: LampiranUrl[]): void {
+    lampiranUrlsRef.current = nextLampirans
+    setLampiranUrls(nextLampirans)
+  }
+
+  function updatePendingFiles(
+    updater: (currentPendingFiles: Map<string, PendingFile>) => Map<string, PendingFile>,
+  ): void {
+    const nextPendingFiles = updater(pendingFilesRef.current)
+    pendingFilesRef.current = nextPendingFiles
+    setPendingFiles(nextPendingFiles)
+  }
+
+  function setTrackedSessionPendingUrls(nextPendingUrls: Set<string>): void {
+    sessionPendingUrlsRef.current = nextPendingUrls
+    setSessionPendingUrls(nextPendingUrls)
+  }
+
+  function trackSessionPendingUrl(url: string): void {
+    setTrackedSessionPendingUrls(addPendingUploadUrl(sessionPendingUrlsRef.current, url))
+  }
+
+  function clearSessionPendingTracking(): void {
+    setTrackedSessionPendingUrls(new Set())
+  }
+
+  async function cleanupTrackedPendingUrls(urls: string[], context: string): Promise<boolean> {
+    const trackedUrls = [...new Set(urls)].filter(url => sessionPendingUrlsRef.current.has(url))
+    if (trackedUrls.length === 0) return true
+
+    const success = await cleanupPendingUrls(trackedUrls, context)
+    if (success) {
+      setTrackedSessionPendingUrls(removePendingUploadUrls(sessionPendingUrlsRef.current, trackedUrls))
+    }
+
+    return success
+  }
+
+  async function cleanupUnreferencedSessionPendingUrls(
+    nextLampirans: LampiranUrl[],
+    context: string,
+  ): Promise<boolean> {
+    return cleanupTrackedPendingUrls(
+      collectUnreferencedPendingUploadUrls(sessionPendingUrlsRef.current, nextLampirans),
+      context,
+    )
   }
 
   async function cleanupPendingUrls(urls: string[], context: string): Promise<boolean> {
@@ -264,52 +327,30 @@ export function AttachmentEditor({
   // Handler: Reset file (undo upload/replace)
   // ---------------------------------------------------------------------------
   async function handleResetFile(docId: string) {
-    const lamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
-    const pending = pendingFiles.get(docId)
+    const lamp = lampiranUrlsRef.current.find(l => l.kelengkapan_id === docId)
+    const pending = pendingFilesRef.current.get(docId)
     const isUserDoc = docId.startsWith('user-custom-')
 
     logDev('[AttachmentEditor] Reset file', { docId, isUserDoc, hasPending: !!pending, hasLamp: !!lamp })
 
-    if (pending?.url) {
-      logDev('[AttachmentEditor] Cleanup pending uploaded file', { docId, url: pending.url })
-      await cleanupPendingUrls([pending.url], 'reset')
-    }
+    const originalLamp = originalLampirans.find(l => l.kelengkapan_id === docId)
+    const nextLampirans = resetLampiranByKelengkapanId({
+      lampiranUrls: lampiranUrlsRef.current,
+      kelengkapanId: docId,
+      originalLampiran: originalLamp,
+    })
+
+    setTrackedLampiranUrls(nextLampirans)
 
     if (isUserDoc) {
-      const originalUserDoc = originalLampirans.find(l => l.kelengkapan_id === docId)
-      if (originalUserDoc) {
-        setUserDocs(prev => prev.map(d => d.id === docId ? { ...d, lamp: originalUserDoc } : d))
-        setLampiranUrls(prev => {
-          const idx = prev.findIndex(l => l.kelengkapan_id === docId)
-          if (idx >= 0) {
-            const updated = [...prev]
-            updated[idx] = originalUserDoc
-            return updated
-          }
-          return prev
-        })
+      if (originalLamp) {
+        setUserDocs(prev => prev.map(d => d.id === docId ? { ...d, lamp: originalLamp } : d))
       } else {
         setUserDocs(prev => prev.filter(d => d.id !== docId))
-        setLampiranUrls(prev => prev.filter(l => l.kelengkapan_id !== docId))
-      }
-    } else {
-      const originalLamp = originalLampirans.find(l => l.kelengkapan_id === docId)
-      if (originalLamp) {
-        setLampiranUrls(prev => {
-          const idx = prev.findIndex(l => l.kelengkapan_id === docId)
-          if (idx >= 0) {
-            const updated = [...prev]
-            updated[idx] = originalLamp
-            return updated
-          }
-          return prev
-        })
-      } else {
-        setLampiranUrls(prev => prev.filter(l => l.kelengkapan_id !== docId))
       }
     }
 
-    setPendingFiles(prev => {
+    updatePendingFiles(prev => {
       const next = new Map(prev)
       next.delete(docId)
       return next
@@ -319,6 +360,15 @@ export function AttachmentEditor({
       next.delete(docId)
       return next
     })
+
+    const pendingUrlsToCleanup = collectUnreferencedPendingUploadUrls(sessionPendingUrlsRef.current, nextLampirans)
+    if (pendingUrlsToCleanup.length > 0) {
+      logDev('[AttachmentEditor] Cleanup unreferenced pending uploads after reset', {
+        docId,
+        count: pendingUrlsToCleanup.length,
+      })
+      await cleanupTrackedPendingUrls(pendingUrlsToCleanup, 'reset')
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -332,6 +382,7 @@ export function AttachmentEditor({
     logDev('[AttachmentEditor] Upload', { docId, filename: file.name })
 
     try {
+      const previousPendingUrl = pendingFilesRef.current.get(docId)?.url
       const kel = kelengkapan.find(k => k.id === docId)
       const doc = userDocs.find(d => d.id === docId)
       const lampName = kel?.nama_dokumen ?? doc?.nama ?? file.name
@@ -369,17 +420,10 @@ export function AttachmentEditor({
 
       logDev('[AttachmentEditor] Upload success', { docId, path: json.url })
 
-      setPendingFiles(prev => new Map(prev).set(docId, { url: json.url, filename: file.name }))
-
-      setLampiranUrls(prev => {
-        const idx = prev.findIndex(l => l.kelengkapan_id === docId)
-        if (idx >= 0) {
-          const updated = [...prev]
-          updated[idx] = newLamp
-          return updated
-        }
-        return [...prev, newLamp]
-      })
+      trackSessionPendingUrl(json.url)
+      updatePendingFiles(prev => new Map(prev).set(docId, { url: json.url, filename: file.name }))
+      const nextLampirans = replaceLampiranByKelengkapanId(lampiranUrlsRef.current, newLamp)
+      setTrackedLampiranUrls(nextLampirans)
 
       setUploadStatuses(prev => new Map(prev).set(docId, `${file.name} berhasil diupload`))
 
@@ -393,6 +437,10 @@ export function AttachmentEditor({
         }
       }
 
+      if (previousPendingUrl && previousPendingUrl !== json.url && !nextLampirans.some(lampiran => lampiran.url === previousPendingUrl)) {
+        logDev('[AttachmentEditor] Cleanup superseded pending upload', { docId })
+        await cleanupTrackedPendingUrls([previousPendingUrl], 'superseded-replace')
+      }
     } catch (err) {
       warnDev('[AttachmentEditor] Upload error', {
         docId,
@@ -441,8 +489,8 @@ export function AttachmentEditor({
     }
 
     setUserDocs(prev => prev.filter(d => d.id !== docId))
-    setLampiranUrls(prev => prev.filter(l => l.kelengkapan_id !== docId))
-    setPendingFiles(prev => {
+    setTrackedLampiranUrls(lampiranUrlsRef.current.filter(l => l.kelengkapan_id !== docId))
+    updatePendingFiles(prev => {
       const next = new Map(prev)
       next.delete(docId)
       return next
@@ -490,12 +538,13 @@ export function AttachmentEditor({
 
       try {
         if (hasFileChanges) {
-          const pendingUrls = [...pendingFiles.values()].map(pending => pending.url)
+          const pendingUrls = [...sessionPendingUrlsRef.current]
           logDev('[AttachmentEditor] Cleaning up pending files', { count: pendingUrls.length })
           await cleanupPendingUrls(pendingUrls, 'cancel')
         }
 
-        setPendingFiles(new Map())
+        updatePendingFiles(() => new Map())
+        clearSessionPendingTracking()
         onCancel()
       } finally {
         setIsCancelling(false)
@@ -532,13 +581,14 @@ export function AttachmentEditor({
     setIsSubmitting(true)
 
     try {
-      const finalLampirans = lampiranUrls.filter(l => {
+      const finalLampirans = lampiranUrlsRef.current.filter(l => {
         if (!l.kelengkapan_id.startsWith('user-custom-')) return true
         return userDocs.some(d => d.id === l.kelengkapan_id)
       })
       const duplicateName = findDuplicateAdditionalKelengkapanName(finalLampirans)
       if (duplicateName) {
         setUserDocError(`${DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR}: "${duplicateName}"`)
+        await cleanupUnreferencedSessionPendingUrls(finalLampirans, 'submit-validation-failed')
         return
       }
 
@@ -546,12 +596,21 @@ export function AttachmentEditor({
         ? parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) || null
         : null
 
+      await cleanupUnreferencedSessionPendingUrls(finalLampirans, 'submit-before-persist')
+
       logDev('[AttachmentEditor] Submit', { lampiranCount: finalLampirans.length, nominal: nominalValueFinal })
 
       await onSubmit({
         lampiranUrls: finalLampirans,
         nominalRealisasi: nominalValueFinal,
       })
+
+      await cleanupUnreferencedSessionPendingUrls(finalLampirans, 'submit-success')
+      updatePendingFiles(() => new Map())
+      clearSessionPendingTracking()
+    } catch (error) {
+      await cleanupUnreferencedSessionPendingUrls(lampiranUrlsRef.current, 'submit-failed')
+      throw error
     } finally {
       setIsSubmitting(false)
     }
@@ -579,7 +638,7 @@ export function AttachmentEditor({
     .map(d => `${d.id}:${d.nama}`)
     .sort()
     .join('|')
-  const hasFileChanges = pendingFiles.size > 0
+  const hasFileChanges = pendingFiles.size > 0 || sessionPendingUrls.size > 0
   const hasUserDocChanges = currentUserDocSignature !== originalUserDocSignature
   const hasUnsavedChanges = hasFileChanges || hasNominalChanged || hasUserDocChanges
 

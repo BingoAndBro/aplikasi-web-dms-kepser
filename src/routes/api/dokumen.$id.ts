@@ -32,6 +32,7 @@ import {
   type LocalAttachmentMovedFile,
   type LocalAttachmentReplacementIssue,
 } from '#/lib/storage/local-attachment-replacement'
+import { cleanupUnreferencedReplacedLocalAttachments } from '#/lib/storage/local-attachment-reference-cleanup'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -555,6 +556,15 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           }
 
           return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
+        }
+
+        if (parsed.data.lampiranUrls !== undefined) {
+          await cleanupUnreferencedReplacedLocalAttachments({
+            context: 'dokumen-update',
+            dokumenId: params.id,
+            oldAttachments: storedLampirans,
+            newAttachments: processedLampirans,
+          })
         }
 
         let updatedRows: Array<Record<string, unknown>>

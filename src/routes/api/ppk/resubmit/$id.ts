@@ -25,6 +25,7 @@ import {
   type LocalAttachmentMovedFile,
   type LocalAttachmentReplacementIssue,
 } from '#/lib/storage/local-attachment-replacement'
+import { cleanupUnreferencedReplacedLocalAttachments } from '#/lib/storage/local-attachment-reference-cleanup'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -325,6 +326,15 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
           return Response.json({ error: 'Gagal menyimpan' }, { status: 500 })
         }
 
+        if (body.lampiranUrls && Array.isArray(body.lampiranUrls)) {
+          await cleanupUnreferencedReplacedLocalAttachments({
+            context: 'ppk-resubmit-save',
+            dokumenId: params.id,
+            oldAttachments: existingLampirans,
+            newAttachments: updatedLampirans,
+          })
+        }
+
         return Response.json({ success: true })
       },
 
@@ -453,6 +463,15 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
           }
 
           return Response.json({ error: 'Gagal resubmit' }, { status: 500 })
+        }
+
+        if (updatedLampirans) {
+          await cleanupUnreferencedReplacedLocalAttachments({
+            context: 'ppk-resubmit-submit',
+            dokumenId: params.id,
+            oldAttachments: existingLampirans,
+            newAttachments: updatedLampirans,
+          })
         }
 
         return Response.json({ success: true })

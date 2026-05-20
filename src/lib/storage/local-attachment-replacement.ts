@@ -1,6 +1,6 @@
 // Server-only module. Do not import from client components.
 import { constants as fsConstants } from 'node:fs'
-import { copyFile, mkdir, rm, stat, unlink } from 'node:fs/promises'
+import { copyFile, lstat, mkdir, realpath, rm, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { LampiranUrl } from '#/lib/dokumen/types'
@@ -71,6 +71,24 @@ export type LocalAttachmentMovementResult =
     rollbackOk: boolean
     issue: LocalAttachmentReplacementIssue
   }
+
+export type LocalReplacedAttachmentCleanupIssueCode =
+  | 'delete-failed'
+  | 'invalid-local-path'
+  | 'not-a-file'
+  | 'path-outside-root'
+
+export type LocalReplacedAttachmentCleanupResult = {
+  deletedCount: number
+  missingCount: number
+  skippedCount: number
+  protectedCount: number
+  failedCount: number
+  failures: Array<{
+    index: number
+    code: LocalReplacedAttachmentCleanupIssueCode
+  }>
+}
 
 type ExistingAttachmentKey = `${string}\n${string}`
 
@@ -292,6 +310,95 @@ export async function rollbackLocalAttachmentMovements(
   return { ok: true }
 }
 
+export async function cleanupReplacedLocalAttachments({
+  oldAttachments,
+  newAttachments,
+  protectedLogicalPaths = new Set<string>(),
+  root,
+}: {
+  oldAttachments: LampiranUrl[]
+  newAttachments: LampiranUrl[]
+  protectedLogicalPaths?: Set<string>
+  root?: string
+}): Promise<LocalReplacedAttachmentCleanupResult> {
+  const result: LocalReplacedAttachmentCleanupResult = {
+    deletedCount: 0,
+    missingCount: 0,
+    skippedCount: 0,
+    protectedCount: 0,
+    failedCount: 0,
+    failures: [],
+  }
+  const storageRoot = root ?? getLocalStorageRoot()
+  const keptPaths = new Set<string>(protectedLogicalPaths)
+
+  for (const attachment of newAttachments) {
+    const safePath = safeLogicalPathOrNull(attachment.url)
+    if (safePath) keptPaths.add(safePath)
+  }
+
+  const attemptedPaths = new Set<string>()
+
+  for (const [index, attachment] of oldAttachments.entries()) {
+    const safePath = safeLogicalPathOrNull(attachment.url)
+    if (!safePath) {
+      result.skippedCount += 1
+      continue
+    }
+
+    if (attemptedPaths.has(safePath)) {
+      result.skippedCount += 1
+      continue
+    }
+    attemptedPaths.add(safePath)
+
+    if (keptPaths.has(safePath)) {
+      result.protectedCount += 1
+      continue
+    }
+
+    if (classifyStoragePath(safePath) !== 'formal') {
+      result.skippedCount += 1
+      continue
+    }
+
+    let physicalPath: string
+    try {
+      physicalPath = resolvePhysicalStoragePath(storageRoot, safePath)
+    } catch {
+      result.failures.push({ index, code: 'invalid-local-path' })
+      continue
+    }
+
+    const inspection = await inspectDeletableLocalFile(storageRoot, physicalPath)
+    if (inspection === 'missing') {
+      result.missingCount += 1
+      continue
+    }
+
+    if (inspection !== 'ok') {
+      result.failures.push({ index, code: inspection })
+      continue
+    }
+
+    try {
+      await unlink(physicalPath)
+      result.deletedCount += 1
+    } catch (error) {
+      if (isNodeErrorCode(error, 'ENOENT')) {
+        result.missingCount += 1
+        continue
+      }
+
+      result.failures.push({ index, code: 'delete-failed' })
+    }
+  }
+
+  result.failedCount = result.failures.length
+
+  return result
+}
+
 export function localAttachmentIssueStatus(issue: LocalAttachmentReplacementIssue): number {
   if (issue.code === 'owner-mismatch') return 403
   if (issue.code === 'invalid-source-path' || issue.code === 'unsupported-source-path') return 400
@@ -384,6 +491,46 @@ function safeLogicalPathForResponse(logicalPath: string | null): string | null {
   } catch {
     return null
   }
+}
+
+function safeLogicalPathOrNull(logicalPath: string | null | undefined): string | null {
+  if (!logicalPath) return null
+
+  try {
+    return assertSafeLogicalStoragePath(logicalPath)
+  } catch {
+    return null
+  }
+}
+
+async function inspectDeletableLocalFile(
+  storageRoot: string,
+  physicalPath: string,
+): Promise<'ok' | 'missing' | 'not-a-file' | 'path-outside-root'> {
+  try {
+    const stats = await lstat(physicalPath)
+    if (!stats.isFile()) return 'not-a-file'
+
+    const [resolvedRoot, resolvedFile] = await Promise.all([
+      realpath(storageRoot),
+      realpath(physicalPath),
+    ])
+
+    return isPhysicalPathInsideRoot(resolvedRoot, resolvedFile)
+      ? 'ok'
+      : 'path-outside-root'
+  } catch (error) {
+    if (isNodeErrorCode(error, 'ENOENT')) return 'missing'
+    return 'not-a-file'
+  }
+}
+
+function isPhysicalPathInsideRoot(storageRoot: string, physicalPath: string): boolean {
+  const relativePath = path.relative(storageRoot, physicalPath)
+
+  return relativePath !== ''
+    && !relativePath.startsWith('..')
+    && !path.isAbsolute(relativePath)
 }
 
 async function moveLogicalFileNoOverwrite(
