@@ -1,6 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
+import {
+  appendSetCookieHeaders,
+  clearActiveRoleCookieHeader,
+  clearSessionCookieHeader,
+} from '#/lib/auth/session-cookies'
 import { changePasswordRequestBoundarySchema } from '#/lib/schemas/user'
 import { isValidPassword } from '#/lib/types/user'
 import { changeLocalUserPassword } from '#/lib/users/local-user-passwords'
@@ -47,7 +52,14 @@ export const Route = createFileRoute('/api/users/me/change-password')({
             return Response.json({ error: result.error }, { status: result.status })
           }
 
-          return Response.json({ success: true, message: 'Password berhasil diubah' })
+          const headers = appendSetCookieHeaders(new Headers(), [
+            clearSessionCookieHeader(request),
+            clearActiveRoleCookieHeader(),
+          ])
+
+          return Response.json({ success: true, message: 'Password berhasil diubah' }, {
+            headers,
+          })
         } catch {
           return Response.json({ error: 'Gagal mengubah password' }, { status: 500 })
         }

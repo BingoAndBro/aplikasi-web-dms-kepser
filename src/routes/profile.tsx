@@ -1,19 +1,23 @@
 "use client"
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Card, CardHeader, CardTitle, CardContent } from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Badge } from '#/components/ui/badge'
-import { User, Mail, CreditCard, Building2, Shield, KeyRound, Loader2, Check } from 'lucide-react'
+import { User, Mail, CreditCard, Building2, Shield, KeyRound, Loader2 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { clearClientAuthState } from '#/lib/auth-state'
+import { ROUTES } from '#/lib/constants/routes'
 import type { RoleName } from '#/lib/types/auth'
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
 })
+
+const ACTIVE_ROLE_COOKIE = 'dms_active_role'
 
 // ---------------------------------------------------------------------------
 // Role badge colors (same as Master User page)
@@ -63,7 +67,6 @@ function ProfilePage() {
     confirmPassword: '',
   })
   const [passwordLoading, setPasswordLoading] = useState(false)
-  const [passwordSuccess, setPasswordSuccess] = useState(false)
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
   // ---------------------------------------------------------------------------
@@ -79,7 +82,7 @@ function ProfilePage() {
         setUser(data.user)
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
-          window.location.href = '/login'
+          window.location.href = ROUTES.LOGIN
           return
         }
         if (err instanceof Error) {
@@ -128,9 +131,10 @@ function ProfilePage() {
           newPassword: passwordForm.newPassword,
         },
       })
-      setPasswordSuccess(true)
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-      setTimeout(() => setPasswordSuccess(false), 3000)
+      clearClientAuthState('unauthenticated', true)
+      document.cookie = `${ACTIVE_ROLE_COOKIE}=; path=/; max-age=0`
+      window.location.href = `${ROUTES.LOGIN}?password_changed=1`
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -273,13 +277,6 @@ function ProfilePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {passwordSuccess && (
-              <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm flex items-center gap-2">
-                <Check size={16} />
-                Password berhasil diubah
-              </div>
-            )}
-
             {passwordError && (
               <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
                 {passwordError}

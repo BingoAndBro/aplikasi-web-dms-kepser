@@ -28,26 +28,41 @@ function LoginPage() {
   // Check for inactive account message from redirect
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
   const inactiveReason = searchParams.get('reason') === 'inactive'
+  const passwordChanged = searchParams.get('password_changed') === '1'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   // Show inactive message on page load if redirected
   useEffect(() => {
+    const url = new URL(window.location.href)
+    let shouldCleanUrl = false
+
     if (inactiveReason) {
       setError('Akun Anda tidak aktif. Hubungi Administrator.')
-      // Clean up URL parameter
-      const url = new URL(window.location.href)
       url.searchParams.delete('reason')
-      window.history.replaceState({}, '', url.pathname)
+      shouldCleanUrl = true
     }
-  }, [inactiveReason])
+
+    if (passwordChanged) {
+      setSuccessMessage('Password berhasil diubah. Silakan login ulang.')
+      url.searchParams.delete('password_changed')
+      shouldCleanUrl = true
+    }
+
+    if (shouldCleanUrl) {
+      const search = url.searchParams.toString()
+      window.history.replaceState({}, '', `${url.pathname}${search ? `?${search}` : ''}${url.hash}`)
+    }
+  }, [inactiveReason, passwordChanged])
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setError(null)
+    setSuccessMessage(null)
 
     const result = loginSchema.safeParse({ email, password })
     if (!result.success) {
@@ -122,6 +137,12 @@ function LoginPage() {
               {error && (
                 <div className="bg-error/10 text-error text-xs p-3 rounded-xl border border-error/20 font-medium">
                   {error}
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="bg-green-500/10 text-green-700 text-xs p-3 rounded-xl border border-green-500/20 font-medium">
+                  {successMessage}
                 </div>
               )}
 

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { useRouterState } from '@tanstack/react-router'
 
 import { ROLE_DEFAULT_ROUTE } from '#/config/navigation'
 import { apiFetch } from '#/lib/api-client'
@@ -50,7 +50,6 @@ type RoleSwitchResponse = {
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate()
   const routerState = useRouterState()
   const lastAuthLogRef = React.useRef<string>('')
 
@@ -178,17 +177,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     setIsLoading(true)
+    let logoutSucceeded = false
     try {
       await apiMutation('/auth/logout')
+      logoutSucceeded = true
     } catch (err) {
       if (!(err instanceof ApiError)) {
         console.error('Failed to logout:', err)
       }
+    } finally {
+      setIsLoading(false)
     }
+
+    if (!logoutSucceeded) {
+      return
+    }
+
     setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
     setUserName(undefined); setEmail(undefined)
     setHasSession(false); clearAppState()
-    navigate({ to: ROUTES.LOGIN })
+    window.location.href = ROUTES.LOGIN
   }
 
   const isAdmin = activeRole === ROLES.ADMIN
