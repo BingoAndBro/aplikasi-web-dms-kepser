@@ -93,8 +93,8 @@ function ArsipSearchPage() {
     if (s === 'AKTIF') return <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px]">AKTIF</Badge>
     if (s === 'INAKTIF') return <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-[10px]">INAKTIF</Badge>
     if (s === 'USUL_MUSNAH') return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">USUL MUSNAH</Badge>
-    if (s === 'DIMUSNAHKAN') return <Badge className="bg-gray-100 text-gray-500 border-gray-300 text-[10px]">DIMUSNAHKAN</Badge>
-    return <Badge className="bg-gray-100 text-gray-500 text-[10px]">{s}</Badge>
+    if (s === 'DIMUSNAHKAN') return <Badge className="bg-gray-100 text-gray-700 border-gray-300 text-[10px]">DIMUSNAHKAN</Badge>
+    return <Badge className="bg-gray-100 text-gray-700 text-[10px]">{s}</Badge>
   }
 
   function getDetailUrl(a: ArsipItem) {
@@ -216,7 +216,7 @@ function ArsipSearchPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); window.location.href = getDetailUrl(a)! }}
                               className="inline-flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors"
-                              aria-label="Lihat detail"
+                              aria-label={`Lihat detail arsip ${a.nomor_surat}`}
                             >
                               <Eye size={14} className="text-primary" />
                             </button>
@@ -233,9 +233,9 @@ function ArsipSearchPage() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2">
-                <Button size="icon-xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>‹</Button>
+                <Button size="icon-xs" variant="outline" disabled={page <= 1} onClick={() => setPage(p => p - 1)} aria-label="Halaman sebelumnya">‹</Button>
                 <span className="text-xs text-on-surface-variant px-2">Halaman {page} dari {totalPages}</span>
-                <Button size="icon-xs" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>›</Button>
+                <Button size="icon-xs" variant="outline" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} aria-label="Halaman berikutnya">›</Button>
               </div>
             )}
           </>

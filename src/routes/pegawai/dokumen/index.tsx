@@ -293,7 +293,7 @@ function DokumenSayaPage() {
                             <Button
                               size="icon-xs"
                               variant="ghost"
-                              aria-label={dok.status === 'NEED_REVISION' && dok.revision_target === 'USER' ? 'Revisi dokumen' : 'Lihat detail'}
+                              aria-label={dok.status === 'NEED_REVISION' && dok.revision_target === 'USER' ? `Revisi dokumen ${dok.judul}` : `Lihat detail dokumen ${dok.judul}`}
                             >
                               {dok.status === 'NEED_REVISION' && dok.revision_target === 'USER' ? (
                                 <FileEdit size={14} className="text-amber-500" />
@@ -315,6 +315,7 @@ function DokumenSayaPage() {
               <div className="flex items-center justify-center gap-2">
                 <Button
                   size="icon-xs" variant="outline"
+                  aria-label="Halaman sebelumnya"
                   onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={page === 0}
                 >
@@ -325,6 +326,7 @@ function DokumenSayaPage() {
                 </span>
                 <Button
                   size="icon-xs" variant="outline"
+                  aria-label="Halaman berikutnya"
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >

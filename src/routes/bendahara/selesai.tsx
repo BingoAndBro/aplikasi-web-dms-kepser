@@ -84,7 +84,7 @@ function BendaharaSelesaiPage() {
                         <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px] font-semibold">Selesai</Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}><Button size="icon-xs" variant="ghost"><Eye size={14} /></Button></Link>
+                        <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}><Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button></Link>
                       </TableCell>
                     </TableRow>
                   ))}

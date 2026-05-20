@@ -107,7 +107,7 @@ function PpkTervalidasiPage() {
                       <TableCell className="text-center"><StatusBadge status={d.status} /></TableCell>
                       <TableCell className="text-center">
                         <Link to="/ppk/dokumen/$id" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label="Lihat detail"><Eye size={14} /></Button>
+                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button>
                         </Link>
                       </TableCell>
                     </TableRow>

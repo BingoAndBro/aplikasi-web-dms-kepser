@@ -123,21 +123,21 @@ function JenisDokumenPage() {
               <Tag size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
               <span className="text-primary">Jenis Dokumen</span>
             </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Jenis Dokumen</h2>
+            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Jenis Dokumen</h1>
             <p className="text-on-surface-variant text-xs mt-1">Kelola jenis dokumen untuk dokumen Non-Material (misalnya: Rapat, Kunjungan, Pelatihan).</p>
           </div>
           <Button onClick={openCreate} size="sm" className="gap-1.5"><Plus size={14} />Tambah Jenis</Button>
         </div>
 
         {successMsg && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
             {successMsg}
           </div>
         )}
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" placeholder="Cari jenis..." value={search}
+            <input type="text" aria-label="Cari jenis dokumen" placeholder="Cari jenis..." value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
             />
@@ -173,9 +173,9 @@ function JenisDokumenPage() {
                     <TableCell><span className="font-semibold text-sm text-on-surface">{item.nama}</span></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error"><Trash2 size={14} /></Button>
+                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit jenis dokumen ${item.nama}`}><Edit2 size={14} /></Button>
+                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus jenis dokumen ${item.nama}`}><Trash2 size={14} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -134,7 +134,7 @@ function UsulMusnahPage() {
                       <td className="px-4 py-3 text-center">{statusBadge(a.musnah_status)}</td>
                       <td className="px-4 py-3 text-center">
                         <Link to="/arsiparis/usul-musnah/$id" params={{ id: a.musnah_id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label="Lihat detail"><Eye size={14} /></Button>
+                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail usul musnah ${a.nomor_surat}`}><Eye size={14} /></Button>
                         </Link>
                       </td>
                     </tr>

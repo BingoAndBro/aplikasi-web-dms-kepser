@@ -144,7 +144,7 @@ function ArsiparisInboxPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link to="/arsiparis/dokumen/$id" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label="Lihat detail"><Eye size={14} /></Button>
+                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button>
                         </Link>
                       </td>
                     </tr>

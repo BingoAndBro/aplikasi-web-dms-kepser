@@ -265,7 +265,7 @@ function PpkInboxPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Link to="/ppk/dokumen/$id" params={{ id: dok.id }}>
-                            <Button size="icon-xs" variant="ghost" aria-label="Lihat detail">
+                            <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${dok.judul}`}>
                               <Eye size={14} />
                             </Button>
                           </Link>
@@ -282,6 +282,7 @@ function PpkInboxPage() {
               <div className="flex items-center justify-center gap-2">
                 <Button
                   size="icon-xs" variant="outline"
+                  aria-label="Halaman sebelumnya"
                   onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={page === 0}
                 >
@@ -292,6 +293,7 @@ function PpkInboxPage() {
                 </span>
                 <Button
                   size="icon-xs" variant="outline"
+                  aria-label="Halaman berikutnya"
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >

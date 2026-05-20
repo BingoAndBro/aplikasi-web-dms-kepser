@@ -46,9 +46,9 @@ export function AppHeader({
           {isAdmin ? (
             <span className="text-xl font-extrabold tracking-tight text-primary shrink-0">Admin Curator</span>
           ) : (
-            <h2 className="text-2xl font-black tracking-tighter text-on-surface font-headline shrink-0">
+            <span className="text-2xl font-black tracking-tighter text-on-surface font-headline shrink-0">
               {ROLE_DISPLAY[activeRole]}
-            </h2>
+            </span>
           )}
         </div>
 
@@ -58,6 +58,7 @@ export function AppHeader({
           </div>
           <input
             type="text"
+            aria-label={isAdmin ? 'Cari cepat user' : 'Cari dokumen, arsip, atau tugas'}
             placeholder={isAdmin ? 'Quick search users...' : 'Search documents, archives, or tasks...'}
             className="pl-14 pr-6 py-3.5 bg-surface-container/30 border border-outline-variant/20 rounded-2xl w-full text-sm focus:ring-2 focus:ring-primary/40 focus:bg-surface-container placeholder:text-outline/40 outline-none transition-all shadow-inner group-hover:border-outline-variant/40"
           />
@@ -66,11 +67,19 @@ export function AppHeader({
 
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-5">
-          <button className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all relative">
+          <button
+            type="button"
+            aria-label="Buka notifikasi"
+            className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all relative"
+          >
             <Bell size={22} />
             <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background" />
           </button>
-          <button className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all">
+          <button
+            type="button"
+            aria-label="Buka pengaturan"
+            className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all"
+          >
             <Settings size={22} />
           </button>
         </div>

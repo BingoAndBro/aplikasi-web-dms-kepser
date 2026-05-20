@@ -108,7 +108,7 @@ function KegiatanPage() {
               <ClipboardList size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
               <span className="text-primary">Master Kegiatan</span>
             </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Master Kegiatan</h2>
+            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Master Kegiatan</h1>
             <p className="text-on-surface-variant text-xs mt-1">Kelola jenis kegiatan per departemen/fungsi.</p>
           </div>
           <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={fungsis.length === 0}>
@@ -117,20 +117,20 @@ function KegiatanPage() {
         </div>
 
         {successMsg && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
             {successMsg}
           </div>
         )}
 
         <div className="flex flex-wrap gap-3">
-          <select value={filterFungsi} onChange={e => setFilterFungsi(e.target.value)}
+          <select value={filterFungsi} onChange={e => setFilterFungsi(e.target.value)} aria-label="Filter kegiatan berdasarkan fungsi"
             className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
             <option value="">Semua Fungsi</option>
             {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
           </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" placeholder="Cari kegiatan..." value={search}
+            <input type="text" aria-label="Cari kegiatan" placeholder="Cari kegiatan..." value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40" />
           </div>
@@ -167,9 +167,9 @@ function KegiatanPage() {
                     <TableCell><span className="text-xs font-medium px-2 py-0.5 bg-surface rounded-lg text-on-surface-variant">{item.fungsi_nama ?? '—'}</span></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error"><Trash2 size={14} /></Button>
+                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit kegiatan ${item.nama}`}><Edit2 size={14} /></Button>
+                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus kegiatan ${item.nama}`}><Trash2 size={14} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -187,7 +187,7 @@ function KegiatanPage() {
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="space-y-1.5">
               <Label>Fungsi <span className="text-error">*</span></Label>
-              <select value={formFungsiId} onChange={e => setFormFungsiId(e.target.value)}
+              <select value={formFungsiId} onChange={e => setFormFungsiId(e.target.value)} aria-label="Pilih fungsi untuk kegiatan"
                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-ring/40">
                 <option value="">Pilih Fungsi</option>
                 {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}

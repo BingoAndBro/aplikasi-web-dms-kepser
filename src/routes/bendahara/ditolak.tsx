@@ -84,7 +84,7 @@ function BendaharaDitolakPage() {
                       <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.updated_at)}</span></TableCell>
                       <TableCell><span className="text-xs text-on-surface-variant" title={d.revision_notes ?? undefined}>{truncate(d.revision_notes, 50)}</span></TableCell>
                       <TableCell className="text-center">
-                        <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}><Button size="icon-xs" variant="ghost"><Eye size={14} /></Button></Link>
+                        <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}><Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button></Link>
                       </TableCell>
                     </TableRow>
                   ))}

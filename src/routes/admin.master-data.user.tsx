@@ -768,7 +768,7 @@ function MasterUserPage() {
               <ChevronRight size={10} />
               <span className="text-primary">Master User</span>
             </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Master User</h2>
+            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Master User</h1>
             <p className="text-on-surface-variant text-xs mt-1">
               Kelola akses dan data pengguna sistem DMS BPS Kabupaten Kepulauan Seribu.
             </p>
@@ -784,6 +784,7 @@ function MasterUserPage() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}
+            aria-label="Filter user berdasarkan status"
             className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[140px]"
           >
             <option value="all">Semua Status</option>
@@ -794,13 +795,14 @@ function MasterUserPage() {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
             <input
               type="text"
+              aria-label="Cari user"
               placeholder="Cari user..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
             />
           </div>
-          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} aria-label="Muat ulang daftar user">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </Button>
         </div>
@@ -853,7 +855,7 @@ function MasterUserPage() {
                           <p className="text-sm font-bold text-on-surface">{user.metadata.nama_lengkap || '-'}</p>
                           <p className="text-[10px] text-outline font-medium">{user.email}</p>
                           {user.metadata.nip_nrp && (
-                            <p className="text-[10px] text-outline/60 font-medium">NIP: {user.metadata.nip_nrp}</p>
+                            <p className="text-[10px] text-on-surface-variant font-medium">NIP: {user.metadata.nip_nrp}</p>
                           )}
                         </div>
                       </div>
@@ -901,19 +903,19 @@ function MasterUserPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(user)} title="Edit">
+                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
                           <Edit2 size={14} />
                         </Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => openResetPassword(user)} title="Reset Password">
+                        <Button size="icon-xs" variant="ghost" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
                           <RefreshCw size={14} />
                         </Button>
                         {user.isActive ? (
-                          <Button size="icon-xs" variant="ghost" onClick={() => openDeactivate(user)} className="hover:text-red-600" title="Nonaktifkan">
+                          <Button size="icon-xs" variant="ghost" onClick={() => openDeactivate(user)} className="hover:text-red-600" aria-label={`Nonaktifkan user ${user.metadata.nama_lengkap || user.email}`}>
                             <UserX size={14} />
                           </Button>
                         ) : (
-                          <Button size="icon-xs" variant="ghost" onClick={() => openActivate(user)} className="hover:text-green-600" title="Aktifkan">
+                          <Button size="icon-xs" variant="ghost" onClick={() => openActivate(user)} className="hover:text-green-600" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
                             <UserCheck size={14} />
                           </Button>
                         )}
@@ -1001,6 +1003,7 @@ function MasterUserPage() {
                   <button
                     key={role}
                     type="button"
+                    aria-pressed={createForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'create')}
                     disabled={isPegawaiDisabled(role)}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
@@ -1077,6 +1080,7 @@ function MasterUserPage() {
                   <button
                     key={role}
                     type="button"
+                    aria-pressed={editForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'edit')}
                     disabled={isPegawaiDisabled(role)}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
@@ -1095,7 +1099,7 @@ function MasterUserPage() {
             {/* Section: Kegiatan sebagai Ketua Tim */}
             <div className="space-y-3 border-t border-outline-variant/20 pt-4 mt-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-on-surface">Kegiatan sebagai Ketua Tim</h4>
+                <p className="text-sm font-semibold text-on-surface">Kegiatan sebagai Ketua Tim</p>
                 <span className="text-[10px] text-on-surface-variant">
                   {dialogChairmanAssignments.length} kegiatan
                 </span>
@@ -1111,6 +1115,7 @@ function MasterUserPage() {
                     {c.kegiatan_nama}
                     <button
                       type="button"
+                      aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`}
                       onClick={() => selectedUser && handleRemoveChairman(c.id, selectedUser.id)}
                       className="ml-1 text-amber-600 hover:text-amber-900 hover:bg-amber-200 rounded-full p-0.5 cursor-pointer"
                     >

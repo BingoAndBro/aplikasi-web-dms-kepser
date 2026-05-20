@@ -160,26 +160,26 @@ function KategoriPage() {
               <Tag size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
               <span className="text-primary">Kategori Permintaan</span>
             </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Kategori Permintaan</h2>
+            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Kategori Permintaan</h1>
             <p className="text-on-surface-variant text-xs mt-1">Kelola kategori permintaan yang bergantung pada jenis permintaan.</p>
           </div>
           <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={jenisList.length === 0}><Plus size={14} />Tambah Kategori</Button>
         </div>
 
         {successMsg && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
             {successMsg}
           </div>
         )}
         <div className="flex flex-wrap gap-3">
-          <select value={filterJenis} onChange={e => setFilterJenis(e.target.value)}
+          <select value={filterJenis} onChange={e => setFilterJenis(e.target.value)} aria-label="Filter kategori berdasarkan jenis permintaan"
             className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
             <option value="">Semua Jenis</option>
             {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
           </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" placeholder="Cari kategori..." value={search}
+            <input type="text" aria-label="Cari kategori permintaan" placeholder="Cari kategori..." value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
             />
@@ -221,9 +221,9 @@ function KategoriPage() {
                       <span className="text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary rounded-lg">{item.jumlah_detail ?? 0}</span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error"><Trash2 size={14} /></Button>
+                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit kategori ${item.nama}`}><Edit2 size={14} /></Button>
+                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus kategori ${item.nama}`}><Trash2 size={14} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>

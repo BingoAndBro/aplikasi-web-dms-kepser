@@ -147,7 +147,7 @@ function LaporanSayaPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link to="/pegawai/dokumen/$id" params={{ id: dok.id }}>
-                          <Button variant="outline" size="sm" className="gap-1.5">
+                          <Button variant="outline" size="sm" className="gap-1.5" aria-label={`Lihat dokumen ${dok.judul}`}>
                             <ExternalLink className="h-3.5 w-3.5" />
                             Lihat
                           </Button>

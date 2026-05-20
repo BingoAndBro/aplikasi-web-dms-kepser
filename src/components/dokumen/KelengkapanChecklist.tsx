@@ -365,6 +365,7 @@ export function KelengkapanChecklist({
             <Button
               variant="ghost"
               size="icon-xs"
+              aria-label="Batal tambah dokumen pendukung"
               onClick={() => {
                 setShowAddForm(false)
                 setNewDocTitle('')
@@ -427,6 +428,7 @@ export function KelengkapanChecklist({
                   <Button
                     variant="ghost"
                     size="icon-xs"
+                    aria-label={`Hapus dokumen pendukung ${doc.nama_dokumen}`}
                     onClick={() => removeUserDoc(doc.id)}
                     className="text-error hover:text-error hover:bg-error/10"
                   >

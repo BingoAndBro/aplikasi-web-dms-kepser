@@ -184,24 +184,24 @@ function DetailPage() {
               <Tag size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
               <span className="text-primary">Detail Permintaan</span>
             </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Detail Permintaan</h2>
+            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Detail Permintaan</h1>
             <p className="text-on-surface-variant text-xs mt-1">Kelola detail permintaan (opsional — tidak semua kategori memiliki detail).</p>
           </div>
           <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={jenisList.length === 0 || kategoriList.length === 0}><Plus size={14} />Tambah Detail</Button>
         </div>
 
         {successMsg && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
             {successMsg}
           </div>
         )}
         <div className="flex flex-wrap gap-3">
-          <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori('') }}
+          <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori('') }} aria-label="Filter detail berdasarkan jenis permintaan"
             className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
             <option value="">Semua Jenis</option>
             {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
           </select>
-          <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)} disabled={!filterJenis}
+          <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)} disabled={!filterJenis} aria-label="Filter detail berdasarkan kategori"
             className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px] disabled:opacity-50">
             <option value="">Semua Kategori</option>
             {kategoriList.filter(k => !filterJenis || k.jenis_permintaan_id === filterJenis).map(k => (
@@ -210,7 +210,7 @@ function DetailPage() {
           </select>
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" placeholder="Cari detail..." value={search}
+            <input type="text" aria-label="Cari detail permintaan" placeholder="Cari detail..." value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
             />
@@ -250,9 +250,9 @@ function DetailPage() {
                     <TableCell><span className="text-xs text-on-surface-variant">{item.jenis_nama || '—'}</span></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error"><Trash2 size={14} /></Button>
+                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit detail permintaan ${item.nama}`}><Edit2 size={14} /></Button>
+                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus detail permintaan ${item.nama}`}><Trash2 size={14} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -270,7 +270,7 @@ function DetailPage() {
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="space-y-1.5">
               <Label>Jenis Permintaan <span className="text-error">*</span></Label>
-              <select value={formJenisId} onChange={e => { setFormJenisId(e.target.value); setFormKategoriId('') }}
+              <select value={formJenisId} onChange={e => { setFormJenisId(e.target.value); setFormKategoriId('') }} aria-label="Pilih jenis permintaan untuk detail"
                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
                 <option value="">Pilih jenis...</option>
                 {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
@@ -278,7 +278,7 @@ function DetailPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Kategori Permintaan <span className="text-error">*</span></Label>
-              <select value={formKategoriId} onChange={e => setFormKategoriId(e.target.value)} disabled={!formJenisId}
+              <select value={formKategoriId} onChange={e => setFormKategoriId(e.target.value)} disabled={!formJenisId} aria-label="Pilih kategori untuk detail"
                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none disabled:opacity-50">
                 <option value="">Pilih kategori...</option>
                 {kategoriList.filter(k => !formJenisId || k.jenis_permintaan_id === formJenisId).map(k => (

@@ -128,12 +128,12 @@ function ArsipInaktifDetailPage() {
         {previewingIdx !== null && (
           <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) closePreview() }}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
+            <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]" role="dialog" aria-modal="true" aria-label="Pratinjau lampiran arsip">
               <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/30 shrink-0">
                 <Eye size={16} className="text-primary shrink-0" />
                 <p className="text-sm font-semibold text-on-surface truncate flex-1">{previewFilename}</p>
                 <span className="text-[10px] text-outline hidden sm:block">ESC</span>
-                <button onClick={closePreview} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors shrink-0"><X size={16} /></button>
+                <button type="button" onClick={closePreview} aria-label="Tutup pratinjau" className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors shrink-0"><X size={16} /></button>
               </div>
               <div className="flex-1 overflow-auto bg-surface-container-low/30">
                 {previewLoading ? <div className="flex items-center justify-center h-48"><Loader2 size={22} className="animate-spin text-primary" /></div>
@@ -257,7 +257,7 @@ function ArsipInaktifDetailPage() {
                         <p className="text-xs font-medium text-on-surface truncate">{lamp.nama}</p>
                         <p className="text-[10px] text-outline">{lamp.uploaded_at ? formatDate(lamp.uploaded_at) : ""}</p>
                       </div>
-                      <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(i)} aria-label="Pratinjau">
+                      <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(i)} aria-label={`Pratinjau lampiran ${i + 1}`}>
                         {previewingIdx === i ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
                       </Button>
                     </div>

@@ -139,7 +139,7 @@ function ArsipAktifPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link to="/arsiparis/aktif/$id" params={{ id: a.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label="Lihat detail"><Eye size={14} /></Button>
+                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail arsip ${a.nomor_surat}`}><Eye size={14} /></Button>
                         </Link>
                       </td>
                     </tr>

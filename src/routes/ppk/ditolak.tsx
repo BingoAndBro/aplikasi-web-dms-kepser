@@ -102,7 +102,7 @@ function PpkDitolakPage() {
                       <TableCell><span className="text-xs text-on-surface-variant" title={d.revision_notes ?? undefined}>{truncate(d.revision_notes)}</span></TableCell>
                       <TableCell className="text-center">
                         <Link to="/ppk/dokumen/$id" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label="Lihat detail"><Eye size={14} /></Button>
+                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button>
                         </Link>
                       </TableCell>
                     </TableRow>

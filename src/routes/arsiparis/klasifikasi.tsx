@@ -90,12 +90,13 @@ function TreeNode({
       >
         {/* Expand/Collapse button */}
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded) }}
           className={cn(
             'p-0.5 rounded hover:bg-black/10 transition-colors',
             isSelected ? 'text-primary-foreground/70 hover:bg-primary-foreground/10' : 'text-outline'
           )}
-          aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          aria-label={`${isExpanded ? 'Tutup' : 'Buka'} klasifikasi ${node.nama}`}
         >
           {hasChildren ? (
             isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
@@ -127,12 +128,13 @@ function TreeNode({
 
         {/* Add child button - all nodes can have children except already deleted check */}
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(node) }}
           className={cn(
-            'p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity',
+            'p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity',
             isSelected ? 'text-primary-foreground/70 hover:text-primary-foreground' : 'text-outline hover:text-primary hover:bg-primary/10'
           )}
-          aria-label="Tambah sub-klasifikasi"
+          aria-label={`Tambah sub-klasifikasi untuk ${node.nama}`}
         >
           <CornerDownRight size={12} />
         </button>
@@ -311,10 +313,10 @@ function AddKlasifikasiModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
+      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl" role="dialog" aria-modal="true" aria-label="Tambah sub-klasifikasi">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30">
           <p className="font-semibold text-on-surface">Tambah Sub-Klasifikasi</p>
-          <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors">
+          <button type="button" onClick={onClose} aria-label="Tutup dialog tambah klasifikasi" className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -452,10 +454,10 @@ function EditKlasifikasiModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
+      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl" role="dialog" aria-modal="true" aria-label="Edit klasifikasi">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30">
           <p className="font-semibold text-on-surface">Edit Klasifikasi</p>
-          <button onClick={onClose} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors">
+          <button type="button" onClick={onClose} aria-label="Tutup dialog edit klasifikasi" className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors">
             <X size={16} />
           </button>
         </div>

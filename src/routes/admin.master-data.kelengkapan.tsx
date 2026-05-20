@@ -275,12 +275,12 @@ function KelengkapanPage() {
             <FileCheck size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
             <span className="text-primary">Kelengkapan Dokumen</span>
           </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Kelengkapan Dokumen</h2>
+          <h1 className="font-headline text-2xl font-extrabold text-on-surface">Kelengkapan Dokumen</h1>
           <p className="text-on-surface-variant text-xs mt-1">Konfigurasi kelengkapan dokumen per kegiatan + chain (jenis/kategori/detail). Kelengkapan hanya tampil setelah chain sampai ke leaf node.</p>
         </div>
 
         {successMsg && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
             {successMsg}
           </div>
         )}
@@ -292,13 +292,13 @@ function KelengkapanPage() {
             Pilih Fungsi & Kegiatan
           </h3>
           <div className="flex flex-wrap gap-3">
-            <select value={filterFungsi} onChange={e => { setFilterFungsi(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+            <select value={filterFungsi} onChange={e => { setFilterFungsi(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih fungsi untuk kelengkapan"
               className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[180px]">
               <option value="">Pilih Fungsi</option>
               {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
             </select>
             {filterFungsi && (
-              <select value={filterKegiatan} onChange={e => { setFilterKegiatan(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+              <select value={filterKegiatan} onChange={e => { setFilterKegiatan(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih kegiatan untuk kelengkapan"
                 className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[220px]">
                 <option value="">Pilih Kegiatan</option>
                 {kegiatans.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
@@ -315,20 +315,20 @@ function KelengkapanPage() {
               Chain Jenis / Kategori / Detail
             </h3>
             <div className="flex flex-wrap gap-3">
-              <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori(''); setFilterDetail('') }}
+              <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih jenis permintaan untuk kelengkapan"
                 className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[180px]">
                 <option value="">Pilih Jenis Permintaan</option>
                 {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
               </select>
               {filterJenis && (
-                <select value={filterKategori} onChange={e => { setFilterKategori(e.target.value); setFilterDetail('') }}
+                <select value={filterKategori} onChange={e => { setFilterKategori(e.target.value); setFilterDetail('') }} aria-label="Pilih kategori untuk kelengkapan"
                   className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[200px]">
                   <option value="">Pilih Kategori</option>
                   {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
                 </select>
               )}
               {filterKategori && detailList.length > 0 && (
-                <select value={filterDetail} onChange={e => setFilterDetail(e.target.value)}
+                <select value={filterDetail} onChange={e => setFilterDetail(e.target.value)} aria-label="Pilih detail untuk kelengkapan"
                   className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[200px]">
                   <option value="">Pilih Detail (opsional)</option>
                   {detailList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
@@ -395,7 +395,7 @@ function KelengkapanPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Jenis Permintaan</Label>
-              <select value={formJenisId} onChange={e => { setFormJenisId(e.target.value); setFormKategoriId(''); setFormDetailId('') }}
+              <select value={formJenisId} onChange={e => { setFormJenisId(e.target.value); setFormKategoriId(''); setFormDetailId('') }} aria-label="Pilih jenis permintaan untuk item kelengkapan"
                 className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
                 <option value="">Semua jenis</option>
                 {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
@@ -404,7 +404,7 @@ function KelengkapanPage() {
             {formJenisId && (
               <div className="space-y-1.5">
                 <Label>Kategori</Label>
-                <select value={formKategoriId} onChange={e => { setFormKategoriId(e.target.value); setFormDetailId('') }}
+                <select value={formKategoriId} onChange={e => { setFormKategoriId(e.target.value); setFormDetailId('') }} aria-label="Pilih kategori untuk item kelengkapan"
                   className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
                   <option value="">Semua kategori</option>
                   {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
@@ -414,7 +414,7 @@ function KelengkapanPage() {
             {formKategoriId && detailList.length > 0 && (
               <div className="space-y-1.5">
                 <Label>Detail (Opsional)</Label>
-                <select value={formDetailId} onChange={e => setFormDetailId(e.target.value)}
+                <select value={formDetailId} onChange={e => setFormDetailId(e.target.value)} aria-label="Pilih detail untuk item kelengkapan"
                   className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
                   <option value="">Tanpa detail</option>
                   {detailList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
@@ -491,9 +491,9 @@ function KelengkapanSection({ title, items, onAdd, onEdit, onDelete, chainLabel 
                 <span className="text-xs font-medium text-on-surface truncate">{item.nama_dokumen}</span>
                 {item.required && <span className="text-[9px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded uppercase shrink-0">WAJIB</span>}
               </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                <Button size="icon-xs" variant="ghost" onClick={() => onEdit(item)}><Edit2 size={12} /></Button>
-                <Button size="icon-xs" variant="ghost" onClick={() => onDelete(item)} className="hover:text-error"><Trash2 size={12} /></Button>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+                <Button size="icon-xs" variant="ghost" onClick={() => onEdit(item)} aria-label={`Edit kelengkapan ${item.nama_dokumen}`}><Edit2 size={12} /></Button>
+                <Button size="icon-xs" variant="ghost" onClick={() => onDelete(item)} className="hover:text-error" aria-label={`Hapus kelengkapan ${item.nama_dokumen}`}><Trash2 size={12} /></Button>
               </div>
             </div>
           ))}

@@ -298,7 +298,7 @@ export function AttachmentViewer({
               size="icon-xs"
               variant="ghost"
               onClick={() => handlePreview(globalIdx)}
-              aria-label="Pratinjau"
+              aria-label={`Pratinjau ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
             >
               <Eye size={14} />
             </Button>
@@ -307,7 +307,7 @@ export function AttachmentViewer({
               size="icon-xs"
               variant="ghost"
               onClick={() => handleDownload(globalIdx)}
-              aria-label="Unduh"
+              aria-label={`Unduh ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
             >
               <Download size={14} />
             </Button>
@@ -323,7 +323,7 @@ export function AttachmentViewer({
                 variant="ghost"
                 className="text-error hover:bg-error/10"
                 onClick={() => handleDelete(globalIdx)}
-                aria-label="Hapus"
+                aria-label={`Hapus ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
               >
                 <Trash2 size={14} />
               </Button>

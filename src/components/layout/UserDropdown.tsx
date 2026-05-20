@@ -19,6 +19,10 @@ export function UserDropdown({
   return (
     <div className="relative">
       <button
+        type="button"
+        aria-label={`Buka menu pengguna ${displayName}`}
+        aria-expanded={userDropdownOpen}
+        aria-haspopup="menu"
         onClick={() => setUserDropdownOpen(!userDropdownOpen)}
         className="w-11 h-11 rounded-2xl bg-primary/10 p-0.5 shadow-xl cursor-pointer hover:bg-primary/20 transition-all"
       >
@@ -29,7 +33,7 @@ export function UserDropdown({
       {userDropdownOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-xl py-2 min-w-[200px]">
+          <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-xl py-2 min-w-[200px]" role="menu">
             <div className="px-4 py-2 border-b border-outline-variant/10">
               <p className="text-sm font-bold text-on-surface">{displayName}</p>
               <p className="text-xs text-outline">{email}</p>
@@ -38,6 +42,7 @@ export function UserDropdown({
               <Link
                 to="/profile"
                 onClick={() => setUserDropdownOpen(false)}
+                role="menuitem"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:bg-primary/5 hover:text-primary transition-colors"
               >
                 <UserCircle size={16} />
@@ -46,6 +51,8 @@ export function UserDropdown({
             </div>
             <div className="border-t border-outline-variant/10 pt-1">
               <button
+                type="button"
+                role="menuitem"
                 onClick={() => { setUserDropdownOpen(false); handleLogout() }}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-error/5 transition-colors"
               >

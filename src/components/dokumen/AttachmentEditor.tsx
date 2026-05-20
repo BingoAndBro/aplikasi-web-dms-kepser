@@ -661,12 +661,12 @@ export function AttachmentEditor({
           onClick={e => { if (e.target === e.currentTarget) closePreview() }}
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
+          <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]" role="dialog" aria-modal="true" aria-label="Pratinjau lampiran">
             <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
               <CheckCircle2 size={16} className="text-primary shrink-0" />
               <p className="text-sm font-semibold text-on-surface truncate flex-1">{previewFilename}</p>
               <span className="text-[10px] text-outline hidden sm:block">ESC</span>
-              <button onClick={closePreview} className="w-7 h-7 rounded-full hover:bg-surface-container-low flex items-center justify-center">
+              <button type="button" onClick={closePreview} aria-label="Tutup pratinjau" className="w-7 h-7 rounded-full hover:bg-surface-container-low flex items-center justify-center">
                 <X size={16} />
               </button>
             </div>
@@ -776,7 +776,7 @@ export function AttachmentEditor({
                       <div className="flex items-center gap-2">
                         {lamp && (
                           <>
-                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(kel.id)} aria-label="Pratinjau">
+                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(kel.id)} aria-label={`Pratinjau ${kel.nama_dokumen}`}>
                               <Eye size={14} />
                             </Button>
                             {isPending ? (
@@ -788,7 +788,7 @@ export function AttachmentEditor({
                                 Reset
                               </button>
                             ) : (
-                              <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(kel.id)} aria-label="Unduh">
+                              <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(kel.id)} aria-label={`Unduh ${kel.nama_dokumen}`}>
                                 <Download size={14} />
                               </Button>
                             )}
@@ -872,7 +872,7 @@ export function AttachmentEditor({
                     <div className="flex items-center gap-2">
                       {hasFile && (
                         <>
-                          <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(doc.id)} aria-label="Pratinjau">
+                          <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(doc.id)} aria-label={`Pratinjau ${doc.nama_dokumen}`}>
                             <Eye size={14} />
                           </Button>
                           {isPending ? (
@@ -884,7 +884,7 @@ export function AttachmentEditor({
                               Reset
                             </button>
                           ) : (
-                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(doc.id)} aria-label="Unduh">
+                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(doc.id)} aria-label={`Unduh ${doc.nama_dokumen}`}>
                               <Download size={14} />
                             </Button>
                           )}
@@ -909,6 +909,8 @@ export function AttachmentEditor({
                       {/* X button - only if no file uploaded */}
                       {!hasFile && (
                         <button
+                          type="button"
+                          aria-label={`Hapus dokumen pendukung ${doc.nama_dokumen}`}
                           onClick={() => handleRemoveUserDoc(doc.id)}
                           className="w-6 h-6 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                         >

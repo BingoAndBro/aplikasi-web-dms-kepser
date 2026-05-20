@@ -215,7 +215,7 @@ function PegawaiRevisiPage() {
                             <Button
                               size="icon-xs"
                               variant="ghost"
-                              aria-label="Revisi dokumen"
+                              aria-label={`Revisi dokumen ${dok.judul}`}
                             >
                               <FileEdit size={14} className="text-amber-500" />
                             </Button>
@@ -232,6 +232,7 @@ function PegawaiRevisiPage() {
               <div className="flex items-center justify-center gap-2">
                 <Button
                   size="icon-xs" variant="outline"
+                  aria-label="Halaman sebelumnya"
                   onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={page === 0}
                 >
@@ -242,6 +243,7 @@ function PegawaiRevisiPage() {
                 </span>
                 <Button
                   size="icon-xs" variant="outline"
+                  aria-label="Halaman berikutnya"
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >

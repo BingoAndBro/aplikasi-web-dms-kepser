@@ -42,9 +42,9 @@ export function AppSidebar({
           <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white shadow-lg shadow-primary/10">
             <img src="/bps-logo.png" alt="BPS" className="w-7 h-7 object-contain" />
           </div>
-          <h2 className="font-headline font-extrabold text-xl tracking-tight text-on-surface">
+          <div className="font-headline font-extrabold text-xl tracking-tight text-on-surface">
             {isAdmin ? 'Curator Admin' : 'DMS Architect'}
-          </h2>
+          </div>
         </div>
         <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary ml-11">
           {isAdmin ? 'System Management' : `${activeRole} Workspace`}
@@ -54,9 +54,9 @@ export function AppSidebar({
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2 space-y-8">
         {navGroups.map((group) => (
           <div key={group.title} className="space-y-3">
-            <h3 className="text-[10px] font-black text-outline uppercase tracking-[0.25em] px-4">
+            <p className="text-[10px] font-black text-outline uppercase tracking-[0.25em] px-4">
               {group.title}
-            </h3>
+            </p>
             <nav className="space-y-1">
               {group.items.map((item) => {
                 const Icon = item.icon
@@ -115,11 +115,12 @@ export function AppSidebar({
       </div>
 
       <div className="flex flex-col gap-1 border-t border-outline-variant/10 pt-6">
-        <button className="flex items-center gap-3 text-outline text-[11px] font-bold p-3 hover:text-primary transition-all group">
+        <button type="button" className="flex items-center gap-3 text-outline text-[11px] font-bold p-3 hover:text-primary transition-all group">
           <HelpCircle size={16} className="group-hover:rotate-12 transition-transform" />
           Support Center
         </button>
         <button
+          type="button"
           onClick={onLogout}
           className="flex items-center gap-3 text-outline text-[11px] font-bold p-3 hover:text-error transition-all group"
         >

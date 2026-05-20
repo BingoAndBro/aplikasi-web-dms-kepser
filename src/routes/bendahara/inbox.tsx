@@ -123,7 +123,7 @@ function BendaharaInboxPage() {
                       <td className="px-4 py-3 text-center text-on-surface-variant">{d.ppk_validated_at ? formatDate(d.ppk_validated_at) : '—'}</td>
                       <td className="px-4 py-3 text-center">
                         <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost"><Eye size={14} /></Button>
+                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button>
                         </Link>
                       </td>
                     </tr>
