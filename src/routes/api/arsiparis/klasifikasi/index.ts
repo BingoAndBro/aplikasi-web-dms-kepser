@@ -116,50 +116,47 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
         const parsed = createKlasifikasiSchema.safeParse(body)
         if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
-        // Cek duplikat nama
-        const [existingName] = await db
-          .select({ id: masterKlasifikasiArsip.id })
-          .from(masterKlasifikasiArsip)
-          .where(and(
-            eq(masterKlasifikasiArsip.nama, parsed.data.nama),
-            eq(masterKlasifikasiArsip.isActive, true),
-          ))
-          .limit(1)
-
-        if (existingName) return Response.json({ error: `Nama klasifikasi "${parsed.data.nama}" sudah ada` }, { status: 409 })
-
-        // Cek duplikat kode
-        if (parsed.data.kode) {
-          const [existingKode] = await db
+        try {
+          // Cek duplikat nama
+          const [existingName] = await db
             .select({ id: masterKlasifikasiArsip.id })
             .from(masterKlasifikasiArsip)
             .where(and(
-              eq(masterKlasifikasiArsip.kode, parsed.data.kode),
+              eq(masterKlasifikasiArsip.nama, parsed.data.nama),
               eq(masterKlasifikasiArsip.isActive, true),
             ))
             .limit(1)
 
-          if (existingKode) return Response.json({ error: `Kode klasifikasi "${parsed.data.kode}" sudah ada` }, { status: 409 })
-        }
+          if (existingName) return Response.json({ error: `Nama klasifikasi "${parsed.data.nama}" sudah ada` }, { status: 409 })
 
-        // Validate parent exists if provided
-        if (parsed.data.parent_id) {
-          const [parent] = await db
-            .select({ id: masterKlasifikasiArsip.id, kode: masterKlasifikasiArsip.kode })
-            .from(masterKlasifikasiArsip)
-            .where(and(
-              eq(masterKlasifikasiArsip.id, parsed.data.parent_id),
-              eq(masterKlasifikasiArsip.isActive, true),
-            ))
-            .limit(1)
+          // Cek duplikat kode
+          if (parsed.data.kode) {
+            const [existingKode] = await db
+              .select({ id: masterKlasifikasiArsip.id })
+              .from(masterKlasifikasiArsip)
+              .where(and(
+                eq(masterKlasifikasiArsip.kode, parsed.data.kode),
+                eq(masterKlasifikasiArsip.isActive, true),
+              ))
+              .limit(1)
 
-          if (!parent) return Response.json({ error: 'Induk klasifikasi tidak ditemukan' }, { status: 400 })
+            if (existingKode) return Response.json({ error: `Kode klasifikasi "${parsed.data.kode}" sudah ada` }, { status: 409 })
+          }
 
-          // Prevent adding as child of root if parent is root
-          // Actually, root can have children, so this is fine
-        }
+          // Validate parent exists if provided
+          if (parsed.data.parent_id) {
+            const [parent] = await db
+              .select({ id: masterKlasifikasiArsip.id, kode: masterKlasifikasiArsip.kode })
+              .from(masterKlasifikasiArsip)
+              .where(and(
+                eq(masterKlasifikasiArsip.id, parsed.data.parent_id),
+                eq(masterKlasifikasiArsip.isActive, true),
+              ))
+              .limit(1)
 
-        try {
+            if (!parent) return Response.json({ error: 'Induk klasifikasi tidak ditemukan' }, { status: 400 })
+          }
+
           const [data] = await db
             .insert(masterKlasifikasiArsip)
             .values({

@@ -249,7 +249,7 @@ function AddKlasifikasiModal({
   isOpen: boolean
   onClose: () => void
   parentNode: KlasifikasiNode | null
-  onSuccess: () => void
+  onSuccess: () => void | Promise<void>
 }) {
   const [nama, setNama] = useState('')
   const [kode, setKode] = useState('')
@@ -258,14 +258,17 @@ function AddKlasifikasiModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset form when parentNode changes
+  // Reset form when the modal opens so preserved modal state cannot keep a stale spinner.
   useEffect(() => {
-    setNama('')
-    setKode('')
-    setDeskripsi('')
-    setErrors({})
-    setError(null)
-  }, [parentNode])
+    if (isOpen) {
+      setNama('')
+      setKode('')
+      setDeskripsi('')
+      setErrors({})
+      setError(null)
+      setLoading(false)
+    }
+  }, [isOpen, parentNode])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -286,18 +289,20 @@ function AddKlasifikasiModal({
         method: 'POST',
         body,
       })
-      onSuccess(); onClose()
+      await onSuccess()
+      onClose()
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
         setError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error ?? 'Gagal'
           : 'Gagal')
-        setLoading(false)
         return
       }
 
-      setError('Terjadi kesalahan'); setLoading(false)
+      setError('Terjadi kesalahan')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -384,7 +389,7 @@ function EditKlasifikasiModal({
   isOpen: boolean
   onClose: () => void
   node: KlasifikasiNode | null
-  onSuccess: () => void
+  onSuccess: () => void | Promise<void>
 }) {
   const [nama, setNama] = useState('')
   const [kode, setKode] = useState('')
@@ -393,16 +398,17 @@ function EditKlasifikasiModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset form when node changes
+  // Reset form when the modal opens so preserved modal state cannot keep a stale spinner.
   useEffect(() => {
-    if (node) {
+    if (isOpen && node) {
       setNama(node.nama)
       setKode(node.kode ?? '')
       setDeskripsi(node.deskripsi ?? '')
       setErrors({})
       setError(null)
+      setLoading(false)
     }
-  }, [node])
+  }, [isOpen, node])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -424,18 +430,20 @@ function EditKlasifikasiModal({
         method: 'PATCH',
         body,
       })
-      onSuccess(); onClose()
+      await onSuccess()
+      onClose()
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
         setError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error ?? 'Gagal'
           : 'Gagal')
-        setLoading(false)
         return
       }
 
-      setError('Terjadi kesalahan'); setLoading(false)
+      setError('Terjadi kesalahan')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -512,10 +520,17 @@ function DeleteKlasifikasiModal({
   isOpen: boolean
   onClose: () => void
   node: KlasifikasiNode | null
-  onSuccess: () => void
+  onSuccess: () => void | Promise<void>
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      setError(null)
+      setLoading(false)
+    }
+  }, [isOpen, node])
 
   async function handleDelete() {
     if (!node) return
@@ -524,18 +539,20 @@ function DeleteKlasifikasiModal({
       await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
         method: 'DELETE',
       })
-      onSuccess(); onClose()
+      await onSuccess()
+      onClose()
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
         setError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error ?? 'Gagal'
           : 'Gagal')
-        setLoading(false)
         return
       }
 
-      setError('Terjadi kesalahan'); setLoading(false)
+      setError('Terjadi kesalahan')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -603,7 +620,7 @@ function KlasifikasiPage() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 
-  async function fetchData() {
+  const fetchData = useCallback(async (): Promise<KlasifikasiNode[] | null> => {
     setLoading(true); setError(null)
     try {
       const json = await apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi')
@@ -617,7 +634,9 @@ function KlasifikasiPage() {
           children: markRoot(n.children),
         }))
       }
-      setItems(markRoot(data))
+      const markedData = markRoot(data)
+      setItems(markedData)
+      return markedData
     } catch (error) {
       if (error instanceof ApiError) {
         const payload = error.payload
@@ -629,10 +648,11 @@ function KlasifikasiPage() {
       } else {
         setError('Terjadi kesalahan')
       }
+      return null
     } finally { setLoading(false) }
-  }
+  }, [])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { void fetchData() }, [fetchData])
 
   function openAddChild(node: KlasifikasiNode) {
     setAddParentNode(node)
@@ -653,10 +673,10 @@ function KlasifikasiPage() {
     setSelectedNode(node)
   }
 
-  function handleModalSuccess() {
-    fetchData()
+  async function handleModalSuccess() {
+    const refreshedItems = await fetchData()
     // Re-select the node after refresh if it still exists
-    if (selectedNode) {
+    if (selectedNode && refreshedItems) {
       const findNode = (nodes: KlasifikasiNode[], id: string): KlasifikasiNode | null => {
         for (const n of nodes) {
           if (n.id === id) return n
@@ -665,7 +685,7 @@ function KlasifikasiPage() {
         }
         return null
       }
-      const found = findNode(items, selectedNode.id)
+      const found = findNode(refreshedItems, selectedNode.id)
       if (found) setSelectedNode(found)
       else setSelectedNode(null)
     }
@@ -763,7 +783,7 @@ function KlasifikasiPage() {
           isOpen={deleteModalOpen}
           onClose={() => { setDeleteModalOpen(false); setSelectedNode(null) }}
           node={selectedNode}
-          onSuccess={() => { handleModalSuccess(); setSelectedNode(null) }}
+          onSuccess={async () => { await handleModalSuccess(); setSelectedNode(null) }}
         />
       </div>
     </PageLayout>

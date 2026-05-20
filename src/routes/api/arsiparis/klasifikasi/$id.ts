@@ -71,100 +71,100 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
         const parsed = updateKlasifikasiSchema.safeParse(body)
         if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 })
 
-        // Verify exists and get current data
-        const [existing] = await db
-          .select({
-            id: masterKlasifikasiArsip.id,
-            nama: masterKlasifikasiArsip.nama,
-            kode: masterKlasifikasiArsip.kode,
-          })
-          .from(masterKlasifikasiArsip)
-          .where(and(
-            eq(masterKlasifikasiArsip.id, params.id),
-            eq(masterKlasifikasiArsip.isActive, true),
-          ))
-          .limit(1)
-
-        if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
-
-        // Prevent modifying root "000"
-        if (existing.kode === '000') {
-          // Only allow updating deskripsi for root
-          if (parsed.data.nama || parsed.data.kode || parsed.data.parent_id !== undefined) {
-            return Response.json({ error: 'Klasifikasi root tidak bisa diubah' }, { status: 403 })
-          }
-        }
-
-        // Cek nama unique jika diupdate
-        if (parsed.data.nama && parsed.data.nama !== existing.nama) {
-          const [duplicate] = await db
-            .select({ id: masterKlasifikasiArsip.id })
+        try {
+          // Verify exists and get current data
+          const [existing] = await db
+            .select({
+              id: masterKlasifikasiArsip.id,
+              nama: masterKlasifikasiArsip.nama,
+              kode: masterKlasifikasiArsip.kode,
+            })
             .from(masterKlasifikasiArsip)
             .where(and(
-              eq(masterKlasifikasiArsip.nama, parsed.data.nama),
+              eq(masterKlasifikasiArsip.id, params.id),
               eq(masterKlasifikasiArsip.isActive, true),
-              ne(masterKlasifikasiArsip.id, params.id),
             ))
             .limit(1)
 
-          if (duplicate) return Response.json({ error: "Nama klasifikasi `" + parsed.data.nama + "` sudah ada" }, { status: 409 })
-        }
+          if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
 
-        // Cek kode unique jika diupdate
-        if (parsed.data.kode && parsed.data.kode !== existing.kode) {
-          const [duplicateKode] = await db
-            .select({ id: masterKlasifikasiArsip.id })
-            .from(masterKlasifikasiArsip)
-            .where(and(
-              eq(masterKlasifikasiArsip.kode, parsed.data.kode),
-              eq(masterKlasifikasiArsip.isActive, true),
-              ne(masterKlasifikasiArsip.id, params.id),
-            ))
-            .limit(1)
-
-          if (duplicateKode) return Response.json({ error: "Kode klasifikasi `" + parsed.data.kode + "` sudah ada" }, { status: 409 })
-        }
-
-        // Validate parent_id if changing
-        if (parsed.data.parent_id !== undefined) {
-          // Cannot move to root (parent_id = null) - root "000" is fixed
-          if (parsed.data.parent_id === null) {
-            return Response.json({ error: 'Tidak bisa memindahkan ke root. Gunakan induk lain.' }, { status: 400 })
-          }
-
-          // Cannot be own parent
-          if (parsed.data.parent_id === params.id) {
-            return Response.json({ error: 'Tidak bisa memilih diri sendiri sebagai induk' }, { status: 400 })
-          }
-
-          // Check circular reference - cannot move to own descendant
-          if (parsed.data.parent_id) {
-            const isCircular = await isDescendantOf(params.id, parsed.data.parent_id)
-            if (isCircular) {
-              return Response.json({ error: 'Tidak bisa memindahkan ke subclass-nya sendiri (circular reference)' }, { status: 400 })
+          // Prevent modifying root "000"
+          if (existing.kode === '000') {
+            // Only allow updating deskripsi for root
+            if (parsed.data.nama || parsed.data.kode || parsed.data.parent_id !== undefined) {
+              return Response.json({ error: 'Klasifikasi root tidak bisa diubah' }, { status: 403 })
             }
           }
 
-          // Verify parent exists
-          const [parent] = await db
-            .select({ id: masterKlasifikasiArsip.id })
-            .from(masterKlasifikasiArsip)
-            .where(and(
-              eq(masterKlasifikasiArsip.id, parsed.data.parent_id),
-              eq(masterKlasifikasiArsip.isActive, true),
-            ))
-            .limit(1)
+          // Cek nama unique jika diupdate
+          if (parsed.data.nama && parsed.data.nama !== existing.nama) {
+            const [duplicate] = await db
+              .select({ id: masterKlasifikasiArsip.id })
+              .from(masterKlasifikasiArsip)
+              .where(and(
+                eq(masterKlasifikasiArsip.nama, parsed.data.nama),
+                eq(masterKlasifikasiArsip.isActive, true),
+                ne(masterKlasifikasiArsip.id, params.id),
+              ))
+              .limit(1)
 
-          if (!parent) return Response.json({ error: 'Induk klasifikasi tidak ditemukan' }, { status: 400 })
-        }
+            if (duplicate) return Response.json({ error: "Nama klasifikasi `" + parsed.data.nama + "` sudah ada" }, { status: 409 })
+          }
 
-        const updateData: Partial<typeof masterKlasifikasiArsip.$inferInsert> = {}
-        if (parsed.data.nama !== undefined) updateData.nama = parsed.data.nama
-        if (parsed.data.deskripsi !== undefined) updateData.deskripsi = parsed.data.deskripsi
-        if (parsed.data.kode !== undefined) updateData.kode = parsed.data.kode
-        if (parsed.data.parent_id !== undefined) updateData.parentId = parsed.data.parent_id
+          // Cek kode unique jika diupdate
+          if (parsed.data.kode && parsed.data.kode !== existing.kode) {
+            const [duplicateKode] = await db
+              .select({ id: masterKlasifikasiArsip.id })
+              .from(masterKlasifikasiArsip)
+              .where(and(
+                eq(masterKlasifikasiArsip.kode, parsed.data.kode),
+                eq(masterKlasifikasiArsip.isActive, true),
+                ne(masterKlasifikasiArsip.id, params.id),
+              ))
+              .limit(1)
 
-        try {
+            if (duplicateKode) return Response.json({ error: "Kode klasifikasi `" + parsed.data.kode + "` sudah ada" }, { status: 409 })
+          }
+
+          // Validate parent_id if changing
+          if (parsed.data.parent_id !== undefined) {
+            // Cannot move to root (parent_id = null) - root "000" is fixed
+            if (parsed.data.parent_id === null) {
+              return Response.json({ error: 'Tidak bisa memindahkan ke root. Gunakan induk lain.' }, { status: 400 })
+            }
+
+            // Cannot be own parent
+            if (parsed.data.parent_id === params.id) {
+              return Response.json({ error: 'Tidak bisa memilih diri sendiri sebagai induk' }, { status: 400 })
+            }
+
+            // Check circular reference - cannot move to own descendant
+            if (parsed.data.parent_id) {
+              const isCircular = await isDescendantOf(params.id, parsed.data.parent_id)
+              if (isCircular) {
+                return Response.json({ error: 'Tidak bisa memindahkan ke subclass-nya sendiri (circular reference)' }, { status: 400 })
+              }
+            }
+
+            // Verify parent exists
+            const [parent] = await db
+              .select({ id: masterKlasifikasiArsip.id })
+              .from(masterKlasifikasiArsip)
+              .where(and(
+                eq(masterKlasifikasiArsip.id, parsed.data.parent_id),
+                eq(masterKlasifikasiArsip.isActive, true),
+              ))
+              .limit(1)
+
+            if (!parent) return Response.json({ error: 'Induk klasifikasi tidak ditemukan' }, { status: 400 })
+          }
+
+          const updateData: Partial<typeof masterKlasifikasiArsip.$inferInsert> = {}
+          if (parsed.data.nama !== undefined) updateData.nama = parsed.data.nama
+          if (parsed.data.deskripsi !== undefined) updateData.deskripsi = parsed.data.deskripsi
+          if (parsed.data.kode !== undefined) updateData.kode = parsed.data.kode
+          if (parsed.data.parent_id !== undefined) updateData.parentId = parsed.data.parent_id
+
           const [data] = await db
             .update(masterKlasifikasiArsip)
             .set(updateData)
@@ -192,46 +192,46 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
         const authError = await requireAdminOrArsiparis(request, 'menghapus')
         if (authError) return authError
 
-        // Verify exists and check if root
-        const [existing] = await db
-          .select({ id: masterKlasifikasiArsip.id, kode: masterKlasifikasiArsip.kode })
-          .from(masterKlasifikasiArsip)
-          .where(and(
-            eq(masterKlasifikasiArsip.id, params.id),
-            eq(masterKlasifikasiArsip.isActive, true),
-          ))
-          .limit(1)
-
-        if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
-
-        // Prevent deleting root "000"
-        if (existing.kode === '000') {
-          return Response.json({ error: 'Klasifikasi root tidak bisa dihapus' }, { status: 403 })
-        }
-
-        // Get all descendants to cascade soft delete
-        const descendantIds = await getDescendantIds(params.id)
-        const allIdsToDelete = [params.id, ...descendantIds]
-
-        // Soft delete all
         try {
+          // Verify exists and check if root
+          const [existing] = await db
+            .select({ id: masterKlasifikasiArsip.id, kode: masterKlasifikasiArsip.kode })
+            .from(masterKlasifikasiArsip)
+            .where(and(
+              eq(masterKlasifikasiArsip.id, params.id),
+              eq(masterKlasifikasiArsip.isActive, true),
+            ))
+            .limit(1)
+
+          if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
+
+          // Prevent deleting root "000"
+          if (existing.kode === '000') {
+            return Response.json({ error: 'Klasifikasi root tidak bisa dihapus' }, { status: 403 })
+          }
+
+          // Get all descendants to cascade soft delete
+          const descendantIds = await getDescendantIds(params.id)
+          const allIdsToDelete = [params.id, ...descendantIds]
+
+          // Soft delete all
           await db
             .update(masterKlasifikasiArsip)
             .set({ isActive: false })
             .where(inArray(masterKlasifikasiArsip.id, allIdsToDelete))
+
+          const deletedCount = allIdsToDelete.length
+          return Response.json({
+            success: true,
+            message: deletedCount > 1
+              ? `Klasifikasi dan ${deletedCount - 1} subclass berhasil dinonaktifkan`
+              : 'Klasifikasi berhasil dinonaktifkan',
+            deleted_count: deletedCount,
+          })
         } catch (err) {
           console.error('[arsiparis/klasifikasi/$id] DELETE local query error:', err)
           return Response.json({ error: 'Gagal menghapus klasifikasi' }, { status: 500 })
         }
-
-        const deletedCount = allIdsToDelete.length
-        return Response.json({
-          success: true,
-          message: deletedCount > 1
-            ? `Klasifikasi dan ${deletedCount - 1} subclass berhasil dinonaktifkan`
-            : 'Klasifikasi berhasil dinonaktifkan',
-          deleted_count: deletedCount,
-        })
       },
     },
   },
