@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { setClientAuthState } from '#/lib/auth-state'
+import { getDefaultRouteForRoles } from '#/lib/constants/routes'
 import { z } from 'zod'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -88,8 +89,7 @@ function LoginPage() {
         isReady: true,
       })
 
-      // ADMIN -> redirect ke /admin, yang lain ke /
-      window.location.href = data.activeRole === 'ADMIN' ? '/admin' : '/'
+      window.location.href = getDefaultRouteForRoles(data.roles, data.activeRole)
 
     } catch (error) {
       if (error instanceof ApiError) {

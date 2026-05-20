@@ -1,4 +1,4 @@
-import type { RoleName } from './roles'
+import { ROLE_NAMES, type RoleName } from './roles'
 
 export const ROUTES = {
   HOME: '/',
@@ -57,15 +57,28 @@ export const ROUTES = {
 export const PUBLIC_PATHS = [ROUTES.LOGIN, ROUTES.API_PREFIX] as const
 
 export const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
-  PEGAWAI: ROUTES.HOME,
+  PEGAWAI: ROUTES.PEGAWAI.ROOT,
   PPK: ROUTES.PPK.ROOT,
   BENDAHARA: ROUTES.BENDAHARA.ROOT,
   ARSIPARIS: ROUTES.ARSIPARIS.ROOT,
   ADMIN: ROUTES.ADMIN.ROOT,
 }
 
+export function getDefaultRouteForRoles(
+  assignedRoles: readonly RoleName[],
+  activeUxRole?: RoleName | null,
+): string {
+  if (activeUxRole && assignedRoles.includes(activeUxRole)) {
+    return ROLE_DEFAULT_ROUTE[activeUxRole]
+  }
+
+  const firstAssignedRole = ROLE_NAMES.find((role) => assignedRoles.includes(role))
+  return firstAssignedRole ? ROLE_DEFAULT_ROUTE[firstAssignedRole] : ROUTES.LOGIN
+}
+
 export const MESH_ROUTES = [
   ROUTES.HOME,
+  ROUTES.PEGAWAI.ROOT,
   ROUTES.PPK.ROOT,
   ROUTES.BENDAHARA.ROOT,
   ROUTES.ARSIPARIS.ROOT,

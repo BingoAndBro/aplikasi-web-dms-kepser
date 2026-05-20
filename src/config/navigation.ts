@@ -48,7 +48,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
   PEGAWAI: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.HOME }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.PEGAWAI.ROOT }],
     },
     {
       title: 'MANAGEMENT',
