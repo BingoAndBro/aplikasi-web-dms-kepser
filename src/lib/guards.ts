@@ -23,7 +23,8 @@ export function requireAuth(
   const authState = currentAuthState ?? getClientAuthState()
   logDev('[GUARD] requireAuth', {
     userId: authState?.userId,
-    role: authState?.activeRole,
+    userRoles: authState?.roles ?? [],
+    activeUxRole: authState?.activeRole,
     isReady: authState?.isReady,
   }, `requireAuth:${authState?.userId ?? 'none'}:${authState?.activeRole ?? 'none'}:${authState?.isReady ? '1' : '0'}`)
 
@@ -64,9 +65,10 @@ export function guardRole(role: RoleName) {
     if (!authenticatedState) return
 
     logDev('[GUARD] guardRole', {
-      requiredRole: role,
+      requiredRouteRole: role,
       userId: authenticatedState.userId,
-      activeRole: authenticatedState.activeRole,
+      userRoles: authenticatedState.roles ?? [],
+      activeUxRole: authenticatedState.activeRole,
     }, `guardRole:${role}:${authenticatedState.userId ?? 'none'}:${authenticatedState.activeRole ?? 'none'}`)
 
     if (!authenticatedState.roles?.includes(role)) {
