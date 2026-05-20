@@ -2,14 +2,19 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import {
   analyzeLocalStorageReferences,
+  DEFAULT_PENDING_CLEANUP_MIN_AGE_MINUTES,
   deleteLocalOrphanCandidates,
+  getEligiblePendingCleanupPaths,
 } from '#/lib/storage/local-storage-diagnostics'
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/cleanup-orphan-files
 // Query params:
-//   - pending_only=true : report pending files only; local pending files are not deleted in 9G
 //   - dry_run=true|false : defaults to true; destructive cleanup requires dry_run=false
+//   - pending_only=true : report/clean only eligible pending files
+//   - include_pending=true : include eligible pending files in cleanup candidates
+//   - min_age_minutes=1440 : minimum pending age before cleanup eligibility
+//   - confirm=true : required together with dry_run=false before deleting pending files
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
@@ -26,6 +31,17 @@ export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
         const url = new URL(request.url)
         const dryRun = url.searchParams.get('dry_run') !== 'false'
         const pendingOnly = url.searchParams.get('pending_only') === 'true'
+        const includePending = url.searchParams.get('include_pending') === 'true'
+        const confirm = url.searchParams.get('confirm') === 'true'
+        const parsedMinAgeMinutes = parseMinAgeMinutes(url.searchParams.get('min_age_minutes'))
+
+        if (parsedMinAgeMinutes === null) {
+          return Response.json({
+            error: 'min_age_minutes harus berupa angka >= 0',
+          }, { status: 400 })
+        }
+
+        const minAgeMinutes = parsedMinAgeMinutes
 
         try {
           const { db } = await import('#/db/client')
@@ -53,19 +69,62 @@ export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
             archives,
           })
           const orphanPaths = pendingOnly ? [] : analysis.orphan_paths
-          const pendingPaths = pendingOnly ? analysis.pending_paths : []
+          const pendingPaths = analysis.pending_paths
+          const pendingDeletionArmed = includePending && !dryRun && confirm
+          const thresholdEligiblePendingPaths = getEligiblePendingCleanupPaths(
+            analysis.pending_path_details,
+            minAgeMinutes,
+          )
+          const eligiblePendingPaths = includePending || pendingOnly
+            ? thresholdEligiblePendingPaths
+            : []
+          const recentPendingPaths = analysis.pending_path_details
+            .filter(detail => !thresholdEligiblePendingPaths.includes(detail.path))
+            .map(detail => detail.path)
+            .sort()
+          const pendingCleanupPaths = pendingDeletionArmed ? thresholdEligiblePendingPaths : []
+          const cleanupCandidatePaths = [...orphanPaths, ...pendingCleanupPaths].sort()
+          const dryRunCandidatePaths = [
+            ...orphanPaths,
+            ...(includePending || pendingOnly ? thresholdEligiblePendingPaths : []),
+          ].sort()
+          const skippedPendingCount = pendingPaths.length - pendingCleanupPaths.length
+          const skippedRecentPendingCount = recentPendingPaths.length
 
-          if (orphanPaths.length === 0) {
+          if (dryRun && dryRunCandidatePaths.length > 0) {
+            return Response.json({
+              message: pendingOnly ? 'Cleanup pending dry-run' : 'Cleanup dry-run',
+              deleted_count: 0,
+              orphan_paths: orphanPaths,
+              dry_run: true,
+              pending_only: pendingOnly,
+              include_pending: includePending,
+              min_age_minutes: minAgeMinutes,
+              pending_cleanup_confirmed: confirm,
+              skipped_pending_count: pendingPaths.length,
+              skipped_recent_pending_count: skippedRecentPendingCount,
+              pending_paths: pendingPaths,
+              eligible_pending_paths: eligiblePendingPaths,
+              analysis_summary: analysis.summary,
+            })
+          }
+
+          if (cleanupCandidatePaths.length === 0) {
             return Response.json({
               message: pendingOnly
-                ? 'Tidak ada file orphan yang memenuhi syarat cleanup; file pending hanya dilaporkan'
+                ? 'Tidak ada file pending yang memenuhi syarat cleanup; file pending hanya dilaporkan'
                 : 'Tidak ada file orphan',
               deleted_count: 0,
               orphan_paths: orphanPaths,
               dry_run: dryRun,
               pending_only: pendingOnly,
-              skipped_pending_count: pendingPaths.length,
+              include_pending: includePending,
+              min_age_minutes: minAgeMinutes,
+              pending_cleanup_confirmed: confirm,
+              skipped_pending_count: skippedPendingCount,
+              skipped_recent_pending_count: skippedRecentPendingCount,
               pending_paths: pendingPaths,
+              eligible_pending_paths: eligiblePendingPaths,
               analysis_summary: analysis.summary,
             })
           }
@@ -77,13 +136,22 @@ export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
               orphan_paths: orphanPaths,
               dry_run: true,
               pending_only: pendingOnly,
+              include_pending: includePending,
+              min_age_minutes: minAgeMinutes,
+              pending_cleanup_confirmed: confirm,
               skipped_pending_count: pendingPaths.length,
+              skipped_recent_pending_count: skippedRecentPendingCount,
               pending_paths: pendingPaths,
+              eligible_pending_paths: eligiblePendingPaths,
               analysis_summary: analysis.summary,
             })
           }
 
-          const cleanup = await deleteLocalOrphanCandidates(orphanPaths)
+          const cleanup = await deleteLocalOrphanCandidates(cleanupCandidatePaths, {
+            allowedClassifications: pendingDeletionArmed
+              ? ['formal', 'pending-dash', 'pending-upload-api']
+              : ['formal'],
+          })
 
           if (cleanup.failedCount > 0) {
             return Response.json({
@@ -96,7 +164,13 @@ export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
               compensationRequired: true,
               dry_run: false,
               pending_only: pendingOnly,
-              skipped_pending_count: pendingPaths.length,
+              include_pending: includePending,
+              min_age_minutes: minAgeMinutes,
+              pending_cleanup_confirmed: confirm,
+              skipped_pending_count: skippedPendingCount,
+              skipped_recent_pending_count: skippedRecentPendingCount,
+              pending_paths: pendingPaths,
+              eligible_pending_paths: eligiblePendingPaths,
               analysis_summary: analysis.summary,
             }, { status: 500 })
           }
@@ -108,7 +182,13 @@ export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
             missing_count: cleanup.missingCount,
             dry_run: false,
             pending_only: pendingOnly,
-            skipped_pending_count: pendingPaths.length,
+            include_pending: includePending,
+            min_age_minutes: minAgeMinutes,
+            pending_cleanup_confirmed: confirm,
+            skipped_pending_count: skippedPendingCount,
+            skipped_recent_pending_count: skippedRecentPendingCount,
+            pending_paths: pendingPaths,
+            eligible_pending_paths: eligiblePendingPaths,
             analysis_summary: analysis.summary,
           })
         } catch {
@@ -119,3 +199,14 @@ export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
     },
   },
 })
+
+function parseMinAgeMinutes(value: string | null): number | null {
+  if (value === null || value.trim() === '') {
+    return DEFAULT_PENDING_CLEANUP_MIN_AGE_MINUTES
+  }
+
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) return null
+
+  return Math.floor(parsed)
+}

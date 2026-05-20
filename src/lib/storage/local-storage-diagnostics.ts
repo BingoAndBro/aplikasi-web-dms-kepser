@@ -11,6 +11,8 @@ import {
   type StoragePathClassification,
 } from '#/lib/storage/local-storage-paths'
 
+export const DEFAULT_PENDING_CLEANUP_MIN_AGE_MINUTES = 1440
+
 type AttachmentReference = {
   url?: unknown
 }
@@ -40,6 +42,14 @@ export type LocalStorageFolderDetails = {
   unsafe_count: number
 }
 
+export type LocalPendingStoragePathDetails = {
+  path: string
+  classification: Extract<StoragePathClassification, 'pending-dash' | 'pending-upload-api'>
+  age_minutes: number | null
+  last_modified_at: string | null
+  eligible_for_cleanup_default: boolean
+}
+
 export type LocalStorageAnalysis = {
   summary: {
     total_folders: number
@@ -51,6 +61,8 @@ export type LocalStorageAnalysis = {
     total_unsafe_files: number
     total_missing_referenced_files: number
     total_legacy_unsupported_metadata_references: number
+    total_eligible_pending_files_for_default_cleanup: number
+    total_recent_pending_files_for_default_cleanup: number
   }
   folder_details: Record<string, LocalStorageFolderDetails>
   orphan_paths: string[]
@@ -58,6 +70,9 @@ export type LocalStorageAnalysis = {
   referenced_paths: string[]
   missing_referenced_paths: string[]
   pending_paths: string[]
+  pending_path_details: LocalPendingStoragePathDetails[]
+  eligible_pending_paths: string[]
+  recent_pending_paths: string[]
   unsupported_paths: string[]
   unsafe_paths: string[]
   metadata_issues: Array<{
@@ -74,13 +89,19 @@ export type LocalOrphanCleanupResult = {
   failedCount: number
   failures: Array<{
     path: string
-    code: 'invalid-local-path' | 'not-a-file' | 'path-outside-root' | 'delete-failed'
+    code:
+      | 'invalid-local-path'
+      | 'not-a-file'
+      | 'path-outside-root'
+      | 'delete-failed'
+      | 'unsupported-path'
   }>
 }
 
 type ScannedStoragePath = {
   logicalPath: string
   classification: StoragePathClassification
+  modifiedAtMs: number
 }
 
 type UnsafeStoragePath = {
@@ -103,6 +124,7 @@ export async function analyzeLocalStorageReferences({
   const orphanPaths: string[] = []
   const referencedPaths: string[] = []
   const pendingPaths: string[] = []
+  const pendingPathDetails: LocalPendingStoragePathDetails[] = []
   const unsupportedPaths: string[] = []
   const unsafePaths = scanned.unsafe.map(file => file.logicalPath)
 
@@ -123,9 +145,11 @@ export async function analyzeLocalStorageReferences({
       file.classification === 'pending-dash'
       || file.classification === 'pending-upload-api'
     ) {
+      const pendingDetail = createPendingPathDetails(file)
       details.pending_files.push(folderFile)
       details.pending_count += 1
       pendingPaths.push(file.logicalPath)
+      pendingPathDetails.push(pendingDetail)
       continue
     }
 
@@ -152,6 +176,13 @@ export async function analyzeLocalStorageReferences({
   const missingReferencedPaths = [...metadata.referencedPaths]
     .filter(referencedPath => !localPathSet.has(referencedPath))
     .sort()
+  const sortedPendingPathDetails = pendingPathDetails.sort((left, right) => left.path.localeCompare(right.path))
+  const eligiblePendingPaths = sortedPendingPathDetails
+    .filter(detail => detail.eligible_for_cleanup_default)
+    .map(detail => detail.path)
+  const recentPendingPaths = sortedPendingPathDetails
+    .filter(detail => !detail.eligible_for_cleanup_default)
+    .map(detail => detail.path)
 
   return {
     summary: {
@@ -164,6 +195,8 @@ export async function analyzeLocalStorageReferences({
       total_unsafe_files: unsafePaths.length,
       total_missing_referenced_files: missingReferencedPaths.length,
       total_legacy_unsupported_metadata_references: metadata.issues.length,
+      total_eligible_pending_files_for_default_cleanup: eligiblePendingPaths.length,
+      total_recent_pending_files_for_default_cleanup: recentPendingPaths.length,
     },
     folder_details: sortFolderDetails(folderDetails),
     orphan_paths: orphanPaths.sort(),
@@ -171,19 +204,41 @@ export async function analyzeLocalStorageReferences({
     referenced_paths: referencedPaths.sort(),
     missing_referenced_paths: missingReferencedPaths,
     pending_paths: pendingPaths.sort(),
+    pending_path_details: sortedPendingPathDetails,
+    eligible_pending_paths: eligiblePendingPaths,
+    recent_pending_paths: recentPendingPaths,
     unsupported_paths: unsupportedPaths.sort(),
     unsafe_paths: unsafePaths.sort(),
     metadata_issues: metadata.issues,
   }
 }
 
+export function getEligiblePendingCleanupPaths(
+  pendingPathDetails: LocalPendingStoragePathDetails[],
+  minAgeMinutes: number,
+): string[] {
+  const safeMinAgeMinutes = Math.max(0, Math.floor(minAgeMinutes))
+
+  return pendingPathDetails
+    .filter((detail) => {
+      if (detail.age_minutes === null) return false
+      return detail.age_minutes >= safeMinAgeMinutes
+    })
+    .map(detail => detail.path)
+    .sort()
+}
+
 export async function deleteLocalOrphanCandidates(
   logicalPaths: string[],
+  options: {
+    allowedClassifications?: StoragePathClassification[]
+  } = {},
 ): Promise<LocalOrphanCleanupResult> {
   let deletedCount = 0
   let missingCount = 0
   const failures: LocalOrphanCleanupResult['failures'] = []
   const storageRoot = getLocalStorageRoot()
+  const allowedClassifications = new Set(options.allowedClassifications ?? ['formal'])
 
   for (const logicalPath of logicalPaths) {
     let safeLogicalPath: string
@@ -194,6 +249,11 @@ export async function deleteLocalOrphanCandidates(
       physicalPath = resolvePhysicalStoragePath(storageRoot, safeLogicalPath)
     } catch {
       failures.push({ path: safeLogicalPathForResponse(logicalPath), code: 'invalid-local-path' })
+      continue
+    }
+
+    if (!allowedClassifications.has(classifyStoragePath(safeLogicalPath))) {
+      failures.push({ path: safeLogicalPath, code: 'unsupported-path' })
       continue
     }
 
@@ -406,9 +466,11 @@ async function scanDirectory({
       continue
     }
 
+    const stats = await lstat(physicalPath)
     files.push({
       logicalPath: safeLogicalPath,
       classification: classifyStoragePath(safeLogicalPath),
+      modifiedAtMs: stats.mtimeMs,
     })
   }
 }
@@ -483,6 +545,23 @@ function sortFolderDetails(
         },
       ]),
   )
+}
+
+function createPendingPathDetails(file: ScannedStoragePath): LocalPendingStoragePathDetails {
+  const ageMinutes = Number.isFinite(file.modifiedAtMs)
+    ? Math.max(0, Math.floor((Date.now() - file.modifiedAtMs) / 60000))
+    : null
+
+  return {
+    path: file.logicalPath,
+    classification: file.classification === 'pending-dash' ? 'pending-dash' : 'pending-upload-api',
+    age_minutes: ageMinutes,
+    last_modified_at: Number.isFinite(file.modifiedAtMs)
+      ? new Date(file.modifiedAtMs).toISOString()
+      : null,
+    eligible_for_cleanup_default: ageMinutes !== null
+      && ageMinutes >= DEFAULT_PENDING_CLEANUP_MIN_AGE_MINUTES,
+  }
 }
 
 function safeLogicalPathForResponse(value: string): string {
