@@ -1,4 +1,8 @@
 import { z } from 'zod'
+import {
+  DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR,
+  findDuplicateAdditionalKelengkapanName,
+} from '#/lib/kelengkapan-validation'
 
 // ---------------------------------------------------------------------------
 // Lampiran entry (stored as JSON in lampiran_urls column)
@@ -15,6 +19,22 @@ export const lampiranUrlSchema = z.object({
 })
 
 export const lampiranUrlsSchema = z.array(lampiranUrlSchema)
+
+export const requestLampiranUrlsSchema = z.array(lampiranUrlSchema).superRefine((lampiranUrls, ctx) => {
+  const duplicateName = findDuplicateAdditionalKelengkapanName(lampiranUrls)
+  if (!duplicateName) return
+
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: `${DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR}: "${duplicateName}"`,
+  })
+})
+
+export function getDokumenValidationErrorMessage(error: z.ZodError): string {
+  return error.issues.find(issue =>
+    issue.message.startsWith(DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR)
+  )?.message ?? 'Validasi gagal'
+}
 
 // ---------------------------------------------------------------------------
 // Create dokumen
@@ -35,7 +55,7 @@ export const createDokumenSchema = z.object({
       today.setHours(0, 0, 0, 0)
       return selected <= today
     }, { message: 'Tanggal tidak boleh melewati hari ini' }),
-  lampiranUrls: z.array(lampiranUrlSchema).default([]),
+  lampiranUrls: requestLampiranUrlsSchema.default([]),
   jenisPermintaanId: z.string().uuid().optional(),
   kategoriPermintaanId: z.string().uuid().optional(),
   detailPermintaanId: z.string().uuid().optional(),
@@ -46,7 +66,7 @@ export const createDokumenSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const updateDokumenSchema = z.object({
-  lampiranUrls: z.array(lampiranUrlSchema).optional(),
+  lampiranUrls: requestLampiranUrlsSchema.optional(),
   judul: z.string().min(3, 'Judul minimal 3 karakter').max(255, 'Judul maksimal 255 karakter').optional(),
   tahun: z.number().int().min(2000).max(2100).optional(),
   fungsiId: z.string().uuid('ID fungsi tidak valid').optional(),
@@ -99,7 +119,7 @@ export const createAndSubmitDokumenSchema = z.object({
       today.setHours(0, 0, 0, 0)
       return selected <= today
     }, { message: 'Tanggal tidak boleh melewati hari ini' }),
-  lampiranUrls: z.array(lampiranUrlSchema),
+  lampiranUrls: requestLampiranUrlsSchema,
   nominal_realisasi: z.number()
     .min(0, 'Nominal tidak boleh negatif')
     .max(999999999999, 'Nominal terlalu besar')
@@ -129,7 +149,7 @@ export const rejectDokumenSchema = z.object({
 
 // Resubmit by PPK after Bendahara rejection — optional lampiran update
 export const resubmitDokumenSchema = z.object({
-  lampiranUrls: z.array(lampiranUrlSchema).optional(),
+  lampiranUrls: requestLampiranUrlsSchema.optional(),
   nominalRealisasi: z.number().min(0).max(999999999999).nullable().optional(),
 }).strict()
 

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
   masterDetailPermintaan,
@@ -10,6 +10,7 @@ import {
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { updateKelengkapanSchema } from '#/lib/schemas/master-data'
+import { normalizeKelengkapanName } from '#/lib/kelengkapan-validation'
 
 async function requireAdmin(request: Request, action: 'mengubah' | 'menghapus') {
   const session = await getLocalServerSession(request)
@@ -72,6 +73,47 @@ async function validateKelengkapanChain(payload: {
   return null
 }
 
+async function findDuplicateKelengkapan(payload: {
+  id: string
+  kegiatanId: string
+  isKetuaTim: boolean
+  namaDokumen: string
+  jenisPermintaanId?: string | null
+  kategoriPermintaanId?: string | null
+  detailPermintaanId?: string | null
+}): Promise<{ id: string; nama_dokumen: string } | null> {
+  const normalizedName = normalizeKelengkapanName(payload.namaDokumen)
+  if (!normalizedName) return null
+
+  const jenisPermintaanId = payload.jenisPermintaanId ?? null
+  const kategoriPermintaanId = payload.kategoriPermintaanId ?? null
+  const detailPermintaanId = payload.detailPermintaanId ?? null
+
+  const rows = await db
+    .select({
+      id: masterKelengkapanDokumen.id,
+      nama_dokumen: masterKelengkapanDokumen.namaDokumen,
+    })
+    .from(masterKelengkapanDokumen)
+    .where(and(
+      eq(masterKelengkapanDokumen.kegiatanId, payload.kegiatanId),
+      eq(masterKelengkapanDokumen.isKetuaTim, payload.isKetuaTim),
+      jenisPermintaanId
+        ? eq(masterKelengkapanDokumen.jenisPermintaanId, jenisPermintaanId)
+        : isNull(masterKelengkapanDokumen.jenisPermintaanId),
+      kategoriPermintaanId
+        ? eq(masterKelengkapanDokumen.kategoriPermintaanId, kategoriPermintaanId)
+        : isNull(masterKelengkapanDokumen.kategoriPermintaanId),
+      detailPermintaanId
+        ? eq(masterKelengkapanDokumen.detailPermintaanId, detailPermintaanId)
+        : isNull(masterKelengkapanDokumen.detailPermintaanId),
+    ))
+
+  return rows.find(row =>
+    row.id !== payload.id && normalizeKelengkapanName(row.nama_dokumen) === normalizedName
+  ) ?? null
+}
+
 export const Route = createFileRoute('/api/master-kelengkapan/$id')({
   server: {
     handlers: {
@@ -99,6 +141,9 @@ export const Route = createFileRoute('/api/master-kelengkapan/$id')({
         const [existing] = await db
           .select({
             id: masterKelengkapanDokumen.id,
+            kegiatan_id: masterKelengkapanDokumen.kegiatanId,
+            is_ketua_tim: masterKelengkapanDokumen.isKetuaTim,
+            nama_dokumen: masterKelengkapanDokumen.namaDokumen,
             jenis_permintaan_id: masterKelengkapanDokumen.jenisPermintaanId,
             kategori_permintaan_id: masterKelengkapanDokumen.kategoriPermintaanId,
             detail_permintaan_id: masterKelengkapanDokumen.detailPermintaanId,
@@ -127,6 +172,28 @@ export const Route = createFileRoute('/api/master-kelengkapan/$id')({
         }
 
         try {
+          const nextScope = {
+            id,
+            kegiatanId: existing.kegiatan_id,
+            isKetuaTim: result.data.isKetuaTim ?? existing.is_ketua_tim,
+            namaDokumen: result.data.namaDokumen ?? existing.nama_dokumen,
+            jenisPermintaanId: result.data.jenisPermintaanId !== undefined
+              ? result.data.jenisPermintaanId
+              : existing.jenis_permintaan_id,
+            kategoriPermintaanId: result.data.kategoriPermintaanId !== undefined
+              ? result.data.kategoriPermintaanId
+              : existing.kategori_permintaan_id,
+            detailPermintaanId: result.data.detailPermintaanId !== undefined
+              ? result.data.detailPermintaanId
+              : existing.detail_permintaan_id,
+          }
+          const duplicate = await findDuplicateKelengkapan(nextScope)
+          if (duplicate) {
+            return Response.json({
+              error: 'Kelengkapan sudah ada untuk detail permintaan dan tipe ini',
+            }, { status: 409 })
+          }
+
           const updates: Partial<typeof masterKelengkapanDokumen.$inferInsert> = {}
           if (result.data.isKetuaTim !== undefined) updates.isKetuaTim = result.data.isKetuaTim
           if (result.data.namaDokumen !== undefined) updates.namaDokumen = result.data.namaDokumen

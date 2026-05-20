@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, asc, eq, type SQL } from 'drizzle-orm'
+import { and, asc, eq, isNull, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
   masterDetailPermintaan,
@@ -10,6 +10,7 @@ import {
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createKelengkapanSchema } from '#/lib/schemas/master-data'
+import { normalizeKelengkapanName } from '#/lib/kelengkapan-validation'
 
 async function requireAdmin(request: Request) {
   const session = await getLocalServerSession(request)
@@ -70,6 +71,44 @@ async function validateKelengkapanChain(payload: {
   }
 
   return null
+}
+
+async function findDuplicateKelengkapan(payload: {
+  kegiatanId: string
+  isKetuaTim: boolean
+  namaDokumen: string
+  jenisPermintaanId?: string | null
+  kategoriPermintaanId?: string | null
+  detailPermintaanId?: string | null
+}): Promise<{ id: string; nama_dokumen: string } | null> {
+  const normalizedName = normalizeKelengkapanName(payload.namaDokumen)
+  if (!normalizedName) return null
+
+  const jenisPermintaanId = payload.jenisPermintaanId ?? null
+  const kategoriPermintaanId = payload.kategoriPermintaanId ?? null
+  const detailPermintaanId = payload.detailPermintaanId ?? null
+
+  const rows = await db
+    .select({
+      id: masterKelengkapanDokumen.id,
+      nama_dokumen: masterKelengkapanDokumen.namaDokumen,
+    })
+    .from(masterKelengkapanDokumen)
+    .where(and(
+      eq(masterKelengkapanDokumen.kegiatanId, payload.kegiatanId),
+      eq(masterKelengkapanDokumen.isKetuaTim, payload.isKetuaTim),
+      jenisPermintaanId
+        ? eq(masterKelengkapanDokumen.jenisPermintaanId, jenisPermintaanId)
+        : isNull(masterKelengkapanDokumen.jenisPermintaanId),
+      kategoriPermintaanId
+        ? eq(masterKelengkapanDokumen.kategoriPermintaanId, kategoriPermintaanId)
+        : isNull(masterKelengkapanDokumen.kategoriPermintaanId),
+      detailPermintaanId
+        ? eq(masterKelengkapanDokumen.detailPermintaanId, detailPermintaanId)
+        : isNull(masterKelengkapanDokumen.detailPermintaanId),
+    ))
+
+  return rows.find(row => normalizeKelengkapanName(row.nama_dokumen) === normalizedName) ?? null
 }
 
 export const Route = createFileRoute('/api/master-kelengkapan')({
@@ -188,6 +227,13 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
         }
 
         try {
+          const duplicate = await findDuplicateKelengkapan(result.data)
+          if (duplicate) {
+            return Response.json({
+              error: 'Kelengkapan sudah ada untuk detail permintaan dan tipe ini',
+            }, { status: 409 })
+          }
+
           const [row] = await db
             .insert(masterKelengkapanDokumen)
             .values({

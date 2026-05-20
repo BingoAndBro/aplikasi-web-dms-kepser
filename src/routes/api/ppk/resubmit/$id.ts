@@ -12,7 +12,7 @@ import {
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
 import { parseLampiranUrls } from '#/lib/dokumen'
-import { resubmitDokumenSchema } from '#/lib/schemas/dokumen'
+import { getDokumenValidationErrorMessage, resubmitDokumenSchema } from '#/lib/schemas/dokumen'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import type { StatusDokumen } from '#/lib/types/fsm'
 import {
@@ -231,7 +231,12 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
 
         if (body.lampiranUrls !== undefined) {
           const parsed = resubmitDokumenSchema.safeParse(body)
-          if (!parsed.success) return Response.json({ error: 'Validasi gagal', details: parsed.error.flatten() }, { status: 400 })
+          if (!parsed.success) {
+            return Response.json({
+              error: getDokumenValidationErrorMessage(parsed.error),
+              details: parsed.error.flatten(),
+            }, { status: 400 })
+          }
         }
 
         if (!isUuid(params.id)) {
@@ -337,7 +342,10 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
         if (body.lampiranUrls !== undefined) {
           const parsed = resubmitDokumenSchema.safeParse(body)
           if (!parsed.success) {
-            return Response.json({ error: 'Validasi gagal', details: parsed.error.flatten() }, { status: 400 })
+            return Response.json({
+              error: getDokumenValidationErrorMessage(parsed.error),
+              details: parsed.error.flatten(),
+            }, { status: 400 })
           }
         }
 

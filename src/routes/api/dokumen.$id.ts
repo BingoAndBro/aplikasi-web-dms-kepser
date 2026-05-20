@@ -14,7 +14,7 @@ import {
   masterKegiatan,
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
-import { updateDokumenSchema } from '#/lib/schemas/dokumen'
+import { getDokumenValidationErrorMessage, updateDokumenSchema } from '#/lib/schemas/dokumen'
 import { type LampiranUrl } from '#/lib/dokumen-helpers'
 import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
 import {
@@ -388,7 +388,7 @@ export const Route = createFileRoute('/api/dokumen/$id')({
         const parsed = updateDokumenSchema.safeParse(body)
         if (!parsed.success) {
           return Response.json({
-            error: 'Validasi gagal',
+            error: getDokumenValidationErrorMessage(parsed.error),
             details: parsed.error.flatten(),
           }, { status: 400 })
         }

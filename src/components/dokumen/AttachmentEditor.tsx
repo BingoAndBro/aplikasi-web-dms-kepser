@@ -12,6 +12,11 @@ import { getSignedUrl, downloadWithSignedUrl } from '#/lib/storage-client'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
 import { logDev, warnDev } from '#/lib/dev-logger'
+import {
+  DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR,
+  findDuplicateAdditionalKelengkapanName,
+  normalizeKelengkapanName,
+} from '#/lib/kelengkapan-validation'
 
 const ACCEPTED_ATTACHMENT_FILE_TYPES = '.pdf,.doc,.docx,.xls,.xlsx'
 const PENDING_CLEANUP_ENDPOINT = '/api/upload?cleanup=pending'
@@ -85,6 +90,7 @@ export function AttachmentEditor({
   // Form state
   const [showAddForm, setShowAddForm] = useState(false)
   const [newDocTitle, setNewDocTitle] = useState('')
+  const [userDocError, setUserDocError] = useState('')
   const [nominalRealisasi, setNominalRealisasi] = useState<string>('')
   const [nominalError, setNominalError] = useState<string>('')
 
@@ -400,11 +406,21 @@ export function AttachmentEditor({
   // Handler: Add user document
   // ---------------------------------------------------------------------------
   function handleAddUserDoc() {
-    if (!newDocTitle.trim()) return
+    const trimmedTitle = newDocTitle.trim()
+    if (!trimmedTitle) return
+
+    const normalizedTitle = normalizeKelengkapanName(trimmedTitle)
+    const duplicate = userDocs.some(doc => normalizeKelengkapanName(doc.nama) === normalizedTitle)
+    if (duplicate) {
+      setUserDocError(`${DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR}: "${trimmedTitle}"`)
+      return
+    }
+
     const docId = `user-custom-${crypto.randomUUID()}`
-    logDev('[AttachmentEditor] Added user doc', { docId, nama: newDocTitle.trim() })
-    setUserDocs(prev => [...prev, { id: docId, nama: newDocTitle.trim() }])
+    logDev('[AttachmentEditor] Added user doc', { docId, nama: trimmedTitle })
+    setUserDocs(prev => [...prev, { id: docId, nama: trimmedTitle }])
     setNewDocTitle('')
+    setUserDocError('')
     setShowAddForm(false)
   }
 
@@ -520,6 +536,11 @@ export function AttachmentEditor({
         if (!l.kelengkapan_id.startsWith('user-custom-')) return true
         return userDocs.some(d => d.id === l.kelengkapan_id)
       })
+      const duplicateName = findDuplicateAdditionalKelengkapanName(finalLampirans)
+      if (duplicateName) {
+        setUserDocError(`${DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR}: "${duplicateName}"`)
+        return
+      }
 
       const nominalValueFinal = !isNonMaterial
         ? parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) || null
@@ -855,7 +876,10 @@ export function AttachmentEditor({
                 <input
                   type="text"
                   value={newDocTitle}
-                  onChange={e => setNewDocTitle(e.target.value)}
+                  onChange={e => {
+                    setNewDocTitle(e.target.value)
+                    setUserDocError('')
+                  }}
                   placeholder="Nama dokumen (misal: Bukti Transfer)"
                   className="flex-1 h-8 px-3 text-sm border border-blue-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400"
                   onKeyDown={e => {
@@ -865,7 +889,7 @@ export function AttachmentEditor({
                   autoFocus
                 />
                 <Button size="sm" onClick={handleAddUserDoc} disabled={!newDocTitle.trim()}>Simpan</Button>
-                <Button size="sm" variant="ghost" onClick={() => { setShowAddForm(false); setNewDocTitle('') }}>Batal</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setShowAddForm(false); setNewDocTitle(''); setUserDocError('') }}>Batal</Button>
               </div>
             ) : (
               <button
@@ -875,6 +899,11 @@ export function AttachmentEditor({
                 <Plus size={16} />
                 <span className="text-sm font-medium">Tambah Dokumen</span>
               </button>
+            )}
+            {userDocError && (
+              <p className="text-xs text-error flex items-center gap-1">
+                <AlertCircle size={12} /> {userDocError}
+              </p>
             )}
           </div>
         </div>

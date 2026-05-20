@@ -12,6 +12,10 @@ import { FileUploadButton } from './FileUploadButton'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import {
+  DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR,
+  normalizeKelengkapanName,
+} from '#/lib/kelengkapan-validation'
 
 type KelengkapanItem = {
   id: string
@@ -95,6 +99,7 @@ export function KelengkapanChecklist({
   const [userDocs, setUserDocs] = useState<UserOptionalDoc[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [newDocTitle, setNewDocTitle] = useState('')
+  const [userDocError, setUserDocError] = useState('')
 
   useEffect(() => {
     async function fetchKelengkapan() {
@@ -160,10 +165,20 @@ export function KelengkapanChecklist({
   }
 
   function addUserDoc() {
-    if (!newDocTitle.trim()) return
+    const trimmedTitle = newDocTitle.trim()
+    if (!trimmedTitle) return
+
+    const normalizedTitle = normalizeKelengkapanName(trimmedTitle)
+    const duplicate = userDocs.some(doc => normalizeKelengkapanName(doc.nama_dokumen) === normalizedTitle)
+    if (duplicate) {
+      setUserDocError(`${DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR}: "${trimmedTitle}"`)
+      return
+    }
+
     const id = `user-custom-${crypto.randomUUID()}`
-    setUserDocs(prev => [...prev, { id, nama_dokumen: newDocTitle.trim() }])
+    setUserDocs(prev => [...prev, { id, nama_dokumen: trimmedTitle }])
     setNewDocTitle('')
+    setUserDocError('')
     setShowAddForm(false)
   }
 
@@ -328,7 +343,10 @@ export function KelengkapanChecklist({
           <div className="flex items-center gap-2 p-3 border border-blue-200 bg-blue-50/30 rounded-lg">
             <Input
               value={newDocTitle}
-              onChange={(e) => setNewDocTitle(e.target.value)}
+              onChange={(e) => {
+                setNewDocTitle(e.target.value)
+                setUserDocError('')
+              }}
               placeholder="Ketik judul dokumen..."
               className="flex-1 h-8 text-xs"
               onKeyDown={(e) => {
@@ -350,12 +368,18 @@ export function KelengkapanChecklist({
               onClick={() => {
                 setShowAddForm(false)
                 setNewDocTitle('')
+                setUserDocError('')
               }}
               className="h-8 w-8"
             >
               <X size={14} />
             </Button>
           </div>
+        )}
+        {userDocError && (
+          <p className="text-xs text-error flex items-center gap-1">
+            <AlertCircle size={12} /> {userDocError}
+          </p>
         )}
 
         {/* User Documents List */}

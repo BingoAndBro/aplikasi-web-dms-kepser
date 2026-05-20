@@ -8,6 +8,7 @@ import { Label } from '#/components/ui/label'
 import { FileCheck, ChevronRight, Plus, Edit2, Trash2, CheckCircle2, Circle, Lock } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { normalizeKelengkapanName } from '#/lib/kelengkapan-validation'
 import type {
   DetailRow,
   FungsiRow,
@@ -37,6 +38,30 @@ function matchesSelectedChain(
   if (kategoriId && row.kategori_permintaan_id && row.kategori_permintaan_id !== kategoriId) return false
   if (detailId && row.detail_permintaan_id && row.detail_permintaan_id !== detailId) return false
   return true
+}
+
+function hasLoadedDuplicateKelengkapan(
+  items: KelengkapanRow[],
+  input: {
+    editingId?: string
+    isKetuaTim: boolean
+    namaDokumen: string
+    jenisPermintaanId: string | null
+    kategoriPermintaanId: string | null
+    detailPermintaanId: string | null
+  },
+): boolean {
+  const normalizedName = normalizeKelengkapanName(input.namaDokumen)
+  if (!normalizedName) return false
+
+  return items.some(item =>
+    item.id !== input.editingId
+    && item.is_ketua_tim === input.isKetuaTim
+    && (item.jenis_permintaan_id ?? null) === input.jenisPermintaanId
+    && (item.kategori_permintaan_id ?? null) === input.kategoriPermintaanId
+    && (item.detail_permintaan_id ?? null) === input.detailPermintaanId
+    && normalizeKelengkapanName(item.nama_dokumen) === normalizedName
+  )
 }
 
 function KelengkapanPage() {
@@ -181,6 +206,19 @@ function KelengkapanPage() {
 
   async function handleSave() {
     if (!formNamaDokumen.trim()) { setError('Nama dokumen tidak boleh kosong'); return }
+    const nextScope = {
+      editingId: editing?.id,
+      isKetuaTim: formIsKetuaTim,
+      namaDokumen: formNamaDokumen.trim(),
+      jenisPermintaanId: formJenisId || null,
+      kategoriPermintaanId: formKategoriId || null,
+      detailPermintaanId: formDetailId || null,
+    }
+    if (hasLoadedDuplicateKelengkapan(items, nextScope)) {
+      setError('Kelengkapan sudah ada untuk detail permintaan dan tipe ini')
+      return
+    }
+
     setSaving(true)
     try {
       if (editing) {

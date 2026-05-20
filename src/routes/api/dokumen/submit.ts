@@ -16,7 +16,11 @@ import {
 import { createLocalSubmitBridgeRepository } from '#/lib/dokumen/local-submit-repository'
 import { createLiveLocalSubmitDrizzleAdapter } from '#/lib/dokumen/local-submit-drizzle-adapter'
 import type { LampiranUrl } from '#/lib/dokumen/types'
-import { createAndSubmitDokumenSchema, validateNominalForMaterial } from '#/lib/schemas/dokumen'
+import {
+  createAndSubmitDokumenSchema,
+  getDokumenValidationErrorMessage,
+  validateNominalForMaterial,
+} from '#/lib/schemas/dokumen'
 import { buildSubmitMovePlan } from '#/lib/storage/submit-move-plan'
 import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
 import {
@@ -413,7 +417,7 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         const parsed = createAndSubmitDokumenSchema.safeParse(body)
         if (!parsed.success) {
           return Response.json({
-            error: 'Validasi gagal',
+            error: getDokumenValidationErrorMessage(parsed.error),
             details: parsed.error.flatten(),
           }, { status: 400 })
         }
