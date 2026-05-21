@@ -14,8 +14,10 @@ const LOCAL_FILE_CONTENT = '%PDF-1.4 runtime preview content'
 
 const mocks = vi.hoisted(() => {
   const getLocalServerSession = vi.fn()
+  const authorizeRawLogicalPathAccess = vi.fn()
 
   return {
+    authorizeRawLogicalPathAccess,
     getLocalServerSession,
   }
 })
@@ -23,6 +25,15 @@ const mocks = vi.hoisted(() => {
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
 }))
+
+vi.mock('#/lib/storage/internal-file-access', async importOriginal => {
+  const actual = await importOriginal<typeof import('#/lib/storage/internal-file-access')>()
+
+  return {
+    ...actual,
+    authorizeRawLogicalPathAccess: mocks.authorizeRawLogicalPathAccess,
+  }
+})
 
 type PreviewHandler = (args: { request: Request }) => Promise<Response>
 
@@ -93,6 +104,7 @@ describe('raw preview internal URL runtime verification', () => {
     await rm(TEST_ROOT, { force: true, recursive: true })
 
     mocks.getLocalServerSession.mockResolvedValue(session())
+    mocks.authorizeRawLogicalPathAccess.mockResolvedValue({ ok: true })
   })
 
   afterEach(async () => {
@@ -114,6 +126,7 @@ describe('raw preview internal URL runtime verification', () => {
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: async () => ({ documents: [], archives: [] }),
     })
 
     expect(fileResponse.status).toBe(200)
@@ -145,6 +158,7 @@ describe('raw preview internal URL runtime verification', () => {
       session: null,
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: async () => ({ documents: [], archives: [] }),
     })
 
     expect(response.status).toBe(401)
@@ -158,6 +172,7 @@ describe('raw preview internal URL runtime verification', () => {
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: async () => ({ documents: [], archives: [] }),
     })
 
     expect(response.status).toBe(404)
@@ -177,6 +192,11 @@ describe('raw preview internal URL runtime verification', () => {
 
   it('does not generate an internal token before raw preview path authorization passes', async () => {
     mocks.getLocalServerSession.mockResolvedValue(session('other-user'))
+    mocks.authorizeRawLogicalPathAccess.mockResolvedValue({
+      ok: false,
+      status: 403,
+      message: 'Anda tidak memiliki akses',
+    })
 
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}&useInternal=true`),

@@ -5,9 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ROLES, type RoleName } from '#/lib/constants/roles'
 import {
+  authorizeRawLogicalPathAccess,
   canAccessLogicalFilePath,
   getFileTokenSecret,
   handleInternalFileAccessRequest,
+  type RawLogicalPathAccessContext,
 } from '#/lib/storage/internal-file-access'
 import {
   signFileAccessToken,
@@ -57,6 +59,20 @@ function requestWithToken(token?: string): Request {
 
 function session(userId = 'owner-user', roles: RoleName[] = [ROLES.PEGAWAI]) {
   return { userId, roles, sessionId: 'unit-test-session' }
+}
+
+function rawContext(
+  overrides: Partial<RawLogicalPathAccessContext> = {},
+): RawLogicalPathAccessContext {
+  return {
+    documents: [],
+    archives: [],
+    ...overrides,
+  }
+}
+
+function rawContextResolver(context: RawLogicalPathAccessContext = rawContext()) {
+  return vi.fn(async () => context)
 }
 
 async function json(response: Response): Promise<Record<string, unknown>> {
@@ -116,6 +132,7 @@ describe('internal file access foundation', () => {
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
     })
 
     expect(response.status).toBe(200)
@@ -138,6 +155,7 @@ describe('internal file access foundation', () => {
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
     })
 
     expect(response.status).toBe(200)
@@ -181,6 +199,7 @@ describe('internal file access foundation', () => {
       session: session('other-user', [ROLES.PEGAWAI]),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
     })
 
     expect(response.status).toBe(403)
@@ -190,12 +209,30 @@ describe('internal file access foundation', () => {
   it('allows raw-path compatibility roles to stream local files', async () => {
     await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
 
-    for (const role of [ROLES.PPK, ROLES.BENDAHARA, ROLES.ARSIPARIS]) {
+    const compatibleRoleCases: Array<{
+      role: RoleName
+      status: string
+      revisionTarget?: string | null
+    }> = [
+      { role: ROLES.PPK, status: 'IN_PPK_VALIDATION' },
+      { role: ROLES.BENDAHARA, status: 'IN_BENDAHARA_APPROVAL' },
+      { role: ROLES.ARSIPARIS, status: 'COMPLETED' },
+    ]
+
+    for (const { role, status, revisionTarget = null } of compatibleRoleCases) {
       const response = await handleInternalFileAccessRequest({
         request: requestWithToken(signedToken(logicalPathPayload())),
         session: session('other-user', [role]),
         secret: TEST_SECRET,
         root: TEST_ROOT,
+        rawLogicalPathAccessContextResolver: rawContextResolver(rawContext({
+          documents: [{
+            id: 'document-id',
+            createdBy: 'owner-user',
+            status,
+            revisionTarget,
+          }],
+        })),
       })
 
       expect(response.status).toBe(200)
@@ -227,6 +264,7 @@ describe('internal file access foundation', () => {
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
     })
     const bodyText = JSON.stringify(await json(response))
 
@@ -243,6 +281,7 @@ describe('internal file access foundation', () => {
       session: session('other-user', [ROLES.PEGAWAI]),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
     })
 
     expect(response.status).toBe(403)
@@ -274,6 +313,106 @@ describe('internal file access foundation', () => {
     expect(canAccessLogicalFilePath(session('owner-user'), 'owner-user/file.pdf')).toBe(true)
     expect(canAccessLogicalFilePath(session('other-user'), 'owner-user/file.pdf')).toBe(false)
     expect(canAccessLogicalFilePath(session('other-user', [ROLES.PPK]), 'owner-user/file.pdf')).toBe(true)
+  })
+
+  it('blocks raw token access when current archive state is DIMUSNAHKAN', async () => {
+    await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload())),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(rawContext({
+        documents: [{
+          id: 'document-id',
+          createdBy: 'owner-user',
+          status: 'ARCHIVED',
+          revisionTarget: null,
+        }],
+        archives: [{
+          id: 'archive-id',
+          dokumenId: 'document-id',
+          statusArsip: 'DIMUSNAHKAN',
+        }],
+      })),
+    })
+
+    expect(response.status).toBe(410)
+    expect(await json(response)).toEqual({
+      error: 'File asli tidak tersedia - arsip telah dimusnahkan',
+    })
+  })
+
+  it('rejects stale raw tokens after archive status changes to DIMUSNAHKAN', async () => {
+    await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
+    const staleToken = signedToken(logicalPathPayload({
+      issuedAt: NOW - 60_000,
+      expiresAt: FUTURE,
+    }))
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(staleToken),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(rawContext({
+        documents: [{
+          id: 'document-id',
+          createdBy: 'owner-user',
+          status: 'ARCHIVED',
+          revisionTarget: null,
+        }],
+        archives: [{
+          id: 'archive-id',
+          dokumenId: 'document-id',
+          statusArsip: 'DIMUSNAHKAN',
+        }],
+      })),
+    })
+
+    expect(response.status).toBe(410)
+  })
+
+  it('keeps pending raw paths strictly owner-scoped', async () => {
+    const pendingPath = 'owner-user/1777964598700-random-report.pdf'
+    await writeTestFile(pendingPath, PDF_CONTENT)
+
+    const ownerResponse = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload({ logicalPath: pendingPath }))),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
+    })
+    const roleResponse = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload({ logicalPath: pendingPath }))),
+      session: session('other-user', [ROLES.PPK]),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
+    })
+
+    expect(ownerResponse.status).toBe(200)
+    expect(roleResponse.status).toBe(403)
+    expect(await json(roleResponse)).toEqual({ error: 'Akses ditolak' })
+  })
+
+  it('authorizes raw governed paths from current document state instead of path prefix alone', async () => {
+    const decision = await authorizeRawLogicalPathAccess({
+      session: session('ppk-user', [ROLES.PPK]),
+      logicalPath: 'owner-user/document-id/file.pdf',
+      resolver: rawContextResolver(rawContext({
+        documents: [{
+          id: 'document-id',
+          createdBy: 'owner-user',
+          status: 'IN_PPK_VALIDATION',
+          revisionTarget: null,
+        }],
+      })),
+    })
+
+    expect(decision).toEqual({ ok: true })
   })
 
   it('reads the file token secret lazily without fallback defaults', () => {
@@ -317,6 +456,7 @@ async function responseWithMockedVerifiedDownloadFilename(
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
     })
   } finally {
     vi.doUnmock('#/lib/storage/file-access-token')

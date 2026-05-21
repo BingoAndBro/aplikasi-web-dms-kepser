@@ -10,10 +10,12 @@ const NOW = new Date('2026-05-15T10:00:00.000Z')
 const LOGICAL_PATH = 'owner-user/document-id/1777964598700-random-report.pdf'
 
 const mocks = vi.hoisted(() => {
+  const authorizeRawLogicalPathAccess = vi.fn()
   const getLocalServerSession = vi.fn()
   const getFileTokenSecret = vi.fn()
 
   return {
+    authorizeRawLogicalPathAccess,
     getFileTokenSecret,
     getLocalServerSession,
   }
@@ -28,6 +30,7 @@ vi.mock('#/lib/storage/internal-file-access', async importOriginal => {
 
   return {
     ...actual,
+    authorizeRawLogicalPathAccess: mocks.authorizeRawLogicalPathAccess,
     getFileTokenSecret: mocks.getFileTokenSecret,
   }
 })
@@ -70,6 +73,7 @@ describe('raw preview internal URL wiring', () => {
 
     mocks.getLocalServerSession.mockResolvedValue(session())
     mocks.getFileTokenSecret.mockReturnValue(TEST_SECRET)
+    mocks.authorizeRawLogicalPathAccess.mockResolvedValue({ ok: true })
   })
 
   afterEach(() => {
@@ -151,6 +155,11 @@ describe('raw preview internal URL wiring', () => {
 
   it('does not create an internal URL before storage path authorization passes', async () => {
     mocks.getLocalServerSession.mockResolvedValue(session('other-user'))
+    mocks.authorizeRawLogicalPathAccess.mockResolvedValue({
+      ok: false,
+      status: 403,
+      message: 'Anda tidak memiliki akses',
+    })
 
     const response = await previewHandler({
       request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}&useInternal=true`),
@@ -158,6 +167,24 @@ describe('raw preview internal URL wiring', () => {
 
     expect(response.status).toBe(403)
     expect(await responseJson(response)).toEqual({ error: 'Anda tidak memiliki akses' })
+    expect(mocks.getFileTokenSecret).not.toHaveBeenCalled()
+  })
+
+  it('does not issue a raw preview token for a DIMUSNAHKAN archive-governed file', async () => {
+    mocks.authorizeRawLogicalPathAccess.mockResolvedValue({
+      ok: false,
+      status: 410,
+      message: 'File asli tidak tersedia - arsip telah dimusnahkan',
+    })
+
+    const response = await previewHandler({
+      request: previewRequest(`?url=${encodeURIComponent(LOGICAL_PATH)}`),
+    })
+
+    expect(response.status).toBe(410)
+    expect(await responseJson(response)).toEqual({
+      error: 'File asli tidak tersedia - arsip telah dimusnahkan',
+    })
     expect(mocks.getFileTokenSecret).not.toHaveBeenCalled()
   })
 

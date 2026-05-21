@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import {
-  canAccessLogicalFilePath,
+  authorizeRawLogicalPathAccess,
   getFileTokenSecret,
 } from '#/lib/storage/internal-file-access'
 import { createInternalFileAccessUrl } from '#/lib/storage/internal-file-access-url'
@@ -49,8 +49,9 @@ export const Route = createFileRoute('/api/dokumen/download-url')({
           return Response.json({ error: 'URL tidak valid' }, { status: 400 })
         }
 
-        if (!canAccessLogicalFilePath(session, logicalPath)) {
-          return Response.json({ error: 'Anda tidak memiliki akses' }, { status: 403 })
+        const rawAccess = await authorizeRawLogicalPathAccess({ session, logicalPath })
+        if (!rawAccess.ok) {
+          return Response.json({ error: rawAccess.message }, { status: rawAccess.status })
         }
 
         const docId = searchParams.get('docId')

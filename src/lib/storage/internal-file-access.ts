@@ -1,11 +1,13 @@
 // Server-only module. Do not import from client components.
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
+import { eq, inArray, sql } from 'drizzle-orm'
 
 import { ROLES, type RoleName } from '#/lib/constants/roles'
 import type { LocalServerSession } from '#/lib/auth/local-server-auth'
 import {
   assertSafeLogicalStoragePath,
+  classifyStoragePath,
   getLocalStorageRoot,
   resolvePhysicalStoragePath,
   storagePathBelongsToUser,
@@ -36,12 +38,34 @@ type FileAccessSession = Pick<LocalServerSession, 'userId' | 'roles' | 'sessionI
 type FileReferenceResult =
   | { ok: true; logicalPath: string }
   | { ok: false; status: number; message: string }
+type RawLogicalPathAccessDocument = {
+  id: string
+  createdBy: string
+  status: string
+  revisionTarget: string | null
+}
+type RawLogicalPathAccessArchive = {
+  id: string
+  dokumenId: string
+  statusArsip: string
+}
+export type RawLogicalPathAccessContext = {
+  documents: RawLogicalPathAccessDocument[]
+  archives: RawLogicalPathAccessArchive[]
+}
+export type RawLogicalPathAccessContextResolver = (
+  logicalPath: string,
+) => Promise<RawLogicalPathAccessContext>
+export type RawLogicalPathAccessDecision =
+  | { ok: true }
+  | { ok: false; status: number; message: string }
 
 export type InternalFileAccessOptions = {
   request: Request
   session: FileAccessSession | null
   secret: string
   root?: string
+  rawLogicalPathAccessContextResolver?: RawLogicalPathAccessContextResolver
 }
 
 export function getFileTokenSecret(env: NodeJS.ProcessEnv = process.env): string {
@@ -59,6 +83,7 @@ export async function handleInternalFileAccessRequest({
   session,
   secret,
   root,
+  rawLogicalPathAccessContextResolver,
 }: InternalFileAccessOptions): Promise<Response> {
   const token = new URL(request.url).searchParams.get('token')
 
@@ -78,8 +103,14 @@ export async function handleInternalFileAccessRequest({
   let logicalPath: string
   if (isSupportedLogicalPathToken(payload)) {
     logicalPath = payload.logicalPath
-    if (!canAccessLogicalFilePath(session, logicalPath)) {
-      return jsonError('Akses ditolak', 403)
+    const rawAccess = await authorizeRawLogicalPathAccess({
+      session,
+      logicalPath,
+      resolver: rawLogicalPathAccessContextResolver,
+    })
+
+    if (!rawAccess.ok) {
+      return jsonError(rawAccess.message, rawAccess.status)
     }
   } else if (isSupportedDocumentToken(payload)) {
     const resolved = await resolveDocumentTokenLogicalPath({ payload, session })
@@ -117,6 +148,59 @@ export function canAccessLogicalFilePath(
   return RAW_PATH_COMPATIBILITY_ROLES.some(role => session.roles.includes(role))
 }
 
+export async function authorizeRawLogicalPathAccess({
+  session,
+  logicalPath,
+  resolver = loadRawLogicalPathAccessContext,
+}: {
+  session: FileAccessSession
+  logicalPath: string
+  resolver?: RawLogicalPathAccessContextResolver
+}): Promise<RawLogicalPathAccessDecision> {
+  let safeLogicalPath: string
+  try {
+    safeLogicalPath = assertSafeLogicalStoragePath(logicalPath)
+  } catch {
+    return { ok: false, status: 500, message: 'File access path is not available' }
+  }
+
+  let context: RawLogicalPathAccessContext
+  try {
+    context = await resolver(safeLogicalPath)
+  } catch {
+    return { ok: false, status: 500, message: 'File access failed' }
+  }
+
+  if (context.archives.some(archive => archive.statusArsip === 'DIMUSNAHKAN')) {
+    return {
+      ok: false,
+      status: 410,
+      message: 'File asli tidak tersedia - arsip telah dimusnahkan',
+    }
+  }
+
+  const hasGovernedReference = context.documents.length > 0 || context.archives.length > 0
+  const classification = classifyStoragePath(safeLogicalPath)
+
+  if (classification === 'pending-dash' || classification === 'pending-upload-api') {
+    return storagePathBelongsToUser(safeLogicalPath, session.userId)
+      ? { ok: true }
+      : { ok: false, status: 403, message: 'Akses ditolak' }
+  }
+
+  if (!hasGovernedReference) {
+    return storagePathBelongsToUser(safeLogicalPath, session.userId)
+      ? { ok: true }
+      : { ok: false, status: 403, message: 'Akses ditolak' }
+  }
+
+  if (context.documents.some(document => canSessionReadRawReferencedDocument(session, document))) {
+    return { ok: true }
+  }
+
+  return { ok: false, status: 403, message: 'Akses ditolak' }
+}
+
 function isSupportedLogicalPathToken(
   payload: FileAccessTokenPayload,
 ): payload is FileAccessTokenPayload & { logicalPath: string } {
@@ -149,6 +233,114 @@ async function resolveDocumentTokenLogicalPath({
   )
 
   return await resolveDocumentLampiranAccessForToken({ payload, session })
+}
+
+async function loadRawLogicalPathAccessContext(
+  logicalPath: string,
+): Promise<RawLogicalPathAccessContext> {
+  const [{ db }, { arsip }, { dokumenTransaksi }] = await Promise.all([
+    import('#/db/client'),
+    import('#/db/schema/arsip'),
+    import('#/db/schema/dokumen'),
+  ])
+  const attachmentJson = JSON.stringify([{ url: logicalPath }])
+
+  const documentRows = await db
+    .select({
+      id: dokumenTransaksi.id,
+      createdBy: dokumenTransaksi.createdBy,
+      status: dokumenTransaksi.status,
+      revisionTarget: dokumenTransaksi.revisionTarget,
+    })
+    .from(dokumenTransaksi)
+    .where(sql`${dokumenTransaksi.lampiranUrls} @> ${attachmentJson}::jsonb`)
+
+  const archiveSnapshotRows = await db
+    .select({
+      id: arsip.id,
+      dokumenId: arsip.dokumenId,
+      statusArsip: arsip.statusArsip,
+      documentId: dokumenTransaksi.id,
+      documentCreatedBy: dokumenTransaksi.createdBy,
+      documentStatus: dokumenTransaksi.status,
+      documentRevisionTarget: dokumenTransaksi.revisionTarget,
+    })
+    .from(arsip)
+    .innerJoin(dokumenTransaksi, eq(arsip.dokumenId, dokumenTransaksi.id))
+    .where(sql`${arsip.lampiranSnapshot} @> ${attachmentJson}::jsonb`)
+
+  const documentsById = new Map<string, RawLogicalPathAccessDocument>()
+  const archivesById = new Map<string, RawLogicalPathAccessArchive>()
+
+  for (const document of documentRows) {
+    documentsById.set(document.id, document)
+  }
+
+  for (const row of archiveSnapshotRows) {
+    archivesById.set(row.id, {
+      id: row.id,
+      dokumenId: row.dokumenId,
+      statusArsip: row.statusArsip,
+    })
+    documentsById.set(row.documentId, {
+      id: row.documentId,
+      createdBy: row.documentCreatedBy,
+      status: row.documentStatus,
+      revisionTarget: row.documentRevisionTarget,
+    })
+  }
+
+  const referencedDocumentIds = [...documentsById.keys()]
+  if (referencedDocumentIds.length > 0) {
+    const archiveRowsForReferencedDocuments = await db
+      .select({
+        id: arsip.id,
+        dokumenId: arsip.dokumenId,
+        statusArsip: arsip.statusArsip,
+      })
+      .from(arsip)
+      .where(inArray(arsip.dokumenId, referencedDocumentIds))
+
+    for (const archive of archiveRowsForReferencedDocuments) {
+      archivesById.set(archive.id, archive)
+    }
+  }
+
+  return {
+    documents: [...documentsById.values()],
+    archives: [...archivesById.values()],
+  }
+}
+
+function canSessionReadRawReferencedDocument(
+  session: FileAccessSession,
+  document: RawLogicalPathAccessDocument,
+): boolean {
+  if (document.createdBy === session.userId) return true
+  if (session.roles.includes(ROLES.PPK)) return canPpkReadRawReferencedDocument(document)
+  if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadRawReferencedDocument(document)
+  if (session.roles.includes(ROLES.ARSIPARIS)) {
+    return document.status === 'COMPLETED' || document.status === 'ARCHIVED'
+  }
+
+  return false
+}
+
+function canPpkReadRawReferencedDocument(document: RawLogicalPathAccessDocument): boolean {
+  return [
+    'IN_PPK_VALIDATION',
+    'IN_BENDAHARA_APPROVAL',
+    'NEED_REVISION',
+    'COMPLETED',
+    'ARCHIVED',
+  ].includes(document.status)
+}
+
+function canBendaharaReadRawReferencedDocument(document: RawLogicalPathAccessDocument): boolean {
+  return document.status === 'IN_BENDAHARA_APPROVAL'
+    || document.status === 'COMPLETED'
+    || document.status === 'ARCHIVED'
+    || (document.status === 'NEED_REVISION' && document.revisionTarget === 'PPK')
 }
 
 function jsonError(message: string, status: number): Response {
