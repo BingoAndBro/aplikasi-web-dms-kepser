@@ -49,8 +49,8 @@ import { Route } from '#/routes/api/admin/cleanup-orphan-files'
 type CleanupHandler = (args: { request: Request }) => Promise<Response>
 
 const cleanupHandler = (Route as unknown as {
-  options: { server: { handlers: { GET: CleanupHandler } } }
-}).options.server.handlers.GET
+  options: { server: { handlers: { GET: CleanupHandler, POST: CleanupHandler } } }
+}).options.server.handlers
 
 const ORPHAN_PATH = '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/33333333-3333-4333-8333-333333333333.pdf'
 const OLD_PENDING_PATH = '11111111-1111-4111-8111-111111111111/44444444-4444-4444-8444-444444444444_1778064971564_Bukti.pdf'
@@ -76,7 +76,7 @@ describe('/api/admin/cleanup-orphan-files', () => {
   })
 
   it('defaults to dry-run and does not call deletion', async () => {
-    const response = await cleanupHandler({
+    const response = await cleanupHandler.GET({
       request: new Request('http://localhost/api/admin/cleanup-orphan-files'),
     })
     const body = await response.json()
@@ -93,9 +93,90 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
-  it('deletes only non-pending orphan candidates with dry_run=false by default', async () => {
-    const response = await cleanupHandler({
+  it('keeps GET dry_run=false non-destructive and reports POST requirement', async () => {
+    const response = await cleanupHandler.GET({
       request: new Request('http://localhost/api/admin/cleanup-orphan-files?dry_run=false'),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      message: 'Destructive cleanup requires POST.',
+      deleted_count: 0,
+      orphan_paths: [ORPHAN_PATH],
+      dry_run: true,
+      pending_paths: [OLD_PENDING_PATH, RECENT_PENDING_PATH].sort(),
+      eligible_pending_paths: [],
+      skipped_pending_count: 2,
+    })
+    expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
+  })
+
+  it('rejects unauthenticated requests before analysis', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(null)
+
+    const response = await cleanupHandler.GET({
+      request: new Request('http://localhost/api/admin/cleanup-orphan-files'),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(401)
+    expect(body).toEqual({ error: 'Unauthorized' })
+    expect(mocks.analyzeLocalStorageReferences).not.toHaveBeenCalled()
+    expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-admin requests before analysis', async () => {
+    mocks.hasLocalRole.mockReturnValue(false)
+
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({ dry_run: false, confirm: true }),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(body).toEqual({ error: 'Akses ditolak - hanya admin' })
+    expect(mocks.analyzeLocalStorageReferences).not.toHaveBeenCalled()
+    expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
+  })
+
+  it('keeps POST without confirm non-destructive even when dry_run=false', async () => {
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({ dry_run: false }),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      message: 'Cleanup dry-run; destructive cleanup requires confirm=true.',
+      deleted_count: 0,
+      orphan_paths: [ORPHAN_PATH],
+      dry_run: true,
+      pending_cleanup_confirmed: false,
+    })
+    expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
+  })
+
+  it('keeps POST dry_run=true non-destructive', async () => {
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({ dry_run: true, confirm: true }),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toMatchObject({
+      message: 'Cleanup dry-run',
+      deleted_count: 0,
+      orphan_paths: [ORPHAN_PATH],
+      dry_run: true,
+      pending_cleanup_confirmed: true,
+    })
+    expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
+  })
+
+  it('deletes only non-pending orphan candidates with POST dry_run=false and confirm=true', async () => {
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({ dry_run: false, confirm: true }),
     })
     const body = await response.json()
 
@@ -114,8 +195,12 @@ describe('/api/admin/cleanup-orphan-files', () => {
   })
 
   it('reports pending-only candidates without deleting unless pending deletion is explicitly armed', async () => {
-    const response = await cleanupHandler({
-      request: new Request('http://localhost/api/admin/cleanup-orphan-files?pending_only=true&dry_run=false&include_pending=true'),
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({
+        dry_run: false,
+        pending_only: true,
+        include_pending: true,
+      }),
     })
     const body = await response.json()
 
@@ -133,7 +218,7 @@ describe('/api/admin/cleanup-orphan-files', () => {
   })
 
   it('reports eligible pending candidates consistently during explicit pending-only dry-run', async () => {
-    const response = await cleanupHandler({
+    const response = await cleanupHandler.GET({
       request: new Request('http://localhost/api/admin/cleanup-orphan-files?pending_only=true&dry_run=true&include_pending=true&confirm=true&min_age_minutes=0'),
     })
     const body = await response.json()
@@ -155,9 +240,14 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
-  it('deletes eligible pending files only with dry_run=false, include_pending=true, and confirm=true', async () => {
-    const response = await cleanupHandler({
-      request: new Request('http://localhost/api/admin/cleanup-orphan-files?dry_run=false&pending_only=true&include_pending=true&confirm=true'),
+  it('deletes eligible pending files only with POST dry_run=false, include_pending=true, and confirm=true', async () => {
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({
+        dry_run: false,
+        pending_only: true,
+        include_pending: true,
+        confirm: true,
+      }),
     })
     const body = await response.json()
 
@@ -172,6 +262,17 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(mocks.deleteLocalOrphanCandidates).toHaveBeenCalledWith([OLD_PENDING_PATH], {
       allowedClassifications: ['formal', 'pending-dash', 'pending-upload-api'],
     })
+  })
+
+  it('rejects invalid POST body values with 400', async () => {
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({ dry_run: 'false', confirm: true }),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.error).toBe('Body cleanup tidak valid')
+    expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 })
 
@@ -218,4 +319,12 @@ function analysisFixture() {
     unsafe_paths: [],
     metadata_issues: [],
   }
+}
+
+function jsonRequest(body: unknown): Request {
+  return new Request('http://localhost/api/admin/cleanup-orphan-files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 }
