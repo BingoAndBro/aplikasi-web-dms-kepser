@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, AlertCircle, Plus, X, User, Trash2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
+import { createClientId } from '#/lib/utils/client-id'
 import { apiFetch } from '#/lib/api-client'
 import { FileUploadButton } from './FileUploadButton'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
@@ -175,7 +176,7 @@ export function KelengkapanChecklist({
       return
     }
 
-    const id = `user-custom-${crypto.randomUUID()}`
+    const id = createClientId('user-custom')
     setUserDocs(prev => [...prev, { id, nama_dokumen: trimmedTitle }])
     setNewDocTitle('')
     setUserDocError('')

@@ -11,6 +11,7 @@ import { buildStorageFilename } from '#/lib/dokumen-helpers'
 import { getSignedUrl, downloadWithSignedUrl } from '#/lib/storage-client'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
+import { createClientId } from '#/lib/utils/client-id'
 import { logDev, warnDev } from '#/lib/dev-logger'
 import {
   DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR,
@@ -464,7 +465,7 @@ export function AttachmentEditor({
       return
     }
 
-    const docId = `user-custom-${crypto.randomUUID()}`
+    const docId = createClientId('user-custom')
     logDev('[AttachmentEditor] Added user doc', { docId, nama: trimmedTitle })
     setUserDocs(prev => [...prev, { id: docId, nama: trimmedTitle }])
     setNewDocTitle('')

@@ -6,6 +6,7 @@ import {
 } from './session-constants'
 
 const ACTIVE_ROLE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+const SESSION_COOKIE_SECURE_ENV = 'DMS_SESSION_COOKIE_SECURE'
 
 type CookieOptions = {
   httpOnly?: boolean
@@ -42,13 +43,11 @@ export function createSessionCookieHeader(
   rawToken: string,
   maxAgeSeconds: number,
 ): string {
-  return serializeCookie(SESSION_COOKIE_NAME, rawToken, {
-    httpOnly: true,
-    maxAge: maxAgeSeconds,
-    sameSite: 'Lax',
-    secure: shouldUseSecureCookies(request),
-    path: '/',
-  })
+  return serializeCookie(
+    SESSION_COOKIE_NAME,
+    rawToken,
+    getSessionCookieOptions(request, maxAgeSeconds),
+  )
 }
 
 export function createActiveRoleCookieHeader(role: RoleName): string {
@@ -60,13 +59,21 @@ export function createActiveRoleCookieHeader(role: RoleName): string {
 }
 
 export function clearSessionCookieHeader(request: Request): string {
-  return serializeCookie(SESSION_COOKIE_NAME, '', {
+  return serializeCookie(
+    SESSION_COOKIE_NAME,
+    '',
+    getSessionCookieOptions(request, 0),
+  )
+}
+
+function getSessionCookieOptions(request: Request, maxAgeSeconds: number): CookieOptions {
+  return {
     httpOnly: true,
-    maxAge: 0,
+    maxAge: maxAgeSeconds,
     sameSite: 'Lax',
     secure: shouldUseSecureCookies(request),
     path: '/',
-  })
+  }
 }
 
 export function clearActiveRoleCookieHeader(): string {
@@ -97,6 +104,9 @@ function serializeCookie(name: string, value: string, options: CookieOptions): s
 }
 
 function shouldUseSecureCookies(request: Request): boolean {
+  const explicitSecure = getExplicitSessionCookieSecure()
+  if (explicitSecure !== null) return explicitSecure
+
   if (process.env.NODE_ENV === 'production') return true
 
   const forwardedProto = request.headers.get('x-forwarded-proto')
@@ -107,6 +117,15 @@ function shouldUseSecureCookies(request: Request): boolean {
   } catch {
     return false
   }
+}
+
+function getExplicitSessionCookieSecure(): boolean | null {
+  const value = process.env[SESSION_COOKIE_SECURE_ENV]?.trim().toLowerCase()
+
+  if (value === 'true') return true
+  if (value === 'false') return false
+
+  return null
 }
 
 function safeDecodeCookieValue(value: string): string {
