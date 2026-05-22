@@ -4,6 +4,7 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterKlasifikasiArsip } from '#/db/schema/arsip'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { ROLES } from '#/lib/constants/roles'
 import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
@@ -21,10 +22,61 @@ const updateKlasifikasiSchema = z.object({
 async function requireAdminOrKepalaSubBagianUmum(request: Request, action: 'mengubah' | 'menghapus') {
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!hasLocalRole(session, 'ADMIN') && !hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) {
+  if (!hasLocalRole(session, ROLES.ADMIN) && !hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
     return Response.json({ error: `Hanya ADMIN atau Kepala Sub Bagian Umum yang bisa ${action} klasifikasi` }, { status: 403 })
   }
   return null
+}
+
+function conflictResponse(error: string): Response {
+  return Response.json({ error }, { status: 409 })
+}
+
+type UniqueViolationField = 'kode' | 'nama' | 'unknown'
+
+function classifyUniqueViolation(error: unknown): UniqueViolationField | null {
+  if (!error || typeof error !== 'object') return null
+
+  const candidate = error as {
+    code?: unknown
+    constraint?: unknown
+    detail?: unknown
+  }
+
+  if (candidate.code !== '23505') return null
+
+  const constraint = typeof candidate.constraint === 'string' ? candidate.constraint.toLowerCase() : ''
+  if (constraint.includes('kode')) return 'kode'
+  if (constraint.includes('nama')) return 'nama'
+
+  const detail = typeof candidate.detail === 'string' ? candidate.detail.toLowerCase() : ''
+  if (/\(kode\)/.test(detail)) return 'kode'
+  if (/\(nama\)/.test(detail)) return 'nama'
+
+  return 'unknown'
+}
+
+function uniqueViolationMessage(field: UniqueViolationField): string {
+  if (field === 'kode') return 'Kode klasifikasi sudah digunakan.'
+  if (field === 'nama') return 'Nama klasifikasi sudah digunakan.'
+  return 'Klasifikasi dengan kode atau nama tersebut sudah ada.'
+}
+
+function toSafeErrorLog(error: unknown, conflictType?: UniqueViolationField): Record<string, unknown> {
+  if (!error || typeof error !== 'object') {
+    return { type: typeof error, conflictType }
+  }
+
+  const candidate = error as {
+    code?: unknown
+    name?: unknown
+  }
+
+  return {
+    name: typeof candidate.name === 'string' ? candidate.name : undefined,
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    conflictType,
+  }
 }
 
 // Helper: get all descendant IDs of a node (for cascade soft delete)
@@ -111,7 +163,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
               ))
               .limit(1)
 
-            if (duplicate) return Response.json({ error: "Nama klasifikasi `" + parsed.data.nama + "` sudah ada" }, { status: 409 })
+            if (duplicate) return conflictResponse('Nama klasifikasi sudah digunakan.')
           }
 
           // Cek kode unique jika diupdate
@@ -126,7 +178,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
               ))
               .limit(1)
 
-            if (duplicateKode) return Response.json({ error: "Kode klasifikasi `" + parsed.data.kode + "` sudah ada" }, { status: 409 })
+            if (duplicateKode) return conflictResponse('Kode klasifikasi sudah digunakan.')
           }
 
           // Validate parent_id if changing
@@ -186,7 +238,13 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
 
           return Response.json(data)
         } catch (err) {
-          console.error('[arsiparis/klasifikasi/$id] PATCH local query error:', err)
+          const uniqueViolationField = classifyUniqueViolation(err)
+          if (uniqueViolationField) {
+            console.warn('[arsiparis/klasifikasi/$id] PATCH unique constraint conflict:', toSafeErrorLog(err, uniqueViolationField))
+            return conflictResponse(uniqueViolationMessage(uniqueViolationField))
+          }
+
+          console.error('[arsiparis/klasifikasi/$id] PATCH local query error:', toSafeErrorLog(err))
           return Response.json({ error: 'Gagal memperbarui klasifikasi' }, { status: 500 })
         }
       },
