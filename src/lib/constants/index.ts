@@ -1,3 +1,4 @@
+export * from './archive-status'
 export * from './document-status'
 export * from './env'
 export * from './roles'

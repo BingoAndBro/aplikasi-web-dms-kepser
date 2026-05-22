@@ -14,6 +14,9 @@ export const TABLES = {
   DOKUMEN_TRANSAKSI: 'dokumen_transaksi',
   LOG_AKTIVITAS: 'log_aktivitas',
   ARSIP: 'arsip',
+  MANUAL_ARSIP: 'manual_arsip',
+  MANUAL_ARSIP_ATTACHMENT: 'manual_arsip_attachment',
+  MANUAL_ARSIP_CATEGORY: 'manual_arsip_category',
 } as const
 
 export const STORAGE_BUCKETS = {
