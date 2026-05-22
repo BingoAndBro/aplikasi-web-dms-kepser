@@ -140,6 +140,19 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
+  it('rejects cross-origin POST before auth and analysis', async () => {
+    const response = await cleanupHandler.POST({
+      request: jsonRequest({ dry_run: false, confirm: true }, 'https://evil.example'),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(403)
+    expect(body).toEqual({ error: 'Permintaan tidak diizinkan' })
+    expect(mocks.getLocalServerSession).not.toHaveBeenCalled()
+    expect(mocks.analyzeLocalStorageReferences).not.toHaveBeenCalled()
+    expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
+  })
+
   it('keeps POST without confirm non-destructive even when dry_run=false', async () => {
     const response = await cleanupHandler.POST({
       request: jsonRequest({ dry_run: false }),
@@ -321,10 +334,10 @@ function analysisFixture() {
   }
 }
 
-function jsonRequest(body: unknown): Request {
+function jsonRequest(body: unknown, origin = 'http://localhost'): Request {
   return new Request('http://localhost/api/admin/cleanup-orphan-files', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Origin: origin },
     body: JSON.stringify(body),
   })
 }

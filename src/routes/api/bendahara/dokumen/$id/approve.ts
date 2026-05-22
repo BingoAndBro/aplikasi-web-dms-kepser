@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
@@ -19,6 +20,8 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 

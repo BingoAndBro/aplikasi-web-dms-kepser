@@ -107,6 +107,9 @@ describe('/api/dokumen/submit local default parity', () => {
     const missingBodyResponse = await submitHandler({
       request: new Request('http://localhost/api/dokumen/submit', {
         method: 'POST',
+        headers: {
+          Origin: 'http://localhost',
+        },
       }),
     })
 
@@ -118,6 +121,7 @@ describe('/api/dokumen/submit local default parity', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Origin: 'http://localhost',
         },
         body: '{',
       }),
@@ -610,6 +614,7 @@ function createJsonRequest(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Origin: 'http://localhost',
     },
     body: JSON.stringify(body),
   })

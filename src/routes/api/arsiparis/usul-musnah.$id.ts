@@ -1,6 +1,7 @@
 import { lstat, realpath, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db/client'
@@ -368,6 +369,8 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah/$id')({
       },
 
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
         if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })

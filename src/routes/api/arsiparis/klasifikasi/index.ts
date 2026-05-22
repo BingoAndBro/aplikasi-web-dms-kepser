@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterKlasifikasiArsip } from '#/db/schema/arsip'
@@ -107,6 +108,8 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
       },
 
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const authError = await requireAdminOrArsiparis(request)
         if (authError) return authError
 

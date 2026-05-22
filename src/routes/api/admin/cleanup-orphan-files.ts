@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { z } from 'zod'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import {
@@ -77,6 +78,8 @@ export const Route = createFileRoute('/api/admin/cleanup-orphan-files')({
         })
       },
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const session = await authorizeCleanupRequest(request)
         if (session instanceof Response) return session
 

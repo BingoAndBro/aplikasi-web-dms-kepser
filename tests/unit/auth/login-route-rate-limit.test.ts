@@ -56,6 +56,18 @@ describe('/api/auth/login rate-limit behavior', () => {
     }))
   })
 
+  it('rejects cross-origin login POST before credential verification', async () => {
+    const response = await loginHandler({
+      request: loginRequest({
+        origin: 'https://evil.example',
+      }),
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Permintaan tidak diizinkan' })
+    expect(mocks.loginWithLocalCredentials).not.toHaveBeenCalled()
+  })
+
   it('keeps invalid user and wrong password responses generic and equivalent', async () => {
     mocks.loginWithLocalCredentials.mockResolvedValueOnce(invalidCredentials())
     const wrongPassword = await loginHandler({
@@ -144,11 +156,12 @@ describe('/api/auth/login rate-limit behavior', () => {
   })
 })
 
-function loginRequest(input: Partial<{ email: string, password: string }> = {}): Request {
+function loginRequest(input: Partial<{ email: string, password: string, origin: string }> = {}): Request {
   return new Request('http://localhost/api/auth/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Origin: input.origin ?? 'http://localhost',
       'x-forwarded-for': '192.0.2.10',
     },
     body: JSON.stringify({

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterFungsi, masterKegiatan } from '#/db/schema/master'
@@ -67,6 +68,8 @@ export const Route = createFileRoute('/api/master-kegiatan')({
       },
 
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         let body: unknown
         try {
           body = await request.json()

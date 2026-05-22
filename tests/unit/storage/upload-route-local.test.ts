@@ -80,6 +80,7 @@ describe('/api/upload local route implementation', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'multipart/form-data; boundary=expected-boundary',
+          Origin: 'http://localhost',
         },
         body: '--different-boundary\r\nContent-Disposition: form-data; name="file"\r\n\r\n',
       }),
@@ -137,6 +138,9 @@ describe('/api/upload local route implementation', () => {
     const response = await uploadHandler({
       request: new Request('http://localhost/api/upload', {
         method: 'POST',
+        headers: {
+          Origin: 'http://localhost',
+        },
         body: formData,
       }),
     })
@@ -157,6 +161,9 @@ describe('/api/upload local route implementation', () => {
     const missingFileResponse = await uploadHandler({
       request: new Request('http://localhost/api/upload', {
         method: 'POST',
+        headers: {
+          Origin: 'http://localhost',
+        },
         body: missingFileForm,
       }),
     })
@@ -259,6 +266,9 @@ describe('/api/upload local route implementation', () => {
 function createUploadRequest(input: Partial<UploadInput> = {}): Request {
   return new Request('http://localhost/api/upload', {
     method: 'POST',
+    headers: {
+      Origin: 'http://localhost',
+    },
     body: createUploadFormData(input),
   })
 }

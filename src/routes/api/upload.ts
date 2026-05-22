@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { lstat, realpath, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
@@ -50,6 +51,8 @@ export const Route = createFileRoute('/api/upload')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const session = await getLocalServerSession(request)
 
         if (!session) {

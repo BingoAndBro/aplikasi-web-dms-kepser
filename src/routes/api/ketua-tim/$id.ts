@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { ketuaTimAssignments } from '#/db/schema/master'
@@ -30,6 +31,8 @@ export const Route = createFileRoute('/api/ketua-tim/$id')({
   server: {
     handlers: {
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string | undefined> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const authError = await requireAdmin(request)
         if (authError) return authError
 

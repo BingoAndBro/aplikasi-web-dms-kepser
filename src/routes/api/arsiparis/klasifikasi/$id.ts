@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, eq, inArray, ne } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterKlasifikasiArsip } from '#/db/schema/arsip'
@@ -62,6 +63,8 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
   server: {
     handlers: {
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const authError = await requireAdminOrArsiparis(request, 'mengubah')
         if (authError) return authError
 
@@ -189,6 +192,8 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
       },
 
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const authError = await requireAdminOrArsiparis(request, 'menghapus')
         if (authError) return authError
 

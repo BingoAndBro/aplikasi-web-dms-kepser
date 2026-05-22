@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, eq, ne } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterJenisDokumen } from '#/db/schema/master'
@@ -29,6 +30,8 @@ export const Route = createFileRoute('/api/master-jenis-dokumen/$id')({
   server: {
     handlers: {
       PATCH: async ({ params, request }: { params: { id: string }; request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const { id } = params
         if (!uuidPattern.test(id)) {
           return Response.json({ error: 'ID jenis dokumen tidak valid' }, { status: 400 })
@@ -109,6 +112,8 @@ export const Route = createFileRoute('/api/master-jenis-dokumen/$id')({
       },
 
       DELETE: async ({ params, request }: { params: { id: string }; request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const { id } = params
         if (!uuidPattern.test(id)) {
           return Response.json({ error: 'ID jenis dokumen tidak valid' }, { status: 400 })

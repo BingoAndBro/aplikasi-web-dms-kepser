@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { desc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { ketuaTimAssignments, masterKegiatan } from '#/db/schema/master'
@@ -95,6 +96,8 @@ export const Route = createFileRoute('/api/ketua-tim/')({
       },
 
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const auth = await requireLocalAdmin(request)
         if ('error' in auth) return auth.error
 
@@ -140,6 +143,8 @@ export const Route = createFileRoute('/api/ketua-tim/')({
       },
 
       DELETE: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const auth = await requireLocalAdmin(request)
         if ('error' in auth) return auth.error
 

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { arsip as arsipTable } from '#/db/schema/arsip'
@@ -27,6 +28,8 @@ export const Route = createFileRoute('/api/dokumen/$id/nominal')({
   server: {
     handlers: {
       PATCH: async ({ request, params }: { request: Request; params: { id: string } }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         // 1. Auth check
         const session = await getLocalServerSession(request)
 

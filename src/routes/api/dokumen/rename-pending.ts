@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db/client'
@@ -30,6 +31,8 @@ export const Route = createFileRoute('/api/dokumen/rename-pending')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const session = await getLocalServerSession(request)
         if (!session) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })

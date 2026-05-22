@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { resetPasswordRequestBoundarySchema } from '#/lib/schemas/user'
@@ -14,6 +15,8 @@ export const Route = createFileRoute('/api/users/$id/reset-password')({
   server: {
     handlers: {
       POST: async ({ params, request }: { params: Record<string, string>; request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const { id } = params
 
         if (!isValidUserId(id)) {

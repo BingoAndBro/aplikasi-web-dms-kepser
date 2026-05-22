@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import { ROLES } from '#/lib/constants/roles'
 import {
@@ -407,6 +408,8 @@ export const Route = createFileRoute('/api/dokumen/submit')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         let body: unknown
         try {
           body = await request.json()

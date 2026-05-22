@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { parseUserResponse } from '#/lib/user-response'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { getLocalUserWithRoles } from '#/lib/users/local-user-queries'
@@ -52,6 +53,8 @@ export const Route = createFileRoute('/api/users/$id')({
       },
 
       PATCH: async ({ params, request }: { params: Record<string, string>; request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const { id } = params
 
         if (!isValidUserId(id)) {

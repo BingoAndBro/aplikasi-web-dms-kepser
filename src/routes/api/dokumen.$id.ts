@@ -1,6 +1,7 @@
 import { lstat, realpath, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { arsip as arsipTable } from '#/db/schema/arsip'
@@ -379,6 +380,8 @@ export const Route = createFileRoute('/api/dokumen/$id')({
       },
 
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         let body: unknown
         try {
           body = await request.json()
@@ -617,6 +620,8 @@ export const Route = createFileRoute('/api/dokumen/$id')({
       },
 
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const session = await getLocalServerSession(request)
 
         if (!session) {

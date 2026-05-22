@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import {
@@ -18,6 +19,8 @@ export const Route = createFileRoute('/api/users/me/change-password')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const session = await getLocalServerSession(request)
 
         if (!session) {

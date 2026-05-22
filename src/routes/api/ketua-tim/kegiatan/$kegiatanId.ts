@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { users } from '#/db/schema/auth'
@@ -106,6 +107,8 @@ export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
       },
 
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string | undefined> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const auth = await requireLocalAdmin(request)
         if ('error' in auth) return auth.error
 

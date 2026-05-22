@@ -75,6 +75,7 @@ function createPatchRequest(): Request {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
+      Origin: 'http://localhost',
     },
     body: JSON.stringify({ nominal_realisasi: 1000 }),
   })

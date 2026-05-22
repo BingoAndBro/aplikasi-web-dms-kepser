@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, eq, isNull } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
@@ -118,6 +119,8 @@ export const Route = createFileRoute('/api/master-kelengkapan/$id')({
   server: {
     handlers: {
       PATCH: async ({ params, request }: { params: Record<string, string>; request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const { id } = params
 
         let body: unknown
@@ -251,6 +254,8 @@ export const Route = createFileRoute('/api/master-kelengkapan/$id')({
       },
 
       DELETE: async ({ params, request }: { params: Record<string, string>; request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         const { id } = params
 
         const authError = await requireAdmin(request, 'menghapus')

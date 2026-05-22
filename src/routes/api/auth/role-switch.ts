@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 import { ROLES } from '#/lib/constants/roles'
 import { roleSwitchSchema } from '#/lib/schemas/auth'
 import { validateAssignedRoles } from '#/lib/auth/role-resolution'
@@ -17,6 +18,8 @@ export const Route = createFileRoute('/api/auth/role-switch')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
         let body: unknown
         try {
           body = await request.json()

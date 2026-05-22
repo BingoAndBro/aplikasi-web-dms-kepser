@@ -103,6 +103,9 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
     const invalidJsonResponse = await renamePendingHandler({
       request: new Request('http://localhost/api/dokumen/rename-pending', {
         method: 'POST',
+        headers: {
+          Origin: 'http://localhost',
+        },
         body: '{',
       }),
     })
@@ -351,6 +354,7 @@ function createJsonRequest(body: unknown): Request {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Origin: 'http://localhost',
     },
     body: JSON.stringify(body),
   })
