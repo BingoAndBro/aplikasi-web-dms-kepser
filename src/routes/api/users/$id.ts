@@ -123,6 +123,8 @@ export const Route = createFileRoute('/api/users/$id')({
             nip_nrp: nip_nrp?.trim(),
             departemen: departemen?.trim(),
             roles: normalizedRoles,
+          }, {
+            actingUserId: session.userId,
           })
 
           if (result.error) {

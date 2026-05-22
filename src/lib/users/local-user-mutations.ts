@@ -1,14 +1,16 @@
 // Server-only local user mutation helpers for admin user-management routes.
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 
 import { db } from '#/db/client'
 import { roles as rolesTable, userRoles, users } from '#/db/schema/auth'
 import { PASSWORD_HASH_ALGORITHM, hashPassword } from '#/lib/auth/password'
 import { revokeAllUserSessions } from '#/lib/auth/session-repository'
-import { type RoleName } from '#/lib/constants/roles'
+import { ROLES, type RoleName } from '#/lib/constants/roles'
 import type { UserWithRoles } from '#/lib/types/user'
 import { getLocalUserWithRoles } from './local-user-queries'
 import {
+  evaluateAdminDeactivationPolicy,
+  evaluateAdminRoleMutationPolicy,
   hasAdminMixedWithNonAdmin,
   normalizeAdminRolePayload,
 } from './role-assignment'
@@ -35,12 +37,19 @@ export type UpdateLocalUserPayload = {
   roles?: RoleName[]
 }
 
+export type UpdateLocalUserOptions = {
+  actingUserId: string
+}
+
 export type LocalUserMutationResult =
   | { data: UserWithRoles; error?: never; status?: never }
   | { data?: never; error: string; status: number }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 type LocalUserTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+type UserMutationTxResult =
+  | { ok: true; userId: string }
+  | { ok: false; error: string; status: number }
 
 export function isValidUserId(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value)
@@ -109,8 +118,12 @@ export async function createLocalUserWithRoles(
 export async function updateLocalUserWithRoles(
   userId: string,
   payload: UpdateLocalUserPayload,
+  options: UpdateLocalUserOptions,
 ): Promise<LocalUserMutationResult> {
   if (!isValidUserId(userId)) {
+    return { error: 'User ID tidak valid', status: 400 }
+  }
+  if (!isValidUserId(options.actingUserId)) {
     return { error: 'User ID tidak valid', status: 400 }
   }
 
@@ -123,7 +136,7 @@ export async function updateLocalUserWithRoles(
   }
 
   try {
-    const updatedUserId = await db.transaction(async (tx) => {
+    const txResult = await db.transaction(async (tx): Promise<UserMutationTxResult> => {
       const [existing] = await tx
         .select({
           id: users.id,
@@ -131,12 +144,32 @@ export async function updateLocalUserWithRoles(
           nipNrp: users.nipNrp,
           departemen: users.departemen,
           metadata: users.metadata,
+          isActive: users.isActive,
         })
         .from(users)
         .where(eq(users.id, userId))
 
       if (!existing) {
-        return null
+        return { ok: false, error: 'User tidak ditemukan', status: 404 }
+      }
+
+      if (rolesToAssign) {
+        const currentRoles = await getUserRoleNames(tx, userId)
+        const activeAdminCount = existing.isActive && currentRoles.includes(ROLES.ADMIN)
+          ? await countActiveAdmins(tx)
+          : 0
+        const policyError = evaluateAdminRoleMutationPolicy({
+          actingUserId: options.actingUserId,
+          targetUserId: userId,
+          currentRoles,
+          nextRoles: rolesToAssign,
+          targetIsActive: existing.isActive,
+          activeAdminCount,
+        })
+
+        if (policyError) {
+          return { ok: false, error: policyError, status: 400 }
+        }
       }
 
       const nextProfile = {
@@ -163,14 +196,14 @@ export async function updateLocalUserWithRoles(
         await replaceUserRoles(tx, userId, roleRecords)
       }
 
-      return userId
+      return { ok: true, userId }
     })
 
-    if (!updatedUserId) {
-      return { error: 'User tidak ditemukan', status: 404 }
+    if (!txResult.ok) {
+      return { error: txResult.error, status: txResult.status }
     }
 
-    const user = await getLocalUserWithRoles(updatedUserId)
+    const user = await getLocalUserWithRoles(txResult.userId)
     return user
       ? { data: user }
       : { error: 'User diupdate tapi gagal mengambil data', status: 500 }
@@ -215,21 +248,56 @@ export async function deactivateLocalUser(
   if (!isValidUserId(userId)) {
     return { error: 'User ID tidak valid', status: 400 }
   }
+  if (!isValidUserId(deactivatedBy)) {
+    return { error: 'User ID tidak valid', status: 400 }
+  }
 
-  const [updated] = await db
-    .update(users)
-    .set({
-      isActive: false,
-      inactiveReason: 'Deactivated by admin',
-      deactivatedAt: new Date(),
-      deactivatedBy,
-      updatedAt: new Date(),
+  const txResult = await db.transaction(async (tx): Promise<UserMutationTxResult> => {
+    const [existing] = await tx
+      .select({
+        id: users.id,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+
+    if (!existing) {
+      return { ok: false, error: 'User tidak ditemukan', status: 404 }
+    }
+
+    const currentRoles = await getUserRoleNames(tx, userId)
+    const activeAdminCount = existing.isActive && currentRoles.includes(ROLES.ADMIN)
+      ? await countActiveAdmins(tx)
+      : 0
+    const policyError = evaluateAdminDeactivationPolicy({
+      currentRoles,
+      targetIsActive: existing.isActive,
+      activeAdminCount,
     })
-    .where(eq(users.id, userId))
-    .returning({ id: users.id })
 
-  if (!updated) {
-    return { error: 'User tidak ditemukan', status: 404 }
+    if (policyError) {
+      return { ok: false, error: policyError, status: 400 }
+    }
+
+    const [updated] = await tx
+      .update(users)
+      .set({
+        isActive: false,
+        inactiveReason: 'Deactivated by admin',
+        deactivatedAt: new Date(),
+        deactivatedBy,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning({ id: users.id })
+
+    return updated
+      ? { ok: true, userId }
+      : { ok: false, error: 'User tidak ditemukan', status: 404 }
+  })
+
+  if (!txResult.ok) {
+    return { error: txResult.error, status: txResult.status }
   }
 
   await revokeAllUserSessions(userId)
@@ -312,6 +380,35 @@ async function getRoleRecords(
   }
 
   return roleRecords
+}
+
+async function getUserRoleNames(
+  tx: LocalUserTransaction,
+  userId: string,
+): Promise<RoleName[]> {
+  const roleRows = await tx
+    .select({ nama: rolesTable.nama })
+    .from(userRoles)
+    .innerJoin(rolesTable, eq(userRoles.roleId, rolesTable.id))
+    .where(eq(userRoles.userId, userId))
+
+  return roleRows
+    .map((row) => row.nama)
+    .filter((role): role is RoleName => typeof role === 'string' && role in ROLES)
+}
+
+async function countActiveAdmins(tx: LocalUserTransaction): Promise<number> {
+  const activeAdminRows = await tx
+    .select({ id: users.id })
+    .from(users)
+    .innerJoin(userRoles, eq(users.id, userRoles.userId))
+    .innerJoin(rolesTable, eq(userRoles.roleId, rolesTable.id))
+    .where(and(
+      eq(users.isActive, true),
+      eq(rolesTable.nama, ROLES.ADMIN),
+    ))
+
+  return activeAdminRows.length
 }
 
 async function replaceUserRoles(

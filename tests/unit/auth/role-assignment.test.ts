@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import { ROLES } from '#/lib/constants/roles'
 import {
+  LAST_ACTIVE_ADMIN_ERROR,
+  SELF_ADMIN_REMOVAL_ERROR,
+  evaluateAdminDeactivationPolicy,
+  evaluateAdminRoleMutationPolicy,
   findInvalidCanonicalRoles,
   normalizeAdminRolePayload,
   normalizeAdminRoleToggle,
@@ -57,5 +61,46 @@ describe('admin user role assignment normalization', () => {
       'ARSIPARIS',
       '123',
     ])
+  })
+
+  it('rejects self admin demotion', () => {
+    expect(evaluateAdminRoleMutationPolicy({
+      actingUserId: 'admin-a',
+      targetUserId: 'admin-a',
+      currentRoles: [ROLES.ADMIN],
+      nextRoles: [ROLES.PEGAWAI, ROLES.PPK],
+      targetIsActive: true,
+      activeAdminCount: 2,
+    })).toBe(SELF_ADMIN_REMOVAL_ERROR)
+  })
+
+  it('allows an admin to demote another admin when another active admin remains', () => {
+    expect(evaluateAdminRoleMutationPolicy({
+      actingUserId: 'admin-a',
+      targetUserId: 'admin-b',
+      currentRoles: [ROLES.ADMIN],
+      nextRoles: [ROLES.PEGAWAI, ROLES.PPK],
+      targetIsActive: true,
+      activeAdminCount: 2,
+    })).toBeNull()
+  })
+
+  it('rejects removing ADMIN from the last active admin account', () => {
+    expect(evaluateAdminRoleMutationPolicy({
+      actingUserId: 'admin-a',
+      targetUserId: 'admin-b',
+      currentRoles: [ROLES.ADMIN],
+      nextRoles: [ROLES.PEGAWAI, ROLES.PPK],
+      targetIsActive: true,
+      activeAdminCount: 1,
+    })).toBe(LAST_ACTIVE_ADMIN_ERROR)
+  })
+
+  it('rejects deactivating the last active admin account', () => {
+    expect(evaluateAdminDeactivationPolicy({
+      currentRoles: [ROLES.ADMIN],
+      targetIsActive: true,
+      activeAdminCount: 1,
+    })).toBe(LAST_ACTIVE_ADMIN_ERROR)
   })
 })

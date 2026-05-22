@@ -35,8 +35,9 @@ import {
 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { getClientAuthState } from '#/lib/auth-state'
 import { ROLE_DISPLAY } from '#/lib/constants/roles'
-import { normalizeAdminRoleToggle } from '#/lib/users/role-assignment'
+import { SELF_ADMIN_REMOVAL_ERROR, normalizeAdminRoleToggle } from '#/lib/users/role-assignment'
 import type { UserWithRoles } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -206,10 +207,16 @@ function MasterUserPage() {
 
   // Loading states for actions
   const [actionLoading, setActionLoading] = useState(false)
+  const [currentUserId] = useState(() => getClientAuthState().userId ?? null)
 
   const isEditDirty = initialEditSnapshot !== null && (
     !sameEditForm(initialEditSnapshot.form, editForm) ||
     !sameAssignments(initialEditSnapshot.assignments, dialogChairmanAssignments)
+  )
+  const isEditingOwnAdminAccount = Boolean(
+    selectedUser
+    && currentUserId === selectedUser.id
+    && initialEditSnapshot?.form.roles.includes('ADMIN'),
   )
 
   // ---------------------------------------------------------------------------
@@ -747,6 +754,11 @@ function MasterUserPage() {
         roles: normalizeAdminRoleToggle(prev.roles, role),
       }))
     } else {
+      if (isEditingOwnAdminAccount) {
+        alert(SELF_ADMIN_REMOVAL_ERROR)
+        return
+      }
+
       setEditForm(prev => ({
         ...prev,
         roles: normalizeAdminRoleToggle(prev.roles, role),
@@ -754,8 +766,9 @@ function MasterUserPage() {
     }
   }
 
-  const isPegawaiDisabled = (role: RoleName, roles: RoleName[]) => (
-    role === 'PEGAWAI' && !roles.includes('ADMIN')
+  const isRoleButtonDisabled = (role: RoleName, roles: RoleName[], form: 'create' | 'edit') => (
+    (form === 'edit' && isEditingOwnAdminAccount)
+    || (role === 'PEGAWAI' && !roles.includes('ADMIN'))
   )
 
   // ---------------------------------------------------------------------------
@@ -1011,12 +1024,12 @@ function MasterUserPage() {
                     type="button"
                     aria-pressed={createForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'create')}
-                    disabled={isPegawaiDisabled(role, createForm.roles)}
+                    disabled={isRoleButtonDisabled(role, createForm.roles, 'create')}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                       createForm.roles.includes(role)
                         ? `${ROLE_COLORS[role]} border-current`
                         : 'bg-white border-border text-outline hover:bg-muted'
-                    } ${isPegawaiDisabled(role, createForm.roles) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${isRoleButtonDisabled(role, createForm.roles, 'create') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     {ROLE_DISPLAY[role]}
                     {role === 'PEGAWAI' && !createForm.roles.includes('ADMIN') && ' (wajib)'}
@@ -1089,12 +1102,12 @@ function MasterUserPage() {
                     type="button"
                     aria-pressed={editForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'edit')}
-                    disabled={isPegawaiDisabled(role, editForm.roles)}
+                    disabled={isRoleButtonDisabled(role, editForm.roles, 'edit')}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                       editForm.roles.includes(role)
                         ? `${ROLE_COLORS[role]} border-current`
                         : 'bg-white border-border text-outline hover:bg-muted'
-                    } ${isPegawaiDisabled(role, editForm.roles) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${isRoleButtonDisabled(role, editForm.roles, 'edit') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     {ROLE_DISPLAY[role]}
                     {role === 'PEGAWAI' && !editForm.roles.includes('ADMIN') && ' (wajib)'}
@@ -1102,6 +1115,11 @@ function MasterUserPage() {
                   </button>
                 ))}
               </div>
+              {isEditingOwnAdminAccount && (
+                <p className="mt-2 text-[11px] font-medium text-red-600">
+                  {SELF_ADMIN_REMOVAL_ERROR}
+                </p>
+              )}
             </div>
 
             {/* Section: Kegiatan sebagai Ketua Tim */}
