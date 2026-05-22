@@ -15,6 +15,13 @@
       "when": 1779400000000,
       "tag": "0001_rename_arsiparis_role",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779432000000,
+      "tag": "0002_add_penanggung_jawab_kinerja_role",
+      "breakpoints": true
     }
   ]
 }

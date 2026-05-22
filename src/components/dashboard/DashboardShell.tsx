@@ -46,6 +46,13 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
     ctaLabel: 'Pemberkasan Arsip',
     ctaTo: '/arsiparis/inbox',
   },
+  PENANGGUNG_JAWAB_KINERJA: {
+    badge: 'PENANGGUNG JAWAB KINERJA PORTAL',
+    title: 'Dashboard',
+    desc: 'Ruang kerja Penanggung Jawab Kinerja untuk laporan metadata dokumen final.',
+    ctaLabel: 'Laporan Kinerja',
+    ctaTo: '/penanggung-jawab-kinerja/laporan-kinerja',
+  },
   ADMIN: {
     badge: 'ADMIN PORTAL',
     title: 'Dashboard',

@@ -157,6 +157,19 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       ],
     },
   ],
+  PENANGGUNG_JAWAB_KINERJA: [
+    {
+      title: 'LAPORAN',
+      items: [
+        {
+          id: 'laporan_kinerja',
+          label: 'Laporan Kinerja',
+          icon: BarChart3,
+          to: ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA,
+        },
+      ],
+    },
+  ],
   ADMIN: [
     {
       title: 'GENERAL',

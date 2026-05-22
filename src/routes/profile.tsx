@@ -29,6 +29,7 @@ const ROLE_COLORS: Record<RoleName, string> = {
   PPK: 'bg-purple-100 text-purple-700 border-purple-200',
   BENDAHARA: 'bg-green-100 text-green-700 border-green-200',
   KEPALA_SUB_BAGIAN_UMUM: 'bg-orange-100 text-orange-700 border-orange-200',
+  PENANGGUNG_JAWAB_KINERJA: 'bg-cyan-100 text-cyan-700 border-cyan-200',
   ADMIN: 'bg-red-100 text-red-700 border-red-200',
 }
 

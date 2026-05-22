@@ -36,6 +36,10 @@ export const ROUTES = {
     KLASIFIKASI: '/arsiparis/klasifikasi',
     SEARCH: '/arsiparis/search',
   },
+  PENANGGUNG_JAWAB_KINERJA: {
+    ROOT: '/penanggung-jawab-kinerja',
+    LAPORAN_KINERJA: '/penanggung-jawab-kinerja/laporan-kinerja',
+  },
   ADMIN: {
     ROOT: '/admin',
     MASTER_USER: '/admin/master-data/user',
@@ -61,6 +65,7 @@ export const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
   PPK: ROUTES.PPK.ROOT,
   BENDAHARA: ROUTES.BENDAHARA.ROOT,
   KEPALA_SUB_BAGIAN_UMUM: ROUTES.KEPALA_SUB_BAGIAN_UMUM.ROOT,
+  PENANGGUNG_JAWAB_KINERJA: ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA,
   ADMIN: ROUTES.ADMIN.ROOT,
 }
 
@@ -82,6 +87,7 @@ export const MESH_ROUTES = [
   ROUTES.PPK.ROOT,
   ROUTES.BENDAHARA.ROOT,
   ROUTES.KEPALA_SUB_BAGIAN_UMUM.ROOT,
+  ROUTES.PENANGGUNG_JAWAB_KINERJA.ROOT,
   ROUTES.ADMIN.ROOT,
 ] as const
 

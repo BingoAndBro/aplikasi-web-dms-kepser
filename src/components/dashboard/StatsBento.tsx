@@ -69,6 +69,15 @@ const BENTO_CONFIGS: Record<RoleName, BentoConfig> = {
     ],
     chart: false,
   },
+  PENANGGUNG_JAWAB_KINERJA: {
+    stats: [
+      { label: 'Dokumen Final', value: '—', icon: FileCheck, color: 'text-primary' },
+      { label: 'Material', value: '—', icon: ClipboardList, color: 'text-blue-500' },
+      { label: 'Non-Material', value: '—', icon: FileText, color: 'text-cyan-500' },
+      { label: 'Arsip', value: '—', icon: Archive, color: 'text-green-500' },
+    ],
+    chart: false,
+  },
   ADMIN: {
     stats: [
       { label: 'Total User', value: '—', icon: Users, color: 'text-primary' },

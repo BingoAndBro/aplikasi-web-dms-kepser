@@ -38,4 +38,12 @@ describe('local auth role resolution', () => {
       error: 'Konfigurasi role akun tidak valid.',
     })
   })
+
+  it('treats PENANGGUNG_JAWAB_KINERJA as a non-admin assignable role', () => {
+    expect(validateAssignedRoles([ROLES.PENANGGUNG_JAWAB_KINERJA])).toEqual({ ok: true })
+    expect(validateAssignedRoles([ROLES.ADMIN, ROLES.PENANGGUNG_JAWAB_KINERJA])).toEqual({
+      ok: false,
+      error: 'Konfigurasi role akun tidak valid.',
+    })
+  })
 })

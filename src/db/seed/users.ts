@@ -82,7 +82,7 @@ export async function seedDevelopmentUsers(database: SeedDb) {
         .select({ roleName: roles.nama })
         .from(userRoles)
         .innerJoin(roles, eq(userRoles.roleId, roles.id))
-        .where(and(eq(userRoles.userId, seededUser.id), inArray(roles.nama, ['PEGAWAI', 'PPK', 'BENDAHARA', 'KEPALA_SUB_BAGIAN_UMUM'])))
+        .where(and(eq(userRoles.userId, seededUser.id), inArray(roles.nama, ['PEGAWAI', 'PPK', 'BENDAHARA', 'KEPALA_SUB_BAGIAN_UMUM', 'PENANGGUNG_JAWAB_KINERJA'])))
 
       if (nonAdminRoleRows.length > 0) {
         throw new Error(`Seed user ${user.email} violates ADMIN dedicated-role rule`)

@@ -5,6 +5,7 @@ export const SEED_ROLE_IDS: Record<RoleName, string> = {
   PPK: '22222222-2222-4222-8222-222222222222',
   BENDAHARA: '33333333-3333-4333-8333-333333333333',
   KEPALA_SUB_BAGIAN_UMUM: '44444444-4444-4444-8444-444444444444',
+  PENANGGUNG_JAWAB_KINERJA: '66666666-6666-4666-8666-666666666666',
   ADMIN: '55555555-5555-4555-8555-555555555555',
 }
 
@@ -50,6 +51,11 @@ export const CANONICAL_SEED_ROLES = [
     id: SEED_ROLE_IDS.KEPALA_SUB_BAGIAN_UMUM,
     nama: ROLES.KEPALA_SUB_BAGIAN_UMUM,
     description: 'Kepala Sub Bagian Umum pengelola arsip dokumen',
+  },
+  {
+    id: SEED_ROLE_IDS.PENANGGUNG_JAWAB_KINERJA,
+    nama: ROLES.PENANGGUNG_JAWAB_KINERJA,
+    description: 'Penanggung Jawab Kinerja pembaca laporan kinerja final',
   },
   {
     id: SEED_ROLE_IDS.ADMIN,

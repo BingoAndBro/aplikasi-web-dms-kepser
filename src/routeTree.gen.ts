@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PpkRouteImport } from './routes/ppk'
+import { Route as PenanggungJawabKinerjaRouteImport } from './routes/penanggung-jawab-kinerja'
 import { Route as PegawaiRouteImport } from './routes/pegawai'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
@@ -20,6 +21,7 @@ import { Route as ArsiparisRouteImport } from './routes/arsiparis'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PpkIndexRouteImport } from './routes/ppk/index'
+import { Route as PenanggungJawabKinerjaIndexRouteImport } from './routes/penanggung-jawab-kinerja/index'
 import { Route as BendaharaIndexRouteImport } from './routes/bendahara/index'
 import { Route as ArsiparisIndexRouteImport } from './routes/arsiparis/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -27,6 +29,7 @@ import { Route as PpkTervalidasiRouteImport } from './routes/ppk/tervalidasi'
 import { Route as PpkRevisiRouteImport } from './routes/ppk/revisi'
 import { Route as PpkInboxRouteImport } from './routes/ppk/inbox'
 import { Route as PpkDitolakRouteImport } from './routes/ppk/ditolak'
+import { Route as PenanggungJawabKinerjaLaporanKinerjaRouteImport } from './routes/penanggung-jawab-kinerja/laporan-kinerja'
 import { Route as PegawaiRevisiRouteImport } from './routes/pegawai/revisi'
 import { Route as PegawaiDokumenRouteImport } from './routes/pegawai/dokumen'
 import { Route as DokumenSayaRouteImport } from './routes/dokumen/saya'
@@ -81,6 +84,7 @@ import { Route as ApiMasterJenisDokumenIdRouteImport } from './routes/api/master
 import { Route as ApiMasterFungsiIdRouteImport } from './routes/api/master-fungsi.$id'
 import { Route as ApiMasterDetailIdRouteImport } from './routes/api/master-detail.$id'
 import { Route as ApiLaporanSayaRouteImport } from './routes/api/laporan/saya'
+import { Route as ApiLaporanKinerjaRouteImport } from './routes/api/laporan/kinerja'
 import { Route as ApiLaporanKegiatanRouteImport } from './routes/api/laporan/kegiatan'
 import { Route as ApiKetuaTimIdRouteImport } from './routes/api/ketua-tim/$id'
 import { Route as ApiFilesAccessRouteImport } from './routes/api/files/access'
@@ -162,6 +166,11 @@ const PpkRoute = PpkRouteImport.update({
   path: '/ppk',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PenanggungJawabKinerjaRoute = PenanggungJawabKinerjaRouteImport.update({
+  id: '/penanggung-jawab-kinerja',
+  path: '/penanggung-jawab-kinerja',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PegawaiRoute = PegawaiRouteImport.update({
   id: '/pegawai',
   path: '/pegawai',
@@ -207,6 +216,12 @@ const PpkIndexRoute = PpkIndexRouteImport.update({
   path: '/',
   getParentRoute: () => PpkRoute,
 } as any)
+const PenanggungJawabKinerjaIndexRoute =
+  PenanggungJawabKinerjaIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PenanggungJawabKinerjaRoute,
+  } as any)
 const BendaharaIndexRoute = BendaharaIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -242,6 +257,12 @@ const PpkDitolakRoute = PpkDitolakRouteImport.update({
   path: '/ditolak',
   getParentRoute: () => PpkRoute,
 } as any)
+const PenanggungJawabKinerjaLaporanKinerjaRoute =
+  PenanggungJawabKinerjaLaporanKinerjaRouteImport.update({
+    id: '/laporan-kinerja',
+    path: '/laporan-kinerja',
+    getParentRoute: () => PenanggungJawabKinerjaRoute,
+  } as any)
 const PegawaiRevisiRoute = PegawaiRevisiRouteImport.update({
   id: '/revisi',
   path: '/revisi',
@@ -511,6 +532,11 @@ const ApiMasterDetailIdRoute = ApiMasterDetailIdRouteImport.update({
 const ApiLaporanSayaRoute = ApiLaporanSayaRouteImport.update({
   id: '/api/laporan/saya',
   path: '/api/laporan/saya',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLaporanKinerjaRoute = ApiLaporanKinerjaRouteImport.update({
+  id: '/api/laporan/kinerja',
+  path: '/api/laporan/kinerja',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLaporanKegiatanRoute = ApiLaporanKegiatanRouteImport.update({
@@ -893,6 +919,7 @@ export interface FileRoutesByFullPath {
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
+  '/penanggung-jawab-kinerja': typeof PenanggungJawabKinerjaRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
   '/profile': typeof ProfileRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
@@ -915,6 +942,7 @@ export interface FileRoutesByFullPath {
   '/dokumen/saya': typeof DokumenSayaRoute
   '/pegawai/dokumen': typeof PegawaiDokumenRouteWithChildren
   '/pegawai/revisi': typeof PegawaiRevisiRoute
+  '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
   '/ppk/revisi': typeof PpkRevisiRoute
@@ -922,6 +950,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
   '/bendahara/': typeof BendaharaIndexRoute
+  '/penanggung-jawab-kinerja/': typeof PenanggungJawabKinerjaIndexRoute
   '/ppk/': typeof PpkIndexRoute
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
@@ -953,6 +982,7 @@ export interface FileRoutesByFullPath {
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
+  '/api/laporan/kinerja': typeof ApiLaporanKinerjaRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
@@ -1053,6 +1083,7 @@ export interface FileRoutesByTo {
   '/dokumen/aju': typeof DokumenAjuRoute
   '/dokumen/saya': typeof DokumenSayaRoute
   '/pegawai/revisi': typeof PegawaiRevisiRoute
+  '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
   '/ppk/revisi': typeof PpkRevisiRoute
@@ -1060,6 +1091,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/arsiparis': typeof ArsiparisIndexRoute
   '/bendahara': typeof BendaharaIndexRoute
+  '/penanggung-jawab-kinerja': typeof PenanggungJawabKinerjaIndexRoute
   '/ppk': typeof PpkIndexRoute
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
@@ -1091,6 +1123,7 @@ export interface FileRoutesByTo {
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
+  '/api/laporan/kinerja': typeof ApiLaporanKinerjaRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
@@ -1174,6 +1207,7 @@ export interface FileRoutesById {
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
+  '/penanggung-jawab-kinerja': typeof PenanggungJawabKinerjaRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
   '/profile': typeof ProfileRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
@@ -1196,6 +1230,7 @@ export interface FileRoutesById {
   '/dokumen/saya': typeof DokumenSayaRoute
   '/pegawai/dokumen': typeof PegawaiDokumenRouteWithChildren
   '/pegawai/revisi': typeof PegawaiRevisiRoute
+  '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
   '/ppk/revisi': typeof PpkRevisiRoute
@@ -1203,6 +1238,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/arsiparis/': typeof ArsiparisIndexRoute
   '/bendahara/': typeof BendaharaIndexRoute
+  '/penanggung-jawab-kinerja/': typeof PenanggungJawabKinerjaIndexRoute
   '/ppk/': typeof PpkIndexRoute
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
@@ -1234,6 +1270,7 @@ export interface FileRoutesById {
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
+  '/api/laporan/kinerja': typeof ApiLaporanKinerjaRoute
   '/api/laporan/saya': typeof ApiLaporanSayaRoute
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
@@ -1320,6 +1357,7 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/login'
     | '/pegawai'
+    | '/penanggung-jawab-kinerja'
     | '/ppk'
     | '/profile'
     | '/api/master-detail'
@@ -1342,6 +1380,7 @@ export interface FileRouteTypes {
     | '/dokumen/saya'
     | '/pegawai/dokumen'
     | '/pegawai/revisi'
+    | '/penanggung-jawab-kinerja/laporan-kinerja'
     | '/ppk/ditolak'
     | '/ppk/inbox'
     | '/ppk/revisi'
@@ -1349,6 +1388,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/arsiparis/'
     | '/bendahara/'
+    | '/penanggung-jawab-kinerja/'
     | '/ppk/'
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
@@ -1380,6 +1420,7 @@ export interface FileRouteTypes {
     | '/api/files/access'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
+    | '/api/laporan/kinerja'
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
@@ -1480,6 +1521,7 @@ export interface FileRouteTypes {
     | '/dokumen/aju'
     | '/dokumen/saya'
     | '/pegawai/revisi'
+    | '/penanggung-jawab-kinerja/laporan-kinerja'
     | '/ppk/ditolak'
     | '/ppk/inbox'
     | '/ppk/revisi'
@@ -1487,6 +1529,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/arsiparis'
     | '/bendahara'
+    | '/penanggung-jawab-kinerja'
     | '/ppk'
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
@@ -1518,6 +1561,7 @@ export interface FileRouteTypes {
     | '/api/files/access'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
+    | '/api/laporan/kinerja'
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
@@ -1600,6 +1644,7 @@ export interface FileRouteTypes {
     | '/forbidden'
     | '/login'
     | '/pegawai'
+    | '/penanggung-jawab-kinerja'
     | '/ppk'
     | '/profile'
     | '/api/master-detail'
@@ -1622,6 +1667,7 @@ export interface FileRouteTypes {
     | '/dokumen/saya'
     | '/pegawai/dokumen'
     | '/pegawai/revisi'
+    | '/penanggung-jawab-kinerja/laporan-kinerja'
     | '/ppk/ditolak'
     | '/ppk/inbox'
     | '/ppk/revisi'
@@ -1629,6 +1675,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/arsiparis/'
     | '/bendahara/'
+    | '/penanggung-jawab-kinerja/'
     | '/ppk/'
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
@@ -1660,6 +1707,7 @@ export interface FileRouteTypes {
     | '/api/files/access'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
+    | '/api/laporan/kinerja'
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
@@ -1745,6 +1793,7 @@ export interface RootRouteChildren {
   ForbiddenRoute: typeof ForbiddenRoute
   LoginRoute: typeof LoginRoute
   PegawaiRoute: typeof PegawaiRouteWithChildren
+  PenanggungJawabKinerjaRoute: typeof PenanggungJawabKinerjaRouteWithChildren
   PpkRoute: typeof PpkRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ApiMasterDetailRoute: typeof ApiMasterDetailRouteWithChildren
@@ -1777,6 +1826,7 @@ export interface RootRouteChildren {
   ApiFilesAccessRoute: typeof ApiFilesAccessRoute
   ApiKetuaTimIdRoute: typeof ApiKetuaTimIdRoute
   ApiLaporanKegiatanRoute: typeof ApiLaporanKegiatanRoute
+  ApiLaporanKinerjaRoute: typeof ApiLaporanKinerjaRoute
   ApiLaporanSayaRoute: typeof ApiLaporanSayaRoute
   ApiPegawaiRevisiRoute: typeof ApiPegawaiRevisiRoute
   ApiPpkDitolakRoute: typeof ApiPpkDitolakRoute
@@ -1813,6 +1863,13 @@ declare module '@tanstack/react-router' {
       path: '/ppk'
       fullPath: '/ppk'
       preLoaderRoute: typeof PpkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/penanggung-jawab-kinerja': {
+      id: '/penanggung-jawab-kinerja'
+      path: '/penanggung-jawab-kinerja'
+      fullPath: '/penanggung-jawab-kinerja'
+      preLoaderRoute: typeof PenanggungJawabKinerjaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pegawai': {
@@ -1878,6 +1935,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PpkIndexRouteImport
       parentRoute: typeof PpkRoute
     }
+    '/penanggung-jawab-kinerja/': {
+      id: '/penanggung-jawab-kinerja/'
+      path: '/'
+      fullPath: '/penanggung-jawab-kinerja/'
+      preLoaderRoute: typeof PenanggungJawabKinerjaIndexRouteImport
+      parentRoute: typeof PenanggungJawabKinerjaRoute
+    }
     '/bendahara/': {
       id: '/bendahara/'
       path: '/'
@@ -1926,6 +1990,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ppk/ditolak'
       preLoaderRoute: typeof PpkDitolakRouteImport
       parentRoute: typeof PpkRoute
+    }
+    '/penanggung-jawab-kinerja/laporan-kinerja': {
+      id: '/penanggung-jawab-kinerja/laporan-kinerja'
+      path: '/laporan-kinerja'
+      fullPath: '/penanggung-jawab-kinerja/laporan-kinerja'
+      preLoaderRoute: typeof PenanggungJawabKinerjaLaporanKinerjaRouteImport
+      parentRoute: typeof PenanggungJawabKinerjaRoute
     }
     '/pegawai/revisi': {
       id: '/pegawai/revisi'
@@ -2303,6 +2374,13 @@ declare module '@tanstack/react-router' {
       path: '/api/laporan/saya'
       fullPath: '/api/laporan/saya'
       preLoaderRoute: typeof ApiLaporanSayaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/laporan/kinerja': {
+      id: '/api/laporan/kinerja'
+      path: '/api/laporan/kinerja'
+      fullPath: '/api/laporan/kinerja'
+      preLoaderRoute: typeof ApiLaporanKinerjaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/laporan/kegiatan': {
@@ -2957,6 +3035,23 @@ const PegawaiRouteChildren: PegawaiRouteChildren = {
 const PegawaiRouteWithChildren =
   PegawaiRoute._addFileChildren(PegawaiRouteChildren)
 
+interface PenanggungJawabKinerjaRouteChildren {
+  PenanggungJawabKinerjaLaporanKinerjaRoute: typeof PenanggungJawabKinerjaLaporanKinerjaRoute
+  PenanggungJawabKinerjaIndexRoute: typeof PenanggungJawabKinerjaIndexRoute
+}
+
+const PenanggungJawabKinerjaRouteChildren: PenanggungJawabKinerjaRouteChildren =
+  {
+    PenanggungJawabKinerjaLaporanKinerjaRoute:
+      PenanggungJawabKinerjaLaporanKinerjaRoute,
+    PenanggungJawabKinerjaIndexRoute: PenanggungJawabKinerjaIndexRoute,
+  }
+
+const PenanggungJawabKinerjaRouteWithChildren =
+  PenanggungJawabKinerjaRoute._addFileChildren(
+    PenanggungJawabKinerjaRouteChildren,
+  )
+
 interface PpkDokumenIdRouteChildren {
   PpkDokumenIdResubmitRoute: typeof PpkDokumenIdResubmitRoute
   PpkDokumenIdIndexRoute: typeof PpkDokumenIdIndexRoute
@@ -3249,6 +3344,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForbiddenRoute: ForbiddenRoute,
   LoginRoute: LoginRoute,
   PegawaiRoute: PegawaiRouteWithChildren,
+  PenanggungJawabKinerjaRoute: PenanggungJawabKinerjaRouteWithChildren,
   PpkRoute: PpkRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ApiMasterDetailRoute: ApiMasterDetailRouteWithChildren,
@@ -3281,6 +3377,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFilesAccessRoute: ApiFilesAccessRoute,
   ApiKetuaTimIdRoute: ApiKetuaTimIdRoute,
   ApiLaporanKegiatanRoute: ApiLaporanKegiatanRoute,
+  ApiLaporanKinerjaRoute: ApiLaporanKinerjaRoute,
   ApiLaporanSayaRoute: ApiLaporanSayaRoute,
   ApiPegawaiRevisiRoute: ApiPegawaiRevisiRoute,
   ApiPpkDitolakRoute: ApiPpkDitolakRoute,
