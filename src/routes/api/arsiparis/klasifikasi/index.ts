@@ -4,6 +4,7 @@ import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterKlasifikasiArsip } from '#/db/schema/arsip'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { ROLES } from '#/lib/constants/roles'
 import { z } from 'zod'
 
 // Types
@@ -20,7 +21,7 @@ export type KlasifikasiNode = {
 
 // ---------------------------------------------------------------------------
 // GET /api/arsiparis/klasifikasi — list semua klasifikasi aktif dalam tree structure
-// POST /api/arsiparis/klasifikasi — create klasifikasi baru (ADMIN only)
+// POST /api/arsiparis/klasifikasi — create klasifikasi baru
 // ---------------------------------------------------------------------------
 
 const createKlasifikasiSchema = z.object({
@@ -33,10 +34,56 @@ const createKlasifikasiSchema = z.object({
 async function requireAdminOrKepalaSubBagianUmum(request: Request) {
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!hasLocalRole(session, 'ADMIN') && !hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) {
+  if (!hasLocalRole(session, ROLES.ADMIN) && !hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
     return Response.json({ error: 'Hanya ADMIN atau Kepala Sub Bagian Umum yang bisa menambah klasifikasi' }, { status: 403 })
   }
   return null
+}
+
+function conflictResponse(error: string): Response {
+  return Response.json({ error }, { status: 409 })
+}
+
+function classifyUniqueViolation(error: unknown): 'kode' | 'nama' | 'unknown' | null {
+  if (!error || typeof error !== 'object') return null
+
+  const candidate = error as {
+    code?: unknown
+    constraint?: unknown
+  }
+
+  if (candidate.code !== '23505') return null
+
+  const constraint = typeof candidate.constraint === 'string' ? candidate.constraint : ''
+
+  if (constraint.includes('idx_master_klasifikasi_kode_unique')) return 'kode'
+  if (constraint.includes('master_klasifikasi_arsip_nama_unique')) return 'nama'
+
+  return 'unknown'
+}
+
+function uniqueViolationMessage(field: 'kode' | 'nama' | 'unknown'): string {
+  if (field === 'kode') return 'Kode klasifikasi sudah digunakan.'
+  if (field === 'nama') return 'Nama klasifikasi sudah digunakan.'
+  return 'Klasifikasi dengan kode atau nama tersebut sudah ada.'
+}
+
+function toSafeErrorLog(error: unknown): Record<string, unknown> {
+  if (!error || typeof error !== 'object') {
+    return { type: typeof error }
+  }
+
+  const candidate = error as {
+    code?: unknown
+    constraint?: unknown
+    name?: unknown
+  }
+
+  return {
+    name: typeof candidate.name === 'string' ? candidate.name : undefined,
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+    constraint: typeof candidate.constraint === 'string' ? candidate.constraint : undefined,
+  }
 }
 
 function buildTree(items: Omit<KlasifikasiNode, 'children'>[]): KlasifikasiNode[] {
@@ -130,7 +177,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
             ))
             .limit(1)
 
-          if (existingName) return Response.json({ error: `Nama klasifikasi "${parsed.data.nama}" sudah ada` }, { status: 409 })
+          if (existingName) return conflictResponse('Nama klasifikasi sudah digunakan.')
 
           // Cek duplikat kode
           if (parsed.data.kode) {
@@ -143,7 +190,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
               ))
               .limit(1)
 
-            if (existingKode) return Response.json({ error: `Kode klasifikasi "${parsed.data.kode}" sudah ada` }, { status: 409 })
+            if (existingKode) return conflictResponse('Kode klasifikasi sudah digunakan.')
           }
 
           // Validate parent exists if provided
@@ -182,7 +229,13 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
 
           return Response.json(data, { status: 201 })
         } catch (err) {
-          console.error('[arsiparis/klasifikasi] POST local query error:', err)
+          const uniqueViolationField = classifyUniqueViolation(err)
+          if (uniqueViolationField) {
+            console.warn('[arsiparis/klasifikasi] POST unique constraint conflict:', toSafeErrorLog(err))
+            return conflictResponse(uniqueViolationMessage(uniqueViolationField))
+          }
+
+          console.error('[arsiparis/klasifikasi] POST local query error:', toSafeErrorLog(err))
           return Response.json({ error: 'Gagal membuat klasifikasi' }, { status: 500 })
         }
       },
