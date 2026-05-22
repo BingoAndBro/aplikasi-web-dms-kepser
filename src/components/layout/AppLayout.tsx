@@ -102,11 +102,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setHasSession(true)
     setUserName(data.session.userName)
     setEmail(data.session.email)
+    setChairmanKegiatan([])
 
     try {
       const ktData = await apiFetch<ChairmanStatusResponse>('/users/me/ketua-tim')
       setChairmanKegiatan(ktData.kegiatan || [])
     } catch (err) {
+      setChairmanKegiatan([])
       if (!(err instanceof Error && err.name === 'ApiError')) {
         console.error('Failed to fetch chairman status:', err)
       }
@@ -243,6 +245,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen overflow-hidden bg-background relative selection:bg-primary-container selection:text-on-primary-container">
         <AppSidebar
           activeRole={activeRole}
+          hasKetuaTimAssignment={chairmanKegiatan.length > 0}
           pathname={routerState.location.pathname}
           searchStr={routerState.location.searchStr}
           onLogout={handleLogout}

@@ -197,8 +197,10 @@ function PpkResubmitPage() {
 
   async function handleKembalikan() {
     setKembalikanLoading(true)
+    let succeeded = false
     try {
       await apiMutation(`/api/ppk/kembalikan/${id}`, { method: 'POST' })
+      succeeded = true
       navigate({ to: '/ppk/revisi' })
     } catch (err) {
       if (err instanceof ApiError) {
@@ -210,7 +212,12 @@ function PpkResubmitPage() {
       }
 
       alert('Terjadi kesalahan')
-    } finally { setKembalikanLoading(false) }
+    } finally {
+      setKembalikanLoading(false)
+      if (!succeeded) {
+        setGuardEnabled(true)
+      }
+    }
   }
 
   if (loading) return (
@@ -307,11 +314,14 @@ function PpkResubmitPage() {
               size="sm"
               variant="outline"
               className="gap-1.5"
-              onClick={() => confirmIfDirty(() => {
-                if (confirm('Yakin ingin mengembalikan dokumen ini ke pegawai?')) {
-                  return handleKembalikan()
+              onClick={() => {
+                if (!confirm('Yakin ingin mengembalikan dokumen ini ke pegawai?')) {
+                  return
                 }
-              })}
+
+                setGuardEnabled(false)
+                return handleKembalikan()
+              }}
               disabled={kembalikanLoading}
             >
               {kembalikanLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowLeft size={14} />}

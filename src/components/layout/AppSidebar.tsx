@@ -25,14 +25,28 @@ export function AppSidebar({
   activeRole,
   pathname,
   searchStr,
+  hasKetuaTimAssignment,
   onLogout,
 }: {
   activeRole: RoleName
   pathname: string
   searchStr?: string
+  hasKetuaTimAssignment?: boolean
   onLogout: () => void | Promise<void>
 }) {
-  const navGroups = React.useMemo(() => NAV_CONFIG[activeRole] ?? [], [activeRole])
+  const navGroups = React.useMemo(() => {
+    const groups = NAV_CONFIG[activeRole] ?? []
+    if (activeRole !== ROLES.PEGAWAI || hasKetuaTimAssignment) {
+      return groups
+    }
+
+    return groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => item.id !== 'laporan_kegiatan'),
+      }))
+      .filter((group) => group.items.length > 0)
+  }, [activeRole, hasKetuaTimAssignment])
   const isAdmin = activeRole === ROLES.ADMIN
 
   return (
