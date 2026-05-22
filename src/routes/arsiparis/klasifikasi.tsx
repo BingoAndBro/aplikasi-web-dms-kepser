@@ -709,7 +709,7 @@ function KlasifikasiPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-              <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
+              <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
               <ChevronRight size={10} />
               <span className="text-primary">Master Klasifikasi</span>
             </div>

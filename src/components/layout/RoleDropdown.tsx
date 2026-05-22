@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react'
 
+import { ROLE_DISPLAY } from '#/lib/constants/roles'
 import type { RoleName } from '#/lib/types/auth'
 
 export function RoleDropdown({
@@ -20,13 +21,13 @@ export function RoleDropdown({
       <span className="text-[8px] font-black text-outline uppercase tracking-[0.2em] mb-1">Switch Role</span>
       <button
         type="button"
-        aria-label={`Ganti role aktif, saat ini ${currentRole}`}
+        aria-label={`Ganti role aktif, saat ini ${ROLE_DISPLAY[currentRole]}`}
         aria-expanded={roleSwitcherOpen}
         aria-haspopup="menu"
         onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
         className="bg-surface-container/50 border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest px-2 py-1 outline-none focus:ring-1 focus:ring-primary/40 cursor-pointer hover:bg-surface-container transition-all flex items-center gap-1"
       >
-        {currentRole}
+        {ROLE_DISPLAY[currentRole]}
         <ChevronDown size={10} className={`transition-transform ${roleSwitcherOpen ? 'rotate-180' : ''}`} />
       </button>
       {roleSwitcherOpen && (
@@ -45,7 +46,7 @@ export function RoleDropdown({
                     : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
                 }`}
               >
-                {role}
+                {ROLE_DISPLAY[role]}
               </button>
             ))}
           </div>

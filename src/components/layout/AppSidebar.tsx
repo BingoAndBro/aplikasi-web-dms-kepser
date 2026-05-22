@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 
 import { NAV_CONFIG } from '#/config/navigation'
-import { ROLES } from '#/lib/constants/roles'
+import { ROLE_DISPLAY, ROLES } from '#/lib/constants/roles'
 
 import type { RoleName } from '#/lib/types/auth'
 
@@ -47,7 +47,7 @@ export function AppSidebar({
           </div>
         </div>
         <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary ml-11">
-          {isAdmin ? 'System Management' : `${activeRole} Workspace`}
+          {isAdmin ? 'System Management' : `${ROLE_DISPLAY[activeRole]} Workspace`}
         </p>
       </div>
 

@@ -9,7 +9,7 @@ import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-aut
 // ---------------------------------------------------------------------------
 // GET /api/arsiparis/search - search arsip (semua authenticated user)
 // Hasil difilter berdasarkan role:
-//   - ADMIN/ARSIPARIS: semua arsip
+//   - ADMIN/arsiparis: semua arsip
 //   - PPK: arsip dari dokumen yang pernah masuk workflow PPK (status-based local approximation)
 //   - Bendahara: arsip dari dokumen COMPLETED
 //   - Pegawai: arsip dari dokumen miliknya sendiri
@@ -39,7 +39,7 @@ export const Route = createFileRoute('/api/arsiparis/search')({
         const parsedTahun = tahun ? parseTahunFilter(tahun) : null
 
         const isAdmin = hasLocalRole(session, 'ADMIN')
-        const isArsiparis = hasLocalRole(session, 'ARSIPARIS')
+        const isKEPALA_SUB_BAGIAN_UMUM = hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')
         const isPPK = hasLocalRole(session, 'PPK')
         const isBendahara = hasLocalRole(session, 'BENDAHARA')
 
@@ -88,7 +88,7 @@ export const Route = createFileRoute('/api/arsiparis/search')({
             .where(inArray(dokumenTransaksi.id, docIds))
 
           const allowedDocs = docs.filter((doc) => {
-            if (isAdmin || isArsiparis) return true
+            if (isAdmin || isKEPALA_SUB_BAGIAN_UMUM) return true
             if (isPPK) {
               return ['IN_BENDAHARA_APPROVAL', 'COMPLETED', 'ARCHIVED'].includes(doc.status)
             }

@@ -39,10 +39,10 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
     ctaLabel: 'Persetujuan Dokumen',
     ctaTo: '/bendahara/inbox',
   },
-  ARSIPARIS: {
-    badge: 'ARSIPARIS PORTAL',
+  KEPALA_SUB_BAGIAN_UMUM: {
+    badge: 'KEPALA SUB BAGIAN UMUM PORTAL',
     title: 'Dashboard',
-    desc: 'Ruang kerja Arsiparis — pengelolaan dan klasifikasi dokumen arsip.',
+    desc: 'Ruang kerja Kepala Sub Bagian Umum — pengelolaan dan klasifikasi dokumen arsip.',
     ctaLabel: 'Pemberkasan Arsip',
     ctaTo: '/arsiparis/inbox',
   },

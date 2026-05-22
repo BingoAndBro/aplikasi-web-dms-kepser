@@ -164,7 +164,7 @@ function isActorValidForAction(
       return role === ROLES.PPK && status === DOC_STATUS.NEED_REVISION
     case FSM_ACTIONS.ARCHIVE:
     case FSM_ACTIONS.SKIP:
-      return role === ROLES.ARSIPARIS
+      return role === ROLES.KEPALA_SUB_BAGIAN_UMUM
     default:
       return false
   }

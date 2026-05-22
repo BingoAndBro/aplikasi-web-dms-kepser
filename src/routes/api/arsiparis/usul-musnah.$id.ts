@@ -253,7 +253,7 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah/$id')({
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         if (!isUuid(params.id)) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
 
@@ -373,7 +373,7 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah/$id')({
         if (sameOriginError) return sameOriginError
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         if (!isUuid(params.id)) return Response.json({ error: 'Usul musnah tidak ditemukan' }, { status: 404 })
 

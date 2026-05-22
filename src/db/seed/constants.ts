@@ -4,7 +4,7 @@ export const SEED_ROLE_IDS: Record<RoleName, string> = {
   PEGAWAI: '11111111-1111-4111-8111-111111111111',
   PPK: '22222222-2222-4222-8222-222222222222',
   BENDAHARA: '33333333-3333-4333-8333-333333333333',
-  ARSIPARIS: '44444444-4444-4444-8444-444444444444',
+  KEPALA_SUB_BAGIAN_UMUM: '44444444-4444-4444-8444-444444444444',
   ADMIN: '55555555-5555-4555-8555-555555555555',
 }
 
@@ -13,7 +13,7 @@ export const SEED_USER_IDS = {
   pegawai: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   ppk: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   bendahara: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-  arsiparis: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  kepalaSubBagianUmum: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
 } as const
 
 export const SEED_MASTER_IDS = {
@@ -47,9 +47,9 @@ export const CANONICAL_SEED_ROLES = [
     description: 'Bendahara pemeriksa dan penyelesai dokumen',
   },
   {
-    id: SEED_ROLE_IDS.ARSIPARIS,
-    nama: ROLES.ARSIPARIS,
-    description: 'Arsiparis pengelola arsip dokumen',
+    id: SEED_ROLE_IDS.KEPALA_SUB_BAGIAN_UMUM,
+    nama: ROLES.KEPALA_SUB_BAGIAN_UMUM,
+    description: 'Kepala Sub Bagian Umum pengelola arsip dokumen',
   },
   {
     id: SEED_ROLE_IDS.ADMIN,
@@ -92,12 +92,12 @@ export const DEV_SEED_USERS = [
     roles: [ROLES.PEGAWAI, ROLES.BENDAHARA],
   },
   {
-    key: 'arsiparis',
-    id: SEED_USER_IDS.arsiparis,
-    email: 'dev.arsiparis@local.test',
-    displayName: 'Dev Arsiparis',
-    namaLengkap: 'Development Arsiparis',
-    roles: [ROLES.PEGAWAI, ROLES.ARSIPARIS],
+    key: 'kepalaSubBagianUmum',
+    id: SEED_USER_IDS.kepalaSubBagianUmum,
+    email: 'dev.kepala-sub-bagian-umum@local.test',
+    displayName: 'Dev Kepala Sub Bagian Umum',
+    namaLengkap: 'Development Kepala Sub Bagian Umum',
+    roles: [ROLES.PEGAWAI, ROLES.KEPALA_SUB_BAGIAN_UMUM],
   },
 ] as const
 

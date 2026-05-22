@@ -27,7 +27,7 @@ export const ROUTES = {
     DITOLAK: '/bendahara/ditolak',
     SELESAI: '/bendahara/selesai',
   },
-  ARSIPARIS: {
+  KEPALA_SUB_BAGIAN_UMUM: {
     ROOT: '/arsiparis',
     INBOX: '/arsiparis/inbox',
     AKTIF: '/arsiparis/aktif',
@@ -60,7 +60,7 @@ export const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
   PEGAWAI: ROUTES.PEGAWAI.ROOT,
   PPK: ROUTES.PPK.ROOT,
   BENDAHARA: ROUTES.BENDAHARA.ROOT,
-  ARSIPARIS: ROUTES.ARSIPARIS.ROOT,
+  KEPALA_SUB_BAGIAN_UMUM: ROUTES.KEPALA_SUB_BAGIAN_UMUM.ROOT,
   ADMIN: ROUTES.ADMIN.ROOT,
 }
 
@@ -81,7 +81,7 @@ export const MESH_ROUTES = [
   ROUTES.PEGAWAI.ROOT,
   ROUTES.PPK.ROOT,
   ROUTES.BENDAHARA.ROOT,
-  ROUTES.ARSIPARIS.ROOT,
+  ROUTES.KEPALA_SUB_BAGIAN_UMUM.ROOT,
   ROUTES.ADMIN.ROOT,
 ] as const
 

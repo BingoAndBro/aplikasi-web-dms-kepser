@@ -63,7 +63,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
       ],
     },
     {
@@ -92,7 +92,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
       ],
     },
     {
@@ -120,7 +120,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'ARSIP',
       items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.ARSIPARIS.SEARCH },
+        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
       ],
     },
     {
@@ -132,20 +132,20 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       ],
     },
   ],
-  ARSIPARIS: [
+  KEPALA_SUB_BAGIAN_UMUM: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.ARSIPARIS.ROOT }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.ROOT }],
     },
     {
       title: 'PEMBERKASAN',
       items: [
-        { id: 'pemberkasan', label: 'Pemberkasan Arsip', icon: Archive, to: ROUTES.ARSIPARIS.INBOX },
-        { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: ROUTES.ARSIPARIS.AKTIF },
-        { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: ROUTES.ARSIPARIS.INAKTIF },
-        { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: ROUTES.ARSIPARIS.USUL_MUSNAH },
-        { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: ROUTES.ARSIPARIS.KLASIFIKASI },
-        { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: ROUTES.ARSIPARIS.SEARCH },
+        { id: 'pemberkasan', label: 'Pemberkasan Arsip', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX },
+        { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF },
+        { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.INAKTIF },
+        { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.USUL_MUSNAH },
+        { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI },
+        { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
       ],
     },
     {

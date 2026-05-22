@@ -21,7 +21,7 @@ export const Route = createFileRoute('/api/arsiparis/aktif')({
       GET: async ({ request }: { request: Request }) => {
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         const url = new URL(request.url)
         const fungsiId = url.searchParams.get('fungsi_id') ?? undefined

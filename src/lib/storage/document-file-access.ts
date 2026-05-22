@@ -8,6 +8,7 @@ import {
   getLocalServerSession,
   type LocalServerSession,
 } from '#/lib/auth/local-server-auth'
+import { ROLES } from '#/lib/constants/roles'
 import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
 import { createInternalFileAccessUrl } from '#/lib/storage/internal-file-access-url'
 import type { FileAccessTokenPayload } from '#/lib/storage/file-access-token'
@@ -255,11 +256,11 @@ function canRouteAccessDocument(
   document: DocumentRow,
 ): boolean {
   if (mode === 'ppk') {
-    return session.roles.includes('PPK') && canPpkReadDocument(document)
+    return session.roles.includes(ROLES.PPK) && canPpkReadDocument(document)
   }
 
   if (mode === 'bendahara') {
-    return session.roles.includes('BENDAHARA') && canBendaharaReadDocument(document)
+    return session.roles.includes(ROLES.BENDAHARA) && canBendaharaReadDocument(document)
   }
 
   return canSessionReadDocument(session, document)
@@ -270,9 +271,9 @@ function canSessionReadDocument(
   document: DocumentRow,
 ): boolean {
   if (document.createdBy === session.userId) return true
-  if (session.roles.includes('PPK')) return canPpkReadDocument(document)
-  if (session.roles.includes('BENDAHARA')) return canBendaharaReadDocument(document)
-  if (session.roles.includes('ARSIPARIS')) {
+  if (session.roles.includes(ROLES.PPK)) return canPpkReadDocument(document)
+  if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadDocument(document)
+  if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
     return document.status === 'COMPLETED' || document.status === 'ARCHIVED'
   }
 

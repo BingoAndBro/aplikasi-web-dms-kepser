@@ -74,7 +74,7 @@ function ArsipAktifPage() {
       <div className="space-y-6">
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
+            <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
             <ChevronRight size={10} />
             <span className="text-primary">Daftar Arsip Aktif</span>
           </div>

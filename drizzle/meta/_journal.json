@@ -8,6 +8,13 @@
       "when": 1778657947265,
       "tag": "0000_dry_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779400000000,
+      "tag": "0001_rename_arsiparis_role",
+      "breakpoints": true
     }
   ]
 }

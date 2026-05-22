@@ -30,11 +30,11 @@ const createKlasifikasiSchema = z.object({
   parent_id: z.string().uuid().optional().nullable(),
 })
 
-async function requireAdminOrArsiparis(request: Request) {
+async function requireAdminOrKepalaSubBagianUmum(request: Request) {
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!hasLocalRole(session, 'ADMIN') && !hasLocalRole(session, 'ARSIPARIS')) {
-    return Response.json({ error: 'Hanya ADMIN atau ARSIPARIS yang bisa menambah klasifikasi' }, { status: 403 })
+  if (!hasLocalRole(session, 'ADMIN') && !hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) {
+    return Response.json({ error: 'Hanya ADMIN atau Kepala Sub Bagian Umum yang bisa menambah klasifikasi' }, { status: 403 })
   }
   return null
 }
@@ -110,7 +110,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
       POST: async ({ request }: { request: Request }) => {
         const sameOriginError = requireSameOrigin(request)
         if (sameOriginError) return sameOriginError
-        const authError = await requireAdminOrArsiparis(request)
+        const authError = await requireAdminOrKepalaSubBagianUmum(request)
         if (authError) return authError
 
         const body = await request.json().catch(() => null)

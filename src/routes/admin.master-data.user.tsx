@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { ROLE_DISPLAY } from '#/lib/constants/roles'
 import type { UserWithRoles } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -50,11 +51,11 @@ const ROLE_COLORS: Record<RoleName, string> = {
   PEGAWAI: 'bg-blue-100 text-blue-700 border-blue-200',
   PPK: 'bg-purple-100 text-purple-700 border-purple-200',
   BENDAHARA: 'bg-green-100 text-green-700 border-green-200',
-  ARSIPARIS: 'bg-orange-100 text-orange-700 border-orange-200',
+  KEPALA_SUB_BAGIAN_UMUM: 'bg-orange-100 text-orange-700 border-orange-200',
   ADMIN: 'bg-red-100 text-red-700 border-red-200',
 }
 
-const ALL_ROLES: RoleName[] = ['PEGAWAI', 'PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN']
+const ALL_ROLES: RoleName[] = ['PEGAWAI', 'PPK', 'BENDAHARA', 'KEPALA_SUB_BAGIAN_UMUM', 'ADMIN']
 
 // ---------------------------------------------------------------------------
 // Types
@@ -868,7 +869,7 @@ function MasterUserPage() {
                               key={role}
                               className={ROLE_COLORS[role]}
                             >
-                              {role}
+                              {ROLE_DISPLAY[role]}
                             </Badge>
                           ))
                         ) : (
@@ -1012,7 +1013,7 @@ function MasterUserPage() {
                         : 'bg-white border-border text-outline hover:bg-muted'
                     } ${isPegawaiDisabled(role) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {role}
+                    {ROLE_DISPLAY[role]}
                     {role === 'PEGAWAI' && ' (wajib)'}
                   </button>
                 ))}
@@ -1089,7 +1090,7 @@ function MasterUserPage() {
                         : 'bg-white border-border text-outline hover:bg-muted'
                     } ${isPegawaiDisabled(role) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {role}
+                    {ROLE_DISPLAY[role]}
                     {role === 'PEGAWAI' && ' (wajib)'}
                   </button>
                 ))}

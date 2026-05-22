@@ -84,7 +84,7 @@ describe('FSM transition()', () => {
     })
 
     it('COMPLETED + ARCHIVE → ARCHIVED', () => {
-      const result = transition('COMPLETED', 'ARCHIVE', 'ARSIPARIS')
+      const result = transition('COMPLETED', 'ARCHIVE', 'KEPALA_SUB_BAGIAN_UMUM')
       assertSuccess(result)
       expect(result.newStatus).toBe('ARCHIVED')
       expect(result.newCurrentStep).toBeNull()
@@ -93,7 +93,7 @@ describe('FSM transition()', () => {
     })
 
     it('COMPLETED + SKIP → COMPLETED (stays), step=null', () => {
-      const result = transition('COMPLETED', 'SKIP', 'ARSIPARIS')
+      const result = transition('COMPLETED', 'SKIP', 'KEPALA_SUB_BAGIAN_UMUM')
       assertSuccess(result)
       expect(result.newStatus).toBe('COMPLETED')
       expect(result.newCurrentStep).toBeNull()
@@ -118,8 +118,8 @@ describe('FSM transition()', () => {
     it('SUBMIT by BENDAHARA → error', () => {
       assertError(transition('DRAFT', 'SUBMIT', 'BENDAHARA'))
     })
-    it('SUBMIT by ARSIPARIS → error', () => {
-      assertError(transition('DRAFT', 'SUBMIT', 'ARSIPARIS'))
+    it('SUBMIT by KEPALA_SUB_BAGIAN_UMUM → error', () => {
+      assertError(transition('DRAFT', 'SUBMIT', 'KEPALA_SUB_BAGIAN_UMUM'))
     })
     it('SUBMIT by ADMIN → error', () => {
       assertError(transition('DRAFT', 'SUBMIT', 'ADMIN'))
@@ -173,8 +173,8 @@ describe('FSM transition()', () => {
     })
 
     // ARCHIVE
-    it('ARCHIVE by ARSIPARIS → success', () => {
-      const result = transition('COMPLETED', 'ARCHIVE', 'ARSIPARIS')
+    it('ARCHIVE by KEPALA_SUB_BAGIAN_UMUM → success', () => {
+      const result = transition('COMPLETED', 'ARCHIVE', 'KEPALA_SUB_BAGIAN_UMUM')
       assertSuccess(result)
     })
     it('ARCHIVE by PPK → error', () => {
@@ -182,8 +182,8 @@ describe('FSM transition()', () => {
     })
 
     // SKIP
-    it('SKIP by ARSIPARIS → success', () => {
-      const result = transition('COMPLETED', 'SKIP', 'ARSIPARIS')
+    it('SKIP by KEPALA_SUB_BAGIAN_UMUM → success', () => {
+      const result = transition('COMPLETED', 'SKIP', 'KEPALA_SUB_BAGIAN_UMUM')
       assertSuccess(result)
     })
     it('SKIP by PPK → error', () => {

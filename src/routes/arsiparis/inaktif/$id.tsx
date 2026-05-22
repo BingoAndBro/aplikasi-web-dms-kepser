@@ -190,7 +190,7 @@ function ArsipInaktifDetailPage() {
         )}
 
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
-          <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
+          <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
           <ChevronRight size={10} />
           <Link to="/arsiparis/inaktif" className="hover:text-primary">Arsip Inaktif</Link>
           <ChevronRight size={10} />
@@ -224,7 +224,7 @@ function ArsipInaktifDetailPage() {
                 <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal Diarsipkan</p><p className="text-sm font-semibold text-on-surface">{formatDate(arsip.archived_at)}</p></div>
                 <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Diarsipkan Oleh</p><p className="text-sm font-semibold text-on-surface">{arsip.archived_by_nama}</p></div>
                 {arsip.catatan_arsiparis && (
-                  <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Catatan Arsiparis</p><p className="text-sm text-on-surface">{arsip.catatan_arsiparis}</p></div>
+                  <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Catatan Kepala Sub Bagian Umum</p><p className="text-sm text-on-surface">{arsip.catatan_arsiparis}</p></div>
                 )}
               </div>
             </div>

@@ -10,6 +10,7 @@ import { User, Mail, CreditCard, Building2, Shield, KeyRound, Loader2 } from 'lu
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { clearClientAuthState } from '#/lib/auth-state'
+import { ROLE_DISPLAY } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -27,7 +28,7 @@ const ROLE_COLORS: Record<RoleName, string> = {
   PEGAWAI: 'bg-blue-100 text-blue-700 border-blue-200',
   PPK: 'bg-purple-100 text-purple-700 border-purple-200',
   BENDAHARA: 'bg-green-100 text-green-700 border-green-200',
-  ARSIPARIS: 'bg-orange-100 text-orange-700 border-orange-200',
+  KEPALA_SUB_BAGIAN_UMUM: 'bg-orange-100 text-orange-700 border-orange-200',
   ADMIN: 'bg-red-100 text-red-700 border-red-200',
 }
 
@@ -207,7 +208,7 @@ function ProfilePage() {
                 <div className="flex flex-wrap gap-1 mt-2">
                   {user.roles.map(role => (
                     <Badge key={role} className={ROLE_COLORS[role]}>
-                      {role}
+                      {ROLE_DISPLAY[role]}
                     </Badge>
                   ))}
                 </div>
@@ -256,7 +257,7 @@ function ProfilePage() {
                   {user.roles.length > 0 ? (
                     user.roles.map(role => (
                       <Badge key={role} className={ROLE_COLORS[role]}>
-                        {role}
+                        {ROLE_DISPLAY[role]}
                       </Badge>
                     ))
                   ) : (

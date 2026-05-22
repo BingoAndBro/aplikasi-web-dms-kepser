@@ -216,7 +216,7 @@ describe('internal file access foundation', () => {
     }> = [
       { role: ROLES.PPK, status: 'IN_PPK_VALIDATION' },
       { role: ROLES.BENDAHARA, status: 'IN_BENDAHARA_APPROVAL' },
-      { role: ROLES.ARSIPARIS, status: 'COMPLETED' },
+      { role: ROLES.KEPALA_SUB_BAGIAN_UMUM, status: 'COMPLETED' },
     ]
 
     for (const { role, status, revisionTarget = null } of compatibleRoleCases) {

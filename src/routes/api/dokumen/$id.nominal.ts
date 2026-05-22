@@ -21,7 +21,7 @@ function normalizeNumericValue(value: string | number | null | undefined): numbe
 
 // ---------------------------------------------------------------------------
 // PATCH /api/dokumen/$id/nominal — Update nominal_realisasi
-// Allowed: creator, arsiparis, ADMIN
+// Allowed: creator, KEPALA_SUB_BAGIAN_UMUM, ADMIN
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/$id/nominal')({
@@ -74,10 +74,10 @@ export const Route = createFileRoute('/api/dokumen/$id/nominal')({
 
         // 3. Authorization check
         const isCreator = dok.created_by === session.user.id
-        const isArsiparis = hasLocalRole(session, 'ARSIPARIS')
+        const isKEPALA_SUB_BAGIAN_UMUM = hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')
         const isAdmin = hasLocalRole(session, 'ADMIN')
 
-        if (!isCreator && !isArsiparis && !isAdmin) {
+        if (!isCreator && !isKEPALA_SUB_BAGIAN_UMUM && !isAdmin) {
           return Response.json({ error: 'Akses ditolak' }, { status: 403 })
         }
 

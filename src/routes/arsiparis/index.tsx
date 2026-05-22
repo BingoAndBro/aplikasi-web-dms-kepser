@@ -2,11 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { apiFetch } from '#/lib/api-client'
 import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { ROLES } from '#/lib/constants/roles'
 import { motion } from 'framer-motion'
 import { Clock, FolderOpen, Archive, XCircle, Search, Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/')({
-  component: ArsiparisDashboard,
+  component: KepalaSubBagianUmumDashboard,
 })
 
 type Stats = {
@@ -38,7 +39,7 @@ type AuthSessionResponse = {
   activeRole: string | null
 }
 
-function ArsiparisDashboard() {
+function KepalaSubBagianUmumDashboard() {
   const [stats, setStats] = useState<Stats>({ inbox: 0, aktif: 0, inaktif: 0, usulMusnah: 0 })
   const [loading, setLoading] = useState(true)
 
@@ -47,7 +48,7 @@ function ArsiparisDashboard() {
       try {
         const auth = await apiFetch<AuthSessionResponse>('/auth/session')
         if (!auth.session) { window.location.href = '/login'; return }
-        if (!auth.roles.includes('ARSIPARIS')) { window.location.href = '/forbidden'; return }
+        if (!auth.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) { window.location.href = '/forbidden'; return }
       } catch {
         window.location.href = '/login'
       }
@@ -89,7 +90,7 @@ function ArsiparisDashboard() {
   ]
 
   return (
-    <DashboardShell role="ARSIPARIS">
+    <DashboardShell role={ROLES.KEPALA_SUB_BAGIAN_UMUM}>
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 size={24} className="animate-spin text-primary" />

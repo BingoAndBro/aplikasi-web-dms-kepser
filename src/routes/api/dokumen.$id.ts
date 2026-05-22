@@ -68,7 +68,7 @@ function canSessionReadDokumen(
       || dokumen.status === 'ARCHIVED'
       || (dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'PPK')
   }
-  if (hasLocalRole(session, 'ARSIPARIS')) {
+  if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) {
     return dokumen.status === 'COMPLETED' || dokumen.status === 'ARCHIVED'
   }
 

@@ -1,10 +1,11 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 
+import { ROLES } from '#/lib/constants/roles'
 import { guardRole } from '#/lib/guards'
 
 export const Route = createFileRoute('/arsiparis')({
   beforeLoad: ({ event }) => {
-    guardRole('ARSIPARIS')(event)
+    guardRole(ROLES.KEPALA_SUB_BAGIAN_UMUM)(event)
   },
   component: () => <Outlet />,
 })

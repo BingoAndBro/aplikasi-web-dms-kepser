@@ -204,7 +204,7 @@ function UsulMusnahDetailPage() {
         )}
 
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
-          <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
+          <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
           <ChevronRight size={10} />
           <Link to="/arsiparis/usul-musnah" className="hover:text-primary">Usul Musnah</Link>
           <ChevronRight size={10} />

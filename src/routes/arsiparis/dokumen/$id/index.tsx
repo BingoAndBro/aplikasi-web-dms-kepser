@@ -394,7 +394,7 @@ function ArsiparisDokumenDetailPage() {
       <div className="max-w-3xl mx-auto space-y-6">
 
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
-          <Link to="/arsiparis" className="hover:text-primary">Arsiparis</Link>
+          <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
           <ChevronRight size={10} />
           <Link to="/arsiparis/inbox" className="hover:text-primary">Pemberkasan</Link>
           <ChevronRight size={10} />
@@ -639,7 +639,7 @@ function ArsiparisDokumenDetailPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-on-surface mb-1.5">Catatan Arsiparis <span className="text-outline font-normal">(opsional)</span></label>
+                <label className="block text-xs font-semibold text-on-surface mb-1.5">Catatan Kepala Sub Bagian Umum <span className="text-outline font-normal">(opsional)</span></label>
                 <textarea
                   value={catatan}
                   onChange={e => setCatatan(e.target.value)}

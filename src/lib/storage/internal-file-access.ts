@@ -21,7 +21,7 @@ const FILE_TOKEN_SECRET_ENV = 'DMS_FILE_TOKEN_SECRET'
 const RAW_PATH_COMPATIBILITY_ROLES: readonly RoleName[] = [
   ROLES.PPK,
   ROLES.BENDAHARA,
-  ROLES.ARSIPARIS,
+  ROLES.KEPALA_SUB_BAGIAN_UMUM,
 ]
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
   '.jpeg': 'image/jpeg',
@@ -319,7 +319,7 @@ function canSessionReadRawReferencedDocument(
   if (document.createdBy === session.userId) return true
   if (session.roles.includes(ROLES.PPK)) return canPpkReadRawReferencedDocument(document)
   if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadRawReferencedDocument(document)
-  if (session.roles.includes(ROLES.ARSIPARIS)) {
+  if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
     return document.status === 'COMPLETED' || document.status === 'ARCHIVED'
   }
 

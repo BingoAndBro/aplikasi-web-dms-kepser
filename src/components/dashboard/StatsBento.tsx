@@ -60,7 +60,7 @@ const BENTO_CONFIGS: Record<RoleName, BentoConfig> = {
     ],
     chart: false,
   },
-  ARSIPARIS: {
+  KEPALA_SUB_BAGIAN_UMUM: {
     stats: [
       { label: 'Menunggu Arsip', value: '—', icon: Clock, color: 'text-primary' },
       { label: 'Arsip Aktif', value: '—', icon: FolderOpen, color: 'text-green-500' },

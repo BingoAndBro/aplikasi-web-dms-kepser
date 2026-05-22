@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/arsiparis/aktif/$id/pindahkan')({
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         const body = await request.json().catch(() => null)
         const catatan = typeof body?.catatan === 'string' ? body.catatan : null

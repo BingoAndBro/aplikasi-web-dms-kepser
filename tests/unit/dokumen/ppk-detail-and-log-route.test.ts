@@ -25,7 +25,7 @@ vi.mock('#/db/client', () => ({
 import { Route as DokumenLogRoute } from '#/routes/api/dokumen.$id.log'
 import { Route as PpkDetailRoute } from '#/routes/api/ppk/dokumen/$id'
 import { Route as BendaharaDetailRoute } from '#/routes/api/bendahara/dokumen/$id'
-import { Route as ArsiparisDetailRoute } from '#/routes/api/arsiparis/dokumen.$id'
+import { Route as KepalaSubBagianUmumDetailRoute } from '#/routes/api/arsiparis/dokumen.$id'
 
 type RouteGetHandler = (args: {
   request: Request
@@ -44,7 +44,7 @@ const bendaharaDetailHandler = (BendaharaDetailRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
 }).options.server.handlers.GET
 
-const arsiparisDetailHandler = (ArsiparisDetailRoute as unknown as {
+const kepalaSubBagianUmumDetailHandler = (KepalaSubBagianUmumDetailRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
 }).options.server.handlers.GET
 
@@ -115,14 +115,14 @@ describe('PPK detail and document log route UUID parity', () => {
     expect(mocks.dbSelect).toHaveBeenCalledTimes(3)
   })
 
-  it('allows the same valid document id through Arsiparis detail lookup', async () => {
-    mocks.getLocalServerSession.mockResolvedValue(createSession(PPK_ID, ['PEGAWAI', 'ARSIPARIS'], 'ARSIPARIS'))
+  it('allows the same valid document id through Kepala Sub Bagian Umum detail lookup', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(PPK_ID, ['PEGAWAI', 'KEPALA_SUB_BAGIAN_UMUM'], 'KEPALA_SUB_BAGIAN_UMUM'))
     mocks.dbSelect
-      .mockReturnValueOnce(createQueryBuilder([createArsiparisDetailRow()]))
+      .mockReturnValueOnce(createQueryBuilder([createKepalaSubBagianUmumDetailRow()]))
       .mockReturnValueOnce(createQueryBuilder([], { orderByTerminal: false }))
       .mockReturnValueOnce(createQueryBuilder([]))
 
-    const response = await arsiparisDetailHandler({
+    const response = await kepalaSubBagianUmumDetailHandler({
       request: new Request(`http://localhost/api/arsiparis/dokumen/${DOKUMEN_ID}`),
       params: { id: DOKUMEN_ID },
     })
@@ -204,7 +204,7 @@ function createBendaharaDetailRow() {
   }
 }
 
-function createArsiparisDetailRow() {
+function createKepalaSubBagianUmumDetailRow() {
   return {
     ...createPpkDetailRow(),
     status: 'COMPLETED',

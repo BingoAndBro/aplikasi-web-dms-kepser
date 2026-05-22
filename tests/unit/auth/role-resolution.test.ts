@@ -13,7 +13,7 @@ describe('local auth role resolution', () => {
   })
 
   it('uses the first assigned role as primary when PEGAWAI is absent', () => {
-    expect(resolvePrimaryRole([ROLES.BENDAHARA, ROLES.ARSIPARIS])).toBe(ROLES.BENDAHARA)
+    expect(resolvePrimaryRole([ROLES.BENDAHARA, ROLES.KEPALA_SUB_BAGIAN_UMUM])).toBe(ROLES.BENDAHARA)
   })
 
   it('uses a valid requested active role', () => {

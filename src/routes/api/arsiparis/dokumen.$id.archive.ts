@@ -7,6 +7,7 @@ import { arsip } from '#/db/schema/arsip'
 import type { LampiranSnapshotJson } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { ROLES } from '#/lib/constants/roles'
 import { transition } from '#/lib/fsm'
 import type { StatusDokumen } from '#/lib/types/fsm'
 
@@ -29,7 +30,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        if (!hasLocalRole(session, 'ARSIPARIS')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         const body = await request.json().catch(() => null)
         if (!body) return Response.json({ error: 'Body tidak valid' }, { status: 400 })
@@ -104,7 +105,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
           }
         }
 
-        const fsResult = transition(dok.status as StatusDokumen, 'ARCHIVE', 'ARSIPARIS')
+        const fsResult = transition(dok.status as StatusDokumen, 'ARCHIVE', ROLES.KEPALA_SUB_BAGIAN_UMUM)
         if (!fsResult.success) {
           return Response.json({ error: fsResult.error ?? 'Transisi status gagal' }, { status: 400 })
         }
