@@ -36,6 +36,7 @@ import {
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { ROLE_DISPLAY } from '#/lib/constants/roles'
+import { normalizeAdminRoleToggle } from '#/lib/users/role-assignment'
 import type { UserWithRoles } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -741,25 +742,21 @@ function MasterUserPage() {
 
   const toggleRole = (role: RoleName, form: 'create' | 'edit') => {
     if (form === 'create') {
-      if (role === 'PEGAWAI') return // Cannot remove PEGAWAI
       setCreateForm(prev => ({
         ...prev,
-        roles: prev.roles.includes(role)
-          ? prev.roles.filter(r => r !== role)
-          : [...prev.roles, role],
+        roles: normalizeAdminRoleToggle(prev.roles, role),
       }))
     } else {
-      if (role === 'PEGAWAI') return // Cannot remove PEGAWAI
       setEditForm(prev => ({
         ...prev,
-        roles: prev.roles.includes(role)
-          ? prev.roles.filter(r => r !== role)
-          : [...prev.roles, role],
+        roles: normalizeAdminRoleToggle(prev.roles, role),
       }))
     }
   }
 
-  const isPegawaiDisabled = (role: RoleName) => role === 'PEGAWAI'
+  const isPegawaiDisabled = (role: RoleName, roles: RoleName[]) => (
+    role === 'PEGAWAI' && !roles.includes('ADMIN')
+  )
 
   // ---------------------------------------------------------------------------
   // Render
@@ -1014,15 +1011,16 @@ function MasterUserPage() {
                     type="button"
                     aria-pressed={createForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'create')}
-                    disabled={isPegawaiDisabled(role)}
+                    disabled={isPegawaiDisabled(role, createForm.roles)}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                       createForm.roles.includes(role)
                         ? `${ROLE_COLORS[role]} border-current`
                         : 'bg-white border-border text-outline hover:bg-muted'
-                    } ${isPegawaiDisabled(role) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${isPegawaiDisabled(role, createForm.roles) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     {ROLE_DISPLAY[role]}
-                    {role === 'PEGAWAI' && ' (wajib)'}
+                    {role === 'PEGAWAI' && !createForm.roles.includes('ADMIN') && ' (wajib)'}
+                    {role === 'ADMIN' && ' (tunggal)'}
                   </button>
                 ))}
               </div>
@@ -1091,15 +1089,16 @@ function MasterUserPage() {
                     type="button"
                     aria-pressed={editForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'edit')}
-                    disabled={isPegawaiDisabled(role)}
+                    disabled={isPegawaiDisabled(role, editForm.roles)}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                       editForm.roles.includes(role)
                         ? `${ROLE_COLORS[role]} border-current`
                         : 'bg-white border-border text-outline hover:bg-muted'
-                    } ${isPegawaiDisabled(role) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    } ${isPegawaiDisabled(role, editForm.roles) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     {ROLE_DISPLAY[role]}
-                    {role === 'PEGAWAI' && ' (wajib)'}
+                    {role === 'PEGAWAI' && !editForm.roles.includes('ADMIN') && ' (wajib)'}
+                    {role === 'ADMIN' && ' (tunggal)'}
                   </button>
                 ))}
               </div>

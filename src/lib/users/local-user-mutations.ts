@@ -5,9 +5,19 @@ import { db } from '#/db/client'
 import { roles as rolesTable, userRoles, users } from '#/db/schema/auth'
 import { PASSWORD_HASH_ALGORITHM, hashPassword } from '#/lib/auth/password'
 import { revokeAllUserSessions } from '#/lib/auth/session-repository'
-import { ROLE_NAMES, ROLES, type RoleName } from '#/lib/constants/roles'
+import { type RoleName } from '#/lib/constants/roles'
 import type { UserWithRoles } from '#/lib/types/user'
 import { getLocalUserWithRoles } from './local-user-queries'
+import {
+  hasAdminMixedWithNonAdmin,
+  normalizeAdminRolePayload,
+} from './role-assignment'
+
+export {
+  findInvalidCanonicalRoles,
+  hasAdminMixedWithNonAdmin,
+  normalizeAdminRolePayload,
+} from './role-assignment'
 
 export type CreateLocalUserPayload = {
   email: string
@@ -34,29 +44,6 @@ type LocalUserTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 export function isValidUserId(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value)
-}
-
-export function normalizeAdminRolePayload(input: RoleName[]): RoleName[] {
-  const uniqueRoles = [...new Set(input)]
-
-  if (uniqueRoles.includes(ROLES.ADMIN)) {
-    return uniqueRoles
-  }
-
-  return uniqueRoles.includes(ROLES.PEGAWAI)
-    ? uniqueRoles
-    : [ROLES.PEGAWAI, ...uniqueRoles]
-}
-
-export function findInvalidCanonicalRoles(input: unknown[]): string[] {
-  return input.filter((role): role is string =>
-    typeof role !== 'string' || !ROLE_NAMES.includes(role as RoleName),
-  )
-}
-
-export function hasAdminMixedWithNonAdmin(input: RoleName[]): boolean {
-  const uniqueRoles = new Set(input)
-  return uniqueRoles.has(ROLES.ADMIN) && uniqueRoles.size > 1
 }
 
 export async function createLocalUserWithRoles(
