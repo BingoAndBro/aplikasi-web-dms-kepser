@@ -42,6 +42,44 @@ describe('arsiparis klasifikasi create route', () => {
     vi.restoreAllMocks()
   })
 
+  it('returns 403 for ADMIN-only create requests', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['ADMIN']))
+
+    const response = await postHandler({
+      request: createPostRequest({
+        kode: 'TES-001',
+        nama: 'Tes 001',
+      }),
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({
+      error: 'Hanya Kepala Sub Bagian Umum yang bisa menambah klasifikasi',
+    })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('allows KEPALA_SUB_BAGIAN_UMUM to create klasifikasi', async () => {
+    queueSelectResults([], [])
+    queueInsertResult([createdKlasifikasi()])
+
+    const response = await postHandler({
+      request: createPostRequest({
+        kode: 'TES-001',
+        nama: 'Tes 001',
+      }),
+    })
+
+    expect(response.status).toBe(201)
+    expect(await response.json()).toMatchObject({
+      id: 'created-klasifikasi',
+      kode: 'TES-001',
+      nama: 'Tes 001',
+    })
+    expect(mocks.dbInsert).toHaveBeenCalledTimes(1)
+  })
+
   it('returns a clear 409 when an active nama already exists', async () => {
     queueSelectResults([{ id: 'existing-nama' }])
 
@@ -130,7 +168,7 @@ describe('arsiparis klasifikasi create route', () => {
   })
 })
 
-function createSession() {
+function createSession(roles = ['KEPALA_SUB_BAGIAN_UMUM']) {
   return {
     user: {
       id: USER_ID,
@@ -138,9 +176,21 @@ function createSession() {
     },
     userId: USER_ID,
     email: 'kepala-sub-bagian-umum@example.test',
-    roles: ['KEPALA_SUB_BAGIAN_UMUM'],
-    activeRole: 'KEPALA_SUB_BAGIAN_UMUM',
+    roles,
+    activeRole: roles[0],
     sessionId: 'test-session-id',
+  }
+}
+
+function createdKlasifikasi() {
+  return {
+    id: 'created-klasifikasi',
+    nama: 'Tes 001',
+    deskripsi: null,
+    is_active: true,
+    created_at: '2026-05-22T00:00:00.000Z',
+    parent_id: null,
+    kode: 'TES-001',
   }
 }
 
@@ -176,6 +226,14 @@ function queueInsertFailure(error: unknown) {
       returning: vi.fn(async () => {
         throw error
       }),
+    })),
+  })
+}
+
+function queueInsertResult(result: unknown[]) {
+  mocks.dbInsert.mockReturnValue({
+    values: vi.fn(() => ({
+      returning: vi.fn(async () => result),
     })),
   })
 }

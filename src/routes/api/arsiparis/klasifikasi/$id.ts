@@ -8,8 +8,8 @@ import { ROLES } from '#/lib/constants/roles'
 import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
-// PATCH /api/arsiparis/klasifikasi/$id — update klasifikasi (ADMIN only)
-// DELETE /api/arsiparis/klasifikasi/$id — soft delete klasifikasi (ADMIN only)
+// PATCH /api/arsiparis/klasifikasi/$id — update klasifikasi
+// DELETE /api/arsiparis/klasifikasi/$id — soft delete klasifikasi
 // ---------------------------------------------------------------------------
 
 const updateKlasifikasiSchema = z.object({
@@ -19,11 +19,11 @@ const updateKlasifikasiSchema = z.object({
   parent_id: z.string().uuid().nullable().optional(),
 })
 
-async function requireAdminOrKepalaSubBagianUmum(request: Request, action: 'mengubah' | 'menghapus') {
+async function requireKepalaSubBagianUmum(request: Request, action: 'mengubah' | 'menghapus') {
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!hasLocalRole(session, ROLES.ADMIN) && !hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
-    return Response.json({ error: `Hanya ADMIN atau Kepala Sub Bagian Umum yang bisa ${action} klasifikasi` }, { status: 403 })
+  if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
+    return Response.json({ error: `Hanya Kepala Sub Bagian Umum yang bisa ${action} klasifikasi` }, { status: 403 })
   }
   return null
 }
@@ -117,7 +117,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const sameOriginError = requireSameOrigin(request)
         if (sameOriginError) return sameOriginError
-        const authError = await requireAdminOrKepalaSubBagianUmum(request, 'mengubah')
+        const authError = await requireKepalaSubBagianUmum(request, 'mengubah')
         if (authError) return authError
 
         const body = await request.json().catch(() => null)
@@ -252,7 +252,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const sameOriginError = requireSameOrigin(request)
         if (sameOriginError) return sameOriginError
-        const authError = await requireAdminOrKepalaSubBagianUmum(request, 'menghapus')
+        const authError = await requireKepalaSubBagianUmum(request, 'menghapus')
         if (authError) return authError
 
         try {

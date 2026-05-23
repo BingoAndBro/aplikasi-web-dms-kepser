@@ -28,9 +28,18 @@ type RoutePatchHandler = (args: {
   params: Record<string, string>
 }) => Promise<Response>
 
+type RouteDeleteHandler = (args: {
+  request: Request
+  params: Record<string, string>
+}) => Promise<Response>
+
 const patchHandler = (KlasifikasiUpdateRoute as unknown as {
-  options: { server: { handlers: { PATCH: RoutePatchHandler } } }
+  options: { server: { handlers: { PATCH: RoutePatchHandler; DELETE: RouteDeleteHandler } } }
 }).options.server.handlers.PATCH
+
+const deleteHandler = (KlasifikasiUpdateRoute as unknown as {
+  options: { server: { handlers: { PATCH: RoutePatchHandler; DELETE: RouteDeleteHandler } } }
+}).options.server.handlers.DELETE
 
 describe('arsiparis klasifikasi update route', () => {
   beforeEach(() => {
@@ -42,6 +51,38 @@ describe('arsiparis klasifikasi update route', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it('returns 403 for ADMIN-only update requests', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['ADMIN']))
+
+    const response = await patchHandler({
+      request: createPatchRequest({ deskripsi: 'Deskripsi baru' }),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({
+      error: 'Hanya Kepala Sub Bagian Umum yang bisa mengubah klasifikasi',
+    })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for ADMIN-only delete requests', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['ADMIN']))
+
+    const response = await deleteHandler({
+      request: createDeleteRequest(),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({
+      error: 'Hanya Kepala Sub Bagian Umum yang bisa menghapus klasifikasi',
+    })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
   })
 
   it('returns a clear 409 when updating to an active nama from another row', async () => {
@@ -148,7 +189,7 @@ describe('arsiparis klasifikasi update route', () => {
   })
 })
 
-function createSession() {
+function createSession(roles = ['KEPALA_SUB_BAGIAN_UMUM']) {
   return {
     user: {
       id: USER_ID,
@@ -156,8 +197,8 @@ function createSession() {
     },
     userId: USER_ID,
     email: 'kepala-sub-bagian-umum@example.test',
-    roles: ['KEPALA_SUB_BAGIAN_UMUM'],
-    activeRole: 'KEPALA_SUB_BAGIAN_UMUM',
+    roles,
+    activeRole: roles[0],
     sessionId: 'test-session-id',
   }
 }
@@ -182,6 +223,15 @@ function createPatchRequest(body: Record<string, unknown>) {
       Origin: 'http://localhost',
     },
     body: JSON.stringify(body),
+  })
+}
+
+function createDeleteRequest() {
+  return new Request(`http://localhost/api/arsiparis/klasifikasi/${CURRENT_ID}`, {
+    method: 'DELETE',
+    headers: {
+      Origin: 'http://localhost',
+    },
   })
 }
 
