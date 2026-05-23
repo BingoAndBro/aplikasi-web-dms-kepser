@@ -270,7 +270,7 @@ function canSessionReadDocument(
   session: DocumentAccessSession,
   document: DocumentRow,
 ): boolean {
-  if (document.createdBy === session.userId) return true
+  if (!isAdminOnlySession(session) && document.createdBy === session.userId) return true
   if (session.roles.includes(ROLES.PPK)) return canPpkReadDocument(document)
   if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadDocument(document)
   if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
@@ -278,6 +278,10 @@ function canSessionReadDocument(
   }
 
   return false
+}
+
+function isAdminOnlySession(session: DocumentAccessSession): boolean {
+  return session.roles.length > 0 && session.roles.every(role => role === ROLES.ADMIN)
 }
 
 function canPpkReadDocument(document: DocumentRow): boolean {

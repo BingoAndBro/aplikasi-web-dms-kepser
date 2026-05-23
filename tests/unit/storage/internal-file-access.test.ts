@@ -288,6 +288,47 @@ describe('internal file access foundation', () => {
     expect(await json(response)).toEqual({ error: 'Akses ditolak' })
   })
 
+  it('rejects ADMIN-only raw governed access even when ADMIN appears to be the document owner', async () => {
+    await writeTestFile('admin-user/document-id/file.pdf', PDF_CONTENT)
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload({
+        logicalPath: 'admin-user/document-id/file.pdf',
+      }))),
+      session: session('admin-user', [ROLES.ADMIN]),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(rawContext({
+        documents: [{
+          id: 'document-id',
+          createdBy: 'admin-user',
+          status: 'COMPLETED',
+          revisionTarget: null,
+        }],
+      })),
+    })
+
+    expect(response.status).toBe(403)
+    expect(await json(response)).toEqual({ error: 'Akses ditolak' })
+  })
+
+  it('rejects ADMIN-only raw owner-prefix fallback for ungoverned logical paths', async () => {
+    await writeTestFile('admin-user/document-id/file.pdf', PDF_CONTENT)
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload({
+        logicalPath: 'admin-user/document-id/file.pdf',
+      }))),
+      session: session('admin-user', [ROLES.ADMIN]),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
+    })
+
+    expect(response.status).toBe(403)
+    expect(await json(response)).toEqual({ error: 'Akses ditolak' })
+  })
+
   it('rejects traversal logical paths before file access', async () => {
     const token = manuallySignedToken({
       version: 1,
@@ -313,6 +354,7 @@ describe('internal file access foundation', () => {
     expect(canAccessLogicalFilePath(session('owner-user'), 'owner-user/file.pdf')).toBe(true)
     expect(canAccessLogicalFilePath(session('other-user'), 'owner-user/file.pdf')).toBe(false)
     expect(canAccessLogicalFilePath(session('other-user', [ROLES.PPK]), 'owner-user/file.pdf')).toBe(true)
+    expect(canAccessLogicalFilePath(session('admin-user', [ROLES.ADMIN]), 'admin-user/file.pdf')).toBe(false)
   })
 
   it('blocks raw token access when current archive state is DIMUSNAHKAN', async () => {
@@ -398,6 +440,22 @@ describe('internal file access foundation', () => {
     expect(await json(roleResponse)).toEqual({ error: 'Akses ditolak' })
   })
 
+  it('rejects ADMIN-only pending raw paths even when the path belongs to ADMIN', async () => {
+    const pendingPath = 'admin-user/1777964598700-random-report.pdf'
+    await writeTestFile(pendingPath, PDF_CONTENT)
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload({ logicalPath: pendingPath }))),
+      session: session('admin-user', [ROLES.ADMIN]),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(),
+    })
+
+    expect(response.status).toBe(403)
+    expect(await json(response)).toEqual({ error: 'Akses ditolak' })
+  })
+
   it('authorizes raw governed paths from current document state instead of path prefix alone', async () => {
     const decision = await authorizeRawLogicalPathAccess({
       session: session('ppk-user', [ROLES.PPK]),
@@ -413,6 +471,62 @@ describe('internal file access foundation', () => {
     })
 
     expect(decision).toEqual({ ok: true })
+  })
+
+  it('rejects ADMIN-only document-token access even when ADMIN appears to be document owner', async () => {
+    const result = await resolveDocumentTokenWithMockedContext({
+      document: {
+        id: '11111111-1111-4111-8111-111111111111',
+        createdBy: 'admin-user',
+        status: 'COMPLETED',
+        revisionTarget: null,
+        lampiranUrls: [{ url: 'admin-user/document-id/file.pdf' }],
+      },
+      archives: [],
+      session: session('admin-user', [ROLES.ADMIN]),
+    })
+
+    expect(result).toEqual({ ok: false, status: 403, message: 'Akses ditolak' })
+  })
+
+  it('allows operational document-token access for completed documents', async () => {
+    const result = await resolveDocumentTokenWithMockedContext({
+      document: {
+        id: '11111111-1111-4111-8111-111111111111',
+        createdBy: 'owner-user',
+        status: 'COMPLETED',
+        revisionTarget: null,
+        lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      },
+      archives: [],
+      session: session('kasubag-user', [ROLES.KEPALA_SUB_BAGIAN_UMUM]),
+    })
+
+    expect(result).toEqual({ ok: true, logicalPath: 'owner-user/document-id/file.pdf' })
+  })
+
+  it('blocks document-token access when current archive state is DIMUSNAHKAN', async () => {
+    const result = await resolveDocumentTokenWithMockedContext({
+      document: {
+        id: '11111111-1111-4111-8111-111111111111',
+        createdBy: 'owner-user',
+        status: 'ARCHIVED',
+        revisionTarget: null,
+        lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      },
+      archives: [{
+        id: 'archive-id',
+        statusArsip: 'DIMUSNAHKAN',
+        lampiranSnapshot: [{ url: 'owner-user/document-id/file.pdf' }],
+      }],
+      session: session('owner-user', [ROLES.PEGAWAI]),
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      status: 410,
+      message: 'File asli tidak tersedia - arsip telah dimusnahkan',
+    })
   })
 
   it('reads the file token secret lazily without fallback defaults', () => {
@@ -462,6 +576,83 @@ async function responseWithMockedVerifiedDownloadFilename(
     vi.doUnmock('#/lib/storage/file-access-token')
     vi.resetModules()
   }
+}
+
+type MockDocumentAccessDocument = {
+  id: string
+  createdBy: string
+  status: string
+  revisionTarget: string | null
+  lampiranUrls: unknown
+}
+
+type MockDocumentAccessArchive = {
+  id: string
+  statusArsip: string
+  lampiranSnapshot: unknown
+}
+
+async function resolveDocumentTokenWithMockedContext({
+  document,
+  archives,
+  session: testSession,
+}: {
+  document: MockDocumentAccessDocument
+  archives: MockDocumentAccessArchive[]
+  session: ReturnType<typeof session>
+}) {
+  vi.resetModules()
+  vi.doMock('#/db/client', () => ({
+    db: createDocumentAccessDbMock(document, archives),
+  }))
+
+  try {
+    const { resolveDocumentLampiranAccessForToken } = await import(
+      '#/lib/storage/document-file-access'
+    )
+
+    return await resolveDocumentLampiranAccessForToken({
+      payload: {
+        version: 1,
+        purpose: 'preview',
+        documentId: document.id,
+        lampiranIndex: 0,
+        subjectUserId: testSession.userId,
+        sessionId: testSession.sessionId,
+        statusCheck: 'document',
+        contentDisposition: 'inline',
+        issuedAt: NOW,
+        expiresAt: FUTURE,
+      },
+      session: testSession,
+    })
+  } finally {
+    vi.doUnmock('#/db/client')
+    vi.resetModules()
+  }
+}
+
+function createDocumentAccessDbMock(
+  document: MockDocumentAccessDocument,
+  archives: MockDocumentAccessArchive[],
+) {
+  const select = vi.fn()
+    .mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn(async () => [document]),
+        })),
+      })),
+    })
+    .mockReturnValueOnce({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(async () => archives),
+        })),
+      })),
+    })
+
+  return { select }
 }
 
 function expectSafeAttachmentFilename(contentDisposition: string | null): string {

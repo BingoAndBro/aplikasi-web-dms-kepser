@@ -141,7 +141,7 @@ export function canAccessLogicalFilePath(
   session: FileAccessSession,
   logicalPath: string,
 ): boolean {
-  if (storagePathBelongsToUser(logicalPath, session.userId)) {
+  if (!isAdminOnlySession(session) && storagePathBelongsToUser(logicalPath, session.userId)) {
     return true
   }
 
@@ -183,13 +183,13 @@ export async function authorizeRawLogicalPathAccess({
   const classification = classifyStoragePath(safeLogicalPath)
 
   if (classification === 'pending-dash' || classification === 'pending-upload-api') {
-    return storagePathBelongsToUser(safeLogicalPath, session.userId)
+    return !isAdminOnlySession(session) && storagePathBelongsToUser(safeLogicalPath, session.userId)
       ? { ok: true }
       : { ok: false, status: 403, message: 'Akses ditolak' }
   }
 
   if (!hasGovernedReference) {
-    return storagePathBelongsToUser(safeLogicalPath, session.userId)
+    return !isAdminOnlySession(session) && storagePathBelongsToUser(safeLogicalPath, session.userId)
       ? { ok: true }
       : { ok: false, status: 403, message: 'Akses ditolak' }
   }
@@ -316,7 +316,7 @@ function canSessionReadRawReferencedDocument(
   session: FileAccessSession,
   document: RawLogicalPathAccessDocument,
 ): boolean {
-  if (document.createdBy === session.userId) return true
+  if (!isAdminOnlySession(session) && document.createdBy === session.userId) return true
   if (session.roles.includes(ROLES.PPK)) return canPpkReadRawReferencedDocument(document)
   if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadRawReferencedDocument(document)
   if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
@@ -324,6 +324,10 @@ function canSessionReadRawReferencedDocument(
   }
 
   return false
+}
+
+function isAdminOnlySession(session: FileAccessSession): boolean {
+  return session.roles.length > 0 && session.roles.every(role => role === ROLES.ADMIN)
 }
 
 function canPpkReadRawReferencedDocument(document: RawLogicalPathAccessDocument): boolean {
