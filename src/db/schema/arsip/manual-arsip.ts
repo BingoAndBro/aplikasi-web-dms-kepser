@@ -94,6 +94,7 @@ export const manualArsipAttachment = arsipSchema.table(
       .references(() => manualArsip.id, { onDelete: 'no action', onUpdate: 'no action' }),
     logicalPath: text('logical_path').notNull(),
     originalFilename: text('original_filename').notNull(),
+    judulLampiran: text('judul_lampiran').notNull(),
     contentType: text('content_type').notNull(),
     sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
     createdBy: uuid('created_by')
@@ -106,6 +107,7 @@ export const manualArsipAttachment = arsipSchema.table(
     index('idx_manual_arsip_attachment_manual_arsip_id').on(table.manualArsipId),
     index('idx_manual_arsip_attachment_created_by').on(table.createdBy),
     check('manual_arsip_attachment_size_bytes_nonnegative', sql`${table.sizeBytes} >= 0`),
+    check('manual_arsip_attachment_judul_lampiran_nonempty', sql`length(trim(${table.judulLampiran})) > 0`),
   ],
 )
 
@@ -117,4 +119,3 @@ export type ManualArsip = typeof manualArsip.$inferSelect
 export type NewManualArsip = typeof manualArsip.$inferInsert
 export type ManualArsipAttachment = typeof manualArsipAttachment.$inferSelect
 export type NewManualArsipAttachment = typeof manualArsipAttachment.$inferInsert
-

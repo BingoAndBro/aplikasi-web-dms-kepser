@@ -356,6 +356,7 @@ export async function uploadManualArsipAttachments(
       manualArsipId,
       logicalPath: descriptor.logicalPath,
       originalFilename: descriptor.originalFilename,
+      judulLampiran: descriptor.originalFilename,
       contentType: descriptor.contentType,
       sizeBytes: descriptor.sizeBytes,
       createdBy,

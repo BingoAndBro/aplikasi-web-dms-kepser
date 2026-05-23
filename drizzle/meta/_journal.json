@@ -29,6 +29,13 @@
       "when": 1779435600000,
       "tag": "0003_manual_archive_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779522000000,
+      "tag": "0004_manual_archive_attachment_title",
+      "breakpoints": true
     }
   ]
 }

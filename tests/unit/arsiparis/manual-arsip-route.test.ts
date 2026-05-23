@@ -309,6 +309,7 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.txInsertValues).toHaveBeenCalledWith([expect.objectContaining({
       manualArsipId: MANUAL_ARSIP_ID,
       originalFilename: 'lampiran.pdf',
+      judulLampiran: 'lampiran.pdf',
       contentType: 'application/pdf',
       sizeBytes: 10,
       createdBy: USER_ID,
