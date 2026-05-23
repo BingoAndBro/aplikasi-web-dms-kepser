@@ -6,6 +6,7 @@ import {
   Loader2,
   Plus,
   ShieldX,
+  Trash2,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -73,6 +74,7 @@ type ManualArsipCreateResponse = {
 
 type ManualArsipAttachmentMetadata = {
   id: string
+  judul_lampiran: string
   original_filename: string
   content_type: string
   size_bytes: number
@@ -101,33 +103,18 @@ type CreateManualArsipResult = {
   notice: SubmissionNotice
 }
 
+type AttachmentRow = {
+  id: string
+  title: string
+  file: File | null
+}
+
 const MANUAL_ARSIP_ATTACHMENT_FIELD_NAME = 'files'
+const MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME = 'titles'
 const MANUAL_ARSIP_ATTACHMENT_MAX_FILES = 5
 const MANUAL_ARSIP_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
-const MANUAL_ARSIP_ATTACHMENT_ACCEPT = [
-  '.pdf',
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.webp',
-  '.gif',
-  '.bmp',
-  '.tif',
-  '.tiff',
-  '.heic',
-  '.heif',
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/bmp',
-  'image/tiff',
-  'image/heic',
-  'image/heif',
-].join(',')
-const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = new Set([
+const MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH = 120
+const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = [
   'application/pdf',
   'image/bmp',
   'image/gif',
@@ -138,7 +125,9 @@ const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = new Set([
   'image/png',
   'image/tiff',
   'image/webp',
-])
+] as const
+const MANUAL_ARSIP_ATTACHMENT_ACCEPT = MANUAL_ARSIP_ALLOWED_CONTENT_TYPES.join(',')
+const MANUAL_ARSIP_ALLOWED_CONTENT_TYPE_SET = new Set<string>(MANUAL_ARSIP_ALLOWED_CONTENT_TYPES)
 
 const emptyForm = (): ManualArsipFormState => ({
   nama: '',
@@ -361,7 +350,7 @@ function CreateManualArsipModal({
   onSuccess: (result: CreateManualArsipResult) => void | Promise<void>
 }) {
   const [form, setForm] = useState<ManualArsipFormState>(emptyForm)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -369,7 +358,7 @@ function CreateManualArsipModal({
   useEffect(() => {
     if (!isOpen) return
     setForm(emptyForm())
-    setSelectedFiles([])
+    setAttachmentRows([])
     setErrors({})
     setSubmitError(null)
     setSubmitting(false)
@@ -382,29 +371,71 @@ function CreateManualArsipModal({
     setErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? [])
-    const validationError = validateSelectedFiles(files)
+  function handleNominalRealisasiChange(value: string) {
+    const raw = value.replace(/[^\d]/g, '')
+    const numericValue = parseInt(raw, 10)
+    setField('nominal_realisasi', raw ? numericValue.toLocaleString('id-ID') : '')
+  }
 
-    if (validationError) {
-      setSelectedFiles([])
-      setErrors((prev) => ({ ...prev, attachments: validationError }))
-      event.target.value = ''
+  function addAttachmentRow() {
+    if (attachmentRows.length >= MANUAL_ARSIP_ATTACHMENT_MAX_FILES) {
+      setErrors((prev) => ({ ...prev, attachments: 'Maksimal 5 lampiran' }))
       return
     }
 
-    setSelectedFiles(files)
+    setAttachmentRows((prev) => [...prev, createAttachmentRow()])
     setErrors((prev) => ({ ...prev, attachments: '' }))
+  }
+
+  function removeAttachmentRow(rowId: string) {
+    setAttachmentRows((prev) => prev.filter((row) => row.id !== rowId))
+    setErrors((prev) => clearAttachmentRowErrors(prev, rowId))
+  }
+
+  function updateAttachmentTitle(rowId: string, title: string) {
+    setAttachmentRows((prev) => prev.map((row) => (
+      row.id === rowId ? { ...row, title } : row
+    )))
+    setErrors((prev) => ({
+      ...prev,
+      [attachmentTitleErrorKey(rowId)]: '',
+      attachments: '',
+    }))
+  }
+
+  function updateAttachmentFile(rowId: string, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+    const fileError = file ? validateAttachmentFile(file) : null
+
+    if (fileError) {
+      event.target.value = ''
+      setAttachmentRows((prev) => prev.map((row) => (
+        row.id === rowId ? { ...row, file: null } : row
+      )))
+      setErrors((prev) => ({
+        ...prev,
+        [attachmentFileErrorKey(rowId)]: fileError,
+        attachments: '',
+      }))
+      return
+    }
+
+    setAttachmentRows((prev) => prev.map((row) => (
+      row.id === rowId ? { ...row, file } : row
+    )))
+    setErrors((prev) => ({
+      ...prev,
+      [attachmentFileErrorKey(rowId)]: '',
+      attachments: '',
+    }))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const validation = validateForm(form)
-    const fileValidationError = validateSelectedFiles(selectedFiles)
-    if (fileValidationError) {
-      validation.errors.attachments = fileValidationError
-    }
+    const attachmentValidation = validateAttachmentRows(attachmentRows)
+    Object.assign(validation.errors, attachmentValidation.errors)
 
     if (Object.keys(validation.errors).length > 0) {
       setErrors(validation.errors)
@@ -426,7 +457,7 @@ function CreateManualArsipModal({
       })
 
       const createdId = createResponse.manual_arsip?.id
-      if (selectedFiles.length === 0) {
+      if (attachmentValidation.rows.length === 0) {
         await onSuccess({
           notice: {
             tone: 'success',
@@ -447,8 +478,9 @@ function CreateManualArsipModal({
       }
 
       const formData = new FormData()
-      for (const file of selectedFiles) {
-        formData.append(MANUAL_ARSIP_ATTACHMENT_FIELD_NAME, file)
+      for (const row of attachmentValidation.rows) {
+        formData.append(MANUAL_ARSIP_ATTACHMENT_FIELD_NAME, row.file)
+        formData.append(MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME, row.title)
       }
 
       try {
@@ -459,7 +491,7 @@ function CreateManualArsipModal({
             body: formData,
           },
         )
-        const uploadedCount = uploadResponse.attachments?.length ?? selectedFiles.length
+        const uploadedCount = uploadResponse.attachments?.length ?? attachmentValidation.rows.length
 
         await onSuccess({
           notice: {
@@ -467,11 +499,11 @@ function CreateManualArsipModal({
             message: `Arsip manual berhasil dibuat. ${uploadedCount} lampiran berhasil diunggah.`,
           },
         })
-      } catch (uploadError) {
+      } catch {
         await onSuccess({
           notice: {
             tone: 'warning',
-            message: formatAttachmentUploadFailureMessage(uploadError),
+            message: 'Arsip berhasil dibuat, tetapi lampiran gagal diunggah.',
           },
         })
       }
@@ -542,12 +574,11 @@ function CreateManualArsipModal({
 
             <FormField label="Nominal Realisasi" hint="Opsional pada fase ini" error={errors.nominal_realisasi}>
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="numeric"
                 value={form.nominal_realisasi}
-                onChange={(event) => setField('nominal_realisasi', event.target.value)}
-                placeholder="0"
+                onChange={(event) => handleNominalRealisasiChange(event.target.value)}
+                placeholder="Contoh: 1.500.000"
                 className={inputClass(errors.nominal_realisasi)}
               />
             </FormField>
@@ -564,35 +595,76 @@ function CreateManualArsipModal({
           </FormField>
 
           <FormField label="Bukti dokumen (opsional)" error={errors.attachments}>
-            <input
-              type="file"
-              multiple
-              accept={MANUAL_ARSIP_ATTACHMENT_ACCEPT}
-              onChange={handleFileChange}
-              className={cn(
-                inputClass(errors.attachments),
-                'h-auto file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary',
+            <div className="space-y-3">
+              {attachmentRows.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-outline-variant/50 bg-surface-container-low/20 px-3 py-4 text-center text-xs text-on-surface-variant">
+                  Belum ada lampiran tambahan.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {attachmentRows.map((row, index) => (
+                    <div key={row.id} className="rounded-lg border border-outline-variant/30 bg-white p-3">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold text-on-surface">Lampiran {index + 1}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => removeAttachmentRow(row.id)}
+                          disabled={submitting}
+                          aria-label={`Hapus lampiran ${index + 1}`}
+                        >
+                          <Trash2 size={13} />
+                        </Button>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <FormField label="Judul lampiran" required error={errors[attachmentTitleErrorKey(row.id)]}>
+                          <input
+                            value={row.title}
+                            onChange={(event) => updateAttachmentTitle(row.id, event.target.value)}
+                            placeholder="Contoh: Bukti Kegiatan"
+                            className={inputClass(errors[attachmentTitleErrorKey(row.id)])}
+                          />
+                        </FormField>
+                        <FormField label="File lampiran" required error={errors[attachmentFileErrorKey(row.id)]}>
+                          <input
+                            type="file"
+                            accept={MANUAL_ARSIP_ATTACHMENT_ACCEPT}
+                            onChange={(event) => updateAttachmentFile(row.id, event)}
+                            className={cn(
+                              inputClass(errors[attachmentFileErrorKey(row.id)]),
+                              'h-auto file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary',
+                            )}
+                          />
+                          {row.file && (
+                            <p className="mt-1 text-[10px] text-on-surface-variant">
+                              {row.file.name} - {formatFileSize(row.file.size)}
+                            </p>
+                          )}
+                        </FormField>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-            />
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addAttachmentRow}
+                disabled={submitting || attachmentRows.length >= MANUAL_ARSIP_ATTACHMENT_MAX_FILES}
+              >
+                <Plus size={14} />
+                Tambah Lampiran
+              </Button>
+            </div>
             <div className="mt-2 rounded-lg border border-outline-variant/30 bg-surface-container-low/20 px-3 py-2 text-[11px] text-on-surface-variant">
-              <p>Maksimal 5 file.</p>
+              <p>Maksimal 5 lampiran.</p>
               <p>Maksimal 10MB per file.</p>
               <p>Format: PDF, JPG/JPEG, PNG, WEBP, GIF, BMP, TIFF, HEIC/HEIF.</p>
               <p>Tidak ada preview/download pada fase ini.</p>
             </div>
-            {selectedFiles.length > 0 && (
-              <div className="mt-2 rounded-lg border border-outline-variant/30 bg-white px-3 py-2">
-                <p className="text-[11px] font-semibold text-on-surface">File terpilih</p>
-                <ul className="mt-1 space-y-1">
-                  {selectedFiles.map((file, index) => (
-                    <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-3 text-[11px] text-on-surface-variant">
-                      <span className="min-w-0 truncate">{file.name}</span>
-                      <span className="shrink-0 text-outline">{formatFileSize(file.size)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </FormField>
 
           {submitError && (
@@ -763,7 +835,7 @@ function validateForm(form: ManualArsipFormState): {
   nominal: number | null
 } {
   const errors: Record<string, string> = {}
-  const trimmedNominal = form.nominal_realisasi.trim()
+  const rawNominal = form.nominal_realisasi.replace(/[^\d]/g, '')
   let nominal: number | null = null
 
   if (!form.nama.trim()) errors.nama = 'Nama wajib diisi'
@@ -771,9 +843,9 @@ function validateForm(form: ManualArsipFormState): {
   if (!form.keterangan.trim()) errors.keterangan = 'Keterangan wajib diisi'
   if (!form.category_id) errors.category_id = 'Kategori wajib dipilih'
 
-  if (trimmedNominal) {
-    nominal = Number(trimmedNominal)
-    if (!Number.isFinite(nominal)) {
+  if (rawNominal) {
+    nominal = parseInt(rawNominal, 10)
+    if (!Number.isSafeInteger(nominal)) {
       errors.nominal_realisasi = 'Nominal harus berupa angka'
     } else if (nominal < 0) {
       errors.nominal_realisasi = 'Nominal realisasi tidak boleh negatif'
@@ -783,29 +855,93 @@ function validateForm(form: ManualArsipFormState): {
   return { errors, nominal }
 }
 
-function validateSelectedFiles(files: File[]): string | null {
-  if (files.length === 0) return null
+function validateAttachmentRows(rows: AttachmentRow[]): {
+  errors: Record<string, string>
+  rows: Array<{ title: string; file: File }>
+} {
+  const errors: Record<string, string> = {}
+  const validatedRows: Array<{ title: string; file: File }> = []
 
-  if (files.length > MANUAL_ARSIP_ATTACHMENT_MAX_FILES) {
-    return 'Maksimal 5 file lampiran'
+  if (rows.length > MANUAL_ARSIP_ATTACHMENT_MAX_FILES) {
+    errors.attachments = 'Maksimal 5 lampiran'
   }
 
-  for (const file of files) {
-    if (file.size <= 0) {
-      return 'File lampiran tidak valid'
+  for (const row of rows) {
+    const title = row.title.trim()
+    let rowHasError = false
+
+    if (!title) {
+      errors[attachmentTitleErrorKey(row.id)] = 'Judul lampiran wajib diisi'
+      rowHasError = true
+    } else if (title.length > MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH) {
+      errors[attachmentTitleErrorKey(row.id)] = 'Judul lampiran maksimal 120 karakter'
+      rowHasError = true
     }
 
-    if (file.size > MANUAL_ARSIP_ATTACHMENT_MAX_BYTES) {
-      return 'Ukuran file maksimal 10MB per file'
+    if (!row.file) {
+      errors[attachmentFileErrorKey(row.id)] = 'File lampiran wajib dipilih'
+      rowHasError = true
+    } else {
+      const fileError = validateAttachmentFile(row.file)
+      if (fileError) {
+        errors[attachmentFileErrorKey(row.id)] = fileError
+        rowHasError = true
+      }
     }
 
-    const contentType = file.type.trim().toLowerCase()
-    if (!MANUAL_ARSIP_ALLOWED_CONTENT_TYPES.has(contentType)) {
-      return 'Tipe file tidak diizinkan. Gunakan PDF atau gambar yang didukung.'
+    if (!rowHasError && row.file) {
+      validatedRows.push({ title, file: row.file })
     }
+  }
+
+  return { errors, rows: validatedRows }
+}
+
+function validateAttachmentFile(file: File): string | null {
+  if (file.size <= 0) {
+    return 'File lampiran tidak valid'
+  }
+
+  if (file.size > MANUAL_ARSIP_ATTACHMENT_MAX_BYTES) {
+    return 'Ukuran file maksimal 10MB per file'
+  }
+
+  const contentType = file.type.trim().toLowerCase()
+  if (!contentType || !MANUAL_ARSIP_ALLOWED_CONTENT_TYPE_SET.has(contentType)) {
+    return 'Tipe file tidak diizinkan. Gunakan PDF atau gambar yang didukung.'
   }
 
   return null
+}
+
+let attachmentRowCounter = 0
+
+function createAttachmentRow(): AttachmentRow {
+  attachmentRowCounter += 1
+  return {
+    id: `attachment-row-${Date.now()}-${attachmentRowCounter}`,
+    title: '',
+    file: null,
+  }
+}
+
+function attachmentTitleErrorKey(rowId: string): string {
+  return `attachment_${rowId}_title`
+}
+
+function attachmentFileErrorKey(rowId: string): string {
+  return `attachment_${rowId}_file`
+}
+
+function clearAttachmentRowErrors(
+  errors: Record<string, string>,
+  rowId: string,
+): Record<string, string> {
+  const next = { ...errors }
+  delete next[attachmentTitleErrorKey(rowId)]
+  delete next[attachmentFileErrorKey(rowId)]
+  delete next.attachments
+  return next
 }
 
 function isValidDateOnly(value: string): boolean {
@@ -837,11 +973,6 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback
-}
-
-function formatAttachmentUploadFailureMessage(error: unknown): string {
-  const detail = getApiErrorMessage(error, 'Lampiran gagal diunggah')
-  return `Arsip berhasil dibuat, tetapi lampiran gagal diunggah. ${detail}`
 }
 
 function truncateText(value: string, maxLength: number) {
