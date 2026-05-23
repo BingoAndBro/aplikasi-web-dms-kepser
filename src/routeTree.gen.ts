@@ -40,6 +40,7 @@ import { Route as BendaharaSelesaiRouteImport } from './routes/bendahara/selesai
 import { Route as BendaharaInboxRouteImport } from './routes/bendahara/inbox'
 import { Route as BendaharaDitolakRouteImport } from './routes/bendahara/ditolak'
 import { Route as ArsiparisSearchRouteImport } from './routes/arsiparis/search'
+import { Route as ArsiparisPenambahanArsipRouteImport } from './routes/arsiparis/penambahan-arsip'
 import { Route as ArsiparisKlasifikasiRouteImport } from './routes/arsiparis/klasifikasi'
 import { Route as ArsiparisInboxRouteImport } from './routes/arsiparis/inbox'
 import { Route as ApiUploadRouteImport } from './routes/api/upload'
@@ -316,6 +317,12 @@ const ArsiparisSearchRoute = ArsiparisSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => ArsiparisRoute,
 } as any)
+const ArsiparisPenambahanArsipRoute =
+  ArsiparisPenambahanArsipRouteImport.update({
+    id: '/penambahan-arsip',
+    path: '/penambahan-arsip',
+    getParentRoute: () => ArsiparisRoute,
+  } as any)
 const ArsiparisKlasifikasiRoute = ArsiparisKlasifikasiRouteImport.update({
   id: '/klasifikasi',
   path: '/klasifikasi',
@@ -953,6 +960,7 @@ export interface FileRoutesByFullPath {
   '/api/upload': typeof ApiUploadRoute
   '/arsiparis/inbox': typeof ArsiparisInboxRoute
   '/arsiparis/klasifikasi': typeof ArsiparisKlasifikasiRoute
+  '/arsiparis/penambahan-arsip': typeof ArsiparisPenambahanArsipRoute
   '/arsiparis/search': typeof ArsiparisSearchRoute
   '/bendahara/ditolak': typeof BendaharaDitolakRoute
   '/bendahara/inbox': typeof BendaharaInboxRoute
@@ -1099,6 +1107,7 @@ export interface FileRoutesByTo {
   '/api/upload': typeof ApiUploadRoute
   '/arsiparis/inbox': typeof ArsiparisInboxRoute
   '/arsiparis/klasifikasi': typeof ArsiparisKlasifikasiRoute
+  '/arsiparis/penambahan-arsip': typeof ArsiparisPenambahanArsipRoute
   '/arsiparis/search': typeof ArsiparisSearchRoute
   '/bendahara/ditolak': typeof BendaharaDitolakRoute
   '/bendahara/inbox': typeof BendaharaInboxRoute
@@ -1247,6 +1256,7 @@ export interface FileRoutesById {
   '/api/upload': typeof ApiUploadRoute
   '/arsiparis/inbox': typeof ArsiparisInboxRoute
   '/arsiparis/klasifikasi': typeof ArsiparisKlasifikasiRoute
+  '/arsiparis/penambahan-arsip': typeof ArsiparisPenambahanArsipRoute
   '/arsiparis/search': typeof ArsiparisSearchRoute
   '/bendahara/ditolak': typeof BendaharaDitolakRoute
   '/bendahara/inbox': typeof BendaharaInboxRoute
@@ -1400,6 +1410,7 @@ export interface FileRouteTypes {
     | '/api/upload'
     | '/arsiparis/inbox'
     | '/arsiparis/klasifikasi'
+    | '/arsiparis/penambahan-arsip'
     | '/arsiparis/search'
     | '/bendahara/ditolak'
     | '/bendahara/inbox'
@@ -1546,6 +1557,7 @@ export interface FileRouteTypes {
     | '/api/upload'
     | '/arsiparis/inbox'
     | '/arsiparis/klasifikasi'
+    | '/arsiparis/penambahan-arsip'
     | '/arsiparis/search'
     | '/bendahara/ditolak'
     | '/bendahara/inbox'
@@ -1693,6 +1705,7 @@ export interface FileRouteTypes {
     | '/api/upload'
     | '/arsiparis/inbox'
     | '/arsiparis/klasifikasi'
+    | '/arsiparis/penambahan-arsip'
     | '/arsiparis/search'
     | '/bendahara/ditolak'
     | '/bendahara/inbox'
@@ -2115,6 +2128,13 @@ declare module '@tanstack/react-router' {
       path: '/klasifikasi'
       fullPath: '/arsiparis/klasifikasi'
       preLoaderRoute: typeof ArsiparisKlasifikasiRouteImport
+      parentRoute: typeof ArsiparisRoute
+    }
+    '/arsiparis/penambahan-arsip': {
+      id: '/arsiparis/penambahan-arsip'
+      path: '/penambahan-arsip'
+      fullPath: '/arsiparis/penambahan-arsip'
+      preLoaderRoute: typeof ArsiparisPenambahanArsipRouteImport
       parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/inbox': {
@@ -2970,6 +2990,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 interface ArsiparisRouteChildren {
   ArsiparisInboxRoute: typeof ArsiparisInboxRoute
   ArsiparisKlasifikasiRoute: typeof ArsiparisKlasifikasiRoute
+  ArsiparisPenambahanArsipRoute: typeof ArsiparisPenambahanArsipRoute
   ArsiparisSearchRoute: typeof ArsiparisSearchRoute
   ArsiparisIndexRoute: typeof ArsiparisIndexRoute
   ArsiparisAktifIdRoute: typeof ArsiparisAktifIdRoute
@@ -2984,6 +3005,7 @@ interface ArsiparisRouteChildren {
 const ArsiparisRouteChildren: ArsiparisRouteChildren = {
   ArsiparisInboxRoute: ArsiparisInboxRoute,
   ArsiparisKlasifikasiRoute: ArsiparisKlasifikasiRoute,
+  ArsiparisPenambahanArsipRoute: ArsiparisPenambahanArsipRoute,
   ArsiparisSearchRoute: ArsiparisSearchRoute,
   ArsiparisIndexRoute: ArsiparisIndexRoute,
   ArsiparisAktifIdRoute: ArsiparisAktifIdRoute,

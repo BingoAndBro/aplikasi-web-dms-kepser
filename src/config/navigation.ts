@@ -144,6 +144,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'arsip_aktif', label: 'Daftar Arsip Aktif', icon: FolderOpen, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF },
         { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.INAKTIF },
         { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.USUL_MUSNAH },
+        { id: 'penambahan_arsip', label: 'Penambahan Arsip', icon: FilePlus, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.PENAMBAHAN_ARSIP },
         { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI },
         { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
       ],

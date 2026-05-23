@@ -33,6 +33,7 @@ export const ROUTES = {
     AKTIF: '/arsiparis/aktif',
     INAKTIF: '/arsiparis/inaktif',
     USUL_MUSNAH: '/arsiparis/usul-musnah',
+    PENAMBAHAN_ARSIP: '/arsiparis/penambahan-arsip',
     KLASIFIKASI: '/arsiparis/klasifikasi',
     SEARCH: '/arsiparis/search',
   },
