@@ -10,7 +10,11 @@ const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
   dbSelect: vi.fn(),
   dbInsert: vi.fn(),
+  dbTransaction: vi.fn(),
   insertValues: vi.fn(),
+  txInsert: vi.fn(),
+  txInsertValues: vi.fn(),
+  writeManualArsipAttachmentContent: vi.fn(),
 }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
@@ -22,15 +26,26 @@ vi.mock('#/db/client', () => ({
   db: {
     select: mocks.dbSelect,
     insert: mocks.dbInsert,
+    transaction: mocks.dbTransaction,
   },
 }))
+
+vi.mock('#/lib/storage/manual-arsip-upload', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#/lib/storage/manual-arsip-upload')>()
+
+  return {
+    ...actual,
+    writeManualArsipAttachmentContent: mocks.writeManualArsipAttachmentContent,
+  }
+})
 
 import { Route as ManualArsipCategoriesRoute } from '#/routes/api/arsiparis/manual-arsip/categories'
 import { Route as ManualArsipIndexRoute } from '#/routes/api/arsiparis/manual-arsip/index'
 import { Route as ManualArsipDetailRoute } from '#/routes/api/arsiparis/manual-arsip/$id'
+import { Route as ManualArsipAttachmentsRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments'
 
 type RouteGetHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
-type RoutePostHandler = (args: { request: Request }) => Promise<Response>
+type RoutePostHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
 
 const categoriesGetHandler = (ManualArsipCategoriesRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
@@ -44,11 +59,19 @@ const detailGetHandler = (ManualArsipDetailRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
 }).options.server.handlers.GET
 
+const attachmentsPostHandler = (ManualArsipAttachmentsRoute as unknown as {
+  options: { server: { handlers: { POST: RoutePostHandler } } }
+}).options.server.handlers.POST
+
 describe('manual arsip API foundation routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+    mocks.writeManualArsipAttachmentContent.mockResolvedValue({
+      logicalPath: 'manual-arsip/test-user/test-arsip/test.pdf',
+      bytesWritten: 10,
+    })
   })
 
   it('requires assigned KEPALA_SUB_BAGIAN_UMUM for category list', async () => {
@@ -265,6 +288,269 @@ describe('manual arsip API foundation routes', () => {
       created_at: '2026-05-22T00:00:00.000Z',
     }])
   })
+
+  it('allows KEPALA_SUB_BAGIAN_UMUM to upload a PDF attachment', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+    queueTransactionInsertResult([manualArsipAttachmentRow({
+      original_filename: 'lampiran.pdf',
+      content_type: 'application/pdf',
+      size_bytes: 10,
+    })])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(201)
+    expect(mocks.txInsertValues).toHaveBeenCalledWith([expect.objectContaining({
+      manualArsipId: MANUAL_ARSIP_ID,
+      originalFilename: 'lampiran.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 10,
+      createdBy: USER_ID,
+    })])
+    expect(JSON.stringify(body)).not.toContain('logical_path')
+    expect(JSON.stringify(body)).not.toContain('logicalPath')
+    expect(JSON.stringify(body)).not.toContain('storage')
+    expect(JSON.stringify(body)).not.toContain('signed')
+    expect(body).toEqual({
+      attachments: [{
+        id: '77777777-7777-4777-8777-777777777777',
+        original_filename: 'lampiran.pdf',
+        content_type: 'application/pdf',
+        size_bytes: 10,
+        created_at: '2026-05-22T00:00:00.000Z',
+      }],
+    })
+  })
+
+  it('allows KEPALA_SUB_BAGIAN_UMUM to upload an image attachment', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+    queueTransactionInsertResult([manualArsipAttachmentRow({
+      original_filename: 'bukti.png',
+      content_type: 'image/png',
+      size_bytes: 12,
+    })])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(12)], 'bukti.png', { type: 'image/png' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(201)
+    expect(await response.json()).toEqual({
+      attachments: [{
+        id: '77777777-7777-4777-8777-777777777777',
+        original_filename: 'bukti.png',
+        content_type: 'image/png',
+        size_bytes: 12,
+        created_at: '2026-05-22T00:00:00.000Z',
+      }],
+    })
+  })
+
+  it('rejects ADMIN-only attachment upload with 403', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-Kasubag attachment upload with 403', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['PEGAWAI'], USER_ID))
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload for non-AKTIF manual archive parents', async () => {
+    for (const status_arsip of ['INAKTIF', 'USUL_MUSNAH', 'DIMUSNAHKAN']) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+      queueSelectResults([manualArsipUploadParentRow(status_arsip)])
+
+      const response = await attachmentsPostHandler({
+        request: createAttachmentUploadRequest([
+          new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+        ]),
+        params: { id: MANUAL_ARSIP_ID },
+      })
+
+      expect(response.status).toBe(409)
+      expect(await response.json()).toEqual({
+        error: 'Lampiran hanya dapat diunggah untuk arsip manual berstatus AKTIF',
+      })
+      expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+      expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects unsupported attachment content type', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'script.txt', { type: 'text/plain' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Tipe file tidak diizinkan. Gunakan PDF atau gambar.',
+    })
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects SVG image attachments with the unsupported file type error', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'vector.svg', { type: 'image/svg+xml' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Tipe file tidak diizinkan. Gunakan PDF atau gambar.',
+    })
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects unknown image subtypes with the unsupported file type error', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'unknown.xyz', { type: 'image/x-unknown' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Tipe file tidak diizinkan. Gunakan PDF atau gambar.',
+    })
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects more than five attachment files', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest(Array.from(
+        { length: 6 },
+        (_, index) => new File([new Uint8Array(1)], `lampiran-${index}.pdf`, { type: 'application/pdf' }),
+      )),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Maksimal 5 file lampiran per unggahan' })
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment files larger than 10 MB before writing content', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array((10 * 1024 * 1024) + 1)], 'besar.pdf', { type: 'application/pdf' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Ukuran file maksimal 10MB' })
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('requires at least one attachment file under the files field', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([], 'file'),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Minimal satu file lampiran wajib diunggah' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it('rejects unauthenticated attachment upload with 401', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it('protects attachment upload with same-origin guard before auth/db work', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ], 'files', 'http://evil.test'),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Permintaan tidak diizinkan' })
+    expect(mocks.getLocalServerSession).not.toHaveBeenCalled()
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when uploading to a missing manual archive parent', async () => {
+    queueSelectResults([])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'Arsip manual tidak ditemukan' })
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
 })
 
 function createSession(roles: string[], userId: string) {
@@ -301,6 +587,21 @@ function createPostRequest(body: Record<string, unknown>, origin = 'http://local
       Origin: origin,
     },
     body: JSON.stringify(body),
+  })
+}
+
+function createAttachmentUploadRequest(files: File[], fieldName = 'files', origin = 'http://localhost') {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append(fieldName, file)
+  }
+
+  return new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}/attachments`, {
+    method: 'POST',
+    headers: {
+      Origin: origin,
+    },
+    body: formData,
   })
 }
 
@@ -358,6 +659,27 @@ function manualArsipJoinedRow() {
   }
 }
 
+function manualArsipUploadParentRow(status_arsip: string) {
+  return {
+    id: MANUAL_ARSIP_ID,
+    status_arsip,
+  }
+}
+
+function manualArsipAttachmentRow(overrides: Partial<{
+  original_filename: string
+  content_type: string
+  size_bytes: number
+}> = {}) {
+  return {
+    id: '77777777-7777-4777-8777-777777777777',
+    original_filename: overrides.original_filename ?? 'lampiran.pdf',
+    content_type: overrides.content_type ?? 'application/pdf',
+    size_bytes: overrides.size_bytes ?? 10,
+    created_at: new Date('2026-05-22T00:00:00.000Z'),
+  }
+}
+
 function queueSelectResults(...results: unknown[][]) {
   const queue = [...results]
   mocks.dbSelect.mockImplementation(() => createSelectBuilder(queue.shift() ?? []))
@@ -383,5 +705,19 @@ function queueInsertResult(result: unknown[]) {
     values: mocks.insertValues.mockReturnValue({
       returning: vi.fn(async () => result),
     }),
+  })
+}
+
+function queueTransactionInsertResult(result: unknown[]) {
+  mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      insert: mocks.txInsert.mockReturnValue({
+        values: mocks.txInsertValues.mockReturnValue({
+          returning: vi.fn(async () => result),
+        }),
+      }),
+    }
+
+    return operation(tx)
   })
 }

@@ -18,6 +18,10 @@ import type {
   ListManualArsipQuery,
   ManualArsipSafeMetadata,
 } from '#/lib/schemas/manual-arsip'
+import {
+  createManualArsipAttachmentStorageDescriptors,
+  writeManualArsipAttachmentContent,
+} from '#/lib/storage/manual-arsip-upload'
 
 export const MANUAL_ARSIP_LIST_DEFAULT_LIMIT = 100
 
@@ -57,13 +61,15 @@ export type ManualArsipListItemResponse = {
 
 export type ManualArsipDetailResponse = ManualArsipListItemResponse & {
   metadata: ManualArsipSafeMetadata
-  attachments: Array<{
-    id: string
-    original_filename: string
-    content_type: string
-    size_bytes: number
-    created_at: string
-  }>
+  attachments: ManualArsipAttachmentResponse[]
+}
+
+export type ManualArsipAttachmentResponse = {
+  id: string
+  original_filename: string
+  content_type: string
+  size_bytes: number
+  created_at: string
 }
 
 type CategoryRow = {
@@ -293,6 +299,87 @@ export async function getManualArsipDetail(
     created_at: isoDateString(row.created_at),
     updated_at: isoDateString(row.updated_at),
   }
+}
+
+export async function uploadManualArsipAttachments(
+  manualArsipId: string,
+  createdBy: string,
+  files: File[],
+): Promise<ManualArsipAttachmentResponse[]> {
+  const [parent] = await db
+    .select({
+      id: manualArsip.id,
+      status_arsip: manualArsip.statusArsip,
+    })
+    .from(manualArsip)
+    .where(eq(manualArsip.id, manualArsipId))
+    .limit(1)
+
+  if (!parent) {
+    throw new ManualArsipApiError('Arsip manual tidak ditemukan', 404)
+  }
+
+  if (parent.status_arsip !== ARCHIVE_STATUS.AKTIF) {
+    throw new ManualArsipApiError('Lampiran hanya dapat diunggah untuk arsip manual berstatus AKTIF', 409)
+  }
+
+  const descriptors = createManualArsipAttachmentStorageDescriptors({
+    files: files.map((file) => ({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    })),
+    manualArsipId,
+    ownerUserId: createdBy,
+  })
+
+  const contents: ArrayBuffer[] = []
+  for (const file of files) {
+    try {
+      contents.push(await file.arrayBuffer())
+    } catch {
+      throw new ManualArsipApiError('Gagal membaca file lampiran', 400)
+    }
+  }
+
+  for (const [index, descriptor] of descriptors.entries()) {
+    await writeManualArsipAttachmentContent({
+      logicalPath: descriptor.logicalPath,
+      content: contents[index],
+      expectedBytes: descriptor.sizeBytes,
+    })
+  }
+
+  const inserted = await db.transaction(async (tx) => tx
+    .insert(manualArsipAttachment)
+    .values(descriptors.map((descriptor) => ({
+      manualArsipId,
+      logicalPath: descriptor.logicalPath,
+      originalFilename: descriptor.originalFilename,
+      contentType: descriptor.contentType,
+      sizeBytes: descriptor.sizeBytes,
+      createdBy,
+      metadata: {},
+    })))
+    .returning({
+      id: manualArsipAttachment.id,
+      original_filename: manualArsipAttachment.originalFilename,
+      content_type: manualArsipAttachment.contentType,
+      size_bytes: manualArsipAttachment.sizeBytes,
+      created_at: manualArsipAttachment.createdAt,
+    }))
+
+  if (inserted.length !== descriptors.length) {
+    throw new ManualArsipApiError('Gagal menyimpan metadata lampiran arsip manual', 500)
+  }
+
+  return inserted.map((attachment) => ({
+    id: attachment.id,
+    original_filename: attachment.original_filename,
+    content_type: attachment.content_type,
+    size_bytes: attachment.size_bytes,
+    created_at: isoDateString(attachment.created_at),
+  }))
 }
 
 export function isUuid(value: string): boolean {
