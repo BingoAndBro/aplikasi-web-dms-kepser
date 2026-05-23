@@ -28,6 +28,9 @@ const METADATA_FORBIDDEN_KEYS = new Set([
   'fileToken',
 ])
 
+const REQUIRED_NOMINAL_MESSAGE = 'Nominal realisasi wajib diisi'
+const POSITIVE_NOMINAL_MESSAGE = 'Nominal realisasi harus lebih dari 0'
+
 export const manualArsipSafeMetadataSchema = z
   .record(z.string(), z.unknown())
   .superRefine((value, ctx) => {
@@ -47,10 +50,58 @@ export const createManualArsipSchema = z
     keterangan: z.string().trim().min(1, 'Keterangan wajib diisi'),
     category_id: z.string().uuid('Kategori tidak valid'),
     klasifikasi_id: z.string().uuid('Klasifikasi tidak valid').nullable().optional(),
-    nominal_realisasi: z.number().finite('Nominal realisasi harus berupa angka').min(0, 'Nominal realisasi tidak boleh negatif').nullable().optional(),
+    nominal_realisasi: z.unknown(),
     metadata: manualArsipSafeMetadataSchema.optional(),
   })
   .strict()
+  .superRefine((value, ctx) => {
+    const hasNominal = Object.prototype.hasOwnProperty.call(value, 'nominal_realisasi')
+    const nominal = value.nominal_realisasi
+
+    if (!hasNominal || nominal === null || nominal === undefined || nominal === '') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['nominal_realisasi'],
+        message: REQUIRED_NOMINAL_MESSAGE,
+      })
+      return
+    }
+
+    if (typeof nominal !== 'number' || !Number.isFinite(nominal)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['nominal_realisasi'],
+        message: 'Nominal realisasi harus berupa angka',
+      })
+      return
+    }
+
+    if (!Number.isInteger(nominal)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['nominal_realisasi'],
+        message: 'Nominal realisasi harus berupa bilangan bulat',
+      })
+      return
+    }
+
+    if (nominal <= 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['nominal_realisasi'],
+        message: POSITIVE_NOMINAL_MESSAGE,
+      })
+    }
+  })
+  .transform((value) => ({
+    nama: value.nama,
+    tanggal: value.tanggal,
+    keterangan: value.keterangan,
+    category_id: value.category_id,
+    klasifikasi_id: value.klasifikasi_id,
+    nominal_realisasi: value.nominal_realisasi as number,
+    metadata: value.metadata,
+  }))
 
 export const listManualArsipQuerySchema = z
   .object({

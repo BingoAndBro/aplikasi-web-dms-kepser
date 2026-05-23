@@ -178,6 +178,86 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
+  it('rejects missing nominal_realisasi without a 500', async () => {
+    const body = validCreateBody() as Record<string, unknown>
+    delete body.nominal_realisasi
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(body),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nominal realisasi wajib diisi' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects null nominal_realisasi without a 500', async () => {
+    const response = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        nominal_realisasi: null,
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nominal realisasi wajib diisi' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects empty nominal_realisasi without a 500', async () => {
+    const response = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        nominal_realisasi: '',
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nominal realisasi wajib diisi' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects formatted nominal_realisasi strings without a 500', async () => {
+    for (const nominal_realisasi of ['Rp 1.500.000', '1.500.000']) {
+      const response = await indexHandlers.POST({
+        request: createPostRequest({
+          ...validCreateBody(),
+          nominal_realisasi,
+        }),
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'Nominal realisasi harus berupa angka' })
+      expect(mocks.dbInsert).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects decimal nominal_realisasi without a 500', async () => {
+    const response = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        nominal_realisasi: 1000.5,
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nominal realisasi harus berupa bilangan bulat' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects zero nominal_realisasi without a 500', async () => {
+    const response = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        nominal_realisasi: 0,
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nominal realisasi harus lebih dari 0' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
   it('rejects negative nominal without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
@@ -187,11 +267,11 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Nominal realisasi tidak boleh negatif' })
+    expect(await response.json()).toEqual({ error: 'Nominal realisasi harus lebih dari 0' })
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
-  it('writes created_by from the server session and returns no file access fields', async () => {
+  it('creates with positive nominal_realisasi and returns no file access fields', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
     queueInsertResult([manualArsipRow()])
 
@@ -207,6 +287,7 @@ describe('manual arsip API foundation routes', () => {
       categoryId: CATEGORY_ID,
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiNamaSnapshot: 'Klasifikasi A',
+      nominalRealisasi: '1000',
     }))
     expect(JSON.stringify(body)).not.toContain('logical_path')
     expect(JSON.stringify(body)).not.toContain('logicalPath')

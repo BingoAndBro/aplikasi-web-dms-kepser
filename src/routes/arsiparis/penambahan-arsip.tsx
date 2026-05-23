@@ -572,7 +572,7 @@ function CreateManualArsipModal({
               </select>
             </FormField>
 
-            <FormField label="Nominal Realisasi" hint="Opsional pada fase ini" error={errors.nominal_realisasi}>
+            <FormField label="Nominal Realisasi" required hint="Rupiah tanpa desimal" error={errors.nominal_realisasi}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -832,23 +832,25 @@ function StatusBadge({ status }: { status: string }) {
 
 function validateForm(form: ManualArsipFormState): {
   errors: Record<string, string>
-  nominal: number | null
+  nominal: number
 } {
   const errors: Record<string, string> = {}
   const rawNominal = form.nominal_realisasi.replace(/[^\d]/g, '')
-  let nominal: number | null = null
+  let nominal = 0
 
   if (!form.nama.trim()) errors.nama = 'Nama wajib diisi'
   if (!isValidDateOnly(form.tanggal)) errors.tanggal = 'Tanggal harus valid'
   if (!form.keterangan.trim()) errors.keterangan = 'Keterangan wajib diisi'
   if (!form.category_id) errors.category_id = 'Kategori wajib dipilih'
 
-  if (rawNominal) {
+  if (!rawNominal) {
+    errors.nominal_realisasi = 'Nominal realisasi wajib diisi'
+  } else {
     nominal = parseInt(rawNominal, 10)
     if (!Number.isSafeInteger(nominal)) {
       errors.nominal_realisasi = 'Nominal harus berupa angka'
-    } else if (nominal < 0) {
-      errors.nominal_realisasi = 'Nominal realisasi tidak boleh negatif'
+    } else if (nominal <= 0) {
+      errors.nominal_realisasi = 'Nominal realisasi harus lebih dari 0'
     }
   }
 
