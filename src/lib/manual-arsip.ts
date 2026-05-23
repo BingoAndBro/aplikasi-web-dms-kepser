@@ -66,6 +66,7 @@ export type ManualArsipDetailResponse = ManualArsipListItemResponse & {
 
 export type ManualArsipAttachmentResponse = {
   id: string
+  judul_lampiran: string
   original_filename: string
   content_type: string
   size_bytes: number
@@ -261,6 +262,7 @@ export async function getManualArsipDetail(
   const attachments = await db
     .select({
       id: manualArsipAttachment.id,
+      judul_lampiran: manualArsipAttachment.judulLampiran,
       original_filename: manualArsipAttachment.originalFilename,
       content_type: manualArsipAttachment.contentType,
       size_bytes: manualArsipAttachment.sizeBytes,
@@ -290,6 +292,7 @@ export async function getManualArsipDetail(
     metadata: sanitizeMetadata(row.metadata),
     attachments: attachments.map((attachment) => ({
       id: attachment.id,
+      judul_lampiran: attachment.judul_lampiran,
       original_filename: attachment.original_filename,
       content_type: attachment.content_type,
       size_bytes: attachment.size_bytes,
@@ -305,7 +308,22 @@ export async function uploadManualArsipAttachments(
   manualArsipId: string,
   createdBy: string,
   files: File[],
+  titles: string[],
 ): Promise<ManualArsipAttachmentResponse[]> {
+  if (titles.length !== files.length) {
+    throw new ManualArsipApiError('Jumlah judul lampiran harus sesuai dengan jumlah file', 400)
+  }
+
+  if (titles.some((title) => title.trim().length === 0)) {
+    throw new ManualArsipApiError('Judul lampiran wajib diisi', 400)
+  }
+
+  if (titles.some((title) => title.trim().length > 120)) {
+    throw new ManualArsipApiError('Judul lampiran maksimal 120 karakter', 400)
+  }
+
+  const normalizedTitles = titles.map((title) => title.trim())
+
   const [parent] = await db
     .select({
       id: manualArsip.id,
@@ -352,11 +370,11 @@ export async function uploadManualArsipAttachments(
 
   const inserted = await db.transaction(async (tx) => tx
     .insert(manualArsipAttachment)
-    .values(descriptors.map((descriptor) => ({
+    .values(descriptors.map((descriptor, index) => ({
       manualArsipId,
       logicalPath: descriptor.logicalPath,
       originalFilename: descriptor.originalFilename,
-      judulLampiran: descriptor.originalFilename,
+      judulLampiran: normalizedTitles[index],
       contentType: descriptor.contentType,
       sizeBytes: descriptor.sizeBytes,
       createdBy,
@@ -364,6 +382,7 @@ export async function uploadManualArsipAttachments(
     })))
     .returning({
       id: manualArsipAttachment.id,
+      judul_lampiran: manualArsipAttachment.judulLampiran,
       original_filename: manualArsipAttachment.originalFilename,
       content_type: manualArsipAttachment.contentType,
       size_bytes: manualArsipAttachment.sizeBytes,
@@ -376,6 +395,7 @@ export async function uploadManualArsipAttachments(
 
   return inserted.map((attachment) => ({
     id: attachment.id,
+    judul_lampiran: attachment.judul_lampiran,
     original_filename: attachment.original_filename,
     content_type: attachment.content_type,
     size_bytes: attachment.size_bytes,

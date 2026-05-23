@@ -253,6 +253,7 @@ describe('manual arsip API foundation routes', () => {
       }],
       [{
         id: '66666666-6666-4666-8666-666666666666',
+        judul_lampiran: 'Bukti Kegiatan',
         original_filename: 'lampiran.pdf',
         content_type: 'application/pdf',
         size_bytes: 10,
@@ -282,6 +283,7 @@ describe('manual arsip API foundation routes', () => {
     expect(JSON.stringify(detailBody)).not.toContain('file_url')
     expect(detailBody.manual_arsip.attachments).toEqual([{
       id: '66666666-6666-4666-8666-666666666666',
+      judul_lampiran: 'Bukti Kegiatan',
       original_filename: 'lampiran.pdf',
       content_type: 'application/pdf',
       size_bytes: 10,
@@ -289,9 +291,10 @@ describe('manual arsip API foundation routes', () => {
     }])
   })
 
-  it('allows KEPALA_SUB_BAGIAN_UMUM to upload a PDF attachment', async () => {
+  it('allows KEPALA_SUB_BAGIAN_UMUM to upload a PDF attachment with a matching title', async () => {
     queueSelectResults([manualArsipUploadParentRow('AKTIF')])
     queueTransactionInsertResult([manualArsipAttachmentRow({
+      judul_lampiran: 'Bukti Kegiatan',
       original_filename: 'lampiran.pdf',
       content_type: 'application/pdf',
       size_bytes: 10,
@@ -300,7 +303,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
-      ]),
+      ], [' Bukti Kegiatan ']),
       params: { id: MANUAL_ARSIP_ID },
     })
     const body = await response.json()
@@ -309,7 +312,7 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.txInsertValues).toHaveBeenCalledWith([expect.objectContaining({
       manualArsipId: MANUAL_ARSIP_ID,
       originalFilename: 'lampiran.pdf',
-      judulLampiran: 'lampiran.pdf',
+      judulLampiran: 'Bukti Kegiatan',
       contentType: 'application/pdf',
       sizeBytes: 10,
       createdBy: USER_ID,
@@ -318,9 +321,14 @@ describe('manual arsip API foundation routes', () => {
     expect(JSON.stringify(body)).not.toContain('logicalPath')
     expect(JSON.stringify(body)).not.toContain('storage')
     expect(JSON.stringify(body)).not.toContain('signed')
+    expect(JSON.stringify(body)).not.toContain('token')
+    expect(JSON.stringify(body)).not.toContain('SQL')
+    expect(JSON.stringify(body)).not.toContain('env')
+    expect(JSON.stringify(body)).not.toContain('secret')
     expect(body).toEqual({
       attachments: [{
         id: '77777777-7777-4777-8777-777777777777',
+        judul_lampiran: 'Bukti Kegiatan',
         original_filename: 'lampiran.pdf',
         content_type: 'application/pdf',
         size_bytes: 10,
@@ -329,9 +337,10 @@ describe('manual arsip API foundation routes', () => {
     })
   })
 
-  it('allows KEPALA_SUB_BAGIAN_UMUM to upload an image attachment', async () => {
+  it('allows KEPALA_SUB_BAGIAN_UMUM to upload an image attachment with a matching title', async () => {
     queueSelectResults([manualArsipUploadParentRow('AKTIF')])
     queueTransactionInsertResult([manualArsipAttachmentRow({
+      judul_lampiran: 'Foto Bukti',
       original_filename: 'bukti.png',
       content_type: 'image/png',
       size_bytes: 12,
@@ -340,7 +349,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(12)], 'bukti.png', { type: 'image/png' }),
-      ]),
+      ], ['Foto Bukti']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -348,6 +357,7 @@ describe('manual arsip API foundation routes', () => {
     expect(await response.json()).toEqual({
       attachments: [{
         id: '77777777-7777-4777-8777-777777777777',
+        judul_lampiran: 'Foto Bukti',
         original_filename: 'bukti.png',
         content_type: 'image/png',
         size_bytes: 12,
@@ -362,7 +372,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
-      ]),
+      ], ['Lampiran Admin']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -378,7 +388,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
-      ]),
+      ], ['Lampiran Pegawai']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -397,7 +407,7 @@ describe('manual arsip API foundation routes', () => {
       const response = await attachmentsPostHandler({
         request: createAttachmentUploadRequest([
           new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
-        ]),
+        ], ['Lampiran Nonaktif']),
         params: { id: MANUAL_ARSIP_ID },
       })
 
@@ -416,7 +426,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'script.txt', { type: 'text/plain' }),
-      ]),
+      ], ['Lampiran Tidak Valid']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -434,7 +444,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'vector.svg', { type: 'image/svg+xml' }),
-      ]),
+      ], ['Lampiran SVG']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -452,7 +462,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'unknown.xyz', { type: 'image/x-unknown' }),
-      ]),
+      ], ['Lampiran Unknown']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -471,7 +481,7 @@ describe('manual arsip API foundation routes', () => {
       request: createAttachmentUploadRequest(Array.from(
         { length: 6 },
         (_, index) => new File([new Uint8Array(1)], `lampiran-${index}.pdf`, { type: 'application/pdf' }),
-      )),
+      ), Array.from({ length: 6 }, (_, index) => `Lampiran ${index}`)),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -487,7 +497,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array((10 * 1024 * 1024) + 1)], 'besar.pdf', { type: 'application/pdf' }),
-      ]),
+      ], ['Lampiran Besar']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -499,7 +509,7 @@ describe('manual arsip API foundation routes', () => {
 
   it('requires at least one attachment file under the files field', async () => {
     const response = await attachmentsPostHandler({
-      request: createAttachmentUploadRequest([], 'file'),
+      request: createAttachmentUploadRequest([], [], 'file'),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -514,7 +524,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
-      ]),
+      ], ['Lampiran Tanpa Sesi']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -527,7 +537,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
-      ], 'files', 'http://evil.test'),
+      ], ['Lampiran Evil'], 'files', 'http://evil.test'),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -543,7 +553,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
         new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
-      ]),
+      ], ['Lampiran Hilang Parent']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -551,6 +561,143 @@ describe('manual arsip API foundation routes', () => {
     expect(await response.json()).toEqual({ error: 'Arsip manual tidak ditemukan' })
     expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload when titles field is missing', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Jumlah judul lampiran harus sesuai dengan jumlah file',
+    })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload with fewer titles than files', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'satu.pdf', { type: 'application/pdf' }),
+        new File([new Uint8Array(10)], 'dua.pdf', { type: 'application/pdf' }),
+      ], ['Judul satu']),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Jumlah judul lampiran harus sesuai dengan jumlah file',
+    })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload with more titles than files', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'satu.pdf', { type: 'application/pdf' }),
+      ], ['Judul satu', 'Judul dua']),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Jumlah judul lampiran harus sesuai dengan jumlah file',
+    })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload with an empty title', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ], ['']),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Judul lampiran wajib diisi' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload with a whitespace-only title', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ], ['   ']),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Judul lampiran wajib diisi' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload with a title longer than 120 characters', async () => {
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }),
+      ], ['a'.repeat(121)]),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Judul lampiran maksimal 120 karakter' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('rejects attachment upload with non-string title entries', async () => {
+    const formData = new FormData()
+    formData.append('files', new File([new Uint8Array(10)], 'lampiran.pdf', { type: 'application/pdf' }))
+    formData.append('titles', new File([new Uint8Array(1)], 'judul.txt', { type: 'text/plain' }))
+
+    const response = await attachmentsPostHandler({
+      request: new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}/attachments`, {
+        method: 'POST',
+        headers: { Origin: 'http://localhost' },
+        body: formData,
+      }),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Judul lampiran wajib diisi' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
+  })
+
+  it('does not fall back from original filename to judul_lampiran', async () => {
+    queueSelectResults([manualArsipUploadParentRow('AKTIF')])
+    queueTransactionInsertResult([manualArsipAttachmentRow({
+      judul_lampiran: 'Judul Eksplisit',
+      original_filename: 'nama-file.pdf',
+      content_type: 'application/pdf',
+      size_bytes: 10,
+    })])
+
+    const response = await attachmentsPostHandler({
+      request: createAttachmentUploadRequest([
+        new File([new Uint8Array(10)], 'nama-file.pdf', { type: 'application/pdf' }),
+      ], ['Judul Eksplisit']),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(201)
+    expect(mocks.txInsertValues).toHaveBeenCalledWith([expect.objectContaining({
+      originalFilename: 'nama-file.pdf',
+      judulLampiran: 'Judul Eksplisit',
+    })])
+    expect(body.attachments[0].judul_lampiran).toBe('Judul Eksplisit')
+    expect(body.attachments[0].judul_lampiran).not.toBe('nama-file.pdf')
   })
 })
 
@@ -591,10 +738,18 @@ function createPostRequest(body: Record<string, unknown>, origin = 'http://local
   })
 }
 
-function createAttachmentUploadRequest(files: File[], fieldName = 'files', origin = 'http://localhost') {
+function createAttachmentUploadRequest(
+  files: File[],
+  titles: string[] = [],
+  fieldName = 'files',
+  origin = 'http://localhost',
+) {
   const formData = new FormData()
   for (const file of files) {
     formData.append(fieldName, file)
+  }
+  for (const title of titles) {
+    formData.append('titles', title)
   }
 
   return new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}/attachments`, {
@@ -668,12 +823,14 @@ function manualArsipUploadParentRow(status_arsip: string) {
 }
 
 function manualArsipAttachmentRow(overrides: Partial<{
+  judul_lampiran: string
   original_filename: string
   content_type: string
   size_bytes: number
 }> = {}) {
   return {
     id: '77777777-7777-4777-8777-777777777777',
+    judul_lampiran: overrides.judul_lampiran ?? 'Bukti Kegiatan',
     original_filename: overrides.original_filename ?? 'lampiran.pdf',
     content_type: overrides.content_type ?? 'application/pdf',
     size_bytes: overrides.size_bytes ?? 10,

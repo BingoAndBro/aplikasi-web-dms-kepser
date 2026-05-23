@@ -12,6 +12,9 @@ import {
   ManualArsipUploadError,
 } from '#/lib/storage/manual-arsip-upload'
 
+const MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME = 'titles'
+const MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH = 120
+
 export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachments')({
   server: {
     handlers: {
@@ -41,11 +44,31 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachment
           return Response.json({ error: 'Minimal satu file lampiran wajib diunggah' }, { status: 400 })
         }
 
+        const titleEntries = formData.getAll(MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME)
+        if (titleEntries.some((value) => typeof value !== 'string')) {
+          return Response.json({ error: 'Judul lampiran wajib diisi' }, { status: 400 })
+        }
+
+        const titles = titleEntries.map((value) => value.trim())
+
+        if (titles.length !== files.length) {
+          return Response.json({ error: 'Jumlah judul lampiran harus sesuai dengan jumlah file' }, { status: 400 })
+        }
+
+        if (titles.some((title) => title.length === 0)) {
+          return Response.json({ error: 'Judul lampiran wajib diisi' }, { status: 400 })
+        }
+
+        if (titles.some((title) => title.length > MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH)) {
+          return Response.json({ error: 'Judul lampiran maksimal 120 karakter' }, { status: 400 })
+        }
+
         try {
           const attachments = await uploadManualArsipAttachments(
             params.id,
             sessionOrResponse.user.id,
             files,
+            titles,
           )
 
           return Response.json({ attachments }, { status: 201 })
