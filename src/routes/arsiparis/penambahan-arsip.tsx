@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
@@ -71,6 +71,19 @@ type ManualArsipCreateResponse = {
   error?: string
 }
 
+type ManualArsipAttachmentMetadata = {
+  id: string
+  original_filename: string
+  content_type: string
+  size_bytes: number
+  created_at: string
+}
+
+type ManualArsipUploadResponse = {
+  attachments?: ManualArsipAttachmentMetadata[]
+  error?: string
+}
+
 type ManualArsipFormState = {
   nama: string
   tanggal: string
@@ -78,6 +91,54 @@ type ManualArsipFormState = {
   category_id: string
   nominal_realisasi: string
 }
+
+type SubmissionNotice = {
+  tone: 'success' | 'warning'
+  message: string
+}
+
+type CreateManualArsipResult = {
+  notice: SubmissionNotice
+}
+
+const MANUAL_ARSIP_ATTACHMENT_FIELD_NAME = 'files'
+const MANUAL_ARSIP_ATTACHMENT_MAX_FILES = 5
+const MANUAL_ARSIP_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
+const MANUAL_ARSIP_ATTACHMENT_ACCEPT = [
+  '.pdf',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.gif',
+  '.bmp',
+  '.tif',
+  '.tiff',
+  '.heic',
+  '.heif',
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/tiff',
+  'image/heic',
+  'image/heif',
+].join(',')
+const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = new Set([
+  'application/pdf',
+  'image/bmp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/tiff',
+  'image/webp',
+])
 
 const emptyForm = (): ManualArsipFormState => ({
   nama: '',
@@ -96,6 +157,7 @@ function PenambahanArsipPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
+  const [notice, setNotice] = useState<SubmissionNotice | null>(null)
 
   async function fetchData() {
     setLoading(true)
@@ -156,6 +218,11 @@ function PenambahanArsipPage() {
     return items.reduce((total, item) => total + (item.nominal_realisasi ?? 0), 0)
   }, [items])
 
+  function openCreateModal() {
+    setNotice(null)
+    setFormOpen(true)
+  }
+
   return (
     <PageLayout>
       <div className="space-y-6">
@@ -168,17 +235,21 @@ function PenambahanArsipPage() {
             </div>
             <h2 className="font-headline text-2xl font-extrabold text-on-surface">Penambahan Arsip</h2>
             <p className="text-on-surface-variant text-xs mt-1">
-              Arsip manual metadata-only. Fase ini tidak menyediakan upload, preview, download, lifecycle action, atau ekspor.
+              Arsip manual dengan lampiran bukti opsional. Fase ini tidak menyediakan preview, download, lifecycle action, atau ekspor.
             </p>
           </div>
 
           {authChecked && !accessDenied && (
-            <Button onClick={() => setFormOpen(true)} className="w-full lg:w-auto">
+            <Button onClick={openCreateModal} className="w-full lg:w-auto">
               <Plus size={14} />
               Tambah Arsip
             </Button>
           )}
         </div>
+
+        {notice && (
+          <NoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
+        )}
 
         {!authChecked && loading && (
           <LoadingState label="Memeriksa akses..." />
@@ -201,7 +272,7 @@ function PenambahanArsipPage() {
             ) : error ? (
               <ErrorState message={error} onRetry={fetchData} />
             ) : items.length === 0 ? (
-              <EmptyState onCreate={() => setFormOpen(true)} />
+              <EmptyState onCreate={openCreateModal} />
             ) : (
               <ManualArsipTable items={items} limit={limit} />
             )}
@@ -212,9 +283,10 @@ function PenambahanArsipPage() {
           categories={categories}
           isOpen={formOpen}
           onClose={() => setFormOpen(false)}
-          onSuccess={async () => {
+          onSuccess={async (result) => {
             await fetchData()
             setFormOpen(false)
+            setNotice(result.notice)
           }}
         />
       </div>
@@ -271,7 +343,7 @@ function ManualArsipTable({
         </table>
       </div>
       <div className="px-4 py-2.5 border-t bg-surface-container-low/20 text-xs text-outline">
-        Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} arsip manual. Tidak ada kontrol upload, preview, download, lifecycle, atau ekspor pada halaman ini.
+        Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} arsip manual. Tidak ada preview, download, lifecycle, atau ekspor pada halaman ini.
       </div>
     </div>
   )
@@ -286,9 +358,10 @@ function CreateManualArsipModal({
   categories: ManualArsipCategory[]
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => void | Promise<void>
+  onSuccess: (result: CreateManualArsipResult) => void | Promise<void>
 }) {
   const [form, setForm] = useState<ManualArsipFormState>(emptyForm)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -296,6 +369,7 @@ function CreateManualArsipModal({
   useEffect(() => {
     if (!isOpen) return
     setForm(emptyForm())
+    setSelectedFiles([])
     setErrors({})
     setSubmitError(null)
     setSubmitting(false)
@@ -308,10 +382,30 @@ function CreateManualArsipModal({
     setErrors((prev) => ({ ...prev, [field]: '' }))
   }
 
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    const validationError = validateSelectedFiles(files)
+
+    if (validationError) {
+      setSelectedFiles([])
+      setErrors((prev) => ({ ...prev, attachments: validationError }))
+      event.target.value = ''
+      return
+    }
+
+    setSelectedFiles(files)
+    setErrors((prev) => ({ ...prev, attachments: '' }))
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const validation = validateForm(form)
+    const fileValidationError = validateSelectedFiles(selectedFiles)
+    if (fileValidationError) {
+      validation.errors.attachments = fileValidationError
+    }
+
     if (Object.keys(validation.errors).length > 0) {
       setErrors(validation.errors)
       return
@@ -320,7 +414,7 @@ function CreateManualArsipModal({
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await apiMutation<ManualArsipCreateResponse>('/api/arsiparis/manual-arsip', {
+      const createResponse = await apiMutation<ManualArsipCreateResponse>('/api/arsiparis/manual-arsip', {
         method: 'POST',
         body: {
           nama: form.nama.trim(),
@@ -331,7 +425,56 @@ function CreateManualArsipModal({
         },
       })
 
-      await onSuccess()
+      const createdId = createResponse.manual_arsip?.id
+      if (selectedFiles.length === 0) {
+        await onSuccess({
+          notice: {
+            tone: 'success',
+            message: 'Arsip manual berhasil dibuat.',
+          },
+        })
+        return
+      }
+
+      if (!createdId) {
+        await onSuccess({
+          notice: {
+            tone: 'warning',
+            message: 'Arsip berhasil dibuat, tetapi lampiran gagal diunggah.',
+          },
+        })
+        return
+      }
+
+      const formData = new FormData()
+      for (const file of selectedFiles) {
+        formData.append(MANUAL_ARSIP_ATTACHMENT_FIELD_NAME, file)
+      }
+
+      try {
+        const uploadResponse = await apiMutation<ManualArsipUploadResponse>(
+          `/api/arsiparis/manual-arsip/${createdId}/attachments`,
+          {
+            method: 'POST',
+            body: formData,
+          },
+        )
+        const uploadedCount = uploadResponse.attachments?.length ?? selectedFiles.length
+
+        await onSuccess({
+          notice: {
+            tone: 'success',
+            message: `Arsip manual berhasil dibuat. ${uploadedCount} lampiran berhasil diunggah.`,
+          },
+        })
+      } catch (uploadError) {
+        await onSuccess({
+          notice: {
+            tone: 'warning',
+            message: formatAttachmentUploadFailureMessage(uploadError),
+          },
+        })
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setSubmitError('Akses ditolak')
@@ -351,7 +494,7 @@ function CreateManualArsipModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30">
           <div>
             <p className="font-semibold text-on-surface">Tambah Arsip Manual</p>
-            <p className="text-xs text-outline mt-0.5">Create parent record tanpa lampiran file.</p>
+            <p className="text-xs text-outline mt-0.5">Create parent record dengan bukti dokumen opsional.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Tutup dialog tambah arsip" className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-container-low transition-colors">
             <X size={16} />
@@ -360,7 +503,7 @@ function CreateManualArsipModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Fase ini tidak menerima upload lampiran. Klasifikasi arsip belum dipilih dari UI pada fase ini; data klasifikasi yang sudah ada tetap ditampilkan di daftar jika API mengembalikannya.
+            Fase ini menerima lampiran opsional sebagai metadata aman. Tidak ada preview/download pada fase ini. Klasifikasi arsip belum dipilih dari UI; data klasifikasi yang sudah ada tetap ditampilkan di daftar jika API mengembalikannya.
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -420,6 +563,38 @@ function CreateManualArsipModal({
             />
           </FormField>
 
+          <FormField label="Bukti dokumen (opsional)" error={errors.attachments}>
+            <input
+              type="file"
+              multiple
+              accept={MANUAL_ARSIP_ATTACHMENT_ACCEPT}
+              onChange={handleFileChange}
+              className={cn(
+                inputClass(errors.attachments),
+                'h-auto file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary',
+              )}
+            />
+            <div className="mt-2 rounded-lg border border-outline-variant/30 bg-surface-container-low/20 px-3 py-2 text-[11px] text-on-surface-variant">
+              <p>Maksimal 5 file.</p>
+              <p>Maksimal 10MB per file.</p>
+              <p>Format: PDF, JPG/JPEG, PNG, WEBP, GIF, BMP, TIFF, HEIC/HEIF.</p>
+              <p>Tidak ada preview/download pada fase ini.</p>
+            </div>
+            {selectedFiles.length > 0 && (
+              <div className="mt-2 rounded-lg border border-outline-variant/30 bg-white px-3 py-2">
+                <p className="text-[11px] font-semibold text-on-surface">File terpilih</p>
+                <ul className="mt-1 space-y-1">
+                  {selectedFiles.map((file, index) => (
+                    <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-3 text-[11px] text-on-surface-variant">
+                      <span className="min-w-0 truncate">{file.name}</span>
+                      <span className="shrink-0 text-outline">{formatFileSize(file.size)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </FormField>
+
           {submitError && (
             <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2 text-xs text-error">
               {submitError}
@@ -455,7 +630,7 @@ function FormField({
   children: ReactNode
 }) {
   return (
-    <label className="block">
+    <div className="block">
       <span className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-on-surface">
         {label}
         {required && <span className="text-error">*</span>}
@@ -463,7 +638,36 @@ function FormField({
       </span>
       {children}
       {error && <span className="mt-1 block text-[10px] text-error">{error}</span>}
-    </label>
+    </div>
+  )
+}
+
+function NoticeBanner({
+  notice,
+  onDismiss,
+}: {
+  notice: SubmissionNotice
+  onDismiss: () => void
+}) {
+  const isWarning = notice.tone === 'warning'
+
+  return (
+    <div className={cn(
+      'flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-xs',
+      isWarning
+        ? 'border-amber-200 bg-amber-50 text-amber-800'
+        : 'border-green-200 bg-green-50 text-green-700',
+    )}>
+      <p>{notice.message}</p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="rounded p-0.5 hover:bg-black/5"
+        aria-label="Tutup pesan"
+      >
+        <X size={14} />
+      </button>
+    </div>
   )
 }
 
@@ -505,7 +709,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       </div>
       <div>
         <p className="font-headline text-lg font-bold text-on-surface">Belum ada arsip manual</p>
-        <p className="text-on-surface-variant text-xs mt-1">Tambahkan parent record arsip tanpa lampiran file.</p>
+        <p className="text-on-surface-variant text-xs mt-1">Tambahkan arsip manual dengan bukti dokumen opsional.</p>
       </div>
       <Button size="sm" onClick={onCreate}>
         <Plus size={14} />
@@ -579,6 +783,31 @@ function validateForm(form: ManualArsipFormState): {
   return { errors, nominal }
 }
 
+function validateSelectedFiles(files: File[]): string | null {
+  if (files.length === 0) return null
+
+  if (files.length > MANUAL_ARSIP_ATTACHMENT_MAX_FILES) {
+    return 'Maksimal 5 file lampiran'
+  }
+
+  for (const file of files) {
+    if (file.size <= 0) {
+      return 'File lampiran tidak valid'
+    }
+
+    if (file.size > MANUAL_ARSIP_ATTACHMENT_MAX_BYTES) {
+      return 'Ukuran file maksimal 10MB per file'
+    }
+
+    const contentType = file.type.trim().toLowerCase()
+    if (!MANUAL_ARSIP_ALLOWED_CONTENT_TYPES.has(contentType)) {
+      return 'Tipe file tidak diizinkan. Gunakan PDF atau gambar yang didukung.'
+    }
+  }
+
+  return null
+}
+
 function isValidDateOnly(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
 
@@ -610,6 +839,11 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
+function formatAttachmentUploadFailureMessage(error: unknown): string {
+  const detail = getApiErrorMessage(error, 'Lampiran gagal diunggah')
+  return `Arsip berhasil dibuat, tetapi lampiran gagal diunggah. ${detail}`
+}
+
 function truncateText(value: string, maxLength: number) {
   if (value.length <= maxLength) return value
   return `${value.slice(0, maxLength - 3)}...`
@@ -630,4 +864,10 @@ function formatCurrency(value: number) {
     currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(value)
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
