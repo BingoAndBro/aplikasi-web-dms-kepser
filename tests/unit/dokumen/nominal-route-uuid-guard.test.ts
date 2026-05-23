@@ -132,6 +132,21 @@ describe('/api/dokumen/$id/nominal UUID guard', () => {
     expect(mocks.txInsert).toHaveBeenCalledTimes(1)
   })
 
+  it('blocks nominal update for COMPLETED material documents', async () => {
+    mockDocumentAndArchive(createDokumen({ status: 'COMPLETED' }), [])
+
+    const response = await nominalPatchHandler({
+      request: createPatchRequest(),
+      params: { id: DOKUMEN_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Tidak bisa update dokumen yang sudah selesai',
+    })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
   it('keeps the ARCHIVED document guard', async () => {
     mockDocumentAndArchive(createDokumen({ status: 'ARCHIVED' }), [])
 
@@ -158,6 +173,21 @@ describe('/api/dokumen/$id/nominal UUID guard', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({
       error: 'Tidak bisa update dokumen yang sudah dimusnahkan',
+    })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('keeps Non-Material nominal validation unchanged', async () => {
+    mockDocumentAndArchive(createDokumen({ is_non_material: true, nominal_realisasi: null }), [])
+
+    const response = await nominalPatchHandler({
+      request: createPatchRequest(),
+      params: { id: DOKUMEN_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Dokumen Non-Material tidak memiliki nominal_realisasi',
     })
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })

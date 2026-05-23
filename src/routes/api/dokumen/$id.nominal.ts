@@ -5,6 +5,7 @@ import { db } from '#/db/client'
 import { arsip as arsipTable } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { DOC_STATUS } from '#/lib/constants/document-status'
 import { updateNominalSchema, validateNominalForMaterial } from '#/lib/schemas/dokumen'
 
 function isUuid(value: string): boolean {
@@ -97,11 +98,18 @@ export const Route = createFileRoute('/api/dokumen/$id/nominal')({
           }, { status: 400 })
         }
 
-        // 5. Check status — archived documents cannot be updated
-        if (dok.status === 'ARCHIVED') {
+        // 5. Check status — final material workflow documents cannot be updated
+        if (dok.status === DOC_STATUS.ARCHIVED) {
           return Response.json(
             { error: 'Tidak bisa update dokumen yang sudah diarsipkan' },
             { status: 400 }
+          )
+        }
+
+        if (dok.is_non_material !== true && dok.status === DOC_STATUS.COMPLETED) {
+          return Response.json(
+            { error: 'Tidak bisa update dokumen yang sudah selesai' },
+            { status: 400 },
           )
         }
 
