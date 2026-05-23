@@ -51,7 +51,7 @@ describe('manual arsip API foundation routes', () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
   })
 
-  it('requires assigned KEPALA_SUB_BAGIAN_UMUM or ADMIN for category list', async () => {
+  it('requires assigned KEPALA_SUB_BAGIAN_UMUM for category list', async () => {
     mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['PEGAWAI'], USER_ID))
 
     const rejected = await categoriesGetHandler({
@@ -63,6 +63,16 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbSelect).not.toHaveBeenCalled()
 
     mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
+
+    const adminRejected = await categoriesGetHandler({
+      request: new Request('http://localhost/api/arsiparis/manual-arsip/categories'),
+    })
+
+    expect(adminRejected.status).toBe(403)
+    expect(await adminRejected.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
     queueSelectResults([{
       id: CATEGORY_ID,
       nama: 'Pemeliharaan',
@@ -75,6 +85,31 @@ describe('manual arsip API foundation routes', () => {
 
     expect(allowed.status).toBe(200)
     expect(await allowed.json()).toEqual({
+      categories: [{
+        id: CATEGORY_ID,
+        nama: 'Pemeliharaan',
+        deskripsi: 'Kategori pemeliharaan',
+      }],
+    })
+  })
+
+  it('allows a multi-role non-admin user with KEPALA_SUB_BAGIAN_UMUM', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(
+      ['PEGAWAI', 'KEPALA_SUB_BAGIAN_UMUM'],
+      USER_ID,
+    ))
+    queueSelectResults([{
+      id: CATEGORY_ID,
+      nama: 'Pemeliharaan',
+      deskripsi: 'Kategori pemeliharaan',
+    }])
+
+    const response = await categoriesGetHandler({
+      request: new Request('http://localhost/api/arsiparis/manual-arsip/categories'),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
       categories: [{
         id: CATEGORY_ID,
         nama: 'Pemeliharaan',

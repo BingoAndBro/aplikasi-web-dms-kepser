@@ -81,10 +81,7 @@ export async function requireManualArsipApiSession(request: Request): Promise<Lo
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (
-    !hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)
-    && !hasLocalRole(session, ROLES.ADMIN)
-  ) {
+  if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
