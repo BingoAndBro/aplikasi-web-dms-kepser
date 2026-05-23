@@ -89,6 +89,10 @@ export function validateManualArsipUploadFiles(
   return files.map(validateManualArsipUploadFileMetadata)
 }
 
+export function isAllowedManualArsipAttachmentContentType(contentType: string): boolean {
+  return Boolean(extensionFromContentType(contentType.trim().toLowerCase()))
+}
+
 export function createManualArsipAttachmentStorageDescriptors({
   files,
   manualArsipId,

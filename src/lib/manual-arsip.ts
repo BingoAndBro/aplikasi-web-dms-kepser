@@ -1,3 +1,5 @@
+import { readFile, stat } from 'node:fs/promises'
+import path from 'node:path'
 import { and, asc, desc, eq, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
@@ -20,8 +22,14 @@ import type {
 } from '#/lib/schemas/manual-arsip'
 import {
   createManualArsipAttachmentStorageDescriptors,
+  isAllowedManualArsipAttachmentContentType,
   writeManualArsipAttachmentContent,
 } from '#/lib/storage/manual-arsip-upload'
+import {
+  assertSafeLogicalStoragePath,
+  getLocalStorageRoot,
+  resolvePhysicalStoragePath,
+} from '#/lib/storage/local-storage-paths'
 
 export const MANUAL_ARSIP_LIST_DEFAULT_LIMIT = 100
 
@@ -73,6 +81,8 @@ export type ManualArsipAttachmentResponse = {
   created_at: string
 }
 
+export type ManualArsipAttachmentFilePurpose = 'preview' | 'download'
+
 type CategoryRow = {
   id: string
   nama: string
@@ -83,6 +93,19 @@ type KlasifikasiRow = {
   id: string
   nama: string
 }
+
+type ManualArsipAttachmentFileRow = {
+  id: string
+  judul_lampiran: string
+  original_filename: string
+  content_type: string
+  size_bytes: number
+  logical_path: string
+}
+
+const FALLBACK_ATTACHMENT_FILENAME = 'lampiran'
+const WINDOWS_DRIVE_PATTERN = /^[a-z]:[\\/]/i
+const URL_LIKE_PATTERN = /^[a-z][a-z0-9+.-]*:/i
 
 export async function requireManualArsipApiSession(request: Request): Promise<LocalServerSession | Response> {
   const session = await getLocalServerSession(request)
@@ -403,6 +426,73 @@ export async function uploadManualArsipAttachments(
   }))
 }
 
+export async function createManualArsipAttachmentFileResponse({
+  manualArsipId,
+  attachmentId,
+  purpose,
+  root,
+}: {
+  manualArsipId: string
+  attachmentId: string
+  purpose: ManualArsipAttachmentFilePurpose
+  root?: string
+}): Promise<Response> {
+  const reference = await loadManualArsipAttachmentFileReference(manualArsipId, attachmentId)
+
+  if (!reference) {
+    return secureJsonError('Lampiran arsip manual tidak ditemukan', 404)
+  }
+
+  if (reference.status_arsip === ARCHIVE_STATUS.DIMUSNAHKAN) {
+    return secureJsonError('File lampiran tidak tersedia - arsip telah dimusnahkan', 410)
+  }
+
+  const normalizedContentType = reference.attachment.content_type.trim().toLowerCase()
+  if (!isAllowedManualArsipAttachmentContentType(normalizedContentType)) {
+    return secureJsonError('File lampiran tidak ditemukan', 404)
+  }
+
+  let physicalPath: string
+  try {
+    const logicalPath = assertSafeLogicalStoragePath(reference.attachment.logical_path)
+    physicalPath = resolvePhysicalStoragePath(root ?? getLocalStorageRoot(), logicalPath)
+  } catch {
+    return secureJsonError('File lampiran tidak ditemukan', 404)
+  }
+
+  let fileSize: number
+  try {
+    const fileStat = await stat(physicalPath)
+    if (!fileStat.isFile()) {
+      return secureJsonError('File lampiran tidak ditemukan', 404)
+    }
+    fileSize = fileStat.size
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return secureJsonError('File lampiran tidak ditemukan', 404)
+    }
+
+    return secureJsonError('Gagal mengakses file lampiran', 500)
+  }
+
+  let fileContent: Buffer
+  try {
+    fileContent = await readFile(physicalPath)
+  } catch {
+    return secureJsonError('Gagal mengakses file lampiran', 500)
+  }
+
+  const headers = secureFileHeaders()
+  headers.set('Content-Type', normalizedContentType)
+  headers.set('Content-Disposition', buildManualArsipAttachmentContentDisposition(reference.attachment, purpose))
+  headers.set('Content-Length', String(fileContent.byteLength || fileSize))
+
+  return new Response(fileContent, {
+    status: 200,
+    headers,
+  })
+}
+
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
@@ -513,4 +603,133 @@ function isoDateString(value: Date | string | null): string {
   if (value instanceof Date) return value.toISOString()
   if (typeof value === 'string') return value
   return ''
+}
+
+async function loadManualArsipAttachmentFileReference(
+  manualArsipId: string,
+  attachmentId: string,
+): Promise<{
+  status_arsip: string
+  attachment: ManualArsipAttachmentFileRow
+} | null> {
+  const [parent] = await db
+    .select({
+      id: manualArsip.id,
+      status_arsip: manualArsip.statusArsip,
+    })
+    .from(manualArsip)
+    .where(eq(manualArsip.id, manualArsipId))
+    .limit(1)
+
+  if (!parent) return null
+
+  const [attachment] = await db
+    .select({
+      id: manualArsipAttachment.id,
+      judul_lampiran: manualArsipAttachment.judulLampiran,
+      original_filename: manualArsipAttachment.originalFilename,
+      content_type: manualArsipAttachment.contentType,
+      size_bytes: manualArsipAttachment.sizeBytes,
+      logical_path: manualArsipAttachment.logicalPath,
+    })
+    .from(manualArsipAttachment)
+    .where(and(
+      eq(manualArsipAttachment.id, attachmentId),
+      eq(manualArsipAttachment.manualArsipId, manualArsipId),
+    ))
+    .limit(1)
+
+  if (!attachment) return null
+
+  return {
+    status_arsip: parent.status_arsip,
+    attachment,
+  }
+}
+
+function secureJsonError(message: string, status: number): Response {
+  return Response.json({ error: message }, {
+    status,
+    headers: secureFileHeaders(),
+  })
+}
+
+function secureFileHeaders(): Headers {
+  return new Headers({
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+  })
+}
+
+function buildManualArsipAttachmentContentDisposition(
+  attachment: ManualArsipAttachmentFileRow,
+  purpose: ManualArsipAttachmentFilePurpose,
+): string {
+  const disposition = purpose === 'download' ? 'attachment' : 'inline'
+  const filename = resolveAttachmentDisplayFilename(attachment)
+
+  return `${disposition}; filename="${filename}"`
+}
+
+function resolveAttachmentDisplayFilename(attachment: ManualArsipAttachmentFileRow): string {
+  const originalExtension = safeExtensionFromFilename(attachment.original_filename)
+  const titleFilename = sanitizeContentDispositionFilename(attachment.judul_lampiran)
+
+  if (titleFilename) {
+    return path.extname(titleFilename) || !originalExtension
+      ? titleFilename
+      : `${titleFilename}.${originalExtension}`
+  }
+
+  return sanitizeContentDispositionFilename(attachment.original_filename)
+    ?? (originalExtension ? `${FALLBACK_ATTACHMENT_FILENAME}.${originalExtension}` : FALLBACK_ATTACHMENT_FILENAME)
+}
+
+function sanitizeContentDispositionFilename(filename: string): string | null {
+  const trimmed = filename.trim()
+
+  if (
+    !trimmed
+    || trimmed === '.'
+    || trimmed === '..'
+    || trimmed.includes('/')
+    || trimmed.includes('\\')
+    || trimmed.includes('\r')
+    || trimmed.includes('\n')
+    || trimmed.includes('"')
+    || trimmed.includes('..')
+    || path.isAbsolute(trimmed)
+    || WINDOWS_DRIVE_PATTERN.test(trimmed)
+    || URL_LIKE_PATTERN.test(trimmed)
+  ) {
+    return null
+  }
+
+  const sanitized = trimmed.replace(/[^A-Za-z0-9._ -]/g, '_').replace(/\s+/g, ' ').trim()
+
+  if (
+    !sanitized
+    || sanitized === '.'
+    || sanitized === '..'
+    || sanitized.includes('..')
+  ) {
+    return null
+  }
+
+  return sanitized
+}
+
+function safeExtensionFromFilename(filename: string): string | null {
+  const safeFilename = sanitizeContentDispositionFilename(filename)
+  if (!safeFilename) return null
+
+  const extension = path.extname(safeFilename).replace(/^\./, '').toLowerCase()
+  return /^[a-z0-9]{1,12}$/.test(extension) ? extension : null
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && (error.code === 'ENOENT' || error.code === 'ENOTDIR')
 }

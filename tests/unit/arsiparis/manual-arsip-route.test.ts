@@ -1,10 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import path from 'node:path'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const ADMIN_ID = '22222222-2222-4222-8222-222222222222'
 const MANUAL_ARSIP_ID = '33333333-3333-4333-8333-333333333333'
 const CATEGORY_ID = '44444444-4444-4444-8444-444444444444'
 const KLASIFIKASI_ID = '55555555-5555-4555-8555-555555555555'
+const ATTACHMENT_ID = '77777777-7777-4777-8777-777777777777'
+const ATTACHMENT_LOGICAL_PATH = 'manual-arsip/test-user/test-arsip/test.pdf'
+const TEST_STORAGE_ROOT = path.resolve('.tmp', 'manual-arsip-route-storage')
+const TEST_FILE_CONTENT = '%PDF-1.4 manual archive test file'
+const ORIGINAL_STORAGE_ROOT = process.env.DMS_LOCAL_STORAGE_ROOT
 
 const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
@@ -43,6 +50,8 @@ import { Route as ManualArsipCategoriesRoute } from '#/routes/api/arsiparis/manu
 import { Route as ManualArsipIndexRoute } from '#/routes/api/arsiparis/manual-arsip/index'
 import { Route as ManualArsipDetailRoute } from '#/routes/api/arsiparis/manual-arsip/$id'
 import { Route as ManualArsipAttachmentsRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments'
+import { Route as ManualArsipAttachmentPreviewRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview'
+import { Route as ManualArsipAttachmentDownloadRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download'
 
 type RouteGetHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
 type RoutePostHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
@@ -63,15 +72,34 @@ const attachmentsPostHandler = (ManualArsipAttachmentsRoute as unknown as {
   options: { server: { handlers: { POST: RoutePostHandler } } }
 }).options.server.handlers.POST
 
+const attachmentPreviewGetHandler = (ManualArsipAttachmentPreviewRoute as unknown as {
+  options: { server: { handlers: { GET: RouteGetHandler } } }
+}).options.server.handlers.GET
+
+const attachmentDownloadGetHandler = (ManualArsipAttachmentDownloadRoute as unknown as {
+  options: { server: { handlers: { GET: RouteGetHandler } } }
+}).options.server.handlers.GET
+
 describe('manual arsip API foundation routes', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
     mocks.writeManualArsipAttachmentContent.mockResolvedValue({
-      logicalPath: 'manual-arsip/test-user/test-arsip/test.pdf',
+      logicalPath: ATTACHMENT_LOGICAL_PATH,
       bytesWritten: 10,
     })
+    process.env.DMS_LOCAL_STORAGE_ROOT = TEST_STORAGE_ROOT
+    await rm(TEST_STORAGE_ROOT, { force: true, recursive: true })
+  })
+
+  afterEach(async () => {
+    if (ORIGINAL_STORAGE_ROOT === undefined) {
+      delete process.env.DMS_LOCAL_STORAGE_ROOT
+    } else {
+      process.env.DMS_LOCAL_STORAGE_ROOT = ORIGINAL_STORAGE_ROOT
+    }
+    await rm(TEST_STORAGE_ROOT, { force: true, recursive: true })
   })
 
   it('requires assigned KEPALA_SUB_BAGIAN_UMUM for category list', async () => {
@@ -780,6 +808,230 @@ describe('manual arsip API foundation routes', () => {
     expect(body.attachments[0].judul_lampiran).toBe('Judul Eksplisit')
     expect(body.attachments[0].judul_lampiran).not.toBe('nama-file.pdf')
   })
+
+  it('allows KEPALA_SUB_BAGIAN_UMUM to preview an AKTIF attachment inline', async () => {
+    await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, TEST_FILE_CONTENT)
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF')],
+      [manualArsipAttachmentFileRow()],
+    )
+
+    const response = await attachmentPreviewGetHandler({
+      request: createAttachmentFileRequest('preview'),
+      params: attachmentFileParams(),
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    expect(response.headers.get('Content-Type')).toBe('application/pdf')
+    expect(response.headers.get('Content-Disposition')).toBe('inline; filename="Bukti Kegiatan.pdf"')
+    expect(response.headers.get('Content-Disposition')).not.toContain('token')
+    expect(await response.text()).toBe(TEST_FILE_CONTENT)
+  })
+
+  it('allows KEPALA_SUB_BAGIAN_UMUM to download an AKTIF attachment', async () => {
+    await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, TEST_FILE_CONTENT)
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF')],
+      [manualArsipAttachmentFileRow()],
+    )
+
+    const response = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('application/pdf')
+    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="Bukti Kegiatan.pdf"')
+    expect(await response.text()).toBe(TEST_FILE_CONTENT)
+  })
+
+  it('rejects ADMIN-only preview and download with 403 before DB access', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['ADMIN'], ADMIN_ID))
+
+    const preview = await attachmentPreviewGetHandler({
+      request: createAttachmentFileRequest('preview'),
+      params: attachmentFileParams(),
+    })
+    const download = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+
+    expect(preview.status).toBe(403)
+    expect(download.status).toBe(403)
+    expect(await preview.json()).toEqual({ error: 'Forbidden' })
+    expect(await download.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-Kasubag preview and download with 403 before DB access', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PEGAWAI'], USER_ID))
+
+    const preview = await attachmentPreviewGetHandler({
+      request: createAttachmentFileRequest('preview'),
+      params: attachmentFileParams(),
+    })
+    const download = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+
+    expect(preview.status).toBe(403)
+    expect(download.status).toBe(403)
+    expect(await preview.json()).toEqual({ error: 'Forbidden' })
+    expect(await download.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it('rejects unauthenticated preview and download with 401 before DB access', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(null)
+
+    const preview = await attachmentPreviewGetHandler({
+      request: createAttachmentFileRequest('preview'),
+      params: attachmentFileParams(),
+    })
+    const download = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+
+    expect(preview.status).toBe(401)
+    expect(download.status).toBe(401)
+    expect(await preview.json()).toEqual({ error: 'Unauthorized' })
+    expect(await download.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it('returns safe 404 for missing parent or wrong attachment ids', async () => {
+    queueSelectResults([])
+
+    const missingParent = await attachmentPreviewGetHandler({
+      request: createAttachmentFileRequest('preview'),
+      params: attachmentFileParams(),
+    })
+
+    expect(missingParent.status).toBe(404)
+    expect(await missingParent.json()).toEqual({ error: 'Lampiran arsip manual tidak ditemukan' })
+
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF')],
+      [],
+    )
+
+    const wrongAttachment = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams({ attachmentId: '88888888-8888-4888-8888-888888888888' }),
+    })
+
+    expect(wrongAttachment.status).toBe(404)
+    expect(await wrongAttachment.json()).toEqual({ error: 'Lampiran arsip manual tidak ditemukan' })
+  })
+
+  it('returns safe 404 when attachment does not belong to the requested parent', async () => {
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF')],
+      [],
+    )
+
+    const response = await attachmentPreviewGetHandler({
+      request: createAttachmentFileRequest('preview'),
+      params: attachmentFileParams({ manualArsipId: '99999999-9999-4999-8999-999999999999' }),
+    })
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'Lampiran arsip manual tidak ditemukan' })
+  })
+
+  it('blocks preview and download for DIMUSNAHKAN parents with 410', async () => {
+    for (const handler of [attachmentPreviewGetHandler, attachmentDownloadGetHandler]) {
+      queueSelectResults(
+        [manualArsipUploadParentRow('DIMUSNAHKAN')],
+        [manualArsipAttachmentFileRow()],
+      )
+
+      const response = await handler({
+        request: createAttachmentFileRequest('preview'),
+        params: attachmentFileParams(),
+      })
+
+      expect(response.status).toBe(410)
+      expect(await response.json()).toEqual({
+        error: 'File lampiran tidak tersedia - arsip telah dimusnahkan',
+      })
+    }
+  })
+
+  it('returns a safe 404 for missing attachment files without path details', async () => {
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF')],
+      [manualArsipAttachmentFileRow()],
+    )
+
+    const response = await attachmentPreviewGetHandler({
+      request: createAttachmentFileRequest('preview'),
+      params: attachmentFileParams(),
+    })
+    const body = JSON.stringify(await response.json())
+
+    expect(response.status).toBe(404)
+    expect(body).toBe('{"error":"File lampiran tidak ditemukan"}')
+    expect(body).not.toContain('manual-arsip')
+    expect(body).not.toContain('test.pdf')
+    expect(body).not.toContain(TEST_STORAGE_ROOT)
+  })
+
+  it('does not serve stored unsafe content types inline or as download', async () => {
+    await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, '<svg></svg>')
+
+    for (const handler of [attachmentPreviewGetHandler, attachmentDownloadGetHandler]) {
+      queueSelectResults(
+        [manualArsipUploadParentRow('AKTIF')],
+        [manualArsipAttachmentFileRow({
+          content_type: 'image/svg+xml',
+          original_filename: 'vector.svg',
+        })],
+      )
+
+      const response = await handler({
+        request: createAttachmentFileRequest('preview'),
+        params: attachmentFileParams(),
+      })
+      const body = JSON.stringify(await response.json())
+
+      expect(response.status).toBe(404)
+      expect(body).toBe('{"error":"File lampiran tidak ditemukan"}')
+      expect(response.headers.get('Content-Type')).toContain('application/json')
+      expect(response.headers.get('Content-Disposition')).toBeNull()
+    }
+  })
+
+  it('sanitizes Content-Disposition filename values and does not expose storage details', async () => {
+    await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, TEST_FILE_CONTENT)
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF')],
+      [manualArsipAttachmentFileRow({
+        judul_lampiran: 'unsafe"\r\nContent-Type: text/html',
+        original_filename: 'lampiran.pdf',
+      })],
+    )
+
+    const response = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+    const contentDisposition = response.headers.get('Content-Disposition')
+
+    expect(response.status).toBe(200)
+    expect(contentDisposition).toBe('attachment; filename="lampiran.pdf"')
+    expect(contentDisposition).not.toContain('\r')
+    expect(contentDisposition).not.toContain('\n')
+    expect(contentDisposition).not.toContain('manual-arsip')
+    expect(contentDisposition).not.toContain(TEST_STORAGE_ROOT)
+    expect(JSON.stringify([...response.headers.entries()])).not.toContain('token')
+  })
 })
 
 function createSession(roles: string[], userId: string) {
@@ -840,6 +1092,22 @@ function createAttachmentUploadRequest(
     },
     body: formData,
   })
+}
+
+function createAttachmentFileRequest(purpose: 'preview' | 'download') {
+  return new Request(
+    `http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}/attachments/${ATTACHMENT_ID}/${purpose}`,
+  )
+}
+
+function attachmentFileParams(overrides: Partial<{
+  manualArsipId: string
+  attachmentId: string
+}> = {}) {
+  return {
+    id: overrides.manualArsipId ?? MANUAL_ARSIP_ID,
+    attachmentId: overrides.attachmentId ?? ATTACHMENT_ID,
+  }
 }
 
 function manualCategoryRow() {
@@ -917,6 +1185,33 @@ function manualArsipAttachmentRow(overrides: Partial<{
     size_bytes: overrides.size_bytes ?? 10,
     created_at: new Date('2026-05-22T00:00:00.000Z'),
   }
+}
+
+function manualArsipAttachmentFileRow(overrides: Partial<{
+  judul_lampiran: string
+  original_filename: string
+  content_type: string
+  size_bytes: number
+  logical_path: string
+}> = {}) {
+  return {
+    id: ATTACHMENT_ID,
+    judul_lampiran: overrides.judul_lampiran ?? 'Bukti Kegiatan',
+    original_filename: overrides.original_filename ?? 'lampiran.pdf',
+    content_type: overrides.content_type ?? 'application/pdf',
+    size_bytes: overrides.size_bytes ?? TEST_FILE_CONTENT.length,
+    logical_path: overrides.logical_path ?? ATTACHMENT_LOGICAL_PATH,
+  }
+}
+
+async function writeManualArsipAttachmentTestFile(
+  logicalPath: string,
+  content: string,
+): Promise<void> {
+  const targetPath = path.join(TEST_STORAGE_ROOT, ...logicalPath.split('/'))
+
+  await mkdir(path.dirname(targetPath), { recursive: true })
+  await writeFile(targetPath, content)
 }
 
 function queueSelectResults(...results: unknown[][]) {
