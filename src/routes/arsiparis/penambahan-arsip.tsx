@@ -3,13 +3,16 @@ import {
   AlertCircle,
   Archive,
   ChevronRight,
+  Download,
+  Eye,
+  FileText,
   Loader2,
   Plus,
   ShieldX,
   Trash2,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
@@ -83,6 +86,15 @@ type ManualArsipAttachmentMetadata = {
 
 type ManualArsipUploadResponse = {
   attachments?: ManualArsipAttachmentMetadata[]
+  error?: string
+}
+
+type ManualArsipDetail = ManualArsipListItem & {
+  attachments: ManualArsipAttachmentMetadata[]
+}
+
+type ManualArsipDetailResponse = {
+  manual_arsip?: ManualArsipDetail
   error?: string
 }
 
@@ -224,7 +236,7 @@ function PenambahanArsipPage() {
             </div>
             <h2 className="font-headline text-2xl font-extrabold text-on-surface">Penambahan Arsip</h2>
             <p className="text-on-surface-variant text-xs mt-1">
-              Arsip manual dengan lampiran bukti opsional. Fase ini tidak menyediakan preview, download, lifecycle action, atau ekspor.
+              Arsip manual dengan lampiran bukti opsional. Preview/download lampiran tersedia melalui API terotorisasi; lifecycle action dan ekspor belum tersedia.
             </p>
           </div>
 
@@ -290,6 +302,62 @@ function ManualArsipTable({
   items: ManualArsipListItem[]
   limit: number | null
 }) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [detailsById, setDetailsById] = useState<Record<string, ManualArsipDetail>>({})
+  const [detailLoadingById, setDetailLoadingById] = useState<Record<string, boolean>>({})
+  const [detailErrorsById, setDetailErrorsById] = useState<Record<string, string>>({})
+
+  async function toggleAttachments(item: ManualArsipListItem) {
+    const willExpand = !expandedIds.has(item.id)
+
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (willExpand) {
+        next.add(item.id)
+      } else {
+        next.delete(item.id)
+      }
+      return next
+    })
+
+    if (!willExpand || detailsById[item.id] || detailLoadingById[item.id]) {
+      return
+    }
+
+    setDetailLoadingById((prev) => ({ ...prev, [item.id]: true }))
+    setDetailErrorsById((prev) => ({ ...prev, [item.id]: '' }))
+
+    try {
+      const detailJson = await apiFetch<ManualArsipDetailResponse>(
+        `/arsiparis/manual-arsip/${encodeURIComponent(item.id)}`,
+      )
+
+      if (!detailJson.manual_arsip) {
+        setDetailErrorsById((prev) => ({ ...prev, [item.id]: 'Detail lampiran tidak ditemukan.' }))
+        return
+      }
+
+      setDetailsById((prev) => ({ ...prev, [item.id]: detailJson.manual_arsip as ManualArsipDetail }))
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        window.location.href = ROUTES.LOGIN
+        return
+      }
+
+      if (err instanceof ApiError && err.status === 403) {
+        setDetailErrorsById((prev) => ({ ...prev, [item.id]: 'Akses ditolak.' }))
+        return
+      }
+
+      setDetailErrorsById((prev) => ({
+        ...prev,
+        [item.id]: getApiErrorMessage(err, 'Gagal memuat detail lampiran.'),
+      }))
+    } finally {
+      setDetailLoadingById((prev) => ({ ...prev, [item.id]: false }))
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
@@ -305,35 +373,204 @@ function ManualArsipTable({
               <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-right">Nominal</th>
               <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Status</th>
               <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Diperbarui</th>
+              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Lampiran</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item, idx) => (
-              <tr key={item.id} className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
-                <td className="px-4 py-3 text-center text-outline">{idx + 1}</td>
-                <td className="px-4 py-3">
-                  <p className="font-semibold text-on-surface">{item.nama}</p>
-                  <p className="text-[10px] text-outline mt-0.5">{shortId(item.id)}</p>
-                </td>
-                <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(item.tanggal)}</td>
-                <td className="px-4 py-3 text-on-surface">{item.category.nama || '-'}</td>
-                <td className="px-4 py-3 text-on-surface-variant">{item.klasifikasi.nama ?? '-'}</td>
-                <td className="px-4 py-3 text-on-surface-variant">
-                  <span title={item.keterangan}>{truncateText(item.keterangan, 96)}</span>
-                </td>
-                <td className="px-4 py-3 text-right text-on-surface">{formatNullableCurrency(item.nominal_realisasi)}</td>
-                <td className="px-4 py-3 text-center">
-                  <StatusBadge status={item.status_arsip} />
-                </td>
-                <td className="px-4 py-3 text-center text-on-surface-variant">{formatDateTime(item.updated_at)}</td>
-              </tr>
-            ))}
+            {items.map((item, idx) => {
+              const expanded = expandedIds.has(item.id)
+              const detail = detailsById[item.id]
+              const detailLoading = detailLoadingById[item.id] === true
+              const detailError = detailErrorsById[item.id]
+
+              return (
+                <Fragment key={item.id}>
+                  <tr className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
+                    <td className="px-4 py-3 text-center text-outline">{idx + 1}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-on-surface">{item.nama}</p>
+                      <p className="text-[10px] text-outline mt-0.5">{shortId(item.id)}</p>
+                    </td>
+                    <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(item.tanggal)}</td>
+                    <td className="px-4 py-3 text-on-surface">{item.category.nama || '-'}</td>
+                    <td className="px-4 py-3 text-on-surface-variant">{item.klasifikasi.nama ?? '-'}</td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      <span title={item.keterangan}>{truncateText(item.keterangan, 96)}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-on-surface">{formatNullableCurrency(item.nominal_realisasi)}</td>
+                    <td className="px-4 py-3 text-center">
+                      <StatusBadge status={item.status_arsip} />
+                    </td>
+                    <td className="px-4 py-3 text-center text-on-surface-variant">{formatDateTime(item.updated_at)}</td>
+                    <td className="px-4 py-3 text-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { void toggleAttachments(item) }}
+                        disabled={detailLoading}
+                        className="h-8 gap-1.5"
+                      >
+                        {detailLoading ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                        {expanded ? 'Tutup' : 'Lihat'}
+                      </Button>
+                    </td>
+                  </tr>
+                  {expanded && (
+                    <tr className="border-t border-outline-variant/20 bg-surface-container-low/20">
+                      <td colSpan={10} className="px-4 py-4">
+                        <ManualArsipAttachmentPanel
+                          item={item}
+                          detail={detail}
+                          loading={detailLoading}
+                          error={detailError}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
           </tbody>
         </table>
       </div>
       <div className="px-4 py-2.5 border-t bg-surface-container-low/20 text-xs text-outline">
-        Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} arsip manual. Tidak ada preview, download, lifecycle, atau ekspor pada halaman ini.
+        Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} arsip manual. Preview/download lampiran menggunakan endpoint API terotorisasi; lifecycle dan ekspor tidak tersedia pada halaman ini.
       </div>
+    </div>
+  )
+}
+
+function ManualArsipAttachmentPanel({
+  item,
+  detail,
+  loading,
+  error,
+}: {
+  item: ManualArsipListItem
+  detail?: ManualArsipDetail
+  loading: boolean
+  error?: string
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-outline-variant/30 bg-white px-3 py-3 text-xs text-on-surface-variant">
+        <Loader2 size={14} className="animate-spin text-primary" />
+        Memuat detail lampiran...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-3 text-xs text-error">
+        {error}
+      </div>
+    )
+  }
+
+  if (!detail) {
+    return (
+      <div className="rounded-lg border border-outline-variant/30 bg-white px-3 py-3 text-xs text-on-surface-variant">
+        Detail lampiran belum dimuat.
+      </div>
+    )
+  }
+
+  if (detail.attachments.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-outline-variant/50 bg-white px-3 py-4 text-center text-xs text-on-surface-variant">
+        Tidak ada lampiran pada arsip manual ini.
+      </div>
+    )
+  }
+
+  const fileUnavailable = item.status_arsip === 'DIMUSNAHKAN' || detail.status_arsip === 'DIMUSNAHKAN'
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-outline">Lampiran ({detail.attachments.length})</p>
+        <p className="mt-1 text-[11px] text-on-surface-variant">
+          Link preview/download dibuat hanya dari ID arsip dan ID lampiran. Otorisasi tetap divalidasi server.
+        </p>
+      </div>
+
+      {fileUnavailable && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          File tidak tersedia - arsip telah dimusnahkan
+        </div>
+      )}
+
+      <div className="grid gap-2">
+        {detail.attachments.map((attachment, index) => (
+          <ManualArsipAttachmentRow
+            key={attachment.id}
+            attachment={attachment}
+            index={index}
+            manualArsipId={item.id}
+            fileUnavailable={fileUnavailable}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ManualArsipAttachmentRow({
+  attachment,
+  index,
+  manualArsipId,
+  fileUnavailable,
+}: {
+  attachment: ManualArsipAttachmentMetadata
+  index: number
+  manualArsipId: string
+  fileUnavailable: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/30 bg-white px-3 py-3 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <FileText size={15} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-on-surface">
+            {attachment.judul_lampiran || `Lampiran ${index + 1}`}
+          </p>
+          <p className="mt-0.5 truncate text-[11px] text-on-surface-variant">
+            {attachment.original_filename || attachment.content_type || '-'}
+          </p>
+          <p className="mt-0.5 text-[10px] text-outline">
+            {attachment.content_type} - {formatFileSize(attachment.size_bytes)}
+          </p>
+        </div>
+      </div>
+
+      {fileUnavailable ? (
+        <p className="text-xs font-medium text-red-700 sm:text-right">
+          File tidak tersedia - arsip telah dimusnahkan
+        </p>
+      ) : (
+        <div className="flex shrink-0 gap-2">
+          <a
+            href={buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'preview')}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={attachmentLinkClass('outline')}
+          >
+            <Eye size={13} />
+            Preview
+          </a>
+          <a
+            href={buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'download')}
+            className={attachmentLinkClass('primary')}
+          >
+            <Download size={13} />
+            Download
+          </a>
+        </div>
+      )}
     </div>
   )
 }
@@ -535,7 +772,7 @@ function CreateManualArsipModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Fase ini menerima lampiran opsional sebagai metadata aman. Tidak ada preview/download pada fase ini. Klasifikasi arsip belum dipilih dari UI; data klasifikasi yang sudah ada tetap ditampilkan di daftar jika API mengembalikannya.
+            Fase ini menerima lampiran opsional sebagai metadata aman. Preview/download hanya tersedia setelah arsip tersimpan melalui endpoint API terotorisasi. Klasifikasi arsip belum dipilih dari UI; data klasifikasi yang sudah ada tetap ditampilkan di daftar jika API mengembalikannya.
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -663,7 +900,7 @@ function CreateManualArsipModal({
               <p>Maksimal 5 lampiran.</p>
               <p>Maksimal 10MB per file.</p>
               <p>Format: PDF, JPG/JPEG, PNG, WEBP, GIF, BMP, TIFF, HEIC/HEIF.</p>
-              <p>Tidak ada preview/download pada fase ini.</p>
+              <p>Preview/download tersedia setelah lampiran berhasil disimpan.</p>
             </div>
           </FormField>
 
@@ -828,6 +1065,23 @@ function StatusBadge({ status }: { status: string }) {
   }
 
   return <Badge variant="outline" className="text-xs">{status}</Badge>
+}
+
+function buildManualArsipAttachmentFileUrl(
+  manualArsipId: string,
+  attachmentId: string,
+  purpose: 'preview' | 'download',
+) {
+  return `/api/arsiparis/manual-arsip/${encodeURIComponent(manualArsipId)}/attachments/${encodeURIComponent(attachmentId)}/${purpose}`
+}
+
+function attachmentLinkClass(variant: 'outline' | 'primary') {
+  return cn(
+    'inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+    variant === 'primary'
+      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+      : 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
+  )
 }
 
 function validateForm(form: ManualArsipFormState): {
