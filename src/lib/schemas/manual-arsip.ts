@@ -1,18 +1,44 @@
 import { z } from 'zod'
+import {
+  MANUAL_ARCHIVE_RETENTION_LABELS,
+  isDateOnlyString,
+} from '#/lib/archive/retention'
 import { ARCHIVE_STATUS_VALUES } from '#/lib/constants/archive-status'
 
 const METADATA_FORBIDDEN_KEYS = new Set([
   'nama',
   'tanggal',
+  'nomor_surat',
+  'nomorSurat',
+  'tanggal_diarsipkan',
+  'tanggalDiarsipkan',
   'keterangan',
   'category_id',
   'categoryId',
   'klasifikasi_id',
   'klasifikasiId',
+  'klasifikasi_kode_snapshot',
+  'klasifikasiKodeSnapshot',
+  'klasifikasi_nama_snapshot',
+  'klasifikasiNamaSnapshot',
+  'nominal_realisasi',
+  'nominalRealisasi',
+  'retensi_aktif',
+  'retensiAktif',
+  'retensi_inaktif',
+  'retensiInaktif',
+  'masa_aktif_berakhir',
+  'masaAktifBerakhir',
+  'masa_inaktif_berakhir',
+  'masaInaktifBerakhir',
   'status_arsip',
   'statusArsip',
   'created_by',
   'createdBy',
+  'archived_by',
+  'archivedBy',
+  'canonical_arsip_id',
+  'canonicalArsipId',
   'logical_path',
   'logicalPath',
   'physical_path',
@@ -46,10 +72,18 @@ export const manualArsipSafeMetadataSchema = z
 export const createManualArsipSchema = z
   .object({
     nama: z.string().trim().min(1, 'Nama arsip wajib diisi').max(255),
-    tanggal: z.string().refine(isValidDateOnly, 'Tanggal harus valid dengan format YYYY-MM-DD'),
+    tanggal: z.string().refine(isDateOnlyString, 'Tanggal harus valid dengan format YYYY-MM-DD'),
+    nomor_surat: z.string({ error: 'Nomor surat wajib diisi' })
+      .trim()
+      .min(1, 'Nomor surat wajib diisi')
+      .max(120, 'Nomor surat maksimal 120 karakter'),
+    tanggal_diarsipkan: z.string({ error: 'Tanggal arsip wajib diisi' })
+      .refine(isDateOnlyString, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'),
     keterangan: z.string().trim().min(1, 'Keterangan wajib diisi'),
     category_id: z.string().uuid('Kategori tidak valid'),
-    klasifikasi_id: z.string().uuid('Klasifikasi tidak valid').nullable().optional(),
+    klasifikasi_id: z.string({ error: 'Klasifikasi wajib dipilih' }).uuid('Klasifikasi tidak valid'),
+    retensi_aktif: z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message: 'Retensi aktif tidak valid' }),
+    retensi_inaktif: z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message: 'Retensi inaktif tidak valid' }),
     nominal_realisasi: z.unknown(),
     metadata: manualArsipSafeMetadataSchema.optional(),
   })
@@ -96,9 +130,13 @@ export const createManualArsipSchema = z
   .transform((value) => ({
     nama: value.nama,
     tanggal: value.tanggal,
+    nomor_surat: value.nomor_surat,
+    tanggal_diarsipkan: value.tanggal_diarsipkan,
     keterangan: value.keterangan,
     category_id: value.category_id,
     klasifikasi_id: value.klasifikasi_id,
+    retensi_aktif: value.retensi_aktif,
+    retensi_inaktif: value.retensi_inaktif,
     nominal_realisasi: value.nominal_realisasi as number,
     metadata: value.metadata,
   }))
@@ -118,17 +156,6 @@ export type CreateManualArsipInput = z.infer<typeof createManualArsipSchema>
 export type UpdateManualArsipInput = z.infer<typeof updateManualArsipSchema>
 export type ListManualArsipQuery = z.infer<typeof listManualArsipQuerySchema>
 export type ManualArsipSafeMetadata = z.infer<typeof manualArsipSafeMetadataSchema>
-
-function isValidDateOnly(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-
-  const [year, month, day] = value.split('-').map(Number)
-  const parsed = new Date(Date.UTC(year, month - 1, day))
-
-  return parsed.getUTCFullYear() === year
-    && parsed.getUTCMonth() === month - 1
-    && parsed.getUTCDate() === day
-}
 
 function validateSafeJsonObject(value: Record<string, unknown>): { ok: true } | { ok: false; message: string } {
   if (!isPlainObject(value)) {

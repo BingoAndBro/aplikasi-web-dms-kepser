@@ -15,6 +15,7 @@ import {
 } from '#/lib/auth/local-server-auth'
 import { ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
+import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import type {
   CreateManualArsipInput,
   ListManualArsipQuery,
@@ -97,6 +98,7 @@ type CategoryRow = {
 type KlasifikasiRow = {
   id: string
   nama: string
+  kode: string | null
 }
 
 type ManualArsipAttachmentFileRow = {
@@ -171,27 +173,39 @@ export async function createManualArsipRecord(
     throw new ManualArsipApiError('Kategori arsip manual tidak ditemukan', 400)
   }
 
-  const klasifikasi = input.klasifikasi_id
-    ? await findActiveKlasifikasi(input.klasifikasi_id)
-    : null
-
-  if (input.klasifikasi_id && !klasifikasi) {
+  const klasifikasi = await findActiveKlasifikasi(input.klasifikasi_id)
+  if (!klasifikasi) {
     throw new ManualArsipApiError('Klasifikasi arsip tidak ditemukan', 400)
   }
+
+  const retentionDates = calculateManualArchiveRetentionDates({
+    tanggalDiarsipkan: input.tanggal_diarsipkan,
+    retensiAktif: input.retensi_aktif,
+    retensiInaktif: input.retensi_inaktif,
+  })
 
   const [created] = await db
     .insert(manualArsip)
     .values({
       nama: input.nama,
       tanggal: input.tanggal,
+      nomorSurat: input.nomor_surat,
+      tanggalDiarsipkan: input.tanggal_diarsipkan,
       keterangan: input.keterangan,
       categoryId: category.id,
-      klasifikasiId: klasifikasi?.id ?? null,
-      klasifikasiNamaSnapshot: klasifikasi?.nama ?? null,
+      klasifikasiId: klasifikasi.id,
+      klasifikasiKodeSnapshot: klasifikasi.kode,
+      klasifikasiNamaSnapshot: klasifikasi.nama,
+      retensiAktif: input.retensi_aktif,
+      retensiInaktif: input.retensi_inaktif,
+      masaAktifBerakhir: retentionDates.masaAktifBerakhir,
+      masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
       nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
       statusArsip: ARCHIVE_STATUS.AKTIF,
       metadata: input.metadata ?? {},
       createdBy,
+      archivedBy: createdBy,
+      canonicalArsipId: null,
     })
     .returning({
       id: manualArsip.id,
@@ -389,23 +403,33 @@ export async function updateManualArsipRecord(
     throw new ManualArsipApiError('Kategori arsip manual tidak ditemukan', 400)
   }
 
-  const klasifikasi = input.klasifikasi_id
-    ? await findActiveKlasifikasi(input.klasifikasi_id)
-    : null
-
-  if (input.klasifikasi_id && !klasifikasi) {
+  const klasifikasi = await findActiveKlasifikasi(input.klasifikasi_id)
+  if (!klasifikasi) {
     throw new ManualArsipApiError('Klasifikasi arsip tidak ditemukan', 400)
   }
+
+  const retentionDates = calculateManualArchiveRetentionDates({
+    tanggalDiarsipkan: input.tanggal_diarsipkan,
+    retensiAktif: input.retensi_aktif,
+    retensiInaktif: input.retensi_inaktif,
+  })
 
   const [updated] = await db
     .update(manualArsip)
     .set({
       nama: input.nama,
       tanggal: input.tanggal,
+      nomorSurat: input.nomor_surat,
+      tanggalDiarsipkan: input.tanggal_diarsipkan,
       keterangan: input.keterangan,
       categoryId: category.id,
-      klasifikasiId: klasifikasi?.id ?? null,
-      klasifikasiNamaSnapshot: klasifikasi?.nama ?? null,
+      klasifikasiId: klasifikasi.id,
+      klasifikasiKodeSnapshot: klasifikasi.kode,
+      klasifikasiNamaSnapshot: klasifikasi.nama,
+      retensiAktif: input.retensi_aktif,
+      retensiInaktif: input.retensi_inaktif,
+      masaAktifBerakhir: retentionDates.masaAktifBerakhir,
+      masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
       nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
       metadata: input.metadata ?? {},
       updatedAt: new Date(),
@@ -646,6 +670,7 @@ async function findActiveKlasifikasi(id: string): Promise<KlasifikasiRow | null>
     .select({
       id: masterKlasifikasiArsip.id,
       nama: masterKlasifikasiArsip.nama,
+      kode: masterKlasifikasiArsip.kode,
     })
     .from(masterKlasifikasiArsip)
     .where(and(

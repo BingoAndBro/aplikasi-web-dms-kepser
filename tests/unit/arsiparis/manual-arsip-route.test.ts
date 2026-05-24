@@ -55,6 +55,7 @@ import { Route as ManualArsipDetailRoute } from '#/routes/api/arsiparis/manual-a
 import { Route as ManualArsipAttachmentsRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments'
 import { Route as ManualArsipAttachmentPreviewRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview'
 import { Route as ManualArsipAttachmentDownloadRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download'
+import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 
 type RouteGetHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
 type RoutePostHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
@@ -86,6 +87,58 @@ const attachmentPreviewGetHandler = (ManualArsipAttachmentPreviewRoute as unknow
 const attachmentDownloadGetHandler = (ManualArsipAttachmentDownloadRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
 }).options.server.handlers.GET
+
+describe('manual archive retention helper', () => {
+  it('calculates date-only retention periods from archive date and labels', () => {
+    expect(calculateManualArchiveRetentionDates({
+      tanggalDiarsipkan: '2026-05-24',
+      retensiAktif: '1 Tahun',
+      retensiInaktif: '3 Tahun',
+    })).toEqual({
+      masaAktifBerakhir: '2027-05-24',
+      masaInaktifBerakhir: '2030-05-24',
+    })
+  })
+
+  it('uses a transitional sentinel for Permanen retention labels', () => {
+    expect(calculateManualArchiveRetentionDates({
+      tanggalDiarsipkan: '2026-05-24',
+      retensiAktif: 'Permanen',
+      retensiInaktif: '1 Tahun',
+    })).toEqual({
+      masaAktifBerakhir: '9999-12-31',
+      masaInaktifBerakhir: '9999-12-31',
+    })
+
+    expect(calculateManualArchiveRetentionDates({
+      tanggalDiarsipkan: '2026-05-24',
+      retensiAktif: '1 Tahun',
+      retensiInaktif: 'Permanen',
+    })).toEqual({
+      masaAktifBerakhir: '2027-05-24',
+      masaInaktifBerakhir: '9999-12-31',
+    })
+  })
+
+  it('clamps leap-day calendar-year additions to the last valid day of February', () => {
+    expect(calculateManualArchiveRetentionDates({
+      tanggalDiarsipkan: '2024-02-29',
+      retensiAktif: '1 Tahun',
+      retensiInaktif: '1 Tahun',
+    })).toEqual({
+      masaAktifBerakhir: '2025-02-28',
+      masaInaktifBerakhir: '2026-02-28',
+    })
+  })
+
+  it('rejects invalid date-only input before calculating retention dates', () => {
+    expect(() => calculateManualArchiveRetentionDates({
+      tanggalDiarsipkan: '2026-02-31',
+      retensiAktif: '1 Tahun',
+      retensiInaktif: '1 Tahun',
+    })).toThrow('Tanggal arsip harus valid dengan format YYYY-MM-DD')
+  })
+})
 
 describe('manual arsip API foundation routes', () => {
   beforeEach(async () => {
@@ -200,6 +253,32 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
+  it('rejects unauthenticated create with 401', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects ADMIN-only create with 403', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
   it('rejects missing keterangan without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
@@ -211,6 +290,100 @@ describe('manual arsip API foundation routes', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: 'Keterangan wajib diisi' })
     expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects missing nomor_surat without a 500', async () => {
+    const body = validCreateBody() as Record<string, unknown>
+    delete body.nomor_surat
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(body),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nomor surat wajib diisi' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects empty nomor_surat without a 500', async () => {
+    const response = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        nomor_surat: '   ',
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nomor surat wajib diisi' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects missing or invalid tanggal_diarsipkan without a 500', async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [omit(validCreateBody(), 'tanggal_diarsipkan'), 'Tanggal arsip wajib diisi'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: null }, 'Tanggal arsip wajib diisi'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '24/05/2026' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-02-31' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
+    ]
+
+    for (const [body, expectedError] of cases) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+
+      const response = await indexHandlers.POST({
+        request: createPostRequest(body),
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: expectedError })
+      expect(mocks.dbInsert).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects missing or invalid klasifikasi_id without a 500', async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [omit(validCreateBody(), 'klasifikasi_id'), 'Klasifikasi wajib dipilih'],
+      [{ ...validCreateBody(), klasifikasi_id: null }, 'Klasifikasi wajib dipilih'],
+      [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Klasifikasi tidak valid'],
+    ]
+
+    for (const [body, expectedError] of cases) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+
+      const response = await indexHandlers.POST({
+        request: createPostRequest(body),
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: expectedError })
+      expect(mocks.dbInsert).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects missing or invalid retention labels without a 500', async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [omit(validCreateBody(), 'retensi_aktif'), 'Retensi aktif tidak valid'],
+      [{ ...validCreateBody(), retensi_aktif: null }, 'Retensi aktif tidak valid'],
+      [{ ...validCreateBody(), retensi_aktif: '2 Tahun' }, 'Retensi aktif tidak valid'],
+      [omit(validCreateBody(), 'retensi_inaktif'), 'Retensi inaktif tidak valid'],
+      [{ ...validCreateBody(), retensi_inaktif: null }, 'Retensi inaktif tidak valid'],
+      [{ ...validCreateBody(), retensi_inaktif: 'Selamanya' }, 'Retensi inaktif tidak valid'],
+    ]
+
+    for (const [body, expectedError] of cases) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+
+      const response = await indexHandlers.POST({
+        request: createPostRequest(body),
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: expectedError })
+      expect(mocks.dbInsert).not.toHaveBeenCalled()
+    }
   })
 
   it('rejects missing nominal_realisasi without a 500', async () => {
@@ -306,7 +479,7 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
-  it('creates with positive nominal_realisasi and returns no file access fields', async () => {
+  it('creates with required retention metadata, derived snapshots, and no file access fields', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
     queueInsertResult([manualArsipRow()])
 
@@ -318,16 +491,62 @@ describe('manual arsip API foundation routes', () => {
     expect(response.status).toBe(201)
     expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
       createdBy: USER_ID,
+      archivedBy: USER_ID,
       statusArsip: 'AKTIF',
       categoryId: CATEGORY_ID,
       klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiKodeSnapshot: '001.02',
       klasifikasiNamaSnapshot: 'Klasifikasi A',
+      nomorSurat: 'B-001/2026',
+      tanggalDiarsipkan: '2026-05-24',
+      retensiAktif: '1 Tahun',
+      retensiInaktif: '3 Tahun',
+      masaAktifBerakhir: '2027-05-24',
+      masaInaktifBerakhir: '2030-05-24',
       nominalRealisasi: '1000',
+      canonicalArsipId: null,
     }))
     expect(JSON.stringify(body)).not.toContain('logical_path')
     expect(JSON.stringify(body)).not.toContain('logicalPath')
     expect(JSON.stringify(body)).not.toContain('file_url')
+    expect(JSON.stringify(body)).not.toContain('storage_root')
+    expect(JSON.stringify(body)).not.toContain('token')
+    expect(JSON.stringify(body)).not.toContain('sql')
+    expect(JSON.stringify(body)).not.toContain('env')
     expect(JSON.stringify(body.manual_arsip.attachments)).toBe('[]')
+  })
+
+  it('creates with Permanen retention using the transitional sentinel dates', async () => {
+    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueInsertResult([manualArsipRow()])
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        retensi_aktif: 'Permanen',
+        retensi_inaktif: '1 Tahun',
+      }),
+    })
+
+    expect(response.status).toBe(201)
+    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+      retensiAktif: 'Permanen',
+      retensiInaktif: '1 Tahun',
+      masaAktifBerakhir: '9999-12-31',
+      masaInaktifBerakhir: '9999-12-31',
+    }))
+  })
+
+  it('rejects missing active klasifikasi lookup on create', async () => {
+    queueSelectResults([manualCategoryRow()], [])
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Klasifikasi arsip tidak ditemukan' })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
   it('rejects top-level and metadata file path fields on create', async () => {
@@ -345,6 +564,31 @@ describe('manual arsip API foundation routes', () => {
       request: createPostRequest({
         ...validCreateBody(),
         metadata: { logical_path: 'manual/path.pdf' },
+      }),
+    })
+
+    expect(metadataResponse.status).toBe(400)
+    expect(await metadataResponse.json()).toEqual({
+      error: 'Metadata tidak boleh berisi field inti atau field akses file',
+    })
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+  })
+
+  it('rejects client-provided classification snapshots on create', async () => {
+    const topLevelResponse = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        klasifikasi_kode_snapshot: 'CLIENT-CODE',
+      }),
+    })
+
+    expect(topLevelResponse.status).toBe(400)
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+
+    const metadataResponse = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        metadata: { klasifikasi_nama_snapshot: 'Client Snapshot' },
       }),
     })
 
@@ -479,6 +723,10 @@ describe('manual arsip API foundation routes', () => {
       ...validCreateBody(),
       nama: 'Arsip manual diperbarui',
       tanggal: '2026-05-24',
+      nomor_surat: 'B-002/2026',
+      tanggal_diarsipkan: '2026-06-01',
+      retensi_aktif: '5 Tahun',
+      retensi_inaktif: '10 Tahun',
       keterangan: 'Keterangan diperbarui',
       metadata: { sumber: 'patch' },
     }
@@ -509,7 +757,14 @@ describe('manual arsip API foundation routes', () => {
       keterangan: 'Keterangan diperbarui',
       categoryId: CATEGORY_ID,
       klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiKodeSnapshot: '001.02',
       klasifikasiNamaSnapshot: 'Klasifikasi A',
+      nomorSurat: 'B-002/2026',
+      tanggalDiarsipkan: '2026-06-01',
+      retensiAktif: '5 Tahun',
+      retensiInaktif: '10 Tahun',
+      masaAktifBerakhir: '2031-06-01',
+      masaInaktifBerakhir: '2041-06-01',
       nominalRealisasi: '1000',
       metadata: { sumber: 'patch' },
       updatedAt: expect.any(Date),
@@ -517,6 +772,8 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.updateSet).not.toHaveBeenCalledWith(expect.objectContaining({
       statusArsip: expect.anything(),
       createdBy: expect.anything(),
+      archivedBy: expect.anything(),
+      canonicalArsipId: expect.anything(),
     }))
     expect(body.manual_arsip).toEqual({
       id: MANUAL_ARSIP_ID,
@@ -593,6 +850,34 @@ describe('manual arsip API foundation routes', () => {
 
       expect(response.status).toBe(400)
       expect(await response.json()).toEqual({ error: 'Tanggal harus valid dengan format YYYY-MM-DD' })
+      expect(mocks.dbUpdate).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects missing or invalid new retention metadata fields on manual archive PATCH', async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [omit(validCreateBody(), 'nomor_surat'), 'Nomor surat wajib diisi'],
+      [{ ...validCreateBody(), nomor_surat: '' }, 'Nomor surat wajib diisi'],
+      [omit(validCreateBody(), 'tanggal_diarsipkan'), 'Tanggal arsip wajib diisi'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
+      [omit(validCreateBody(), 'klasifikasi_id'), 'Klasifikasi wajib dipilih'],
+      [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Klasifikasi tidak valid'],
+      [omit(validCreateBody(), 'retensi_aktif'), 'Retensi aktif tidak valid'],
+      [{ ...validCreateBody(), retensi_inaktif: '2 Tahun' }, 'Retensi inaktif tidak valid'],
+    ]
+
+    for (const [body, expectedError] of cases) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+      queueSelectResults([manualArsipEditParentRow('AKTIF')])
+
+      const response = await detailPatchHandler({
+        request: createPatchRequest(body),
+        params: { id: MANUAL_ARSIP_ID },
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: expectedError })
       expect(mocks.dbUpdate).not.toHaveBeenCalled()
     }
   })
@@ -1438,12 +1723,22 @@ function validCreateBody() {
   return {
     nama: 'Arsip manual uji',
     tanggal: '2026-05-22',
+    nomor_surat: 'B-001/2026',
+    tanggal_diarsipkan: '2026-05-24',
     keterangan: 'Keterangan arsip manual',
     category_id: CATEGORY_ID,
     klasifikasi_id: KLASIFIKASI_ID,
+    retensi_aktif: '1 Tahun',
+    retensi_inaktif: '3 Tahun',
     nominal_realisasi: 1000,
     metadata: { sumber: 'manual' },
   }
+}
+
+function omit(source: Record<string, unknown>, key: string): Record<string, unknown> {
+  const clone = { ...source }
+  delete clone[key]
+  return clone
 }
 
 function createPostRequest(body: Record<string, unknown>, origin = 'http://localhost') {
@@ -1519,6 +1814,7 @@ function klasifikasiRow() {
   return {
     id: KLASIFIKASI_ID,
     nama: 'Klasifikasi A',
+    kode: '001.02',
   }
 }
 
