@@ -1,0 +1,274 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const SESSION_USER_ID = '11111111-1111-4111-8111-111111111111'
+const DOCUMENT_CREATOR_ID = '22222222-2222-4222-8222-222222222222'
+const DOCUMENT_ID = '33333333-3333-4333-8333-333333333333'
+const KLASIFIKASI_ID = '44444444-4444-4444-8444-444444444444'
+
+const mocks = vi.hoisted(() => ({
+  getLocalServerSession: vi.fn(),
+  dbSelect: vi.fn(),
+  dbTransaction: vi.fn(),
+  txInsert: vi.fn(),
+  txInsertValues: vi.fn(),
+  txUpdate: vi.fn(),
+  txUpdateSet: vi.fn(),
+}))
+
+vi.mock('#/lib/auth/local-server-auth', () => ({
+  getLocalServerSession: mocks.getLocalServerSession,
+  hasLocalRole: (session: { roles: string[] }, role: string) => session.roles.includes(role),
+}))
+
+vi.mock('#/db/client', () => ({
+  db: {
+    select: mocks.dbSelect,
+    transaction: mocks.dbTransaction,
+  },
+}))
+
+import { Route as WorkflowArchiveRoute } from '#/routes/api/arsiparis/dokumen.$id.archive'
+
+type RoutePostHandler = (args: {
+  request: Request
+  params: Record<string, string>
+}) => Promise<Response>
+
+const postHandler = (WorkflowArchiveRoute as unknown as {
+  options: { server: { handlers: { POST: RoutePostHandler } } }
+}).options.server.handlers.POST
+
+describe('workflow archive canonical write route', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM']))
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('writes canonical workflow archive fields from server-derived values', async () => {
+    queueSelectResults(
+      [dokumenRow()],
+      [],
+      [klasifikasiRow()],
+    )
+    queueSuccessfulTransaction()
+
+    const response = await postHandler({
+      request: createPostRequest({
+        ...validArchiveBody(),
+        klasifikasi: 'Client supplied classification must be ignored',
+      }),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body).toEqual({
+      success: true,
+      message: 'Dokumen berhasil diarsipkan',
+    })
+
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      sourceType: 'WORKFLOW',
+      dokumenId: DOCUMENT_ID,
+      namaArsip: 'Laporan Kinerja - Realisasi Triwulan I',
+      nomorSurat: 'B-123',
+      klasifikasi: 'Keuangan',
+      klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiKodeSnapshot: 'KA.01',
+      klasifikasiNamaSnapshot: 'Keuangan',
+      retensiAktif: '1 Tahun',
+      retensiInaktif: '3 Tahun',
+      masaAktifBerakhir: '2027-05-01',
+      masaInaktifBerakhir: '2030-05-01',
+      archivedBy: SESSION_USER_ID,
+      createdBy: DOCUMENT_CREATOR_ID,
+      statusArsip: 'AKTIF',
+      nominalRealisasi: '1500000.00',
+      lampiranSnapshot: [{
+        kelengkapan_id: 'lampiran-1',
+        nama: 'Bukti',
+        url: 'formal/path.pdf',
+      }],
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      dokumenId: DOCUMENT_ID,
+      userId: SESSION_USER_ID,
+      aksi: 'ARCHIVE',
+    }))
+
+    const responseText = JSON.stringify(body)
+    expect(responseText).not.toContain('logical_path')
+    expect(responseText).not.toContain('storage')
+    expect(responseText).not.toContain('token')
+    expect(responseText).not.toContain('formal/path.pdf')
+  })
+
+  it('rejects missing klasifikasi_id before DB writes', async () => {
+    const body = validArchiveBody() as Record<string, unknown>
+    delete body.klasifikasi_id
+
+    const response = await postHandler({
+      request: createPostRequest(body),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Klasifikasi wajib dipilih' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects inactive or missing classification without inserting archive rows', async () => {
+    queueSelectResults(
+      [dokumenRow()],
+      [],
+      [],
+    )
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Klasifikasi arsip tidak ditemukan' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('fails safely when the source document creator is missing', async () => {
+    queueSelectResults([dokumenRow({ created_by: null })])
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Gagal mengarsipkan dokumen' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('keeps ADMIN-only users out of workflow archive writes', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['ADMIN']))
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Akses ditolak' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+})
+
+function createSession(roles: string[]) {
+  return {
+    user: {
+      id: SESSION_USER_ID,
+      email: 'kasubag@example.test',
+    },
+    userId: SESSION_USER_ID,
+    email: 'kasubag@example.test',
+    roles,
+    activeRole: roles[0],
+    sessionId: 'test-session-id',
+  }
+}
+
+function validArchiveBody() {
+  return {
+    nomor_surat: 'B-123',
+    klasifikasi_id: KLASIFIKASI_ID,
+    retensi_aktif: '1 Tahun',
+    retensi_inaktif: '3 Tahun',
+    masa_aktif_berakhir: '2027-05-01',
+    masa_inaktif_berakhir: '2030-05-01',
+    catatan_arsiparis: 'Siap diarsipkan',
+  }
+}
+
+function createPostRequest(body: Record<string, unknown>, origin = 'http://localhost') {
+  return new Request(`http://localhost/api/arsiparis/dokumen/${DOCUMENT_ID}/archive`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: origin,
+    },
+    body: JSON.stringify(body),
+  })
+}
+
+function dokumenRow(overrides: Partial<{
+  judul: string | null
+  status: string
+  created_by: string | null
+  jenis_dokumen_nama: string | null
+  kegiatan_nama: string | null
+  nominal_realisasi: string | null
+  lampiran_urls: unknown
+}> = {}) {
+  return {
+    id: DOCUMENT_ID,
+    judul: overrides.judul ?? 'Realisasi Triwulan I',
+    status: overrides.status ?? 'COMPLETED',
+    created_by: Object.hasOwn(overrides, 'created_by') ? overrides.created_by ?? null : DOCUMENT_CREATOR_ID,
+    jenis_dokumen_nama: overrides.jenis_dokumen_nama ?? 'Laporan Kinerja',
+    kegiatan_nama: overrides.kegiatan_nama ?? 'Penyusunan Publikasi',
+    nominal_realisasi: overrides.nominal_realisasi ?? '1500000.00',
+    lampiran_urls: overrides.lampiran_urls ?? [{
+      kelengkapan_id: 'lampiran-1',
+      nama: 'Bukti',
+      url: 'formal/path.pdf',
+    }],
+  }
+}
+
+function klasifikasiRow() {
+  return {
+    id: KLASIFIKASI_ID,
+    kode: 'KA.01',
+    nama: 'Keuangan',
+  }
+}
+
+function queueSelectResults(...results: unknown[][]) {
+  const queue = [...results]
+  mocks.dbSelect.mockImplementation(() => createSelectBuilder(queue.shift() ?? []))
+}
+
+function createSelectBuilder(result: unknown[]): Record<string, unknown> {
+  const query: Record<string, unknown> = {}
+
+  query.from = vi.fn(() => query)
+  query.leftJoin = vi.fn(() => query)
+  query.where = vi.fn(() => query)
+  query.limit = vi.fn(async () => result)
+
+  return query
+}
+
+function queueSuccessfulTransaction() {
+  mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      insert: mocks.txInsert.mockReturnValue({
+        values: mocks.txInsertValues.mockResolvedValue(undefined),
+      }),
+      update: mocks.txUpdate.mockReturnValue({
+        set: mocks.txUpdateSet.mockReturnValue({
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => [{ id: DOCUMENT_ID }]),
+          })),
+        }),
+      }),
+    }
+
+    return operation(tx)
+  })
+}

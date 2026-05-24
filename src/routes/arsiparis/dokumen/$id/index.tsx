@@ -302,7 +302,7 @@ function ArsiparisDokumenDetailPage() {
         method: 'POST',
         body: {
           nomor_surat: nomorSurat.trim(),
-          klasifikasi: selectedNode?.nama ?? '',
+          klasifikasi_id: klasifikasi,
           retensi_aktif: retensiAktif,
           retensi_inaktif: retensiInaktif,
           masa_aktif_berakhir: masaAktifBerakhir,
