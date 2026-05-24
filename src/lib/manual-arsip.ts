@@ -20,6 +20,7 @@ import type {
   ListManualArsipQuery,
   ManualArsipSafeMetadata,
 } from '#/lib/schemas/manual-arsip'
+import { updateManualArsipSchema } from '#/lib/schemas/manual-arsip'
 import {
   createManualArsipAttachmentStorageDescriptors,
   isAllowedManualArsipAttachmentContentType,
@@ -70,6 +71,10 @@ export type ManualArsipListItemResponse = {
 export type ManualArsipDetailResponse = ManualArsipListItemResponse & {
   metadata: ManualArsipSafeMetadata
   attachments: ManualArsipAttachmentResponse[]
+}
+
+export type ManualArsipUpdateResponse = ManualArsipListItemResponse & {
+  metadata: ManualArsipSafeMetadata
 }
 
 export type ManualArsipAttachmentResponse = {
@@ -349,6 +354,89 @@ export async function getManualArsipDetail(
     created_by: row.created_by,
     created_at: isoDateString(row.created_at),
     updated_at: isoDateString(row.updated_at),
+  }
+}
+
+export async function updateManualArsipRecord(
+  id: string,
+  rawInput: unknown,
+): Promise<ManualArsipUpdateResponse> {
+  const [existing] = await db
+    .select({
+      id: manualArsip.id,
+      status_arsip: manualArsip.statusArsip,
+    })
+    .from(manualArsip)
+    .where(eq(manualArsip.id, id))
+    .limit(1)
+
+  if (!existing) {
+    throw new ManualArsipApiError('Arsip manual tidak ditemukan', 404)
+  }
+
+  if (existing.status_arsip !== ARCHIVE_STATUS.AKTIF) {
+    throw new ManualArsipApiError('Arsip manual hanya dapat diedit saat status AKTIF', 409)
+  }
+
+  const parsed = updateManualArsipSchema.safeParse(rawInput)
+  if (!parsed.success) {
+    throw new ManualArsipApiError(parsed.error.issues[0].message, 400)
+  }
+
+  const input = parsed.data
+  const category = await findActiveManualArsipCategory(input.category_id)
+  if (!category) {
+    throw new ManualArsipApiError('Kategori arsip manual tidak ditemukan', 400)
+  }
+
+  const klasifikasi = input.klasifikasi_id
+    ? await findActiveKlasifikasi(input.klasifikasi_id)
+    : null
+
+  if (input.klasifikasi_id && !klasifikasi) {
+    throw new ManualArsipApiError('Klasifikasi arsip tidak ditemukan', 400)
+  }
+
+  const [updated] = await db
+    .update(manualArsip)
+    .set({
+      nama: input.nama,
+      tanggal: input.tanggal,
+      keterangan: input.keterangan,
+      categoryId: category.id,
+      klasifikasiId: klasifikasi?.id ?? null,
+      klasifikasiNamaSnapshot: klasifikasi?.nama ?? null,
+      nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
+      metadata: input.metadata ?? {},
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(manualArsip.id, id),
+      eq(manualArsip.statusArsip, ARCHIVE_STATUS.AKTIF),
+    ))
+    .returning({
+      id: manualArsip.id,
+      nama: manualArsip.nama,
+      tanggal: manualArsip.tanggal,
+      keterangan: manualArsip.keterangan,
+      nominal_realisasi: manualArsip.nominalRealisasi,
+      status_arsip: manualArsip.statusArsip,
+      category_id: manualArsip.categoryId,
+      klasifikasi_id: manualArsip.klasifikasiId,
+      klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
+      metadata: manualArsip.metadata,
+      created_by: manualArsip.createdBy,
+      created_at: manualArsip.createdAt,
+      updated_at: manualArsip.updatedAt,
+    })
+
+  if (!updated) {
+    throw new ManualArsipApiError('Arsip manual hanya dapat diedit saat status AKTIF', 409)
+  }
+
+  return {
+    ...toManualArsipListItem(updated, category, klasifikasi),
+    metadata: sanitizeMetadata(updated.metadata),
   }
 }
 

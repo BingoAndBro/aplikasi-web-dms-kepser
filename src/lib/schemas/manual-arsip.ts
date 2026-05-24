@@ -103,6 +103,8 @@ export const createManualArsipSchema = z
     metadata: value.metadata,
   }))
 
+export const updateManualArsipSchema = createManualArsipSchema
+
 export const listManualArsipQuerySchema = z
   .object({
     category_id: z.string().uuid('Kategori tidak valid').optional(),
@@ -113,6 +115,7 @@ export const listManualArsipQuerySchema = z
   .strict()
 
 export type CreateManualArsipInput = z.infer<typeof createManualArsipSchema>
+export type UpdateManualArsipInput = z.infer<typeof updateManualArsipSchema>
 export type ListManualArsipQuery = z.infer<typeof listManualArsipQuerySchema>
 export type ManualArsipSafeMetadata = z.infer<typeof manualArsipSafeMetadataSchema>
 

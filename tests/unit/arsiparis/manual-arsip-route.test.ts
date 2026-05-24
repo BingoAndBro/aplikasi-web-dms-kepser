@@ -17,8 +17,10 @@ const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
   dbSelect: vi.fn(),
   dbInsert: vi.fn(),
+  dbUpdate: vi.fn(),
   dbTransaction: vi.fn(),
   insertValues: vi.fn(),
+  updateSet: vi.fn(),
   txInsert: vi.fn(),
   txInsertValues: vi.fn(),
   writeManualArsipAttachmentContent: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock('#/db/client', () => ({
   db: {
     select: mocks.dbSelect,
     insert: mocks.dbInsert,
+    update: mocks.dbUpdate,
     transaction: mocks.dbTransaction,
   },
 }))
@@ -55,6 +58,7 @@ import { Route as ManualArsipAttachmentDownloadRoute } from '#/routes/api/arsipa
 
 type RouteGetHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
 type RoutePostHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
+type RoutePatchHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
 
 const categoriesGetHandler = (ManualArsipCategoriesRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
@@ -64,9 +68,12 @@ const indexHandlers = (ManualArsipIndexRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler; POST: RoutePostHandler } } }
 }).options.server.handlers
 
-const detailGetHandler = (ManualArsipDetailRoute as unknown as {
-  options: { server: { handlers: { GET: RouteGetHandler } } }
-}).options.server.handlers.GET
+const detailHandlers = (ManualArsipDetailRoute as unknown as {
+  options: { server: { handlers: { GET: RouteGetHandler; PATCH: RoutePatchHandler } } }
+}).options.server.handlers
+
+const detailGetHandler = detailHandlers.GET
+const detailPatchHandler = detailHandlers.PATCH
 
 const attachmentsPostHandler = (ManualArsipAttachmentsRoute as unknown as {
   options: { server: { handlers: { POST: RoutePostHandler } } }
@@ -398,6 +405,296 @@ describe('manual arsip API foundation routes', () => {
       size_bytes: 10,
       created_at: '2026-05-22T00:00:00.000Z',
     }])
+  })
+
+  it('rejects unauthenticated manual archive metadata PATCH with 401', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects ADMIN-only manual archive metadata PATCH with 403', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-Kasubag manual archive metadata PATCH with 403', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['PEGAWAI'], USER_ID))
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('returns safe 404 for invalid manual archive PATCH id', async () => {
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: 'not-a-uuid' },
+    })
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'Arsip manual tidak ditemukan' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('returns safe 404 for missing manual archive metadata PATCH target', async () => {
+    queueSelectResults([])
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'Arsip manual tidak ditemukan' })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('updates AKTIF manual archive parent metadata and safe snapshots', async () => {
+    const updateBody = {
+      ...validCreateBody(),
+      nama: 'Arsip manual diperbarui',
+      tanggal: '2026-05-24',
+      keterangan: 'Keterangan diperbarui',
+      metadata: { sumber: 'patch' },
+    }
+
+    queueSelectResults(
+      [manualArsipEditParentRow('AKTIF')],
+      [manualCategoryRow()],
+      [klasifikasiRow()],
+    )
+    queueUpdateResult([manualArsipRow({
+      nama: updateBody.nama,
+      tanggal: updateBody.tanggal,
+      keterangan: updateBody.keterangan,
+      metadata: updateBody.metadata,
+      updated_at: new Date('2026-05-24T00:00:00.000Z'),
+    })])
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(updateBody),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({
+      nama: 'Arsip manual diperbarui',
+      tanggal: '2026-05-24',
+      keterangan: 'Keterangan diperbarui',
+      categoryId: CATEGORY_ID,
+      klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiNamaSnapshot: 'Klasifikasi A',
+      nominalRealisasi: '1000',
+      metadata: { sumber: 'patch' },
+      updatedAt: expect.any(Date),
+    }))
+    expect(mocks.updateSet).not.toHaveBeenCalledWith(expect.objectContaining({
+      statusArsip: expect.anything(),
+      createdBy: expect.anything(),
+    }))
+    expect(body.manual_arsip).toEqual({
+      id: MANUAL_ARSIP_ID,
+      nama: 'Arsip manual diperbarui',
+      tanggal: '2026-05-24',
+      keterangan: 'Keterangan diperbarui',
+      nominal_realisasi: 1000,
+      status_arsip: 'AKTIF',
+      category: {
+        id: CATEGORY_ID,
+        nama: 'Pemeliharaan',
+        deskripsi: null,
+      },
+      klasifikasi: {
+        id: KLASIFIKASI_ID,
+        nama: 'Klasifikasi A',
+        nama_snapshot: 'Klasifikasi A',
+      },
+      metadata: { sumber: 'patch' },
+      created_by: USER_ID,
+      created_at: '2026-05-22T00:00:00.000Z',
+      updated_at: '2026-05-24T00:00:00.000Z',
+    })
+  })
+
+  it('rejects manual archive metadata PATCH for non-AKTIF statuses with 409', async () => {
+    for (const status_arsip of ['INAKTIF', 'USUL_MUSNAH', 'DIMUSNAHKAN']) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+      queueSelectResults([manualArsipEditParentRow(status_arsip)])
+
+      const response = await detailPatchHandler({
+        request: createPatchRequest(validCreateBody()),
+        params: { id: MANUAL_ARSIP_ID },
+      })
+
+      expect(response.status).toBe(409)
+      expect(await response.json()).toEqual({
+        error: 'Arsip manual hanya dapat diedit saat status AKTIF',
+      })
+      expect(mocks.dbUpdate).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects missing required metadata fields on manual archive PATCH', async () => {
+    const body = validCreateBody() as Record<string, unknown>
+    delete body.nama
+
+    queueSelectResults([manualArsipEditParentRow('AKTIF')])
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(body),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: expect.any(String) })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid date-only values on manual archive PATCH', async () => {
+    for (const tanggal of ['24/05/2026', '2026-05-24T00:00:00.000Z']) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+      queueSelectResults([manualArsipEditParentRow('AKTIF')])
+
+      const response = await detailPatchHandler({
+        request: createPatchRequest({
+          ...validCreateBody(),
+          tanggal,
+        }),
+        params: { id: MANUAL_ARSIP_ID },
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'Tanggal harus valid dengan format YYYY-MM-DD' })
+      expect(mocks.dbUpdate).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects invalid nominal_realisasi values on manual archive PATCH', async () => {
+    const cases: Array<[unknown, string]> = [
+      [undefined, 'Nominal realisasi wajib diisi'],
+      [null, 'Nominal realisasi wajib diisi'],
+      ['', 'Nominal realisasi wajib diisi'],
+      [0, 'Nominal realisasi harus lebih dari 0'],
+      [-1, 'Nominal realisasi harus lebih dari 0'],
+      [1000.5, 'Nominal realisasi harus berupa bilangan bulat'],
+      ['Rp 1.500.000', 'Nominal realisasi harus berupa angka'],
+      ['1.500.000', 'Nominal realisasi harus berupa angka'],
+    ]
+
+    for (const [nominal_realisasi, expectedError] of cases) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+      const body = validCreateBody() as Record<string, unknown>
+      if (nominal_realisasi === undefined) {
+        delete body.nominal_realisasi
+      } else {
+        body.nominal_realisasi = nominal_realisasi
+      }
+      queueSelectResults([manualArsipEditParentRow('AKTIF')])
+
+      const response = await detailPatchHandler({
+        request: createPatchRequest(body),
+        params: { id: MANUAL_ARSIP_ID },
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: expectedError })
+      expect(mocks.dbUpdate).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects invalid category on manual archive PATCH', async () => {
+    queueSelectResults(
+      [manualArsipEditParentRow('AKTIF')],
+      [],
+    )
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Kategori arsip manual tidak ditemukan' })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid klasifikasi on manual archive PATCH', async () => {
+    queueSelectResults(
+      [manualArsipEditParentRow('AKTIF')],
+      [manualCategoryRow()],
+      [],
+    )
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Klasifikasi arsip tidak ditemukan' })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('does not expose file access or sensitive fields in manual archive PATCH response', async () => {
+    queueSelectResults(
+      [manualArsipEditParentRow('AKTIF')],
+      [manualCategoryRow()],
+      [klasifikasiRow()],
+    )
+    queueUpdateResult([{
+      ...manualArsipRow(),
+      logical_path: 'must-not-leak.pdf',
+      physical_path: 'C:\\storage\\must-not-leak.pdf',
+      storage_root: TEST_STORAGE_ROOT,
+      token: 'secret-token',
+      sql: 'select * from secret',
+    }])
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+    const body = JSON.stringify(await response.json())
+
+    expect(response.status).toBe(200)
+    expect(body).not.toContain('logical_path')
+    expect(body).not.toContain('logicalPath')
+    expect(body).not.toContain('physical_path')
+    expect(body).not.toContain('storage_root')
+    expect(body).not.toContain(TEST_STORAGE_ROOT)
+    expect(body).not.toContain('token')
+    expect(body).not.toContain('sql')
+    expect(body).not.toContain('env')
+    expect(body).not.toContain('secret')
   })
 
   it('allows KEPALA_SUB_BAGIAN_UMUM to upload a PDF attachment with a matching title', async () => {
@@ -1160,6 +1457,17 @@ function createPostRequest(body: Record<string, unknown>, origin = 'http://local
   })
 }
 
+function createPatchRequest(body: Record<string, unknown>, origin = 'http://localhost') {
+  return new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: origin,
+    },
+    body: JSON.stringify(body),
+  })
+}
+
 function createAttachmentUploadRequest(
   files: File[],
   titles: string[] = [],
@@ -1214,21 +1522,34 @@ function klasifikasiRow() {
   }
 }
 
-function manualArsipRow() {
+function manualArsipRow(overrides: Partial<{
+  nama: string
+  tanggal: string
+  keterangan: string
+  nominal_realisasi: string | number | null
+  status_arsip: string
+  category_id: string
+  klasifikasi_id: string | null
+  klasifikasi_nama_snapshot: string | null
+  metadata: Record<string, unknown>
+  created_by: string
+  created_at: Date
+  updated_at: Date
+}> = {}) {
   return {
     id: MANUAL_ARSIP_ID,
-    nama: 'Arsip manual uji',
-    tanggal: '2026-05-22',
-    keterangan: 'Keterangan arsip manual',
-    nominal_realisasi: '1000.00',
-    status_arsip: 'AKTIF',
-    category_id: CATEGORY_ID,
-    klasifikasi_id: KLASIFIKASI_ID,
-    klasifikasi_nama_snapshot: 'Klasifikasi A',
-    metadata: { sumber: 'manual' },
-    created_by: USER_ID,
-    created_at: new Date('2026-05-22T00:00:00.000Z'),
-    updated_at: new Date('2026-05-22T00:00:00.000Z'),
+    nama: overrides.nama ?? 'Arsip manual uji',
+    tanggal: overrides.tanggal ?? '2026-05-22',
+    keterangan: overrides.keterangan ?? 'Keterangan arsip manual',
+    nominal_realisasi: overrides.nominal_realisasi ?? '1000.00',
+    status_arsip: overrides.status_arsip ?? 'AKTIF',
+    category_id: overrides.category_id ?? CATEGORY_ID,
+    klasifikasi_id: overrides.klasifikasi_id ?? KLASIFIKASI_ID,
+    klasifikasi_nama_snapshot: overrides.klasifikasi_nama_snapshot ?? 'Klasifikasi A',
+    metadata: overrides.metadata ?? { sumber: 'manual' },
+    created_by: overrides.created_by ?? USER_ID,
+    created_at: overrides.created_at ?? new Date('2026-05-22T00:00:00.000Z'),
+    updated_at: overrides.updated_at ?? new Date('2026-05-22T00:00:00.000Z'),
   }
 }
 
@@ -1264,6 +1585,13 @@ function manualArsipUploadParentRow(status_arsip: string, overrides: Partial<{
     tanggal: overrides.tanggal ?? '2026-05-23',
     status_arsip,
     category_nama: overrides.category_nama ?? 'Kategori',
+  }
+}
+
+function manualArsipEditParentRow(status_arsip: string) {
+  return {
+    id: MANUAL_ARSIP_ID,
+    status_arsip,
   }
 }
 
@@ -1336,6 +1664,18 @@ function queueInsertResult(result: unknown[]) {
       returning: vi.fn(async () => result),
     }),
   })
+}
+
+function queueUpdateResult(result: unknown[]) {
+  const updateQuery: Record<string, unknown> = {}
+
+  updateQuery.set = mocks.updateSet.mockReturnValue({
+    where: vi.fn(() => ({
+      returning: vi.fn(async () => result),
+    })),
+  })
+
+  mocks.dbUpdate.mockReturnValue(updateQuery)
 }
 
 function queueTransactionInsertResult(result: unknown[]) {
