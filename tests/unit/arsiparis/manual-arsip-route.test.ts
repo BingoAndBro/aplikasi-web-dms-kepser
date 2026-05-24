@@ -7,6 +7,7 @@ const ADMIN_ID = '22222222-2222-4222-8222-222222222222'
 const MANUAL_ARSIP_ID = '33333333-3333-4333-8333-333333333333'
 const CATEGORY_ID = '44444444-4444-4444-8444-444444444444'
 const KLASIFIKASI_ID = '55555555-5555-4555-8555-555555555555'
+const CANONICAL_ARSIP_ID = '66666666-6666-4666-8666-666666666666'
 const ATTACHMENT_ID = '77777777-7777-4777-8777-777777777777'
 const ATTACHMENT_LOGICAL_PATH = 'manual-arsip/test-user/test-arsip/test.pdf'
 const TEST_STORAGE_ROOT = path.resolve('.tmp', 'manual-arsip-route-storage')
@@ -23,6 +24,8 @@ const mocks = vi.hoisted(() => ({
   updateSet: vi.fn(),
   txInsert: vi.fn(),
   txInsertValues: vi.fn(),
+  txUpdate: vi.fn(),
+  txUpdateSet: vi.fn(),
   writeManualArsipAttachmentContent: vi.fn(),
 }))
 
@@ -481,7 +484,7 @@ describe('manual arsip API foundation routes', () => {
 
   it('creates with required retention metadata, derived snapshots, and no file access fields', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
-    queueInsertResult([manualArsipRow()])
+    queueManualArchiveCreateTransaction()
 
     const response = await indexHandlers.POST({
       request: createPostRequest(validCreateBody()),
@@ -489,7 +492,9 @@ describe('manual arsip API foundation routes', () => {
     const body = await response.json()
 
     expect(response.status).toBe(201)
-    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
       createdBy: USER_ID,
       archivedBy: USER_ID,
       statusArsip: 'AKTIF',
@@ -506,6 +511,9 @@ describe('manual arsip API foundation routes', () => {
       nominalRealisasi: '1000',
       canonicalArsipId: null,
     }))
+    expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
+      canonicalArsipId: CANONICAL_ARSIP_ID,
+    }))
     expect(JSON.stringify(body)).not.toContain('logical_path')
     expect(JSON.stringify(body)).not.toContain('logicalPath')
     expect(JSON.stringify(body)).not.toContain('file_url')
@@ -518,7 +526,7 @@ describe('manual arsip API foundation routes', () => {
 
   it('creates with Permanen retention using the transitional sentinel dates', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
-    queueInsertResult([manualArsipRow()])
+    queueManualArchiveCreateTransaction()
 
     const response = await indexHandlers.POST({
       request: createPostRequest({
@@ -529,12 +537,93 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
       retensiAktif: 'Permanen',
       retensiInaktif: '1 Tahun',
       masaAktifBerakhir: '9999-12-31',
       masaInaktifBerakhir: '9999-12-31',
     }))
+  })
+
+  it('creates a canonical MANUAL row from the inserted source row in the same transaction', async () => {
+    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueManualArchiveCreateTransaction({
+      source: manualArsipRow({
+        nama: 'Canonical source row',
+        nomor_surat: 'B-099/2026',
+        tanggal_diarsipkan: '2026-06-02',
+        klasifikasi_kode_snapshot: '001.02',
+        klasifikasi_nama_snapshot: 'Klasifikasi A',
+        retensi_aktif: '5 Tahun',
+        retensi_inaktif: '10 Tahun',
+        masa_aktif_berakhir: '2031-06-02',
+        masa_inaktif_berakhir: '2041-06-02',
+        nominal_realisasi: '250000.00',
+      }),
+    })
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest({
+        ...validCreateBody(),
+        nama: 'Canonical source row',
+        nomor_surat: 'B-099/2026',
+        tanggal_diarsipkan: '2026-06-02',
+        retensi_aktif: '5 Tahun',
+        retensi_inaktif: '10 Tahun',
+        nominal_realisasi: 250000,
+      }),
+    })
+
+    expect(response.status).toBe(201)
+    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      sourceType: 'MANUAL',
+      dokumenId: null,
+      namaArsip: 'Canonical source row',
+      nomorSurat: 'B-099/2026',
+      klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiKodeSnapshot: '001.02',
+      klasifikasiNamaSnapshot: 'Klasifikasi A',
+      retensiAktif: '5 Tahun',
+      retensiInaktif: '10 Tahun',
+      masaAktifBerakhir: '2031-06-02',
+      masaInaktifBerakhir: '2041-06-02',
+      archivedAt: new Date('2026-06-02T00:00:00.000Z'),
+      archivedBy: USER_ID,
+      createdBy: USER_ID,
+      nominalRealisasi: '250000.00',
+      statusArsip: 'AKTIF',
+      metadata: {},
+    }))
+    expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
+      canonicalArsipId: CANONICAL_ARSIP_ID,
+    }))
+  })
+
+  it('surfaces a safe create failure when canonical MANUAL insert fails inside the transaction', async () => {
+    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueManualArchiveCreateTransaction({
+      canonicalError: new Error('CANONICAL_INSERT_FAILED'),
+    })
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+    const body = JSON.stringify(await response.json())
+
+    expect(response.status).toBe(500)
+    expect(body).toBe('{"error":"Gagal membuat arsip manual"}')
+    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
+    expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
+    expect(mocks.txUpdateSet).not.toHaveBeenCalled()
+    expect(body).not.toContain('logical_path')
+    expect(body).not.toContain('logicalPath')
+    expect(body).not.toContain('physical')
+    expect(body).not.toContain('storage')
+    expect(body).not.toContain('token')
+    expect(body).not.toContain('sql')
+    expect(body).not.toContain('env')
+    expect(body).not.toContain('secret')
   })
 
   it('rejects missing active klasifikasi lookup on create', async () => {
@@ -1821,12 +1910,21 @@ function klasifikasiRow() {
 function manualArsipRow(overrides: Partial<{
   nama: string
   tanggal: string
+  nomor_surat: string | null
+  tanggal_diarsipkan: string | null
   keterangan: string
   nominal_realisasi: string | number | null
   status_arsip: string
   category_id: string
   klasifikasi_id: string | null
+  klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string | null
+  retensi_aktif: string | null
+  retensi_inaktif: string | null
+  masa_aktif_berakhir: string | null
+  masa_inaktif_berakhir: string | null
+  archived_by: string | null
+  canonical_arsip_id: string | null
   metadata: Record<string, unknown>
   created_by: string
   created_at: Date
@@ -1836,12 +1934,21 @@ function manualArsipRow(overrides: Partial<{
     id: MANUAL_ARSIP_ID,
     nama: overrides.nama ?? 'Arsip manual uji',
     tanggal: overrides.tanggal ?? '2026-05-22',
+    nomor_surat: overrides.nomor_surat ?? 'B-001/2026',
+    tanggal_diarsipkan: overrides.tanggal_diarsipkan ?? '2026-05-24',
     keterangan: overrides.keterangan ?? 'Keterangan arsip manual',
     nominal_realisasi: overrides.nominal_realisasi ?? '1000.00',
     status_arsip: overrides.status_arsip ?? 'AKTIF',
     category_id: overrides.category_id ?? CATEGORY_ID,
     klasifikasi_id: overrides.klasifikasi_id ?? KLASIFIKASI_ID,
+    klasifikasi_kode_snapshot: overrides.klasifikasi_kode_snapshot ?? '001.02',
     klasifikasi_nama_snapshot: overrides.klasifikasi_nama_snapshot ?? 'Klasifikasi A',
+    retensi_aktif: overrides.retensi_aktif ?? '1 Tahun',
+    retensi_inaktif: overrides.retensi_inaktif ?? '3 Tahun',
+    masa_aktif_berakhir: overrides.masa_aktif_berakhir ?? '2027-05-24',
+    masa_inaktif_berakhir: overrides.masa_inaktif_berakhir ?? '2030-05-24',
+    archived_by: overrides.archived_by ?? USER_ID,
+    canonical_arsip_id: overrides.canonical_arsip_id ?? null,
     metadata: overrides.metadata ?? { sumber: 'manual' },
     created_by: overrides.created_by ?? USER_ID,
     created_at: overrides.created_at ?? new Date('2026-05-22T00:00:00.000Z'),
@@ -1982,6 +2089,52 @@ function queueTransactionInsertResult(result: unknown[]) {
           returning: vi.fn(async () => result),
         }),
       }),
+    }
+
+    return operation(tx)
+  })
+}
+
+function queueManualArchiveCreateTransaction(options: {
+  source?: ReturnType<typeof manualArsipRow>
+  canonical?: { id: string } | null
+  linked?: { id: string; canonical_arsip_id: string | null } | null
+  canonicalError?: Error
+  linkError?: Error
+} = {}) {
+  const insertResults = [
+    [options.source ?? manualArsipRow()],
+    [options.canonical ?? { id: CANONICAL_ARSIP_ID }],
+  ]
+
+  mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      insert: mocks.txInsert.mockImplementation(() => ({
+        values: mocks.txInsertValues.mockImplementation(() => ({
+          returning: vi.fn(async () => {
+            const callNumber = mocks.txInsertValues.mock.calls.length
+            if (callNumber === 2 && options.canonicalError) {
+              throw options.canonicalError
+            }
+
+            return insertResults.shift() ?? []
+          }),
+        })),
+      })),
+      update: mocks.txUpdate.mockImplementation(() => ({
+        set: mocks.txUpdateSet.mockImplementation(() => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => {
+              if (options.linkError) throw options.linkError
+
+              return [options.linked ?? {
+                id: MANUAL_ARSIP_ID,
+                canonical_arsip_id: CANONICAL_ARSIP_ID,
+              }]
+            }),
+          })),
+        })),
+      })),
     }
 
     return operation(tx)

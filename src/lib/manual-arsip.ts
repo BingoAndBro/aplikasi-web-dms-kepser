@@ -1,8 +1,9 @@
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { and, asc, desc, eq, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
+  arsip,
   manualArsip,
   manualArsipAttachment,
   manualArsipCategory,
@@ -15,6 +16,7 @@ import {
 } from '#/lib/auth/local-server-auth'
 import { ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
+import { createManualArchiveCanonicalWritePlan } from '#/lib/archive/manual-archive-canonical'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import type {
   CreateManualArsipInput,
@@ -184,44 +186,113 @@ export async function createManualArsipRecord(
     retensiInaktif: input.retensi_inaktif,
   })
 
-  const [created] = await db
-    .insert(manualArsip)
-    .values({
-      nama: input.nama,
-      tanggal: input.tanggal,
-      nomorSurat: input.nomor_surat,
-      tanggalDiarsipkan: input.tanggal_diarsipkan,
-      keterangan: input.keterangan,
-      categoryId: category.id,
-      klasifikasiId: klasifikasi.id,
-      klasifikasiKodeSnapshot: klasifikasi.kode,
-      klasifikasiNamaSnapshot: klasifikasi.nama,
-      retensiAktif: input.retensi_aktif,
-      retensiInaktif: input.retensi_inaktif,
-      masaAktifBerakhir: retentionDates.masaAktifBerakhir,
-      masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
-      nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
-      statusArsip: ARCHIVE_STATUS.AKTIF,
-      metadata: input.metadata ?? {},
-      createdBy,
-      archivedBy: createdBy,
-      canonicalArsipId: null,
+  const created = await db.transaction(async (tx) => {
+    const [source] = await tx
+      .insert(manualArsip)
+      .values({
+        nama: input.nama,
+        tanggal: input.tanggal,
+        nomorSurat: input.nomor_surat,
+        tanggalDiarsipkan: input.tanggal_diarsipkan,
+        keterangan: input.keterangan,
+        categoryId: category.id,
+        klasifikasiId: klasifikasi.id,
+        klasifikasiKodeSnapshot: klasifikasi.kode,
+        klasifikasiNamaSnapshot: klasifikasi.nama,
+        retensiAktif: input.retensi_aktif,
+        retensiInaktif: input.retensi_inaktif,
+        masaAktifBerakhir: retentionDates.masaAktifBerakhir,
+        masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
+        nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
+        statusArsip: ARCHIVE_STATUS.AKTIF,
+        metadata: input.metadata ?? {},
+        createdBy,
+        archivedBy: createdBy,
+        canonicalArsipId: null,
+      })
+      .returning({
+        id: manualArsip.id,
+        nama: manualArsip.nama,
+        tanggal: manualArsip.tanggal,
+        nomor_surat: manualArsip.nomorSurat,
+        tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
+        keterangan: manualArsip.keterangan,
+        nominal_realisasi: manualArsip.nominalRealisasi,
+        status_arsip: manualArsip.statusArsip,
+        category_id: manualArsip.categoryId,
+        klasifikasi_id: manualArsip.klasifikasiId,
+        klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
+        klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
+        retensi_aktif: manualArsip.retensiAktif,
+        retensi_inaktif: manualArsip.retensiInaktif,
+        masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
+        masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
+        archived_by: manualArsip.archivedBy,
+        canonical_arsip_id: manualArsip.canonicalArsipId,
+        metadata: manualArsip.metadata,
+        created_by: manualArsip.createdBy,
+        created_at: manualArsip.createdAt,
+        updated_at: manualArsip.updatedAt,
+      })
+
+    if (!source) {
+      throw new Error('MANUAL_ARCHIVE_SOURCE_CREATE_FAILED')
+    }
+
+    const plan = createManualArchiveCanonicalWritePlan({
+      id: source.id,
+      canonicalArsipId: source.canonical_arsip_id,
+      nama: source.nama,
+      nomorSurat: source.nomor_surat,
+      tanggalDiarsipkan: source.tanggal_diarsipkan,
+      klasifikasiId: source.klasifikasi_id,
+      klasifikasiKodeSnapshot: source.klasifikasi_kode_snapshot,
+      klasifikasiNamaSnapshot: source.klasifikasi_nama_snapshot,
+      retensiAktif: source.retensi_aktif,
+      retensiInaktif: source.retensi_inaktif,
+      masaAktifBerakhir: source.masa_aktif_berakhir,
+      masaInaktifBerakhir: source.masa_inaktif_berakhir,
+      archivedBy: source.archived_by,
+      createdBy: source.created_by,
+      nominalRealisasi: source.nominal_realisasi,
+      statusArsip: source.status_arsip,
     })
-    .returning({
-      id: manualArsip.id,
-      nama: manualArsip.nama,
-      tanggal: manualArsip.tanggal,
-      keterangan: manualArsip.keterangan,
-      nominal_realisasi: manualArsip.nominalRealisasi,
-      status_arsip: manualArsip.statusArsip,
-      category_id: manualArsip.categoryId,
-      klasifikasi_id: manualArsip.klasifikasiId,
-      klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
-      metadata: manualArsip.metadata,
-      created_by: manualArsip.createdBy,
-      created_at: manualArsip.createdAt,
-      updated_at: manualArsip.updatedAt,
-    })
+
+    if (plan.action !== 'create') {
+      throw new Error('MANUAL_ARCHIVE_CANONICAL_PLAN_NOT_CREATE')
+    }
+
+    const [canonical] = await tx
+      .insert(arsip)
+      .values(plan.insertValues)
+      .returning({
+        id: arsip.id,
+      })
+
+    if (!canonical) {
+      throw new Error('MANUAL_ARCHIVE_CANONICAL_CREATE_FAILED')
+    }
+
+    const [linked] = await tx
+      .update(manualArsip)
+      .set({
+        canonicalArsipId: canonical.id,
+      })
+      .where(and(
+        eq(manualArsip.id, source.id),
+        isNull(manualArsip.canonicalArsipId),
+      ))
+      .returning({
+        id: manualArsip.id,
+        canonical_arsip_id: manualArsip.canonicalArsipId,
+      })
+
+    if (!linked?.canonical_arsip_id) {
+      throw new Error('MANUAL_ARCHIVE_CANONICAL_LINK_FAILED')
+    }
+
+    return source
+  })
 
   if (!created) {
     throw new ManualArsipApiError('Gagal membuat arsip manual', 500)
