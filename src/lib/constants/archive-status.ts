@@ -14,3 +14,14 @@ export const ARCHIVE_STATUS: { [K in StatusArsip]: K } = {
   DIMUSNAHKAN: 'DIMUSNAHKAN',
 }
 
+export const ARCHIVE_SOURCE_TYPE_VALUES = [
+  'WORKFLOW',
+  'MANUAL',
+] as const
+
+export type ArchiveSourceType = typeof ARCHIVE_SOURCE_TYPE_VALUES[number]
+
+export const ARCHIVE_SOURCE_TYPE: { [K in ArchiveSourceType]: K } = {
+  WORKFLOW: 'WORKFLOW',
+  MANUAL: 'MANUAL',
+}

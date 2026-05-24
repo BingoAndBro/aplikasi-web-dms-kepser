@@ -36,6 +36,13 @@
       "when": 1779522000000,
       "tag": "0004_manual_archive_attachment_title",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779609600000,
+      "tag": "0005_canonical_archive_schema_foundation",
+      "breakpoints": true
     }
   ]
 }
