@@ -1,28 +1,30 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
-import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 import {
   Trash2, ChevronRight, AlertCircle, Loader2,
-  Eye,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/usul-musnah/')({ component: UsulMusnahPage })
 
 type MusnahItem = {
-  arsip_id: string
-  musnah_id: string
+  id: string
   nomor_surat: string
-  judul_dokumen: string
-  musnah_status: 'MENUNGGU' | 'DISETUJUI' | 'DITOLAK'
-  diusulkan_oleh: string
-  created_at: string
-  decided_by: string | null
-  decided_at: string | null
-  catatan: string | null
+  nama_arsip: string
+  klasifikasi_arsip: string
+  tanggal_arsip: string | null
+  retensi_aktif: string
+  retensi_inaktif: string
+  masa_aktif_berakhir: string | null
+  masa_inaktif_berakhir: string | null
+  nominal_realisasi: string | number | null
+  sumber: string
+  jumlah_lampiran: number | null
+  source_warnings: string[]
 }
 
 type UsulMusnahResponse = {
@@ -30,27 +32,15 @@ type UsulMusnahResponse = {
   error?: string
 }
 
-type FungsiOption = { id: string; nama: string }
-
 function UsulMusnahPage() {
   const [items, setItems] = useState<MusnahItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [fungsiList, setFungsiList] = useState<{ id: string; nama: string }[]>([])
-  const [fungsiFilter, setFungsiFilter] = useState('')
-
-  useEffect(() => {
-    apiFetch<FungsiOption[]>('/master-fungsi')
-      .then(data => { setFungsiList(data) })
-      .catch(() => { setFungsiList([]) })
-  }, [])
 
   async function fetchData() {
     setLoading(true); setError(null)
     try {
-      const params = new URLSearchParams()
-      if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      const json = await apiFetch<UsulMusnahResponse>('/arsiparis/usul-musnah', { query: params })
+      const json = await apiFetch<UsulMusnahResponse>('/arsiparis/usul-musnah')
       setItems(json.usul_musnah ?? [])
     } catch (error) {
       if (error instanceof ApiError) {
@@ -66,15 +56,7 @@ function UsulMusnahPage() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchData() }, [fungsiFilter])
-
-
-
-  const statusBadge = (status: MusnahItem['musnah_status']) => {
-    if (status === 'MENUNGGU') return <Badge className='bg-amber-100 text-amber-700 border-amber-200 text-xs'>MENUNGGU</Badge>
-    if (status === 'DISETUJUI') return <Badge className='bg-green-100 text-green-700 border-green-200 text-xs'>DISETUJUI</Badge>
-    return <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">DITOLAK</Badge>
-  }
+  useEffect(() => { fetchData() }, [])
 
   return (
     <PageLayout>
@@ -86,15 +68,11 @@ function UsulMusnahPage() {
             <span className="text-primary">Usul Musnah</span>
           </div>
           <h2 className="font-headline text-2xl font-extrabold text-on-surface">Usul Musnah</h2>
-          <p className="text-on-surface-variant text-xs mt-1">{items.length} pengajuan pemusnahan.</p>
+          <p className="text-on-surface-variant text-xs mt-1">{items.length} arsip berstatus usul musnah.</p>
         </div>
 
-        <div className="flex gap-3">
-          <select value={fungsiFilter} onChange={e => setFungsiFilter(e.target.value)} className="px-3 py-2 bg-white border border-border rounded-lg text-xs cursor-pointer">
-            <option value="">Semua Fungsi</option>
-            {fungsiList.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
-          </select>
-          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter('')}>Reset</Button>}
+        <div className="rounded-xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 px-4 py-3 text-xs text-on-surface-variant">
+          Pencarian dan filter lintas metadata ditunda. Halaman ini menampilkan daftar kanonis read-only berdasarkan status arsip.
         </div>
 
         {loading ? (
@@ -108,7 +86,7 @@ function UsulMusnahPage() {
           <div className="flex flex-col items-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
             <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center"><Trash2 size={24} className="text-blue-500" /></div>
             <p className="font-headline text-lg font-bold text-on-surface">Tidak ada pengajuan</p>
-            <p className="text-on-surface-variant text-xs">Pengajuan pemusnahan arsip akan muncul di sini.</p>
+            <p className="text-on-surface-variant text-xs">Tidak ada baris arsip untuk status ini.</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
@@ -117,26 +95,47 @@ function UsulMusnahPage() {
                 <thead>
                   <tr className="bg-surface-container-low/30 text-left">
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Nama Arsip</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Nomor Surat</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Judul</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Usul</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Status</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-16">Detail</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Klasifikasi Arsip</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Arsip</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Retensi</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Masa Berakhir</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-right">Nominal Realisasi</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Sumber</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Lampiran</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((a, i) => (
-                    <tr key={a.musnah_id} className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
+                    <tr key={a.id} className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
                       <td className="px-4 py-3 text-center text-outline">{i + 1}</td>
-                      <td className="px-4 py-3 font-semibold text-on-surface">{a.nomor_surat}</td>
-                      <td className="px-4 py-3 text-on-surface line-clamp-1">{a.judul_dokumen}</td>
-                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(a.created_at)}</td>
-                      <td className="px-4 py-3 text-center">{statusBadge(a.musnah_status)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Link to="/arsiparis/usul-musnah/$id" params={{ id: a.musnah_id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail usul musnah ${a.nomor_surat}`}><Eye size={14} /></Button>
-                        </Link>
+                      <td className="px-4 py-3 text-on-surface">
+                        <p className="font-semibold line-clamp-1">{a.nama_arsip}</p>
+                        {a.source_warnings.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {a.source_warnings.map((warning) => (
+                              <Badge key={warning} className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                                {warning}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </td>
+                      <td className="px-4 py-3 font-semibold text-on-surface">{a.nomor_surat}</td>
+                      <td className="px-4 py-3 text-on-surface">{a.klasifikasi_arsip}</td>
+                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatNullableDate(a.tanggal_arsip)}</td>
+                      <td className="px-4 py-3 text-on-surface">
+                        <p>Aktif: {a.retensi_aktif}</p>
+                        <p className="text-on-surface-variant">Inaktif: {a.retensi_inaktif}</p>
+                      </td>
+                      <td className="px-4 py-3 text-on-surface">
+                        <p>Aktif: {formatNullableDate(a.masa_aktif_berakhir)}</p>
+                        <p className="text-on-surface-variant">Inaktif: {formatNullableDate(a.masa_inaktif_berakhir)}</p>
+                      </td>
+                      <td className="px-4 py-3 text-right text-on-surface">{formatNominal(a.nominal_realisasi)}</td>
+                      <td className="px-4 py-3 text-center"><SourceBadge label={a.sumber} /></td>
+                      <td className="px-4 py-3 text-center text-on-surface">{a.jumlah_lampiran ?? '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -147,4 +146,30 @@ function UsulMusnahPage() {
       </div>
     </PageLayout>
   )
+}
+
+function SourceBadge({ label }: { label: string }) {
+  const className = label === 'Arsip Manual'
+    ? 'bg-sky-100 text-sky-700 border-sky-200 text-xs'
+    : label === 'Dokumen Persetujuan'
+      ? 'bg-emerald-100 text-emerald-700 border-emerald-200 text-xs'
+      : 'bg-slate-100 text-slate-700 border-slate-200 text-xs'
+
+  return <Badge className={className}>{label}</Badge>
+}
+
+function formatNullableDate(value: string | null): string {
+  return value ? formatDate(value) : '-'
+}
+
+function formatNominal(value: string | number | null): string {
+  if (value === null || value === '') return '-'
+  const numericValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numericValue)) return String(value)
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(numericValue)
 }

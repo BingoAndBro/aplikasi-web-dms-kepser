@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
   FolderOpen, ChevronRight, AlertCircle, Loader2,
-  Eye,
 } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
-import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/aktif/')({ component: ArsipAktifPage })
@@ -15,11 +14,17 @@ export const Route = createFileRoute('/arsiparis/aktif/')({ component: ArsipAkti
 type ArsipAktifItem = {
   id: string
   nomor_surat: string
-  judul_dokumen: string
-  fungsi_nama: string
-  kegiatan_nama: string
-  archived_at: string
-  masa_aktif_berakhir: string
+  nama_arsip: string
+  klasifikasi_arsip: string
+  tanggal_arsip: string | null
+  retensi_aktif: string
+  retensi_inaktif: string
+  masa_aktif_berakhir: string | null
+  masa_inaktif_berakhir: string | null
+  nominal_realisasi: string | number | null
+  sumber: string
+  jumlah_lampiran: number | null
+  source_warnings: string[]
 }
 
 type ArsipAktifResponse = {
@@ -27,29 +32,15 @@ type ArsipAktifResponse = {
   error?: string
 }
 
-type FungsiOption = { id: string; nama: string }
-
 function ArsipAktifPage() {
   const [items, setItems] = useState<ArsipAktifItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [fungsiList, setFungsiList] = useState<{ id: string; nama: string }[]>([])
-  const [fungsiFilter, setFungsiFilter] = useState('')
-  const [q, setQ] = useState('')
-
-  useEffect(() => {
-    apiFetch<FungsiOption[]>('/master-fungsi')
-      .then(data => { setFungsiList(data) })
-      .catch(() => { setFungsiList([]) })
-  }, [])
 
   async function fetchData() {
     setLoading(true); setError(null)
     try {
-      const params = new URLSearchParams()
-      if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      if (q) params.set('q', q)
-      const json = await apiFetch<ArsipAktifResponse>('/arsiparis/aktif', { query: params })
+      const json = await apiFetch<ArsipAktifResponse>('/arsiparis/aktif')
       setItems(json.aktif ?? [])
     } catch (error) {
       if (error instanceof ApiError) {
@@ -65,8 +56,7 @@ function ArsipAktifPage() {
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchData() }, [fungsiFilter, q])
-
+  useEffect(() => { fetchData() }, [])
 
 
   return (
@@ -82,16 +72,8 @@ function ArsipAktifPage() {
           <p className="text-on-surface-variant text-xs mt-1">{items.length} arsip dalam masa aktif.</p>
         </div>
 
-        <div className="flex gap-3 flex-wrap">
-          <select value={fungsiFilter} onChange={e => setFungsiFilter(e.target.value)} className="px-3 py-2 bg-white border border-border rounded-lg text-xs cursor-pointer">
-            <option value="">Semua Fungsi</option>
-            {fungsiList.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
-          </select>
-          <input
-            type="text" value={q} onChange={e => setQ(e.target.value)} placeholder="Cari nomor surat atau judul..."
-            className="px-3 py-2 bg-white border border-border rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring w-64"
-          />
-          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter("")}>Reset</Button>}
+        <div className="rounded-xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 px-4 py-3 text-xs text-on-surface-variant">
+          Pencarian dan filter lintas metadata ditunda. Halaman ini menampilkan daftar kanonis read-only berdasarkan status arsip.
         </div>
 
         {loading ? (
@@ -114,34 +96,47 @@ function ArsipAktifPage() {
                 <thead>
                   <tr className="bg-surface-container-low/30 text-left">
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Nama Arsip</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Nomor Surat</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Judul</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Fungsi</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kegiatan</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Klasifikasi Arsip</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Arsip</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Masa Aktif Berakhir</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-16">Detail</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Retensi</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Masa Berakhir</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-right">Nominal Realisasi</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Sumber</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Lampiran</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((a, i) => (
                     <tr key={a.id} className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
                       <td className="px-4 py-3 text-center text-outline">{i + 1}</td>
+                      <td className="px-4 py-3 text-on-surface">
+                        <p className="font-semibold line-clamp-1">{a.nama_arsip}</p>
+                        {a.source_warnings.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {a.source_warnings.map((warning) => (
+                              <Badge key={warning} className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                                {warning}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-semibold text-on-surface">{a.nomor_surat}</td>
-                      <td className="px-4 py-3 text-on-surface line-clamp-1">{a.judul_dokumen}</td>
-                      <td className="px-4 py-3 text-on-surface">{a.fungsi_nama}</td>
-                      <td className="px-4 py-3 text-on-surface">{a.kegiatan_nama}</td>
-                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(a.archived_at)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={cn('text-xs font-semibold', new Date(a.masa_aktif_berakhir) < new Date() ? 'text-error' : 'text-on-surface')}>
-                          {formatDate(a.masa_aktif_berakhir)}
-                        </span>
+                      <td className="px-4 py-3 text-on-surface">{a.klasifikasi_arsip}</td>
+                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatNullableDate(a.tanggal_arsip)}</td>
+                      <td className="px-4 py-3 text-on-surface">
+                        <p>Aktif: {a.retensi_aktif}</p>
+                        <p className="text-on-surface-variant">Inaktif: {a.retensi_inaktif}</p>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <Link to="/arsiparis/aktif/$id" params={{ id: a.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail arsip ${a.nomor_surat}`}><Eye size={14} /></Button>
-                        </Link>
+                      <td className="px-4 py-3 text-on-surface">
+                        <p>Aktif: {formatNullableDate(a.masa_aktif_berakhir)}</p>
+                        <p className="text-on-surface-variant">Inaktif: {formatNullableDate(a.masa_inaktif_berakhir)}</p>
                       </td>
+                      <td className="px-4 py-3 text-right text-on-surface">{formatNominal(a.nominal_realisasi)}</td>
+                      <td className="px-4 py-3 text-center"><SourceBadge label={a.sumber} /></td>
+                      <td className="px-4 py-3 text-center text-on-surface">{a.jumlah_lampiran ?? '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -152,4 +147,30 @@ function ArsipAktifPage() {
       </div>
     </PageLayout>
   )
+}
+
+function SourceBadge({ label }: { label: string }) {
+  const className = label === 'Arsip Manual'
+    ? 'bg-sky-100 text-sky-700 border-sky-200 text-xs'
+    : label === 'Dokumen Persetujuan'
+      ? 'bg-emerald-100 text-emerald-700 border-emerald-200 text-xs'
+      : 'bg-slate-100 text-slate-700 border-slate-200 text-xs'
+
+  return <Badge className={className}>{label}</Badge>
+}
+
+function formatNullableDate(value: string | null): string {
+  return value ? formatDate(value) : '-'
+}
+
+function formatNominal(value: string | number | null): string {
+  if (value === null || value === '') return '-'
+  const numericValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numericValue)) return String(value)
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(numericValue)
 }

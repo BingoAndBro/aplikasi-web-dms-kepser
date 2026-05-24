@@ -1,15 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, desc, eq, type SQL } from 'drizzle-orm'
-import { db } from '#/db/client'
-import { arsip, arsipUsulMusnah } from '#/db/schema/arsip'
-import { dokumenTransaksi } from '#/db/schema/dokumen'
-import { masterFungsi } from '#/db/schema/master'
+import type { UnifiedArchiveListRow } from '#/lib/archive/unified-archive-query'
+import { getUnifiedArchiveList } from '#/lib/archive/unified-archive-query'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
-
-function parseTahunFilter(value: string): number | null {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
+import { ARCHIVE_STATUS } from '#/lib/constants/archive-status'
+import { ROLES } from '#/lib/constants/roles'
 
 // ---------------------------------------------------------------------------
 // GET /api/arsiparis/usul-musnah - list arsip USUL_MUSNAH
@@ -21,65 +15,51 @@ export const Route = createFileRoute('/api/arsiparis/usul-musnah')({
       GET: async ({ request }: { request: Request }) => {
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
-
-        const url = new URL(request.url)
-        const fungsiId = url.searchParams.get('fungsi_id') ?? undefined
-        const tahun = url.searchParams.get('tahun') ?? undefined
-
-        const filters: SQL[] = [
-          eq(arsip.statusArsip, 'USUL_MUSNAH'),
-          eq(arsip.isDitolak, false),
-        ]
-        if (fungsiId) filters.push(eq(dokumenTransaksi.fungsiId, fungsiId))
-        if (tahun) {
-          const parsedTahun = parseTahunFilter(tahun)
-          if (parsedTahun === null) return Response.json({ usul_musnah: [] })
-          filters.push(eq(dokumenTransaksi.tahun, parsedTahun))
-        }
+        if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         try {
-          const rows = await db
-            .select({
-              arsip_id: arsip.id,
-              musnah_id: arsipUsulMusnah.id,
-              nomor_surat: arsip.nomorSurat,
-              judul_dokumen: dokumenTransaksi.judul,
-              fungsi_nama: masterFungsi.nama,
-              musnah_status: arsipUsulMusnah.status,
-              diusulkan_oleh: arsipUsulMusnah.diusulkanOleh,
-              created_at: arsipUsulMusnah.createdAt,
-              decided_by: arsipUsulMusnah.decidedBy,
-              decided_at: arsipUsulMusnah.decidedAt,
-              catatan: arsipUsulMusnah.catatan,
-            })
-            .from(arsip)
-            .innerJoin(arsipUsulMusnah, eq(arsip.id, arsipUsulMusnah.arsipId))
-            .innerJoin(dokumenTransaksi, eq(arsip.dokumenId, dokumenTransaksi.id))
-            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
-            .where(and(...filters))
-            .orderBy(desc(arsip.archivedAt))
+          const result = await getUnifiedArchiveList({ statusArsip: ARCHIVE_STATUS.USUL_MUSNAH })
 
           return Response.json({
-            usul_musnah: rows.map((row) => ({
-              arsip_id: row.arsip_id,
-              musnah_id: row.musnah_id,
-              nomor_surat: row.nomor_surat ?? '\u2014',
-              judul_dokumen: row.judul_dokumen ?? '\u2014',
-              fungsi_nama: row.fungsi_nama ?? '\u2014',
-              musnah_status: row.musnah_status as 'MENUNGGU' | 'DISETUJUI' | 'DITOLAK',
-              diusulkan_oleh: row.diusulkan_oleh,
-              created_at: row.created_at,
-              decided_by: row.decided_by,
-              decided_at: row.decided_at,
-              catatan: row.catatan,
-            })),
+            usul_musnah: result.rows.map(mapUnifiedArchiveRow),
           })
-        } catch (err) {
-          console.error('[usul-musnah] local query error:', err)
+        } catch {
+          console.error('[usul-musnah] local query error')
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
       },
     },
   },
 })
+
+function mapUnifiedArchiveRow(row: UnifiedArchiveListRow) {
+  return {
+    id: row.id,
+    nama_arsip: row.namaArsip ?? '\u2014',
+    nomor_surat: row.nomorSurat ?? '\u2014',
+    klasifikasi_arsip: formatKlasifikasi(row),
+    tanggal_arsip: row.tanggalArsip,
+    retensi_aktif: row.retensiAktif ?? '\u2014',
+    retensi_inaktif: row.retensiInaktif ?? '\u2014',
+    masa_aktif_berakhir: row.masaAktifBerakhir,
+    masa_inaktif_berakhir: row.masaInaktifBerakhir,
+    nominal_realisasi: row.nominalRealisasi,
+    sumber: row.sourceType === 'WORKFLOW' ? 'Dokumen Persetujuan' : row.sourceType === 'MANUAL' ? 'Arsip Manual' : 'Sumber Tidak Dikenal',
+    jumlah_lampiran: row.attachmentCount ?? null,
+    source_warnings: row.warnings.map(formatSourceWarning),
+  }
+}
+
+function formatKlasifikasi(row: UnifiedArchiveListRow): string {
+  const kode = row.klasifikasiKodeSnapshot
+  const nama = row.klasifikasiNamaSnapshot
+  if (kode && nama) return `${kode} - ${nama}`
+  return kode ?? nama ?? '\u2014'
+}
+
+function formatSourceWarning(warning: UnifiedArchiveListRow['warnings'][number]): string {
+  if (warning === 'MISSING_MANUAL_SOURCE') return 'Data sumber manual belum lengkap'
+  if (warning === 'WORKFLOW_WITHOUT_DOKUMEN_ID') return 'Dokumen workflow belum terhubung'
+  if (warning === 'MANUAL_WITH_DOKUMEN_ID') return 'Arsip manual memiliki relasi dokumen tidak lazim'
+  return 'Jenis sumber arsip tidak dikenal'
+}

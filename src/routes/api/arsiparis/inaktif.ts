@@ -1,15 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, desc, eq, type SQL } from 'drizzle-orm'
-import { db } from '#/db/client'
-import { arsip } from '#/db/schema/arsip'
-import { dokumenTransaksi } from '#/db/schema/dokumen'
-import { masterFungsi, masterKegiatan } from '#/db/schema/master'
+import type { UnifiedArchiveListRow } from '#/lib/archive/unified-archive-query'
+import { getUnifiedArchiveList } from '#/lib/archive/unified-archive-query'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
-
-function parseTahunFilter(value: string): number | null {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
-}
+import { ARCHIVE_STATUS } from '#/lib/constants/archive-status'
+import { ROLES } from '#/lib/constants/roles'
 
 // ---------------------------------------------------------------------------
 // GET /api/arsiparis/inaktif - list arsip dengan status_arsip='INAKTIF'
@@ -21,59 +15,51 @@ export const Route = createFileRoute('/api/arsiparis/inaktif')({
       GET: async ({ request }: { request: Request }) => {
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
-
-        const url = new URL(request.url)
-        const fungsiId = url.searchParams.get('fungsi_id') ?? undefined
-        const tahun = url.searchParams.get('tahun') ?? undefined
-
-        const filters: SQL[] = [
-          eq(arsip.statusArsip, 'INAKTIF'),
-          eq(arsip.isDitolak, false),
-        ]
-        if (fungsiId) filters.push(eq(dokumenTransaksi.fungsiId, fungsiId))
-        if (tahun) {
-          const parsedTahun = parseTahunFilter(tahun)
-          if (parsedTahun === null) return Response.json({ inaktif: [] })
-          filters.push(eq(dokumenTransaksi.tahun, parsedTahun))
-        }
+        if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         try {
-          const rows = await db
-            .select({
-              id: arsip.id,
-              nomor_surat: arsip.nomorSurat,
-              judul_dokumen: dokumenTransaksi.judul,
-              fungsi_nama: masterFungsi.nama,
-              kegiatan_nama: masterKegiatan.nama,
-              archived_at: arsip.archivedAt,
-              masa_aktif_berakhir: arsip.masaAktifBerakhir,
-              masa_inaktif_berakhir: arsip.masaInaktifBerakhir,
-            })
-            .from(arsip)
-            .innerJoin(dokumenTransaksi, eq(arsip.dokumenId, dokumenTransaksi.id))
-            .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
-            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
-            .where(and(...filters))
-            .orderBy(desc(arsip.archivedAt))
+          const result = await getUnifiedArchiveList({ statusArsip: ARCHIVE_STATUS.INAKTIF })
 
           return Response.json({
-            inaktif: rows.map((row) => ({
-              id: row.id,
-              nomor_surat: row.nomor_surat ?? '\u2014',
-              judul_dokumen: row.judul_dokumen ?? '\u2014',
-              fungsi_nama: row.fungsi_nama ?? '\u2014',
-              kegiatan_nama: row.kegiatan_nama ?? '\u2014',
-              archived_at: row.archived_at,
-              masa_aktif_berakhir: row.masa_aktif_berakhir,
-              masa_inaktif_berakhir: row.masa_inaktif_berakhir,
-            })),
+            inaktif: result.rows.map(mapUnifiedArchiveRow),
           })
-        } catch (err) {
-          console.error('[inaktif] local query error:', err)
+        } catch {
+          console.error('[inaktif] local query error')
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
       },
     },
   },
 })
+
+function mapUnifiedArchiveRow(row: UnifiedArchiveListRow) {
+  return {
+    id: row.id,
+    nama_arsip: row.namaArsip ?? '\u2014',
+    nomor_surat: row.nomorSurat ?? '\u2014',
+    klasifikasi_arsip: formatKlasifikasi(row),
+    tanggal_arsip: row.tanggalArsip,
+    retensi_aktif: row.retensiAktif ?? '\u2014',
+    retensi_inaktif: row.retensiInaktif ?? '\u2014',
+    masa_aktif_berakhir: row.masaAktifBerakhir,
+    masa_inaktif_berakhir: row.masaInaktifBerakhir,
+    nominal_realisasi: row.nominalRealisasi,
+    sumber: row.sourceType === 'WORKFLOW' ? 'Dokumen Persetujuan' : row.sourceType === 'MANUAL' ? 'Arsip Manual' : 'Sumber Tidak Dikenal',
+    jumlah_lampiran: row.attachmentCount ?? null,
+    source_warnings: row.warnings.map(formatSourceWarning),
+  }
+}
+
+function formatKlasifikasi(row: UnifiedArchiveListRow): string {
+  const kode = row.klasifikasiKodeSnapshot
+  const nama = row.klasifikasiNamaSnapshot
+  if (kode && nama) return `${kode} - ${nama}`
+  return kode ?? nama ?? '\u2014'
+}
+
+function formatSourceWarning(warning: UnifiedArchiveListRow['warnings'][number]): string {
+  if (warning === 'MISSING_MANUAL_SOURCE') return 'Data sumber manual belum lengkap'
+  if (warning === 'WORKFLOW_WITHOUT_DOKUMEN_ID') return 'Dokumen workflow belum terhubung'
+  if (warning === 'MANUAL_WITH_DOKUMEN_ID') return 'Arsip manual memiliki relasi dokumen tidak lazim'
+  return 'Jenis sumber arsip tidak dikenal'
+}
