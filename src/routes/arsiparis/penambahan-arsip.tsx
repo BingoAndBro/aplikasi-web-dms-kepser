@@ -78,7 +78,6 @@ type ManualArsipCreateResponse = {
 type ManualArsipAttachmentMetadata = {
   id: string
   judul_lampiran: string
-  original_filename: string
   content_type: string
   size_bytes: number
   created_at: string
@@ -119,6 +118,11 @@ type AttachmentRow = {
   id: string
   title: string
   file: File | null
+}
+
+type PreviewingAttachment = {
+  title: string
+  url: string
 }
 
 const MANUAL_ARSIP_ATTACHMENT_FIELD_NAME = 'files'
@@ -306,6 +310,18 @@ function ManualArsipTable({
   const [detailsById, setDetailsById] = useState<Record<string, ManualArsipDetail>>({})
   const [detailLoadingById, setDetailLoadingById] = useState<Record<string, boolean>>({})
   const [detailErrorsById, setDetailErrorsById] = useState<Record<string, string>>({})
+  const [previewingAttachment, setPreviewingAttachment] = useState<PreviewingAttachment | null>(null)
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && previewingAttachment) {
+        closePreview()
+      }
+    }
+
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [previewingAttachment])
 
   async function toggleAttachments(item: ManualArsipListItem) {
     const willExpand = !expandedIds.has(item.id)
@@ -358,86 +374,107 @@ function ManualArsipTable({
     }
   }
 
-  return (
-    <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-surface-container-low/30 text-left">
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-52">Nama</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kategori</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Klasifikasi</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-64">Keterangan</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-right">Nominal</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Status</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Diperbarui</th>
-              <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Lampiran</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, idx) => {
-              const expanded = expandedIds.has(item.id)
-              const detail = detailsById[item.id]
-              const detailLoading = detailLoadingById[item.id] === true
-              const detailError = detailErrorsById[item.id]
+  function openPreview(manualArsipId: string, attachment: ManualArsipAttachmentMetadata) {
+    setPreviewingAttachment({
+      title: attachment.judul_lampiran || 'Pratinjau lampiran',
+      url: buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'preview'),
+    })
+  }
 
-              return (
-                <Fragment key={item.id}>
-                  <tr className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
-                    <td className="px-4 py-3 text-center text-outline">{idx + 1}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-on-surface">{item.nama}</p>
-                      <p className="text-[10px] text-outline mt-0.5">{shortId(item.id)}</p>
-                    </td>
-                    <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(item.tanggal)}</td>
-                    <td className="px-4 py-3 text-on-surface">{item.category.nama || '-'}</td>
-                    <td className="px-4 py-3 text-on-surface-variant">{item.klasifikasi.nama ?? '-'}</td>
-                    <td className="px-4 py-3 text-on-surface-variant">
-                      <span title={item.keterangan}>{truncateText(item.keterangan, 96)}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-on-surface">{formatNullableCurrency(item.nominal_realisasi)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <StatusBadge status={item.status_arsip} />
-                    </td>
-                    <td className="px-4 py-3 text-center text-on-surface-variant">{formatDateTime(item.updated_at)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { void toggleAttachments(item) }}
-                        disabled={detailLoading}
-                        className="h-8 gap-1.5"
-                      >
-                        {detailLoading ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
-                        {expanded ? 'Tutup' : 'Lihat'}
-                      </Button>
-                    </td>
-                  </tr>
-                  {expanded && (
-                    <tr className="border-t border-outline-variant/20 bg-surface-container-low/20">
-                      <td colSpan={10} className="px-4 py-4">
-                        <ManualArsipAttachmentPanel
-                          item={item}
-                          detail={detail}
-                          loading={detailLoading}
-                          error={detailError}
-                        />
+  function closePreview() {
+    setPreviewingAttachment(null)
+  }
+
+  return (
+    <>
+      {previewingAttachment && (
+        <ManualArsipPreviewModal
+          preview={previewingAttachment}
+          onClose={closePreview}
+        />
+      )}
+
+      <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-surface-container-low/30 text-left">
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-52">Nama</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kategori</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Klasifikasi</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-64">Keterangan</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-right">Nominal</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Status</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Diperbarui</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Lampiran</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, idx) => {
+                const expanded = expandedIds.has(item.id)
+                const detail = detailsById[item.id]
+                const detailLoading = detailLoadingById[item.id] === true
+                const detailError = detailErrorsById[item.id]
+
+                return (
+                  <Fragment key={item.id}>
+                    <tr className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
+                      <td className="px-4 py-3 text-center text-outline">{idx + 1}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-on-surface">{item.nama}</p>
+                        <p className="text-[10px] text-outline mt-0.5">{shortId(item.id)}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(item.tanggal)}</td>
+                      <td className="px-4 py-3 text-on-surface">{item.category.nama || '-'}</td>
+                      <td className="px-4 py-3 text-on-surface-variant">{item.klasifikasi.nama ?? '-'}</td>
+                      <td className="px-4 py-3 text-on-surface-variant">
+                        <span title={item.keterangan}>{truncateText(item.keterangan, 96)}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-on-surface">{formatNullableCurrency(item.nominal_realisasi)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <StatusBadge status={item.status_arsip} />
+                      </td>
+                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatDateTime(item.updated_at)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { void toggleAttachments(item) }}
+                          disabled={detailLoading}
+                          className="h-8 gap-1.5"
+                        >
+                          {detailLoading ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                          {expanded ? 'Tutup' : 'Lihat'}
+                        </Button>
                       </td>
                     </tr>
-                  )}
-                </Fragment>
-              )
-            })}
-          </tbody>
-        </table>
+                    {expanded && (
+                      <tr className="border-t border-outline-variant/20 bg-surface-container-low/20">
+                        <td colSpan={10} className="px-4 py-4">
+                          <ManualArsipAttachmentPanel
+                            item={item}
+                            detail={detail}
+                            loading={detailLoading}
+                            error={detailError}
+                            onPreview={openPreview}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-2.5 border-t bg-surface-container-low/20 text-xs text-outline">
+          Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} arsip manual. Preview/download lampiran menggunakan endpoint API terotorisasi; lifecycle dan ekspor tidak tersedia pada halaman ini.
+        </div>
       </div>
-      <div className="px-4 py-2.5 border-t bg-surface-container-low/20 text-xs text-outline">
-        Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} arsip manual. Preview/download lampiran menggunakan endpoint API terotorisasi; lifecycle dan ekspor tidak tersedia pada halaman ini.
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -446,11 +483,13 @@ function ManualArsipAttachmentPanel({
   detail,
   loading,
   error,
+  onPreview,
 }: {
   item: ManualArsipListItem
   detail?: ManualArsipDetail
   loading: boolean
   error?: string
+  onPreview: (manualArsipId: string, attachment: ManualArsipAttachmentMetadata) => void
 }) {
   if (loading) {
     return (
@@ -510,6 +549,7 @@ function ManualArsipAttachmentPanel({
             index={index}
             manualArsipId={item.id}
             fileUnavailable={fileUnavailable}
+            onPreview={onPreview}
           />
         ))}
       </div>
@@ -522,11 +562,13 @@ function ManualArsipAttachmentRow({
   index,
   manualArsipId,
   fileUnavailable,
+  onPreview,
 }: {
   attachment: ManualArsipAttachmentMetadata
   index: number
   manualArsipId: string
   fileUnavailable: boolean
+  onPreview: (manualArsipId: string, attachment: ManualArsipAttachmentMetadata) => void
 }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-outline-variant/30 bg-white px-3 py-3 sm:flex-row sm:items-center">
@@ -539,10 +581,7 @@ function ManualArsipAttachmentRow({
             {attachment.judul_lampiran || `Lampiran ${index + 1}`}
           </p>
           <p className="mt-0.5 truncate text-[11px] text-on-surface-variant">
-            {attachment.original_filename || attachment.content_type || '-'}
-          </p>
-          <p className="mt-0.5 text-[10px] text-outline">
-            {attachment.content_type} - {formatFileSize(attachment.size_bytes)}
+            {formatFriendlyAttachmentMetadata(attachment)}
           </p>
         </div>
       </div>
@@ -553,15 +592,16 @@ function ManualArsipAttachmentRow({
         </p>
       ) : (
         <div className="flex shrink-0 gap-2">
-          <a
-            href={buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'preview')}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={attachmentLinkClass('outline')}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onPreview(manualArsipId, attachment)}
+            className="h-8 gap-1.5"
           >
             <Eye size={13} />
             Preview
-          </a>
+          </Button>
           <a
             href={buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'download')}
             className={attachmentLinkClass('primary')}
@@ -571,6 +611,67 @@ function ManualArsipAttachmentRow({
           </a>
         </div>
       )}
+    </div>
+  )
+}
+
+function ManualArsipPreviewModal({
+  preview,
+  onClose,
+}: {
+  preview: PreviewingAttachment
+  onClose: () => void
+}) {
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+  }, [preview.url])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <button
+        type="button"
+        aria-label="Tutup pratinjau"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className="relative z-10 mx-4 flex max-h-[78vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pratinjau lampiran arsip manual"
+      >
+        <div className="flex shrink-0 items-center gap-3 border-b border-outline-variant/30 px-4 py-3">
+          <Eye size={16} className="shrink-0 text-primary" />
+          <p className="flex-1 truncate text-sm font-semibold text-on-surface">{preview.title}</p>
+          <span className="hidden text-[10px] text-outline sm:block">ESC</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup pratinjau"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-container-low"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="relative flex-1 overflow-hidden bg-surface-container-low/30">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-container-low/70">
+              <div className="flex flex-col items-center gap-2 text-xs text-on-surface-variant">
+                <Loader2 size={22} className="animate-spin text-primary" />
+                Memuat pratinjau...
+              </div>
+            </div>
+          )}
+          <iframe
+            src={preview.url}
+            className="h-[calc(78vh-56px)] w-full border-0"
+            title={preview.title}
+            onLoad={() => setLoading(false)}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -1073,6 +1174,36 @@ function buildManualArsipAttachmentFileUrl(
   purpose: 'preview' | 'download',
 ) {
   return `/api/arsiparis/manual-arsip/${encodeURIComponent(manualArsipId)}/attachments/${encodeURIComponent(attachmentId)}/${purpose}`
+}
+
+function formatFriendlyAttachmentMetadata(attachment: ManualArsipAttachmentMetadata) {
+  return `${getFriendlyDocumentType(attachment.content_type)} • ${formatFileSize(attachment.size_bytes)}`
+}
+
+function getFriendlyDocumentType(contentType: string) {
+  switch (contentType.trim().toLowerCase()) {
+    case 'application/pdf':
+      return 'PDF'
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'Gambar JPEG'
+    case 'image/png':
+      return 'Gambar PNG'
+    case 'image/webp':
+      return 'Gambar WEBP'
+    case 'image/gif':
+      return 'Gambar GIF'
+    case 'image/bmp':
+      return 'Gambar BMP'
+    case 'image/tiff':
+      return 'Gambar TIFF'
+    case 'image/heic':
+      return 'Gambar HEIC'
+    case 'image/heif':
+      return 'Gambar HEIF'
+    default:
+      return 'File'
+  }
 }
 
 function attachmentLinkClass(variant: 'outline' | 'primary') {
