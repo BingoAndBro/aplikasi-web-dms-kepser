@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertManualArchiveReadyForCanonicalWrite,
   buildManualArchiveCanonicalInsertValues,
+  buildManualArchiveCanonicalUpdateValues,
   createManualArchiveCanonicalWritePlan,
   ManualArchiveCanonicalError,
   type ManualArchiveCanonicalSource,
@@ -37,6 +38,39 @@ describe('manual archive canonical write helper', () => {
       metadata: {},
     })
     expect(insertValues.archivedAt.toISOString()).toBe('2026-05-24T00:00:00.000Z')
+  })
+
+  it('builds canonical MANUAL update values without create-only fields', () => {
+    const updateValues = buildManualArchiveCanonicalUpdateValues(completeSource({
+      nama: 'Updated Manual Archive',
+      nomorSurat: 'B-002/2026',
+      tanggalDiarsipkan: '2026-06-01',
+      retensiAktif: '5 Tahun',
+      retensiInaktif: '10 Tahun',
+      masaAktifBerakhir: '2031-06-01',
+      masaInaktifBerakhir: '2041-06-01',
+      nominalRealisasi: '500000.00',
+    }))
+
+    expect(updateValues).toMatchObject({
+      namaArsip: 'Updated Manual Archive',
+      nomorSurat: 'B-002/2026',
+      klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiKodeSnapshot: 'MA.01',
+      klasifikasiNamaSnapshot: 'Manual Classification',
+      retensiAktif: '5 Tahun',
+      retensiInaktif: '10 Tahun',
+      masaAktifBerakhir: '2031-06-01',
+      masaInaktifBerakhir: '2041-06-01',
+      archivedBy: ARCHIVED_BY,
+      createdBy: CREATED_BY,
+      nominalRealisasi: '500000.00',
+      statusArsip: 'AKTIF',
+      metadata: {},
+    })
+    expect(updateValues.archivedAt.toISOString()).toBe('2026-06-01T00:00:00.000Z')
+    expect(updateValues).not.toHaveProperty('sourceType')
+    expect(updateValues).not.toHaveProperty('dokumenId')
   })
 
   it('fails missing required source fields with controlled error details', () => {

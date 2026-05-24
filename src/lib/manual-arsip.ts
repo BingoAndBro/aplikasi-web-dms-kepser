@@ -14,9 +14,15 @@ import {
   hasLocalRole,
   type LocalServerSession,
 } from '#/lib/auth/local-server-auth'
-import { ARCHIVE_STATUS } from '#/lib/constants/archive-status'
+import {
+  ARCHIVE_SOURCE_TYPE,
+  ARCHIVE_STATUS,
+} from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
-import { createManualArchiveCanonicalWritePlan } from '#/lib/archive/manual-archive-canonical'
+import {
+  buildManualArchiveCanonicalUpdateValues,
+  createManualArchiveCanonicalWritePlan,
+} from '#/lib/archive/manual-archive-canonical'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import type {
   CreateManualArsipInput,
@@ -119,6 +125,50 @@ type ManualArsipAttachmentFileReference = {
   status_arsip: string
   category_nama: string | null
   attachment: ManualArsipAttachmentFileRow
+}
+
+type ManualArsipPatchUpdateValues = {
+  nama: string
+  tanggal: string
+  nomorSurat: string
+  tanggalDiarsipkan: string
+  keterangan: string
+  categoryId: string
+  klasifikasiId: string
+  klasifikasiKodeSnapshot: string | null
+  klasifikasiNamaSnapshot: string
+  retensiAktif: string
+  retensiInaktif: string
+  masaAktifBerakhir: string
+  masaInaktifBerakhir: string
+  nominalRealisasi: string | null
+  metadata: ManualArsipSafeMetadata
+  updatedAt: Date
+}
+
+type ManualArsipPatchUpdatedRow = {
+  id: string
+  nama: string
+  tanggal: string
+  nomor_surat: string | null
+  tanggal_diarsipkan: string | null
+  keterangan: string
+  nominal_realisasi: string | number | null
+  status_arsip: string
+  category_id: string
+  klasifikasi_id: string | null
+  klasifikasi_kode_snapshot: string | null
+  klasifikasi_nama_snapshot: string | null
+  retensi_aktif: string | null
+  retensi_inaktif: string | null
+  masa_aktif_berakhir: string | null
+  masa_inaktif_berakhir: string | null
+  archived_by: string | null
+  canonical_arsip_id: string | null
+  metadata: unknown
+  created_by: string
+  created_at: Date | string | null
+  updated_at: Date | string | null
 }
 
 const FALLBACK_ATTACHMENT_TITLE_SEGMENT = 'Lampiran'
@@ -450,6 +500,7 @@ export async function updateManualArsipRecord(
     .select({
       id: manualArsip.id,
       status_arsip: manualArsip.statusArsip,
+      canonical_arsip_id: manualArsip.canonicalArsipId,
     })
     .from(manualArsip)
     .where(eq(manualArsip.id, id))
@@ -485,44 +536,34 @@ export async function updateManualArsipRecord(
     retensiInaktif: input.retensi_inaktif,
   })
 
-  const [updated] = await db
-    .update(manualArsip)
-    .set({
-      nama: input.nama,
-      tanggal: input.tanggal,
-      nomorSurat: input.nomor_surat,
-      tanggalDiarsipkan: input.tanggal_diarsipkan,
-      keterangan: input.keterangan,
-      categoryId: category.id,
-      klasifikasiId: klasifikasi.id,
-      klasifikasiKodeSnapshot: klasifikasi.kode,
-      klasifikasiNamaSnapshot: klasifikasi.nama,
-      retensiAktif: input.retensi_aktif,
-      retensiInaktif: input.retensi_inaktif,
-      masaAktifBerakhir: retentionDates.masaAktifBerakhir,
-      masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
-      nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
-      metadata: input.metadata ?? {},
-      updatedAt: new Date(),
+  const updateValues: ManualArsipPatchUpdateValues = {
+    nama: input.nama,
+    tanggal: input.tanggal,
+    nomorSurat: input.nomor_surat,
+    tanggalDiarsipkan: input.tanggal_diarsipkan,
+    keterangan: input.keterangan,
+    categoryId: category.id,
+    klasifikasiId: klasifikasi.id,
+    klasifikasiKodeSnapshot: klasifikasi.kode,
+    klasifikasiNamaSnapshot: klasifikasi.nama,
+    retensiAktif: input.retensi_aktif,
+    retensiInaktif: input.retensi_inaktif,
+    masaAktifBerakhir: retentionDates.masaAktifBerakhir,
+    masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
+    nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
+    metadata: input.metadata ?? {},
+    updatedAt: new Date(),
+  }
+
+  const updated = existing.canonical_arsip_id
+    ? await updateLinkedManualArsipRecord({
+      id,
+      canonicalArsipId: existing.canonical_arsip_id,
+      updateValues,
     })
-    .where(and(
-      eq(manualArsip.id, id),
-      eq(manualArsip.statusArsip, ARCHIVE_STATUS.AKTIF),
-    ))
-    .returning({
-      id: manualArsip.id,
-      nama: manualArsip.nama,
-      tanggal: manualArsip.tanggal,
-      keterangan: manualArsip.keterangan,
-      nominal_realisasi: manualArsip.nominalRealisasi,
-      status_arsip: manualArsip.statusArsip,
-      category_id: manualArsip.categoryId,
-      klasifikasi_id: manualArsip.klasifikasiId,
-      klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
-      metadata: manualArsip.metadata,
-      created_by: manualArsip.createdBy,
-      created_at: manualArsip.createdAt,
-      updated_at: manualArsip.updatedAt,
+    : await updateUnlinkedManualArsipRecord({
+      id,
+      updateValues,
     })
 
   if (!updated) {
@@ -533,6 +574,131 @@ export async function updateManualArsipRecord(
     ...toManualArsipListItem(updated, category, klasifikasi),
     metadata: sanitizeMetadata(updated.metadata),
   }
+}
+
+async function updateUnlinkedManualArsipRecord({
+  id,
+  updateValues,
+}: {
+  id: string
+  updateValues: ManualArsipPatchUpdateValues
+}): Promise<ManualArsipPatchUpdatedRow | null> {
+  const [updated] = await db
+    .update(manualArsip)
+    .set(updateValues)
+    .where(and(
+      eq(manualArsip.id, id),
+      eq(manualArsip.statusArsip, ARCHIVE_STATUS.AKTIF),
+    ))
+    .returning({
+      id: manualArsip.id,
+      nama: manualArsip.nama,
+      tanggal: manualArsip.tanggal,
+      nomor_surat: manualArsip.nomorSurat,
+      tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
+      keterangan: manualArsip.keterangan,
+      nominal_realisasi: manualArsip.nominalRealisasi,
+      status_arsip: manualArsip.statusArsip,
+      category_id: manualArsip.categoryId,
+      klasifikasi_id: manualArsip.klasifikasiId,
+      klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
+      klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
+      retensi_aktif: manualArsip.retensiAktif,
+      retensi_inaktif: manualArsip.retensiInaktif,
+      masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
+      masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
+      archived_by: manualArsip.archivedBy,
+      canonical_arsip_id: manualArsip.canonicalArsipId,
+      metadata: manualArsip.metadata,
+      created_by: manualArsip.createdBy,
+      created_at: manualArsip.createdAt,
+      updated_at: manualArsip.updatedAt,
+    })
+
+  return updated ?? null
+}
+
+async function updateLinkedManualArsipRecord({
+  id,
+  canonicalArsipId,
+  updateValues,
+}: {
+  id: string
+  canonicalArsipId: string
+  updateValues: ManualArsipPatchUpdateValues
+}): Promise<ManualArsipPatchUpdatedRow | null> {
+  return db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(manualArsip)
+      .set(updateValues)
+      .where(and(
+        eq(manualArsip.id, id),
+        eq(manualArsip.statusArsip, ARCHIVE_STATUS.AKTIF),
+      ))
+      .returning({
+        id: manualArsip.id,
+        nama: manualArsip.nama,
+        tanggal: manualArsip.tanggal,
+        nomor_surat: manualArsip.nomorSurat,
+        tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
+        keterangan: manualArsip.keterangan,
+        nominal_realisasi: manualArsip.nominalRealisasi,
+        status_arsip: manualArsip.statusArsip,
+        category_id: manualArsip.categoryId,
+        klasifikasi_id: manualArsip.klasifikasiId,
+        klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
+        klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
+        retensi_aktif: manualArsip.retensiAktif,
+        retensi_inaktif: manualArsip.retensiInaktif,
+        masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
+        masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
+        archived_by: manualArsip.archivedBy,
+        canonical_arsip_id: manualArsip.canonicalArsipId,
+        metadata: manualArsip.metadata,
+        created_by: manualArsip.createdBy,
+        created_at: manualArsip.createdAt,
+        updated_at: manualArsip.updatedAt,
+      })
+
+    if (!updated) return null
+
+    const [canonical] = await tx
+      .update(arsip)
+      .set({
+        ...buildManualArchiveCanonicalUpdateValues({
+          id: updated.id,
+          canonicalArsipId: updated.canonical_arsip_id,
+          nama: updated.nama,
+          nomorSurat: updated.nomor_surat,
+          tanggalDiarsipkan: updated.tanggal_diarsipkan,
+          klasifikasiId: updated.klasifikasi_id,
+          klasifikasiKodeSnapshot: updated.klasifikasi_kode_snapshot,
+          klasifikasiNamaSnapshot: updated.klasifikasi_nama_snapshot,
+          retensiAktif: updated.retensi_aktif,
+          retensiInaktif: updated.retensi_inaktif,
+          masaAktifBerakhir: updated.masa_aktif_berakhir,
+          masaInaktifBerakhir: updated.masa_inaktif_berakhir,
+          archivedBy: updated.archived_by,
+          createdBy: updated.created_by,
+          nominalRealisasi: updated.nominal_realisasi,
+          statusArsip: updated.status_arsip,
+        }),
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(arsip.id, canonicalArsipId),
+        eq(arsip.sourceType, ARCHIVE_SOURCE_TYPE.MANUAL),
+      ))
+      .returning({
+        id: arsip.id,
+      })
+
+    if (!canonical) {
+      throw new Error('MANUAL_ARCHIVE_CANONICAL_UPDATE_FAILED')
+    }
+
+    return updated
+  })
 }
 
 export async function uploadManualArsipAttachments(

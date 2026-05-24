@@ -43,6 +43,11 @@ export type ManualArchiveCanonicalInsertValues = {
   metadata: Record<string, never>
 }
 
+export type ManualArchiveCanonicalUpdateValues = Omit<
+  ManualArchiveCanonicalInsertValues,
+  'sourceType' | 'dokumenId'
+>
+
 export type ManualArchiveCanonicalField =
   | 'id'
   | 'nama'
@@ -161,6 +166,18 @@ export function buildManualArchiveCanonicalInsertValues(
     statusArsip: ARCHIVE_STATUS.AKTIF,
     metadata: {},
   }
+}
+
+export function buildManualArchiveCanonicalUpdateValues(
+  source: ManualArchiveCanonicalSource,
+): ManualArchiveCanonicalUpdateValues {
+  const {
+    sourceType: _sourceType,
+    dokumenId: _dokumenId,
+    ...updateValues
+  } = buildManualArchiveCanonicalInsertValues(source)
+
+  return updateValues
 }
 
 export function createManualArchiveCanonicalWritePlan(
