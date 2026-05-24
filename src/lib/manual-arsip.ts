@@ -103,7 +103,32 @@ type ManualArsipAttachmentFileRow = {
   logical_path: string
 }
 
-const FALLBACK_ATTACHMENT_FILENAME = 'lampiran'
+type ManualArsipAttachmentFileReference = {
+  id: string
+  nama: string
+  tanggal: string | Date | null
+  status_arsip: string
+  category_nama: string | null
+  attachment: ManualArsipAttachmentFileRow
+}
+
+const FALLBACK_ATTACHMENT_TITLE_SEGMENT = 'Lampiran'
+const FALLBACK_MANUAL_ARSIP_SEGMENT = 'Arsip'
+const FALLBACK_CATEGORY_SEGMENT = 'Kategori'
+const FALLBACK_DATE_SEGMENT = 'Tanggal'
+const MAX_CONTENT_DISPOSITION_FILENAME_LENGTH = 180
+const EXTENSIONS_BY_MANUAL_ARSIP_CONTENT_TYPE: Record<string, readonly string[]> = {
+  'application/pdf': ['pdf'],
+  'image/bmp': ['bmp'],
+  'image/gif': ['gif'],
+  'image/heic': ['heic'],
+  'image/heif': ['heif'],
+  'image/jpeg': ['jpg', 'jpeg'],
+  'image/jpg': ['jpg', 'jpeg'],
+  'image/png': ['png'],
+  'image/tiff': ['tif', 'tiff'],
+  'image/webp': ['webp'],
+}
 const WINDOWS_DRIVE_PATTERN = /^[a-z]:[\\/]/i
 const URL_LIKE_PATTERN = /^[a-z][a-z0-9+.-]*:/i
 
@@ -484,7 +509,7 @@ export async function createManualArsipAttachmentFileResponse({
 
   const headers = secureFileHeaders()
   headers.set('Content-Type', normalizedContentType)
-  headers.set('Content-Disposition', buildManualArsipAttachmentContentDisposition(reference.attachment, purpose))
+  headers.set('Content-Disposition', buildManualArsipAttachmentContentDisposition(reference, purpose))
   headers.set('Content-Length', String(fileContent.byteLength || fileSize))
 
   return new Response(fileContent, {
@@ -608,16 +633,17 @@ function isoDateString(value: Date | string | null): string {
 async function loadManualArsipAttachmentFileReference(
   manualArsipId: string,
   attachmentId: string,
-): Promise<{
-  status_arsip: string
-  attachment: ManualArsipAttachmentFileRow
-} | null> {
+): Promise<ManualArsipAttachmentFileReference | null> {
   const [parent] = await db
     .select({
       id: manualArsip.id,
+      nama: manualArsip.nama,
+      tanggal: manualArsip.tanggal,
       status_arsip: manualArsip.statusArsip,
+      category_nama: manualArsipCategory.nama,
     })
     .from(manualArsip)
+    .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
     .where(eq(manualArsip.id, manualArsipId))
     .limit(1)
 
@@ -642,7 +668,11 @@ async function loadManualArsipAttachmentFileReference(
   if (!attachment) return null
 
   return {
+    id: parent.id,
+    nama: parent.nama,
+    tanggal: parent.tanggal,
     status_arsip: parent.status_arsip,
+    category_nama: parent.category_nama ?? null,
     attachment,
   }
 }
@@ -662,30 +692,77 @@ function secureFileHeaders(): Headers {
 }
 
 function buildManualArsipAttachmentContentDisposition(
-  attachment: ManualArsipAttachmentFileRow,
+  reference: ManualArsipAttachmentFileReference,
   purpose: ManualArsipAttachmentFilePurpose,
 ): string {
   const disposition = purpose === 'download' ? 'attachment' : 'inline'
-  const filename = resolveAttachmentDisplayFilename(attachment)
+  const filename = resolveManualArsipAttachmentPolicyFilename(reference)
 
   return `${disposition}; filename="${filename}"`
 }
 
-function resolveAttachmentDisplayFilename(attachment: ManualArsipAttachmentFileRow): string {
-  const originalExtension = safeExtensionFromFilename(attachment.original_filename)
-  const titleFilename = sanitizeContentDispositionFilename(attachment.judul_lampiran)
+function resolveManualArsipAttachmentPolicyFilename(
+  reference: ManualArsipAttachmentFileReference,
+): string {
+  const baseName = [
+    sanitizeFilenameSegment(reference.attachment.judul_lampiran, FALLBACK_ATTACHMENT_TITLE_SEGMENT),
+    sanitizeFilenameSegment(reference.nama, FALLBACK_MANUAL_ARSIP_SEGMENT),
+    sanitizeFilenameSegment(reference.category_nama, FALLBACK_CATEGORY_SEGMENT),
+    sanitizeFilenameSegment(formatManualArsipDateSegment(reference.tanggal), FALLBACK_DATE_SEGMENT),
+  ].join('_')
+  const extension = resolveManualArsipAttachmentExtension(reference.attachment)
+  const filename = extension ? `${baseName}.${extension}` : baseName
 
-  if (titleFilename) {
-    return path.extname(titleFilename) || !originalExtension
-      ? titleFilename
-      : `${titleFilename}.${originalExtension}`
-  }
-
-  return sanitizeContentDispositionFilename(attachment.original_filename)
-    ?? (originalExtension ? `${FALLBACK_ATTACHMENT_FILENAME}.${originalExtension}` : FALLBACK_ATTACHMENT_FILENAME)
+  return truncateContentDispositionFilename(filename, extension)
 }
 
-function sanitizeContentDispositionFilename(filename: string): string | null {
+function sanitizeFilenameSegment(value: string | null | undefined, fallback: string): string {
+  const trimmed = typeof value === 'string' ? value.trim() : ''
+  const withoutDiacritics = trimmed.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+  const sanitized = withoutDiacritics
+    .replace(/[\r\n"\\/]/g, '_')
+    .replace(/[^A-Za-z0-9-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[-_]+|[-_]+$/g, '')
+
+  if (
+    !sanitized
+    || sanitized === '.'
+    || sanitized === '..'
+    || sanitized.includes('..')
+    || path.isAbsolute(sanitized)
+    || WINDOWS_DRIVE_PATTERN.test(sanitized)
+    || URL_LIKE_PATTERN.test(sanitized)
+  ) {
+    return fallback
+  }
+
+  return sanitized
+}
+
+function formatManualArsipDateSegment(value: string | Date | null): string {
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  if (typeof value !== 'string') return ''
+
+  const trimmed = value.trim()
+  const match = trimmed.match(/^(\d{4}-\d{2}-\d{2})(?:$|[T\s])/)
+
+  return match?.[1] ?? ''
+}
+
+function resolveManualArsipAttachmentExtension(attachment: ManualArsipAttachmentFileRow): string | null {
+  const normalizedContentType = attachment.content_type.trim().toLowerCase()
+  const allowedExtensions = EXTENSIONS_BY_MANUAL_ARSIP_CONTENT_TYPE[normalizedContentType] ?? []
+  const originalExtension = safeExtensionFromFilename(attachment.original_filename)
+
+  if (originalExtension && allowedExtensions.includes(originalExtension)) {
+    return originalExtension
+  }
+
+  return allowedExtensions[0] ?? originalExtension
+}
+
+function safeExtensionFromFilename(filename: string): string | null {
   const trimmed = filename.trim()
 
   if (
@@ -705,26 +782,25 @@ function sanitizeContentDispositionFilename(filename: string): string | null {
     return null
   }
 
-  const sanitized = trimmed.replace(/[^A-Za-z0-9._ -]/g, '_').replace(/\s+/g, ' ').trim()
-
-  if (
-    !sanitized
-    || sanitized === '.'
-    || sanitized === '..'
-    || sanitized.includes('..')
-  ) {
-    return null
-  }
-
-  return sanitized
+  const extension = path.extname(trimmed).replace(/^\./, '').toLowerCase()
+  return /^[a-z0-9]{1,12}$/.test(extension) ? extension : null
 }
 
-function safeExtensionFromFilename(filename: string): string | null {
-  const safeFilename = sanitizeContentDispositionFilename(filename)
-  if (!safeFilename) return null
+function truncateContentDispositionFilename(filename: string, extension: string | null): string {
+  if (filename.length <= MAX_CONTENT_DISPOSITION_FILENAME_LENGTH) return filename
 
-  const extension = path.extname(safeFilename).replace(/^\./, '').toLowerCase()
-  return /^[a-z0-9]{1,12}$/.test(extension) ? extension : null
+  const suffix = extension ? `.${extension}` : ''
+  const maxBaseLength = Math.max(
+    FALLBACK_ATTACHMENT_TITLE_SEGMENT.length,
+    MAX_CONTENT_DISPOSITION_FILENAME_LENGTH - suffix.length,
+  )
+  const baseName = suffix ? filename.slice(0, -suffix.length) : filename
+  const truncatedBase = baseName
+    .slice(0, maxBaseLength)
+    .replace(/[-_]+$/g, '')
+    || FALLBACK_ATTACHMENT_TITLE_SEGMENT
+
+  return `${truncatedBase}${suffix}`
 }
 
 function isMissingFileError(error: unknown): boolean {

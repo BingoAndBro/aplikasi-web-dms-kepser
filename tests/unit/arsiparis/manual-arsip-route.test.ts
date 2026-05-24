@@ -825,7 +825,9 @@ describe('manual arsip API foundation routes', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
     expect(response.headers.get('Content-Type')).toBe('application/pdf')
-    expect(response.headers.get('Content-Disposition')).toBe('inline; filename="Bukti Kegiatan.pdf"')
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'inline; filename="Bukti_Kegiatan_Nama_Arsip_Kategori_2026-05-23.pdf"',
+    )
     expect(response.headers.get('Content-Disposition')).not.toContain('token')
     expect(await response.text()).toBe(TEST_FILE_CONTENT)
   })
@@ -844,7 +846,9 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toBe('application/pdf')
-    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="Bukti Kegiatan.pdf"')
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="Bukti_Kegiatan_Nama_Arsip_Kategori_2026-05-23.pdf"',
+    )
     expect(await response.text()).toBe(TEST_FILE_CONTENT)
   })
 
@@ -1008,13 +1012,37 @@ describe('manual arsip API foundation routes', () => {
     }
   })
 
-  it('sanitizes Content-Disposition filename values and does not expose storage details', async () => {
+  it('sanitizes unsafe filename policy segments', async () => {
+    await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, TEST_FILE_CONTENT)
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF', {
+        nama: 'Nama/Arsip "Rahasia"',
+        category_nama: 'Kategori\r\nA: B',
+      })],
+      [manualArsipAttachmentFileRow({
+        judul_lampiran: 'Bukti\\Kegiatan<>?',
+        original_filename: 'lampiran.pdf',
+      })],
+    )
+
+    const response = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="Bukti_Kegiatan_Nama_Arsip_Rahasia_Kategori_A_B_2026-05-23.pdf"',
+    )
+  })
+
+  it('sanitizes header injection attempts and prefers content-type extension on conflicts', async () => {
     await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, TEST_FILE_CONTENT)
     queueSelectResults(
       [manualArsipUploadParentRow('AKTIF')],
       [manualArsipAttachmentFileRow({
         judul_lampiran: 'unsafe"\r\nContent-Type: text/html',
-        original_filename: 'lampiran.pdf',
+        original_filename: 'payload.html',
       })],
     )
 
@@ -1025,12 +1053,73 @@ describe('manual arsip API foundation routes', () => {
     const contentDisposition = response.headers.get('Content-Disposition')
 
     expect(response.status).toBe(200)
-    expect(contentDisposition).toBe('attachment; filename="lampiran.pdf"')
+    expect(contentDisposition).toBe(
+      'attachment; filename="unsafe_Content-Type_text_html_Nama_Arsip_Kategori_2026-05-23.pdf"',
+    )
     expect(contentDisposition).not.toContain('\r')
     expect(contentDisposition).not.toContain('\n')
+    expect(contentDisposition).not.toContain('"Content-Type')
+    expect(contentDisposition).not.toContain('.html')
+    expect(contentDisposition).not.toContain('.svg')
+    expect(contentDisposition).not.toContain('.exe')
+    expect(contentDisposition).not.toContain('.bat')
     expect(contentDisposition).not.toContain('manual-arsip')
+    expect(contentDisposition).not.toContain('test.pdf')
     expect(contentDisposition).not.toContain(TEST_STORAGE_ROOT)
+    expect(contentDisposition).not.toContain('logical_path')
+    expect(contentDisposition).not.toContain('storage')
     expect(JSON.stringify([...response.headers.entries()])).not.toContain('token')
+  })
+
+  it('uses fallback segments when policy segments sanitize to empty', async () => {
+    await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, TEST_FILE_CONTENT)
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF', {
+        nama: '////',
+        category_nama: '\r\n"',
+        tanggal: 'not-a-date',
+      })],
+      [manualArsipAttachmentFileRow({
+        judul_lampiran: '""',
+        original_filename: 'photo.jpeg',
+        content_type: 'image/jpeg',
+      })],
+    )
+
+    const response = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="Lampiran_Arsip_Kategori_Tanggal.jpeg"',
+    )
+  })
+
+  it('truncates long filenames while preserving extension', async () => {
+    await writeManualArsipAttachmentTestFile(ATTACHMENT_LOGICAL_PATH, TEST_FILE_CONTENT)
+    queueSelectResults(
+      [manualArsipUploadParentRow('AKTIF')],
+      [manualArsipAttachmentFileRow({
+        judul_lampiran: 'x'.repeat(220),
+        original_filename: 'lampiran.pdf',
+        content_type: 'application/pdf',
+      })],
+    )
+
+    const response = await attachmentDownloadGetHandler({
+      request: createAttachmentFileRequest('download'),
+      params: attachmentFileParams(),
+    })
+    const contentDisposition = response.headers.get('Content-Disposition') ?? ''
+    const filename = contentDisposition.match(/^attachment; filename="([^"]+)"$/)?.[1] ?? ''
+
+    expect(response.status).toBe(200)
+    expect(filename.length).toBeLessThanOrEqual(180)
+    expect(filename.endsWith('.pdf')).toBe(true)
+    expect(contentDisposition).not.toContain('\r')
+    expect(contentDisposition).not.toContain('\n')
   })
 })
 
@@ -1164,10 +1253,17 @@ function manualArsipJoinedRow() {
   }
 }
 
-function manualArsipUploadParentRow(status_arsip: string) {
+function manualArsipUploadParentRow(status_arsip: string, overrides: Partial<{
+  nama: string
+  tanggal: string
+  category_nama: string | null
+}> = {}) {
   return {
     id: MANUAL_ARSIP_ID,
+    nama: overrides.nama ?? 'Nama Arsip',
+    tanggal: overrides.tanggal ?? '2026-05-23',
     status_arsip,
+    category_nama: overrides.category_nama ?? 'Kategori',
   }
 }
 
