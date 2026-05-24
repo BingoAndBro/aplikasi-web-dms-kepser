@@ -2,24 +2,28 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
   Archive,
+  ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Download,
   Eye,
   FileText,
   Loader2,
   Plus,
+  Search,
   ShieldX,
   Trash2,
   X,
 } from 'lucide-react'
-import { Fragment, useEffect, useMemo, useState } from 'react'
-import type { ChangeEvent, FormEvent, ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent, FormEvent, ReactNode, RefObject } from 'react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
+import { MANUAL_ARCHIVE_RETENTION_LABELS } from '#/lib/archive/retention'
 import { ROLES } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
 import { cn } from '#/lib/utils'
@@ -39,6 +43,21 @@ type ManualArsipCategory = {
   id: string
   nama: string
   deskripsi: string | null
+}
+
+type KlasifikasiNode = {
+  id: string
+  nama: string
+  kode?: string | null
+  is_root?: boolean
+  children?: KlasifikasiNode[]
+}
+
+type FlatKlasifikasiOption = {
+  id: string
+  kode: string | null
+  nama: string
+  node: KlasifikasiNode
 }
 
 type ManualArsipListItem = {
@@ -61,6 +80,11 @@ type ManualArsipListItem = {
 
 type CategoriesResponse = {
   categories?: ManualArsipCategory[]
+  error?: string
+}
+
+type KlasifikasiResponse = {
+  klasifikasi?: KlasifikasiNode[]
   error?: string
 }
 
@@ -100,8 +124,13 @@ type ManualArsipDetailResponse = {
 type ManualArsipFormState = {
   nama: string
   tanggal: string
+  nomor_surat: string
+  tanggal_diarsipkan: string
   keterangan: string
   category_id: string
+  klasifikasi_id: string
+  retensi_aktif: string
+  retensi_inaktif: string
   nominal_realisasi: string
 }
 
@@ -144,12 +173,19 @@ const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = [
 ] as const
 const MANUAL_ARSIP_ATTACHMENT_ACCEPT = MANUAL_ARSIP_ALLOWED_CONTENT_TYPES.join(',')
 const MANUAL_ARSIP_ALLOWED_CONTENT_TYPE_SET = new Set<string>(MANUAL_ARSIP_ALLOWED_CONTENT_TYPES)
+const MANUAL_ARSIP_RETENTION_OPTIONS = MANUAL_ARCHIVE_RETENTION_LABELS
+const MANUAL_ARSIP_RETENTION_OPTION_SET = new Set<string>(MANUAL_ARSIP_RETENTION_OPTIONS)
 
 const emptyForm = (): ManualArsipFormState => ({
   nama: '',
   tanggal: new Date().toISOString().slice(0, 10),
+  nomor_surat: '',
+  tanggal_diarsipkan: new Date().toISOString().slice(0, 10),
   keterangan: '',
   category_id: '',
+  klasifikasi_id: '',
+  retensi_aktif: '',
+  retensi_inaktif: '',
   nominal_realisasi: '',
 })
 
@@ -158,6 +194,7 @@ function PenambahanArsipPage() {
   const [accessDenied, setAccessDenied] = useState(false)
   const [items, setItems] = useState<ManualArsipListItem[]>([])
   const [categories, setCategories] = useState<ManualArsipCategory[]>([])
+  const [klasifikasiList, setKlasifikasiList] = useState<KlasifikasiNode[]>([])
   const [limit, setLimit] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -168,12 +205,14 @@ function PenambahanArsipPage() {
     setLoading(true)
     setError(null)
     try {
-      const [categoryJson, listJson] = await Promise.all([
+      const [categoryJson, klasifikasiJson, listJson] = await Promise.all([
         apiFetch<CategoriesResponse>('/arsiparis/manual-arsip/categories'),
+        apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi'),
         apiFetch<ManualArsipListResponse>('/arsiparis/manual-arsip'),
       ])
 
       setCategories(categoryJson.categories ?? [])
+      setKlasifikasiList(klasifikasiJson.klasifikasi ?? [])
       setItems(listJson.manual_arsip ?? [])
       setLimit(listJson.meta?.limit ?? null)
     } catch (err) {
@@ -286,6 +325,7 @@ function PenambahanArsipPage() {
 
         <CreateManualArsipModal
           categories={categories}
+          klasifikasiList={klasifikasiList}
           isOpen={formOpen}
           onClose={() => setFormOpen(false)}
           onSuccess={async (result) => {
@@ -678,11 +718,13 @@ function ManualArsipPreviewModal({
 
 function CreateManualArsipModal({
   categories,
+  klasifikasiList,
   isOpen,
   onClose,
   onSuccess,
 }: {
   categories: ManualArsipCategory[]
+  klasifikasiList: KlasifikasiNode[]
   isOpen: boolean
   onClose: () => void
   onSuccess: (result: CreateManualArsipResult) => void | Promise<void>
@@ -692,6 +734,27 @@ function CreateManualArsipModal({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [currentNodes, setCurrentNodes] = useState<KlasifikasiNode[]>([])
+  const [selectedNode, setSelectedNode] = useState<KlasifikasiNode | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [currentPath, setCurrentPath] = useState<KlasifikasiNode[]>([])
+  const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const allKlasifikasiOptions = useMemo(() => {
+    const rootNode = findRootKlasifikasiNode(klasifikasiList)
+    return flattenKlasifikasiTree(rootNode?.children ?? klasifikasiList)
+  }, [klasifikasiList])
+  const filteredSearchResults = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    if (!normalizedQuery) return []
+
+    return allKlasifikasiOptions.filter((option) => {
+      const kode = option.kode?.toLowerCase() ?? ''
+      return option.nama.toLowerCase().includes(normalizedQuery) || kode.includes(normalizedQuery)
+    })
+  }, [allKlasifikasiOptions, searchQuery])
+  const visibleNodes = searchQuery.trim() ? [] : currentNodes
+  const breadcrumbPath = currentPath.map((node) => formatKlasifikasiLabel(node)).join(' / ')
 
   useEffect(() => {
     if (!isOpen) return
@@ -700,13 +763,93 @@ function CreateManualArsipModal({
     setErrors({})
     setSubmitError(null)
     setSubmitting(false)
+    setDropdownOpen(false)
+    setSelectedNode(null)
+    setSearchQuery('')
+    setCurrentPath([])
+    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+    setCurrentPath([])
+
+    if (!form.klasifikasi_id) {
+      setSelectedNode(null)
+      return
+    }
+
+    setSelectedNode(findKlasifikasiNodeById(klasifikasiList, form.klasifikasi_id))
+  }, [isOpen, klasifikasiList])
+
+  useEffect(() => {
+    if (!dropdownOpen) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setDropdownOpen(false)
+        setSearchQuery('')
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [dropdownOpen])
 
   if (!isOpen) return null
 
   function setField<K extends keyof ManualArsipFormState>(field: K, value: ManualArsipFormState[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
     setErrors((prev) => ({ ...prev, [field]: '' }))
+  }
+
+  function openKlasifikasiDropdown() {
+    setDropdownOpen(true)
+    setSearchQuery('')
+
+    if (selectedNode) {
+      const path = findKlasifikasiPathToNode(klasifikasiList, selectedNode.id)
+      if (path.length > 0) {
+        const parentPath = path.slice(0, -1)
+        const parentNode = parentPath[parentPath.length - 1] ?? null
+        setCurrentPath(parentPath)
+        setCurrentNodes(sortKlasifikasiByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiList)))
+        return
+      }
+    }
+
+    setCurrentPath([])
+    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+  }
+
+  function handleKlasifikasiNodeClick(node: KlasifikasiNode) {
+    const children = sortKlasifikasiByKode(node.children ?? [])
+
+    if (children.length > 0) {
+      setSearchQuery('')
+      setCurrentPath((prev) => [...prev, node])
+      setCurrentNodes(children)
+      return
+    }
+
+    setSelectedNode(node)
+    setField('klasifikasi_id', node.id)
+    setDropdownOpen(false)
+    setSearchQuery('')
+  }
+
+  function handleKlasifikasiBack() {
+    if (currentPath.length === 0) {
+      setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+      return
+    }
+
+    const nextPath = currentPath.slice(0, -1)
+    const parentNode = nextPath[nextPath.length - 1] ?? null
+    setCurrentPath(nextPath)
+    setCurrentNodes(sortKlasifikasiByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiList)))
   }
 
   function handleNominalRealisasiChange(value: string) {
@@ -788,8 +931,13 @@ function CreateManualArsipModal({
         body: {
           nama: form.nama.trim(),
           tanggal: form.tanggal,
+          nomor_surat: form.nomor_surat.trim(),
+          tanggal_diarsipkan: form.tanggal_diarsipkan,
           keterangan: form.keterangan.trim(),
           category_id: form.category_id,
+          klasifikasi_id: form.klasifikasi_id,
+          retensi_aktif: form.retensi_aktif,
+          retensi_inaktif: form.retensi_inaktif,
           nominal_realisasi: validation.nominal,
         },
       })
@@ -873,11 +1021,11 @@ function CreateManualArsipModal({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Fase ini menerima lampiran opsional sebagai metadata aman. Preview/download hanya tersedia setelah arsip tersimpan melalui endpoint API terotorisasi. Klasifikasi arsip belum dipilih dari UI; data klasifikasi yang sudah ada tetap ditampilkan di daftar jika API mengembalikannya.
+            Isi metadata arsip lengkap sebelum menyimpan. Tanggal Arsip dipakai server untuk menghitung masa retensi; tanggal berakhir tidak dikirim dari browser. Preview/download lampiran tetap tersedia setelah arsip tersimpan melalui endpoint API terotorisasi.
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Nama" required error={errors.nama}>
+            <FormField label="Nama Arsip" required error={errors.nama}>
               <input
                 value={form.nama}
                 onChange={(event) => setField('nama', event.target.value)}
@@ -886,12 +1034,42 @@ function CreateManualArsipModal({
               />
             </FormField>
 
-            <FormField label="Tanggal" required error={errors.tanggal}>
+            <FormField
+              label="Tanggal Dokumen/Sumber"
+              required
+              hint="tanggal item yang diarsipkan"
+              error={errors.tanggal}
+            >
               <input
                 type="date"
                 value={form.tanggal}
                 onChange={(event) => setField('tanggal', event.target.value)}
                 className={inputClass(errors.tanggal)}
+              />
+            </FormField>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label="Nomor Surat" required error={errors.nomor_surat}>
+              <input
+                value={form.nomor_surat}
+                onChange={(event) => setField('nomor_surat', event.target.value)}
+                placeholder="Contoh: 001/ARSIP/2026"
+                className={inputClass(errors.nomor_surat)}
+              />
+            </FormField>
+
+            <FormField
+              label="Tanggal Arsip"
+              required
+              hint="dasar perhitungan retensi"
+              error={errors.tanggal_diarsipkan}
+            >
+              <input
+                type="date"
+                value={form.tanggal_diarsipkan}
+                onChange={(event) => setField('tanggal_diarsipkan', event.target.value)}
+                className={inputClass(errors.tanggal_diarsipkan)}
               />
             </FormField>
           </div>
@@ -910,6 +1088,58 @@ function CreateManualArsipModal({
               </select>
             </FormField>
 
+            <KlasifikasiFormField
+              error={errors.klasifikasi_id}
+              selectedNode={selectedNode}
+              dropdownOpen={dropdownOpen}
+              dropdownRef={dropdownRef}
+              searchQuery={searchQuery}
+              visibleNodes={visibleNodes}
+              filteredSearchResults={filteredSearchResults}
+              breadcrumbPath={breadcrumbPath}
+              currentPath={currentPath}
+              onToggle={() => {
+                if (dropdownOpen) {
+                  setDropdownOpen(false)
+                  setSearchQuery('')
+                  return
+                }
+
+                openKlasifikasiDropdown()
+              }}
+              onSearchChange={setSearchQuery}
+              onBack={handleKlasifikasiBack}
+              onSelect={handleKlasifikasiNodeClick}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <FormField label="Retensi Aktif" required error={errors.retensi_aktif}>
+              <select
+                value={form.retensi_aktif}
+                onChange={(event) => setField('retensi_aktif', event.target.value)}
+                className={inputClass(errors.retensi_aktif)}
+              >
+                <option value="">Pilih retensi aktif</option>
+                {MANUAL_ARSIP_RETENTION_OPTIONS.map((retensi) => (
+                  <option key={retensi} value={retensi}>{retensi}</option>
+                ))}
+              </select>
+            </FormField>
+
+            <FormField label="Retensi Inaktif" required error={errors.retensi_inaktif}>
+              <select
+                value={form.retensi_inaktif}
+                onChange={(event) => setField('retensi_inaktif', event.target.value)}
+                className={inputClass(errors.retensi_inaktif)}
+              >
+                <option value="">Pilih retensi inaktif</option>
+                {MANUAL_ARSIP_RETENTION_OPTIONS.map((retensi) => (
+                  <option key={retensi} value={retensi}>{retensi}</option>
+                ))}
+              </select>
+            </FormField>
+
             <FormField label="Nominal Realisasi" required hint="Rupiah tanpa desimal" error={errors.nominal_realisasi}>
               <input
                 type="text"
@@ -920,6 +1150,12 @@ function CreateManualArsipModal({
                 className={inputClass(errors.nominal_realisasi)}
               />
             </FormField>
+          </div>
+
+          <div className="rounded-lg border border-outline-variant/30 bg-surface-container-low/20 px-3 py-2 text-[11px] text-on-surface-variant">
+            <p>Tanggal Dokumen/Sumber adalah tanggal dari dokumen atau kegiatan yang diarsipkan.</p>
+            <p>Tanggal Arsip adalah tanggal resmi pencatatan arsip dan menjadi dasar hitung retensi di server.</p>
+            <p>Kode dan nama klasifikasi hanya ditampilkan untuk membantu pemilihan; server tetap mengambil snapshot klasifikasi dari data master.</p>
           </div>
 
           <FormField label="Keterangan" required error={errors.keterangan}>
@@ -1015,7 +1251,7 @@ function CreateManualArsipModal({
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
               Batal
             </Button>
-            <Button type="submit" disabled={submitting || categories.length === 0}>
+            <Button type="submit" disabled={submitting || categories.length === 0 || klasifikasiList.length === 0}>
               {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
               Simpan Arsip
             </Button>
@@ -1023,6 +1259,168 @@ function CreateManualArsipModal({
         </form>
       </div>
     </div>
+  )
+}
+
+function KlasifikasiFormField({
+  error,
+  selectedNode,
+  dropdownOpen,
+  dropdownRef,
+  searchQuery,
+  visibleNodes,
+  filteredSearchResults,
+  breadcrumbPath,
+  currentPath,
+  onToggle,
+  onSearchChange,
+  onBack,
+  onSelect,
+}: {
+  error?: string
+  selectedNode: KlasifikasiNode | null
+  dropdownOpen: boolean
+  dropdownRef: RefObject<HTMLDivElement | null>
+  searchQuery: string
+  visibleNodes: KlasifikasiNode[]
+  filteredSearchResults: FlatKlasifikasiOption[]
+  breadcrumbPath: string
+  currentPath: KlasifikasiNode[]
+  onToggle: () => void
+  onSearchChange: (value: string) => void
+  onBack: () => void
+  onSelect: (node: KlasifikasiNode) => void
+}) {
+  return (
+    <FormField
+      label="Klasifikasi Arsip"
+      required
+      hint="pilih kode dan nama"
+      error={error}
+    >
+      <div ref={dropdownRef} className="relative">
+        <button
+          type="button"
+          onClick={onToggle}
+          className={cn(
+            'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 text-left text-sm outline-none focus:ring-1 focus:ring-ring',
+            error ? 'border-error' : 'border-border',
+          )}
+        >
+          <div className="min-w-0">
+            {selectedNode ? (
+              <>
+                <p className="truncate font-medium text-on-surface">
+                  {formatKlasifikasiLabel(selectedNode)}
+                </p>
+                <p className="truncate text-[10px] text-on-surface-variant">
+                  {selectedNode.kode ? 'Kode klasifikasi tersedia dari data master' : 'Tanpa kode klasifikasi'}
+                </p>
+              </>
+            ) : (
+              <p className="text-on-surface-variant">Pilih klasifikasi arsip</p>
+            )}
+          </div>
+          <ChevronDown
+            size={16}
+            className={cn('shrink-0 text-outline transition-transform', dropdownOpen && 'rotate-180')}
+          />
+        </button>
+
+        {dropdownOpen && (
+          <div className="absolute z-20 mt-2 w-full rounded-xl border border-outline-variant/30 bg-white shadow-lg">
+            <div className="border-b border-outline-variant/20 p-3">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/50" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => onSearchChange(event.target.value)}
+                  placeholder="Cari nama atau kode klasifikasi"
+                  className="w-full rounded-lg border border-border bg-white py-2 pr-3 pl-9 text-xs outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+
+              {!searchQuery.trim() && (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onBack}
+                    disabled={currentPath.length === 0}
+                    className="gap-1.5 px-2 text-xs"
+                  >
+                    <ChevronLeft size={14} />
+                    Back
+                  </Button>
+                  <p className="truncate text-[10px] text-on-surface-variant">
+                    {breadcrumbPath || 'Root'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="max-h-72 overflow-y-auto p-2">
+              {searchQuery.trim() ? (
+                filteredSearchResults.length === 0 ? (
+                  <div className="px-3 py-6 text-center text-xs text-on-surface-variant">
+                    Tidak ada hasil pencarian.
+                  </div>
+                ) : (
+                  filteredSearchResults.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => onSelect(option.node)}
+                      className="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-container-low/40"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-on-surface">
+                          {formatKlasifikasiLabel(option.node)}
+                        </p>
+                        <p className="truncate text-[10px] text-on-surface-variant">
+                          Pilih klasifikasi ini
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                )
+              ) : visibleNodes.length === 0 ? (
+                <div className="px-3 py-6 text-center text-xs text-on-surface-variant">
+                  Tidak ada klasifikasi pada level ini.
+                </div>
+              ) : (
+                visibleNodes.map((node) => {
+                  const hasChildren = (node.children?.length ?? 0) > 0
+
+                  return (
+                    <button
+                      key={node.id}
+                      type="button"
+                      onClick={() => onSelect(node)}
+                      className="flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-container-low/40"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-on-surface">
+                          {formatKlasifikasiLabel(node)}
+                        </p>
+                        <p className="truncate text-[10px] text-on-surface-variant">
+                          {hasChildren ? 'Buka sub-klasifikasi' : 'Pilih klasifikasi ini'}
+                        </p>
+                      </div>
+                      {hasChildren && (
+                        <ChevronRight size={14} className="mt-0.5 shrink-0 text-outline" />
+                      )}
+                    </button>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </FormField>
   )
 }
 
@@ -1215,6 +1613,101 @@ function attachmentLinkClass(variant: 'outline' | 'primary') {
   )
 }
 
+function formatKlasifikasiLabel(node: Pick<KlasifikasiNode, 'kode' | 'nama'>) {
+  const kode = node.kode?.trim()
+  return kode ? `${kode} - ${node.nama}` : node.nama
+}
+
+function compareKlasifikasiKode(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): number {
+  const aParts = (a ?? '').split('.')
+  const bParts = (b ?? '').split('.')
+  const maxLength = Math.max(aParts.length, bParts.length)
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const aPart = aParts[index] ?? ''
+    const bPart = bParts[index] ?? ''
+    const comparison = aPart.localeCompare(bPart, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+
+    if (comparison !== 0) return comparison
+  }
+
+  return 0
+}
+
+function sortKlasifikasiByKode(nodes: KlasifikasiNode[]): KlasifikasiNode[] {
+  return [...nodes].sort((left, right) => {
+    const kodeComparison = compareKlasifikasiKode(left.kode, right.kode)
+    if (kodeComparison !== 0) return kodeComparison
+
+    return left.nama.localeCompare(right.nama, undefined, { sensitivity: 'base' })
+  })
+}
+
+function flattenKlasifikasiTree(
+  nodes: KlasifikasiNode[],
+): FlatKlasifikasiOption[] {
+  const flattened: FlatKlasifikasiOption[] = []
+
+  for (const node of sortKlasifikasiByKode(nodes)) {
+    flattened.push({
+      id: node.id,
+      kode: node.kode ?? null,
+      nama: node.nama,
+      node,
+    })
+
+    if (node.children?.length) {
+      flattened.push(...flattenKlasifikasiTree(node.children))
+    }
+  }
+
+  return flattened
+}
+
+function findRootKlasifikasiNode(nodes: KlasifikasiNode[]): KlasifikasiNode | null {
+  if (nodes.length === 1 && nodes[0]?.is_root) return nodes[0]
+  return nodes.find((node) => node.is_root) ?? null
+}
+
+function buildInitialKlasifikasiNodes(nodes: KlasifikasiNode[]): KlasifikasiNode[] {
+  const rootNode = findRootKlasifikasiNode(nodes)
+  return sortKlasifikasiByKode(rootNode?.children ?? nodes)
+}
+
+function findKlasifikasiNodeById(
+  nodes: KlasifikasiNode[],
+  targetId: string,
+): KlasifikasiNode | null {
+  for (const node of nodes) {
+    if (node.id === targetId) return node
+
+    const childMatch = findKlasifikasiNodeById(node.children ?? [], targetId)
+    if (childMatch) return childMatch
+  }
+
+  return null
+}
+
+function findKlasifikasiPathToNode(
+  nodes: KlasifikasiNode[],
+  targetId: string,
+): KlasifikasiNode[] {
+  for (const node of nodes) {
+    if (node.id === targetId) return [node]
+
+    const childPath = findKlasifikasiPathToNode(node.children ?? [], targetId)
+    if (childPath.length > 0) return [node, ...childPath]
+  }
+
+  return []
+}
+
 function validateForm(form: ManualArsipFormState): {
   errors: Record<string, string>
   nominal: number
@@ -1223,10 +1716,35 @@ function validateForm(form: ManualArsipFormState): {
   const rawNominal = form.nominal_realisasi.replace(/[^\d]/g, '')
   let nominal = 0
 
-  if (!form.nama.trim()) errors.nama = 'Nama wajib diisi'
-  if (!isValidDateOnly(form.tanggal)) errors.tanggal = 'Tanggal harus valid'
+  if (!form.nama.trim()) errors.nama = 'Nama Arsip wajib diisi'
+  if (!form.nomor_surat.trim()) errors.nomor_surat = 'Nomor Surat wajib diisi'
+
+  if (!form.tanggal) {
+    errors.tanggal = 'Tanggal Dokumen/Sumber wajib diisi'
+  } else if (!isValidDateOnly(form.tanggal)) {
+    errors.tanggal = 'Tanggal Dokumen/Sumber harus valid'
+  }
+
+  if (!form.tanggal_diarsipkan) {
+    errors.tanggal_diarsipkan = 'Tanggal Arsip wajib diisi'
+  } else if (!isValidDateOnly(form.tanggal_diarsipkan)) {
+    errors.tanggal_diarsipkan = 'Tanggal Arsip harus valid'
+  }
+
   if (!form.keterangan.trim()) errors.keterangan = 'Keterangan wajib diisi'
   if (!form.category_id) errors.category_id = 'Kategori wajib dipilih'
+  if (!form.klasifikasi_id) errors.klasifikasi_id = 'Klasifikasi arsip wajib dipilih'
+  if (!form.retensi_aktif) {
+    errors.retensi_aktif = 'Retensi aktif wajib dipilih'
+  } else if (!MANUAL_ARSIP_RETENTION_OPTION_SET.has(form.retensi_aktif)) {
+    errors.retensi_aktif = 'Retensi aktif tidak valid'
+  }
+
+  if (!form.retensi_inaktif) {
+    errors.retensi_inaktif = 'Retensi inaktif wajib dipilih'
+  } else if (!MANUAL_ARSIP_RETENTION_OPTION_SET.has(form.retensi_inaktif)) {
+    errors.retensi_inaktif = 'Retensi inaktif tidak valid'
+  }
 
   if (!rawNominal) {
     errors.nominal_realisasi = 'Nominal realisasi wajib diisi'
