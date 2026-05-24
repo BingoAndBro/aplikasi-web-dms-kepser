@@ -14,6 +14,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { users } from '../auth/users'
+import { arsip } from './arsip'
 import { masterKlasifikasiArsip } from './klasifikasi-arsip'
 
 const arsipSchema = pgSchema('arsip')
@@ -42,6 +43,8 @@ export const manualArsip = arsipSchema.table(
     id: uuid('id').primaryKey().defaultRandom(),
     nama: text('nama').notNull(),
     tanggal: date('tanggal').notNull(),
+    nomorSurat: text('nomor_surat'),
+    tanggalDiarsipkan: date('tanggal_diarsipkan'),
     keterangan: text('keterangan').notNull(),
     nominalRealisasi: numeric('nominal_realisasi', { precision: 15, scale: 2 }),
     categoryId: uuid('category_id')
@@ -49,7 +52,16 @@ export const manualArsip = arsipSchema.table(
       .references(() => manualArsipCategory.id, { onDelete: 'restrict', onUpdate: 'no action' }),
     klasifikasiId: uuid('klasifikasi_id')
       .references(() => masterKlasifikasiArsip.id, { onDelete: 'set null', onUpdate: 'no action' }),
+    klasifikasiKodeSnapshot: text('klasifikasi_kode_snapshot'),
     klasifikasiNamaSnapshot: text('klasifikasi_nama_snapshot'),
+    retensiAktif: text('retensi_aktif'),
+    retensiInaktif: text('retensi_inaktif'),
+    masaAktifBerakhir: date('masa_aktif_berakhir'),
+    masaInaktifBerakhir: date('masa_inaktif_berakhir'),
+    archivedBy: uuid('archived_by')
+      .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
+    canonicalArsipId: uuid('canonical_arsip_id')
+      .references(() => arsip.id, { onDelete: 'set null', onUpdate: 'no action' }),
     // Canonical active lifecycle values: AKTIF, INAKTIF, USUL_MUSNAH, DIMUSNAHKAN.
     statusArsip: text('status_arsip').notNull().default('AKTIF'),
     metadata: jsonb('metadata').$type<ManualArsipMetadataJson>().notNull().default(sql`'{}'::jsonb`),
@@ -73,7 +85,11 @@ export const manualArsip = arsipSchema.table(
     index('idx_manual_arsip_klasifikasi_id').on(table.klasifikasiId),
     index('idx_manual_arsip_status_arsip').on(table.statusArsip),
     index('idx_manual_arsip_tanggal').on(table.tanggal),
+    index('idx_manual_arsip_tanggal_diarsipkan').on(table.tanggalDiarsipkan),
     index('idx_manual_arsip_created_by').on(table.createdBy),
+    uniqueIndex('manual_arsip_canonical_arsip_id_unique')
+      .on(table.canonicalArsipId)
+      .where(sql`${table.canonicalArsipId} is not null`),
     check(
       'manual_arsip_status_arsip_check',
       sql`${table.statusArsip} in ('AKTIF', 'INAKTIF', 'USUL_MUSNAH', 'DIMUSNAHKAN')`,

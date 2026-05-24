@@ -43,6 +43,13 @@
       "when": 1779609600000,
       "tag": "0005_canonical_archive_schema_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779696000000,
+      "tag": "0006_manual_archive_retention_schema_foundation",
+      "breakpoints": true
     }
   ]
 }
