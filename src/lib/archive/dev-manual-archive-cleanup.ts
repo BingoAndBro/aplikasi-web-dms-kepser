@@ -20,6 +20,7 @@ import {
 
 export const DEV_MANUAL_ARCHIVE_CLEANUP_CONFIRMATION =
   'HAPUS DATA ARSIP MANUAL DEV INVALID'
+const DEV_MANUAL_ARCHIVE_PROTECTED_REFERENCE_SCAN_LIMIT = 5000
 
 export type DevManualArchiveCleanupMode = 'dry_run' | 'execute'
 
@@ -237,7 +238,10 @@ async function buildProtectedReferenceSet(
     collectWorkflowSnapshotReferences(row.lampiran_snapshot, protectedReferences)
   }
 
-  const allManualRows = await selectManualArchiveRows(database)
+  const allManualRows = await selectManualArchiveRows(
+    database,
+    DEV_MANUAL_ARCHIVE_PROTECTED_REFERENCE_SCAN_LIMIT,
+  )
   const validManualIds = allManualRows
     .filter(isProtectedManualArchiveRow)
     .map((row) => row.id)
@@ -419,7 +423,7 @@ async function selectManualAttachments(
     })
     .from(manualArsipAttachment)
     .where(inArray(manualArsipAttachment.manualArsipId, ids))
-    .limit(5000) as Promise<ManualArchiveAttachmentCleanupRow[]>
+    .limit(DEV_MANUAL_ARCHIVE_PROTECTED_REFERENCE_SCAN_LIMIT) as Promise<ManualArchiveAttachmentCleanupRow[]>
 }
 
 async function selectCanonicalArchiveReferenceRows(
@@ -432,7 +436,7 @@ async function selectCanonicalArchiveReferenceRows(
       lampiran_snapshot: arsip.lampiranSnapshot,
     })
     .from(arsip)
-    .limit(5000) as Promise<CanonicalArchiveReferenceRow[]>
+    .limit(DEV_MANUAL_ARCHIVE_PROTECTED_REFERENCE_SCAN_LIMIT) as Promise<CanonicalArchiveReferenceRow[]>
 }
 
 function collectWorkflowSnapshotReferences(

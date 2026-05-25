@@ -62,6 +62,27 @@ describe('dev manual archive cleanup helper', () => {
     expectNoLeak(result)
   })
 
+  it('uses explicit terminal limits for real Drizzle-compatible dry-run queries', async () => {
+    const database = createFakeDatabase({
+      manualRows: [invalidManualRow()],
+      invalidAttachmentRows: [attachmentRow()],
+    })
+
+    const result = await cleanupInvalidManualArchiveDevData({
+      dryRun: true,
+      database,
+      storage: createFakeStorage(),
+    })
+
+    expect(result.status).toBe('completed')
+    expect(result.scannedManualRows).toBe(1)
+    expect(database.calls).toContainEqual(['limit', 'manualArsip', 100])
+    expect(database.calls).toContainEqual(['limit', 'manualArsip', 5000])
+    expect(database.calls).toContainEqual(['limit', 'arsip', 5000])
+    expect(database.calls).toContainEqual(['limit', 'manualArsipAttachment', 5000])
+    expectNoLeak(result)
+  })
+
   it('wrong confirmation rejects execute and deletes nothing', async () => {
     const database = createFakeDatabase({
       manualRows: [invalidManualRow()],
@@ -338,7 +359,6 @@ type FakeQuery = {
   leftJoin: (...args: unknown[]) => FakeQuery
   where: (...args: unknown[]) => FakeQuery
   limit: (limit: number) => Promise<unknown[]>
-  then: Promise<unknown[]>['then']
 }
 
 function createFakeDatabase(options: FakeDatabaseOptions): FakeDatabase {
@@ -375,13 +395,6 @@ function createFakeDatabase(options: FakeDatabaseOptions): FakeDatabase {
             options,
             manualAttachmentSelectCount,
           }))
-        },
-        then(onfulfilled, onrejected) {
-          return Promise.resolve(rowsFor({
-            table: selectedTable,
-            options,
-            manualAttachmentSelectCount,
-          })).then(onfulfilled, onrejected)
         },
       }
 
