@@ -380,6 +380,42 @@ describe('unified archive detail reader', () => {
     expectNoMutationCalls(database)
   })
 
+  it('WORKFLOW attachment without a safe file reference is unavailable without exposing paths', async () => {
+    const database = createFakeReadDatabase({
+      canonicalRows: [
+        workflowCanonicalRow({
+          lampiran_snapshot: [{
+            displayName: 'Lampiran Tanpa File',
+            content_type: 'application/pdf',
+          }],
+        }),
+      ],
+      userRows: [userRow()],
+      workflowRows: [workflowSourceRow()],
+      manualRows: [],
+    })
+    const reader = createUnifiedArchiveDetailReader(database)
+
+    const result = await reader.getUnifiedArchiveDetail(WORKFLOW_ARCHIVE_ID)
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') throw new Error('expected found')
+    expect(result.detail.attachments).toEqual([{
+      sourceType: 'WORKFLOW',
+      attachmentId: null,
+      index: 1,
+      displayName: 'Lampiran Tanpa File',
+      fileName: null,
+      mimeType: 'application/pdf',
+      sizeBytes: null,
+      uploadedAt: null,
+      availability: 'UNAVAILABLE_SOURCE_INCOMPLETE',
+    }])
+    expectNoSensitiveOutput(result)
+    expectNoFileActions(result)
+    expectNoMutationCalls(database)
+  })
+
   it('DIMUSNAHKAN detail marks attachments unavailable destroyed without file actions', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow({ status_arsip: 'DIMUSNAHKAN' })],

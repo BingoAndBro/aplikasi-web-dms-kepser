@@ -18,6 +18,7 @@ import {
   type ArchiveSourceType,
   type StatusArsip,
 } from '#/lib/constants/archive-status'
+import { isSafeWorkflowAttachmentEntry } from '#/lib/archive/unified-archive-file-actions'
 
 export type UnifiedArchiveDetailSourceType = ArchiveSourceType | 'UNKNOWN'
 
@@ -525,6 +526,7 @@ function mapWorkflowAttachmentSummary(
     entry.createdAt,
     entry.created_at,
   )
+  const hasSafeFileReference = isSafeWorkflowAttachmentEntry(entry)
 
   if (!displayName && !fileName && !mimeType && sizeBytes === null && !uploadedAt) {
     return null
@@ -539,7 +541,7 @@ function mapWorkflowAttachmentSummary(
     mimeType,
     sizeBytes,
     uploadedAt,
-    availability: resolveAttachmentAvailability(statusArsip, sourceIncomplete),
+    availability: resolveAttachmentAvailability(statusArsip, sourceIncomplete || !hasSafeFileReference),
   }
 }
 

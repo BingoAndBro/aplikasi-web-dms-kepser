@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { AlertCircle, AlertTriangle, ArrowLeft, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, AlertTriangle, ArrowLeft, Download, Eye, FileText, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
@@ -238,7 +238,7 @@ function AttachmentSection({ detail }: { detail: UnifiedArchiveDetail }) {
           Lampiran Arsip
         </h3>
         <p className="text-xs text-on-surface-variant">
-          Metadata lampiran read-only. Halaman ini tidak menyediakan akses file.
+          Akses file tersedia hanya melalui endpoint server terotorisasi.
         </p>
       </div>
 
@@ -257,6 +257,7 @@ function AttachmentSection({ detail }: { detail: UnifiedArchiveDetail }) {
           {detail.attachments.map((attachment, index) => (
             <AttachmentCard
               key={attachment.attachmentId ?? `${attachment.sourceType}-${attachment.index ?? index}`}
+              archiveId={detail.id}
               attachment={attachment}
               fallbackIndex={index + 1}
             />
@@ -268,12 +269,17 @@ function AttachmentSection({ detail }: { detail: UnifiedArchiveDetail }) {
 }
 
 function AttachmentCard({
+  archiveId,
   attachment,
   fallbackIndex,
 }: {
+  archiveId: string
   attachment: UnifiedArchiveAttachmentSummary
   fallbackIndex: number
 }) {
+  const previewHref = buildAttachmentActionHref(archiveId, attachment, 'preview')
+  const downloadHref = buildAttachmentActionHref(archiveId, attachment, 'download')
+
   return (
     <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low/30 p-4">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
@@ -297,6 +303,29 @@ function AttachmentCard({
           ['Diunggah Pada', formatNullableDateTime(attachment.uploadedAt)],
         ]}
       />
+
+      {previewHref && downloadHref ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a
+            href={previewHref}
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-outline-variant/60 bg-white px-2.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
+          >
+            <Eye size={13} />
+            Preview
+          </a>
+          <a
+            href={downloadHref}
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Download size={13} />
+            Download
+          </a>
+        </div>
+      ) : (
+        <p className="mt-3 text-xs font-semibold text-on-surface-variant">
+          {formatAttachmentAvailability(attachment.availability)}
+        </p>
+      )}
     </div>
   )
 }
@@ -433,6 +462,36 @@ function formatAttachmentAvailability(
   if (availability === 'AVAILABLE') return 'Tersedia'
   if (availability === 'UNAVAILABLE_DESTROYED') return 'Tidak tersedia - dimusnahkan'
   return 'Tidak tersedia - sumber belum lengkap'
+}
+
+function buildAttachmentActionHref(
+  archiveId: string,
+  attachment: UnifiedArchiveAttachmentSummary,
+  action: 'preview' | 'download',
+): string | null {
+  if (attachment.availability !== 'AVAILABLE') return null
+
+  const attachmentRef = buildAttachmentRef(attachment)
+  if (!attachmentRef) return null
+
+  const params = new URLSearchParams({
+    action,
+    attachmentRef,
+  })
+
+  return `/api/arsiparis/arsip/${encodeURIComponent(archiveId)}?${params.toString()}`
+}
+
+function buildAttachmentRef(attachment: UnifiedArchiveAttachmentSummary): string | null {
+  if (attachment.sourceType === 'WORKFLOW') {
+    return attachment.index && attachment.index > 0 ? `workflow-${attachment.index}` : null
+  }
+
+  if (attachment.sourceType === 'MANUAL') {
+    return attachment.attachmentId ? `manual-${attachment.attachmentId}` : null
+  }
+
+  return null
 }
 
 function formatText(value: string | null | undefined): string {
