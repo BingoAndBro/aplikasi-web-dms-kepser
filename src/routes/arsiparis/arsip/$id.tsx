@@ -35,12 +35,14 @@ type UnifiedArchiveDetailResponse = {
   error?: string
 }
 
-type UnifiedArchiveLifecycleAction = 'mark_inactive' | 'propose_destruction'
+type UnifiedArchiveLifecycleAction = 'mark_inactive' | 'propose_destruction' | 'approve_destruction'
 
 type UnifiedArchiveLifecycleResponse = {
   ok?: boolean
   error?: string
 }
+
+const destructionConfirmationPhrase = 'SETUJUI PEMUSNAHAN ARSIP'
 
 function UnifiedArchiveDetailPage() {
   const { id } = Route.useParams()
@@ -110,7 +112,7 @@ function UnifiedArchiveDetailPage() {
         ) : error ? (
           <ErrorState message={error} onRetry={fetchDetail} />
         ) : detail ? (
-          <DetailContent detail={detail} />
+          <DetailContent detail={detail} onRefetch={fetchDetail} />
         ) : (
           <ErrorState message="Metadata arsip tidak tersedia" onRetry={fetchDetail} />
         )}
@@ -119,7 +121,13 @@ function UnifiedArchiveDetailPage() {
   )
 }
 
-function DetailContent({ detail }: { detail: UnifiedArchiveDetail }) {
+function DetailContent({
+  detail,
+  onRefetch,
+}: {
+  detail: UnifiedArchiveDetail
+  onRefetch: (options?: { showLoading?: boolean }) => Promise<void>
+}) {
   return (
     <div className="space-y-6">
       {detail.statusArsip === 'DIMUSNAHKAN' && (
@@ -181,22 +189,33 @@ function DetailContent({ detail }: { detail: UnifiedArchiveDetail }) {
 
       <AttachmentSection detail={detail} />
 
-      <LifecycleActionSection detail={detail} />
+      <LifecycleActionSection detail={detail} onRefetch={onRefetch} />
     </div>
   )
 }
 
 function LifecycleActionSection({
   detail,
+  onRefetch,
 }: {
   detail: UnifiedArchiveDetail
+  onRefetch: (options?: { showLoading?: boolean }) => Promise<void>
 }) {
   const navigate = useNavigate()
   const [pendingAction, setPendingAction] = useState<UnifiedArchiveLifecycleAction | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
+  const [destructionPanelOpen, setDestructionPanelOpen] = useState(false)
+  const [destructionPhrase, setDestructionPhrase] = useState('')
+  const [destructionReason, setDestructionReason] = useState('')
   const lifecycleAction = resolveLifecycleAction(detail.statusArsip)
+  const canSubmitDestruction = destructionPhrase === destructionConfirmationPhrase
+    && destructionReason.trim().length > 0
+    && pendingAction === null
 
   async function submitLifecycleAction(action: UnifiedArchiveLifecycleAction) {
+    if (action === 'approve_destruction') return
+
     const confirmationMessage = action === 'mark_inactive'
       ? 'Pindahkan arsip ini ke status Inaktif?'
       : 'Ajukan arsip ini ke Usul Musnah?'
@@ -205,6 +224,7 @@ function LifecycleActionSection({
 
     setPendingAction(action)
     setActionError(null)
+    setActionSuccess(null)
 
     try {
       await apiFetch<UnifiedArchiveLifecycleResponse>(
@@ -228,6 +248,42 @@ function LifecycleActionSection({
     }
   }
 
+  async function submitDestructionApproval() {
+    const trimmedReason = destructionReason.trim()
+    if (destructionPhrase !== destructionConfirmationPhrase || trimmedReason.length === 0) return
+
+    setPendingAction('approve_destruction')
+    setActionError(null)
+    setActionSuccess(null)
+
+    try {
+      await apiFetch<UnifiedArchiveLifecycleResponse>(
+        `/arsiparis/arsip/${detail.id}/lifecycle`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'approve_destruction',
+            confirmation: destructionConfirmationPhrase,
+            reason: trimmedReason,
+          }),
+        },
+      )
+      await onRefetch({ showLoading: false })
+      setDestructionPanelOpen(false)
+      setDestructionPhrase('')
+      setDestructionReason('')
+      setActionSuccess('Arsip berhasil ditandai sebagai DIMUSNAHKAN. Metadata telah dimuat ulang.')
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setActionError(readApiError(error.payload) ?? 'Gagal memusnahkan arsip.')
+      } else {
+        setActionError('Terjadi kesalahan saat memusnahkan arsip.')
+      }
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
   return (
     <section className="rounded-xl border border-outline-variant/30 bg-white p-5 shadow-sm">
       <div className="mb-4 flex flex-col gap-1">
@@ -245,6 +301,12 @@ function LifecycleActionSection({
         </div>
       )}
 
+      {actionSuccess && (
+        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+          {actionSuccess}
+        </div>
+      )}
+
       {lifecycleAction ? (
         <Button
           className="w-full gap-1.5 sm:w-auto"
@@ -257,8 +319,102 @@ function LifecycleActionSection({
           {lifecycleAction.label}
         </Button>
       ) : detail.statusArsip === 'USUL_MUSNAH' ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-          Persetujuan pemusnahan tidak ditampilkan di UI pada fase ini. Gunakan proses/API terpisah yang sudah disetujui.
+        <div className="space-y-4">
+          <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-2">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0 text-error" />
+                <div>
+                  <p className="text-sm font-bold text-error">Aksi destruktif terminal</p>
+                  <p className="mt-1 text-xs font-medium text-error/80">
+                    Musnahkan Arsip hanya tersedia untuk status USUL_MUSNAH dan membutuhkan konfirmasi eksplisit.
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="w-full gap-1.5 bg-error text-white hover:bg-error/90 sm:w-auto"
+                onClick={() => {
+                  setDestructionPanelOpen(true)
+                  setActionError(null)
+                  setActionSuccess(null)
+                }}
+                disabled={pendingAction !== null || destructionPanelOpen}
+              >
+                <AlertTriangle size={14} />
+                Musnahkan Arsip
+              </Button>
+            </div>
+          </div>
+
+          {destructionPanelOpen && (
+            <div className="rounded-xl border border-error/30 bg-error/5 p-4">
+              <div className="mb-4 space-y-2 text-xs font-semibold text-error/90">
+                <p>Arsip akan berubah menjadi DIMUSNAHKAN.</p>
+                <p>Preview dan download file akan diblokir.</p>
+                <p>File fisik tidak dihapus oleh aksi ini.</p>
+                <p>Metadata arsip tetap dapat dilihat oleh pengguna berwenang.</p>
+                <p>Audit khusus belum ditulis di fase ini; ini limitation development/local-LAN.</p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-xs font-bold text-on-surface" htmlFor="destruction-confirmation">
+                  Ketik frasa konfirmasi <span className="text-error">*</span>
+                </label>
+                <input
+                  id="destruction-confirmation"
+                  value={destructionPhrase}
+                  onChange={(event) => {
+                    setDestructionPhrase(event.target.value)
+                    setActionError(null)
+                  }}
+                  className="w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
+                  placeholder={destructionConfirmationPhrase}
+                  autoComplete="off"
+                />
+                <p className="text-[10px] font-semibold text-outline">
+                  Frasa wajib: {destructionConfirmationPhrase}
+                </p>
+
+                <label className="block text-xs font-bold text-on-surface" htmlFor="destruction-reason">
+                  Alasan pemusnahan <span className="text-error">*</span>
+                </label>
+                <textarea
+                  id="destruction-reason"
+                  value={destructionReason}
+                  onChange={(event) => {
+                    setDestructionReason(event.target.value)
+                    setActionError(null)
+                  }}
+                  rows={4}
+                  className="w-full resize-none rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
+                  placeholder="Tuliskan alasan pemusnahan arsip."
+                />
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDestructionPanelOpen(false)
+                      setActionError(null)
+                    }}
+                    disabled={pendingAction !== null}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    className="gap-1.5 bg-error text-white hover:bg-error/90"
+                    onClick={submitDestructionApproval}
+                    disabled={!canSubmitDestruction}
+                  >
+                    {pendingAction === 'approve_destruction'
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : <AlertTriangle size={14} />}
+                    Konfirmasi Pemusnahan Arsip
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : detail.statusArsip === 'DIMUSNAHKAN' ? (
         <p className="text-sm text-on-surface-variant">
