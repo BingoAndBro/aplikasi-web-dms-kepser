@@ -43,6 +43,18 @@ type UnifiedArchiveLifecycleResponse = {
 }
 
 const destructionConfirmationPhrase = 'SETUJUI PEMUSNAHAN ARSIP'
+const markInactiveConfirmationMessage = [
+  'Pindahkan arsip ini ke status Inaktif?',
+  'Arsip akan keluar dari daftar Arsip Aktif dan masuk ke Arsip Inaktif.',
+  'Status ini tidak dapat dikembalikan lagi melalui fitur saat ini. Pastikan keputusan ini sudah benar sebelum melanjutkan.',
+  'Aksi ini tidak menghapus file arsip.',
+].join('\n\n')
+const proposeDestructionConfirmationMessage = [
+  'Ajukan arsip ini ke Usul Musnah?',
+  'Arsip akan masuk ke daftar Usul Musnah dan siap untuk proses pemusnahan.',
+  'Status ini tidak dapat dikembalikan lagi melalui fitur saat ini. Pastikan arsip memang sudah layak diajukan untuk dimusnahkan.',
+  'Aksi ini belum memusnahkan arsip dan belum menghapus file.',
+].join('\n\n')
 
 function UnifiedArchiveDetailPage() {
   const { id } = Route.useParams()
@@ -217,8 +229,8 @@ function LifecycleActionSection({
     if (action === 'approve_destruction') return
 
     const confirmationMessage = action === 'mark_inactive'
-      ? 'Pindahkan arsip ini ke status Inaktif?'
-      : 'Ajukan arsip ini ke Usul Musnah?'
+      ? markInactiveConfirmationMessage
+      : proposeDestructionConfirmationMessage
 
     if (!window.confirm(confirmationMessage)) return
 
@@ -350,9 +362,10 @@ function LifecycleActionSection({
             <div className="rounded-xl border border-error/30 bg-error/5 p-4">
               <div className="mb-4 space-y-2 text-xs font-semibold text-error/90">
                 <p>Arsip akan berubah menjadi DIMUSNAHKAN.</p>
+                <p>Setelah dimusnahkan, status tidak dapat dikembalikan melalui fitur saat ini.</p>
                 <p>Preview dan download file akan diblokir.</p>
-                <p>File fisik tidak dihapus oleh aksi ini.</p>
                 <p>Metadata arsip tetap dapat dilihat oleh pengguna berwenang.</p>
+                <p>Pada implementasi saat ini, file fisik belum dihapus dari storage; penghapusan file fisik akan menjadi fase terpisah.</p>
                 <p>Audit khusus belum ditulis di fase ini; ini limitation development/local-LAN.</p>
               </div>
 
