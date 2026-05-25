@@ -104,6 +104,7 @@ function UsulMusnahPage() {
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-right">Nominal Realisasi</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Sumber</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Lampiran</th>
+                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,6 +137,15 @@ function UsulMusnahPage() {
                       <td className="px-4 py-3 text-right text-on-surface">{formatNominal(a.nominal_realisasi)}</td>
                       <td className="px-4 py-3 text-center"><SourceBadge label={a.sumber} /></td>
                       <td className="px-4 py-3 text-center text-on-surface">{a.jumlah_lampiran ?? '-'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Link
+                          to="/arsiparis/arsip/$id"
+                          params={{ id: a.id }}
+                          className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
+                        >
+                          Detail
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

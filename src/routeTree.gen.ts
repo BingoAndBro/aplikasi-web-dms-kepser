@@ -69,6 +69,7 @@ import { Route as DokumenIdEditRouteImport } from './routes/dokumen/$id/edit'
 import { Route as BendaharaDokumenIdRouteImport } from './routes/bendahara/dokumen/$id'
 import { Route as ArsiparisUsulMusnahIdRouteImport } from './routes/arsiparis/usul-musnah/$id'
 import { Route as ArsiparisInaktifIdRouteImport } from './routes/arsiparis/inaktif/$id'
+import { Route as ArsiparisArsipIdRouteImport } from './routes/arsiparis/arsip/$id'
 import { Route as ArsiparisAktifIdRouteImport } from './routes/arsiparis/aktif/$id'
 import { Route as ApiUsersMeRouteImport } from './routes/api/users/me'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
@@ -144,6 +145,7 @@ import { Route as ApiArsiparisManualArsipIdRouteImport } from './routes/api/arsi
 import { Route as ApiArsiparisKlasifikasiIdRouteImport } from './routes/api/arsiparis/klasifikasi/$id'
 import { Route as ApiArsiparisInaktifIdRouteImport } from './routes/api/arsiparis/inaktif.$id'
 import { Route as ApiArsiparisDokumenIdRouteImport } from './routes/api/arsiparis/dokumen.$id'
+import { Route as ApiArsiparisArsipIdRouteImport } from './routes/api/arsiparis/arsip/$id'
 import { Route as ApiArsiparisAktifIdRouteImport } from './routes/api/arsiparis/aktif.$id'
 import { Route as ApiUsersMeIsKetuaTimKegiatanIdRouteImport } from './routes/api/users/me/is-ketua-tim/$kegiatanId'
 import { Route as ApiPpkDokumenIdRejectRouteImport } from './routes/api/ppk/dokumen/$id/reject'
@@ -465,6 +467,11 @@ const ArsiparisUsulMusnahIdRoute = ArsiparisUsulMusnahIdRouteImport.update({
 const ArsiparisInaktifIdRoute = ArsiparisInaktifIdRouteImport.update({
   id: '/inaktif/$id',
   path: '/inaktif/$id',
+  getParentRoute: () => ArsiparisRoute,
+} as any)
+const ArsiparisArsipIdRoute = ArsiparisArsipIdRouteImport.update({
+  id: '/arsip/$id',
+  path: '/arsip/$id',
   getParentRoute: () => ArsiparisRoute,
 } as any)
 const ArsiparisAktifIdRoute = ArsiparisAktifIdRouteImport.update({
@@ -853,6 +860,11 @@ const ApiArsiparisDokumenIdRoute = ApiArsiparisDokumenIdRouteImport.update({
   path: '/api/arsiparis/dokumen/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiArsiparisArsipIdRoute = ApiArsiparisArsipIdRouteImport.update({
+  id: '/api/arsiparis/arsip/$id',
+  path: '/api/arsiparis/arsip/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiArsiparisAktifIdRoute = ApiArsiparisAktifIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -1049,6 +1061,7 @@ export interface FileRoutesByFullPath {
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/aktif/$id': typeof ArsiparisAktifIdRoute
+  '/arsiparis/arsip/$id': typeof ArsiparisArsipIdRoute
   '/arsiparis/inaktif/$id': typeof ArsiparisInaktifIdRoute
   '/arsiparis/usul-musnah/$id': typeof ArsiparisUsulMusnahIdRoute
   '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
@@ -1068,6 +1081,7 @@ export interface FileRoutesByFullPath {
   '/dokumen/$id/': typeof DokumenIdIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
   '/api/arsiparis/aktif/$id': typeof ApiArsiparisAktifIdRouteWithChildren
+  '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/inaktif/$id': typeof ApiArsiparisInaktifIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
@@ -1197,6 +1211,7 @@ export interface FileRoutesByTo {
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/aktif/$id': typeof ArsiparisAktifIdRoute
+  '/arsiparis/arsip/$id': typeof ArsiparisArsipIdRoute
   '/arsiparis/inaktif/$id': typeof ArsiparisInaktifIdRoute
   '/arsiparis/usul-musnah/$id': typeof ArsiparisUsulMusnahIdRoute
   '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
@@ -1214,6 +1229,7 @@ export interface FileRoutesByTo {
   '/dokumen/$id': typeof DokumenIdIndexRoute
   '/pegawai/dokumen': typeof PegawaiDokumenIndexRoute
   '/api/arsiparis/aktif/$id': typeof ApiArsiparisAktifIdRouteWithChildren
+  '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/inaktif/$id': typeof ApiArsiparisInaktifIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
@@ -1351,6 +1367,7 @@ export interface FileRoutesById {
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/aktif/$id': typeof ArsiparisAktifIdRoute
+  '/arsiparis/arsip/$id': typeof ArsiparisArsipIdRoute
   '/arsiparis/inaktif/$id': typeof ArsiparisInaktifIdRoute
   '/arsiparis/usul-musnah/$id': typeof ArsiparisUsulMusnahIdRoute
   '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
@@ -1370,6 +1387,7 @@ export interface FileRoutesById {
   '/dokumen/$id/': typeof DokumenIdIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
   '/api/arsiparis/aktif/$id': typeof ApiArsiparisAktifIdRouteWithChildren
+  '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/inaktif/$id': typeof ApiArsiparisInaktifIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
@@ -1508,6 +1526,7 @@ export interface FileRouteTypes {
     | '/api/users/$id'
     | '/api/users/me'
     | '/arsiparis/aktif/$id'
+    | '/arsiparis/arsip/$id'
     | '/arsiparis/inaktif/$id'
     | '/arsiparis/usul-musnah/$id'
     | '/bendahara/dokumen/$id'
@@ -1527,6 +1546,7 @@ export interface FileRouteTypes {
     | '/dokumen/$id/'
     | '/pegawai/dokumen/'
     | '/api/arsiparis/aktif/$id'
+    | '/api/arsiparis/arsip/$id'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/inaktif/$id'
     | '/api/arsiparis/klasifikasi/$id'
@@ -1656,6 +1676,7 @@ export interface FileRouteTypes {
     | '/api/users/$id'
     | '/api/users/me'
     | '/arsiparis/aktif/$id'
+    | '/arsiparis/arsip/$id'
     | '/arsiparis/inaktif/$id'
     | '/arsiparis/usul-musnah/$id'
     | '/bendahara/dokumen/$id'
@@ -1673,6 +1694,7 @@ export interface FileRouteTypes {
     | '/dokumen/$id'
     | '/pegawai/dokumen'
     | '/api/arsiparis/aktif/$id'
+    | '/api/arsiparis/arsip/$id'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/inaktif/$id'
     | '/api/arsiparis/klasifikasi/$id'
@@ -1809,6 +1831,7 @@ export interface FileRouteTypes {
     | '/api/users/$id'
     | '/api/users/me'
     | '/arsiparis/aktif/$id'
+    | '/arsiparis/arsip/$id'
     | '/arsiparis/inaktif/$id'
     | '/arsiparis/usul-musnah/$id'
     | '/bendahara/dokumen/$id'
@@ -1828,6 +1851,7 @@ export interface FileRouteTypes {
     | '/dokumen/$id/'
     | '/pegawai/dokumen/'
     | '/api/arsiparis/aktif/$id'
+    | '/api/arsiparis/arsip/$id'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/inaktif/$id'
     | '/api/arsiparis/klasifikasi/$id'
@@ -1929,6 +1953,7 @@ export interface RootRouteChildren {
   ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
   ApiKetuaTimIndexRoute: typeof ApiKetuaTimIndexRoute
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
+  ApiArsiparisArsipIdRoute: typeof ApiArsiparisArsipIdRoute
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
   ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
   ApiArsiparisManualArsipIdRoute: typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -2363,6 +2388,13 @@ declare module '@tanstack/react-router' {
       path: '/inaktif/$id'
       fullPath: '/arsiparis/inaktif/$id'
       preLoaderRoute: typeof ArsiparisInaktifIdRouteImport
+      parentRoute: typeof ArsiparisRoute
+    }
+    '/arsiparis/arsip/$id': {
+      id: '/arsiparis/arsip/$id'
+      path: '/arsip/$id'
+      fullPath: '/arsiparis/arsip/$id'
+      preLoaderRoute: typeof ArsiparisArsipIdRouteImport
       parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/aktif/$id': {
@@ -2890,6 +2922,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArsiparisDokumenIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/arsiparis/arsip/$id': {
+      id: '/api/arsiparis/arsip/$id'
+      path: '/api/arsiparis/arsip/$id'
+      fullPath: '/api/arsiparis/arsip/$id'
+      preLoaderRoute: typeof ApiArsiparisArsipIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/arsiparis/aktif/$id': {
       id: '/api/arsiparis/aktif/$id'
       path: '/$id'
@@ -3054,6 +3093,7 @@ interface ArsiparisRouteChildren {
   ArsiparisSearchRoute: typeof ArsiparisSearchRoute
   ArsiparisIndexRoute: typeof ArsiparisIndexRoute
   ArsiparisAktifIdRoute: typeof ArsiparisAktifIdRoute
+  ArsiparisArsipIdRoute: typeof ArsiparisArsipIdRoute
   ArsiparisInaktifIdRoute: typeof ArsiparisInaktifIdRoute
   ArsiparisUsulMusnahIdRoute: typeof ArsiparisUsulMusnahIdRoute
   ArsiparisAktifIndexRoute: typeof ArsiparisAktifIndexRoute
@@ -3069,6 +3109,7 @@ const ArsiparisRouteChildren: ArsiparisRouteChildren = {
   ArsiparisSearchRoute: ArsiparisSearchRoute,
   ArsiparisIndexRoute: ArsiparisIndexRoute,
   ArsiparisAktifIdRoute: ArsiparisAktifIdRoute,
+  ArsiparisArsipIdRoute: ArsiparisArsipIdRoute,
   ArsiparisInaktifIdRoute: ArsiparisInaktifIdRoute,
   ArsiparisUsulMusnahIdRoute: ArsiparisUsulMusnahIdRoute,
   ArsiparisAktifIndexRoute: ArsiparisAktifIndexRoute,
@@ -3567,6 +3608,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenIndexRoute: ApiDokumenIndexRoute,
   ApiKetuaTimIndexRoute: ApiKetuaTimIndexRoute,
   ApiUsersIndexRoute: ApiUsersIndexRoute,
+  ApiArsiparisArsipIdRoute: ApiArsiparisArsipIdRoute,
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
   ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
   ApiArsiparisManualArsipIdRoute: ApiArsiparisManualArsipIdRouteWithChildren,
