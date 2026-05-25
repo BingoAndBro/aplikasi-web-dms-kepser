@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { AlertCircle, AlertTriangle, ArrowLeft, Download, Eye, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, AlertTriangle, ArrowLeft, CheckCircle2, Download, Eye, FileText, Loader2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
@@ -231,40 +231,61 @@ function ManualSourceSection({ source }: { source: ManualArchiveDetailSource }) 
 }
 
 function AttachmentSection({ detail }: { detail: UnifiedArchiveDetail }) {
+  const [previewing, setPreviewing] = useState<{ href: string; title: string } | null>(null)
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && previewing) setPreviewing(null)
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [previewing])
+
   return (
-    <section className="rounded-xl border border-outline-variant/30 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex flex-col gap-1">
-        <h3 className="font-headline text-lg font-extrabold text-on-surface">
-          Lampiran Arsip
-        </h3>
-        <p className="text-xs text-on-surface-variant">
-          Akses file tersedia hanya melalui endpoint server terotorisasi.
-        </p>
-      </div>
-
-      {detail.statusArsip === 'DIMUSNAHKAN' && (
-        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-          Akses file tidak tersedia karena arsip telah dimusnahkan.
-        </div>
+    <>
+      {previewing && (
+        <PreviewModal
+          href={previewing.href}
+          title={previewing.title}
+          onClose={() => setPreviewing(null)}
+        />
       )}
 
-      {detail.attachments.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-outline-variant/50 bg-surface-container-low/30 p-4 text-sm text-on-surface-variant">
-          Belum ada metadata lampiran yang tersedia.
+      <section className="rounded-xl border border-outline-variant/30 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-col gap-1">
+          <h3 className="font-headline text-lg font-extrabold text-on-surface">
+            Lampiran Arsip
+          </h3>
+          <p className="text-xs text-on-surface-variant">
+            Akses file tersedia hanya melalui endpoint server terotorisasi.
+          </p>
         </div>
-      ) : (
-        <div className="grid gap-3">
-          {detail.attachments.map((attachment, index) => (
-            <AttachmentCard
-              key={attachment.attachmentId ?? `${attachment.sourceType}-${attachment.index ?? index}`}
-              archiveId={detail.id}
-              attachment={attachment}
-              fallbackIndex={index + 1}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+
+        {detail.statusArsip === 'DIMUSNAHKAN' && (
+          <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            Akses file tidak tersedia karena arsip telah dimusnahkan.
+          </div>
+        )}
+
+        {detail.attachments.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-outline-variant/50 bg-surface-container-low/30 p-4 text-sm text-on-surface-variant">
+            Belum ada metadata lampiran yang tersedia.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {detail.attachments.map((attachment, index) => (
+              <AttachmentCard
+                key={attachment.attachmentId ?? `${attachment.sourceType}-${attachment.index ?? index}`}
+                archiveId={detail.id}
+                attachment={attachment}
+                fallbackIndex={index + 1}
+                onPreview={(href, title) => setPreviewing({ href, title })}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   )
 }
 
@@ -272,60 +293,109 @@ function AttachmentCard({
   archiveId,
   attachment,
   fallbackIndex,
+  onPreview,
 }: {
   archiveId: string
   attachment: UnifiedArchiveAttachmentSummary
   fallbackIndex: number
+  onPreview: (href: string, title: string) => void
 }) {
   const previewHref = buildAttachmentActionHref(archiveId, attachment, 'preview')
   const downloadHref = buildAttachmentActionHref(archiveId, attachment, 'download')
+  const attachmentName = formatAttachmentName(attachment, fallbackIndex)
 
   return (
-    <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low/30 p-4">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-outline">
-            Nama Lampiran
+    <div className="flex items-center gap-3 rounded-lg bg-surface-container-low/20 p-3">
+      {attachment.availability === 'AVAILABLE' ? (
+        <CheckCircle2 size={16} className="shrink-0 text-green-600" />
+      ) : (
+        <AlertCircle size={16} className="shrink-0 text-amber-600" />
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-xs font-medium text-on-surface">
+            {attachmentName}
           </p>
-          <p className="mt-1 break-words text-sm font-bold text-on-surface">
-            {formatAttachmentName(attachment, fallbackIndex)}
-          </p>
+          <AttachmentAvailabilityBadge availability={attachment.availability} />
         </div>
-        <AttachmentAvailabilityBadge availability={attachment.availability} />
+        <p className="mt-0.5 text-[10px] text-outline">
+          {formatAttachmentSubtext(attachment)}
+        </p>
       </div>
 
-      <DescriptionGrid
-        items={[
-          ['Jenis', formatAttachmentType(attachment.mimeType)],
-          ['Ukuran', formatFileSize(attachment.sizeBytes)],
-          ['Status Ketersediaan', formatAttachmentAvailability(attachment.availability)],
-          ['Sumber', formatSourceType(attachment.sourceType)],
-          ['Diunggah Pada', formatNullableDateTime(attachment.uploadedAt)],
-        ]}
-      />
-
       {previewHref && downloadHref ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <a
-            href={previewHref}
-            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-outline-variant/60 bg-white px-2.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            onClick={() => onPreview(previewHref, attachmentName)}
+            aria-label={`Pratinjau ${attachmentName}`}
           >
-            <Eye size={13} />
-            Preview
-          </a>
+            <Eye size={14} />
+          </Button>
           <a
             href={downloadHref}
-            className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            className="inline-flex size-6 items-center justify-center rounded-[min(var(--radius-md),10px)] hover:bg-muted hover:text-foreground"
+            aria-label={`Unduh ${attachmentName}`}
           >
-            <Download size={13} />
-            Download
+            <Download size={14} />
           </a>
         </div>
       ) : (
-        <p className="mt-3 text-xs font-semibold text-on-surface-variant">
+        <p className="text-[10px] font-semibold text-on-surface-variant">
           {formatAttachmentAvailability(attachment.availability)}
         </p>
       )}
+    </div>
+  )
+}
+
+function PreviewModal({
+  href,
+  title,
+  onClose,
+}: {
+  href: string
+  title: string
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Tutup pratinjau"
+      />
+      <div
+        className="relative z-10 mx-4 flex max-h-[70vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pratinjau lampiran arsip"
+        onClick={event => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3">
+          <CheckCircle2 size={16} className="shrink-0 text-primary" />
+          <p className="flex-1 truncate text-sm font-semibold text-on-surface">{title}</p>
+          <span className="hidden text-[10px] text-outline sm:block">ESC</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup pratinjau"
+            className="flex size-7 items-center justify-center rounded-full hover:bg-surface-container-low"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto bg-surface-container-low/30">
+          <iframe
+            src={href}
+            className="h-[calc(70vh-96px)] w-full border-0"
+            title={title}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -421,6 +491,10 @@ function formatMaterial(value: boolean | null): string {
 }
 
 function formatAttachmentName(attachment: UnifiedArchiveAttachmentSummary, fallbackIndex: number): string {
+  if (attachment.sourceType === 'WORKFLOW') {
+    return formatText(attachment.fileName ?? attachment.displayName ?? `Lampiran ${attachment.index ?? fallbackIndex}`)
+  }
+
   return formatText(attachment.displayName ?? attachment.fileName ?? `Lampiran ${attachment.index ?? fallbackIndex}`)
 }
 
@@ -454,6 +528,10 @@ function formatFileSize(sizeBytes: number | null): string {
   return `${new Intl.NumberFormat('id-ID', {
     maximumFractionDigits: value >= 10 ? 0 : 1,
   }).format(value)} ${units[unitIndex]}`
+}
+
+function formatAttachmentSubtext(attachment: UnifiedArchiveAttachmentSummary): string {
+  return `${formatAttachmentType(attachment.mimeType)} - ${formatFileSize(attachment.sizeBytes)}`
 }
 
 function formatAttachmentAvailability(

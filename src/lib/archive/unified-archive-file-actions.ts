@@ -9,6 +9,13 @@ import {
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
+  masterDetailPermintaan,
+  masterJenisDokumen,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
+  masterKegiatan,
+} from '#/db/schema/master'
+import {
   ARCHIVE_SOURCE_TYPE,
   ARCHIVE_STATUS,
   type StatusArsip,
@@ -55,6 +62,13 @@ type CanonicalFileActionRow = {
 type WorkflowDocumentRow = {
   id: string
   status: string
+  is_non_material: boolean | null
+  tanggal: string | null
+  kegiatan_nama: string | null
+  jenis_dokumen_nama: string | null
+  jenis_permintaan_nama: string | null
+  kategori_permintaan_nama: string | null
+  detail_permintaan_nama: string | null
 }
 
 type ManualSourceRow = {
@@ -69,7 +83,8 @@ type ManualAttachmentRow = {
 type WorkflowAttachmentReference = {
   logicalPath: string
   contentType: string | null
-  filename: string
+  attachmentName: string
+  originalFilename: string | null
 }
 
 const WORKFLOW_REF_PATTERN = /^workflow-([1-9]\d*)$/
@@ -155,6 +170,7 @@ async function createWorkflowArchiveAttachmentFileResponse({
 
   const reference = resolveWorkflowAttachmentReference(canonical.lampiran_snapshot, parsedRef.index)
   if (!reference) return secureJsonError('Lampiran arsip tidak ditemukan', 404)
+  const filename = resolveWorkflowDownloadFilename(reference, document, parsedRef.index)
 
   let physicalPath: string
   try {
@@ -182,7 +198,7 @@ async function createWorkflowArchiveAttachmentFileResponse({
 
   const headers = secureFileHeaders()
   headers.set('Content-Type', reference.contentType ?? inferContentType(reference.logicalPath))
-  headers.set('Content-Disposition', buildContentDisposition(reference.filename, purpose))
+  headers.set('Content-Disposition', buildContentDisposition(filename, purpose))
   headers.set('Content-Length', String(fileContent.byteLength || fileSize))
 
   return new Response(fileContent, {
@@ -268,8 +284,20 @@ async function selectWorkflowDocument(
     .select({
       id: dokumenTransaksi.id,
       status: dokumenTransaksi.status,
+      is_non_material: dokumenTransaksi.isNonMaterial,
+      tanggal: dokumenTransaksi.tanggal,
+      kegiatan_nama: masterKegiatan.nama,
+      jenis_dokumen_nama: masterJenisDokumen.nama,
+      jenis_permintaan_nama: masterJenisPermintaan.nama,
+      kategori_permintaan_nama: masterKategoriPermintaan.nama,
+      detail_permintaan_nama: masterDetailPermintaan.nama,
     })
     .from(dokumenTransaksi)
+    .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+    .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
+    .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
+    .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
+    .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
     .where(eq(dokumenTransaksi.id, dokumenId))
     .limit(1) as WorkflowDocumentRow[]
 
@@ -331,7 +359,14 @@ function resolveWorkflowAttachmentReference(
       entry.content_type,
       entry.type,
     ),
-    filename: resolveWorkflowAttachmentFilename(entry, index, logicalPath),
+    attachmentName: resolveWorkflowAttachmentName(entry, index),
+    originalFilename: firstSafeFilenameText(
+      entry.fileName,
+      entry.file_name,
+      entry.filename,
+      entry.originalFilename,
+      entry.original_filename,
+    ),
   }
 }
 
@@ -360,12 +395,11 @@ function parseWorkflowAttachmentSnapshot(value: unknown): unknown[] {
   }
 }
 
-function resolveWorkflowAttachmentFilename(
+function resolveWorkflowAttachmentName(
   entry: Record<string, unknown>,
   index: number,
-  logicalPath: string,
 ): string {
-  const base = firstSafeFilenameText(
+  return firstSafeFilenameText(
     entry.displayName,
     entry.display_name,
     entry.judulLampiran,
@@ -373,17 +407,49 @@ function resolveWorkflowAttachmentFilename(
     entry.title,
     entry.nama,
     entry.name,
-    entry.fileName,
-    entry.file_name,
-    entry.filename,
-    entry.originalFilename,
-    entry.original_filename,
   ) ?? `lampiran-${index}`
-  const logicalExtension = getFileExtension(logicalPath)
+}
 
-  if (!logicalExtension || path.extname(base)) return base
+function resolveWorkflowDownloadFilename(
+  reference: WorkflowAttachmentReference,
+  document: WorkflowDocumentRow,
+  index: number,
+): string {
+  const extension = getFileExtension(reference.originalFilename ?? reference.logicalPath)
+  const fallbackFilename = reference.originalFilename ?? withExtension(reference.attachmentName, extension)
+  const kegiatanNama = sanitizeFilenameSegment(document.kegiatan_nama) ?? 'TanpaKegiatan'
+  const leafNode = resolveWorkflowLeafNode(document, kegiatanNama)
+  const tanggal = sanitizeFilenameSegment(document.tanggal) ?? ''
+  const parts = [
+    sanitizeFilenameSegment(reference.attachmentName) ?? `lampiran-${index}`,
+    leafNode,
+    kegiatanNama,
+    tanggal,
+  ].filter(Boolean)
 
-  return `${base}.${logicalExtension}`
+  if (parts.length < 3 || !extension) return fallbackFilename
+
+  return `${parts.join('_')}.${extension}`
+}
+
+function resolveWorkflowLeafNode(
+  document: WorkflowDocumentRow,
+  fallbackKegiatan: string,
+): string {
+  if (document.is_non_material) {
+    return sanitizeFilenameSegment(document.jenis_dokumen_nama) ?? 'Dokumen'
+  }
+
+  return sanitizeFilenameSegment(document.detail_permintaan_nama)
+    ?? sanitizeFilenameSegment(document.kategori_permintaan_nama)
+    ?? sanitizeFilenameSegment(document.jenis_permintaan_nama)
+    ?? fallbackKegiatan
+}
+
+function withExtension(filename: string, extension: string): string {
+  if (!extension || path.extname(filename)) return filename
+
+  return `${filename}.${extension}`
 }
 
 function parseWorkflowAttachmentRef(value: string): { index: number } | null {
@@ -461,6 +527,18 @@ function sanitizeContentDispositionFilename(value: unknown): string | null {
   }
 
   return sanitized.slice(0, 180)
+}
+
+function sanitizeFilenameSegment(value: unknown): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : ''
+  if (!trimmed) return null
+
+  const sanitized = trimmed
+    .replace(/[\/\\:*?"<>|]/g, '_')
+    .replace(/_+/g, '_')
+    .trim()
+
+  return sanitizeContentDispositionFilename(sanitized)
 }
 
 function secureJsonError(message: string, status: number): Response {

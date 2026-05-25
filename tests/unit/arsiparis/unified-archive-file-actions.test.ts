@@ -81,7 +81,9 @@ describe('unified archive file actions', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
     expect(response.headers.get('Content-Type')).toBe('application/pdf')
-    expect(response.headers.get('Content-Disposition')).toBe('inline; filename="Bukti Persetujuan.pdf"')
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'inline; filename="Bukti Persetujuan_Detail Permintaan_Kegiatan Statistik_2026-05-24.pdf"',
+    )
     expect(await response.text()).toBe(TEST_FILE_CONTENT)
     expectNoLeak(JSON.stringify([...response.headers.entries()]))
   })
@@ -214,6 +216,9 @@ function createFakeDatabase(options: FakeDatabaseOptions): UnifiedArchiveFileAct
           selectedTable = table
           return query
         },
+        leftJoin() {
+          return query
+        },
         where() {
           return query
         },
@@ -265,6 +270,13 @@ function workflowDocumentRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: DOKUMEN_ID,
     status: 'ARCHIVED',
+    is_non_material: false,
+    tanggal: '2026-05-24',
+    kegiatan_nama: 'Kegiatan Statistik',
+    jenis_dokumen_nama: null,
+    jenis_permintaan_nama: 'Jenis Permintaan',
+    kategori_permintaan_nama: 'Kategori Permintaan',
+    detail_permintaan_nama: 'Detail Permintaan',
     ...overrides,
   }
 }
