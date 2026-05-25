@@ -140,6 +140,8 @@ import { Route as ApiArsiparisManualArsipCategoriesRouteImport } from './routes/
 import { Route as ApiArsiparisManualArsipIdRouteImport } from './routes/api/arsiparis/manual-arsip/$id'
 import { Route as ApiArsiparisKlasifikasiIdRouteImport } from './routes/api/arsiparis/klasifikasi/$id'
 import { Route as ApiArsiparisDokumenIdRouteImport } from './routes/api/arsiparis/dokumen.$id'
+import { Route as ApiArsiparisArsipExportRouteImport } from './routes/api/arsiparis/arsip/export'
+import { Route as ApiArsiparisArsipAggregateRouteImport } from './routes/api/arsiparis/arsip/aggregate'
 import { Route as ApiArsiparisArsipIdRouteImport } from './routes/api/arsiparis/arsip/$id'
 import { Route as ApiUsersMeIsKetuaTimKegiatanIdRouteImport } from './routes/api/users/me/is-ketua-tim/$kegiatanId'
 import { Route as ApiPpkDokumenIdRejectRouteImport } from './routes/api/ppk/dokumen/$id/reject'
@@ -827,6 +829,17 @@ const ApiArsiparisDokumenIdRoute = ApiArsiparisDokumenIdRouteImport.update({
   path: '/api/arsiparis/dokumen/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiArsiparisArsipExportRoute = ApiArsiparisArsipExportRouteImport.update({
+  id: '/api/arsiparis/arsip/export',
+  path: '/api/arsiparis/arsip/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiArsiparisArsipAggregateRoute =
+  ApiArsiparisArsipAggregateRouteImport.update({
+    id: '/api/arsiparis/arsip/aggregate',
+    path: '/api/arsiparis/arsip/aggregate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiArsiparisArsipIdRoute = ApiArsiparisArsipIdRouteImport.update({
   id: '/api/arsiparis/arsip/$id',
   path: '/api/arsiparis/arsip/$id',
@@ -1034,6 +1047,8 @@ export interface FileRoutesByFullPath {
   '/dokumen/$id/': typeof DokumenIdIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
   '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRouteWithChildren
+  '/api/arsiparis/arsip/aggregate': typeof ApiArsiparisArsipAggregateRoute
+  '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -1175,6 +1190,8 @@ export interface FileRoutesByTo {
   '/dokumen/$id': typeof DokumenIdIndexRoute
   '/pegawai/dokumen': typeof PegawaiDokumenIndexRoute
   '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRouteWithChildren
+  '/api/arsiparis/arsip/aggregate': typeof ApiArsiparisArsipAggregateRoute
+  '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -1326,6 +1343,8 @@ export interface FileRoutesById {
   '/dokumen/$id/': typeof DokumenIdIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
   '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRouteWithChildren
+  '/api/arsiparis/arsip/aggregate': typeof ApiArsiparisArsipAggregateRoute
+  '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -1478,6 +1497,8 @@ export interface FileRouteTypes {
     | '/dokumen/$id/'
     | '/pegawai/dokumen/'
     | '/api/arsiparis/arsip/$id'
+    | '/api/arsiparis/arsip/aggregate'
+    | '/api/arsiparis/arsip/export'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
@@ -1619,6 +1640,8 @@ export interface FileRouteTypes {
     | '/dokumen/$id'
     | '/pegawai/dokumen'
     | '/api/arsiparis/arsip/$id'
+    | '/api/arsiparis/arsip/aggregate'
+    | '/api/arsiparis/arsip/export'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
@@ -1769,6 +1792,8 @@ export interface FileRouteTypes {
     | '/dokumen/$id/'
     | '/pegawai/dokumen/'
     | '/api/arsiparis/arsip/$id'
+    | '/api/arsiparis/arsip/aggregate'
+    | '/api/arsiparis/arsip/export'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
@@ -1868,6 +1893,8 @@ export interface RootRouteChildren {
   ApiKetuaTimIndexRoute: typeof ApiKetuaTimIndexRoute
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
   ApiArsiparisArsipIdRoute: typeof ApiArsiparisArsipIdRouteWithChildren
+  ApiArsiparisArsipAggregateRoute: typeof ApiArsiparisArsipAggregateRoute
+  ApiArsiparisArsipExportRoute: typeof ApiArsiparisArsipExportRoute
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
   ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
   ApiArsiparisManualArsipIdRoute: typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -2801,6 +2828,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArsiparisDokumenIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/arsiparis/arsip/export': {
+      id: '/api/arsiparis/arsip/export'
+      path: '/api/arsiparis/arsip/export'
+      fullPath: '/api/arsiparis/arsip/export'
+      preLoaderRoute: typeof ApiArsiparisArsipExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/arsiparis/arsip/aggregate': {
+      id: '/api/arsiparis/arsip/aggregate'
+      path: '/api/arsiparis/arsip/aggregate'
+      fullPath: '/api/arsiparis/arsip/aggregate'
+      preLoaderRoute: typeof ApiArsiparisArsipAggregateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/arsiparis/arsip/$id': {
       id: '/api/arsiparis/arsip/$id'
       path: '/api/arsiparis/arsip/$id'
@@ -3419,6 +3460,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiKetuaTimIndexRoute: ApiKetuaTimIndexRoute,
   ApiUsersIndexRoute: ApiUsersIndexRoute,
   ApiArsiparisArsipIdRoute: ApiArsiparisArsipIdRouteWithChildren,
+  ApiArsiparisArsipAggregateRoute: ApiArsiparisArsipAggregateRoute,
+  ApiArsiparisArsipExportRoute: ApiArsiparisArsipExportRoute,
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
   ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
   ApiArsiparisManualArsipIdRoute: ApiArsiparisManualArsipIdRouteWithChildren,

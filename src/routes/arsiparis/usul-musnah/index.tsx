@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { buttonVariants } from '#/components/ui/button'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 import {
-  Trash2, ChevronRight, AlertCircle, Loader2,
+  Trash2, ChevronRight, AlertCircle, Loader2, Download,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/usul-musnah/')({ component: UsulMusnahPage })
@@ -61,14 +62,23 @@ function UsulMusnahPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
-            <ChevronRight size={10} />
-            <span className="text-primary">Usul Musnah</span>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
+              <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
+              <ChevronRight size={10} />
+              <span className="text-primary">Usul Musnah</span>
+            </div>
+            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Usul Musnah</h2>
+            <p className="text-on-surface-variant text-xs mt-1">{items.length} arsip berstatus usul musnah.</p>
           </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Usul Musnah</h2>
-          <p className="text-on-surface-variant text-xs mt-1">{items.length} arsip berstatus usul musnah.</p>
+          <a
+            href="/api/arsiparis/arsip/export?status=USUL_MUSNAH"
+            className={buttonVariants({ variant: 'outline', size: 'sm', className: 'w-fit' })}
+          >
+            <Download size={14} />
+            Export CSV
+          </a>
         </div>
 
         <div className="rounded-xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 px-4 py-3 text-xs text-on-surface-variant">
