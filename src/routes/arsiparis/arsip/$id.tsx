@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   AlertCircle,
   AlertTriangle,
@@ -110,7 +110,7 @@ function UnifiedArchiveDetailPage() {
         ) : error ? (
           <ErrorState message={error} onRetry={fetchDetail} />
         ) : detail ? (
-          <DetailContent detail={detail} onRefresh={() => fetchDetail({ showLoading: false })} />
+          <DetailContent detail={detail} />
         ) : (
           <ErrorState message="Metadata arsip tidak tersedia" onRetry={fetchDetail} />
         )}
@@ -119,13 +119,7 @@ function UnifiedArchiveDetailPage() {
   )
 }
 
-function DetailContent({
-  detail,
-  onRefresh,
-}: {
-  detail: UnifiedArchiveDetail
-  onRefresh: () => Promise<void>
-}) {
+function DetailContent({ detail }: { detail: UnifiedArchiveDetail }) {
   return (
     <div className="space-y-6">
       {detail.statusArsip === 'DIMUSNAHKAN' && (
@@ -183,25 +177,23 @@ function DetailContent({
         />
       </section>
 
-      <LifecycleActionSection detail={detail} onRefresh={onRefresh} />
-
       <SourceSection detail={detail} />
 
       <AttachmentSection detail={detail} />
+
+      <LifecycleActionSection detail={detail} />
     </div>
   )
 }
 
 function LifecycleActionSection({
   detail,
-  onRefresh,
 }: {
   detail: UnifiedArchiveDetail
-  onRefresh: () => Promise<void>
 }) {
+  const navigate = useNavigate()
   const [pendingAction, setPendingAction] = useState<UnifiedArchiveLifecycleAction | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const lifecycleAction = resolveLifecycleAction(detail.statusArsip)
 
   async function submitLifecycleAction(action: UnifiedArchiveLifecycleAction) {
@@ -213,7 +205,6 @@ function LifecycleActionSection({
 
     setPendingAction(action)
     setActionError(null)
-    setActionSuccess(null)
 
     try {
       await apiFetch<UnifiedArchiveLifecycleResponse>(
@@ -223,10 +214,9 @@ function LifecycleActionSection({
           body: JSON.stringify({ action }),
         },
       )
-      setActionSuccess(action === 'mark_inactive'
-        ? 'Arsip berhasil dipindahkan ke Inaktif.'
-        : 'Arsip berhasil dipindahkan ke Usul Musnah.')
-      await onRefresh()
+      await navigate({
+        to: action === 'mark_inactive' ? '/arsiparis/inaktif' : '/arsiparis/usul-musnah',
+      })
     } catch (error) {
       if (error instanceof ApiError) {
         setActionError(readApiError(error.payload) ?? 'Gagal mengubah status lifecycle arsip.')
@@ -252,12 +242,6 @@ function LifecycleActionSection({
       {actionError && (
         <div className="mb-3 rounded-lg border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error">
           {actionError}
-        </div>
-      )}
-
-      {actionSuccess && (
-        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
-          {actionSuccess}
         </div>
       )}
 
