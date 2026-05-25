@@ -1,5 +1,6 @@
-import { asc, eq } from 'drizzle-orm'
+import { asc, eq, inArray } from 'drizzle-orm'
 
+import { users } from '#/db/schema/auth'
 import {
   arsip,
   manualArsip,
@@ -90,6 +91,8 @@ export type UnifiedArchiveDetail = {
   nominalRealisasi: string | number | null
   createdBy: string | null
   archivedBy: string | null
+  createdByName: string | null
+  archivedByName: string | null
   createdAt: string | null
   updatedAt: string | null
   warnings: UnifiedArchiveDetailWarning[]
@@ -155,6 +158,13 @@ type ManualSourceDetailRow = {
   archived_by: string | null
 }
 
+type ActorDisplayRow = {
+  id: string
+  display_name: string | null
+  nama_lengkap: string | null
+  email: string | null
+}
+
 type ManualAttachmentDetailRow = {
   id: string
   judul_lampiran: string | null
@@ -198,6 +208,7 @@ export async function getUnifiedArchiveDetailForDatabase(
   const warnings = new Set<UnifiedArchiveDetailWarning>()
   collectCanonicalWarnings(canonical, sourceType, warnings)
 
+  const actorNames = await selectCanonicalActorDisplayNames(database, canonical)
   const source = await selectAndMapSourceDetail(database, canonical, sourceType, warnings)
   const attachments = await selectAndMapAttachmentSummaries(
     database,
@@ -226,6 +237,8 @@ export async function getUnifiedArchiveDetailForDatabase(
       nominalRealisasi: normalizeNominal(canonical.nominal_realisasi),
       createdBy: trimToNull(canonical.created_by),
       archivedBy: trimToNull(canonical.archived_by),
+      createdByName: actorNames.createdByName,
+      archivedByName: actorNames.archivedByName,
       createdAt: toIsoLikeString(canonical.created_at),
       updatedAt: toIsoLikeString(canonical.updated_at),
       warnings: [...warnings].sort(),
@@ -267,6 +280,40 @@ async function selectCanonicalArchiveDetail(
     .limit(1) as CanonicalArchiveDetailRow[]
 
   return rows[0] ?? null
+}
+
+async function selectCanonicalActorDisplayNames(
+  database: UnifiedArchiveDetailReaderDatabase,
+  canonical: CanonicalArchiveDetailRow,
+): Promise<{ createdByName: string | null; archivedByName: string | null }> {
+  const createdBy = trimToNull(canonical.created_by)
+  const archivedBy = trimToNull(canonical.archived_by)
+  const actorIds = [...new Set([createdBy, archivedBy].filter((id): id is string => Boolean(id)))]
+
+  if (actorIds.length === 0) {
+    return {
+      createdByName: null,
+      archivedByName: null,
+    }
+  }
+
+  const rows = await database
+    .select({
+      id: users.id,
+      display_name: users.displayName,
+      nama_lengkap: users.namaLengkap,
+      email: users.email,
+    })
+    .from(users)
+    .where(inArray(users.id, actorIds))
+    .limit(actorIds.length) as ActorDisplayRow[]
+
+  const byId = new Map(rows.map((row) => [row.id, resolveUserDisplayName(row)]))
+
+  return {
+    createdByName: createdBy ? byId.get(createdBy) ?? null : null,
+    archivedByName: archivedBy ? byId.get(archivedBy) ?? null : null,
+  }
 }
 
 async function selectAndMapAttachmentSummaries(
@@ -638,6 +685,12 @@ function normalizeNominal(value: string | number | null | undefined): string | n
 function toIsoLikeString(value: Date | string | null | undefined): string | null {
   if (value instanceof Date) return value.toISOString()
   return trimToNull(value)
+}
+
+function resolveUserDisplayName(row: ActorDisplayRow): string | null {
+  return trimToNull(row.display_name)
+    ?? trimToNull(row.nama_lengkap)
+    ?? trimToNull(row.email)
 }
 
 function firstSafeDisplayName(...values: unknown[]): string | null {

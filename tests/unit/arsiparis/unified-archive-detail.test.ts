@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { users } from '#/db/schema/auth'
 import {
   arsip,
   manualArsip,
@@ -20,11 +21,13 @@ const ATTACHMENT_ID = '44444444-4444-4444-8444-444444444445'
 const USER_ID = '55555555-5555-4555-8555-555555555555'
 const KLASIFIKASI_ID = '66666666-6666-4666-8666-666666666666'
 const CATEGORY_ID = '77777777-7777-4777-8777-777777777777'
+const USER_DISPLAY_NAME = 'Kasubag Arsip'
 
 describe('unified archive detail reader', () => {
   it('returns not_found when canonical row is missing', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [],
+      userRows: [],
       workflowRows: [],
       manualRows: [],
     })
@@ -42,6 +45,7 @@ describe('unified archive detail reader', () => {
   it('maps WORKFLOW canonical detail with safe workflow source metadata', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow()],
+      userRows: [userRow()],
       workflowRows: [workflowSourceRow()],
       manualRows: [],
     })
@@ -68,6 +72,8 @@ describe('unified archive detail reader', () => {
       nominalRealisasi: '100000.00',
       createdBy: USER_ID,
       archivedBy: USER_ID,
+      createdByName: USER_DISPLAY_NAME,
+      archivedByName: USER_DISPLAY_NAME,
       createdAt: '2026-05-24T00:00:00.000Z',
       updatedAt: '2026-05-24T00:00:00.000Z',
       warnings: [],
@@ -101,6 +107,7 @@ describe('unified archive detail reader', () => {
   it('WORKFLOW missing dokumen_id adds WORKFLOW_WITHOUT_DOKUMEN_ID warning', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow({ dokumen_id: null })],
+      userRows: [userRow()],
       workflowRows: [],
       manualRows: [],
     })
@@ -123,6 +130,7 @@ describe('unified archive detail reader', () => {
   it('WORKFLOW source id present but source row missing adds WORKFLOW_SOURCE_NOT_FOUND warning', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow()],
+      userRows: [userRow()],
       workflowRows: [],
       manualRows: [],
     })
@@ -143,6 +151,7 @@ describe('unified archive detail reader', () => {
   it('maps MANUAL canonical detail with safe manual source metadata', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [manualCanonicalRow()],
+      userRows: [userRow()],
       workflowRows: [],
       manualRows: [manualSourceRow()],
       attachmentRows: [manualAttachmentRow()],
@@ -158,6 +167,8 @@ describe('unified archive detail reader', () => {
       sourceType: 'MANUAL',
       statusArsip: 'AKTIF',
       namaArsip: 'Manual Archive',
+      createdByName: USER_DISPLAY_NAME,
+      archivedByName: USER_DISPLAY_NAME,
       warnings: [],
       source: {
         sourceType: 'MANUAL',
@@ -190,6 +201,7 @@ describe('unified archive detail reader', () => {
   it('MANUAL missing source adds missing source warnings', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [manualCanonicalRow()],
+      userRows: [userRow()],
       workflowRows: [],
       manualRows: [],
     })
@@ -208,9 +220,54 @@ describe('unified archive detail reader', () => {
     expectNoMutationCalls(database)
   })
 
+  it('resolves canonical actor names without exposing raw UUIDs as display names', async () => {
+    const database = createFakeReadDatabase({
+      canonicalRows: [manualCanonicalRow()],
+      userRows: [userRow({
+        display_name: null,
+        nama_lengkap: 'Nama Lengkap Arsiparis',
+        email: 'arsiparis@example.test',
+      })],
+      workflowRows: [],
+      manualRows: [manualSourceRow()],
+    })
+    const reader = createUnifiedArchiveDetailReader(database)
+
+    const result = await reader.getUnifiedArchiveDetail(MANUAL_ARCHIVE_ID)
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') throw new Error('expected found')
+    expect(result.detail.createdByName).toBe('Nama Lengkap Arsiparis')
+    expect(result.detail.archivedByName).toBe('Nama Lengkap Arsiparis')
+    expect(result.detail.createdByName).not.toBe(USER_ID)
+    expect(result.detail.archivedByName).not.toBe(USER_ID)
+    expectNoMutationCalls(database)
+  })
+
+  it('returns null actor display names when canonical actor ids cannot be resolved', async () => {
+    const database = createFakeReadDatabase({
+      canonicalRows: [manualCanonicalRow()],
+      userRows: [],
+      workflowRows: [],
+      manualRows: [manualSourceRow()],
+    })
+    const reader = createUnifiedArchiveDetailReader(database)
+
+    const result = await reader.getUnifiedArchiveDetail(MANUAL_ARCHIVE_ID)
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') throw new Error('expected found')
+    expect(result.detail.createdBy).toBe(USER_ID)
+    expect(result.detail.archivedBy).toBe(USER_ID)
+    expect(result.detail.createdByName).toBeNull()
+    expect(result.detail.archivedByName).toBeNull()
+    expectNoMutationCalls(database)
+  })
+
   it('MANUAL row with unexpected dokumen_id adds MANUAL_WITH_DOKUMEN_ID warning', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [manualCanonicalRow({ dokumen_id: DOKUMEN_ID })],
+      userRows: [userRow()],
       workflowRows: [],
       manualRows: [manualSourceRow()],
     })
@@ -228,6 +285,7 @@ describe('unified archive detail reader', () => {
   it('UNKNOWN source type returns source null with UNKNOWN_SOURCE_TYPE warning', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow({ source_type: 'LEGACY', dokumen_id: DOKUMEN_ID })],
+      userRows: [userRow()],
       workflowRows: [workflowSourceRow()],
       manualRows: [manualSourceRow()],
     })
@@ -256,6 +314,7 @@ describe('unified archive detail reader', () => {
           lampiran_snapshot: [{ nama: 'Sensitive Filename.pdf', url: 'token-value' }],
         } as any),
       ],
+      userRows: [userRow()],
       workflowRows: [],
       manualRows: [
         manualSourceRow({
@@ -296,6 +355,7 @@ describe('unified archive detail reader', () => {
           }],
         }),
       ],
+      userRows: [userRow()],
       workflowRows: [workflowSourceRow()],
       manualRows: [],
     })
@@ -323,6 +383,7 @@ describe('unified archive detail reader', () => {
   it('DIMUSNAHKAN detail marks attachments unavailable destroyed without file actions', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow({ status_arsip: 'DIMUSNAHKAN' })],
+      userRows: [userRow()],
       workflowRows: [workflowSourceRow()],
       manualRows: [],
     })
@@ -340,6 +401,7 @@ describe('unified archive detail reader', () => {
   it('invalid WORKFLOW attachment snapshot returns empty attachments with controlled warning', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow({ lampiran_snapshot: '{"not":"an array"}' })],
+      userRows: [userRow()],
       workflowRows: [workflowSourceRow()],
       manualRows: [],
     })
@@ -358,6 +420,7 @@ describe('unified archive detail reader', () => {
   it('detail DTO does not include preview or download URLs', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [manualCanonicalRow()],
+      userRows: [userRow()],
       workflowRows: [],
       manualRows: [manualSourceRow()],
       attachmentRows: [manualAttachmentRow()],
@@ -374,6 +437,7 @@ describe('unified archive detail reader', () => {
   it('reader does not call insert, update, delete, or transaction', async () => {
     const database = createFakeReadDatabase({
       canonicalRows: [workflowCanonicalRow()],
+      userRows: [userRow()],
       workflowRows: [workflowSourceRow()],
       manualRows: [],
     })
@@ -395,6 +459,7 @@ type FakeReadDatabase = UnifiedArchiveDetailReaderDatabase & {
 
 type FakeReadDatabaseOptions = {
   canonicalRows: unknown[]
+  userRows?: unknown[]
   workflowRows: unknown[]
   manualRows: unknown[]
   attachmentRows?: unknown[]
@@ -456,6 +521,7 @@ function createFakeReadDatabase(options: FakeReadDatabaseOptions): FakeReadDatab
 
 function rowsFor(table: unknown, options: FakeReadDatabaseOptions): unknown[] {
   if (table === arsip) return options.canonicalRows
+  if (table === users) return options.userRows ?? []
   if (table === dokumenTransaksi) return options.workflowRows
   if (table === manualArsip) return options.manualRows
   if (table === manualArsipAttachment) return options.attachmentRows ?? []
@@ -464,6 +530,7 @@ function rowsFor(table: unknown, options: FakeReadDatabaseOptions): unknown[] {
 
 function tableName(table: unknown): string {
   if (table === arsip) return 'arsip'
+  if (table === users) return 'users'
   if (table === dokumenTransaksi) return 'dokumenTransaksi'
   if (table === manualArsip) return 'manualArsip'
   if (table === manualArsipCategory) return 'manualArsipCategory'
@@ -554,6 +621,16 @@ function manualSourceRow(overrides: Partial<Record<string, unknown>> = {}) {
     tanggal_diarsipkan: '2026-05-24',
     created_by: USER_ID,
     archived_by: USER_ID,
+    ...overrides,
+  }
+}
+
+function userRow(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: USER_ID,
+    display_name: USER_DISPLAY_NAME,
+    nama_lengkap: 'Nama Lengkap Kasubag',
+    email: 'kasubag@example.test',
     ...overrides,
   }
 }

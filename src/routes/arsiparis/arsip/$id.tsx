@@ -150,10 +150,10 @@ function DetailContent({ detail }: { detail: UnifiedArchiveDetail }) {
             ['Masa Aktif Berakhir', formatNullableDate(detail.masaAktifBerakhir)],
             ['Masa Inaktif Berakhir', formatNullableDate(detail.masaInaktifBerakhir)],
             ['Nominal Realisasi', formatNominal(detail.nominalRealisasi)],
-            ['Created By', formatText(detail.createdBy)],
-            ['Archived By', formatText(detail.archivedBy)],
-            ['Created At', formatNullableDateTime(detail.createdAt)],
-            ['Updated At', formatNullableDateTime(detail.updatedAt)],
+            ['Dibuat oleh', formatActorName(detail.createdByName, detail.createdBy)],
+            ['Diarsipkan oleh', formatActorName(detail.archivedByName, detail.archivedBy)],
+            ['Tanggal dibuat', formatNullableDateTime(detail.createdAt)],
+            ['Terakhir diperbarui', formatNullableDateTime(detail.updatedAt)],
           ]}
         />
       </section>
@@ -199,14 +199,13 @@ function WorkflowSourceSection({ source }: { source: WorkflowArchiveDetailSource
       </h3>
       <DescriptionGrid
         items={[
-          ['Dokumen ID', source.dokumenId],
+          ['ID Dokumen', source.dokumenId],
           ['Judul Dokumen', formatText(source.judulDokumen)],
           ['Jenis Dokumen', formatMaterial(source.isNonMaterial)],
           ['Status Workflow', formatText(source.workflowStatus)],
           ['Fungsi', formatText(source.fungsiNama)],
           ['Kegiatan', formatText(source.kegiatanNama)],
           ['Tahun', source.tahun === null ? '-' : String(source.tahun)],
-          ['Created By', formatText(source.createdBy)],
         ]}
       />
     </section>
@@ -225,9 +224,6 @@ function ManualSourceSection({ source }: { source: ManualArchiveDetailSource }) 
           ['Keterangan', formatText(source.keterangan)],
           ['Kategori', formatText(source.categoryName)],
           ['Tanggal Dokumen/Sumber', formatNullableDate(source.tanggalDokumenSumber)],
-          ['Tanggal Diarsipkan', formatNullableDate(source.tanggalDiarsipkan)],
-          ['Created By', formatText(source.createdBy)],
-          ['Archived By', formatText(source.archivedBy)],
         ]}
       />
     </section>
@@ -441,6 +437,13 @@ function formatAttachmentAvailability(
 
 function formatText(value: string | null | undefined): string {
   return value && value.trim().length > 0 ? value : '-'
+}
+
+function formatActorName(name: string | null | undefined, actorId: string | null | undefined): string {
+  if (name && name.trim().length > 0) return name
+  if (actorId && actorId.trim().length > 0) return 'Pengguna tidak ditemukan'
+
+  return 'Tidak tersedia'
 }
 
 function formatNullableDate(value: string | null): string {
