@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   arsip,
   manualArsip,
+  manualArsipAttachment,
   manualArsipCategory,
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
@@ -15,6 +16,7 @@ const WORKFLOW_ARCHIVE_ID = '11111111-1111-4111-8111-111111111111'
 const MANUAL_ARCHIVE_ID = '22222222-2222-4222-8222-222222222222'
 const DOKUMEN_ID = '33333333-3333-4333-8333-333333333333'
 const MANUAL_SOURCE_ID = '44444444-4444-4444-8444-444444444444'
+const ATTACHMENT_ID = '44444444-4444-4444-8444-444444444445'
 const USER_ID = '55555555-5555-4555-8555-555555555555'
 const KLASIFIKASI_ID = '66666666-6666-4666-8666-666666666666'
 const CATEGORY_ID = '77777777-7777-4777-8777-777777777777'
@@ -80,6 +82,17 @@ describe('unified archive detail reader', () => {
         tahun: 2026,
         createdBy: USER_ID,
       },
+      attachments: [{
+        sourceType: 'WORKFLOW',
+        attachmentId: null,
+        index: 1,
+        displayName: 'Bukti Persetujuan',
+        fileName: null,
+        mimeType: 'application/pdf',
+        sizeBytes: 2048,
+        uploadedAt: '2026-05-24T01:00:00.000Z',
+        availability: 'AVAILABLE',
+      }],
     })
     expectNoSensitiveOutput(result)
     expectNoMutationCalls(database)
@@ -98,7 +111,11 @@ describe('unified archive detail reader', () => {
     expect(result.status).toBe('found')
     if (result.status !== 'found') throw new Error('expected found')
     expect(result.detail.source).toBeNull()
-    expect(result.detail.warnings).toEqual(['WORKFLOW_WITHOUT_DOKUMEN_ID'])
+    expect(result.detail.warnings).toEqual([
+      'ATTACHMENT_SOURCE_INCOMPLETE',
+      'WORKFLOW_WITHOUT_DOKUMEN_ID',
+    ])
+    expect(result.detail.attachments[0].availability).toBe('UNAVAILABLE_SOURCE_INCOMPLETE')
     expect(database.calls).not.toContainEqual(['from', 'dokumenTransaksi'])
     expectNoMutationCalls(database)
   })
@@ -116,7 +133,10 @@ describe('unified archive detail reader', () => {
     expect(result.status).toBe('found')
     if (result.status !== 'found') throw new Error('expected found')
     expect(result.detail.source).toBeNull()
-    expect(result.detail.warnings).toEqual(['WORKFLOW_SOURCE_NOT_FOUND'])
+    expect(result.detail.warnings).toEqual([
+      'ATTACHMENT_SOURCE_INCOMPLETE',
+      'WORKFLOW_SOURCE_NOT_FOUND',
+    ])
     expectNoMutationCalls(database)
   })
 
@@ -125,6 +145,7 @@ describe('unified archive detail reader', () => {
       canonicalRows: [manualCanonicalRow()],
       workflowRows: [],
       manualRows: [manualSourceRow()],
+      attachmentRows: [manualAttachmentRow()],
     })
     const reader = createUnifiedArchiveDetailReader(database)
 
@@ -150,6 +171,17 @@ describe('unified archive detail reader', () => {
         createdBy: USER_ID,
         archivedBy: USER_ID,
       },
+      attachments: [{
+        sourceType: 'MANUAL',
+        attachmentId: ATTACHMENT_ID,
+        index: 1,
+        displayName: 'Bukti Kegiatan',
+        fileName: null,
+        mimeType: 'image/png',
+        sizeBytes: 4096,
+        uploadedAt: '2026-05-24T02:00:00.000Z',
+        availability: 'AVAILABLE',
+      }],
     })
     expectNoSensitiveOutput(result)
     expectNoMutationCalls(database)
@@ -168,6 +200,7 @@ describe('unified archive detail reader', () => {
     expect(result.status).toBe('found')
     if (result.status !== 'found') throw new Error('expected found')
     expect(result.detail.source).toBeNull()
+    expect(result.detail.attachments).toEqual([])
     expect(result.detail.warnings).toEqual([
       'MANUAL_SOURCE_NOT_FOUND',
       'MISSING_MANUAL_SOURCE',
@@ -231,6 +264,14 @@ describe('unified archive detail reader', () => {
           metadata: { secret: 'hidden' },
         } as any),
       ],
+      attachmentRows: [
+        manualAttachmentRow({
+          logical_path: `${USER_ID}/manual/secret.pdf`,
+          original_filename: 'secret.pdf',
+          metadata: { secret: 'hidden' },
+          token: 'secret-token',
+        } as any),
+      ],
     })
     const reader = createUnifiedArchiveDetailReader(database)
 
@@ -238,6 +279,95 @@ describe('unified archive detail reader', () => {
 
     expect(result.status).toBe('found')
     expectNoSensitiveOutput(result)
+    expectNoMutationCalls(database)
+  })
+
+  it('WORKFLOW attachment mapping strips paths, tokens, and raw metadata', async () => {
+    const database = createFakeReadDatabase({
+      canonicalRows: [
+        workflowCanonicalRow({
+          lampiran_snapshot: [{
+            displayName: 'Lampiran Aman',
+            original_filename: 'secret.pdf',
+            url: `${USER_ID}/workflow/${WORKFLOW_ARCHIVE_ID}/secret.pdf`,
+            signed_url: 'https://example.test/token',
+            token: 'secret-token',
+            metadata: { secret: 'hidden' },
+          }],
+        }),
+      ],
+      workflowRows: [workflowSourceRow()],
+      manualRows: [],
+    })
+    const reader = createUnifiedArchiveDetailReader(database)
+
+    const result = await reader.getUnifiedArchiveDetail(WORKFLOW_ARCHIVE_ID)
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') throw new Error('expected found')
+    expect(result.detail.attachments).toEqual([{
+      sourceType: 'WORKFLOW',
+      attachmentId: null,
+      index: 1,
+      displayName: 'Lampiran Aman',
+      fileName: null,
+      mimeType: null,
+      sizeBytes: null,
+      uploadedAt: null,
+      availability: 'AVAILABLE',
+    }])
+    expectNoSensitiveOutput(result)
+    expectNoMutationCalls(database)
+  })
+
+  it('DIMUSNAHKAN detail marks attachments unavailable destroyed without file actions', async () => {
+    const database = createFakeReadDatabase({
+      canonicalRows: [workflowCanonicalRow({ status_arsip: 'DIMUSNAHKAN' })],
+      workflowRows: [workflowSourceRow()],
+      manualRows: [],
+    })
+    const reader = createUnifiedArchiveDetailReader(database)
+
+    const result = await reader.getUnifiedArchiveDetail(WORKFLOW_ARCHIVE_ID)
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') throw new Error('expected found')
+    expect(result.detail.attachments[0].availability).toBe('UNAVAILABLE_DESTROYED')
+    expectNoFileActions(result)
+    expectNoMutationCalls(database)
+  })
+
+  it('invalid WORKFLOW attachment snapshot returns empty attachments with controlled warning', async () => {
+    const database = createFakeReadDatabase({
+      canonicalRows: [workflowCanonicalRow({ lampiran_snapshot: '{"not":"an array"}' })],
+      workflowRows: [workflowSourceRow()],
+      manualRows: [],
+    })
+    const reader = createUnifiedArchiveDetailReader(database)
+
+    const result = await reader.getUnifiedArchiveDetail(WORKFLOW_ARCHIVE_ID)
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') throw new Error('expected found')
+    expect(result.detail.attachments).toEqual([])
+    expect(result.detail.warnings).toEqual(['ATTACHMENT_METADATA_UNAVAILABLE'])
+    expectNoSensitiveOutput(result)
+    expectNoMutationCalls(database)
+  })
+
+  it('detail DTO does not include preview or download URLs', async () => {
+    const database = createFakeReadDatabase({
+      canonicalRows: [manualCanonicalRow()],
+      workflowRows: [],
+      manualRows: [manualSourceRow()],
+      attachmentRows: [manualAttachmentRow()],
+    })
+    const reader = createUnifiedArchiveDetailReader(database)
+
+    const result = await reader.getUnifiedArchiveDetail(MANUAL_ARCHIVE_ID)
+
+    expect(result.status).toBe('found')
+    expectNoFileActions(result)
     expectNoMutationCalls(database)
   })
 
@@ -267,12 +397,14 @@ type FakeReadDatabaseOptions = {
   canonicalRows: unknown[]
   workflowRows: unknown[]
   manualRows: unknown[]
+  attachmentRows?: unknown[]
 }
 
 type FakeQuery = {
   from: (table: unknown) => FakeQuery
   leftJoin: (...args: unknown[]) => FakeQuery
   where: (...args: unknown[]) => FakeQuery
+  orderBy: (...args: unknown[]) => Promise<unknown[]>
   limit: (limit: number) => Promise<unknown[]>
 }
 
@@ -303,6 +435,10 @@ function createFakeReadDatabase(options: FakeReadDatabaseOptions): FakeReadDatab
           calls.push(['where', tableName(selectedTable)])
           return query
         },
+        orderBy() {
+          calls.push(['orderBy', tableName(selectedTable)])
+          return Promise.resolve(rowsFor(selectedTable, options))
+        },
         limit(limit) {
           calls.push(['limit', tableName(selectedTable), limit])
           return Promise.resolve(rowsFor(selectedTable, options))
@@ -322,6 +458,7 @@ function rowsFor(table: unknown, options: FakeReadDatabaseOptions): unknown[] {
   if (table === arsip) return options.canonicalRows
   if (table === dokumenTransaksi) return options.workflowRows
   if (table === manualArsip) return options.manualRows
+  if (table === manualArsipAttachment) return options.attachmentRows ?? []
   return []
 }
 
@@ -330,6 +467,7 @@ function tableName(table: unknown): string {
   if (table === dokumenTransaksi) return 'dokumenTransaksi'
   if (table === manualArsip) return 'manualArsip'
   if (table === manualArsipCategory) return 'manualArsipCategory'
+  if (table === manualArsipAttachment) return 'manualArsipAttachment'
   return 'unknown'
 }
 
@@ -354,6 +492,13 @@ function workflowCanonicalRow(overrides: Partial<Record<string, unknown>> = {}) 
     archived_by: USER_ID,
     created_at: '2026-05-24T00:00:00.000Z',
     updated_at: '2026-05-24T00:00:00.000Z',
+    lampiran_snapshot: [{
+      nama: 'Bukti Persetujuan',
+      content_type: 'application/pdf',
+      size_bytes: 2048,
+      uploaded_at: '2026-05-24T01:00:00.000Z',
+      url: `${USER_ID}/workflow/${WORKFLOW_ARCHIVE_ID}/safe-hidden.pdf`,
+    }],
     ...overrides,
   }
 }
@@ -379,6 +524,7 @@ function manualCanonicalRow(overrides: Partial<Record<string, unknown>> = {}) {
     archived_by: USER_ID,
     created_at: '2026-05-24T00:00:00.000Z',
     updated_at: '2026-05-24T00:00:00.000Z',
+    lampiran_snapshot: null,
     ...overrides,
   }
 }
@@ -412,6 +558,18 @@ function manualSourceRow(overrides: Partial<Record<string, unknown>> = {}) {
   }
 }
 
+function manualAttachmentRow(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: ATTACHMENT_ID,
+    judul_lampiran: 'Bukti Kegiatan',
+    original_filename: 'bukti-kegiatan.png',
+    content_type: 'image/png',
+    size_bytes: 4096,
+    created_at: '2026-05-24T02:00:00.000Z',
+    ...overrides,
+  }
+}
+
 function expectNoMutationCalls(database: FakeReadDatabase): void {
   expect(database.calls).not.toContainEqual(['insert'])
   expect(database.calls).not.toContainEqual(['update'])
@@ -439,4 +597,17 @@ function expectNoSensitiveOutput(value: unknown): void {
   expect(serialized).not.toContain('metadata')
   expect(serialized).not.toContain('secret')
   expect(serialized).not.toContain('lampiran_snapshot')
+}
+
+function expectNoFileActions(value: unknown): void {
+  const serialized = JSON.stringify(value).toLowerCase()
+
+  expect(serialized).not.toContain('previewurl')
+  expect(serialized).not.toContain('downloadurl')
+  expect(serialized).not.toContain('preview_url')
+  expect(serialized).not.toContain('download_url')
+  expect(serialized).not.toContain('/preview')
+  expect(serialized).not.toContain('/download')
+  expect(serialized).not.toContain('signedurl')
+  expect(serialized).not.toContain('signed_url')
 }

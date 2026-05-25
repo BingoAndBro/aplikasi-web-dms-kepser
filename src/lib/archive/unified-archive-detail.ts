@@ -1,8 +1,9 @@
-import { eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 
 import {
   arsip,
   manualArsip,
+  manualArsipAttachment,
   manualArsipCategory,
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
@@ -27,6 +28,25 @@ export type UnifiedArchiveDetailWarning =
   | 'WORKFLOW_SOURCE_NOT_FOUND'
   | 'MANUAL_SOURCE_NOT_FOUND'
   | 'SOURCE_METADATA_INCOMPLETE'
+  | 'ATTACHMENT_METADATA_UNAVAILABLE'
+  | 'ATTACHMENT_SOURCE_INCOMPLETE'
+
+export type UnifiedArchiveAttachmentAvailability =
+  | 'AVAILABLE'
+  | 'UNAVAILABLE_DESTROYED'
+  | 'UNAVAILABLE_SOURCE_INCOMPLETE'
+
+export type UnifiedArchiveAttachmentSummary = {
+  sourceType: 'WORKFLOW' | 'MANUAL'
+  attachmentId: string | null
+  index: number | null
+  displayName: string | null
+  fileName: string | null
+  mimeType: string | null
+  sizeBytes: number | null
+  uploadedAt: string | null
+  availability: UnifiedArchiveAttachmentAvailability
+}
 
 export type WorkflowArchiveDetailSource = {
   sourceType: 'WORKFLOW'
@@ -74,6 +94,7 @@ export type UnifiedArchiveDetail = {
   updatedAt: string | null
   warnings: UnifiedArchiveDetailWarning[]
   source: WorkflowArchiveDetailSource | ManualArchiveDetailSource | null
+  attachments: UnifiedArchiveAttachmentSummary[]
 }
 
 export type UnifiedArchiveDetailResult =
@@ -108,6 +129,7 @@ type CanonicalArchiveDetailRow = {
   archived_by: string | null
   created_at: Date | string | null
   updated_at: Date | string | null
+  lampiran_snapshot: unknown
 }
 
 type WorkflowSourceDetailRow = {
@@ -131,6 +153,15 @@ type ManualSourceDetailRow = {
   tanggal_diarsipkan: Date | string | null
   created_by: string | null
   archived_by: string | null
+}
+
+type ManualAttachmentDetailRow = {
+  id: string
+  judul_lampiran: string | null
+  original_filename: string | null
+  content_type: string | null
+  size_bytes: string | number | null
+  created_at: Date | string | null
 }
 
 export function createUnifiedArchiveDetailReader(
@@ -168,6 +199,13 @@ export async function getUnifiedArchiveDetailForDatabase(
   collectCanonicalWarnings(canonical, sourceType, warnings)
 
   const source = await selectAndMapSourceDetail(database, canonical, sourceType, warnings)
+  const attachments = await selectAndMapAttachmentSummaries(
+    database,
+    canonical,
+    sourceType,
+    source,
+    warnings,
+  )
 
   return {
     status: 'found',
@@ -192,6 +230,7 @@ export async function getUnifiedArchiveDetailForDatabase(
       updatedAt: toIsoLikeString(canonical.updated_at),
       warnings: [...warnings].sort(),
       source,
+      attachments,
     },
   }
 }
@@ -221,12 +260,65 @@ async function selectCanonicalArchiveDetail(
       archived_by: arsip.archivedBy,
       created_at: arsip.createdAt,
       updated_at: arsip.updatedAt,
+      lampiran_snapshot: arsip.lampiranSnapshot,
     })
     .from(arsip)
     .where(eq(arsip.id, archiveId))
     .limit(1) as CanonicalArchiveDetailRow[]
 
   return rows[0] ?? null
+}
+
+async function selectAndMapAttachmentSummaries(
+  database: UnifiedArchiveDetailReaderDatabase,
+  canonical: CanonicalArchiveDetailRow,
+  sourceType: UnifiedArchiveDetailSourceType,
+  source: WorkflowArchiveDetailSource | ManualArchiveDetailSource | null,
+  warnings: Set<UnifiedArchiveDetailWarning>,
+): Promise<UnifiedArchiveAttachmentSummary[]> {
+  if (sourceType === ARCHIVE_SOURCE_TYPE.WORKFLOW) {
+    return mapWorkflowAttachmentSummaries(
+      canonical.lampiran_snapshot,
+      canonical.status_arsip,
+      isAttachmentSourceIncomplete(sourceType, source, warnings),
+      warnings,
+    )
+  }
+
+  if (sourceType === ARCHIVE_SOURCE_TYPE.MANUAL) {
+    if (source?.sourceType !== ARCHIVE_SOURCE_TYPE.MANUAL) return []
+
+    const rows = await selectManualAttachmentDetails(database, source.manualArsipId)
+
+    return rows.map((row, index) => mapManualAttachmentSummary(
+      row,
+      index,
+      canonical.status_arsip,
+    ))
+  }
+
+  return []
+}
+
+async function selectManualAttachmentDetails(
+  database: UnifiedArchiveDetailReaderDatabase,
+  manualArsipId: string,
+): Promise<ManualAttachmentDetailRow[]> {
+  return database
+    .select({
+      id: manualArsipAttachment.id,
+      judul_lampiran: manualArsipAttachment.judulLampiran,
+      original_filename: manualArsipAttachment.originalFilename,
+      content_type: manualArsipAttachment.contentType,
+      size_bytes: manualArsipAttachment.sizeBytes,
+      created_at: manualArsipAttachment.createdAt,
+    })
+    .from(manualArsipAttachment)
+    .where(eq(manualArsipAttachment.manualArsipId, manualArsipId))
+    .orderBy(
+      asc(manualArsipAttachment.createdAt),
+      asc(manualArsipAttachment.id),
+    ) as Promise<ManualAttachmentDetailRow[]>
 }
 
 async function selectAndMapSourceDetail(
@@ -320,6 +412,154 @@ async function selectManualSourceDetail(
   return rows[0] ?? null
 }
 
+function mapWorkflowAttachmentSummaries(
+  value: unknown,
+  statusArsip: StatusArsip,
+  sourceIncomplete: boolean,
+  warnings: Set<UnifiedArchiveDetailWarning>,
+): UnifiedArchiveAttachmentSummary[] {
+  const parsed = parseWorkflowAttachmentSnapshot(value)
+  if (parsed.status === 'unavailable') {
+    warnings.add('ATTACHMENT_METADATA_UNAVAILABLE')
+    return []
+  }
+
+  const attachments = parsed.entries
+    .map((entry, index) => mapWorkflowAttachmentSummary(entry, index, statusArsip, sourceIncomplete))
+    .filter((attachment): attachment is UnifiedArchiveAttachmentSummary => Boolean(attachment))
+
+  if (parsed.entries.length > 0 && attachments.length === 0) {
+    warnings.add('ATTACHMENT_METADATA_UNAVAILABLE')
+  }
+  if (sourceIncomplete && attachments.length > 0) {
+    warnings.add('ATTACHMENT_SOURCE_INCOMPLETE')
+  }
+
+  return attachments
+}
+
+function mapWorkflowAttachmentSummary(
+  entry: unknown,
+  index: number,
+  statusArsip: StatusArsip,
+  sourceIncomplete: boolean,
+): UnifiedArchiveAttachmentSummary | null {
+  if (!isRecord(entry)) return null
+
+  const displayName = firstSafeDisplayName(
+    entry.displayName,
+    entry.display_name,
+    entry.judulLampiran,
+    entry.judul_lampiran,
+    entry.title,
+    entry.nama,
+    entry.name,
+  )
+  const fileName = displayName
+    ? null
+    : firstSafeFileName(
+      entry.fileName,
+      entry.file_name,
+      entry.filename,
+      entry.originalFilename,
+      entry.original_filename,
+    )
+  const mimeType = firstSafeMimeType(
+    entry.mimeType,
+    entry.mime_type,
+    entry.contentType,
+    entry.content_type,
+    entry.type,
+  )
+  const sizeBytes = firstSafeSizeBytes(entry.sizeBytes, entry.size_bytes, entry.size)
+  const uploadedAt = firstSafeDateTime(
+    entry.uploadedAt,
+    entry.uploaded_at,
+    entry.createdAt,
+    entry.created_at,
+  )
+
+  if (!displayName && !fileName && !mimeType && sizeBytes === null && !uploadedAt) {
+    return null
+  }
+
+  return {
+    sourceType: 'WORKFLOW',
+    attachmentId: null,
+    index: index + 1,
+    displayName,
+    fileName,
+    mimeType,
+    sizeBytes,
+    uploadedAt,
+    availability: resolveAttachmentAvailability(statusArsip, sourceIncomplete),
+  }
+}
+
+function mapManualAttachmentSummary(
+  row: ManualAttachmentDetailRow,
+  index: number,
+  statusArsip: StatusArsip,
+): UnifiedArchiveAttachmentSummary {
+  const displayName = firstSafeDisplayName(row.judul_lampiran)
+  const fileName = displayName ? null : firstSafeFileName(row.original_filename)
+
+  return {
+    sourceType: 'MANUAL',
+    attachmentId: trimToNull(row.id),
+    index: index + 1,
+    displayName,
+    fileName,
+    mimeType: firstSafeMimeType(row.content_type),
+    sizeBytes: firstSafeSizeBytes(row.size_bytes),
+    uploadedAt: toIsoLikeString(row.created_at),
+    availability: resolveAttachmentAvailability(statusArsip, false),
+  }
+}
+
+function parseWorkflowAttachmentSnapshot(value: unknown): { status: 'ok'; entries: unknown[] } | { status: 'unavailable' } {
+  if (value === null || value === undefined) return { status: 'ok', entries: [] }
+  if (Array.isArray(value)) return { status: 'ok', entries: value }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return { status: 'ok', entries: [] }
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      return Array.isArray(parsed) ? { status: 'ok', entries: parsed } : { status: 'unavailable' }
+    } catch {
+      return { status: 'unavailable' }
+    }
+  }
+
+  return { status: 'unavailable' }
+}
+
+function isAttachmentSourceIncomplete(
+  sourceType: UnifiedArchiveDetailSourceType,
+  source: WorkflowArchiveDetailSource | ManualArchiveDetailSource | null,
+  warnings: Set<UnifiedArchiveDetailWarning>,
+): boolean {
+  if (sourceType === 'UNKNOWN') return true
+  if (source === null) return true
+
+  return warnings.has('WORKFLOW_WITHOUT_DOKUMEN_ID')
+    || warnings.has('WORKFLOW_SOURCE_NOT_FOUND')
+    || warnings.has('MISSING_MANUAL_SOURCE')
+    || warnings.has('MANUAL_SOURCE_NOT_FOUND')
+}
+
+function resolveAttachmentAvailability(
+  statusArsip: StatusArsip,
+  sourceIncomplete: boolean,
+): UnifiedArchiveAttachmentAvailability {
+  if (statusArsip === 'DIMUSNAHKAN') return 'UNAVAILABLE_DESTROYED'
+  if (sourceIncomplete) return 'UNAVAILABLE_SOURCE_INCOMPLETE'
+
+  return 'AVAILABLE'
+}
+
 function collectCanonicalWarnings(
   row: CanonicalArchiveDetailRow,
   sourceType: UnifiedArchiveDetailSourceType,
@@ -398,6 +638,105 @@ function normalizeNominal(value: string | number | null | undefined): string | n
 function toIsoLikeString(value: Date | string | null | undefined): string | null {
   if (value instanceof Date) return value.toISOString()
   return trimToNull(value)
+}
+
+function firstSafeDisplayName(...values: unknown[]): string | null {
+  for (const value of values) {
+    const safeValue = toSafeAttachmentText(value)
+    if (safeValue) return safeValue
+  }
+
+  return null
+}
+
+function firstSafeFileName(...values: unknown[]): string | null {
+  for (const value of values) {
+    const safeValue = toSafeFileName(value)
+    if (safeValue) return safeValue
+  }
+
+  return null
+}
+
+function firstSafeMimeType(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+
+    const normalized = value.trim().toLowerCase()
+    if (/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(normalized)) {
+      return normalized
+    }
+  }
+
+  return null
+}
+
+function firstSafeSizeBytes(...values: unknown[]): number | null {
+  for (const value of values) {
+    const numeric = typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number(value)
+        : Number.NaN
+
+    if (Number.isFinite(numeric) && numeric >= 0) {
+      return Math.trunc(numeric)
+    }
+  }
+
+  return null
+}
+
+function firstSafeDateTime(...values: unknown[]): string | null {
+  for (const value of values) {
+    const formatted = value instanceof Date
+      ? value.toISOString()
+      : toSafeDateTimeText(value)
+    if (formatted) return formatted
+  }
+
+  return null
+}
+
+function toSafeDateTimeText(value: unknown): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : ''
+  if (!trimmed || trimmed.length > 80 || hasUnsafeAttachmentText(trimmed)) return null
+
+  return /^\d{4}-\d{2}-\d{2}(?:$|[T\s]\d{2}:\d{2})/.test(trimmed) ? trimmed : null
+}
+
+function toSafeAttachmentText(value: unknown): string | null {
+  const trimmed = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
+  if (!trimmed || trimmed.length > 200 || hasUnsafeAttachmentText(trimmed)) return null
+
+  return trimmed
+}
+
+function toSafeFileName(value: unknown): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : ''
+  if (
+    !trimmed
+    || trimmed.length > 200
+    || trimmed === '.'
+    || trimmed === '..'
+    || trimmed.includes('..')
+    || hasUnsafeAttachmentText(trimmed)
+  ) {
+    return null
+  }
+
+  return trimmed
+}
+
+function hasUnsafeAttachmentText(value: string): boolean {
+  return /[\r\n"\\/]/.test(value)
+    || /^[a-z][a-z0-9+.-]*:/i.test(value)
+    || /^[a-z]:/i.test(value)
+    || value.toLowerCase().includes('token')
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function trimToNull(value: string | null | undefined): string | null {
