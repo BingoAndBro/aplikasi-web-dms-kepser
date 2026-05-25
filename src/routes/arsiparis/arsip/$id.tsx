@@ -1,5 +1,16 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { AlertCircle, AlertTriangle, ArrowLeft, CheckCircle2, Download, Eye, FileText, Loader2, X } from 'lucide-react'
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRightCircle,
+  CheckCircle2,
+  Download,
+  Eye,
+  FileText,
+  Loader2,
+  X,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
@@ -24,14 +35,22 @@ type UnifiedArchiveDetailResponse = {
   error?: string
 }
 
+type UnifiedArchiveLifecycleAction = 'mark_inactive' | 'propose_destruction'
+
+type UnifiedArchiveLifecycleResponse = {
+  ok?: boolean
+  error?: string
+}
+
 function UnifiedArchiveDetailPage() {
   const { id } = Route.useParams()
   const [detail, setDetail] = useState<UnifiedArchiveDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  async function fetchDetail() {
-    setLoading(true)
+  async function fetchDetail(options: { showLoading?: boolean } = {}) {
+    const showLoading = options.showLoading ?? true
+    if (showLoading) setLoading(true)
     setError(null)
     try {
       const json = await apiFetch<UnifiedArchiveDetailResponse>(`/arsiparis/arsip/${id}`)
@@ -52,7 +71,7 @@ function UnifiedArchiveDetailPage() {
       }
       setDetail(null)
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
@@ -91,7 +110,7 @@ function UnifiedArchiveDetailPage() {
         ) : error ? (
           <ErrorState message={error} onRetry={fetchDetail} />
         ) : detail ? (
-          <DetailContent detail={detail} />
+          <DetailContent detail={detail} onRefresh={() => fetchDetail({ showLoading: false })} />
         ) : (
           <ErrorState message="Metadata arsip tidak tersedia" onRetry={fetchDetail} />
         )}
@@ -100,7 +119,13 @@ function UnifiedArchiveDetailPage() {
   )
 }
 
-function DetailContent({ detail }: { detail: UnifiedArchiveDetail }) {
+function DetailContent({
+  detail,
+  onRefresh,
+}: {
+  detail: UnifiedArchiveDetail
+  onRefresh: () => Promise<void>
+}) {
   return (
     <div className="space-y-6">
       {detail.statusArsip === 'DIMUSNAHKAN' && (
@@ -158,10 +183,109 @@ function DetailContent({ detail }: { detail: UnifiedArchiveDetail }) {
         />
       </section>
 
+      <LifecycleActionSection detail={detail} onRefresh={onRefresh} />
+
       <SourceSection detail={detail} />
 
       <AttachmentSection detail={detail} />
     </div>
+  )
+}
+
+function LifecycleActionSection({
+  detail,
+  onRefresh,
+}: {
+  detail: UnifiedArchiveDetail
+  onRefresh: () => Promise<void>
+}) {
+  const [pendingAction, setPendingAction] = useState<UnifiedArchiveLifecycleAction | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
+  const lifecycleAction = resolveLifecycleAction(detail.statusArsip)
+
+  async function submitLifecycleAction(action: UnifiedArchiveLifecycleAction) {
+    const confirmationMessage = action === 'mark_inactive'
+      ? 'Pindahkan arsip ini ke status Inaktif?'
+      : 'Ajukan arsip ini ke Usul Musnah?'
+
+    if (!window.confirm(confirmationMessage)) return
+
+    setPendingAction(action)
+    setActionError(null)
+    setActionSuccess(null)
+
+    try {
+      await apiFetch<UnifiedArchiveLifecycleResponse>(
+        `/arsiparis/arsip/${detail.id}/lifecycle`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ action }),
+        },
+      )
+      setActionSuccess(action === 'mark_inactive'
+        ? 'Arsip berhasil dipindahkan ke Inaktif.'
+        : 'Arsip berhasil dipindahkan ke Usul Musnah.')
+      await onRefresh()
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setActionError(readApiError(error.payload) ?? 'Gagal mengubah status lifecycle arsip.')
+      } else {
+        setActionError('Terjadi kesalahan saat mengubah status lifecycle arsip.')
+      }
+    } finally {
+      setPendingAction(null)
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-outline-variant/30 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex flex-col gap-1">
+        <h3 className="font-headline text-lg font-extrabold text-on-surface">
+          Aksi Lifecycle
+        </h3>
+        <p className="text-xs text-on-surface-variant">
+          Perubahan status tetap divalidasi oleh server dan role Kepala Sub Bagian Umum.
+        </p>
+      </div>
+
+      {actionError && (
+        <div className="mb-3 rounded-lg border border-error/20 bg-error/5 px-3 py-2 text-xs font-semibold text-error">
+          {actionError}
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+          {actionSuccess}
+        </div>
+      )}
+
+      {lifecycleAction ? (
+        <Button
+          className="w-full gap-1.5 sm:w-auto"
+          onClick={() => submitLifecycleAction(lifecycleAction.action)}
+          disabled={pendingAction !== null}
+        >
+          {pendingAction === lifecycleAction.action
+            ? <Loader2 size={14} className="animate-spin" />
+            : <ArrowRightCircle size={14} />}
+          {lifecycleAction.label}
+        </Button>
+      ) : detail.statusArsip === 'USUL_MUSNAH' ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+          Persetujuan pemusnahan tidak ditampilkan di UI pada fase ini. Gunakan proses/API terpisah yang sudah disetujui.
+        </div>
+      ) : detail.statusArsip === 'DIMUSNAHKAN' ? (
+        <p className="text-sm text-on-surface-variant">
+          Tidak ada aksi lifecycle untuk arsip yang sudah dimusnahkan.
+        </p>
+      ) : (
+        <p className="text-sm text-on-surface-variant">
+          Tidak ada aksi lifecycle yang tersedia untuk status arsip saat ini.
+        </p>
+      )}
+    </section>
   )
 }
 
@@ -457,6 +581,27 @@ function AttachmentAvailabilityBadge({
       : 'border-amber-200 bg-amber-100 text-amber-700'
 
   return <Badge className={className}>{formatAttachmentAvailability(availability)}</Badge>
+}
+
+function resolveLifecycleAction(status: UnifiedArchiveDetail['statusArsip']): {
+  action: UnifiedArchiveLifecycleAction
+  label: string
+} | null {
+  if (status === 'AKTIF') {
+    return {
+      action: 'mark_inactive',
+      label: 'Pindahkan ke Inaktif',
+    }
+  }
+
+  if (status === 'INAKTIF') {
+    return {
+      action: 'propose_destruction',
+      label: 'Pindahkan ke Usul Musnah',
+    }
+  }
+
+  return null
 }
 
 function formatWarning(warning: UnifiedArchiveDetailWarning): string {
