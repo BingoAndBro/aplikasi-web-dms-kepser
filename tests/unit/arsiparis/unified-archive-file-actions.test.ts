@@ -46,20 +46,35 @@ describe('unified archive file actions', () => {
     expectNoLeak(body)
   })
 
-  it('blocks DIMUSNAHKAN canonical archive file access with 410', async () => {
+  it.each<['WORKFLOW' | 'MANUAL', 'preview' | 'download']>([
+    ['WORKFLOW', 'preview'],
+    ['WORKFLOW', 'download'],
+    ['MANUAL', 'preview'],
+    ['MANUAL', 'download'],
+  ])('blocks stale %s %s action links when canonical archive is DIMUSNAHKAN', async (sourceType, purpose) => {
+    const manualResponder = vi.fn(async () => new Response('should not be called'))
     const response = await createUnifiedArchiveAttachmentFileResponse({
-      archiveId: WORKFLOW_ARCHIVE_ID,
-      attachmentRef: 'workflow-1',
-      purpose: 'download',
+      archiveId: sourceType === 'WORKFLOW' ? WORKFLOW_ARCHIVE_ID : MANUAL_ARCHIVE_ID,
+      attachmentRef: sourceType === 'WORKFLOW' ? 'workflow-1' : `manual-${ATTACHMENT_ID}`,
+      purpose,
       database: createFakeDatabase({
-        canonicalRows: [workflowCanonicalRow({ status_arsip: 'DIMUSNAHKAN' })],
+        canonicalRows: [
+          sourceType === 'WORKFLOW'
+            ? workflowCanonicalRow({ status_arsip: 'DIMUSNAHKAN' })
+            : manualCanonicalRow({ status_arsip: 'DIMUSNAHKAN' }),
+        ],
+        manualRows: [manualSourceRow()],
+        manualAttachmentRows: [manualAttachmentRow()],
       }),
       root: TEST_ROOT,
+      manualFileResponse: manualResponder,
     })
     const body = JSON.stringify(await response.json())
 
     expect(response.status).toBe(410)
     expect(body).toBe('{"error":"File arsip tidak tersedia karena arsip telah dimusnahkan"}')
+    expect(body).not.toContain(TEST_FILE_CONTENT)
+    expect(manualResponder).not.toHaveBeenCalled()
     expectNoLeak(body)
   })
 
@@ -179,12 +194,15 @@ describe('unified archive file actions', () => {
     expectNoLeak(JSON.stringify([...response.headers.entries()]))
   })
 
-  it('blocks stale MANUAL action links when the linked source is DIMUSNAHKAN', async () => {
+  it.each<['preview' | 'download']>([
+    ['preview'],
+    ['download'],
+  ])('blocks stale MANUAL %s action links when the linked source is DIMUSNAHKAN', async (purpose) => {
     const manualResponder = vi.fn(async () => new Response('should not be called'))
     const response = await createUnifiedArchiveAttachmentFileResponse({
       archiveId: MANUAL_ARCHIVE_ID,
       attachmentRef: `manual-${ATTACHMENT_ID}`,
-      purpose: 'preview',
+      purpose,
       database: createFakeDatabase({
         canonicalRows: [manualCanonicalRow()],
         manualRows: [manualSourceRow({ status_arsip: 'DIMUSNAHKAN' })],
@@ -196,7 +214,9 @@ describe('unified archive file actions', () => {
 
     expect(response.status).toBe(410)
     expect(manualResponder).not.toHaveBeenCalled()
-    expectNoLeak(JSON.stringify(await response.json()))
+    const body = JSON.stringify(await response.json())
+    expect(body).not.toContain(TEST_FILE_CONTENT)
+    expectNoLeak(body)
   })
 })
 

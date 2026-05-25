@@ -89,12 +89,71 @@ describe('unified archive lifecycle route', () => {
     }
   })
 
-  it('returns 400 for malformed bodies and unsupported actions including approve_destruction', async () => {
+  it('returns 400 for malformed bodies and unsupported actions', async () => {
     const cases = [
       malformedJsonRequest(),
-      lifecycleRequest({ action: 'approve_destruction' }),
       lifecycleRequest({ action: 'restore_active' }),
       lifecycleRequest({ action: 'mark_inactive', extra: true }),
+    ]
+
+    for (const request of cases) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+
+      const response = await postHandler({
+        request,
+        params: { id: ARCHIVE_ID },
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'Aksi lifecycle arsip tidak valid.' })
+      expect(mocks.dbSelect).not.toHaveBeenCalled()
+      expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    }
+  })
+
+  it('rejects approve_destruction without confirmation before DB work', async () => {
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        reason: 'Retensi selesai',
+      }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Aksi lifecycle arsip tidak valid.' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects approve_destruction with wrong confirmation before DB work', async () => {
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'setuju',
+        reason: 'Retensi selesai',
+      }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Aksi lifecycle arsip tidak valid.' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects approve_destruction without a non-empty reason before DB work', async () => {
+    const cases = [
+      lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+      }),
+      lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+        reason: '   ',
+      }),
     ]
 
     for (const request of cases) {
@@ -185,6 +244,35 @@ describe('unified archive lifecycle route', () => {
     expectNoSensitiveOutput(body)
   })
 
+  it('updates WORKFLOW USUL_MUSNAH to DIMUSNAHKAN through approve_destruction', async () => {
+    queueSelectResults([canonicalArchiveRow('WORKFLOW', 'USUL_MUSNAH')])
+    queueTransactionUpdates([{ id: ARCHIVE_ID }])
+
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+        reason: 'Retensi selesai dan disetujui untuk dimusnahkan',
+      }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({
+      ok: true,
+      archiveId: ARCHIVE_ID,
+      fromStatus: 'USUL_MUSNAH',
+      toStatus: 'DIMUSNAHKAN',
+      sourceType: 'WORKFLOW',
+    })
+    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
+    expect(mocks.txUpdateSet).toHaveBeenCalledTimes(1)
+    expect(mocks.txUpdateSet).toHaveBeenCalledWith({ statusArsip: 'DIMUSNAHKAN' })
+    expectNoSensitiveOutput(body)
+  })
+
   it('returns 409 for invalid direct WORKFLOW transitions', async () => {
     queueSelectResults([canonicalArchiveRow('WORKFLOW', 'AKTIF')])
 
@@ -195,6 +283,42 @@ describe('unified archive lifecycle route', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({ error: 'Perubahan status arsip tidak diizinkan.' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('returns 409 for WORKFLOW approve_destruction when status is not USUL_MUSNAH', async () => {
+    queueSelectResults([canonicalArchiveRow('WORKFLOW', 'INAKTIF')])
+
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+        reason: 'Retensi selesai',
+      }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({ error: 'Perubahan status arsip tidak diizinkan.' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('returns 409 for WORKFLOW approve_destruction when archive is already DIMUSNAHKAN', async () => {
+    queueSelectResults([canonicalArchiveRow('WORKFLOW', 'DIMUSNAHKAN')])
+
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+        reason: 'Retensi selesai',
+      }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Arsip yang sudah dimusnahkan tidak dapat diubah statusnya.',
+    })
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
@@ -227,6 +351,39 @@ describe('unified archive lifecycle route', () => {
     expectNoSensitiveOutput(body)
   })
 
+  it('updates linked MANUAL canonical and source statuses to DIMUSNAHKAN in one transaction', async () => {
+    queueSelectResults(
+      [canonicalArchiveRow('MANUAL', 'USUL_MUSNAH')],
+      [manualSourceRow('USUL_MUSNAH')],
+    )
+    queueTransactionUpdates([{ id: ARCHIVE_ID }], [{ id: MANUAL_SOURCE_ID }])
+
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+        reason: 'Retensi selesai dan disetujui untuk dimusnahkan',
+      }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({
+      ok: true,
+      archiveId: ARCHIVE_ID,
+      fromStatus: 'USUL_MUSNAH',
+      toStatus: 'DIMUSNAHKAN',
+      sourceType: 'MANUAL',
+    })
+    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
+    expect(mocks.txUpdateSet).toHaveBeenCalledTimes(2)
+    expect(mocks.txUpdateSet).toHaveBeenNthCalledWith(1, { statusArsip: 'DIMUSNAHKAN' })
+    expect(mocks.txUpdateSet).toHaveBeenNthCalledWith(2, { statusArsip: 'DIMUSNAHKAN' })
+    expectNoSensitiveOutput(body)
+  })
+
   it('returns 409 for MANUAL status drift without updates', async () => {
     queueSelectResults(
       [canonicalArchiveRow('MANUAL', 'AKTIF')],
@@ -235,6 +392,28 @@ describe('unified archive lifecycle route', () => {
 
     const response = await postHandler({
       request: lifecycleRequest({ action: 'mark_inactive' }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Status Arsip Manual tidak selaras dengan status arsip canonical.',
+    })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('returns 409 for MANUAL approve_destruction drift without updates', async () => {
+    queueSelectResults(
+      [canonicalArchiveRow('MANUAL', 'USUL_MUSNAH')],
+      [manualSourceRow('INAKTIF')],
+    )
+
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+        reason: 'Retensi selesai',
+      }),
       params: { id: ARCHIVE_ID },
     })
 
@@ -276,16 +455,39 @@ describe('unified archive lifecycle route', () => {
     })
   })
 
+  it('returns 409 for approve_destruction guarded update failures', async () => {
+    queueSelectResults([canonicalArchiveRow('WORKFLOW', 'USUL_MUSNAH')])
+    queueTransactionUpdates([])
+
+    const response = await postHandler({
+      request: lifecycleRequest({
+        action: 'approve_destruction',
+        confirmation: 'SETUJUI PEMUSNAHAN ARSIP',
+        reason: 'Retensi selesai',
+      }),
+      params: { id: ARCHIVE_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Status arsip berubah. Muat ulang data dan coba lagi.',
+    })
+  })
+
   it('does not import storage, file deletion, proposal, audit-log, or canonicalization helpers', () => {
     const source = readFileSync('src/routes/api/arsiparis/arsip/$id/lifecycle.ts', 'utf8')
 
     expect(source).not.toContain('#/lib/storage')
+    expect(source).not.toContain('#/lib/archive/unified-archive-file-actions')
     expect(source).not.toContain('storage-client')
+    expect(source).not.toContain('createUnifiedArchiveAttachmentFileResponse')
     expect(source).not.toContain('deleteFile')
     expect(source).not.toContain('unlink')
     expect(source).not.toContain('rm(')
     expect(source).not.toContain('arsipUsulMusnah')
+    expect(source).not.toContain('arsip_usul_musnah')
     expect(source).not.toContain('logAktivitas')
+    expect(source).not.toContain('log_aktivitas')
     expect(source).not.toContain('manual-archive-canonicalization')
   })
 

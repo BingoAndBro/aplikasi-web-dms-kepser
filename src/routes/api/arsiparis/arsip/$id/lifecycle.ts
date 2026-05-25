@@ -13,10 +13,20 @@ import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-aut
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
 const archiveIdSchema = z.uuid()
-const lifecycleBodySchema = z.object({
+const destructionConfirmationPhrase = 'SETUJUI PEMUSNAHAN ARSIP'
+const nonDestructiveLifecycleBodySchema = z.object({
   action: z.enum(['mark_inactive', 'propose_destruction']),
   reason: z.string().trim().max(1000).optional(),
 }).strict()
+const approveDestructionLifecycleBodySchema = z.object({
+  action: z.literal('approve_destruction'),
+  confirmation: z.literal(destructionConfirmationPhrase),
+  reason: z.string().trim().min(1).max(1000),
+}).strict()
+const lifecycleBodySchema = z.discriminatedUnion('action', [
+  nonDestructiveLifecycleBodySchema,
+  approveDestructionLifecycleBodySchema,
+])
 
 type CanonicalArchiveRow = {
   id: string
@@ -94,7 +104,22 @@ export const Route = createFileRoute('/api/arsiparis/arsip/$id/lifecycle')({
           )
         }
 
-        if (plan.action !== 'mark_inactive' && plan.action !== 'propose_destruction') {
+        if (
+          plan.action === 'approve_destruction'
+          && (
+            plan.fromStatus !== 'USUL_MUSNAH'
+            || plan.toStatus !== 'DIMUSNAHKAN'
+            || plan.fileDeletion !== false
+          )
+        ) {
+          return Response.json({ error: 'Perubahan status arsip tidak diizinkan.' }, { status: 409 })
+        }
+
+        if (
+          plan.action !== 'mark_inactive'
+          && plan.action !== 'propose_destruction'
+          && plan.action !== 'approve_destruction'
+        ) {
           return Response.json({ error: 'Aksi lifecycle arsip tidak valid.' }, { status: 400 })
         }
 
