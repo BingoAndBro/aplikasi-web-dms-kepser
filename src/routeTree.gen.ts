@@ -68,6 +68,7 @@ import { Route as PegawaiDokumenAjuRouteImport } from './routes/pegawai/dokumen/
 import { Route as PegawaiDokumenIdRouteImport } from './routes/pegawai/dokumen/$id'
 import { Route as DokumenIdEditRouteImport } from './routes/dokumen/$id/edit'
 import { Route as BendaharaDokumenIdRouteImport } from './routes/bendahara/dokumen/$id'
+import { Route as ArsiparisLaporanKlasifikasiDetailRouteImport } from './routes/arsiparis.laporan-klasifikasi_.detail'
 import { Route as ArsiparisArsipIdRouteImport } from './routes/arsiparis/arsip/$id'
 import { Route as ApiUsersMeRouteImport } from './routes/api/users/me'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
@@ -142,6 +143,7 @@ import { Route as ApiArsiparisManualArsipIdRouteImport } from './routes/api/arsi
 import { Route as ApiArsiparisKlasifikasiIdRouteImport } from './routes/api/arsiparis/klasifikasi/$id'
 import { Route as ApiArsiparisDokumenIdRouteImport } from './routes/api/arsiparis/dokumen.$id'
 import { Route as ApiArsiparisArsipExportRouteImport } from './routes/api/arsiparis/arsip/export'
+import { Route as ApiArsiparisArsipClassificationReportDetailRouteImport } from './routes/api/arsiparis/arsip/classification-report-detail'
 import { Route as ApiArsiparisArsipClassificationReportRouteImport } from './routes/api/arsiparis/arsip/classification-report'
 import { Route as ApiArsiparisArsipAggregateRouteImport } from './routes/api/arsiparis/arsip/aggregate'
 import { Route as ApiArsiparisArsipIdRouteImport } from './routes/api/arsiparis/arsip/$id'
@@ -462,6 +464,12 @@ const BendaharaDokumenIdRoute = BendaharaDokumenIdRouteImport.update({
   path: '/dokumen/$id',
   getParentRoute: () => BendaharaRoute,
 } as any)
+const ArsiparisLaporanKlasifikasiDetailRoute =
+  ArsiparisLaporanKlasifikasiDetailRouteImport.update({
+    id: '/laporan-klasifikasi_/detail',
+    path: '/laporan-klasifikasi/detail',
+    getParentRoute: () => ArsiparisRoute,
+  } as any)
 const ArsiparisArsipIdRoute = ArsiparisArsipIdRouteImport.update({
   id: '/arsip/$id',
   path: '/arsip/$id',
@@ -842,6 +850,12 @@ const ApiArsiparisArsipExportRoute = ApiArsiparisArsipExportRouteImport.update({
   path: '/api/arsiparis/arsip/export',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiArsiparisArsipClassificationReportDetailRoute =
+  ApiArsiparisArsipClassificationReportDetailRouteImport.update({
+    id: '/api/arsiparis/arsip/classification-report-detail',
+    path: '/api/arsiparis/arsip/classification-report-detail',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiArsiparisArsipClassificationReportRoute =
   ApiArsiparisArsipClassificationReportRouteImport.update({
     id: '/api/arsiparis/arsip/classification-report',
@@ -1045,6 +1059,7 @@ export interface FileRoutesByFullPath {
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/arsip/$id': typeof ArsiparisArsipIdRoute
+  '/arsiparis/laporan-klasifikasi/detail': typeof ArsiparisLaporanKlasifikasiDetailRoute
   '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdRouteWithChildren
@@ -1064,6 +1079,7 @@ export interface FileRoutesByFullPath {
   '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRouteWithChildren
   '/api/arsiparis/arsip/aggregate': typeof ApiArsiparisArsipAggregateRoute
   '/api/arsiparis/arsip/classification-report': typeof ApiArsiparisArsipClassificationReportRoute
+  '/api/arsiparis/arsip/classification-report-detail': typeof ApiArsiparisArsipClassificationReportDetailRoute
   '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
@@ -1192,6 +1208,7 @@ export interface FileRoutesByTo {
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/arsip/$id': typeof ArsiparisArsipIdRoute
+  '/arsiparis/laporan-klasifikasi/detail': typeof ArsiparisLaporanKlasifikasiDetailRoute
   '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/pegawai/dokumen/aju': typeof PegawaiDokumenAjuRoute
@@ -1209,6 +1226,7 @@ export interface FileRoutesByTo {
   '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRouteWithChildren
   '/api/arsiparis/arsip/aggregate': typeof ApiArsiparisArsipAggregateRoute
   '/api/arsiparis/arsip/classification-report': typeof ApiArsiparisArsipClassificationReportRoute
+  '/api/arsiparis/arsip/classification-report-detail': typeof ApiArsiparisArsipClassificationReportDetailRoute
   '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
@@ -1345,6 +1363,7 @@ export interface FileRoutesById {
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/arsiparis/arsip/$id': typeof ArsiparisArsipIdRoute
+  '/arsiparis/laporan-klasifikasi_/detail': typeof ArsiparisLaporanKlasifikasiDetailRoute
   '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdRouteWithChildren
@@ -1364,6 +1383,7 @@ export interface FileRoutesById {
   '/api/arsiparis/arsip/$id': typeof ApiArsiparisArsipIdRouteWithChildren
   '/api/arsiparis/arsip/aggregate': typeof ApiArsiparisArsipAggregateRoute
   '/api/arsiparis/arsip/classification-report': typeof ApiArsiparisArsipClassificationReportRoute
+  '/api/arsiparis/arsip/classification-report-detail': typeof ApiArsiparisArsipClassificationReportDetailRoute
   '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
@@ -1501,6 +1521,7 @@ export interface FileRouteTypes {
     | '/api/users/$id'
     | '/api/users/me'
     | '/arsiparis/arsip/$id'
+    | '/arsiparis/laporan-klasifikasi/detail'
     | '/bendahara/dokumen/$id'
     | '/dokumen/$id/edit'
     | '/pegawai/dokumen/$id'
@@ -1520,6 +1541,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/$id'
     | '/api/arsiparis/arsip/aggregate'
     | '/api/arsiparis/arsip/classification-report'
+    | '/api/arsiparis/arsip/classification-report-detail'
     | '/api/arsiparis/arsip/export'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
@@ -1648,6 +1670,7 @@ export interface FileRouteTypes {
     | '/api/users/$id'
     | '/api/users/me'
     | '/arsiparis/arsip/$id'
+    | '/arsiparis/laporan-klasifikasi/detail'
     | '/bendahara/dokumen/$id'
     | '/dokumen/$id/edit'
     | '/pegawai/dokumen/aju'
@@ -1665,6 +1688,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/$id'
     | '/api/arsiparis/arsip/aggregate'
     | '/api/arsiparis/arsip/classification-report'
+    | '/api/arsiparis/arsip/classification-report-detail'
     | '/api/arsiparis/arsip/export'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
@@ -1800,6 +1824,7 @@ export interface FileRouteTypes {
     | '/api/users/$id'
     | '/api/users/me'
     | '/arsiparis/arsip/$id'
+    | '/arsiparis/laporan-klasifikasi_/detail'
     | '/bendahara/dokumen/$id'
     | '/dokumen/$id/edit'
     | '/pegawai/dokumen/$id'
@@ -1819,6 +1844,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/$id'
     | '/api/arsiparis/arsip/aggregate'
     | '/api/arsiparis/arsip/classification-report'
+    | '/api/arsiparis/arsip/classification-report-detail'
     | '/api/arsiparis/arsip/export'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
@@ -1921,6 +1947,7 @@ export interface RootRouteChildren {
   ApiArsiparisArsipIdRoute: typeof ApiArsiparisArsipIdRouteWithChildren
   ApiArsiparisArsipAggregateRoute: typeof ApiArsiparisArsipAggregateRoute
   ApiArsiparisArsipClassificationReportRoute: typeof ApiArsiparisArsipClassificationReportRoute
+  ApiArsiparisArsipClassificationReportDetailRoute: typeof ApiArsiparisArsipClassificationReportDetailRoute
   ApiArsiparisArsipExportRoute: typeof ApiArsiparisArsipExportRoute
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
   ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
@@ -2350,6 +2377,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/bendahara/dokumen/$id'
       preLoaderRoute: typeof BendaharaDokumenIdRouteImport
       parentRoute: typeof BendaharaRoute
+    }
+    '/arsiparis/laporan-klasifikasi_/detail': {
+      id: '/arsiparis/laporan-klasifikasi_/detail'
+      path: '/laporan-klasifikasi/detail'
+      fullPath: '/arsiparis/laporan-klasifikasi/detail'
+      preLoaderRoute: typeof ArsiparisLaporanKlasifikasiDetailRouteImport
+      parentRoute: typeof ArsiparisRoute
     }
     '/arsiparis/arsip/$id': {
       id: '/arsiparis/arsip/$id'
@@ -2869,6 +2903,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArsiparisArsipExportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/arsiparis/arsip/classification-report-detail': {
+      id: '/api/arsiparis/arsip/classification-report-detail'
+      path: '/api/arsiparis/arsip/classification-report-detail'
+      fullPath: '/api/arsiparis/arsip/classification-report-detail'
+      preLoaderRoute: typeof ApiArsiparisArsipClassificationReportDetailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/arsiparis/arsip/classification-report': {
       id: '/api/arsiparis/arsip/classification-report'
       path: '/api/arsiparis/arsip/classification-report'
@@ -3041,6 +3082,7 @@ interface ArsiparisRouteChildren {
   ArsiparisSearchRoute: typeof ArsiparisSearchRoute
   ArsiparisIndexRoute: typeof ArsiparisIndexRoute
   ArsiparisArsipIdRoute: typeof ArsiparisArsipIdRoute
+  ArsiparisLaporanKlasifikasiDetailRoute: typeof ArsiparisLaporanKlasifikasiDetailRoute
   ArsiparisAktifIndexRoute: typeof ArsiparisAktifIndexRoute
   ArsiparisInaktifIndexRoute: typeof ArsiparisInaktifIndexRoute
   ArsiparisUsulMusnahIndexRoute: typeof ArsiparisUsulMusnahIndexRoute
@@ -3055,6 +3097,8 @@ const ArsiparisRouteChildren: ArsiparisRouteChildren = {
   ArsiparisSearchRoute: ArsiparisSearchRoute,
   ArsiparisIndexRoute: ArsiparisIndexRoute,
   ArsiparisArsipIdRoute: ArsiparisArsipIdRoute,
+  ArsiparisLaporanKlasifikasiDetailRoute:
+    ArsiparisLaporanKlasifikasiDetailRoute,
   ArsiparisAktifIndexRoute: ArsiparisAktifIndexRoute,
   ArsiparisInaktifIndexRoute: ArsiparisInaktifIndexRoute,
   ArsiparisUsulMusnahIndexRoute: ArsiparisUsulMusnahIndexRoute,
@@ -3506,6 +3550,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArsiparisArsipAggregateRoute: ApiArsiparisArsipAggregateRoute,
   ApiArsiparisArsipClassificationReportRoute:
     ApiArsiparisArsipClassificationReportRoute,
+  ApiArsiparisArsipClassificationReportDetailRoute:
+    ApiArsiparisArsipClassificationReportDetailRoute,
   ApiArsiparisArsipExportRoute: ApiArsiparisArsipExportRoute,
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
   ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
@@ -3526,13 +3572,10 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-
 import type { createStart } from '@tanstack/react-start'
-
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
-
     router: Awaited<ReturnType<typeof getRouter>>
   }
 }

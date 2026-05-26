@@ -142,6 +142,7 @@ function LaporanKlasifikasiArsipPage() {
                     <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Usul Musnah</th>
                     <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Dimusnahkan</th>
                     <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Total Nominal Realisasi</th>
+                    <th className="px-4 py-3 text-center font-semibold text-outline uppercase tracking-wider">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -157,6 +158,14 @@ function LaporanKlasifikasiArsipPage() {
                       <td className="px-4 py-3 text-right text-on-surface">{formatCount(row.totalUsulMusnah)}</td>
                       <td className="px-4 py-3 text-right text-on-surface">{formatCount(row.totalDimusnahkan)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-on-surface">{formatCurrency(row.totalNominalRealisasi)}</td>
+                      <td className="px-4 py-3 text-center">
+                        <a
+                          href={getClassificationDetailHref(row)}
+                          className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
+                        >
+                          Detail
+                        </a>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -191,4 +200,12 @@ function formatCurrency(value: string): string {
     currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(numericValue)
+}
+
+function getClassificationDetailHref(row: ClassificationReportRow): string {
+  if (row.klasifikasiId) {
+    return `/arsiparis/laporan-klasifikasi/detail?klasifikasiId=${encodeURIComponent(row.klasifikasiId)}`
+  }
+
+  return '/arsiparis/laporan-klasifikasi/detail?missing=true'
 }
