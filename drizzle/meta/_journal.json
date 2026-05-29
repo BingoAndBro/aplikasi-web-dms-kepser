@@ -50,6 +50,13 @@
       "when": 1779696000000,
       "tag": "0006_manual_archive_retention_schema_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780045200000,
+      "tag": "0007_folder_berkas_data_model_foundation",
+      "breakpoints": true
     }
   ]
 }
