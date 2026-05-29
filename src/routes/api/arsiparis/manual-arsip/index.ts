@@ -43,7 +43,7 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/')({
           })
         } catch (err) {
           console.error('[arsiparis/manual-arsip] GET local query error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengambil arsip manual' }, { status: 500 })
+          return Response.json({ error: 'Gagal mengambil dokumen manual' }, { status: 500 })
         }
       },
 
@@ -71,7 +71,7 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/')({
           }
 
           console.error('[arsiparis/manual-arsip] POST local query error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal membuat arsip manual' }, { status: 500 })
+          return Response.json({ error: 'Gagal membuat dokumen manual' }, { status: 500 })
         }
       },
     },

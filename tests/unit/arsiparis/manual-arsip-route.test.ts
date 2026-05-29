@@ -296,39 +296,13 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
-  it('rejects missing nomor_surat without a 500', async () => {
-    const body = validCreateBody() as Record<string, unknown>
-    delete body.nomor_surat
-
-    const response = await indexHandlers.POST({
-      request: createPostRequest(body),
-    })
-
-    expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Nomor surat wajib diisi' })
-    expect(mocks.dbInsert).not.toHaveBeenCalled()
-  })
-
-  it('rejects empty nomor_surat without a 500', async () => {
-    const response = await indexHandlers.POST({
-      request: createPostRequest({
-        ...validCreateBody(),
-        nomor_surat: '   ',
-      }),
-    })
-
-    expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Nomor surat wajib diisi' })
-    expect(mocks.dbInsert).not.toHaveBeenCalled()
-  })
-
-  it('rejects missing or invalid tanggal_diarsipkan without a 500', async () => {
+  it('rejects invalid or partial final retention metadata without a 500', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [omit(validCreateBody(), 'tanggal_diarsipkan'), 'Tanggal arsip wajib diisi'],
-      [{ ...validCreateBody(), tanggal_diarsipkan: null }, 'Tanggal arsip wajib diisi'],
       [{ ...validCreateBody(), tanggal_diarsipkan: '24/05/2026' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
       [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
       [{ ...validCreateBody(), tanggal_diarsipkan: '2026-02-31' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
+      [{ ...validCreateBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
     ]
 
     for (const [body, expectedError] of cases) {
@@ -347,9 +321,9 @@ describe('manual arsip API foundation routes', () => {
 
   it('rejects missing or invalid klasifikasi_id without a 500', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [omit(validCreateBody(), 'klasifikasi_id'), 'Klasifikasi wajib dipilih'],
-      [{ ...validCreateBody(), klasifikasi_id: null }, 'Klasifikasi wajib dipilih'],
-      [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Klasifikasi tidak valid'],
+      [omit(validCreateBody(), 'klasifikasi_id'), 'Jenis pembayaran wajib dipilih'],
+      [{ ...validCreateBody(), klasifikasi_id: null }, 'Jenis pembayaran wajib dipilih'],
+      [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Jenis pembayaran tidak valid'],
     ]
 
     for (const [body, expectedError] of cases) {
@@ -366,13 +340,9 @@ describe('manual arsip API foundation routes', () => {
     }
   })
 
-  it('rejects missing or invalid retention labels without a 500', async () => {
+  it('rejects invalid legacy retention labels without a 500', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [omit(validCreateBody(), 'retensi_aktif'), 'Retensi aktif tidak valid'],
-      [{ ...validCreateBody(), retensi_aktif: null }, 'Retensi aktif tidak valid'],
       [{ ...validCreateBody(), retensi_aktif: '2 Tahun' }, 'Retensi aktif tidak valid'],
-      [omit(validCreateBody(), 'retensi_inaktif'), 'Retensi inaktif tidak valid'],
-      [{ ...validCreateBody(), retensi_inaktif: null }, 'Retensi inaktif tidak valid'],
       [{ ...validCreateBody(), retensi_inaktif: 'Selamanya' }, 'Retensi inaktif tidak valid'],
     ]
 
@@ -483,9 +453,20 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
-  it('creates with required retention metadata, derived snapshots, and no file access fields', async () => {
+  it('creates transitional manual document metadata without final archive fields', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
-    queueManualArchiveCreateTransaction()
+    queueManualArchiveCreateTransaction({
+      source: {
+        ...manualArsipRow(),
+        nomor_surat: null,
+        tanggal_diarsipkan: null,
+        retensi_aktif: null,
+        retensi_inaktif: null,
+        masa_aktif_berakhir: null,
+        masa_inaktif_berakhir: null,
+        archived_by: null,
+      },
+    })
 
     const response = await indexHandlers.POST({
       request: createPostRequest(validCreateBody()),
@@ -497,20 +478,36 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbInsert).not.toHaveBeenCalled()
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
       createdBy: USER_ID,
-      archivedBy: USER_ID,
+      archivedBy: null,
       statusArsip: 'AKTIF',
       categoryId: CATEGORY_ID,
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiKodeSnapshot: '001.02',
       klasifikasiNamaSnapshot: 'Klasifikasi A',
-      nomorSurat: 'B-001/2026',
-      tanggalDiarsipkan: '2026-05-24',
-      retensiAktif: '1 Tahun',
-      retensiInaktif: '3 Tahun',
-      masaAktifBerakhir: '2027-05-24',
-      masaInaktifBerakhir: '2030-05-24',
+      nomorSurat: null,
+      tanggalDiarsipkan: null,
+      retensiAktif: null,
+      retensiInaktif: null,
+      masaAktifBerakhir: null,
+      masaInaktifBerakhir: null,
       nominalRealisasi: '1000',
       canonicalArsipId: null,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      sourceType: 'MANUAL',
+      dokumenId: null,
+      namaArsip: 'Arsip manual uji',
+      nomorSurat: null,
+      klasifikasiId: KLASIFIKASI_ID,
+      retensiAktif: null,
+      retensiInaktif: null,
+      masaAktifBerakhir: null,
+      masaInaktifBerakhir: null,
+      archivedAt: null,
+      archivedBy: null,
+      createdBy: USER_ID,
+      nominalRealisasi: '1000.00',
+      statusArsip: 'AKTIF',
     }))
     expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
       canonicalArsipId: CANONICAL_ARSIP_ID,
@@ -532,6 +529,7 @@ describe('manual arsip API foundation routes', () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
         ...validCreateBody(),
+        tanggal_diarsipkan: '2026-05-24',
         retensi_aktif: 'Permanen',
         retensi_inaktif: '1 Tahun',
       }),
@@ -613,7 +611,7 @@ describe('manual arsip API foundation routes', () => {
     const body = JSON.stringify(await response.json())
 
     expect(response.status).toBe(500)
-    expect(body).toBe('{"error":"Gagal membuat arsip manual"}')
+    expect(body).toBe('{"error":"Gagal membuat dokumen manual"}')
     expect(mocks.dbTransaction).toHaveBeenCalledOnce()
     expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
     expect(mocks.txUpdateSet).not.toHaveBeenCalled()
@@ -635,7 +633,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Klasifikasi arsip tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Jenis pembayaran tidak ditemukan' })
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
@@ -790,7 +788,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(404)
-    expect(await response.json()).toEqual({ error: 'Arsip manual tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Dokumen manual tidak ditemukan' })
     expect(mocks.dbSelect).not.toHaveBeenCalled()
     expect(mocks.dbUpdate).not.toHaveBeenCalled()
   })
@@ -804,7 +802,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(404)
-    expect(await response.json()).toEqual({ error: 'Arsip manual tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Dokumen manual tidak ditemukan' })
     expect(mocks.dbUpdate).not.toHaveBeenCalled()
   })
 
@@ -1018,7 +1016,7 @@ describe('manual arsip API foundation routes', () => {
     const body = JSON.stringify(await response.json())
 
     expect(response.status).toBe(500)
-    expect(body).toBe('{"error":"Gagal memperbarui arsip manual"}')
+    expect(body).toBe('{"error":"Gagal memperbarui dokumen manual"}')
     expect(mocks.dbTransaction).toHaveBeenCalledOnce()
     expect(mocks.txUpdateSet).toHaveBeenCalledTimes(2)
     expect(body).not.toContain('logical_path')
@@ -1044,7 +1042,7 @@ describe('manual arsip API foundation routes', () => {
 
       expect(response.status).toBe(409)
       expect(await response.json()).toEqual({
-        error: 'Arsip manual hanya dapat diedit saat status AKTIF',
+        error: 'Dokumen manual hanya dapat diedit saat status AKTIF',
       })
       expect(mocks.dbUpdate).not.toHaveBeenCalled()
     }
@@ -1086,15 +1084,13 @@ describe('manual arsip API foundation routes', () => {
     }
   })
 
-  it('rejects missing or invalid new retention metadata fields on manual archive PATCH', async () => {
+  it('rejects invalid or partial final metadata fields on manual archive PATCH', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [omit(validCreateBody(), 'nomor_surat'), 'Nomor surat wajib diisi'],
-      [{ ...validCreateBody(), nomor_surat: '' }, 'Nomor surat wajib diisi'],
-      [omit(validCreateBody(), 'tanggal_diarsipkan'), 'Tanggal arsip wajib diisi'],
       [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
-      [omit(validCreateBody(), 'klasifikasi_id'), 'Klasifikasi wajib dipilih'],
-      [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Klasifikasi tidak valid'],
-      [omit(validCreateBody(), 'retensi_aktif'), 'Retensi aktif tidak valid'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
+      [{ ...validCreateBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
+      [omit(validCreateBody(), 'klasifikasi_id'), 'Jenis pembayaran wajib dipilih'],
+      [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Jenis pembayaran tidak valid'],
       [{ ...validCreateBody(), retensi_inaktif: '2 Tahun' }, 'Retensi inaktif tidak valid'],
     ]
 
@@ -1160,7 +1156,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Kategori arsip manual tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Kategori dokumen tidak ditemukan' })
     expect(mocks.dbUpdate).not.toHaveBeenCalled()
   })
 
@@ -1177,7 +1173,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Klasifikasi arsip tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Jenis pembayaran tidak ditemukan' })
     expect(mocks.dbUpdate).not.toHaveBeenCalled()
   })
 
@@ -1336,7 +1332,7 @@ describe('manual arsip API foundation routes', () => {
 
       expect(response.status).toBe(409)
       expect(await response.json()).toEqual({
-        error: 'Lampiran hanya dapat diunggah untuk arsip manual berstatus AKTIF',
+        error: 'Lampiran hanya dapat diunggah untuk dokumen manual berstatus AKTIF',
       })
       expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
       expect(mocks.dbTransaction).not.toHaveBeenCalled()
@@ -1481,7 +1477,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(404)
-    expect(await response.json()).toEqual({ error: 'Arsip manual tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Dokumen manual tidak ditemukan' })
     expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
@@ -1732,7 +1728,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(missingParent.status).toBe(404)
-    expect(await missingParent.json()).toEqual({ error: 'Lampiran arsip manual tidak ditemukan' })
+    expect(await missingParent.json()).toEqual({ error: 'Lampiran dokumen manual tidak ditemukan' })
 
     queueSelectResults(
       [manualArsipUploadParentRow('AKTIF')],
@@ -1745,7 +1741,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(wrongAttachment.status).toBe(404)
-    expect(await wrongAttachment.json()).toEqual({ error: 'Lampiran arsip manual tidak ditemukan' })
+    expect(await wrongAttachment.json()).toEqual({ error: 'Lampiran dokumen manual tidak ditemukan' })
   })
 
   it('returns safe 404 when attachment does not belong to the requested parent', async () => {
@@ -1760,7 +1756,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(404)
-    expect(await response.json()).toEqual({ error: 'Lampiran arsip manual tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Lampiran dokumen manual tidak ditemukan' })
   })
 
   it('blocks preview and download for DIMUSNAHKAN parents with 410', async () => {
@@ -1955,13 +1951,9 @@ function validCreateBody() {
   return {
     nama: 'Arsip manual uji',
     tanggal: '2026-05-22',
-    nomor_surat: 'B-001/2026',
-    tanggal_diarsipkan: '2026-05-24',
     keterangan: 'Keterangan arsip manual',
     category_id: CATEGORY_ID,
     klasifikasi_id: KLASIFIKASI_ID,
-    retensi_aktif: '1 Tahun',
-    retensi_inaktif: '3 Tahun',
     nominal_realisasi: 1000,
     metadata: { sumber: 'manual' },
   }

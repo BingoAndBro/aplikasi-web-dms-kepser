@@ -130,17 +130,17 @@ type ManualArsipAttachmentFileReference = {
 type ManualArsipPatchUpdateValues = {
   nama: string
   tanggal: string
-  nomorSurat: string
-  tanggalDiarsipkan: string
+  nomorSurat: string | null
+  tanggalDiarsipkan: string | null
   keterangan: string
   categoryId: string
   klasifikasiId: string
   klasifikasiKodeSnapshot: string | null
   klasifikasiNamaSnapshot: string
-  retensiAktif: string
-  retensiInaktif: string
-  masaAktifBerakhir: string
-  masaInaktifBerakhir: string
+  retensiAktif: string | null
+  retensiInaktif: string | null
+  masaAktifBerakhir: string | null
+  masaInaktifBerakhir: string | null
   nominalRealisasi: string | null
   metadata: ManualArsipSafeMetadata
   updatedAt: Date
@@ -222,19 +222,15 @@ export async function createManualArsipRecord(
 ): Promise<ManualArsipDetailResponse> {
   const category = await findActiveManualArsipCategory(input.category_id)
   if (!category) {
-    throw new ManualArsipApiError('Kategori arsip manual tidak ditemukan', 400)
+    throw new ManualArsipApiError('Kategori dokumen tidak ditemukan', 400)
   }
 
   const klasifikasi = await findActiveKlasifikasi(input.klasifikasi_id)
   if (!klasifikasi) {
-    throw new ManualArsipApiError('Klasifikasi arsip tidak ditemukan', 400)
+    throw new ManualArsipApiError('Jenis pembayaran tidak ditemukan', 400)
   }
 
-  const retentionDates = calculateManualArchiveRetentionDates({
-    tanggalDiarsipkan: input.tanggal_diarsipkan,
-    retensiAktif: input.retensi_aktif,
-    retensiInaktif: input.retensi_inaktif,
-  })
+  const retentionDates = getManualArchiveRetentionDates(input)
 
   const created = await db.transaction(async (tx) => {
     const [source] = await tx
@@ -257,7 +253,7 @@ export async function createManualArsipRecord(
         statusArsip: ARCHIVE_STATUS.AKTIF,
         metadata: input.metadata ?? {},
         createdBy,
-        archivedBy: createdBy,
+        archivedBy: input.tanggal_diarsipkan ? createdBy : null,
         canonicalArsipId: null,
       })
       .returning({
@@ -345,7 +341,7 @@ export async function createManualArsipRecord(
   })
 
   if (!created) {
-    throw new ManualArsipApiError('Gagal membuat arsip manual', 500)
+    throw new ManualArsipApiError('Gagal membuat dokumen manual', 500)
   }
 
   return {
@@ -507,11 +503,11 @@ export async function updateManualArsipRecord(
     .limit(1)
 
   if (!existing) {
-    throw new ManualArsipApiError('Arsip manual tidak ditemukan', 404)
+    throw new ManualArsipApiError('Dokumen manual tidak ditemukan', 404)
   }
 
   if (existing.status_arsip !== ARCHIVE_STATUS.AKTIF) {
-    throw new ManualArsipApiError('Arsip manual hanya dapat diedit saat status AKTIF', 409)
+    throw new ManualArsipApiError('Dokumen manual hanya dapat diedit saat status AKTIF', 409)
   }
 
   const parsed = updateManualArsipSchema.safeParse(rawInput)
@@ -522,19 +518,15 @@ export async function updateManualArsipRecord(
   const input = parsed.data
   const category = await findActiveManualArsipCategory(input.category_id)
   if (!category) {
-    throw new ManualArsipApiError('Kategori arsip manual tidak ditemukan', 400)
+    throw new ManualArsipApiError('Kategori dokumen tidak ditemukan', 400)
   }
 
   const klasifikasi = await findActiveKlasifikasi(input.klasifikasi_id)
   if (!klasifikasi) {
-    throw new ManualArsipApiError('Klasifikasi arsip tidak ditemukan', 400)
+    throw new ManualArsipApiError('Jenis pembayaran tidak ditemukan', 400)
   }
 
-  const retentionDates = calculateManualArchiveRetentionDates({
-    tanggalDiarsipkan: input.tanggal_diarsipkan,
-    retensiAktif: input.retensi_aktif,
-    retensiInaktif: input.retensi_inaktif,
-  })
+  const retentionDates = getManualArchiveRetentionDates(input)
 
   const updateValues: ManualArsipPatchUpdateValues = {
     nama: input.nama,
@@ -567,7 +559,7 @@ export async function updateManualArsipRecord(
     })
 
   if (!updated) {
-    throw new ManualArsipApiError('Arsip manual hanya dapat diedit saat status AKTIF', 409)
+    throw new ManualArsipApiError('Dokumen manual hanya dapat diedit saat status AKTIF', 409)
   }
 
   return {
@@ -731,11 +723,11 @@ export async function uploadManualArsipAttachments(
     .limit(1)
 
   if (!parent) {
-    throw new ManualArsipApiError('Arsip manual tidak ditemukan', 404)
+    throw new ManualArsipApiError('Dokumen manual tidak ditemukan', 404)
   }
 
   if (parent.status_arsip !== ARCHIVE_STATUS.AKTIF) {
-    throw new ManualArsipApiError('Lampiran hanya dapat diunggah untuk arsip manual berstatus AKTIF', 409)
+    throw new ManualArsipApiError('Lampiran hanya dapat diunggah untuk dokumen manual berstatus AKTIF', 409)
   }
 
   const descriptors = createManualArsipAttachmentStorageDescriptors({
@@ -787,7 +779,7 @@ export async function uploadManualArsipAttachments(
     }))
 
   if (inserted.length !== descriptors.length) {
-    throw new ManualArsipApiError('Gagal menyimpan metadata lampiran arsip manual', 500)
+    throw new ManualArsipApiError('Gagal menyimpan metadata lampiran dokumen manual', 500)
   }
 
   return inserted.map((attachment) => ({
@@ -814,7 +806,7 @@ export async function createManualArsipAttachmentFileResponse({
   const reference = await loadManualArsipAttachmentFileReference(manualArsipId, attachmentId)
 
   if (!reference) {
-    return secureJsonError('Lampiran arsip manual tidak ditemukan', 404)
+    return secureJsonError('Lampiran dokumen manual tidak ditemukan', 404)
   }
 
   if (reference.status_arsip === ARCHIVE_STATUS.DIMUSNAHKAN) {
@@ -959,6 +951,27 @@ function toManualArsipListItem(
 function normalizeNominalForWrite(value: number | null | undefined): string | null {
   if (value === null || value === undefined) return null
   return value.toString()
+}
+
+function getManualArchiveRetentionDates(input: Pick<
+  CreateManualArsipInput,
+  'tanggal_diarsipkan' | 'retensi_aktif' | 'retensi_inaktif'
+>): {
+  masaAktifBerakhir: string | null
+  masaInaktifBerakhir: string | null
+} {
+  if (!input.tanggal_diarsipkan || !input.retensi_aktif || !input.retensi_inaktif) {
+    return {
+      masaAktifBerakhir: null,
+      masaInaktifBerakhir: null,
+    }
+  }
+
+  return calculateManualArchiveRetentionDates({
+    tanggalDiarsipkan: input.tanggal_diarsipkan,
+    retensiAktif: input.retensi_aktif,
+    retensiInaktif: input.retensi_inaktif,
+  })
 }
 
 function normalizeNumericValue(value: string | number | null): number | null {

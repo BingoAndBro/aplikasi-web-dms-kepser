@@ -27,16 +27,16 @@ export type ManualArchiveCanonicalInsertValues = {
   sourceType: 'MANUAL'
   dokumenId: null
   namaArsip: string
-  nomorSurat: string
+  nomorSurat: string | null
   klasifikasiId: string
   klasifikasiKodeSnapshot: string
   klasifikasiNamaSnapshot: string
-  retensiAktif: string
-  retensiInaktif: string
-  masaAktifBerakhir: string
-  masaInaktifBerakhir: string
-  archivedAt: Date
-  archivedBy: string
+  retensiAktif: string | null
+  retensiInaktif: string | null
+  masaAktifBerakhir: string | null
+  masaInaktifBerakhir: string | null
+  archivedAt: Date | null
+  archivedBy: string | null
   createdBy: string
   nominalRealisasi: string
   statusArsip: 'AKTIF'
@@ -102,16 +102,16 @@ export type ManualArchiveCanonicalWritePlan =
 type CompleteManualArchiveCanonicalSource = {
   id: string
   nama: string
-  nomorSurat: string
-  tanggalDiarsipkan: string
+  nomorSurat: string | null
+  tanggalDiarsipkan: string | null
   klasifikasiId: string
   klasifikasiKodeSnapshot: string
   klasifikasiNamaSnapshot: string
-  retensiAktif: string
-  retensiInaktif: string
-  masaAktifBerakhir: string
-  masaInaktifBerakhir: string
-  archivedBy: string
+  retensiAktif: string | null
+  retensiInaktif: string | null
+  masaAktifBerakhir: string | null
+  masaInaktifBerakhir: string | null
+  archivedBy: string | null
   createdBy: string
   nominalRealisasi: string
   statusArsip: 'AKTIF'
@@ -122,18 +122,15 @@ export function assertManualArchiveReadyForCanonicalWrite(
 ): asserts source is CompleteManualArchiveCanonicalSource {
   normalizeRequiredString(source.id, 'id')
   normalizeRequiredString(source.nama, 'nama')
-  normalizeRequiredString(source.nomorSurat, 'nomorSurat')
-  normalizeRequiredDateOnly(source.tanggalDiarsipkan, 'tanggalDiarsipkan')
   normalizeRequiredString(source.klasifikasiId, 'klasifikasiId')
   normalizeRequiredString(source.klasifikasiKodeSnapshot, 'klasifikasiKodeSnapshot')
   normalizeRequiredString(source.klasifikasiNamaSnapshot, 'klasifikasiNamaSnapshot')
-  normalizeRequiredString(source.retensiAktif, 'retensiAktif')
-  normalizeRequiredString(source.retensiInaktif, 'retensiInaktif')
-  normalizeRequiredDateOnly(source.masaAktifBerakhir, 'masaAktifBerakhir')
-  normalizeRequiredDateOnly(source.masaInaktifBerakhir, 'masaInaktifBerakhir')
-  normalizeRequiredString(source.archivedBy, 'archivedBy')
   normalizeRequiredString(source.createdBy, 'createdBy')
   normalizeRequiredNominal(source.nominalRealisasi)
+
+  normalizeOptionalDateOnly(source.tanggalDiarsipkan, 'tanggalDiarsipkan')
+  normalizeOptionalDateOnly(source.masaAktifBerakhir, 'masaAktifBerakhir')
+  normalizeOptionalDateOnly(source.masaInaktifBerakhir, 'masaInaktifBerakhir')
 
   if (source.statusArsip !== ARCHIVE_STATUS.AKTIF) {
     throw new ManualArchiveCanonicalError('invalid_status', 'statusArsip')
@@ -149,18 +146,19 @@ export function buildManualArchiveCanonicalInsertValues(
     sourceType: ARCHIVE_SOURCE_TYPE.MANUAL,
     dokumenId: null,
     namaArsip: normalizeRequiredString(source.nama, 'nama'),
-    nomorSurat: normalizeRequiredString(source.nomorSurat, 'nomorSurat'),
+    nomorSurat: normalizeOptionalString(source.nomorSurat),
     klasifikasiId: normalizeRequiredString(source.klasifikasiId, 'klasifikasiId'),
     klasifikasiKodeSnapshot: normalizeRequiredString(source.klasifikasiKodeSnapshot, 'klasifikasiKodeSnapshot'),
     klasifikasiNamaSnapshot: normalizeRequiredString(source.klasifikasiNamaSnapshot, 'klasifikasiNamaSnapshot'),
-    retensiAktif: normalizeRequiredString(source.retensiAktif, 'retensiAktif'),
-    retensiInaktif: normalizeRequiredString(source.retensiInaktif, 'retensiInaktif'),
-    masaAktifBerakhir: normalizeRequiredDateOnly(source.masaAktifBerakhir, 'masaAktifBerakhir'),
-    masaInaktifBerakhir: normalizeRequiredDateOnly(source.masaInaktifBerakhir, 'masaInaktifBerakhir'),
-    // Manual Archive stores a date-only archive date. The canonical timestamp
-    // uses UTC midnight for the same YYYY-MM-DD, never the current server time.
+    retensiAktif: normalizeOptionalString(source.retensiAktif),
+    retensiInaktif: normalizeOptionalString(source.retensiInaktif),
+    masaAktifBerakhir: normalizeOptionalDateOnly(source.masaAktifBerakhir, 'masaAktifBerakhir'),
+    masaInaktifBerakhir: normalizeOptionalDateOnly(source.masaInaktifBerakhir, 'masaInaktifBerakhir'),
+    // Manual Archive may omit final archive metadata during the Phase 13E
+    // transitional document-entry flow. When present, keep the old UTC-midnight
+    // date-only convention; when absent, keep the canonical final fields null.
     archivedAt: dateOnlyToUtcMidnight(source.tanggalDiarsipkan),
-    archivedBy: normalizeRequiredString(source.archivedBy, 'archivedBy'),
+    archivedBy: normalizeOptionalString(source.archivedBy),
     createdBy: normalizeRequiredString(source.createdBy, 'createdBy'),
     nominalRealisasi: normalizeRequiredNominal(source.nominalRealisasi),
     statusArsip: ARCHIVE_STATUS.AKTIF,
@@ -227,11 +225,13 @@ function normalizeRequiredString(
   return trimmed
 }
 
-function normalizeRequiredDateOnly(
+function normalizeOptionalDateOnly(
   value: string | null | undefined,
   field: ManualArchiveCanonicalField,
-): string {
-  const normalized = normalizeRequiredString(value, field)
+): string | null {
+  const normalized = normalizeOptionalString(value)
+  if (!normalized) return null
+
   if (!isValidDateOnly(normalized)) {
     throw new ManualArchiveCanonicalError('invalid_date', field)
   }
@@ -256,8 +256,10 @@ function normalizeRequiredNominal(value: string | number | null | undefined): st
   return normalized
 }
 
-function dateOnlyToUtcMidnight(value: string): Date {
-  const normalized = normalizeRequiredDateOnly(value, 'tanggalDiarsipkan')
+function dateOnlyToUtcMidnight(value: string | null | undefined): Date | null {
+  const normalized = normalizeOptionalDateOnly(value, 'tanggalDiarsipkan')
+  if (!normalized) return null
+
   const [year, month, day] = normalized.split('-').map(Number)
 
   return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
@@ -282,6 +284,10 @@ function trimToNull(value: string | null | undefined): string | null {
   const trimmed = value.trim()
 
   return trimmed.length > 0 ? trimmed : null
+}
+
+function normalizeOptionalString(value: string | null | undefined): string | null {
+  return trimToNull(value)
 }
 
 function createManualArchiveCanonicalErrorMessage(

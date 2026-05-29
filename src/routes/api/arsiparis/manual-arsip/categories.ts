@@ -17,7 +17,7 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/categories')({
           return Response.json({ categories })
         } catch (err) {
           console.error('[arsiparis/manual-arsip/categories] GET local query error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengambil kategori arsip manual' }, { status: 500 })
+          return Response.json({ error: 'Gagal mengambil kategori dokumen manual' }, { status: 500 })
         }
       },
     },

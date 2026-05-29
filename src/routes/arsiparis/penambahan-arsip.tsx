@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
-  Archive,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -23,7 +22,6 @@ import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
-import { MANUAL_ARCHIVE_RETENTION_LABELS } from '#/lib/archive/retention'
 import { ROLES } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
 import { cn } from '#/lib/utils'
@@ -124,13 +122,9 @@ type ManualArsipDetailResponse = {
 type ManualArsipFormState = {
   nama: string
   tanggal: string
-  nomor_surat: string
-  tanggal_diarsipkan: string
   keterangan: string
   category_id: string
   klasifikasi_id: string
-  retensi_aktif: string
-  retensi_inaktif: string
   nominal_realisasi: string
 }
 
@@ -173,19 +167,12 @@ const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = [
 ] as const
 const MANUAL_ARSIP_ATTACHMENT_ACCEPT = MANUAL_ARSIP_ALLOWED_CONTENT_TYPES.join(',')
 const MANUAL_ARSIP_ALLOWED_CONTENT_TYPE_SET = new Set<string>(MANUAL_ARSIP_ALLOWED_CONTENT_TYPES)
-const MANUAL_ARSIP_RETENTION_OPTIONS = MANUAL_ARCHIVE_RETENTION_LABELS
-const MANUAL_ARSIP_RETENTION_OPTION_SET = new Set<string>(MANUAL_ARSIP_RETENTION_OPTIONS)
-
 const emptyForm = (): ManualArsipFormState => ({
   nama: '',
   tanggal: new Date().toISOString().slice(0, 10),
-  nomor_surat: '',
-  tanggal_diarsipkan: new Date().toISOString().slice(0, 10),
   keterangan: '',
   category_id: '',
   klasifikasi_id: '',
-  retensi_aktif: '',
-  retensi_inaktif: '',
   nominal_realisasi: '',
 })
 
@@ -226,7 +213,7 @@ function PenambahanArsipPage() {
         return
       }
 
-      setError(getApiErrorMessage(err, 'Gagal memuat arsip manual. Coba muat ulang halaman.'))
+      setError(getApiErrorMessage(err, 'Gagal memuat dokumen manual. Coba muat ulang halaman.'))
     } finally {
       setLoading(false)
     }
@@ -275,18 +262,18 @@ function PenambahanArsipPage() {
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
               <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
               <ChevronRight size={10} />
-              <span className="text-primary">Penambahan Arsip</span>
+              <span className="text-primary">Penambahan Dokumen</span>
             </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Penambahan Arsip</h2>
+            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Penambahan Dokumen</h2>
             <p className="text-on-surface-variant text-xs mt-1">
-              Arsip manual dengan lampiran bukti opsional. Preview/download lampiran tersedia melalui API terotorisasi; lifecycle action dan ekspor belum tersedia.
+              Dokumen manual ini akan mengikuti alur pengklasifikasian. Metadata arsip final diisi saat tutup berkas.
             </p>
           </div>
 
           {authChecked && !accessDenied && (
             <Button onClick={openCreateModal} className="w-full lg:w-auto">
               <Plus size={14} />
-              Tambah Arsip
+              Tambah Dokumen
             </Button>
           )}
         </div>
@@ -306,13 +293,13 @@ function PenambahanArsipPage() {
         {authChecked && !accessDenied && (
           <>
             <div className="grid gap-3 md:grid-cols-3">
-              <SummaryCard label="Arsip Manual" value={String(items.length)} />
+              <SummaryCard label="Dokumen Manual" value={String(items.length)} />
               <SummaryCard label="Total Nominal Tampil" value={formatCurrency(totalNominal)} />
               <SummaryCard label="Batas API" value={limit ? `${limit} record` : '-'} />
             </div>
 
             {loading ? (
-              <LoadingState label="Memuat arsip manual..." />
+              <LoadingState label="Memuat dokumen manual..." />
             ) : error ? (
               <ErrorState message={error} onRetry={fetchData} />
             ) : items.length === 0 ? (
@@ -440,10 +427,10 @@ function ManualArsipTable({
             <thead>
               <tr className="bg-surface-container-low/30 text-left">
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
-                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-52">Nama</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-52">Nama Dokumen</th>
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal</th>
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kategori</th>
-                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Klasifikasi</th>
+                <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Jenis Pembayaran</th>
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-64">Keterangan</th>
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-right">Nominal</th>
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Status</th>
@@ -511,7 +498,7 @@ function ManualArsipTable({
           </table>
         </div>
         <div className="px-4 py-2.5 border-t bg-surface-container-low/20 text-xs text-outline">
-          Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} arsip manual. Preview/download lampiran menggunakan endpoint API terotorisasi; lifecycle dan ekspor tidak tersedia pada halaman ini.
+          Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} dokumen manual. Preview/download lampiran menggunakan endpoint API terotorisasi; lifecycle dan ekspor tidak tersedia pada halaman ini.
         </div>
       </div>
     </>
@@ -559,7 +546,7 @@ function ManualArsipAttachmentPanel({
   if (detail.attachments.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-outline-variant/50 bg-white px-3 py-4 text-center text-xs text-on-surface-variant">
-        Tidak ada lampiran pada arsip manual ini.
+        Tidak ada lampiran pada dokumen manual ini.
       </div>
     )
   }
@@ -571,13 +558,13 @@ function ManualArsipAttachmentPanel({
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-outline">Lampiran ({detail.attachments.length})</p>
         <p className="mt-1 text-[11px] text-on-surface-variant">
-          Link preview/download dibuat hanya dari ID arsip dan ID lampiran. Otorisasi tetap divalidasi server.
+          Link preview/download dibuat hanya dari ID dokumen manual dan ID lampiran. Otorisasi tetap divalidasi server.
         </p>
       </div>
 
       {fileUnavailable && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          File tidak tersedia - arsip telah dimusnahkan
+          File tidak tersedia - dokumen telah dimusnahkan
         </div>
       )}
 
@@ -628,7 +615,7 @@ function ManualArsipAttachmentRow({
 
       {fileUnavailable ? (
         <p className="text-xs font-medium text-red-700 sm:text-right">
-          File tidak tersedia - arsip telah dimusnahkan
+          File tidak tersedia - dokumen telah dimusnahkan
         </p>
       ) : (
         <div className="flex shrink-0 gap-2">
@@ -680,7 +667,7 @@ function ManualArsipPreviewModal({
         className="relative z-10 mx-4 flex max-h-[78vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-label="Pratinjau lampiran arsip manual"
+        aria-label="Pratinjau lampiran dokumen manual"
       >
         <div className="flex shrink-0 items-center gap-3 border-b border-outline-variant/30 px-4 py-3">
           <Eye size={16} className="shrink-0 text-primary" />
@@ -931,13 +918,9 @@ function CreateManualArsipModal({
         body: {
           nama: form.nama.trim(),
           tanggal: form.tanggal,
-          nomor_surat: form.nomor_surat.trim(),
-          tanggal_diarsipkan: form.tanggal_diarsipkan,
           keterangan: form.keterangan.trim(),
           category_id: form.category_id,
           klasifikasi_id: form.klasifikasi_id,
-          retensi_aktif: form.retensi_aktif,
-          retensi_inaktif: form.retensi_inaktif,
           nominal_realisasi: validation.nominal,
         },
       })
@@ -947,7 +930,7 @@ function CreateManualArsipModal({
         await onSuccess({
           notice: {
             tone: 'success',
-            message: 'Arsip manual berhasil dibuat.',
+            message: 'Dokumen manual berhasil dibuat.',
           },
         })
         return
@@ -957,7 +940,7 @@ function CreateManualArsipModal({
         await onSuccess({
           notice: {
             tone: 'warning',
-            message: 'Arsip berhasil dibuat, tetapi lampiran gagal diunggah.',
+            message: 'Dokumen berhasil dibuat, tetapi lampiran gagal diunggah.',
           },
         })
         return
@@ -982,14 +965,14 @@ function CreateManualArsipModal({
         await onSuccess({
           notice: {
             tone: 'success',
-            message: `Arsip manual berhasil dibuat. ${uploadedCount} lampiran berhasil diunggah.`,
+            message: `Dokumen manual berhasil dibuat. ${uploadedCount} lampiran berhasil diunggah.`,
           },
         })
       } catch {
         await onSuccess({
           notice: {
             tone: 'warning',
-            message: 'Arsip berhasil dibuat, tetapi lampiran gagal diunggah.',
+            message: 'Dokumen berhasil dibuat, tetapi lampiran gagal diunggah.',
           },
         })
       }
@@ -999,7 +982,7 @@ function CreateManualArsipModal({
         return
       }
 
-      setSubmitError(getApiErrorMessage(err, 'Gagal membuat arsip manual'))
+      setSubmitError(getApiErrorMessage(err, 'Gagal membuat dokumen manual'))
     } finally {
       setSubmitting(false)
     }
@@ -1008,24 +991,24 @@ function CreateManualArsipModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Tambah arsip manual">
+      <div className="relative z-10 w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Tambah dokumen manual">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30">
           <div>
-            <p className="font-semibold text-on-surface">Tambah Arsip Manual</p>
-            <p className="text-xs text-outline mt-0.5">Create parent record dengan bukti dokumen opsional.</p>
+            <p className="font-semibold text-on-surface">Tambah Dokumen Manual</p>
+            <p className="text-xs text-outline mt-0.5">Dokumen manual masuk ke alur pengklasifikasian.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Tutup dialog tambah arsip" className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-container-low transition-colors">
+          <button type="button" onClick={onClose} aria-label="Tutup dialog tambah dokumen" className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-container-low transition-colors">
             <X size={16} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Isi metadata arsip lengkap sebelum menyimpan. Tanggal Arsip dipakai server untuk menghitung masa retensi; tanggal berakhir tidak dikirim dari browser. Preview/download lampiran tetap tersedia setelah arsip tersimpan melalui endpoint API terotorisasi.
+            Dokumen manual ini akan mengikuti alur pengklasifikasian. Metadata arsip final diisi saat tutup berkas.
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Nama Arsip" required error={errors.nama}>
+            <FormField label="Nama Dokumen" required error={errors.nama}>
               <input
                 value={form.nama}
                 onChange={(event) => setField('nama', event.target.value)}
@@ -1045,31 +1028,6 @@ function CreateManualArsipModal({
                 value={form.tanggal}
                 onChange={(event) => setField('tanggal', event.target.value)}
                 className={inputClass(errors.tanggal)}
-              />
-            </FormField>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Nomor Surat" required error={errors.nomor_surat}>
-              <input
-                value={form.nomor_surat}
-                onChange={(event) => setField('nomor_surat', event.target.value)}
-                placeholder="Contoh: 001/ARSIP/2026"
-                className={inputClass(errors.nomor_surat)}
-              />
-            </FormField>
-
-            <FormField
-              label="Tanggal Arsip"
-              required
-              hint="dasar perhitungan retensi"
-              error={errors.tanggal_diarsipkan}
-            >
-              <input
-                type="date"
-                value={form.tanggal_diarsipkan}
-                onChange={(event) => setField('tanggal_diarsipkan', event.target.value)}
-                className={inputClass(errors.tanggal_diarsipkan)}
               />
             </FormField>
           </div>
@@ -1113,33 +1071,7 @@ function CreateManualArsipModal({
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <FormField label="Retensi Aktif" required error={errors.retensi_aktif}>
-              <select
-                value={form.retensi_aktif}
-                onChange={(event) => setField('retensi_aktif', event.target.value)}
-                className={inputClass(errors.retensi_aktif)}
-              >
-                <option value="">Pilih retensi aktif</option>
-                {MANUAL_ARSIP_RETENTION_OPTIONS.map((retensi) => (
-                  <option key={retensi} value={retensi}>{retensi}</option>
-                ))}
-              </select>
-            </FormField>
-
-            <FormField label="Retensi Inaktif" required error={errors.retensi_inaktif}>
-              <select
-                value={form.retensi_inaktif}
-                onChange={(event) => setField('retensi_inaktif', event.target.value)}
-                className={inputClass(errors.retensi_inaktif)}
-              >
-                <option value="">Pilih retensi inaktif</option>
-                {MANUAL_ARSIP_RETENTION_OPTIONS.map((retensi) => (
-                  <option key={retensi} value={retensi}>{retensi}</option>
-                ))}
-              </select>
-            </FormField>
-
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField label="Nominal Realisasi" required hint="Rupiah tanpa desimal" error={errors.nominal_realisasi}>
               <input
                 type="text"
@@ -1153,9 +1085,8 @@ function CreateManualArsipModal({
           </div>
 
           <div className="rounded-lg border border-outline-variant/30 bg-surface-container-low/20 px-3 py-2 text-[11px] text-on-surface-variant">
-            <p>Tanggal Dokumen/Sumber adalah tanggal dari dokumen atau kegiatan yang diarsipkan.</p>
-            <p>Tanggal Arsip adalah tanggal resmi pencatatan arsip dan menjadi dasar hitung retensi di server.</p>
-            <p>Kode dan nama klasifikasi hanya ditampilkan untuk membantu pemilihan; server tetap mengambil snapshot klasifikasi dari data master.</p>
+            <p>Tanggal Dokumen/Sumber adalah tanggal dari dokumen atau kegiatan sumber.</p>
+            <p>Kode dan nama jenis pembayaran hanya ditampilkan untuk membantu pemilihan; server tetap mengambil snapshot dari data master.</p>
           </div>
 
           <FormField label="Keterangan" required error={errors.keterangan}>
@@ -1163,12 +1094,12 @@ function CreateManualArsipModal({
               value={form.keterangan}
               onChange={(event) => setField('keterangan', event.target.value)}
               rows={4}
-              placeholder="Keterangan arsip manual..."
+              placeholder="Keterangan dokumen manual..."
               className={cn(inputClass(errors.keterangan), 'h-auto resize-none')}
             />
           </FormField>
 
-          <FormField label="Bukti dokumen (opsional)" error={errors.attachments}>
+          <FormField label="Lampiran (opsional)" error={errors.attachments}>
             <div className="space-y-3">
               {attachmentRows.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-outline-variant/50 bg-surface-container-low/20 px-3 py-4 text-center text-xs text-on-surface-variant">
@@ -1293,7 +1224,7 @@ function KlasifikasiFormField({
 }) {
   return (
     <FormField
-      label="Klasifikasi Arsip"
+      label="Jenis Pembayaran"
       required
       hint="pilih kode dan nama"
       error={error}
@@ -1318,7 +1249,7 @@ function KlasifikasiFormField({
                 </p>
               </>
             ) : (
-              <p className="text-on-surface-variant">Pilih klasifikasi arsip</p>
+              <p className="text-on-surface-variant">Pilih jenis pembayaran</p>
             )}
           </div>
           <ChevronDown
@@ -1336,7 +1267,7 @@ function KlasifikasiFormField({
                   type="text"
                   value={searchQuery}
                   onChange={(event) => onSearchChange(event.target.value)}
-                  placeholder="Cari nama atau kode klasifikasi"
+                  placeholder="Cari nama atau kode jenis pembayaran"
                   className="w-full rounded-lg border border-border bg-white py-2 pr-3 pl-9 text-xs outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
@@ -1513,15 +1444,15 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="flex flex-col items-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10 text-center">
       <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center">
-        <Archive size={24} className="text-blue-500" />
+        <FileText size={24} className="text-blue-500" />
       </div>
       <div>
-        <p className="font-headline text-lg font-bold text-on-surface">Belum ada arsip manual</p>
-        <p className="text-on-surface-variant text-xs mt-1">Tambahkan arsip manual dengan bukti dokumen opsional.</p>
+        <p className="font-headline text-lg font-bold text-on-surface">Belum ada dokumen manual</p>
+        <p className="text-on-surface-variant text-xs mt-1">Tambahkan dokumen manual dengan lampiran opsional.</p>
       </div>
       <Button size="sm" onClick={onCreate}>
         <Plus size={14} />
-        Tambah Arsip
+        Tambah Dokumen
       </Button>
     </div>
   )
@@ -1536,7 +1467,7 @@ function AccessDeniedState() {
       <div className="space-y-1">
         <p className="text-base font-medium text-on-surface">Akses ditolak</p>
         <p className="text-sm text-on-surface-variant max-w-sm">
-          Penambahan Arsip hanya dapat diakses oleh Kepala Sub Bagian Umum.
+          Penambahan Dokumen hanya dapat diakses oleh Kepala Sub Bagian Umum.
         </p>
       </div>
       <Button onClick={() => { window.location.href = ROUTES.HOME }}>
@@ -1716,8 +1647,7 @@ function validateForm(form: ManualArsipFormState): {
   const rawNominal = form.nominal_realisasi.replace(/[^\d]/g, '')
   let nominal = 0
 
-  if (!form.nama.trim()) errors.nama = 'Nama Arsip wajib diisi'
-  if (!form.nomor_surat.trim()) errors.nomor_surat = 'Nomor Surat wajib diisi'
+  if (!form.nama.trim()) errors.nama = 'Nama Dokumen wajib diisi'
 
   if (!form.tanggal) {
     errors.tanggal = 'Tanggal Dokumen/Sumber wajib diisi'
@@ -1725,26 +1655,9 @@ function validateForm(form: ManualArsipFormState): {
     errors.tanggal = 'Tanggal Dokumen/Sumber harus valid'
   }
 
-  if (!form.tanggal_diarsipkan) {
-    errors.tanggal_diarsipkan = 'Tanggal Arsip wajib diisi'
-  } else if (!isValidDateOnly(form.tanggal_diarsipkan)) {
-    errors.tanggal_diarsipkan = 'Tanggal Arsip harus valid'
-  }
-
   if (!form.keterangan.trim()) errors.keterangan = 'Keterangan wajib diisi'
   if (!form.category_id) errors.category_id = 'Kategori wajib dipilih'
-  if (!form.klasifikasi_id) errors.klasifikasi_id = 'Klasifikasi arsip wajib dipilih'
-  if (!form.retensi_aktif) {
-    errors.retensi_aktif = 'Retensi aktif wajib dipilih'
-  } else if (!MANUAL_ARSIP_RETENTION_OPTION_SET.has(form.retensi_aktif)) {
-    errors.retensi_aktif = 'Retensi aktif tidak valid'
-  }
-
-  if (!form.retensi_inaktif) {
-    errors.retensi_inaktif = 'Retensi inaktif wajib dipilih'
-  } else if (!MANUAL_ARSIP_RETENTION_OPTION_SET.has(form.retensi_inaktif)) {
-    errors.retensi_inaktif = 'Retensi inaktif tidak valid'
-  }
+  if (!form.klasifikasi_id) errors.klasifikasi_id = 'Jenis pembayaran wajib dipilih'
 
   if (!rawNominal) {
     errors.nominal_realisasi = 'Nominal realisasi wajib diisi'

@@ -37,7 +37,7 @@ describe('manual archive canonical write helper', () => {
       statusArsip: 'AKTIF',
       metadata: {},
     })
-    expect(insertValues.archivedAt.toISOString()).toBe('2026-05-24T00:00:00.000Z')
+    expect(insertValues.archivedAt?.toISOString()).toBe('2026-05-24T00:00:00.000Z')
   })
 
   it('builds canonical MANUAL update values without create-only fields', () => {
@@ -68,27 +68,56 @@ describe('manual archive canonical write helper', () => {
       statusArsip: 'AKTIF',
       metadata: {},
     })
-    expect(updateValues.archivedAt.toISOString()).toBe('2026-06-01T00:00:00.000Z')
+    expect(updateValues.archivedAt?.toISOString()).toBe('2026-06-01T00:00:00.000Z')
     expect(updateValues).not.toHaveProperty('sourceType')
     expect(updateValues).not.toHaveProperty('dokumenId')
   })
 
+  it('allows transitional null final archive metadata while preserving required document metadata', () => {
+    const insertValues = buildManualArchiveCanonicalInsertValues(completeSource({
+      nomorSurat: null,
+      tanggalDiarsipkan: null,
+      retensiAktif: null,
+      retensiInaktif: null,
+      masaAktifBerakhir: null,
+      masaInaktifBerakhir: null,
+      archivedBy: null,
+    }))
+
+    expect(insertValues).toMatchObject({
+      sourceType: 'MANUAL',
+      dokumenId: null,
+      namaArsip: 'Arsip Manual',
+      nomorSurat: null,
+      klasifikasiId: KLASIFIKASI_ID,
+      retensiAktif: null,
+      retensiInaktif: null,
+      masaAktifBerakhir: null,
+      masaInaktifBerakhir: null,
+      archivedAt: null,
+      archivedBy: null,
+      createdBy: CREATED_BY,
+      nominalRealisasi: '250000.00',
+      statusArsip: 'AKTIF',
+    })
+  })
+
   it('fails missing required source fields with controlled error details', () => {
     expect(() => assertManualArchiveReadyForCanonicalWrite(completeSource({
-      nomorSurat: '   ',
+      klasifikasiId: '   ',
     }))).toThrow(ManualArchiveCanonicalError)
 
     try {
       assertManualArchiveReadyForCanonicalWrite(completeSource({
-        nomorSurat: null,
+        klasifikasiId: null,
       }))
     } catch (error) {
       expect(error).toBeInstanceOf(ManualArchiveCanonicalError)
       expect(error).toMatchObject({
         name: 'ManualArchiveCanonicalError',
         reason: 'missing_required_field',
-        field: 'nomorSurat',
-        message: 'Manual Archive canonical write blocked: missing_required_field:nomorSurat',
+        field: 'klasifikasiId',
+        message: 'Manual Archive canonical write blocked: missing_required_field:klasifikasiId',
       })
     }
   })
@@ -127,7 +156,7 @@ describe('manual archive canonical write helper', () => {
     expect(plan.sourceId).toBe(MANUAL_ARCHIVE_ID)
     expect(plan.insertValues.sourceType).toBe('MANUAL')
     expect(plan.insertValues.dokumenId).toBeNull()
-    expect(plan.insertValues.archivedAt.toISOString()).toBe('2026-05-24T00:00:00.000Z')
+    expect(plan.insertValues.archivedAt?.toISOString()).toBe('2026-05-24T00:00:00.000Z')
   })
 
   it('keeps canonical metadata free of file, token, SQL, env, and storage data', () => {
@@ -182,8 +211,8 @@ describe('manual archive canonical write helper', () => {
       tanggalDiarsipkan: '2026-01-02',
     }))
 
-    expect(first.archivedAt.toISOString()).toBe('2026-01-02T00:00:00.000Z')
-    expect(second.archivedAt.toISOString()).toBe(first.archivedAt.toISOString())
+    expect(first.archivedAt?.toISOString()).toBe('2026-01-02T00:00:00.000Z')
+    expect(second.archivedAt?.toISOString()).toBe(first.archivedAt?.toISOString())
   })
 
   it('rejects invalid date-only source values with controlled errors', () => {

@@ -57,6 +57,21 @@ const METADATA_FORBIDDEN_KEYS = new Set([
 const REQUIRED_NOMINAL_MESSAGE = 'Nominal realisasi wajib diisi'
 const POSITIVE_NOMINAL_MESSAGE = 'Nominal realisasi harus lebih dari 0'
 
+const optionalTrimmedString = (maxLength: number, message: string) => z
+  .preprocess((value) => typeof value === 'string' ? value.trim() : value, z.string().max(maxLength, message).nullish())
+  .transform((value) => value || null)
+
+const optionalDateOnlyString = (message: string) => z
+  .preprocess((value) => value === '' ? null : value, z.string().refine(isDateOnlyString, message).nullish())
+  .transform((value) => value ?? null)
+
+const optionalRetentionLabel = (message: string) => z
+  .preprocess(
+    (value) => value === '' ? null : value,
+    z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message }).nullish(),
+  )
+  .transform((value) => value ?? null)
+
 export const manualArsipSafeMetadataSchema = z
   .record(z.string(), z.unknown())
   .superRefine((value, ctx) => {
@@ -71,19 +86,15 @@ export const manualArsipSafeMetadataSchema = z
 
 export const createManualArsipSchema = z
   .object({
-    nama: z.string().trim().min(1, 'Nama arsip wajib diisi').max(255),
+    nama: z.string().trim().min(1, 'Nama dokumen wajib diisi').max(255),
     tanggal: z.string().refine(isDateOnlyString, 'Tanggal harus valid dengan format YYYY-MM-DD'),
-    nomor_surat: z.string({ error: 'Nomor surat wajib diisi' })
-      .trim()
-      .min(1, 'Nomor surat wajib diisi')
-      .max(120, 'Nomor surat maksimal 120 karakter'),
-    tanggal_diarsipkan: z.string({ error: 'Tanggal arsip wajib diisi' })
-      .refine(isDateOnlyString, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'),
+    nomor_surat: optionalTrimmedString(120, 'Nomor surat maksimal 120 karakter').optional(),
+    tanggal_diarsipkan: optionalDateOnlyString('Tanggal arsip harus valid dengan format YYYY-MM-DD').optional(),
     keterangan: z.string().trim().min(1, 'Keterangan wajib diisi'),
     category_id: z.string().uuid('Kategori tidak valid'),
-    klasifikasi_id: z.string({ error: 'Klasifikasi wajib dipilih' }).uuid('Klasifikasi tidak valid'),
-    retensi_aktif: z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message: 'Retensi aktif tidak valid' }),
-    retensi_inaktif: z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message: 'Retensi inaktif tidak valid' }),
+    klasifikasi_id: z.string({ error: 'Jenis pembayaran wajib dipilih' }).uuid('Jenis pembayaran tidak valid'),
+    retensi_aktif: optionalRetentionLabel('Retensi aktif tidak valid'),
+    retensi_inaktif: optionalRetentionLabel('Retensi inaktif tidak valid'),
     nominal_realisasi: z.unknown(),
     metadata: manualArsipSafeMetadataSchema.optional(),
   })
@@ -126,17 +137,32 @@ export const createManualArsipSchema = z
         message: POSITIVE_NOMINAL_MESSAGE,
       })
     }
+
+    const hasFinalRetentionMetadata = Boolean(
+      value.tanggal_diarsipkan || value.retensi_aktif || value.retensi_inaktif,
+    )
+    const hasCompleteFinalRetentionMetadata = Boolean(
+      value.tanggal_diarsipkan && value.retensi_aktif && value.retensi_inaktif,
+    )
+
+    if (hasFinalRetentionMetadata && !hasCompleteFinalRetentionMetadata) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tanggal_diarsipkan'],
+        message: 'Metadata retensi final harus lengkap atau dikosongkan',
+      })
+    }
   })
   .transform((value) => ({
     nama: value.nama,
     tanggal: value.tanggal,
-    nomor_surat: value.nomor_surat,
-    tanggal_diarsipkan: value.tanggal_diarsipkan,
+    nomor_surat: value.nomor_surat ?? null,
+    tanggal_diarsipkan: value.tanggal_diarsipkan ?? null,
     keterangan: value.keterangan,
     category_id: value.category_id,
     klasifikasi_id: value.klasifikasi_id,
-    retensi_aktif: value.retensi_aktif,
-    retensi_inaktif: value.retensi_inaktif,
+    retensi_aktif: value.retensi_aktif ?? null,
+    retensi_inaktif: value.retensi_inaktif ?? null,
     nominal_realisasi: value.nominal_realisasi as number,
     metadata: value.metadata,
   }))
@@ -146,7 +172,7 @@ export const updateManualArsipSchema = createManualArsipSchema
 export const listManualArsipQuerySchema = z
   .object({
     category_id: z.string().uuid('Kategori tidak valid').optional(),
-    klasifikasi_id: z.string().uuid('Klasifikasi tidak valid').optional(),
+    klasifikasi_id: z.string().uuid('Jenis pembayaran tidak valid').optional(),
     status_arsip: z.enum(ARCHIVE_STATUS_VALUES).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(100),
   })

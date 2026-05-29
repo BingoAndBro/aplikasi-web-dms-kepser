@@ -26,7 +26,7 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachment
         if (sessionOrResponse instanceof Response) return sessionOrResponse
 
         if (!isUuid(params.id)) {
-          return Response.json({ error: 'Arsip manual tidak ditemukan' }, { status: 404 })
+          return Response.json({ error: 'Dokumen manual tidak ditemukan' }, { status: 404 })
         }
 
         let formData: FormData
@@ -82,7 +82,7 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachment
           }
 
           console.error('[arsiparis/manual-arsip/$id/attachments] POST local upload error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengunggah lampiran arsip manual' }, { status: 500 })
+          return Response.json({ error: 'Gagal mengunggah lampiran dokumen manual' }, { status: 500 })
         }
       },
     },
@@ -104,6 +104,6 @@ function manualArsipUploadErrorResponse(error: ManualArsipUploadError): Response
       return Response.json({ error: 'File lampiran tidak valid' }, { status: 400 })
     case 'target-exists':
     case 'write-failed':
-      return Response.json({ error: 'Gagal mengunggah lampiran arsip manual' }, { status: 500 })
+      return Response.json({ error: 'Gagal mengunggah lampiran dokumen manual' }, { status: 500 })
   }
 }

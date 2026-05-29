@@ -14,7 +14,7 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachment
         if (sessionOrResponse instanceof Response) return sessionOrResponse
 
         if (!isUuid(params.id) || !isUuid(params.attachmentId)) {
-          return Response.json({ error: 'Lampiran arsip manual tidak ditemukan' }, { status: 404 })
+          return Response.json({ error: 'Lampiran dokumen manual tidak ditemukan' }, { status: 404 })
         }
 
         try {
