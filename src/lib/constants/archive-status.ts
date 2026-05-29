@@ -37,3 +37,9 @@ export const BERKAS_STATUS: { [K in BerkasStatus]: K } = {
   OPEN: 'OPEN',
   CLOSED: 'CLOSED',
 }
+
+export const BERKAS_ARCHIVE_STATUS_VALUES = ARCHIVE_STATUS_VALUES
+
+export type BerkasArchiveStatus = StatusArsip
+
+export const BERKAS_ARCHIVE_STATUS: { [K in BerkasArchiveStatus]: K } = ARCHIVE_STATUS

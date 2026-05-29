@@ -14,6 +14,7 @@ import { dokumenTransaksi } from '../dokumen/dokumen-transaksi'
 import { arsip } from './arsip'
 import { masterKlasifikasiArsip } from './klasifikasi-arsip'
 import { manualArsip } from './manual-arsip'
+import type { StatusArsip } from '#/lib/constants/archive-status'
 
 const arsipSchema = pgSchema('arsip')
 
@@ -29,6 +30,7 @@ export const berkasArsip = arsipSchema.table(
     klasifikasiKodeSnapshot: text('klasifikasi_kode_snapshot'),
     klasifikasiNamaSnapshot: text('klasifikasi_nama_snapshot').notNull(),
     statusBerkas: text('status_berkas').$type<BerkasStatus>().notNull().default('OPEN'),
+    statusArsip: text('status_arsip').$type<StatusArsip>(),
     nomorSpm: text('nomor_spm'),
     retensiAktif: text('retensi_aktif'),
     retensiInaktif: text('retensi_inaktif'),
@@ -52,6 +54,14 @@ export const berkasArsip = arsipSchema.table(
       .on(table.klasifikasiId)
       .where(sql`${table.statusBerkas} = 'OPEN'`),
     check('berkas_arsip_status_berkas_check', sql`${table.statusBerkas} in ('OPEN', 'CLOSED')`),
+    check(
+      'berkas_arsip_status_arsip_check',
+      sql`${table.statusArsip} is null or ${table.statusArsip} in ('AKTIF', 'INAKTIF', 'USUL_MUSNAH', 'DIMUSNAHKAN')`,
+    ),
+    check(
+      'berkas_arsip_open_status_arsip_null_check',
+      sql`${table.statusBerkas} <> 'OPEN' or ${table.statusArsip} is null`,
+    ),
     check(
       'berkas_arsip_closed_metadata_check',
       sql`(${table.statusBerkas} = 'OPEN' and ${table.closedAt} is null and ${table.closedBy} is null)
@@ -99,8 +109,8 @@ export const berkasArsipItem = arsipSchema.table(
   ],
 )
 
-// Phase 13F only adds the folder/berkas foundation. Runtime helpers must still
-// enforce that CLOSED folders cannot accept new items before wiring writes.
+// Phase 13L adds nullable folder-level status_arsip only. Runtime close
+// behavior will set AKTIF in a later phase, so CLOSED rows may remain null.
 export type BerkasArsip = typeof berkasArsip.$inferSelect
 export type NewBerkasArsip = typeof berkasArsip.$inferInsert
 export type BerkasArsipItem = typeof berkasArsipItem.$inferSelect

@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest'
+import { berkasArsip } from '#/db/schema/arsip/berkas-arsip'
 import {
+  BERKAS_ARCHIVE_STATUS,
+  BERKAS_ARCHIVE_STATUS_VALUES,
   BERKAS_STATUS,
   BERKAS_STATUS_VALUES,
 } from '#/lib/constants/archive-status'
 import {
   addBerkasItemRequestSchema,
+  berkasArchiveStatusSchema,
   berkasItemSourceTypeSchema,
   berkasStatusSchema,
   closeBerkasMetadataSchema,
+  nullableBerkasArchiveStatusSchema,
   openBerkasRequestSchema,
 } from '#/lib/schemas/berkas-arsip'
 
@@ -17,6 +22,22 @@ describe('berkas arsip schema foundation', () => {
     expect(BERKAS_STATUS.OPEN).toBe('OPEN')
     expect(BERKAS_STATUS.CLOSED).toBe('CLOSED')
     expect(berkasStatusSchema.safeParse('INAKTIF').success).toBe(false)
+  })
+
+  it('reuses archive lifecycle values for nullable folder lifecycle foundation', () => {
+    expect(BERKAS_ARCHIVE_STATUS_VALUES).toEqual(['AKTIF', 'INAKTIF', 'USUL_MUSNAH', 'DIMUSNAHKAN'])
+    expect(BERKAS_ARCHIVE_STATUS.AKTIF).toBe('AKTIF')
+    expect(BERKAS_ARCHIVE_STATUS.INAKTIF).toBe('INAKTIF')
+    expect(BERKAS_ARCHIVE_STATUS.USUL_MUSNAH).toBe('USUL_MUSNAH')
+    expect(BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN).toBe('DIMUSNAHKAN')
+    expect(berkasArchiveStatusSchema.parse('AKTIF')).toBe('AKTIF')
+    expect(nullableBerkasArchiveStatusSchema.parse(null)).toBeNull()
+    expect(nullableBerkasArchiveStatusSchema.safeParse('VERIFIKASI_PENYUSUTAN').success).toBe(false)
+  })
+
+  it('models folder archive lifecycle as nullable on berkas_arsip', () => {
+    expect(berkasArsip.statusArsip.name).toBe('status_arsip')
+    expect(berkasArsip.statusArsip.notNull).toBe(false)
   })
 
   it('allows only current source types for folder items', () => {

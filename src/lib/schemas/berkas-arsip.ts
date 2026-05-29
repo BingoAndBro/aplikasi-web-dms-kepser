@@ -5,10 +5,15 @@ import {
 } from '#/lib/archive/retention'
 import {
   ARCHIVE_SOURCE_TYPE_VALUES,
+  BERKAS_ARCHIVE_STATUS_VALUES,
   BERKAS_STATUS_VALUES,
 } from '#/lib/constants/archive-status'
 
 export const berkasStatusSchema = z.enum(BERKAS_STATUS_VALUES)
+
+export const berkasArchiveStatusSchema = z.enum(BERKAS_ARCHIVE_STATUS_VALUES)
+
+export const nullableBerkasArchiveStatusSchema = berkasArchiveStatusSchema.nullable()
 
 export const berkasItemSourceTypeSchema = z.enum(ARCHIVE_SOURCE_TYPE_VALUES)
 
@@ -55,3 +60,4 @@ export const closeBerkasMetadataSchema = z
 export type CloseBerkasMetadataInput = z.infer<typeof closeBerkasMetadataSchema>
 export type OpenBerkasRequestInput = z.infer<typeof openBerkasRequestSchema>
 export type AddBerkasItemRequestInput = z.infer<typeof addBerkasItemRequestSchema>
+export type NullableBerkasArchiveStatusInput = z.infer<typeof nullableBerkasArchiveStatusSchema>
