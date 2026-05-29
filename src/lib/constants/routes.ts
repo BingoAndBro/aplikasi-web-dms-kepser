@@ -30,6 +30,7 @@ export const ROUTES = {
   KEPALA_SUB_BAGIAN_UMUM: {
     ROOT: '/arsiparis',
     INBOX: '/arsiparis/inbox',
+    BERKAS_AKTIF: '/arsiparis/berkas',
     AKTIF: '/arsiparis/aktif',
     INAKTIF: '/arsiparis/inaktif',
     USUL_MUSNAH: '/arsiparis/usul-musnah',

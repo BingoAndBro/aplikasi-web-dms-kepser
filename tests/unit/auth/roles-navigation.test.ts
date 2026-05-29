@@ -41,4 +41,17 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     expect(ROLES.ADMIN).not.toBe(ROLES.PENANGGUNG_JAWAB_KINERJA)
     expect(ROLE_DEFAULT_ROUTE[ROLES.ADMIN]).toBe(ROUTES.ADMIN.ROOT)
   })
+
+  it('points Kepala Sub Bagian Umum active archive navigation to folder-first berkas page', () => {
+    const pemberkasanGroup = NAV_CONFIG[ROLES.KEPALA_SUB_BAGIAN_UMUM].find((group) => group.title === 'PEMBERKASAN')
+
+    expect(pemberkasanGroup?.items).toContainEqual(
+      expect.objectContaining({
+        id: 'arsip_aktif',
+        label: 'Pemberkasan Arsip Aktif',
+        to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF,
+      }),
+    )
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF).toBe('/arsiparis/aktif')
+  })
 })
