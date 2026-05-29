@@ -284,7 +284,7 @@ test.describe('TC-03: PPK Detail Page', () => {
     await expect(page.locator('text=Alur Dokumen')).toBeVisible()
     await expect(page.locator('text=Draf')).toBeVisible()
     await expect(page.locator('text=PPK')).toBeVisible()
-    await expect(page.locator('text=Bendahara')).toBeVisible()
+    await expect(page.locator('text=PPSPM')).toBeVisible()
 
     // Lampiran section
     await expect(page.locator('text=Lampiran')).toBeVisible()
@@ -543,7 +543,7 @@ test.describe('TC-11: PPK Resubmit — Edit Lampiran + FSM', () => {
     await page.waitForTimeout(2000)
 
     // Resubmit page should have catatan banner
-    const catatanBanner = page.locator('text=Catatan dari Bendahara').or(page.locator('text=Revisi dari Bendahara'))
+    const catatanBanner = page.locator('text=Catatan dari PPSPM').or(page.locator('text=Revisi dari PPSPM'))
     // Either shows or the page redirected
     await expect(page.locator('h2').first()).toBeVisible({ timeout: 5000 })
   })
@@ -565,7 +565,7 @@ test.describe('TC-12: Bendahara Inbox — List', () => {
     // Filter fungsi
     await expect(page.locator('select').first()).toBeVisible()
 
-    // Badge check — show "Persetujuan Bendahara" color
+    // Badge check - show "Persetujuan PPSPM" color
     // Either has rows with badge or empty state
     const listOrEmpty = page.locator('table tbody tr').first().or(page.locator('text=Tidak ada dokumen').or(page.locator('text=Belum ada dokumen')))
     await expect(listOrEmpty).toBeVisible({ timeout: 5000 })
@@ -655,7 +655,7 @@ test.describe('TC-15: Bendahara Reject — back to PPK', () => {
 
     await expect(page.locator('text=Tolak Dokumen')).toBeVisible({ timeout: 5000 })
 
-    await page.locator('textarea').fill('Dokumen ditolak oleh Bendahara. Mohon perbaiki dan ajukan kembali.')
+    await page.locator('textarea').fill('Dokumen ditolak oleh PPSPM. Mohon perbaiki dan ajukan kembali.')
     await page.locator('button', { hasText: 'Tolak Dokumen' }).click()
     await page.waitForTimeout(3000)
 

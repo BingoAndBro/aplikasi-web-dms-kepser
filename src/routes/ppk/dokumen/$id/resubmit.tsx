@@ -27,7 +27,7 @@ export const Route = createFileRoute('/ppk/dokumen/$id/resubmit')({
 const WORKFLOW_STEPS = [
   { key: 'DRAFT', label: 'Draf' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
-  { key: 'IN_BENDAHARA_APPROVAL', label: 'Bendahara' },
+  { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 
@@ -268,7 +268,7 @@ function PpkResubmitPage() {
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-bold text-amber-700 mb-1">Catatan dari Bendahara</p>
+              <p className="text-xs font-bold text-amber-700 mb-1">Catatan dari PPSPM</p>
               <p className="text-xs text-amber-700">{dokumen.revision_notes}</p>
             </div>
           </div>
@@ -308,7 +308,7 @@ function PpkResubmitPage() {
           kelengkapan={kelengkapan}
           isNonMaterial={dokIsNonMaterial}
           nominalValue={dokumen.nominal_realisasi}
-          submitLabel="Resubmit ke Bendahara"
+          submitLabel="Resubmit ke PPSPM"
           extraActions={
             <Button
               size="sm"

@@ -50,7 +50,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
     className: 'bg-amber-100 text-amber-800 border-amber-200',
   },
   IN_BENDAHARA_APPROVAL: {
-    label: 'Persetujuan Bendahara',
+    label: 'Persetujuan PPSPM',
     variant: 'secondary',
     className: 'bg-blue-100 text-blue-800 border-blue-200',
   },
@@ -89,7 +89,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function StepBadge({ step }: { step: string | null }) {
   if (!step) return null
-  const label = step === 'PPK' ? 'Step 1: PPK' : 'Step 2: Bendahara'
+  const label = step === 'PPK' ? 'Step 1: PPK' : 'Step 2: PPSPM'
   return (
     <span className="text-[10px] text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded">
       {label}
@@ -198,7 +198,7 @@ function DokumenSayaPage() {
             <option value="">Semua Status</option>
             <option value="DRAFT">Draf</option>
             <option value="IN_PPK_VALIDATION">Validasi PPK</option>
-            <option value="IN_BENDAHARA_APPROVAL">Persetujuan Bendahara</option>
+            <option value="IN_BENDAHARA_APPROVAL">Persetujuan PPSPM</option>
             <option value="NEED_REVISION">Perlu Revisi</option>
             <option value="COMPLETED">Selesai</option>
             <option value="ARCHIVED">Diarsipkan</option>

@@ -62,7 +62,7 @@ type DokumenDetail = {
 const WORKFLOW_STEPS_MATERIAL = [
   { key: 'DRAFT', label: 'Draf' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
-  { key: 'IN_BENDAHARA_APPROVAL', label: 'Bendahara' },
+  { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 
@@ -173,7 +173,7 @@ function DokumenDetailPage() {
           )}>
             {dok.status === 'DRAFT' ? 'Draf' :
              dok.status === 'IN_PPK_VALIDATION' ? 'Validasi PPK' :
-             dok.status === 'IN_BENDAHARA_APPROVAL' ? 'Persetujuan Bendahara' :
+             dok.status === 'IN_BENDAHARA_APPROVAL' ? 'Persetujuan PPSPM' :
              dok.status === 'NEED_REVISION' ? 'Perlu Revisi' :
              dok.status === 'TERSIMPAN' ? 'Tersimpan' :
              'Selesai'}
@@ -212,7 +212,7 @@ function DokumenDetailPage() {
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-bold text-amber-700 mb-1">Catatan Revisi dari {dok.revision_target === 'USER' ? 'PPK' : 'Bendahara'}</p>
+              <p className="text-xs font-bold text-amber-700 mb-1">Catatan Revisi dari {dok.revision_target === 'USER' ? 'PPK' : 'PPSPM'}</p>
               <p className="text-xs text-amber-700">{dok.revision_notes}</p>
             </div>
           </div>

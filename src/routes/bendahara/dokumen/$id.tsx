@@ -36,7 +36,7 @@ type DokumenDetail = {
 const WORKFLOW_STEPS = [
   { key: 'DRAFT', label: 'Draf' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
-  { key: 'IN_BENDAHARA_APPROVAL', label: 'Bendahara' },
+  { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 function getWorkflowIdx(status: string) { return WORKFLOW_STEPS.findIndex(s => s.key === status) }
@@ -154,7 +154,7 @@ function BendaharaDokumenDetailPage() {
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
               <Banknote size={12} />
-              <Link to="/bendahara" className="hover:text-primary">Bendahara</Link>
+              <Link to="/bendahara" className="hover:text-primary">PPSPM</Link>
               <ChevronRight size={10} />
               <Link to="/bendahara/inbox" className="hover:text-primary">Persetujuan</Link>
               <ChevronRight size={10} />
@@ -163,7 +163,7 @@ function BendaharaDokumenDetailPage() {
             <h2 className="font-headline text-xl font-extrabold text-on-surface">{dokumen.judul}</h2>
           </div>
           <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs font-semibold shrink-0">
-            Persetujuan Bendahara
+            Persetujuan PPSPM
           </Badge>
         </div>
 
@@ -193,7 +193,7 @@ function BendaharaDokumenDetailPage() {
           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-bold text-amber-700 mb-1">Catatan Revisi dari Bendahara</p>
+              <p className="text-xs font-bold text-amber-700 mb-1">Catatan Revisi dari PPSPM</p>
               <p className="text-xs text-amber-700">{dokumen.revision_notes || 'Tidak ada catatan'}</p>
             </div>
           </div>

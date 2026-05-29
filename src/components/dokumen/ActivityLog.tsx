@@ -23,10 +23,10 @@ const AKSI_CONFIG: Record<string, { label: string; icon: typeof FileText; color:
   REJECT: { label: 'Ditolak', icon: XCircle, color: 'text-red-600 bg-red-50' },
   PPK_APPROVE: { label: 'Divalidasi oleh PPK', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
   PPK_REJECT: { label: 'Ditolak oleh PPK', icon: XCircle, color: 'text-red-600 bg-red-50' },
-  BENDAHARA_APPROVE: { label: 'Disetujui Bendahara', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
-  BENDAHARA_REJECT: { label: 'Dikembalikan Bendahara', icon: XCircle, color: 'text-red-600 bg-red-50' },
+  BENDAHARA_APPROVE: { label: 'Disetujui PPSPM', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
+  BENDAHARA_REJECT: { label: 'Dikembalikan PPSPM', icon: XCircle, color: 'text-red-600 bg-red-50' },
   RESUBMIT: { label: 'Diajukan ulang ke PPK', icon: Upload, color: 'text-amber-600 bg-amber-50' },
-  RESUBMIT_PPK: { label: 'Diajukan ulang ke Bendahara', icon: ArrowRight, color: 'text-blue-600 bg-blue-50' },
+  RESUBMIT_PPK: { label: 'Diajukan ulang ke PPSPM', icon: ArrowRight, color: 'text-blue-600 bg-blue-50' },
   PPK_KEMBALIKAN: { label: 'Dikembalikan ke Pegawai', icon: XCircle, color: 'text-red-600 bg-red-50' },
   ARCHIVE: { label: 'Diarsipkan', icon: FileText, color: 'text-purple-600 bg-purple-50' },
   // Non-Material documents

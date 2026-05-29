@@ -95,7 +95,7 @@ function LaporanSayaPage() {
             <Inbox className="h-12 w-12 text-muted-foreground/40" />
             <p className="text-base font-medium text-muted-foreground">Belum ada dokumen selesai</p>
             <p className="text-sm text-muted-foreground/70">
-              Dokumen yang telah disetujui Bendahara akan muncul di sini.
+              Dokumen yang telah disetujui PPSPM akan muncul di sini.
             </p>
           </div>
         )}

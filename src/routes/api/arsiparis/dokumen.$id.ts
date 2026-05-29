@@ -116,7 +116,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
               is_archived: !!arsipRecord,
             },
             bendahara_approve: bendaharaLog
-              ? { nama: 'Bendahara', tanggal: bendaharaLog.timestamp }
+              ? { nama: 'PPSPM', tanggal: bendaharaLog.timestamp }
               : null,
             arsip: arsipRecord
               ? {

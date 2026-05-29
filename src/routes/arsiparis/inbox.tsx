@@ -113,7 +113,7 @@ function ArsiparisInboxPage() {
             </div>
             <p className="font-headline text-lg font-bold text-on-surface">Tidak ada dokumen</p>
             <p className="text-on-surface-variant text-xs text-center max-w-sm">
-              Dokumen yang telah disetujui Bendahara dan belum diarsipkan akan muncul di sini.
+              Dokumen yang telah disetujui PPSPM dan belum diarsipkan akan muncul di sini.
             </p>
           </div>
         ) : (

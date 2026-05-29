@@ -20,7 +20,7 @@ export const Route = createFileRoute('/ppk/tervalidasi')({ component: PpkTervali
 
 function StatusBadge({ status }: { status: string }) {
   const cfg: Record<string, { label: string; cls: string }> = {
-    IN_BENDAHARA_APPROVAL: { label: 'Menunggu Bendahara', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
+    IN_BENDAHARA_APPROVAL: { label: 'Menunggu PPSPM', cls: 'bg-blue-100 text-blue-800 border-blue-200' },
     COMPLETED: { label: 'Selesai', cls: 'bg-green-100 text-green-800 border-green-200' },
     ARCHIVED: { label: 'Diarsipkan', cls: 'border-outline text-outline/60' },
   }

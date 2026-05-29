@@ -36,7 +36,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secon
     className: 'bg-amber-100 text-amber-800 border-amber-200',
   },
   IN_BENDAHARA_APPROVAL: {
-    label: 'Persetujuan Bendahara',
+    label: 'Persetujuan PPSPM',
     variant: 'secondary',
     className: 'bg-blue-100 text-blue-800 border-blue-200',
   },
@@ -71,7 +71,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function StepBadge({ step }: { step: string | null }) {
   if (!step) return null
-  const label = step === 'PPK' ? 'Step 1: PPK' : 'Step 2: Bendahara'
+  const label = step === 'PPK' ? 'Step 1: PPK' : 'Step 2: PPSPM'
   return (
     <span className="text-[10px] text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded">
       {label}
@@ -127,7 +127,7 @@ function PpkRevisiPage() {
             </div>
             <h2 className="font-headline text-2xl font-extrabold text-on-surface">Revisi Dokumen</h2>
             <p className="text-on-surface-variant text-xs mt-1">
-              {filtered.length} dokumen dikembalikan oleh Bendahara untuk diperbaiki.
+              {filtered.length} dokumen dikembalikan oleh PPSPM untuk diperbaiki.
             </p>
           </div>
         </div>
@@ -161,7 +161,7 @@ function PpkRevisiPage() {
             </div>
             <p className="font-headline text-lg font-bold text-on-surface">Tidak ada dokumen</p>
             <p className="text-on-surface-variant text-xs">
-              {search ? 'Tidak ada dokumen yang cocok dengan pencarian Anda.' : 'Dokumen yang dikembalikan Bendahara akan muncul di sini.'}
+              {search ? 'Tidak ada dokumen yang cocok dengan pencarian Anda.' : 'Dokumen yang dikembalikan PPSPM akan muncul di sini.'}
             </p>
           </div>
         ) : (

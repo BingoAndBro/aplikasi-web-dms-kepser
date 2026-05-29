@@ -21,7 +21,7 @@ export const ROLES: { [K in RoleName]: K } = {
 export const ROLE_DISPLAY: Record<RoleName, string> = {
   PEGAWAI: 'Pegawai',
   PPK: 'Pejabat Pembuat Komitmen',
-  BENDAHARA: 'Bendahara',
+  BENDAHARA: 'PPSPM',
   KEPALA_SUB_BAGIAN_UMUM: 'Kepala Sub Bagian Umum',
   PENANGGUNG_JAWAB_KINERJA: 'Penanggung Jawab Kinerja',
   ADMIN: 'Administrator',

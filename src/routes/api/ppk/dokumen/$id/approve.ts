@@ -117,7 +117,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/approve')({
 
         return Response.json({
           success: true,
-          message: 'Dokumen diteruskan ke Bendahara',
+          message: 'Dokumen diteruskan ke PPSPM',
         })
       },
     },

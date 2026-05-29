@@ -32,7 +32,7 @@ export const Route = createFileRoute('/pegawai/dokumen/$id/revisi')({
 const WORKFLOW_STEPS = [
   { key: 'DRAFT', label: 'Draf' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
-  { key: 'IN_BENDAHARA_APPROVAL', label: 'Bendahara' },
+  { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 

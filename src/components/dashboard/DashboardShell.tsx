@@ -33,9 +33,9 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
     ctaTo: '/ppk/inbox',
   },
   BENDAHARA: {
-    badge: 'BENDAHARA PORTAL',
+    badge: 'PPSPM PORTAL',
     title: 'Dashboard',
-    desc: 'Ruang kerja Bendahara — persetujuan pencairan dana kegiatan.',
+    desc: 'Ruang kerja PPSPM (Pejabat Penandatangan Surat Perintah Membayar) untuk persetujuan pencairan dana kegiatan.',
     ctaLabel: 'Persetujuan Dokumen',
     ctaTo: '/bendahara/inbox',
   },

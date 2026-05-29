@@ -26,7 +26,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
         if (!hasLocalRole(session, 'BENDAHARA')) {
-          return Response.json({ error: 'Akses ditolak — bukan Bendahara' }, { status: 403 })
+          return Response.json({ error: 'Akses ditolak - bukan PPSPM' }, { status: 403 })
         }
 
         let body: unknown = {}

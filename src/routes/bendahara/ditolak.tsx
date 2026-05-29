@@ -38,7 +38,7 @@ function BendaharaDitolakPage() {
         <div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
             <Banknote size={12} />
-            <Link to="/bendahara" className="hover:text-primary">Bendahara</Link>
+            <Link to="/bendahara" className="hover:text-primary">PPSPM</Link>
             <ChevronRight size={10} />
             <span className="text-primary">Dokumen Ditolak</span>
           </div>

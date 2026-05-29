@@ -86,7 +86,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
           if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
           if (!canBendaharaRead(dok.status, dok.revision_target)) {
-            return Response.json({ error: 'Dokumen tidak tersedia untuk Bendahara' }, { status: 400 })
+            return Response.json({ error: 'Dokumen tidak tersedia untuk PPSPM' }, { status: 400 })
           }
 
           const ppkLogs = await db

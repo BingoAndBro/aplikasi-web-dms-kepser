@@ -26,7 +26,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
         if (!hasLocalRole(session, 'BENDAHARA')) {
-          return Response.json({ error: 'Akses ditolak — bukan Bendahara' }, { status: 403 })
+          return Response.json({ error: 'Akses ditolak - bukan PPSPM' }, { status: 403 })
         }
 
         let body: unknown
@@ -74,7 +74,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
             return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
           }
 
-          if (existingActionRows.length > 0) return Response.json({ error: 'Dokumen sudah pernah diaksi oleh Bendahara' }, { status: 400 })
+          if (existingActionRows.length > 0) return Response.json({ error: 'Dokumen sudah pernah diaksi oleh PPSPM' }, { status: 400 })
           return Response.json({ error: 'Dokumen sudah tidak dalam tahap persetujuan' }, { status: 400 })
         }
 
