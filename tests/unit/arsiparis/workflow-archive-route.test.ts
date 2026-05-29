@@ -270,6 +270,32 @@ describe('workflow archive canonical write route', () => {
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
+  it('rejects ARCHIVED documents with already-archived copy before archive writes', async () => {
+    queueSelectResults([dokumenRow({ status: 'ARCHIVED' })])
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Dokumen sudah diarsipkan' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-COMPLETED non-ARCHIVED documents with safe not-final copy', async () => {
+    queueSelectResults([dokumenRow({ status: 'IN_PPK_VALIDATION' })])
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Dokumen belum berada di tahap final' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
   it('fails safely when the source document creator is missing', async () => {
     queueSelectResults([dokumenRow({ created_by: null })])
 

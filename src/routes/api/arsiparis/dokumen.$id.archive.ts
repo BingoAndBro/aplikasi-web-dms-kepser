@@ -117,6 +117,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
 
         const dok = dokRows[0]
         if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+        if (dok.status === 'ARCHIVED') return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
         if (dok.status !== 'COMPLETED') return Response.json({ error: 'Dokumen belum berada di tahap final' }, { status: 400 })
         if (!dok.created_by) return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
 
