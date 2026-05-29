@@ -12,6 +12,31 @@ export const berkasStatusSchema = z.enum(BERKAS_STATUS_VALUES)
 
 export const berkasItemSourceTypeSchema = z.enum(ARCHIVE_SOURCE_TYPE_VALUES)
 
+export const openBerkasRequestSchema = z
+  .object({
+    klasifikasi_id: z.uuid('Jenis pembayaran tidak valid'),
+  })
+  .strict()
+
+export const addWorkflowBerkasItemRequestSchema = z
+  .object({
+    source_type: z.literal('WORKFLOW'),
+    dokumen_id: z.uuid('Dokumen workflow tidak valid'),
+  })
+  .strict()
+
+export const addManualBerkasItemRequestSchema = z
+  .object({
+    source_type: z.literal('MANUAL'),
+    manual_arsip_id: z.uuid('Dokumen manual tidak valid'),
+  })
+  .strict()
+
+export const addBerkasItemRequestSchema = z.discriminatedUnion('source_type', [
+  addWorkflowBerkasItemRequestSchema,
+  addManualBerkasItemRequestSchema,
+])
+
 export const closeBerkasMetadataSchema = z
   .object({
     nomor_spm: z.string().trim().min(1, 'Nomor SPM wajib diisi').max(120, 'Nomor SPM maksimal 120 karakter'),
@@ -28,3 +53,5 @@ export const closeBerkasMetadataSchema = z
   }))
 
 export type CloseBerkasMetadataInput = z.infer<typeof closeBerkasMetadataSchema>
+export type OpenBerkasRequestInput = z.infer<typeof openBerkasRequestSchema>
+export type AddBerkasItemRequestInput = z.infer<typeof addBerkasItemRequestSchema>

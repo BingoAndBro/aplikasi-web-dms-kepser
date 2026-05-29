@@ -4,9 +4,11 @@ import {
   BERKAS_STATUS_VALUES,
 } from '#/lib/constants/archive-status'
 import {
+  addBerkasItemRequestSchema,
   berkasItemSourceTypeSchema,
   berkasStatusSchema,
   closeBerkasMetadataSchema,
+  openBerkasRequestSchema,
 } from '#/lib/schemas/berkas-arsip'
 
 describe('berkas arsip schema foundation', () => {
@@ -48,5 +50,44 @@ describe('berkas arsip schema foundation', () => {
     })
 
     expect(parsed.success).toBe(false)
+  })
+
+  it('validates open-folder request by classification id', () => {
+    expect(openBerkasRequestSchema.parse({
+      klasifikasi_id: '11111111-1111-4111-8111-111111111111',
+    })).toEqual({
+      klasifikasi_id: '11111111-1111-4111-8111-111111111111',
+    })
+
+    expect(openBerkasRequestSchema.safeParse({ klasifikasi_id: 'not-a-uuid' }).success).toBe(false)
+  })
+
+  it('validates source-specific add-item bodies strictly', () => {
+    expect(addBerkasItemRequestSchema.parse({
+      source_type: 'WORKFLOW',
+      dokumen_id: '22222222-2222-4222-8222-222222222222',
+    })).toEqual({
+      source_type: 'WORKFLOW',
+      dokumen_id: '22222222-2222-4222-8222-222222222222',
+    })
+
+    expect(addBerkasItemRequestSchema.parse({
+      source_type: 'MANUAL',
+      manual_arsip_id: '33333333-3333-4333-8333-333333333333',
+    })).toEqual({
+      source_type: 'MANUAL',
+      manual_arsip_id: '33333333-3333-4333-8333-333333333333',
+    })
+
+    expect(addBerkasItemRequestSchema.safeParse({
+      source_type: 'WORKFLOW',
+      dokumen_id: '22222222-2222-4222-8222-222222222222',
+      manual_arsip_id: '33333333-3333-4333-8333-333333333333',
+    }).success).toBe(false)
+
+    expect(addBerkasItemRequestSchema.safeParse({
+      source_type: 'MANUAL',
+      dokumen_id: '22222222-2222-4222-8222-222222222222',
+    }).success).toBe(false)
   })
 })
