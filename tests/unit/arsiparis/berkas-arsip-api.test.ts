@@ -325,6 +325,7 @@ function openBerkasDto() {
     klasifikasi_kode_snapshot: 'BB',
     klasifikasi_nama_snapshot: 'Belanja Barang',
     status_berkas: 'OPEN',
+    status_arsip: null,
     nomor_spm: null,
     retensi_aktif: null,
     retensi_inaktif: null,
@@ -340,6 +341,7 @@ function closedBerkasDto() {
   return {
     ...openBerkasDto(),
     status_berkas: 'CLOSED',
+    status_arsip: 'AKTIF',
     nomor_spm: 'SPM-001/2026',
     retensi_aktif: '1 Tahun',
     retensi_inaktif: '3 Tahun',

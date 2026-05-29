@@ -8,6 +8,7 @@ import {
   getOrCreateOpenBerkasForKlasifikasi,
   type BerkasArsipRepository,
 } from '#/lib/archive/berkas-arsip-service'
+import { BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 
 const ACTOR_ID = 'actor-user'
 const KLASIFIKASI_ID = 'klasifikasi-belanja-barang'
@@ -183,6 +184,7 @@ describe('berkas arsip service foundation', () => {
 
     expect(closed).toMatchObject({
       status_berkas: 'CLOSED',
+      status_arsip: 'AKTIF',
       nomor_spm: 'SPM-001/2026',
       retensi_aktif: '1 Tahun',
       retensi_inaktif: '3 Tahun',
@@ -303,6 +305,7 @@ function createFakeRepository(options: {
       return {
         ...openBerkas(),
         statusBerkas: 'CLOSED',
+        statusArsip: BERKAS_ARCHIVE_STATUS.AKTIF,
         nomorSpm: input.plan.nomorSpm,
         retensiAktif: input.plan.retensiAktif,
         retensiInaktif: input.plan.retensiInaktif,
@@ -327,6 +330,7 @@ function closedBerkas() {
     ...baseBerkas(),
     id: CLOSED_BERKAS_ID,
     statusBerkas: 'CLOSED' as const,
+    statusArsip: BERKAS_ARCHIVE_STATUS.AKTIF,
     nomorSpm: 'SPM-CLOSED',
     retensiAktif: '1 Tahun',
     retensiInaktif: '3 Tahun',
@@ -344,6 +348,7 @@ function baseBerkas() {
     klasifikasiKodeSnapshot: 'BB',
     klasifikasiNamaSnapshot: 'Belanja Barang',
     statusBerkas: 'OPEN' as const,
+    statusArsip: null,
     nomorSpm: null,
     retensiAktif: null,
     retensiInaktif: null,

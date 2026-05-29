@@ -42,6 +42,7 @@ export function safeBerkasDto(berkas: BerkasArsipDto): BerkasArsipDto {
     klasifikasi_kode_snapshot: berkas.klasifikasi_kode_snapshot,
     klasifikasi_nama_snapshot: berkas.klasifikasi_nama_snapshot,
     status_berkas: berkas.status_berkas,
+    status_arsip: berkas.status_arsip,
     nomor_spm: berkas.nomor_spm,
     retensi_aktif: berkas.retensi_aktif,
     retensi_inaktif: berkas.retensi_inaktif,

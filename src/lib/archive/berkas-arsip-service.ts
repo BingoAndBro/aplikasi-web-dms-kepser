@@ -10,8 +10,10 @@ import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import {
   ARCHIVE_SOURCE_TYPE,
+  BERKAS_ARCHIVE_STATUS,
   BERKAS_STATUS,
   type ArchiveSourceType,
+  type BerkasArchiveStatus,
   type BerkasStatus,
 } from '#/lib/constants/archive-status'
 import {
@@ -31,6 +33,7 @@ export type BerkasArsipDto = {
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: BerkasStatus
+  status_arsip: BerkasArchiveStatus | null
   nomor_spm: string | null
   retensi_aktif: string | null
   retensi_inaktif: string | null
@@ -57,6 +60,7 @@ type BerkasRow = {
   klasifikasiKodeSnapshot: string | null
   klasifikasiNamaSnapshot: string
   statusBerkas: BerkasStatus
+  statusArsip: BerkasArchiveStatus | null
   nomorSpm: string | null
   retensiAktif: string | null
   retensiInaktif: string | null
@@ -478,6 +482,7 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
       .update(berkasArsip)
       .set({
         statusBerkas: BERKAS_STATUS.CLOSED,
+        statusArsip: BERKAS_ARCHIVE_STATUS.AKTIF,
         nomorSpm: input.plan.nomorSpm,
         retensiAktif: input.plan.retensiAktif,
         retensiInaktif: input.plan.retensiInaktif,
@@ -541,6 +546,7 @@ function toBerkasDto(row: BerkasRow): BerkasArsipDto {
     klasifikasi_kode_snapshot: row.klasifikasiKodeSnapshot,
     klasifikasi_nama_snapshot: row.klasifikasiNamaSnapshot,
     status_berkas: row.statusBerkas,
+    status_arsip: row.statusArsip,
     nomor_spm: row.nomorSpm,
     retensi_aktif: row.retensiAktif,
     retensi_inaktif: row.retensiInaktif,
