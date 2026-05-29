@@ -64,6 +64,7 @@ function safeBerkasDetail(detail: BerkasArsipDetailDto) {
 function safeBerkasDetailItem(item: BerkasArsipDetailItemDto, index: number) {
   return {
     item_key: `item-${index + 1}`,
+    item_file_key: item.item_id,
     source_type: item.source_type,
     source_title: item.source_title,
     source_date: item.source_date,

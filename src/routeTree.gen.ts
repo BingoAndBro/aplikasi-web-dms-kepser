@@ -170,6 +170,8 @@ import { Route as ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport } from '.
 import { Route as ApiBendaharaDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/bendahara/dokumen/$id/download/$lampiranIndex'
 import { Route as ApiArsiparisManualArsipIdAttachmentsAttachmentIdPreviewRouteImport } from './routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview'
 import { Route as ApiArsiparisManualArsipIdAttachmentsAttachmentIdDownloadRouteImport } from './routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download'
+import { Route as ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRouteImport } from './routes/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex'
+import { Route as ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRouteImport } from './routes/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex'
 
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
@@ -1011,6 +1013,18 @@ const ApiArsiparisManualArsipIdAttachmentsAttachmentIdDownloadRoute =
     path: '/$attachmentId/download',
     getParentRoute: () => ApiArsiparisManualArsipIdAttachmentsRoute,
   } as any)
+const ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute =
+  ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRouteImport.update({
+    id: '/$itemId/preview/$lampiranIndex',
+    path: '/$itemId/preview/$lampiranIndex',
+    getParentRoute: () => ApiArsiparisBerkasIdItemsRoute,
+  } as any)
+const ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute =
+  ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRouteImport.update({
+    id: '/$itemId/download/$lampiranIndex',
+    path: '/$itemId/download/$lampiranIndex',
+    getParentRoute: () => ApiArsiparisBerkasIdItemsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -1158,7 +1172,7 @@ export interface FileRoutesByFullPath {
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
-  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRoute
+  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1174,6 +1188,8 @@ export interface FileRoutesByFullPath {
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
   '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiArsiparisManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiArsiparisManualArsipIdAttachmentsAttachmentIdPreviewRoute
+  '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute
+  '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex': typeof ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1312,7 +1328,7 @@ export interface FileRoutesByTo {
   '/ppk/dokumen/$id': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
-  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRoute
+  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1328,6 +1344,8 @@ export interface FileRoutesByTo {
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
   '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiArsiparisManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiArsiparisManualArsipIdAttachmentsAttachmentIdPreviewRoute
+  '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute
+  '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex': typeof ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1476,7 +1494,7 @@ export interface FileRoutesById {
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
-  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRoute
+  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1492,6 +1510,8 @@ export interface FileRoutesById {
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
   '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiArsiparisManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiArsiparisManualArsipIdAttachmentsAttachmentIdPreviewRoute
+  '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute
+  '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex': typeof ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1657,6 +1677,8 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
     | '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview'
+    | '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex'
+    | '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1811,6 +1833,8 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
     | '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview'
+    | '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex'
+    | '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex'
   id:
     | '__root__'
     | '/'
@@ -1974,6 +1998,8 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
     | '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview'
+    | '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex'
+    | '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -3181,6 +3207,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArsiparisManualArsipIdAttachmentsAttachmentIdDownloadRouteImport
       parentRoute: typeof ApiArsiparisManualArsipIdAttachmentsRoute
     }
+    '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex': {
+      id: '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex'
+      path: '/$itemId/preview/$lampiranIndex'
+      fullPath: '/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex'
+      preLoaderRoute: typeof ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRouteImport
+      parentRoute: typeof ApiArsiparisBerkasIdItemsRoute
+    }
+    '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex': {
+      id: '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex'
+      path: '/$itemId/download/$lampiranIndex'
+      fullPath: '/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex'
+      preLoaderRoute: typeof ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRouteImport
+      parentRoute: typeof ApiArsiparisBerkasIdItemsRoute
+    }
   }
 }
 
@@ -3547,14 +3587,32 @@ const ApiArsiparisArsipIdRouteChildren: ApiArsiparisArsipIdRouteChildren = {
 const ApiArsiparisArsipIdRouteWithChildren =
   ApiArsiparisArsipIdRoute._addFileChildren(ApiArsiparisArsipIdRouteChildren)
 
+interface ApiArsiparisBerkasIdItemsRouteChildren {
+  ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute: typeof ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute
+  ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute: typeof ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute
+}
+
+const ApiArsiparisBerkasIdItemsRouteChildren: ApiArsiparisBerkasIdItemsRouteChildren =
+  {
+    ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute:
+      ApiArsiparisBerkasIdItemsItemIdDownloadLampiranIndexRoute,
+    ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute:
+      ApiArsiparisBerkasIdItemsItemIdPreviewLampiranIndexRoute,
+  }
+
+const ApiArsiparisBerkasIdItemsRouteWithChildren =
+  ApiArsiparisBerkasIdItemsRoute._addFileChildren(
+    ApiArsiparisBerkasIdItemsRouteChildren,
+  )
+
 interface ApiArsiparisBerkasIdRouteChildren {
   ApiArsiparisBerkasIdCloseRoute: typeof ApiArsiparisBerkasIdCloseRoute
-  ApiArsiparisBerkasIdItemsRoute: typeof ApiArsiparisBerkasIdItemsRoute
+  ApiArsiparisBerkasIdItemsRoute: typeof ApiArsiparisBerkasIdItemsRouteWithChildren
 }
 
 const ApiArsiparisBerkasIdRouteChildren: ApiArsiparisBerkasIdRouteChildren = {
   ApiArsiparisBerkasIdCloseRoute: ApiArsiparisBerkasIdCloseRoute,
-  ApiArsiparisBerkasIdItemsRoute: ApiArsiparisBerkasIdItemsRoute,
+  ApiArsiparisBerkasIdItemsRoute: ApiArsiparisBerkasIdItemsRouteWithChildren,
 }
 
 const ApiArsiparisBerkasIdRouteWithChildren =
@@ -3730,10 +3788,13 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
+
 import type { createStart } from '@tanstack/react-start'
+
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
+
     router: Awaited<ReturnType<typeof getRouter>>
   }
 }

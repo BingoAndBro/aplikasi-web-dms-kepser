@@ -29,6 +29,9 @@ vi.mock('#/lib/archive/berkas-arsip-read-model', async (importOriginal) => {
 })
 
 import {
+  buildBerkasItemAttachmentFileUrl,
+} from '#/routes/arsiparis/berkas/$id'
+import {
   formatBerkasArchiveStatusLabel,
   formatBerkasStatusLabel,
   formatItemWarningLabel,
@@ -116,7 +119,7 @@ describe('folder-first berkas archive read API routes', () => {
     expect(readModelMocks.listBerkasArsipFolders).not.toHaveBeenCalled()
   })
 
-  it('returns safe detail DTOs from getBerkasArsipDetail without item ids or bridge ids', async () => {
+  it('returns safe detail DTOs from getBerkasArsipDetail with internal file keys but no bridge ids', async () => {
     const response = await detailGetHandler({
       request: new Request(`http://localhost/api/arsiparis/berkas/${BERKAS_ID}`),
       params: { id: BERKAS_ID },
@@ -128,6 +131,7 @@ describe('folder-first berkas archive read API routes', () => {
     expect(readModelMocks.getBerkasArsipDetail).toHaveBeenCalledWith(BERKAS_ID)
     expect(body.berkas.items[0]).toMatchObject({
       item_key: 'item-1',
+      item_file_key: '44444444-4444-4444-8444-444444444444',
       source_type: 'WORKFLOW',
       source_title: 'Laporan Pembayaran',
     })
@@ -160,6 +164,22 @@ describe('folder-first berkas archive page formatting', () => {
     expect(formatSourceTypeLabel('WORKFLOW')).toBe('Workflow')
     expect(formatSourceTypeLabel('MANUAL')).toBe('Manual')
     expect(formatItemWarningLabel('SOURCE_NOT_FOUND')).toBe('Data sumber tidak ditemukan')
+  })
+
+  it('builds folder item file-action URLs without raw logical paths', () => {
+    const href = buildBerkasItemAttachmentFileUrl(
+      BERKAS_ID,
+      '44444444-4444-4444-8444-444444444444',
+      0,
+      'preview',
+    )
+
+    expect(href).toBe(
+      `/api/arsiparis/berkas/${BERKAS_ID}/items/44444444-4444-4444-8444-444444444444/preview/0`,
+    )
+    expect(href).not.toContain('logical_path')
+    expect(href).not.toContain('storage')
+    expect(href).not.toContain('token')
   })
 })
 

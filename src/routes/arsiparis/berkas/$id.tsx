@@ -2,9 +2,12 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
   ChevronRight,
+  Download,
+  Eye,
   FileText,
   FolderOpen,
   Loader2,
+  X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -29,6 +32,7 @@ export const Route = createFileRoute('/arsiparis/berkas/$id')({ component: Berka
 
 type BerkasDetailItem = {
   item_key: string
+  item_file_key: string
   source_type: string
   source_title: string
   source_date: string | null
@@ -115,7 +119,7 @@ function BerkasArsipDetailPage() {
           </div>
           <h2 className="font-headline text-2xl font-extrabold text-on-surface">Detail Berkas Arsip</h2>
           <p className="mt-1 text-xs text-on-surface-variant">
-            Detail folder-first read-only. Fase ini tidak menyediakan aksi lifecycle, preview, atau download.
+            Detail folder-first read-only dengan akses lampiran melalui endpoint server terotorisasi.
           </p>
         </div>
 
@@ -151,7 +155,7 @@ function BerkasArsipDetailPage() {
         ) : (
           <>
             <FolderMetadataPanel detail={detail} />
-            <ItemList items={detail.items} />
+            <ItemList berkasId={detail.berkas_id} statusArsip={detail.status_arsip} items={detail.items} />
           </>
         )}
       </div>
@@ -206,7 +210,25 @@ function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
   )
 }
 
-function ItemList({ items }: { items: BerkasDetailItem[] }) {
+function ItemList({
+  berkasId,
+  statusArsip,
+  items,
+}: {
+  berkasId: string
+  statusArsip: string | null
+  items: BerkasDetailItem[]
+}) {
+  const [previewing, setPreviewing] = useState<{ href: string; title: string } | null>(null)
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && previewing) setPreviewing(null)
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [previewing])
+
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 py-12">
@@ -218,21 +240,52 @@ function ItemList({ items }: { items: BerkasDetailItem[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      <div>
-        <h3 className="font-headline text-lg font-extrabold text-on-surface">Daftar Dokumen Dalam Berkas</h3>
-        <p className="text-xs text-on-surface-variant">Kartu item ringan tanpa aksi file atau detail arsip lama.</p>
+    <>
+      {previewing && (
+        <PreviewModal
+          href={previewing.href}
+          title={previewing.title}
+          onClose={() => setPreviewing(null)}
+        />
+      )}
+
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-headline text-lg font-extrabold text-on-surface">Daftar Dokumen Dalam Berkas</h3>
+          <p className="text-xs text-on-surface-variant">Kartu item ringan tanpa aksi lifecycle atau detail arsip lama.</p>
+        </div>
+        <div className="grid gap-3">
+          {items.map((item, index) => (
+            <ItemCard
+              key={item.item_key}
+              berkasId={berkasId}
+              statusArsip={statusArsip}
+              item={item}
+              index={index}
+              onPreview={(href, title) => setPreviewing({ href, title })}
+            />
+          ))}
+        </div>
       </div>
-      <div className="grid gap-3">
-        {items.map((item, index) => (
-          <ItemCard key={item.item_key} item={item} index={index} />
-        ))}
-      </div>
-    </div>
+    </>
   )
 }
 
-function ItemCard({ item, index }: { item: BerkasDetailItem; index: number }) {
+function ItemCard({
+  berkasId,
+  statusArsip,
+  item,
+  index,
+  onPreview,
+}: {
+  berkasId: string
+  statusArsip: string | null
+  item: BerkasDetailItem
+  index: number
+  onPreview: (href: string, title: string) => void
+}) {
+  const fileBlocked = statusArsip === 'DIMUSNAHKAN'
+
   return (
     <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -285,6 +338,124 @@ function ItemCard({ item, index }: { item: BerkasDetailItem; index: number }) {
           ))}
         </div>
       )}
+
+      <ItemAttachmentActions
+        berkasId={berkasId}
+        item={item}
+        fileBlocked={fileBlocked}
+        onPreview={onPreview}
+      />
+    </div>
+  )
+}
+
+function ItemAttachmentActions({
+  berkasId,
+  item,
+  fileBlocked,
+  onPreview,
+}: {
+  berkasId: string
+  item: BerkasDetailItem
+  fileBlocked: boolean
+  onPreview: (href: string, title: string) => void
+}) {
+  const attachmentCount = typeof item.attachment_count === 'number' && item.attachment_count > 0
+    ? item.attachment_count
+    : 0
+
+  if (attachmentCount === 0) return null
+
+  if (fileBlocked) {
+    return (
+      <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+        Data sudah dimusnahkan
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-3 grid gap-2">
+      {Array.from({ length: attachmentCount }, (_, lampiranIndex) => {
+        const title = attachmentCount === 1 ? 'Lampiran' : `Lampiran ${lampiranIndex + 1}`
+        const previewHref = buildBerkasItemAttachmentFileUrl(berkasId, item.item_file_key, lampiranIndex, 'preview')
+        const downloadHref = buildBerkasItemAttachmentFileUrl(berkasId, item.item_file_key, lampiranIndex, 'download')
+
+        return (
+          <div
+            key={`${item.item_key}-lampiran-${lampiranIndex}`}
+            className="flex items-center gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-low/20 px-3 py-2"
+          >
+            <FileText size={15} className="shrink-0 text-outline" />
+            <p className="min-w-0 flex-1 truncate text-xs font-semibold text-on-surface">{title}</p>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                onClick={() => onPreview(previewHref, title)}
+                aria-label={`Pratinjau ${title}`}
+              >
+                <Eye size={14} />
+              </Button>
+              <a
+                href={downloadHref}
+                className="inline-flex size-6 items-center justify-center rounded-[min(var(--radius-md),10px)] hover:bg-muted hover:text-foreground"
+                aria-label={`Unduh ${title}`}
+              >
+                <Download size={14} />
+              </a>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function PreviewModal({
+  href,
+  title,
+  onClose,
+}: {
+  href: string
+  title: string
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Tutup pratinjau"
+      />
+      <div
+        className="relative z-10 mx-4 flex max-h-[70vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Pratinjau lampiran berkas"
+        onClick={event => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3">
+          <FileText size={16} className="shrink-0 text-primary" />
+          <p className="flex-1 truncate text-sm font-semibold text-on-surface">{title}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup pratinjau"
+            className="flex size-7 items-center justify-center rounded-full hover:bg-surface-container-low"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto bg-surface-container-low/30">
+          <iframe
+            src={href}
+            className="h-[calc(70vh-72px)] w-full border-0"
+            title={title}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -338,6 +509,22 @@ function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string |
           : 'border-slate-200 bg-slate-50 text-slate-700'
 
   return <Badge className={className}>{formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}</Badge>
+}
+
+export function buildBerkasItemAttachmentFileUrl(
+  berkasId: string,
+  itemFileKey: string,
+  lampiranIndex: number,
+  purpose: 'preview' | 'download',
+): string {
+  return [
+    '/api/arsiparis/berkas',
+    encodeURIComponent(berkasId),
+    'items',
+    encodeURIComponent(itemFileKey),
+    purpose,
+    encodeURIComponent(String(lampiranIndex)),
+  ].join('/')
 }
 
 function resolveErrorMessage(error: unknown): string {
