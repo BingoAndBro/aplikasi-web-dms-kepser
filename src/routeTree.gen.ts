@@ -142,6 +142,7 @@ import { Route as ApiArsiparisManualArsipCategoriesRouteImport } from './routes/
 import { Route as ApiArsiparisManualArsipIdRouteImport } from './routes/api/arsiparis/manual-arsip/$id'
 import { Route as ApiArsiparisKlasifikasiIdRouteImport } from './routes/api/arsiparis/klasifikasi/$id'
 import { Route as ApiArsiparisDokumenIdRouteImport } from './routes/api/arsiparis/dokumen.$id'
+import { Route as ApiArsiparisBerkasOpenRouteImport } from './routes/api/arsiparis/berkas/open'
 import { Route as ApiArsiparisArsipExportRouteImport } from './routes/api/arsiparis/arsip/export'
 import { Route as ApiArsiparisArsipClassificationReportDetailRouteImport } from './routes/api/arsiparis/arsip/classification-report-detail'
 import { Route as ApiArsiparisArsipClassificationReportRouteImport } from './routes/api/arsiparis/arsip/classification-report'
@@ -156,6 +157,8 @@ import { Route as ApiBendaharaDokumenIdRejectRouteImport } from './routes/api/be
 import { Route as ApiBendaharaDokumenIdApproveRouteImport } from './routes/api/bendahara/dokumen/$id/approve'
 import { Route as ApiArsiparisManualArsipIdAttachmentsRouteImport } from './routes/api/arsiparis/manual-arsip/$id/attachments'
 import { Route as ApiArsiparisDokumenIdArchiveRouteImport } from './routes/api/arsiparis/dokumen.$id.archive'
+import { Route as ApiArsiparisBerkasIdItemsRouteImport } from './routes/api/arsiparis/berkas/$id/items'
+import { Route as ApiArsiparisBerkasIdCloseRouteImport } from './routes/api/arsiparis/berkas/$id/close'
 import { Route as ApiArsiparisArsipIdLifecycleRouteImport } from './routes/api/arsiparis/arsip/$id/lifecycle'
 import { Route as ApiPpkDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/preview/$lampiranIndex'
 import { Route as ApiPpkDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/download/$lampiranIndex'
@@ -845,6 +848,11 @@ const ApiArsiparisDokumenIdRoute = ApiArsiparisDokumenIdRouteImport.update({
   path: '/api/arsiparis/dokumen/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiArsiparisBerkasOpenRoute = ApiArsiparisBerkasOpenRouteImport.update({
+  id: '/api/arsiparis/berkas/open',
+  path: '/api/arsiparis/berkas/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiArsiparisArsipExportRoute = ApiArsiparisArsipExportRouteImport.update({
   id: '/api/arsiparis/arsip/export',
   path: '/api/arsiparis/arsip/export',
@@ -924,6 +932,18 @@ const ApiArsiparisDokumenIdArchiveRoute =
     id: '/archive',
     path: '/archive',
     getParentRoute: () => ApiArsiparisDokumenIdRoute,
+  } as any)
+const ApiArsiparisBerkasIdItemsRoute =
+  ApiArsiparisBerkasIdItemsRouteImport.update({
+    id: '/api/arsiparis/berkas/$id/items',
+    path: '/api/arsiparis/berkas/$id/items',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiArsiparisBerkasIdCloseRoute =
+  ApiArsiparisBerkasIdCloseRouteImport.update({
+    id: '/api/arsiparis/berkas/$id/close',
+    path: '/api/arsiparis/berkas/$id/close',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiArsiparisArsipIdLifecycleRoute =
   ApiArsiparisArsipIdLifecycleRouteImport.update({
@@ -1081,6 +1101,7 @@ export interface FileRoutesByFullPath {
   '/api/arsiparis/arsip/classification-report': typeof ApiArsiparisArsipClassificationReportRoute
   '/api/arsiparis/arsip/classification-report-detail': typeof ApiArsiparisArsipClassificationReportDetailRoute
   '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
+  '/api/arsiparis/berkas/open': typeof ApiArsiparisBerkasOpenRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -1108,6 +1129,8 @@ export interface FileRoutesByFullPath {
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
+  '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
+  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1228,6 +1251,7 @@ export interface FileRoutesByTo {
   '/api/arsiparis/arsip/classification-report': typeof ApiArsiparisArsipClassificationReportRoute
   '/api/arsiparis/arsip/classification-report-detail': typeof ApiArsiparisArsipClassificationReportDetailRoute
   '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
+  '/api/arsiparis/berkas/open': typeof ApiArsiparisBerkasOpenRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -1255,6 +1279,8 @@ export interface FileRoutesByTo {
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
+  '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
+  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1385,6 +1411,7 @@ export interface FileRoutesById {
   '/api/arsiparis/arsip/classification-report': typeof ApiArsiparisArsipClassificationReportRoute
   '/api/arsiparis/arsip/classification-report-detail': typeof ApiArsiparisArsipClassificationReportDetailRoute
   '/api/arsiparis/arsip/export': typeof ApiArsiparisArsipExportRoute
+  '/api/arsiparis/berkas/open': typeof ApiArsiparisBerkasOpenRoute
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -1412,6 +1439,8 @@ export interface FileRoutesById {
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
+  '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
+  '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1543,6 +1572,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/classification-report'
     | '/api/arsiparis/arsip/classification-report-detail'
     | '/api/arsiparis/arsip/export'
+    | '/api/arsiparis/berkas/open'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
@@ -1570,6 +1600,8 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
     | '/api/arsiparis/arsip/$id/lifecycle'
+    | '/api/arsiparis/berkas/$id/close'
+    | '/api/arsiparis/berkas/$id/items'
     | '/api/arsiparis/dokumen/$id/archive'
     | '/api/arsiparis/manual-arsip/$id/attachments'
     | '/api/bendahara/dokumen/$id/approve'
@@ -1690,6 +1722,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/classification-report'
     | '/api/arsiparis/arsip/classification-report-detail'
     | '/api/arsiparis/arsip/export'
+    | '/api/arsiparis/berkas/open'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
@@ -1717,6 +1750,8 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id'
     | '/ppk/dokumen/$id'
     | '/api/arsiparis/arsip/$id/lifecycle'
+    | '/api/arsiparis/berkas/$id/close'
+    | '/api/arsiparis/berkas/$id/items'
     | '/api/arsiparis/dokumen/$id/archive'
     | '/api/arsiparis/manual-arsip/$id/attachments'
     | '/api/bendahara/dokumen/$id/approve'
@@ -1846,6 +1881,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/classification-report'
     | '/api/arsiparis/arsip/classification-report-detail'
     | '/api/arsiparis/arsip/export'
+    | '/api/arsiparis/berkas/open'
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
@@ -1873,6 +1909,8 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
     | '/api/arsiparis/arsip/$id/lifecycle'
+    | '/api/arsiparis/berkas/$id/close'
+    | '/api/arsiparis/berkas/$id/items'
     | '/api/arsiparis/dokumen/$id/archive'
     | '/api/arsiparis/manual-arsip/$id/attachments'
     | '/api/bendahara/dokumen/$id/approve'
@@ -1949,6 +1987,7 @@ export interface RootRouteChildren {
   ApiArsiparisArsipClassificationReportRoute: typeof ApiArsiparisArsipClassificationReportRoute
   ApiArsiparisArsipClassificationReportDetailRoute: typeof ApiArsiparisArsipClassificationReportDetailRoute
   ApiArsiparisArsipExportRoute: typeof ApiArsiparisArsipExportRoute
+  ApiArsiparisBerkasOpenRoute: typeof ApiArsiparisBerkasOpenRoute
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
   ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
   ApiArsiparisManualArsipIdRoute: typeof ApiArsiparisManualArsipIdRouteWithChildren
@@ -1961,6 +2000,8 @@ export interface RootRouteChildren {
   ApiPpkResubmitIdRoute: typeof ApiPpkResubmitIdRoute
   ApiArsiparisKlasifikasiIndexRoute: typeof ApiArsiparisKlasifikasiIndexRoute
   ApiArsiparisManualArsipIndexRoute: typeof ApiArsiparisManualArsipIndexRoute
+  ApiArsiparisBerkasIdCloseRoute: typeof ApiArsiparisBerkasIdCloseRoute
+  ApiArsiparisBerkasIdItemsRoute: typeof ApiArsiparisBerkasIdItemsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -2896,6 +2937,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArsiparisDokumenIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/arsiparis/berkas/open': {
+      id: '/api/arsiparis/berkas/open'
+      path: '/api/arsiparis/berkas/open'
+      fullPath: '/api/arsiparis/berkas/open'
+      preLoaderRoute: typeof ApiArsiparisBerkasOpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/arsiparis/arsip/export': {
       id: '/api/arsiparis/arsip/export'
       path: '/api/arsiparis/arsip/export'
@@ -2993,6 +3041,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/arsiparis/dokumen/$id/archive'
       preLoaderRoute: typeof ApiArsiparisDokumenIdArchiveRouteImport
       parentRoute: typeof ApiArsiparisDokumenIdRoute
+    }
+    '/api/arsiparis/berkas/$id/items': {
+      id: '/api/arsiparis/berkas/$id/items'
+      path: '/api/arsiparis/berkas/$id/items'
+      fullPath: '/api/arsiparis/berkas/$id/items'
+      preLoaderRoute: typeof ApiArsiparisBerkasIdItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/arsiparis/berkas/$id/close': {
+      id: '/api/arsiparis/berkas/$id/close'
+      path: '/api/arsiparis/berkas/$id/close'
+      fullPath: '/api/arsiparis/berkas/$id/close'
+      preLoaderRoute: typeof ApiArsiparisBerkasIdCloseRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/arsiparis/arsip/$id/lifecycle': {
       id: '/api/arsiparis/arsip/$id/lifecycle'
@@ -3553,6 +3615,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArsiparisArsipClassificationReportDetailRoute:
     ApiArsiparisArsipClassificationReportDetailRoute,
   ApiArsiparisArsipExportRoute: ApiArsiparisArsipExportRoute,
+  ApiArsiparisBerkasOpenRoute: ApiArsiparisBerkasOpenRoute,
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
   ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
   ApiArsiparisManualArsipIdRoute: ApiArsiparisManualArsipIdRouteWithChildren,
@@ -3566,6 +3629,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpkResubmitIdRoute: ApiPpkResubmitIdRoute,
   ApiArsiparisKlasifikasiIndexRoute: ApiArsiparisKlasifikasiIndexRoute,
   ApiArsiparisManualArsipIndexRoute: ApiArsiparisManualArsipIndexRoute,
+  ApiArsiparisBerkasIdCloseRoute: ApiArsiparisBerkasIdCloseRoute,
+  ApiArsiparisBerkasIdItemsRoute: ApiArsiparisBerkasIdItemsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
