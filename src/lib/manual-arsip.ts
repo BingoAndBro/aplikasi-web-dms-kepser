@@ -1,9 +1,11 @@
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { and, asc, desc, eq, isNull, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, sql, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
   arsip,
+  berkasArsip,
+  berkasArsipItem,
   manualArsip,
   manualArsipAttachment,
   manualArsipCategory,
@@ -17,8 +19,15 @@ import {
 import {
   ARCHIVE_SOURCE_TYPE,
   ARCHIVE_STATUS,
+  BERKAS_STATUS,
 } from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
+import {
+  addManualDocumentToOpenBerkas,
+  BerkasArsipServiceError,
+  getOrCreateOpenBerkasForKlasifikasi,
+  type BerkasArsipRepository,
+} from '#/lib/archive/berkas-arsip-service'
 import {
   buildManualArchiveCanonicalUpdateValues,
   createManualArchiveCanonicalWritePlan,
@@ -171,6 +180,8 @@ type ManualArsipPatchUpdatedRow = {
   updated_at: Date | string | null
 }
 
+type ManualArsipTransaction = Pick<typeof db, 'select' | 'insert' | 'update'>
+
 const FALLBACK_ATTACHMENT_TITLE_SEGMENT = 'Lampiran'
 const FALLBACK_MANUAL_ARSIP_SEGMENT = 'Arsip'
 const FALLBACK_CATEGORY_SEGMENT = 'Kategori'
@@ -233,111 +244,129 @@ export async function createManualArsipRecord(
   const retentionDates = getManualArchiveRetentionDates(input)
 
   const created = await db.transaction(async (tx) => {
-    const [source] = await tx
-      .insert(manualArsip)
-      .values({
-        nama: input.nama,
-        tanggal: input.tanggal,
-        nomorSurat: input.nomor_surat,
-        tanggalDiarsipkan: input.tanggal_diarsipkan,
-        keterangan: input.keterangan,
-        categoryId: category.id,
+      const [source] = await tx
+        .insert(manualArsip)
+        .values({
+          nama: input.nama,
+          tanggal: input.tanggal,
+          nomorSurat: input.nomor_surat,
+          tanggalDiarsipkan: input.tanggal_diarsipkan,
+          keterangan: input.keterangan,
+          categoryId: category.id,
+          klasifikasiId: klasifikasi.id,
+          klasifikasiKodeSnapshot: klasifikasi.kode,
+          klasifikasiNamaSnapshot: klasifikasi.nama,
+          retensiAktif: input.retensi_aktif,
+          retensiInaktif: input.retensi_inaktif,
+          masaAktifBerakhir: retentionDates.masaAktifBerakhir,
+          masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
+          nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
+          statusArsip: ARCHIVE_STATUS.AKTIF,
+          metadata: input.metadata ?? {},
+          createdBy,
+          archivedBy: input.tanggal_diarsipkan ? createdBy : null,
+          canonicalArsipId: null,
+        })
+        .returning({
+          id: manualArsip.id,
+          nama: manualArsip.nama,
+          tanggal: manualArsip.tanggal,
+          nomor_surat: manualArsip.nomorSurat,
+          tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
+          keterangan: manualArsip.keterangan,
+          nominal_realisasi: manualArsip.nominalRealisasi,
+          status_arsip: manualArsip.statusArsip,
+          category_id: manualArsip.categoryId,
+          klasifikasi_id: manualArsip.klasifikasiId,
+          klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
+          klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
+          retensi_aktif: manualArsip.retensiAktif,
+          retensi_inaktif: manualArsip.retensiInaktif,
+          masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
+          masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
+          archived_by: manualArsip.archivedBy,
+          canonical_arsip_id: manualArsip.canonicalArsipId,
+          metadata: manualArsip.metadata,
+          created_by: manualArsip.createdBy,
+          created_at: manualArsip.createdAt,
+          updated_at: manualArsip.updatedAt,
+        })
+
+      if (!source) {
+        throw new Error('MANUAL_ARCHIVE_SOURCE_CREATE_FAILED')
+      }
+
+      const plan = createManualArchiveCanonicalWritePlan({
+        id: source.id,
+        canonicalArsipId: source.canonical_arsip_id,
+        nama: source.nama,
+        nomorSurat: source.nomor_surat,
+        tanggalDiarsipkan: source.tanggal_diarsipkan,
+        klasifikasiId: source.klasifikasi_id,
+        klasifikasiKodeSnapshot: source.klasifikasi_kode_snapshot,
+        klasifikasiNamaSnapshot: source.klasifikasi_nama_snapshot,
+        retensiAktif: source.retensi_aktif,
+        retensiInaktif: source.retensi_inaktif,
+        masaAktifBerakhir: source.masa_aktif_berakhir,
+        masaInaktifBerakhir: source.masa_inaktif_berakhir,
+        archivedBy: source.archived_by,
+        createdBy: source.created_by,
+        nominalRealisasi: source.nominal_realisasi,
+        statusArsip: source.status_arsip,
+      })
+
+      if (plan.action !== 'create') {
+        throw new Error('MANUAL_ARCHIVE_CANONICAL_PLAN_NOT_CREATE')
+      }
+
+      const [canonical] = await tx
+        .insert(arsip)
+        .values(plan.insertValues)
+        .returning({
+          id: arsip.id,
+        })
+
+      if (!canonical) {
+        throw new Error('MANUAL_ARCHIVE_CANONICAL_CREATE_FAILED')
+      }
+
+      const [linked] = await tx
+        .update(manualArsip)
+        .set({
+          canonicalArsipId: canonical.id,
+        })
+        .where(and(
+          eq(manualArsip.id, source.id),
+          isNull(manualArsip.canonicalArsipId),
+        ))
+        .returning({
+          id: manualArsip.id,
+          canonical_arsip_id: manualArsip.canonicalArsipId,
+        })
+
+      if (!linked?.canonical_arsip_id) {
+        throw new Error('MANUAL_ARCHIVE_CANONICAL_LINK_FAILED')
+      }
+
+      const berkasRepository = createManualArchiveBerkasRepository(tx)
+      const openBerkas = await getOrCreateOpenBerkasForKlasifikasi({
         klasifikasiId: klasifikasi.id,
-        klasifikasiKodeSnapshot: klasifikasi.kode,
-        klasifikasiNamaSnapshot: klasifikasi.nama,
-        retensiAktif: input.retensi_aktif,
-        retensiInaktif: input.retensi_inaktif,
-        masaAktifBerakhir: retentionDates.masaAktifBerakhir,
-        masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
-        nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
-        statusArsip: ARCHIVE_STATUS.AKTIF,
-        metadata: input.metadata ?? {},
-        createdBy,
-        archivedBy: input.tanggal_diarsipkan ? createdBy : null,
-        canonicalArsipId: null,
-      })
-      .returning({
-        id: manualArsip.id,
-        nama: manualArsip.nama,
-        tanggal: manualArsip.tanggal,
-        nomor_surat: manualArsip.nomorSurat,
-        tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
-        keterangan: manualArsip.keterangan,
-        nominal_realisasi: manualArsip.nominalRealisasi,
-        status_arsip: manualArsip.statusArsip,
-        category_id: manualArsip.categoryId,
-        klasifikasi_id: manualArsip.klasifikasiId,
-        klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
-        klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
-        retensi_aktif: manualArsip.retensiAktif,
-        retensi_inaktif: manualArsip.retensiInaktif,
-        masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
-        masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
-        archived_by: manualArsip.archivedBy,
-        canonical_arsip_id: manualArsip.canonicalArsipId,
-        metadata: manualArsip.metadata,
-        created_by: manualArsip.createdBy,
-        created_at: manualArsip.createdAt,
-        updated_at: manualArsip.updatedAt,
-      })
+        actorUserId: createdBy,
+      }, { repository: berkasRepository })
 
-    if (!source) {
-      throw new Error('MANUAL_ARCHIVE_SOURCE_CREATE_FAILED')
+      await addManualDocumentToOpenBerkas({
+        berkasId: openBerkas.id,
+        manualArsipId: source.id,
+        actorUserId: createdBy,
+      }, { repository: berkasRepository })
+
+      return source
+  }).catch((error) => {
+    if (error instanceof BerkasArsipServiceError) {
+      throw new ManualArsipApiError(error.message, statusForBerkasServiceError(error))
     }
 
-    const plan = createManualArchiveCanonicalWritePlan({
-      id: source.id,
-      canonicalArsipId: source.canonical_arsip_id,
-      nama: source.nama,
-      nomorSurat: source.nomor_surat,
-      tanggalDiarsipkan: source.tanggal_diarsipkan,
-      klasifikasiId: source.klasifikasi_id,
-      klasifikasiKodeSnapshot: source.klasifikasi_kode_snapshot,
-      klasifikasiNamaSnapshot: source.klasifikasi_nama_snapshot,
-      retensiAktif: source.retensi_aktif,
-      retensiInaktif: source.retensi_inaktif,
-      masaAktifBerakhir: source.masa_aktif_berakhir,
-      masaInaktifBerakhir: source.masa_inaktif_berakhir,
-      archivedBy: source.archived_by,
-      createdBy: source.created_by,
-      nominalRealisasi: source.nominal_realisasi,
-      statusArsip: source.status_arsip,
-    })
-
-    if (plan.action !== 'create') {
-      throw new Error('MANUAL_ARCHIVE_CANONICAL_PLAN_NOT_CREATE')
-    }
-
-    const [canonical] = await tx
-      .insert(arsip)
-      .values(plan.insertValues)
-      .returning({
-        id: arsip.id,
-      })
-
-    if (!canonical) {
-      throw new Error('MANUAL_ARCHIVE_CANONICAL_CREATE_FAILED')
-    }
-
-    const [linked] = await tx
-      .update(manualArsip)
-      .set({
-        canonicalArsipId: canonical.id,
-      })
-      .where(and(
-        eq(manualArsip.id, source.id),
-        isNull(manualArsip.canonicalArsipId),
-      ))
-      .returning({
-        id: manualArsip.id,
-        canonical_arsip_id: manualArsip.canonicalArsipId,
-      })
-
-    if (!linked?.canonical_arsip_id) {
-      throw new Error('MANUAL_ARCHIVE_CANONICAL_LINK_FAILED')
-    }
-
-    return source
+    throw error
   })
 
   if (!created) {
@@ -348,6 +377,152 @@ export async function createManualArsipRecord(
     ...toManualArsipListItem(created, category, klasifikasi),
     metadata: sanitizeMetadata(created.metadata),
     attachments: [],
+  }
+}
+
+function createManualArchiveBerkasRepository(
+  tx: ManualArsipTransaction,
+): BerkasArsipRepository {
+  return {
+    async findActiveKlasifikasi(id) {
+      const [row] = await tx
+        .select({
+          id: masterKlasifikasiArsip.id,
+          kode: masterKlasifikasiArsip.kode,
+          nama: masterKlasifikasiArsip.nama,
+        })
+        .from(masterKlasifikasiArsip)
+        .where(and(
+          eq(masterKlasifikasiArsip.id, id),
+          eq(masterKlasifikasiArsip.isActive, true),
+        ))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findOpenBerkasByKlasifikasiId(klasifikasiId) {
+      const [row] = await tx
+        .select()
+        .from(berkasArsip)
+        .where(and(
+          eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+        ))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async insertOpenBerkas(input) {
+      const [row] = await tx
+        .insert(berkasArsip)
+        .values({
+          klasifikasiId: input.klasifikasi.id,
+          klasifikasiKodeSnapshot: input.klasifikasi.kode,
+          klasifikasiNamaSnapshot: input.klasifikasi.nama,
+          statusBerkas: BERKAS_STATUS.OPEN,
+          createdBy: input.actorUserId,
+        })
+        .returning()
+
+      if (!row) throw new Error('BERKAS_OPEN_CREATE_FAILED')
+      return row
+    },
+
+    async findBerkasById(id) {
+      const [row] = await tx
+        .select()
+        .from(berkasArsip)
+        .where(eq(berkasArsip.id, id))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findWorkflowSource() {
+      throw new Error('WORKFLOW_SOURCE_NOT_SUPPORTED_IN_MANUAL_ARCHIVE_CREATE')
+    },
+
+    async findManualSource(manualArsipId) {
+      const [row] = await tx
+        .select({
+          id: manualArsip.id,
+          canonicalArsipId: manualArsip.canonicalArsipId,
+          klasifikasiId: manualArsip.klasifikasiId,
+        })
+        .from(manualArsip)
+        .where(eq(manualArsip.id, manualArsipId))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async insertBerkasItem(input) {
+      const [row] = await tx
+        .insert(berkasArsipItem)
+        .values({
+          berkasId: input.berkasId,
+          sourceType: input.sourceType,
+          dokumenId: input.dokumenId,
+          manualArsipId: input.manualArsipId,
+          canonicalArsipId: input.canonicalArsipId,
+          addedBy: input.actorUserId,
+        })
+        .returning()
+
+      if (!row) throw new Error('BERKAS_ITEM_CREATE_FAILED')
+      return row
+    },
+
+    async countBerkasItems(berkasId) {
+      const [row] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(berkasArsipItem)
+        .where(eq(berkasArsipItem.berkasId, berkasId))
+
+      return Number(row?.count ?? 0)
+    },
+
+    async closeOpenBerkas(input) {
+      const [row] = await tx
+        .update(berkasArsip)
+        .set({
+          statusBerkas: BERKAS_STATUS.CLOSED,
+          nomorSpm: input.plan.nomorSpm,
+          retensiAktif: input.plan.retensiAktif,
+          retensiInaktif: input.plan.retensiInaktif,
+          masaAktifBerakhir: input.plan.masaAktifBerakhir,
+          masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
+          closedAt: input.plan.closedAt,
+          closedBy: input.actorUserId,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(berkasArsip.id, input.berkasId),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+        ))
+        .returning()
+
+      return row ?? null
+    },
+  }
+}
+
+function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
+  switch (error.code) {
+    case 'KLASIFIKASI_NOT_FOUND':
+    case 'SOURCE_KLASIFIKASI_MISMATCH':
+    case 'INVALID_CLOSE_METADATA':
+      return 400
+    case 'BERKAS_NOT_FOUND':
+    case 'SOURCE_NOT_FOUND':
+      return 404
+    case 'BERKAS_CLOSED':
+    case 'BERKAS_NOT_OPEN':
+    case 'BERKAS_EMPTY':
+    case 'CONFLICT':
+      return 409
   }
 }
 

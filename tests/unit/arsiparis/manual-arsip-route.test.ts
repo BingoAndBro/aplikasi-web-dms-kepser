@@ -9,6 +9,8 @@ const CATEGORY_ID = '44444444-4444-4444-8444-444444444444'
 const KLASIFIKASI_ID = '55555555-5555-4555-8555-555555555555'
 const CANONICAL_ARSIP_ID = '66666666-6666-4666-8666-666666666666'
 const ATTACHMENT_ID = '77777777-7777-4777-8777-777777777777'
+const BERKAS_ID = '88888888-8888-4888-8888-888888888888'
+const BERKAS_ITEM_ID = '99999999-9999-4999-8999-999999999999'
 const ATTACHMENT_LOGICAL_PATH = 'manual-arsip/test-user/test-arsip/test.pdf'
 const TEST_STORAGE_ROOT = path.resolve('.tmp', 'manual-arsip-route-storage')
 const TEST_FILE_CONTENT = '%PDF-1.4 manual archive test file'
@@ -22,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   dbTransaction: vi.fn(),
   insertValues: vi.fn(),
   updateSet: vi.fn(),
+  txSelect: vi.fn(),
   txInsert: vi.fn(),
   txInsertValues: vi.fn(),
   txUpdate: vi.fn(),
@@ -512,6 +515,21 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
       canonicalArsipId: CANONICAL_ARSIP_ID,
     }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiKodeSnapshot: '001.02',
+      klasifikasiNamaSnapshot: 'Klasifikasi A',
+      statusBerkas: 'OPEN',
+      createdBy: USER_ID,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(4, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      sourceType: 'MANUAL',
+      dokumenId: null,
+      manualArsipId: MANUAL_ARSIP_ID,
+      canonicalArsipId: CANONICAL_ARSIP_ID,
+      addedBy: USER_ID,
+    }))
     expect(JSON.stringify(body)).not.toContain('logical_path')
     expect(JSON.stringify(body)).not.toContain('logicalPath')
     expect(JSON.stringify(body)).not.toContain('file_url')
@@ -520,6 +538,44 @@ describe('manual arsip API foundation routes', () => {
     expect(JSON.stringify(body)).not.toContain('sql')
     expect(JSON.stringify(body)).not.toContain('env')
     expect(JSON.stringify(body.manual_arsip.attachments)).toBe('[]')
+  })
+
+  it('reuses an existing OPEN berkas when creating a manual document', async () => {
+    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueManualArchiveCreateTransaction({
+      existingOpenBerkas: openBerkasRow(),
+    })
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+
+    expect(response.status).toBe(201)
+    expect(mocks.txInsertValues).toHaveBeenCalledTimes(3)
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      statusBerkas: 'OPEN',
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      sourceType: 'MANUAL',
+      manualArsipId: MANUAL_ARSIP_ID,
+      canonicalArsipId: CANONICAL_ARSIP_ID,
+    }))
+  })
+
+  it('maps duplicate manual berkas item assignment to a safe conflict', async () => {
+    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueManualArchiveCreateTransaction({
+      itemError: Object.assign(new Error('unique conflict'), { code: '23505' }),
+    })
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(409)
+    expect(body).toEqual({ error: 'Dokumen sudah terhubung ke berkas' })
   })
 
   it('creates with Permanen retention using the transitional sentinel dates', async () => {
@@ -2042,6 +2098,44 @@ function klasifikasiRow() {
   }
 }
 
+function openBerkasRow() {
+  return {
+    id: BERKAS_ID,
+    klasifikasiId: KLASIFIKASI_ID,
+    klasifikasiKodeSnapshot: '001.02',
+    klasifikasiNamaSnapshot: 'Klasifikasi A',
+    statusBerkas: 'OPEN',
+    nomorSpm: null,
+    retensiAktif: null,
+    retensiInaktif: null,
+    masaAktifBerakhir: null,
+    masaInaktifBerakhir: null,
+    closedAt: null,
+    closedBy: null,
+    createdBy: USER_ID,
+  }
+}
+
+function berkasItemRow() {
+  return {
+    id: BERKAS_ITEM_ID,
+    berkasId: BERKAS_ID,
+    sourceType: 'MANUAL',
+    dokumenId: null,
+    manualArsipId: MANUAL_ARSIP_ID,
+    canonicalArsipId: CANONICAL_ARSIP_ID,
+    addedBy: USER_ID,
+  }
+}
+
+function linkedManualSourceRow() {
+  return {
+    id: MANUAL_ARSIP_ID,
+    canonicalArsipId: CANONICAL_ARSIP_ID,
+    klasifikasiId: KLASIFIKASI_ID,
+  }
+}
+
 function manualArsipRow(overrides: Partial<{
   nama: string
   tanggal: string
@@ -2238,25 +2332,56 @@ function queueManualArchiveCreateTransaction(options: {
   source?: ReturnType<typeof manualArsipRow>
   canonical?: { id: string } | null
   linked?: { id: string; canonical_arsip_id: string | null } | null
+  existingOpenBerkas?: ReturnType<typeof openBerkasRow> | null
+  openBerkas?: ReturnType<typeof openBerkasRow> | null
+  manualSource?: ReturnType<typeof linkedManualSourceRow> | null
+  item?: ReturnType<typeof berkasItemRow> | null
   canonicalError?: Error
   linkError?: Error
+  itemError?: Error
 } = {}) {
-  const insertResults = [
-    [options.source ?? manualArsipRow()],
-    [options.canonical ?? { id: CANONICAL_ARSIP_ID }],
+  const selectedOpenBerkas = options.openBerkas === undefined
+    ? options.existingOpenBerkas ?? openBerkasRow()
+    : options.openBerkas
+  const selectedManualSource = options.manualSource === undefined
+    ? linkedManualSourceRow()
+    : options.manualSource
+  const txSelectResults = [
+    options.existingOpenBerkas ? [options.existingOpenBerkas] : [],
+    ...(options.existingOpenBerkas ? [] : [[klasifikasiRow()]]),
+    selectedOpenBerkas ? [selectedOpenBerkas] : [],
+    selectedManualSource ? [selectedManualSource] : [],
   ]
 
   mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
     const tx = {
+      select: mocks.txSelect.mockImplementation(() => createSelectBuilder(txSelectResults.shift() ?? [])),
       insert: mocks.txInsert.mockImplementation(() => ({
-        values: mocks.txInsertValues.mockImplementation(() => ({
+        values: mocks.txInsertValues.mockImplementation((values: Record<string, unknown>) => ({
           returning: vi.fn(async () => {
-            const callNumber = mocks.txInsertValues.mock.calls.length
-            if (callNumber === 2 && options.canonicalError) {
-              throw options.canonicalError
+            if ('nama' in values) {
+              return [options.source ?? manualArsipRow()]
             }
 
-            return insertResults.shift() ?? []
+            if ('namaArsip' in values) {
+              if (options.canonicalError) {
+                throw options.canonicalError
+              }
+
+              return [options.canonical ?? { id: CANONICAL_ARSIP_ID }]
+            }
+
+            if (values.statusBerkas === 'OPEN') {
+              return [selectedOpenBerkas ?? openBerkasRow()]
+            }
+
+            if (values.sourceType === 'MANUAL' && 'berkasId' in values) {
+              if (options.itemError) throw options.itemError
+
+              return [options.item ?? berkasItemRow()]
+            }
+
+            return []
           }),
         })),
       })),
