@@ -35,21 +35,6 @@ type FlatKlasifikasiOption = {
   node: Klasifikasi
 }
 
-const RETENSI_OPTIONS = ['1 Tahun', '3 Tahun', '5 Tahun', '10 Tahun', 'Permanen'] as const
-
-function retensiToYears(retensi: string): number {
-  if (retensi === 'Permanen') return 999
-  const match = retensi.match(/(\d+)/)
-  return match ? parseInt(match[1]) : 1
-}
-
-function calcDate(dateStr: string, years: number): string {
-  const d = new Date(dateStr)
-  if (years === 999) return '9999-12-31'
-  d.setFullYear(d.getFullYear() + years)
-  return d.toISOString().split('T')[0]
-}
-
 function compareKode(a: string | null | undefined, b: string | null | undefined): number {
   const aParts = (a ?? '').split('.')
   const bParts = (b ?? '').split('.')
@@ -164,7 +149,7 @@ type DokumenDetail = {
   status: string
   is_ketua_tim: boolean
   bendahara_approve: { nama: string; tanggal: string } | null
-  arsip: { id: string; status_arsip: string; nomor_surat: string } | null
+  arsip: { id: string; status_arsip: string; nomor_surat: string | null } | null
   is_archived: boolean
   nominal_realisasi: number | null
   is_non_material?: boolean
@@ -185,17 +170,12 @@ function ArsiparisDokumenDetailPage() {
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   const [klasifikasiList, setKlasifikasiList] = useState<Klasifikasi[]>([])
-  const [nomorSurat, setNomorSurat] = useState('')
   const [klasifikasi, setKlasifikasi] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [currentNodes, setCurrentNodes] = useState<Klasifikasi[]>([])
   const [selectedNode, setSelectedNode] = useState<Klasifikasi | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPath, setCurrentPath] = useState<Klasifikasi[]>([])
-  const [retensiAktif, setRetensiAktif] = useState<string>(RETENSI_OPTIONS[0])
-  const [retensiInaktif, setRetensiInaktif] = useState<string>(RETENSI_OPTIONS[0])
-  const [masaAktifBerakhir, setMasaAktifBerakhir] = useState('')
-  const [masaInaktifBerakhir, setMasaInaktifBerakhir] = useState('')
   const [catatan, setCatatan] = useState('')
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [formLoading, setFormLoading] = useState(false)
@@ -276,24 +256,9 @@ function ArsiparisDokumenDetailPage() {
     return () => document.removeEventListener('mousedown', handlePointerDown)
   }, [dropdownOpen])
 
-  function recalcDates() {
-    if (!dokumen) return
-    const archivedAt = dokumen.tanggal || new Date().toISOString().split('T')[0]
-    const activeYears = retensiToYears(retensiAktif)
-    const inactiveYears = retensiToYears(retensiInaktif)
-    setMasaAktifBerakhir(calcDate(archivedAt, activeYears))
-    const aktifEndDate = masaAktifBerakhir || calcDate(archivedAt, activeYears)
-    setMasaInaktifBerakhir(calcDate(aktifEndDate, inactiveYears))
-  }
-
-  useEffect(() => { recalcDates() }, [dokumen, retensiAktif, retensiInaktif])
-
   async function handleArchive() {
     const errors: Record<string, string> = {}
-    if (!nomorSurat.trim()) errors.nomorSurat = 'Nomor surat wajib diisi'
-    if (!klasifikasi) errors.klasifikasi = 'Klasifikasi wajib dipilih'
-    if (!masaAktifBerakhir) errors.masaAktifBerakhir = 'Masa aktif berakhir wajib diisi'
-    if (!masaInaktifBerakhir) errors.masaInaktifBerakhir = 'Masa inaktif berakhir wajib diisi'
+    if (!klasifikasi) errors.klasifikasi = 'Jenis pembayaran wajib dipilih'
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
 
     setFormLoading(true); setFormSubmitError(null)
@@ -301,12 +266,7 @@ function ArsiparisDokumenDetailPage() {
       await apiMutation(`/api/arsiparis/dokumen/${id}/archive`, {
         method: 'POST',
         body: {
-          nomor_surat: nomorSurat.trim(),
           klasifikasi_id: klasifikasi,
-          retensi_aktif: retensiAktif,
-          retensi_inaktif: retensiInaktif,
-          masa_aktif_berakhir: masaAktifBerakhir,
-          masa_inaktif_berakhir: masaInaktifBerakhir,
           catatan_arsiparis: catatan.trim() || undefined,
         },
       })
@@ -396,7 +356,7 @@ function ArsiparisDokumenDetailPage() {
         <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
           <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
           <ChevronRight size={10} />
-          <Link to="/arsiparis/inbox" className="hover:text-primary">Pemberkasan</Link>
+          <Link to="/arsiparis/inbox" className="hover:text-primary">Pengklasifikasian</Link>
           <ChevronRight size={10} />
           <span className="text-primary">Detail</span>
         </div>
@@ -406,7 +366,7 @@ function ArsiparisDokumenDetailPage() {
         <div className="flex items-center gap-3">
           <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">COMPLETED</Badge>
           {isArchived && (
-            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs"> Sudah Diarsipkan (#{dokumen.arsip?.nomor_surat})</Badge>
+            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">Sudah Diklasifikasikan</Badge>
           )}
         </div>
 
@@ -443,28 +403,19 @@ function ArsiparisDokumenDetailPage() {
           <div className="bg-green-50 border border-green-200 rounded-xl p-5 flex items-center gap-3">
             <CheckCircle2 size={20} className="text-green-500 shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-green-700">Dokumen sudah diarsipkan</p>
-              <p className="text-xs text-green-600">Nomor Surat: {dokumen.arsip?.nomor_surat}</p>
+              <p className="text-sm font-semibold text-green-700">Dokumen sudah diklasifikasikan</p>
+              <p className="text-xs text-green-600">Jenis pembayaran sudah dipilih untuk dokumen ini.</p>
             </div>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-            <p className="text-xs font-bold text-outline uppercase tracking-widest mb-4">Formulir Pemberkasan</p>
+            <p className="text-xs font-bold text-outline uppercase tracking-widest mb-4">Formulir Pengklasifikasian Dokumen</p>
+            <p className="text-xs text-on-surface-variant mb-4">
+              Pilih jenis pembayaran untuk tahap awal. Metadata final berkas dan retensi diisi pada fase tutup berkas.
+            </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-on-surface mb-1.5">Nomor Surat <span className="text-error">*</span></label>
-                <input
-                  type="text"
-                  value={nomorSurat}
-                  onChange={e => { setNomorSurat(e.target.value); setFormErrors(p => ({ ...p, nomorSurat: '' })) }}
-                  placeholder="Contoh: 001/ARSIP/2025"
-                  className={cn('w-full px-3 py-2 border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring', formErrors.nomorSurat ? 'border-error' : 'border-border')}
-                />
-                {formErrors.nomorSurat && <p className="text-[10px] text-error mt-1">{formErrors.nomorSurat}</p>}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-on-surface mb-1.5">Klasifikasi <span className="text-error">*</span></label>
+                <label className="block text-xs font-semibold text-on-surface mb-1.5">Jenis Pembayaran <span className="text-error">*</span></label>
                 <div ref={dropdownRef} className="relative">
                   <button
                     type="button"
@@ -493,7 +444,7 @@ function ArsiparisDokumenDetailPage() {
                           </p>
                         </>
                       ) : (
-                        <p className="text-on-surface-variant">Pilih Klasifikasi</p>
+                        <p className="text-on-surface-variant">Pilih Jenis Pembayaran</p>
                       )}
                     </div>
                     <ChevronDown
@@ -511,7 +462,7 @@ function ArsiparisDokumenDetailPage() {
                             type="text"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            placeholder="Cari nama atau kode klasifikasi"
+                            placeholder="Cari nama atau kode jenis pembayaran"
                             className="w-full rounded-lg border border-border bg-white py-2 pr-3 pl-9 text-xs outline-none focus:ring-1 focus:ring-ring"
                           />
                         </div>
@@ -559,7 +510,7 @@ function ArsiparisDokumenDetailPage() {
                           )
                         ) : visibleNodes.length === 0 ? (
                           <div className="px-3 py-6 text-center text-xs text-on-surface-variant">
-                            Tidak ada klasifikasi pada level ini.
+                            Tidak ada jenis pembayaran pada level ini.
                           </div>
                         ) : (
                           visibleNodes.map((node) => {
@@ -590,54 +541,6 @@ function ArsiparisDokumenDetailPage() {
                 {formErrors.klasifikasi && <p className="text-[10px] text-error mt-1">{formErrors.klasifikasi}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-1.5">Retensi Aktif <span className="text-error">*</span></label>
-                  <select
-                    value={retensiAktif}
-                    onChange={e => setRetensiAktif(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                  >
-                    {RETENSI_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-1.5">Retensi Inaktif <span className="text-error">*</span></label>
-                  <select
-                    value={retensiInaktif}
-                    onChange={e => setRetensiInaktif(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                  >
-                    {RETENSI_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-1.5">Masa Aktif Berakhir</label>
-                  <input
-                    type="date"
-                    value={masaAktifBerakhir}
-                    onChange={e => setMasaAktifBerakhir(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                    readOnly
-                  />
-                  {formErrors.masaAktifBerakhir && <p className="text-[10px] text-error mt-1">{formErrors.masaAktifBerakhir}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface mb-1.5">Masa Inaktif Berakhir</label>
-                  <input
-                    type="date"
-                    value={masaInaktifBerakhir}
-                    onChange={e => setMasaInaktifBerakhir(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground bg-white outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                    readOnly
-                  />
-                  {formErrors.masaInaktifBerakhir && <p className="text-[10px] text-error mt-1">{formErrors.masaInaktifBerakhir}</p>}
-                </div>
-              </div>
-
               <div>
                 <label className="block text-xs font-semibold text-on-surface mb-1.5">Catatan Kepala Sub Bagian Umum <span className="text-outline font-normal">(opsional)</span></label>
                 <textarea
@@ -659,7 +562,7 @@ function ArsiparisDokumenDetailPage() {
               <div className="flex gap-3 pt-2">
                 <Button className="flex-1 gap-1.5" onClick={handleArchive} disabled={!!formLoading}>
                   {formLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  Terima
+                  Klasifikasikan Dokumen
                 </Button>
               </div>
             </div>

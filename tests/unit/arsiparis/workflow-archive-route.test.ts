@@ -69,7 +69,7 @@ describe('workflow archive canonical write route', () => {
     const body = await response.json()
     expect(body).toEqual({
       success: true,
-      message: 'Dokumen berhasil diarsipkan',
+      message: 'Dokumen berhasil diklasifikasikan',
     })
 
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
@@ -108,6 +108,65 @@ describe('workflow archive canonical write route', () => {
     expect(responseText).not.toContain('formal/path.pdf')
   })
 
+  it('allows initial classification without nomor_surat', async () => {
+    queueSelectResults(
+      [dokumenRow()],
+      [],
+      [klasifikasiRow()],
+    )
+    queueSuccessfulTransaction()
+
+    const body = validArchiveBody() as Record<string, unknown>
+    delete body.nomor_surat
+
+    const response = await postHandler({
+      request: createPostRequest(body),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      message: 'Dokumen berhasil diklasifikasikan',
+    })
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      nomorSurat: null,
+      klasifikasiId: KLASIFIKASI_ID,
+    }))
+  })
+
+  it('allows initial classification without final retention metadata', async () => {
+    queueSelectResults(
+      [dokumenRow()],
+      [],
+      [klasifikasiRow()],
+    )
+    queueSuccessfulTransaction()
+
+    const body = validArchiveBody() as Record<string, unknown>
+    delete body.retensi_aktif
+    delete body.retensi_inaktif
+    delete body.masa_aktif_berakhir
+    delete body.masa_inaktif_berakhir
+
+    const response = await postHandler({
+      request: createPostRequest(body),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      message: 'Dokumen berhasil diklasifikasikan',
+    })
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      retensiAktif: null,
+      retensiInaktif: null,
+      masaAktifBerakhir: null,
+      masaInaktifBerakhir: null,
+    }))
+  })
+
   it('rejects missing klasifikasi_id before DB writes', async () => {
     const body = validArchiveBody() as Record<string, unknown>
     delete body.klasifikasi_id
@@ -118,7 +177,7 @@ describe('workflow archive canonical write route', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Klasifikasi wajib dipilih' })
+    expect(await response.json()).toEqual({ error: 'Jenis pembayaran wajib dipilih' })
     expect(mocks.dbSelect).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
@@ -136,7 +195,7 @@ describe('workflow archive canonical write route', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Klasifikasi arsip tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Jenis pembayaran tidak ditemukan' })
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 

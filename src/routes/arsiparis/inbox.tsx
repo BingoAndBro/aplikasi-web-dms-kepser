@@ -78,10 +78,10 @@ function ArsiparisInboxPage() {
             <Banknote size={12} />
             <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
             <ChevronRight size={10} />
-            <span className="text-primary">Pemberkasan Arsip</span>
+            <span className="text-primary">Pengklasifikasian Dokumen</span>
           </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Pemberkasan Arsip</h2>
-          <p className="text-on-surface-variant text-xs mt-1">{items.length} dokumen menunggu untuk diarsipkan.</p>
+          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Pengklasifikasian Dokumen</h2>
+          <p className="text-on-surface-variant text-xs mt-1">{items.length} dokumen menunggu pengklasifikasian jenis pembayaran.</p>
         </div>
 
         <div className="flex gap-3">
@@ -113,7 +113,7 @@ function ArsiparisInboxPage() {
             </div>
             <p className="font-headline text-lg font-bold text-on-surface">Tidak ada dokumen</p>
             <p className="text-on-surface-variant text-xs text-center max-w-sm">
-              Dokumen yang telah disetujui PPSPM dan belum diarsipkan akan muncul di sini.
+              Dokumen yang telah disetujui PPSPM dan belum diklasifikasikan akan muncul di sini.
             </p>
           </div>
         ) : (

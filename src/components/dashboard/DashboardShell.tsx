@@ -42,8 +42,8 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
   KEPALA_SUB_BAGIAN_UMUM: {
     badge: 'KEPALA SUB BAGIAN UMUM PORTAL',
     title: 'Dashboard',
-    desc: 'Ruang kerja Kepala Sub Bagian Umum — pengelolaan dan klasifikasi dokumen arsip.',
-    ctaLabel: 'Pemberkasan Arsip',
+    desc: 'Ruang kerja Kepala Sub Bagian Umum — pengklasifikasian dokumen dan pengelolaan arsip.',
+    ctaLabel: 'Pengklasifikasian Dokumen',
     ctaTo: '/arsiparis/inbox',
   },
   PENANGGUNG_JAWAB_KINERJA: {

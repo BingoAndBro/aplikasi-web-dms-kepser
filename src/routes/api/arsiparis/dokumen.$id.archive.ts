@@ -32,7 +32,7 @@ function toSafeErrorLog(error: unknown): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/arsiparis/dokumen/[id]/archive - arsipkan dokumen
+// POST /api/arsiparis/dokumen/[id]/archive - transitional document classification write
 // ---------------------------------------------------------------------------
 
 const RETENSI_OPTIONS = ['1 Tahun', '3 Tahun', '5 Tahun', '10 Tahun', 'Permanen'] as const
@@ -52,13 +52,13 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         if (!body) return Response.json({ error: 'Body tidak valid' }, { status: 400 })
 
         const schema = z.object({
-          nomor_surat: z.string().min(1, 'Nomor surat wajib diisi'),
-          klasifikasi_id: z.string({ error: 'Klasifikasi wajib dipilih' }).uuid('Klasifikasi tidak valid'),
+          nomor_surat: z.string().trim().optional(),
+          klasifikasi_id: z.string({ error: 'Jenis pembayaran wajib dipilih' }).uuid('Jenis pembayaran tidak valid'),
           klasifikasi: z.string().optional(),
-          retensi_aktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi aktif tidak valid' }),
-          retensi_inaktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi inaktif tidak valid' }),
-          masa_aktif_berakhir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD'),
-          masa_inaktif_berakhir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD'),
+          retensi_aktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi aktif tidak valid' }).optional(),
+          retensi_inaktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi inaktif tidak valid' }).optional(),
+          masa_aktif_berakhir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD').optional(),
+          masa_inaktif_berakhir: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD').optional(),
           catatan_arsiparis: z.string().optional(),
         })
 
@@ -146,7 +146,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         }
 
         const klasifikasi = klasifikasiRows[0]
-        if (!klasifikasi) return Response.json({ error: 'Klasifikasi arsip tidak ditemukan' }, { status: 400 })
+        if (!klasifikasi) return Response.json({ error: 'Jenis pembayaran tidak ditemukan' }, { status: 400 })
 
         let lampiranSnapshot: LampiranSnapshotJson = []
         if (dok.lampiran_urls) {
@@ -176,15 +176,15 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
               sourceType: 'WORKFLOW',
               dokumenId: params.id,
               namaArsip,
-              nomorSurat: data.nomor_surat,
+              nomorSurat: data.nomor_surat?.trim() || null,
               klasifikasi: klasifikasi.nama,
               klasifikasiId: klasifikasi.id,
               klasifikasiKodeSnapshot: klasifikasi.kode,
               klasifikasiNamaSnapshot: klasifikasi.nama,
-              retensiAktif: data.retensi_aktif,
-              retensiInaktif: data.retensi_inaktif,
-              masaAktifBerakhir: data.masa_aktif_berakhir,
-              masaInaktifBerakhir: data.masa_inaktif_berakhir,
+              retensiAktif: data.retensi_aktif ?? null,
+              retensiInaktif: data.retensi_inaktif ?? null,
+              masaAktifBerakhir: data.masa_aktif_berakhir ?? null,
+              masaInaktifBerakhir: data.masa_inaktif_berakhir ?? null,
               catatanArsiparis: data.catatan_arsiparis ?? null,
               archivedBy: session.user.id,
               createdBy: dok.created_by,
@@ -221,7 +221,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
           return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
         }
 
-        return Response.json({ success: true, message: 'Dokumen berhasil diarsipkan' })
+        return Response.json({ success: true, message: 'Dokumen berhasil diklasifikasikan' })
       },
     },
   },
