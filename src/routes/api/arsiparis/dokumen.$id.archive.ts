@@ -1,14 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db/client'
-import { arsip, masterKlasifikasiArsip } from '#/db/schema/arsip'
+import {
+  arsip,
+  berkasArsip,
+  berkasArsipItem,
+  masterKlasifikasiArsip,
+} from '#/db/schema/arsip'
 import type { LampiranSnapshotJson } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { masterJenisDokumen, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import {
+  addWorkflowDocumentToOpenBerkas,
+  BerkasArsipServiceError,
+  getOrCreateOpenBerkasForKlasifikasi,
+  type BerkasArsipRepository,
+} from '#/lib/archive/berkas-arsip-service'
 import { deriveWorkflowNamaArsip } from '#/lib/archive/workflow-nama-arsip'
+import { ARCHIVE_SOURCE_TYPE, BERKAS_STATUS } from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
 import { transition } from '#/lib/fsm'
 import type { StatusDokumen } from '#/lib/types/fsm'
@@ -208,6 +220,18 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
               throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
             }
 
+            const berkasRepository = createWorkflowArchiveBerkasRepository(tx)
+            const openBerkas = await getOrCreateOpenBerkasForKlasifikasi({
+              klasifikasiId: klasifikasi.id,
+              actorUserId: session.user.id,
+            }, { repository: berkasRepository })
+
+            await addWorkflowDocumentToOpenBerkas({
+              berkasId: openBerkas.id,
+              dokumenId: params.id,
+              actorUserId: session.user.id,
+            }, { repository: berkasRepository })
+
             await tx.insert(logAktivitas).values({
               dokumenId: params.id,
               userId: session.user.id,
@@ -217,6 +241,13 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
             })
           })
         } catch (err) {
+          if (err instanceof BerkasArsipServiceError) {
+            return Response.json(
+              { error: err.message },
+              { status: statusForBerkasServiceError(err) },
+            )
+          }
+
           console.error('[archive] local transaction error:', toSafeErrorLog(err))
           return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
         }
@@ -226,3 +257,158 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
     },
   },
 })
+
+type WorkflowArchiveTransaction = Pick<typeof db, 'select' | 'insert' | 'update'>
+
+function createWorkflowArchiveBerkasRepository(
+  tx: WorkflowArchiveTransaction,
+): BerkasArsipRepository {
+  return {
+    async findActiveKlasifikasi(id) {
+      const [row] = await tx
+        .select({
+          id: masterKlasifikasiArsip.id,
+          kode: masterKlasifikasiArsip.kode,
+          nama: masterKlasifikasiArsip.nama,
+        })
+        .from(masterKlasifikasiArsip)
+        .where(and(
+          eq(masterKlasifikasiArsip.id, id),
+          eq(masterKlasifikasiArsip.isActive, true),
+        ))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findOpenBerkasByKlasifikasiId(klasifikasiId) {
+      const [row] = await tx
+        .select()
+        .from(berkasArsip)
+        .where(and(
+          eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+        ))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async insertOpenBerkas(input) {
+      const [row] = await tx
+        .insert(berkasArsip)
+        .values({
+          klasifikasiId: input.klasifikasi.id,
+          klasifikasiKodeSnapshot: input.klasifikasi.kode,
+          klasifikasiNamaSnapshot: input.klasifikasi.nama,
+          statusBerkas: BERKAS_STATUS.OPEN,
+          createdBy: input.actorUserId,
+        })
+        .returning()
+
+      if (!row) throw new Error('BERKAS_OPEN_CREATE_FAILED')
+      return row
+    },
+
+    async findBerkasById(id) {
+      const [row] = await tx
+        .select()
+        .from(berkasArsip)
+        .where(eq(berkasArsip.id, id))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findWorkflowSource(dokumenId) {
+      const [row] = await tx
+        .select({
+          id: dokumenTransaksi.id,
+          canonicalArsipId: arsip.id,
+          klasifikasiId: arsip.klasifikasiId,
+        })
+        .from(dokumenTransaksi)
+        .leftJoin(
+          arsip,
+          and(
+            eq(arsip.dokumenId, dokumenTransaksi.id),
+            eq(arsip.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+          ),
+        )
+        .where(eq(dokumenTransaksi.id, dokumenId))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findManualSource() {
+      throw new Error('MANUAL_SOURCE_NOT_SUPPORTED_IN_WORKFLOW_ARCHIVE_ROUTE')
+    },
+
+    async insertBerkasItem(input) {
+      const [row] = await tx
+        .insert(berkasArsipItem)
+        .values({
+          berkasId: input.berkasId,
+          sourceType: input.sourceType,
+          dokumenId: input.dokumenId,
+          manualArsipId: input.manualArsipId,
+          canonicalArsipId: input.canonicalArsipId,
+          addedBy: input.actorUserId,
+        })
+        .returning()
+
+      if (!row) throw new Error('BERKAS_ITEM_CREATE_FAILED')
+      return row
+    },
+
+    async countBerkasItems(berkasId) {
+      const [row] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(berkasArsipItem)
+        .where(eq(berkasArsipItem.berkasId, berkasId))
+
+      return Number(row?.count ?? 0)
+    },
+
+    async closeOpenBerkas(input) {
+      const [row] = await tx
+        .update(berkasArsip)
+        .set({
+          statusBerkas: BERKAS_STATUS.CLOSED,
+          nomorSpm: input.plan.nomorSpm,
+          retensiAktif: input.plan.retensiAktif,
+          retensiInaktif: input.plan.retensiInaktif,
+          masaAktifBerakhir: input.plan.masaAktifBerakhir,
+          masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
+          closedAt: input.plan.closedAt,
+          closedBy: input.actorUserId,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(berkasArsip.id, input.berkasId),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+        ))
+        .returning()
+
+      return row ?? null
+    },
+  }
+}
+
+function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
+  switch (error.code) {
+    case 'KLASIFIKASI_NOT_FOUND':
+    case 'SOURCE_KLASIFIKASI_MISMATCH':
+    case 'INVALID_CLOSE_METADATA':
+      return 400
+    case 'BERKAS_NOT_FOUND':
+    case 'SOURCE_NOT_FOUND':
+      return 404
+    case 'BERKAS_CLOSED':
+    case 'BERKAS_NOT_OPEN':
+    case 'BERKAS_EMPTY':
+    case 'CONFLICT':
+      return 409
+  }
+}

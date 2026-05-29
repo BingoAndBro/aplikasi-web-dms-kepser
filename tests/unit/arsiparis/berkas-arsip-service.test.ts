@@ -100,6 +100,35 @@ describe('berkas arsip service foundation', () => {
     expect(repository.calls).not.toContainEqual(['insertBerkasItem'])
   })
 
+  it('maps duplicate source assignment to a safe conflict error', async () => {
+    const repository = createFakeRepository({
+      insertBerkasItemError: Object.assign(new Error('unique conflict'), { code: '23505' }),
+    })
+
+    await expect(addWorkflowDocumentToOpenBerkas({
+      berkasId: BERKAS_ID,
+      dokumenId: DOKUMEN_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Dokumen sudah terhubung ke berkas',
+    })
+  })
+
+  it('does not hide non-unique add-item failures', async () => {
+    const repository = createFakeRepository({
+      insertBerkasItemError: Object.assign(new Error('database unavailable'), { code: '08006' }),
+    })
+
+    await expect(addWorkflowDocumentToOpenBerkas({
+      berkasId: BERKAS_ID,
+      dokumenId: DOKUMEN_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      message: 'database unavailable',
+    })
+  })
+
   it('rejects closing an empty berkas', async () => {
     const repository = createFakeRepository({ itemCount: 0 })
 
@@ -188,6 +217,7 @@ function createFakeRepository(options: {
   workflowKlasifikasiId?: string | null
   manualKlasifikasiId?: string | null
   insertOpenBerkasError?: unknown
+  insertBerkasItemError?: unknown
   openAfterConflict?: boolean
 } = {}): BerkasArsipRepository & { calls: unknown[][] } {
   const calls: unknown[][] = []
@@ -253,6 +283,7 @@ function createFakeRepository(options: {
     },
     async insertBerkasItem(input) {
       calls.push(['insertBerkasItem', input.berkasId, input.sourceType])
+      if (options.insertBerkasItemError) throw options.insertBerkasItemError
       return {
         id: 'berkas-item',
         berkasId: input.berkasId,

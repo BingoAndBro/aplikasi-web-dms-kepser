@@ -246,7 +246,7 @@ export async function addWorkflowDocumentToOpenBerkas(
 
   assertSourceMatchesBerkas(source, berkas)
 
-  const item = await repository.insertBerkasItem({
+  const item = await insertBerkasItemSafely(repository, {
     berkasId: input.berkasId,
     sourceType: ARCHIVE_SOURCE_TYPE.WORKFLOW,
     dokumenId: input.dokumenId,
@@ -271,7 +271,7 @@ export async function addManualDocumentToOpenBerkas(
 
   assertSourceMatchesBerkas(source, berkas)
 
-  const item = await repository.insertBerkasItem({
+  const item = await insertBerkasItemSafely(repository, {
     berkasId: input.berkasId,
     sourceType: ARCHIVE_SOURCE_TYPE.MANUAL,
     dokumenId: null,
@@ -514,6 +514,22 @@ function assertSourceMatchesBerkas(
     throw new BerkasArsipServiceError(
       'SOURCE_KLASIFIKASI_MISMATCH',
       'Jenis pembayaran dokumen tidak sesuai dengan berkas',
+    )
+  }
+}
+
+async function insertBerkasItemSafely(
+  repository: BerkasArsipRepository,
+  input: Parameters<BerkasArsipRepository['insertBerkasItem']>[0],
+): Promise<BerkasItemRow> {
+  try {
+    return await repository.insertBerkasItem(input)
+  } catch (error) {
+    if (!isUniqueConflict(error)) throw error
+
+    throw new BerkasArsipServiceError(
+      'CONFLICT',
+      'Dokumen sudah terhubung ke berkas',
     )
   }
 }

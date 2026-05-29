@@ -4,6 +4,8 @@ const SESSION_USER_ID = '11111111-1111-4111-8111-111111111111'
 const DOCUMENT_CREATOR_ID = '22222222-2222-4222-8222-222222222222'
 const DOCUMENT_ID = '33333333-3333-4333-8333-333333333333'
 const KLASIFIKASI_ID = '44444444-4444-4444-8444-444444444444'
+const BERKAS_ID = '55555555-5555-4555-8555-555555555555'
+const CANONICAL_ARSIP_ID = '66666666-6666-4666-8666-666666666666'
 
 const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
@@ -11,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   dbTransaction: vi.fn(),
   txInsert: vi.fn(),
   txInsertValues: vi.fn(),
+  txInsertReturning: vi.fn(),
+  txSelect: vi.fn(),
   txUpdate: vi.fn(),
   txUpdateSet: vi.fn(),
 }))
@@ -96,6 +100,21 @@ describe('workflow archive canonical write route', () => {
       }],
     }))
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      klasifikasiId: KLASIFIKASI_ID,
+      klasifikasiKodeSnapshot: 'KA.01',
+      klasifikasiNamaSnapshot: 'Keuangan',
+      statusBerkas: 'OPEN',
+      createdBy: SESSION_USER_ID,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      sourceType: 'WORKFLOW',
+      dokumenId: DOCUMENT_ID,
+      manualArsipId: null,
+      canonicalArsipId: CANONICAL_ARSIP_ID,
+      addedBy: SESSION_USER_ID,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(4, expect.objectContaining({
       dokumenId: DOCUMENT_ID,
       userId: SESSION_USER_ID,
       aksi: 'ARCHIVE',
@@ -165,6 +184,58 @@ describe('workflow archive canonical write route', () => {
       masaAktifBerakhir: null,
       masaInaktifBerakhir: null,
     }))
+  })
+
+  it('reuses an existing OPEN berkas and attaches the workflow item', async () => {
+    queueSelectResults(
+      [dokumenRow()],
+      [],
+      [klasifikasiRow()],
+    )
+    queueSuccessfulTransaction({
+      txSelectResults: [
+        [openBerkasRow()],
+        [openBerkasRow()],
+        [workflowSourceRow()],
+      ],
+    })
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      statusBerkas: 'OPEN',
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      sourceType: 'WORKFLOW',
+      dokumenId: DOCUMENT_ID,
+      canonicalArsipId: CANONICAL_ARSIP_ID,
+    }))
+  })
+
+  it('maps duplicate berkas item assignment to a safe conflict response', async () => {
+    queueSelectResults(
+      [dokumenRow()],
+      [],
+      [klasifikasiRow()],
+    )
+    queueSuccessfulTransaction({
+      txInsertReturningByCall: {
+        3: Object.assign(new Error('unique conflict'), { code: '23505' }),
+      },
+    })
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({ error: 'Dokumen sudah terhubung ke berkas' })
   })
 
   it('rejects missing klasifikasi_id before DB writes', async () => {
@@ -313,12 +384,40 @@ function createSelectBuilder(result: unknown[]): Record<string, unknown> {
   return query
 }
 
-function queueSuccessfulTransaction() {
+function queueSuccessfulTransaction(options: {
+  txSelectResults?: unknown[][]
+  txInsertReturningByCall?: Record<number, unknown>
+} = {}) {
   mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
+    let txInsertCall = 0
+    const txSelectResults = [...(options.txSelectResults ?? [
+      [],
+      [klasifikasiRow()],
+      [openBerkasRow()],
+      [workflowSourceRow()],
+    ])]
+
     const tx = {
-      insert: mocks.txInsert.mockReturnValue({
-        values: mocks.txInsertValues.mockResolvedValue(undefined),
-      }),
+      select: mocks.txSelect.mockImplementation(() => createSelectBuilder(txSelectResults.shift() ?? [])),
+      insert: mocks.txInsert.mockImplementation(() => ({
+        values: (value: Record<string, unknown>) => {
+          mocks.txInsertValues(value)
+          txInsertCall += 1
+
+          return {
+            returning: async () => {
+              mocks.txInsertReturning()
+              const override = options.txInsertReturningByCall?.[txInsertCall]
+              if (override instanceof Error) throw override
+              if (override) return override
+
+              if (value.statusBerkas === 'OPEN') return [openBerkasRow()]
+              if (value.sourceType === 'WORKFLOW') return [berkasItemRow()]
+              return []
+            },
+          }
+        },
+      })),
       update: mocks.txUpdate.mockReturnValue({
         set: mocks.txUpdateSet.mockReturnValue({
           where: vi.fn(() => ({
@@ -330,4 +429,42 @@ function queueSuccessfulTransaction() {
 
     return operation(tx)
   })
+}
+
+function openBerkasRow() {
+  return {
+    id: BERKAS_ID,
+    klasifikasiId: KLASIFIKASI_ID,
+    klasifikasiKodeSnapshot: 'KA.01',
+    klasifikasiNamaSnapshot: 'Keuangan',
+    statusBerkas: 'OPEN',
+    nomorSpm: null,
+    retensiAktif: null,
+    retensiInaktif: null,
+    masaAktifBerakhir: null,
+    masaInaktifBerakhir: null,
+    closedAt: null,
+    closedBy: null,
+    createdBy: SESSION_USER_ID,
+  }
+}
+
+function workflowSourceRow() {
+  return {
+    id: DOCUMENT_ID,
+    canonicalArsipId: CANONICAL_ARSIP_ID,
+    klasifikasiId: KLASIFIKASI_ID,
+  }
+}
+
+function berkasItemRow() {
+  return {
+    id: '77777777-7777-4777-8777-777777777777',
+    berkasId: BERKAS_ID,
+    sourceType: 'WORKFLOW',
+    dokumenId: DOCUMENT_ID,
+    manualArsipId: null,
+    canonicalArsipId: CANONICAL_ARSIP_ID,
+    addedBy: SESSION_USER_ID,
+  }
 }
