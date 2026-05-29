@@ -1,0 +1,575 @@
+import { and, eq, sql } from 'drizzle-orm'
+import {
+  berkasArsip,
+  berkasArsipItem,
+  masterKlasifikasiArsip,
+  manualArsip,
+  arsip,
+} from '#/db/schema/arsip'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
+import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
+import {
+  ARCHIVE_SOURCE_TYPE,
+  BERKAS_STATUS,
+  type ArchiveSourceType,
+  type BerkasStatus,
+} from '#/lib/constants/archive-status'
+import {
+  closeBerkasMetadataSchema,
+  type CloseBerkasMetadataInput,
+} from '#/lib/schemas/berkas-arsip'
+
+type KlasifikasiSnapshot = {
+  id: string
+  kode: string | null
+  nama: string
+}
+
+export type BerkasArsipDto = {
+  id: string
+  klasifikasi_id: string
+  klasifikasi_kode_snapshot: string | null
+  klasifikasi_nama_snapshot: string
+  status_berkas: BerkasStatus
+  nomor_spm: string | null
+  retensi_aktif: string | null
+  retensi_inaktif: string | null
+  masa_aktif_berakhir: string | null
+  masa_inaktif_berakhir: string | null
+  closed_at: string | null
+  closed_by: string | null
+  created_by: string
+}
+
+export type BerkasArsipItemDto = {
+  id: string
+  berkas_id: string
+  source_type: ArchiveSourceType
+  dokumen_id: string | null
+  manual_arsip_id: string | null
+  canonical_arsip_id: string | null
+  added_by: string
+}
+
+type BerkasRow = {
+  id: string
+  klasifikasiId: string
+  klasifikasiKodeSnapshot: string | null
+  klasifikasiNamaSnapshot: string
+  statusBerkas: BerkasStatus
+  nomorSpm: string | null
+  retensiAktif: string | null
+  retensiInaktif: string | null
+  masaAktifBerakhir: string | null
+  masaInaktifBerakhir: string | null
+  closedAt: Date | string | null
+  closedBy: string | null
+  createdBy: string
+}
+
+type BerkasItemRow = {
+  id: string
+  berkasId: string
+  sourceType: ArchiveSourceType
+  dokumenId: string | null
+  manualArsipId: string | null
+  canonicalArsipId: string | null
+  addedBy: string
+}
+
+type SourceReference = {
+  id: string
+  klasifikasiId: string | null
+  canonicalArsipId: string | null
+}
+
+export type CreateOpenBerkasInput = {
+  klasifikasiId: string
+  actorUserId: string
+}
+
+export type AddWorkflowDocumentToOpenBerkasInput = {
+  berkasId: string
+  dokumenId: string
+  actorUserId: string
+}
+
+export type AddManualDocumentToOpenBerkasInput = {
+  berkasId: string
+  manualArsipId: string
+  actorUserId: string
+}
+
+export type CloseBerkasArsipInput = {
+  berkasId: string
+  actorUserId: string
+  metadata: unknown
+  now?: Date
+}
+
+export type CloseBerkasPlan = {
+  nomorSpm: string
+  retensiAktif: CloseBerkasMetadataInput['retensi_aktif']
+  retensiInaktif: CloseBerkasMetadataInput['retensi_inaktif']
+  closedAtDateOnly: string
+  closedAt: Date
+  masaAktifBerakhir: string
+  masaInaktifBerakhir: string
+}
+
+export type BerkasArsipRepository = {
+  findActiveKlasifikasi(id: string): Promise<KlasifikasiSnapshot | null>
+  findOpenBerkasByKlasifikasiId(klasifikasiId: string): Promise<BerkasRow | null>
+  insertOpenBerkas(input: {
+    klasifikasi: KlasifikasiSnapshot
+    actorUserId: string
+  }): Promise<BerkasRow>
+  findBerkasById(id: string): Promise<BerkasRow | null>
+  findWorkflowSource(dokumenId: string): Promise<SourceReference | null>
+  findManualSource(manualArsipId: string): Promise<SourceReference | null>
+  insertBerkasItem(input: {
+    berkasId: string
+    sourceType: ArchiveSourceType
+    dokumenId: string | null
+    manualArsipId: string | null
+    canonicalArsipId: string | null
+    actorUserId: string
+  }): Promise<BerkasItemRow>
+  countBerkasItems(berkasId: string): Promise<number>
+  closeOpenBerkas(input: {
+    berkasId: string
+    actorUserId: string
+    plan: CloseBerkasPlan
+  }): Promise<BerkasRow | null>
+}
+
+export type BerkasArsipServiceDeps = {
+  repository?: BerkasArsipRepository
+}
+
+export type BerkasArsipErrorCode =
+  | 'KLASIFIKASI_NOT_FOUND'
+  | 'BERKAS_NOT_FOUND'
+  | 'BERKAS_CLOSED'
+  | 'BERKAS_NOT_OPEN'
+  | 'BERKAS_EMPTY'
+  | 'SOURCE_NOT_FOUND'
+  | 'SOURCE_KLASIFIKASI_MISMATCH'
+  | 'INVALID_CLOSE_METADATA'
+  | 'CONFLICT'
+
+export class BerkasArsipServiceError extends Error {
+  constructor(
+    public readonly code: BerkasArsipErrorCode,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'BerkasArsipServiceError'
+  }
+}
+
+export async function findOpenBerkasForKlasifikasi(
+  klasifikasiId: string,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipDto | null> {
+  const row = await getRepository(deps).findOpenBerkasByKlasifikasiId(klasifikasiId)
+  return row ? toBerkasDto(row) : null
+}
+
+export async function createOpenBerkasForKlasifikasi(
+  input: CreateOpenBerkasInput,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipDto> {
+  const repository = getRepository(deps)
+  const klasifikasi = await repository.findActiveKlasifikasi(input.klasifikasiId)
+  if (!klasifikasi) {
+    throw new BerkasArsipServiceError('KLASIFIKASI_NOT_FOUND', 'Jenis pembayaran tidak ditemukan')
+  }
+
+  const row = await repository.insertOpenBerkas({
+    klasifikasi,
+    actorUserId: input.actorUserId,
+  })
+
+  return toBerkasDto(row)
+}
+
+export async function getOrCreateOpenBerkasForKlasifikasi(
+  input: CreateOpenBerkasInput,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipDto> {
+  const repository = getRepository(deps)
+  const existing = await repository.findOpenBerkasByKlasifikasiId(input.klasifikasiId)
+  if (existing) return toBerkasDto(existing)
+
+  try {
+    return await createOpenBerkasForKlasifikasi(input, { repository })
+  } catch (error) {
+    if (!isUniqueConflict(error)) throw error
+
+    const racedExisting = await repository.findOpenBerkasByKlasifikasiId(input.klasifikasiId)
+    if (racedExisting) return toBerkasDto(racedExisting)
+
+    throw new BerkasArsipServiceError('CONFLICT', 'Gagal membuka berkas karena konflik data')
+  }
+}
+
+export async function assertBerkasCanAcceptItems(
+  berkasId: string,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipDto> {
+  const row = await getRepository(deps).findBerkasById(berkasId)
+  if (!row) {
+    throw new BerkasArsipServiceError('BERKAS_NOT_FOUND', 'Berkas tidak ditemukan')
+  }
+
+  if (row.statusBerkas !== BERKAS_STATUS.OPEN) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_CLOSED',
+      'Berkas ini tidak dapat dipilih karena sudah ditutup',
+    )
+  }
+
+  return toBerkasDto(row)
+}
+
+export async function addWorkflowDocumentToOpenBerkas(
+  input: AddWorkflowDocumentToOpenBerkasInput,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipItemDto> {
+  const repository = getRepository(deps)
+  const berkas = await assertBerkasCanAcceptItems(input.berkasId, { repository })
+  const source = await repository.findWorkflowSource(input.dokumenId)
+  if (!source) {
+    throw new BerkasArsipServiceError('SOURCE_NOT_FOUND', 'Dokumen workflow tidak ditemukan')
+  }
+
+  assertSourceMatchesBerkas(source, berkas)
+
+  const item = await repository.insertBerkasItem({
+    berkasId: input.berkasId,
+    sourceType: ARCHIVE_SOURCE_TYPE.WORKFLOW,
+    dokumenId: input.dokumenId,
+    manualArsipId: null,
+    canonicalArsipId: source.canonicalArsipId,
+    actorUserId: input.actorUserId,
+  })
+
+  return toBerkasItemDto(item)
+}
+
+export async function addManualDocumentToOpenBerkas(
+  input: AddManualDocumentToOpenBerkasInput,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipItemDto> {
+  const repository = getRepository(deps)
+  const berkas = await assertBerkasCanAcceptItems(input.berkasId, { repository })
+  const source = await repository.findManualSource(input.manualArsipId)
+  if (!source) {
+    throw new BerkasArsipServiceError('SOURCE_NOT_FOUND', 'Dokumen manual tidak ditemukan')
+  }
+
+  assertSourceMatchesBerkas(source, berkas)
+
+  const item = await repository.insertBerkasItem({
+    berkasId: input.berkasId,
+    sourceType: ARCHIVE_SOURCE_TYPE.MANUAL,
+    dokumenId: null,
+    manualArsipId: input.manualArsipId,
+    canonicalArsipId: source.canonicalArsipId,
+    actorUserId: input.actorUserId,
+  })
+
+  return toBerkasItemDto(item)
+}
+
+export async function closeBerkasArsip(
+  input: CloseBerkasArsipInput,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipDto> {
+  const repository = getRepository(deps)
+  const existing = await repository.findBerkasById(input.berkasId)
+  if (!existing) {
+    throw new BerkasArsipServiceError('BERKAS_NOT_FOUND', 'Berkas tidak ditemukan')
+  }
+
+  if (existing.statusBerkas !== BERKAS_STATUS.OPEN) {
+    throw new BerkasArsipServiceError('BERKAS_NOT_OPEN', 'Berkas sudah ditutup')
+  }
+
+  const itemCount = await repository.countBerkasItems(input.berkasId)
+  if (itemCount < 1) {
+    throw new BerkasArsipServiceError('BERKAS_EMPTY', 'Berkas kosong tidak dapat ditutup')
+  }
+
+  const plan = buildCloseBerkasPlan(input.metadata, input.now)
+  const closed = await repository.closeOpenBerkas({
+    berkasId: input.berkasId,
+    actorUserId: input.actorUserId,
+    plan,
+  })
+
+  if (!closed) {
+    throw new BerkasArsipServiceError('BERKAS_NOT_OPEN', 'Berkas sudah ditutup')
+  }
+
+  return toBerkasDto(closed)
+}
+
+export function buildCloseBerkasPlan(
+  metadata: unknown,
+  now = new Date(),
+): CloseBerkasPlan {
+  const parsed = closeBerkasMetadataSchema.safeParse(metadata)
+  if (!parsed.success) {
+    throw new BerkasArsipServiceError(
+      'INVALID_CLOSE_METADATA',
+      parsed.error.issues[0]?.message ?? 'Metadata tutup berkas tidak valid',
+    )
+  }
+
+  const closedAtDateOnly = parsed.data.closed_at ?? toServerDateOnly(now)
+  const retentionDates = calculateManualArchiveRetentionDates({
+    tanggalDiarsipkan: closedAtDateOnly,
+    retensiAktif: parsed.data.retensi_aktif,
+    retensiInaktif: parsed.data.retensi_inaktif,
+  })
+
+  return {
+    nomorSpm: parsed.data.nomor_spm,
+    retensiAktif: parsed.data.retensi_aktif,
+    retensiInaktif: parsed.data.retensi_inaktif,
+    closedAtDateOnly,
+    closedAt: dateOnlyToUtcMidnight(closedAtDateOnly),
+    masaAktifBerakhir: retentionDates.masaAktifBerakhir,
+    masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
+  }
+}
+
+const defaultBerkasArsipRepository: BerkasArsipRepository = {
+  async findActiveKlasifikasi(id) {
+    const database = await getDatabase()
+    const [row] = await database
+      .select({
+        id: masterKlasifikasiArsip.id,
+        kode: masterKlasifikasiArsip.kode,
+        nama: masterKlasifikasiArsip.nama,
+      })
+      .from(masterKlasifikasiArsip)
+      .where(and(
+        eq(masterKlasifikasiArsip.id, id),
+        eq(masterKlasifikasiArsip.isActive, true),
+      ))
+      .limit(1)
+
+    return row ?? null
+  },
+
+  async findOpenBerkasByKlasifikasiId(klasifikasiId) {
+    const database = await getDatabase()
+    const [row] = await database
+      .select()
+      .from(berkasArsip)
+      .where(and(
+        eq(berkasArsip.klasifikasiId, klasifikasiId),
+        eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+      ))
+      .limit(1)
+
+    return row ?? null
+  },
+
+  async insertOpenBerkas(input) {
+    const database = await getDatabase()
+    const [row] = await database
+      .insert(berkasArsip)
+      .values({
+        klasifikasiId: input.klasifikasi.id,
+        klasifikasiKodeSnapshot: input.klasifikasi.kode,
+        klasifikasiNamaSnapshot: input.klasifikasi.nama,
+        statusBerkas: BERKAS_STATUS.OPEN,
+        createdBy: input.actorUserId,
+      })
+      .returning()
+
+    if (!row) throw new Error('BERKAS_OPEN_CREATE_FAILED')
+    return row
+  },
+
+  async findBerkasById(id) {
+    const database = await getDatabase()
+    const [row] = await database
+      .select()
+      .from(berkasArsip)
+      .where(eq(berkasArsip.id, id))
+      .limit(1)
+
+    return row ?? null
+  },
+
+  async findWorkflowSource(dokumenId) {
+    const database = await getDatabase()
+    const [row] = await database
+      .select({
+        id: dokumenTransaksi.id,
+        canonicalArsipId: arsip.id,
+        klasifikasiId: arsip.klasifikasiId,
+      })
+      .from(dokumenTransaksi)
+      .leftJoin(
+        arsip,
+        and(
+          eq(arsip.dokumenId, dokumenTransaksi.id),
+          eq(arsip.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+        ),
+      )
+      .where(eq(dokumenTransaksi.id, dokumenId))
+      .limit(1)
+
+    return row ?? null
+  },
+
+  async findManualSource(manualArsipId) {
+    const database = await getDatabase()
+    const [row] = await database
+      .select({
+        id: manualArsip.id,
+        canonicalArsipId: manualArsip.canonicalArsipId,
+        klasifikasiId: manualArsip.klasifikasiId,
+      })
+      .from(manualArsip)
+      .where(eq(manualArsip.id, manualArsipId))
+      .limit(1)
+
+    return row ?? null
+  },
+
+  async insertBerkasItem(input) {
+    const database = await getDatabase()
+    const [row] = await database
+      .insert(berkasArsipItem)
+      .values({
+        berkasId: input.berkasId,
+        sourceType: input.sourceType,
+        dokumenId: input.dokumenId,
+        manualArsipId: input.manualArsipId,
+        canonicalArsipId: input.canonicalArsipId,
+        addedBy: input.actorUserId,
+      })
+      .returning()
+
+    if (!row) throw new Error('BERKAS_ITEM_CREATE_FAILED')
+    return row
+  },
+
+  async countBerkasItems(berkasId) {
+    const database = await getDatabase()
+    const [row] = await database
+      .select({ count: sql<number>`count(*)::int` })
+      .from(berkasArsipItem)
+      .where(eq(berkasArsipItem.berkasId, berkasId))
+
+    return Number(row?.count ?? 0)
+  },
+
+  async closeOpenBerkas(input) {
+    const database = await getDatabase()
+    const [row] = await database
+      .update(berkasArsip)
+      .set({
+        statusBerkas: BERKAS_STATUS.CLOSED,
+        nomorSpm: input.plan.nomorSpm,
+        retensiAktif: input.plan.retensiAktif,
+        retensiInaktif: input.plan.retensiInaktif,
+        masaAktifBerakhir: input.plan.masaAktifBerakhir,
+        masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
+        closedAt: input.plan.closedAt,
+        closedBy: input.actorUserId,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(berkasArsip.id, input.berkasId),
+        eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+      ))
+      .returning()
+
+    return row ?? null
+  },
+}
+
+function getRepository(deps: BerkasArsipServiceDeps): BerkasArsipRepository {
+  return deps.repository ?? defaultBerkasArsipRepository
+}
+
+async function getDatabase() {
+  const client = await import('#/db/client')
+  return client.db
+}
+
+function assertSourceMatchesBerkas(
+  source: SourceReference,
+  berkas: BerkasArsipDto,
+): void {
+  if (source.klasifikasiId !== berkas.klasifikasi_id) {
+    throw new BerkasArsipServiceError(
+      'SOURCE_KLASIFIKASI_MISMATCH',
+      'Jenis pembayaran dokumen tidak sesuai dengan berkas',
+    )
+  }
+}
+
+function toBerkasDto(row: BerkasRow): BerkasArsipDto {
+  return {
+    id: row.id,
+    klasifikasi_id: row.klasifikasiId,
+    klasifikasi_kode_snapshot: row.klasifikasiKodeSnapshot,
+    klasifikasi_nama_snapshot: row.klasifikasiNamaSnapshot,
+    status_berkas: row.statusBerkas,
+    nomor_spm: row.nomorSpm,
+    retensi_aktif: row.retensiAktif,
+    retensi_inaktif: row.retensiInaktif,
+    masa_aktif_berakhir: row.masaAktifBerakhir,
+    masa_inaktif_berakhir: row.masaInaktifBerakhir,
+    closed_at: row.closedAt ? dateLikeToIso(row.closedAt) : null,
+    closed_by: row.closedBy,
+    created_by: row.createdBy,
+  }
+}
+
+function toBerkasItemDto(row: BerkasItemRow): BerkasArsipItemDto {
+  return {
+    id: row.id,
+    berkas_id: row.berkasId,
+    source_type: row.sourceType,
+    dokumen_id: row.dokumenId,
+    manual_arsip_id: row.manualArsipId,
+    canonical_arsip_id: row.canonicalArsipId,
+    added_by: row.addedBy,
+  }
+}
+
+function toServerDateOnly(date: Date): string {
+  return [
+    String(date.getFullYear()).padStart(4, '0'),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function dateOnlyToUtcMidnight(dateOnly: string): Date {
+  const [year, month, day] = dateOnly.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
+}
+
+function dateLikeToIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : value
+}
+
+function isUniqueConflict(error: unknown): boolean {
+  return Boolean(
+    error
+      && typeof error === 'object'
+      && 'code' in error
+      && (error as { code?: unknown }).code === '23505',
+  )
+}
