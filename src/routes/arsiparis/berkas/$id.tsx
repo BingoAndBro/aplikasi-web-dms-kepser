@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   AlertCircle,
   AlertTriangle,
@@ -108,6 +108,7 @@ type BerkasDetailResponse = {
 
 function BerkasArsipDetailPage() {
   const { id } = Route.useParams()
+  const navigate = useNavigate()
   const [detail, setDetail] = useState<BerkasDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -165,7 +166,13 @@ function BerkasArsipDetailPage() {
       setActionSuccess(lifecycleAction.successMessage)
       setDestructionPanelOpen(false)
       setDestructionPhrase('')
-      await fetchData()
+      if (lifecycleAction.action === 'mark_inactive') {
+        await navigate({ to: '/arsiparis/inaktif' })
+      } else if (lifecycleAction.action === 'propose_destruction') {
+        await navigate({ to: '/arsiparis/usul-musnah' })
+      } else {
+        await fetchData()
+      }
     } catch (error) {
       setActionError(resolveErrorMessage(error))
     } finally {
@@ -197,7 +204,7 @@ function BerkasArsipDetailPage() {
       setActionSuccess('Berkas berhasil ditutup dan menjadi Arsip Aktif.')
       setCloseDialogOpen(false)
       setCloseForm(EMPTY_CLOSE_BERKAS_FORM)
-      await fetchData()
+      await navigate({ to: '/arsiparis/berkas' })
     } catch (error) {
       setActionError(resolveErrorMessage(error))
     } finally {

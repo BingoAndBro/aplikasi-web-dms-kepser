@@ -12,6 +12,14 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import {
   BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
   formatBerkasArchiveStatusLabel,
   formatBerkasStatusLabel,
@@ -87,7 +95,7 @@ function UsulMusnahPage() {
     }
   }
 
-  function openDestructionPanel(folder: BerkasFolder) {
+  function openDestructionDialog(folder: BerkasFolder) {
     const lifecycleAction = resolveBerkasLifecycleAction(folder.status_berkas, folder.status_arsip)
     if (lifecycleAction?.action !== 'approve_destruction') return
 
@@ -95,6 +103,12 @@ function UsulMusnahPage() {
     setDestructionPhrase('')
     setActionError(null)
     setActionSuccess(null)
+  }
+
+  function closeDestructionDialog() {
+    setDestructionTarget(null)
+    setDestructionPhrase('')
+    setActionError(null)
   }
 
   async function approveDestruction() {
@@ -178,49 +192,66 @@ function UsulMusnahPage() {
           </div>
         )}
 
-        {destructionTarget && (
-          <div className="rounded-2xl border border-error/30 bg-error/5 p-4">
-            <div className="mb-4 space-y-2 text-xs font-semibold text-error/90">
-              <p>Status berkas akan menjadi Dimusnahkan.</p>
-              <p>Preview dan download file akan diblokir.</p>
-              <p>File fisik tidak dihapus pada fase ini.</p>
-              <p>Metadata berkas dan dokumen tetap tersimpan.</p>
+        <Dialog
+          open={Boolean(destructionTarget)}
+          onOpenChange={(open) => {
+            if (!open && !pendingBerkasId) closeDestructionDialog()
+          }}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Musnahkan Data</DialogTitle>
+              <DialogDescription>
+                Konfirmasi status-only untuk berkas yang dipilih.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {destructionTarget && (
+                <div className="rounded-xl border border-outline-variant/40 bg-surface-container-low/30 px-3 py-2 text-xs text-on-surface">
+                  Berkas: <span className="font-semibold">
+                    {formatKlasifikasiLabel(
+                      destructionTarget.klasifikasi_kode_snapshot,
+                      destructionTarget.klasifikasi_nama_snapshot,
+                    )}
+                  </span>
+                </div>
+              )}
+
+              <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
+                <p>Status berkas akan menjadi Dimusnahkan.</p>
+                <p>Preview dan download file akan diblokir.</p>
+                <p>File fisik tidak dihapus pada fase ini.</p>
+                <p>Metadata berkas dan dokumen tetap tersimpan.</p>
+              </div>
+
+              <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-destruction-confirmation">
+                Ketik frasa konfirmasi <span className="text-error">*</span>
+                <input
+                  id="berkas-destruction-confirmation"
+                  value={destructionPhrase}
+                  onChange={(event) => setDestructionPhrase(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
+                  placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+                  autoComplete="off"
+                />
+              </label>
+              <p className="text-[10px] font-semibold text-outline">
+                Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+              </p>
             </div>
-            <div className="mb-3 rounded-xl border border-white/60 bg-white px-3 py-2 text-xs text-on-surface">
-              Berkas: <span className="font-semibold">
-                {formatKlasifikasiLabel(
-                  destructionTarget.klasifikasi_kode_snapshot,
-                  destructionTarget.klasifikasi_nama_snapshot,
-                )}
-              </span>
-            </div>
-            <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-destruction-confirmation">
-              Ketik frasa konfirmasi <span className="text-error">*</span>
-            </label>
-            <input
-              id="berkas-destruction-confirmation"
-              value={destructionPhrase}
-              onChange={(event) => setDestructionPhrase(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
-              placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
-              autoComplete="off"
-            />
-            <p className="mt-2 text-[10px] font-semibold text-outline">
-              Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
-            </p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+
+            <DialogFooter className="gap-2">
               <Button
+                type="button"
                 variant="outline"
                 disabled={Boolean(pendingBerkasId)}
-                onClick={() => {
-                  setDestructionTarget(null)
-                  setDestructionPhrase('')
-                  setActionError(null)
-                }}
+                onClick={closeDestructionDialog}
               >
                 Batal
               </Button>
               <Button
+                type="button"
                 className="gap-1.5 bg-error text-white hover:bg-error/90"
                 disabled={!canSubmitDestruction}
                 onClick={approveDestruction}
@@ -230,9 +261,9 @@ function UsulMusnahPage() {
                   : <AlertTriangle size={14} />}
                 Konfirmasi Musnahkan Data
               </Button>
-            </div>
-          </div>
-        )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -258,7 +289,7 @@ function UsulMusnahPage() {
           <BerkasLifecycleTable
             folders={folders}
             pendingBerkasId={pendingBerkasId}
-            onOpenDestructionPanel={openDestructionPanel}
+            onOpenDestructionDialog={openDestructionDialog}
           />
         )}
       </div>
@@ -269,11 +300,11 @@ function UsulMusnahPage() {
 function BerkasLifecycleTable({
   folders,
   pendingBerkasId,
-  onOpenDestructionPanel,
+  onOpenDestructionDialog,
 }: {
   folders: BerkasFolder[]
   pendingBerkasId: string | null
-  onOpenDestructionPanel: (folder: BerkasFolder) => void
+  onOpenDestructionDialog: (folder: BerkasFolder) => void
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
@@ -330,7 +361,7 @@ function BerkasLifecycleTable({
                       variant="destructive"
                       className="h-7 gap-1.5 bg-error px-2.5 text-[11px] text-white hover:bg-error/90"
                       disabled={pendingBerkasId === folder.berkas_id}
-                      onClick={() => onOpenDestructionPanel(folder)}
+                      onClick={() => onOpenDestructionDialog(folder)}
                     >
                       {pendingBerkasId === folder.berkas_id
                         ? <Loader2 size={14} className="animate-spin" />

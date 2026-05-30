@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   AlertCircle,
   ArchiveX,
@@ -57,6 +57,7 @@ type BerkasFolderListResponse = {
 }
 
 function ArsipInaktifPage() {
+  const navigate = useNavigate()
   const [folders, setFolders] = useState<BerkasFolder[]>([])
   const [summary, setSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -99,7 +100,7 @@ function ArsipInaktifPage() {
         body: JSON.stringify({ action: 'propose_destruction' }),
       })
       setActionSuccess(lifecycleAction.successMessage)
-      await fetchData()
+      await navigate({ to: '/arsiparis/usul-musnah' })
     } catch (error) {
       setActionError(resolveErrorMessage(error))
     } finally {
