@@ -456,7 +456,7 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
-  it('creates transitional manual document metadata without final archive fields', async () => {
+  it('creates manual source metadata without final archive fields and without a canonical MANUAL row', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       source: {
@@ -497,39 +497,24 @@ describe('manual arsip API foundation routes', () => {
       canonicalArsipId: null,
     }))
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      sourceType: 'MANUAL',
-      dokumenId: null,
-      namaArsip: 'Arsip manual uji',
-      nomorSurat: null,
-      klasifikasiId: KLASIFIKASI_ID,
-      retensiAktif: null,
-      retensiInaktif: null,
-      masaAktifBerakhir: null,
-      masaInaktifBerakhir: null,
-      archivedAt: null,
-      archivedBy: null,
-      createdBy: USER_ID,
-      nominalRealisasi: '1000.00',
-      statusArsip: 'AKTIF',
-    }))
-    expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
-      canonicalArsipId: CANONICAL_ARSIP_ID,
-    }))
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiKodeSnapshot: '001.02',
       klasifikasiNamaSnapshot: 'Klasifikasi A',
       statusBerkas: 'OPEN',
       createdBy: USER_ID,
     }))
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(4, expect.objectContaining({
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
       berkasId: BERKAS_ID,
       sourceType: 'MANUAL',
       dokumenId: null,
       manualArsipId: MANUAL_ARSIP_ID,
-      canonicalArsipId: CANONICAL_ARSIP_ID,
+      canonicalArsipId: null,
       addedBy: USER_ID,
     }))
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      namaArsip: expect.anything(),
+    }))
+    expect(mocks.txUpdateSet).not.toHaveBeenCalled()
     expect(JSON.stringify(body)).not.toContain('logical_path')
     expect(JSON.stringify(body)).not.toContain('logicalPath')
     expect(JSON.stringify(body)).not.toContain('file_url')
@@ -551,15 +536,15 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.txInsertValues).toHaveBeenCalledTimes(3)
+    expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
     }))
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
       berkasId: BERKAS_ID,
       sourceType: 'MANUAL',
       manualArsipId: MANUAL_ARSIP_ID,
-      canonicalArsipId: CANONICAL_ARSIP_ID,
+      canonicalArsipId: null,
     }))
   })
 
@@ -599,6 +584,10 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(409)
     expect(body).toEqual({ error: 'Dokumen sudah terhubung ke berkas' })
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      namaArsip: expect.anything(),
+    }))
+    expect(mocks.txUpdateSet).not.toHaveBeenCalled()
   })
 
   it('creates with Permanen retention using the transitional sentinel dates', async () => {
@@ -623,7 +612,7 @@ describe('manual arsip API foundation routes', () => {
     }))
   })
 
-  it('creates a canonical MANUAL row from the inserted source row in the same transaction', async () => {
+  it('creates final manual source metadata without creating or linking a canonical MANUAL row', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       source: manualArsipRow({
@@ -654,10 +643,8 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(201)
     expect(mocks.dbTransaction).toHaveBeenCalledOnce()
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      sourceType: 'MANUAL',
-      dokumenId: null,
-      namaArsip: 'Canonical source row',
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      nama: 'Canonical source row',
       nomorSurat: 'B-099/2026',
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiKodeSnapshot: '001.02',
@@ -666,22 +653,22 @@ describe('manual arsip API foundation routes', () => {
       retensiInaktif: '10 Tahun',
       masaAktifBerakhir: '2031-06-02',
       masaInaktifBerakhir: '2041-06-02',
-      archivedAt: new Date('2026-06-02T00:00:00.000Z'),
       archivedBy: USER_ID,
       createdBy: USER_ID,
-      nominalRealisasi: '250000.00',
+      nominalRealisasi: '250000',
       statusArsip: 'AKTIF',
-      metadata: {},
+      canonicalArsipId: null,
     }))
-    expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
-      canonicalArsipId: CANONICAL_ARSIP_ID,
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      namaArsip: expect.anything(),
     }))
+    expect(mocks.txUpdateSet).not.toHaveBeenCalled()
   })
 
-  it('surfaces a safe create failure when canonical MANUAL insert fails inside the transaction', async () => {
+  it('does not create a canonical fallback when duplicate manual berkas item insert fails', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
-      canonicalError: new Error('CANONICAL_INSERT_FAILED'),
+      itemError: Object.assign(new Error('unique conflict'), { code: '23505' }),
     })
 
     const response = await indexHandlers.POST({
@@ -689,10 +676,12 @@ describe('manual arsip API foundation routes', () => {
     })
     const body = JSON.stringify(await response.json())
 
-    expect(response.status).toBe(500)
-    expect(body).toBe('{"error":"Gagal membuat dokumen manual"}')
+    expect(response.status).toBe(409)
+    expect(body).toBe('{"error":"Dokumen sudah terhubung ke berkas"}')
     expect(mocks.dbTransaction).toHaveBeenCalledOnce()
-    expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      namaArsip: expect.anything(),
+    }))
     expect(mocks.txUpdateSet).not.toHaveBeenCalled()
     expect(body).not.toContain('logical_path')
     expect(body).not.toContain('logicalPath')
@@ -2147,15 +2136,17 @@ function berkasItemRow() {
     sourceType: 'MANUAL',
     dokumenId: null,
     manualArsipId: MANUAL_ARSIP_ID,
-    canonicalArsipId: CANONICAL_ARSIP_ID,
+    canonicalArsipId: null,
     addedBy: USER_ID,
   }
 }
 
-function linkedManualSourceRow() {
+function manualSourceRow(overrides: Partial<{
+  canonicalArsipId: string | null
+}> = {}) {
   return {
     id: MANUAL_ARSIP_ID,
-    canonicalArsipId: CANONICAL_ARSIP_ID,
+    canonicalArsipId: overrides.canonicalArsipId ?? null,
     klasifikasiId: KLASIFIKASI_ID,
   }
 }
@@ -2358,7 +2349,7 @@ function queueManualArchiveCreateTransaction(options: {
   linked?: { id: string; canonical_arsip_id: string | null } | null
   existingOpenBerkas?: ReturnType<typeof openBerkasRow> | null
   openBerkas?: ReturnType<typeof openBerkasRow> | null
-  manualSource?: ReturnType<typeof linkedManualSourceRow> | null
+  manualSource?: ReturnType<typeof manualSourceRow> | null
   item?: ReturnType<typeof berkasItemRow> | null
   canonicalError?: Error
   linkError?: Error
@@ -2368,7 +2359,7 @@ function queueManualArchiveCreateTransaction(options: {
     ? options.existingOpenBerkas ?? openBerkasRow()
     : options.openBerkas
   const selectedManualSource = options.manualSource === undefined
-    ? linkedManualSourceRow()
+    ? manualSourceRow()
     : options.manualSource
   const txSelectResults = [
     options.existingOpenBerkas ? [options.existingOpenBerkas] : [],

@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { and, asc, desc, eq, isNull, sql, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
   arsip,
@@ -30,7 +30,6 @@ import {
 } from '#/lib/archive/berkas-arsip-service'
 import {
   buildManualArchiveCanonicalUpdateValues,
-  createManualArchiveCanonicalWritePlan,
 } from '#/lib/archive/manual-archive-canonical'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import type {
@@ -294,58 +293,6 @@ export async function createManualArsipRecord(
 
       if (!source) {
         throw new Error('MANUAL_ARCHIVE_SOURCE_CREATE_FAILED')
-      }
-
-      const plan = createManualArchiveCanonicalWritePlan({
-        id: source.id,
-        canonicalArsipId: source.canonical_arsip_id,
-        nama: source.nama,
-        nomorSurat: source.nomor_surat,
-        tanggalDiarsipkan: source.tanggal_diarsipkan,
-        klasifikasiId: source.klasifikasi_id,
-        klasifikasiKodeSnapshot: source.klasifikasi_kode_snapshot,
-        klasifikasiNamaSnapshot: source.klasifikasi_nama_snapshot,
-        retensiAktif: source.retensi_aktif,
-        retensiInaktif: source.retensi_inaktif,
-        masaAktifBerakhir: source.masa_aktif_berakhir,
-        masaInaktifBerakhir: source.masa_inaktif_berakhir,
-        archivedBy: source.archived_by,
-        createdBy: source.created_by,
-        nominalRealisasi: source.nominal_realisasi,
-        statusArsip: source.status_arsip,
-      })
-
-      if (plan.action !== 'create') {
-        throw new Error('MANUAL_ARCHIVE_CANONICAL_PLAN_NOT_CREATE')
-      }
-
-      const [canonical] = await tx
-        .insert(arsip)
-        .values(plan.insertValues)
-        .returning({
-          id: arsip.id,
-        })
-
-      if (!canonical) {
-        throw new Error('MANUAL_ARCHIVE_CANONICAL_CREATE_FAILED')
-      }
-
-      const [linked] = await tx
-        .update(manualArsip)
-        .set({
-          canonicalArsipId: canonical.id,
-        })
-        .where(and(
-          eq(manualArsip.id, source.id),
-          isNull(manualArsip.canonicalArsipId),
-        ))
-        .returning({
-          id: manualArsip.id,
-          canonical_arsip_id: manualArsip.canonicalArsipId,
-        })
-
-      if (!linked?.canonical_arsip_id) {
-        throw new Error('MANUAL_ARCHIVE_CANONICAL_LINK_FAILED')
       }
 
       const berkasRepository = createManualArchiveBerkasRepository(tx)

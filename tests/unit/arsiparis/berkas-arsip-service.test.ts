@@ -116,8 +116,8 @@ describe('berkas arsip service foundation', () => {
     expect(repository.calls).not.toContainEqual(['insertBerkasItem'])
   })
 
-  it('adds a manual document only to an OPEN matching berkas and keeps the canonical bridge id', async () => {
-    const repository = createFakeRepository()
+  it('adds a manual document only to an OPEN matching berkas when no canonical bridge exists', async () => {
+    const repository = createFakeRepository({ manualCanonicalArsipId: null })
 
     const item = await addManualDocumentToOpenBerkas({
       berkasId: BERKAS_ID,
@@ -129,8 +129,24 @@ describe('berkas arsip service foundation', () => {
       source_type: 'MANUAL',
       manual_arsip_id: MANUAL_ARSIP_ID,
       dokumen_id: null,
-      canonical_arsip_id: CANONICAL_ARSIP_ID,
+      canonical_arsip_id: null,
       added_by: ACTOR_ID,
+    })
+  })
+
+  it('preserves an existing old manual canonical bridge id when present', async () => {
+    const repository = createFakeRepository({ manualCanonicalArsipId: CANONICAL_ARSIP_ID })
+
+    const item = await addManualDocumentToOpenBerkas({
+      berkasId: BERKAS_ID,
+      manualArsipId: MANUAL_ARSIP_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })
+
+    expect(item).toMatchObject({
+      source_type: 'MANUAL',
+      manual_arsip_id: MANUAL_ARSIP_ID,
+      canonical_arsip_id: CANONICAL_ARSIP_ID,
     })
   })
 
@@ -385,6 +401,7 @@ function createFakeRepository(options: {
   itemCount?: number
   workflowKlasifikasiId?: string | null
   manualKlasifikasiId?: string | null
+  manualCanonicalArsipId?: string | null
   existingBerkasRows?: ReturnType<typeof baseBerkas>[]
   insertOpenBerkasError?: unknown
   insertBerkasItemError?: unknown
@@ -461,7 +478,9 @@ function createFakeRepository(options: {
       return {
         id: manualArsipId,
         klasifikasiId: options.manualKlasifikasiId ?? KLASIFIKASI_ID,
-        canonicalArsipId: CANONICAL_ARSIP_ID,
+        canonicalArsipId: Object.prototype.hasOwnProperty.call(options, 'manualCanonicalArsipId')
+          ? options.manualCanonicalArsipId ?? null
+          : CANONICAL_ARSIP_ID,
       }
     },
     async insertBerkasItem(input) {
