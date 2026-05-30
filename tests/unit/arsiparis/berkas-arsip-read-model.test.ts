@@ -195,6 +195,40 @@ describe('berkas arsip read model', () => {
     expectNoSensitiveOutput(result.detail)
   })
 
+  it('does not throw and falls back to source labels when workflow master metadata is missing', async () => {
+    const repository = createFakeRepository({
+      folderRows: [closedBerkas()],
+      itemRows: [closedWorkflowItem({
+        workflow_date: null,
+        kegiatan_nama: null,
+        jenis_dokumen_nama: null,
+        jenis_permintaan_nama: null,
+        kategori_permintaan_nama: null,
+        detail_permintaan_nama: null,
+        workflow_lampiran_urls: [
+          {
+            nama: 'Bukti Aman',
+            url: 'owner-user/workflow/bukti-aman.pdf',
+          },
+        ],
+      })],
+    })
+
+    const result = await getBerkasArsipDetail(BERKAS_CLOSED_ID, { repository })
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') return
+
+    expect(result.detail.items[0].attachments).toEqual([
+      {
+        label: 'Bukti Aman',
+        previewTitle: 'Bukti Aman.pdf',
+        downloadFilename: 'Bukti Aman.pdf',
+      },
+    ])
+    expectNoSensitiveOutput(result.detail)
+  })
+
   it('handles a missing source safely with a placeholder and warning', async () => {
     const repository = createFakeRepository({
       folderRows: [closedBerkas()],

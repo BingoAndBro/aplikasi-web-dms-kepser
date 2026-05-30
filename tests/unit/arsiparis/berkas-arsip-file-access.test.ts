@@ -141,6 +141,39 @@ describe('berkas arsip item file access helper', () => {
     expectNoLeak(header)
   })
 
+  it('serves WORKFLOW files with label fallback when master metadata and content type are incomplete', async () => {
+    await writeTestFile(WORKFLOW_LOGICAL_PATH, TEST_FILE_CONTENT)
+
+    const response = await createBerkasArsipItemAttachmentFileResponse({
+      berkasId: BERKAS_ID,
+      itemId: WORKFLOW_ITEM_ID,
+      lampiranIndex: 0,
+      purpose: 'preview',
+    }, {
+      repository: createRepository({
+        workflowDocumentOverrides: {
+          tanggal: null,
+          kegiatan_nama: null,
+          jenis_dokumen_nama: null,
+          jenis_permintaan_nama: null,
+          kategori_permintaan_nama: null,
+          detail_permintaan_nama: null,
+        },
+        workflowLampiranUrls: [{
+          nama: 'Bukti Aman',
+          url: WORKFLOW_LOGICAL_PATH,
+        }],
+      }),
+      root: TEST_ROOT,
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('application/pdf')
+    expect(response.headers.get('Content-Disposition')).toBe('inline; filename="Bukti Aman.pdf"')
+    expect(await response.text()).toBe(TEST_FILE_CONTENT)
+    expectNoLeak(JSON.stringify([...response.headers.entries()]))
+  })
+
   it('delegates a MANUAL item attachment by folder item and lampiran index', async () => {
     const manualFileResponse = vi.fn(async () => new Response('manual-file', {
       status: 200,

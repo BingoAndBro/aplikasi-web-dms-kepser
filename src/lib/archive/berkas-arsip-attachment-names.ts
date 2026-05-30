@@ -165,16 +165,7 @@ function resolveWorkflowAttachmentNamesFromEntry(
   ) ?? `Lampiran ${index + 1}`
 
   const sourceFilename = resolveWorkflowSourceFilename(entry, document)
-  const filename = sourceFilename ?? withSafeExtension(
-    firstSafeFilenameText(
-      entry.fileName,
-      entry.file_name,
-      entry.filename,
-      entry.originalFilename,
-      entry.original_filename,
-    ) ?? label,
-    entry,
-  ) ?? label
+  const filename = sourceFilename ?? resolveFallbackWorkflowFilename(entry, label) ?? label
 
   return {
     label,
@@ -192,9 +183,27 @@ function resolveWorkflowSourceFilename(
 
   const lampiran = toLampiranUrl(entry)
   if (!lampiran) return null
+  if (!hasBuildableWorkflowDocumentMetadata(document)) return null
 
-  const filename = buildStorageFilename(toDokumenRow(document), lampiran)
-  return sanitizeBerkasAttachmentFilename(filename)
+  try {
+    const filename = buildStorageFilename(toDokumenRow(document), lampiran)
+    return sanitizeBerkasAttachmentFilename(filename)
+  } catch {
+    return null
+  }
+}
+
+function hasBuildableWorkflowDocumentMetadata(document: WorkflowAttachmentNamingDocument): boolean {
+  if (!trimToNull(formatDateLike(document.tanggal))) return false
+  if (!trimToNull(document.kegiatan_nama)) return false
+
+  if (document.is_non_material === true) return Boolean(trimToNull(document.jenis_dokumen_nama))
+
+  return Boolean(
+    trimToNull(document.detail_permintaan_nama)
+      ?? trimToNull(document.kategori_permintaan_nama)
+      ?? trimToNull(document.jenis_permintaan_nama),
+  )
 }
 
 function toLampiranUrl(entry: Record<string, unknown>): LampiranUrl | null {
@@ -273,6 +282,22 @@ function withSafeExtension(filename: string, entry: Record<string, unknown>): st
   return sanitizeBerkasAttachmentFilename(`${safeFilename}.${extension}`)
 }
 
+function resolveFallbackWorkflowFilename(
+  entry: Record<string, unknown>,
+  label: string,
+): string | null {
+  return withSafeExtension(
+    firstSafeFilenameText(
+      entry.fileName,
+      entry.file_name,
+      entry.filename,
+      entry.originalFilename,
+      entry.original_filename,
+    ) ?? label,
+    entry,
+  )
+}
+
 function resolveWorkflowAttachmentLogicalPath(entry: Record<string, unknown>): string | null {
   const rawPath = entry.url
   if (typeof rawPath !== 'string' || !rawPath.trim()) return null
@@ -332,6 +357,13 @@ function toSafeAttachmentText(value: unknown): string | null {
   }
 
   return trimmed.slice(0, 180)
+}
+
+function trimToNull(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+
+  return trimmed.length > 0 ? trimmed : null
 }
 
 function hasSensitiveNameText(value: string): boolean {

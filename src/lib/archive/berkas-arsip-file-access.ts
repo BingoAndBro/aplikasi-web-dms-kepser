@@ -22,6 +22,7 @@ import {
   type BerkasArchiveStatus,
 } from '#/lib/constants/archive-status'
 import {
+  getFileExtension,
   getLocalStorageRoot,
   resolvePhysicalStoragePath,
 } from '#/lib/storage/local-storage-paths'
