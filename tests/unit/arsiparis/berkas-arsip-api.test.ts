@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => {
     addManualDocumentToOpenBerkas: vi.fn(),
     closeBerkasArsip: vi.fn(),
     transitionBerkasArchiveStatus: vi.fn(),
+    executeBerkasPhysicalFileDestruction: vi.fn(),
     BerkasArsipServiceError: MockBerkasArsipServiceError,
   }
 })
@@ -42,6 +43,11 @@ vi.mock('#/lib/archive/berkas-arsip-service', () => ({
   addManualDocumentToOpenBerkas: mocks.addManualDocumentToOpenBerkas,
   closeBerkasArsip: mocks.closeBerkasArsip,
   transitionBerkasArchiveStatus: mocks.transitionBerkasArchiveStatus,
+}))
+
+vi.mock('#/lib/archive/berkas-arsip-physical-destruction', () => ({
+  BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE: 'HAPUS FILE FISIK ARSIP',
+  executeBerkasPhysicalFileDestruction: mocks.executeBerkasPhysicalFileDestruction,
 }))
 
 import { Route as OpenBerkasRoute } from '#/routes/api/arsiparis/berkas/open'
@@ -80,6 +86,7 @@ describe('berkas arsip API routes', () => {
     mocks.addManualDocumentToOpenBerkas.mockResolvedValue(manualItemDto())
     mocks.closeBerkasArsip.mockResolvedValue(closedBerkasDto())
     mocks.transitionBerkasArchiveStatus.mockResolvedValue(inactiveBerkasDto())
+    mocks.executeBerkasPhysicalFileDestruction.mockResolvedValue(physicalDeletionReport())
   })
 
   it('protects POST routes with same-origin before auth or service work', async () => {
@@ -384,6 +391,7 @@ describe('berkas arsip API routes', () => {
       expect(response.status).toBe(400)
       expect(await response.json()).toEqual({ error: 'Aksi lifecycle berkas tidak valid' })
       expect(mocks.transitionBerkasArchiveStatus).not.toHaveBeenCalled()
+      expect(mocks.executeBerkasPhysicalFileDestruction).not.toHaveBeenCalled()
     }
   })
 
@@ -404,10 +412,13 @@ describe('berkas arsip API routes', () => {
       actorUserId: USER_ID,
       action: 'mark_inactive',
     })
+    expect(mocks.executeBerkasPhysicalFileDestruction).not.toHaveBeenCalled()
     expectNoSensitiveOutput(body)
   })
 
-  it('moves approve_destruction only with the folder confirmation phrase', async () => {
+  it('moves approve_destruction then invokes physical deletion with the internal phrase', async () => {
+    mocks.transitionBerkasArchiveStatus.mockResolvedValueOnce(destroyedBerkasDto())
+
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
@@ -419,11 +430,94 @@ describe('berkas arsip API routes', () => {
     const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(body).toEqual({ berkas: inactiveBerkasDto() })
+    expect(body).toEqual({
+      berkas: destroyedBerkasDto(),
+      physical_deletion: physicalDeletionReport(),
+    })
     expect(mocks.transitionBerkasArchiveStatus).toHaveBeenCalledWith({
       berkasId: BERKAS_ID,
       actorUserId: USER_ID,
       action: 'approve_destruction',
+    })
+    expect(mocks.executeBerkasPhysicalFileDestruction).toHaveBeenCalledWith({
+      berkasId: BERKAS_ID,
+      confirmation: 'HAPUS FILE FISIK ARSIP',
+    })
+    expect(
+      mocks.transitionBerkasArchiveStatus.mock.invocationCallOrder[0],
+    ).toBeLessThan(mocks.executeBerkasPhysicalFileDestruction.mock.invocationCallOrder[0])
+    expectNoSensitiveOutput(body)
+  })
+
+  it('returns safe physical deletion partial summaries without leaking paths', async () => {
+    const partialReport = physicalDeletionReport({
+      status: 'partial',
+      deleted_count: 1,
+      already_missing_count: 1,
+      skipped_unsafe_count: 1,
+      skipped_duplicate_count: 1,
+      failed_count: 1,
+      physical_deletion_performed: true,
+      errors: [
+        'DUPLICATE_FILE_CANDIDATE_SKIPPED',
+        'PHYSICAL_FILE_ALREADY_MISSING',
+        'PHYSICAL_FILE_DELETE_FAILED',
+        'UNSAFE_FILE_CANDIDATE_SKIPPED',
+      ],
+    })
+    mocks.transitionBerkasArchiveStatus.mockResolvedValueOnce(destroyedBerkasDto())
+    mocks.executeBerkasPhysicalFileDestruction.mockResolvedValueOnce(partialReport)
+
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'approve_destruction',
+        confirmation: 'MUSNAHKAN DATA FILE',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({
+      berkas: destroyedBerkasDto(),
+      physical_deletion: partialReport,
+    })
+    expectNoSensitiveOutput(body)
+  })
+
+  it('keeps lifecycle success and returns a safe failed physical deletion summary on helper exceptions', async () => {
+    mocks.transitionBerkasArchiveStatus.mockResolvedValueOnce(destroyedBerkasDto())
+    mocks.executeBerkasPhysicalFileDestruction.mockRejectedValueOnce(
+      new Error('D:\\storage\\owner-user\\secret-token.pdf'),
+    )
+
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'approve_destruction',
+        confirmation: 'MUSNAHKAN DATA FILE',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({
+      berkas: destroyedBerkasDto(),
+      physical_deletion: {
+        status: 'failed',
+        total_items: 0,
+        workflow_attachment_candidates: 0,
+        manual_attachment_candidates: 0,
+        deleted_count: 0,
+        already_missing_count: 0,
+        skipped_unsafe_count: 0,
+        skipped_duplicate_count: 0,
+        failed_count: 1,
+        physical_deletion_performed: false,
+        errors: ['PHYSICAL_FILE_DELETE_FAILED'],
+      },
     })
     expectNoSensitiveOutput(body)
   })
@@ -448,6 +542,7 @@ describe('berkas arsip API routes', () => {
 
     expect(response.status).toBe(409)
     expect(body).toEqual({ error: 'Perubahan status arsip berkas tidak valid' })
+    expect(mocks.executeBerkasPhysicalFileDestruction).not.toHaveBeenCalled()
     expectNoSensitiveOutput(body)
   })
 })
@@ -524,6 +619,30 @@ function inactiveBerkasDto() {
   return {
     ...closedBerkasDto(),
     status_arsip: 'INAKTIF',
+  }
+}
+
+function destroyedBerkasDto() {
+  return {
+    ...closedBerkasDto(),
+    status_arsip: 'DIMUSNAHKAN',
+  }
+}
+
+function physicalDeletionReport(overrides: Record<string, unknown> = {}) {
+  return {
+    status: 'completed',
+    total_items: 2,
+    workflow_attachment_candidates: 1,
+    manual_attachment_candidates: 1,
+    deleted_count: 2,
+    already_missing_count: 0,
+    skipped_unsafe_count: 0,
+    skipped_duplicate_count: 0,
+    failed_count: 0,
+    physical_deletion_performed: true,
+    errors: [],
+    ...overrides,
   }
 }
 

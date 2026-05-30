@@ -168,7 +168,7 @@ function UsulMusnahPage() {
             </p>
           </div>
           <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs text-orange-800">
-            Musnahkan Data bersifat status-only. File fisik tidak dihapus pada fase ini.
+            Musnahkan Data mengubah status menjadi Dimusnahkan dan menghapus file fisik terkait berkas.
           </div>
         </div>
 
@@ -202,7 +202,7 @@ function UsulMusnahPage() {
             <DialogHeader>
               <DialogTitle>Musnahkan Data</DialogTitle>
               <DialogDescription>
-                Konfirmasi status-only untuk berkas yang dipilih.
+                Konfirmasi final untuk mengubah status dan menghapus file fisik terkait berkas.
               </DialogDescription>
             </DialogHeader>
 
@@ -220,9 +220,10 @@ function UsulMusnahPage() {
 
               <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
                 <p>Status berkas akan menjadi Dimusnahkan.</p>
-                <p>Preview dan download file akan diblokir.</p>
-                <p>File fisik tidak dihapus pada fase ini.</p>
+                <p>File fisik terkait berkas akan dihapus.</p>
+                <p>Preview dan download file akan tetap diblokir.</p>
                 <p>Metadata berkas dan dokumen tetap tersimpan.</p>
+                <p>Aksi ini tidak mudah dibalik.</p>
               </div>
 
               <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-destruction-confirmation">

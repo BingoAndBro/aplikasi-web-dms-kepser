@@ -4,6 +4,11 @@ import { z } from 'zod'
 import { transitionBerkasArchiveStatus } from '#/lib/archive/berkas-arsip-service'
 import { BERKAS_DESTRUCTION_CONFIRMATION_PHRASE } from '#/lib/archive/berkas-arsip-page-format'
 import {
+  BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE,
+  executeBerkasPhysicalFileDestruction,
+  type BerkasPhysicalDestructionReport,
+} from '#/lib/archive/berkas-arsip-physical-destruction'
+import {
   berkasArsipErrorResponse,
   parseBerkasIdParam,
   requireBerkasArsipApiSession,
@@ -51,8 +56,14 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id/lifecycle')({
             actorUserId: sessionOrResponse.user.id,
             action: parsed.data.action,
           })
+          const physicalDeletion = parsed.data.action === 'approve_destruction'
+            ? await executePhysicalDeletionAfterLifecycle(berkasId)
+            : undefined
 
-          return Response.json({ berkas: safeBerkasDto(berkas) })
+          return Response.json({
+            berkas: safeBerkasDto(berkas),
+            ...(physicalDeletion ? { physical_deletion: physicalDeletion } : {}),
+          })
         } catch (error) {
           return berkasArsipErrorResponse(error)
         }
@@ -60,3 +71,32 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id/lifecycle')({
     },
   },
 })
+
+async function executePhysicalDeletionAfterLifecycle(
+  berkasId: string,
+): Promise<BerkasPhysicalDestructionReport> {
+  try {
+    return await executeBerkasPhysicalFileDestruction({
+      berkasId,
+      confirmation: BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE,
+    })
+  } catch {
+    return failedPhysicalDeletionReport()
+  }
+}
+
+function failedPhysicalDeletionReport(): BerkasPhysicalDestructionReport {
+  return {
+    status: 'failed',
+    total_items: 0,
+    workflow_attachment_candidates: 0,
+    manual_attachment_candidates: 0,
+    deleted_count: 0,
+    already_missing_count: 0,
+    skipped_unsafe_count: 0,
+    skipped_duplicate_count: 0,
+    failed_count: 1,
+    physical_deletion_performed: false,
+    errors: ['PHYSICAL_FILE_DELETE_FAILED'],
+  }
+}
