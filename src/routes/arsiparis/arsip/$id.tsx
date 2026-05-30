@@ -109,11 +109,11 @@ function UnifiedArchiveDetailPage() {
             </p>
           </div>
           <Link
-            to="/arsiparis/aktif"
+            to="/arsiparis/berkas"
             className="inline-flex h-8 items-center gap-2 rounded-lg border border-outline-variant/50 px-3 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low"
           >
             <ArrowLeft size={14} />
-            Kembali ke daftar
+            Kembali ke Pemberkasan Arsip Aktif
           </Link>
         </div>
 

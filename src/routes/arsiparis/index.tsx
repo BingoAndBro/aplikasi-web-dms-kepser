@@ -21,8 +21,10 @@ type InboxStatsResponse = {
   inbox?: unknown[]
 }
 
-type AktifStatsResponse = {
-  aktif?: unknown[]
+type BerkasStatsResponse = {
+  summary?: {
+    total_rows_returned?: number
+  }
 }
 
 type InaktifStatsResponse = {
@@ -62,13 +64,18 @@ function KepalaSubBagianUmumDashboard() {
       try {
         const [inboxJson, aktifJson, inaktifJson, musnahJson] = await Promise.all([
           apiFetch<InboxStatsResponse>('/arsiparis/inbox').catch(() => ({ inbox: [] })),
-          apiFetch<AktifStatsResponse>('/arsiparis/aktif').catch(() => ({ aktif: [] })),
+          apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+            query: {
+              status_berkas: 'CLOSED',
+              status_arsip: 'AKTIF',
+            },
+          }).catch(() => ({ summary: { total_rows_returned: 0 } })),
           apiFetch<InaktifStatsResponse>('/arsiparis/inaktif').catch(() => ({ inaktif: [] })),
           apiFetch<UsulMusnahStatsResponse>('/arsiparis/usul-musnah').catch(() => ({ usul_musnah: [] })),
         ])
         setStats({
           inbox: (inboxJson.inbox ?? []).length,
-          aktif: (aktifJson.aktif ?? []).length,
+          aktif: aktifJson.summary?.total_rows_returned ?? 0,
           inaktif: (inaktifJson.inaktif ?? []).length,
           usulMusnah: (musnahJson.usul_musnah ?? []).length,
         })
@@ -83,7 +90,7 @@ function KepalaSubBagianUmumDashboard() {
 
   const statCards = [
     { label: 'Menunggu Arsip', value: stats.inbox, icon: Clock, color: 'text-primary', key: 'inbox' },
-    { label: 'Arsip Aktif', value: stats.aktif, icon: FolderOpen, color: 'text-green-500', key: 'aktif' },
+    { label: 'Pemberkasan Arsip Aktif', value: stats.aktif, icon: FolderOpen, color: 'text-green-500', key: 'aktif' },
     { label: 'Arsip Inaktif', value: stats.inaktif, icon: Archive, color: 'text-orange-500', key: 'inaktif' },
     { label: 'Usul Musnah', value: stats.usulMusnah, icon: XCircle, color: 'text-error', key: 'usulMusnah' },
     { label: 'Pencarian', value: null, icon: Search, color: 'text-blue-400', key: 'search' },
@@ -118,7 +125,7 @@ function KepalaSubBagianUmumDashboard() {
                 className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group relative overflow-hidden cursor-pointer"
                 onClick={() => {
                   if (stat.key === 'inbox') window.location.href = '/arsiparis/inbox'
-                  else if (stat.key === 'aktif') window.location.href = '/arsiparis/aktif'
+                  else if (stat.key === 'aktif') window.location.href = '/arsiparis/berkas'
                   else if (stat.key === 'inaktif') window.location.href = '/arsiparis/inaktif'
                   else if (stat.key === 'usulMusnah') window.location.href = '/arsiparis/usul-musnah'
                   else if (stat.key === 'search') window.location.href = '/arsiparis/search'

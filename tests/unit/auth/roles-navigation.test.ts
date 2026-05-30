@@ -52,6 +52,13 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
         to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF,
       }),
     )
+    expect(pemberkasanGroup?.items).not.toContainEqual(
+      expect.objectContaining({
+        id: 'arsip_aktif',
+        to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF,
+      }),
+    )
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/arsiparis/berkas')
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF).toBe('/arsiparis/aktif')
   })
 })

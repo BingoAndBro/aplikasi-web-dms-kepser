@@ -98,7 +98,7 @@ function ArsipSearchPage() {
   }
 
   function getDetailUrl(a: ArsipItem) {
-    if (a.status_arsip === 'AKTIF') return '/arsiparis/aktif/' + a.id
+    if (a.status_arsip === 'AKTIF') return '/arsiparis/arsip/' + a.id
     if (a.status_arsip === 'INAKTIF') return '/arsiparis/inaktif/' + a.id
     if (a.status_arsip === 'USUL_MUSNAH') return '/arsiparis/usul-musnah/' + a.id
     return null

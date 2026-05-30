@@ -337,8 +337,14 @@ describe('folder-first berkas archive page formatting', () => {
   it('keeps the active folder page constrained to open and active sections', () => {
     const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
     const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
+    const legacyDetailSource = readFileSync('src/routes/arsiparis/arsip/$id.tsx', 'utf8')
     const closeDialogSource = readFileSync('src/routes/arsiparis/berkas/-components/CloseBerkasDialog.tsx', 'utf8')
     const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
+    const legacyActiveSource = readFileSync('src/routes/arsiparis/aktif/index.tsx', 'utf8')
+    const dashboardSource = readFileSync('src/routes/arsiparis/index.tsx', 'utf8')
+    const searchSource = readFileSync('src/routes/arsiparis/search.tsx', 'utf8')
+    const inactiveSource = readFileSync('src/routes/arsiparis/inaktif/index.tsx', 'utf8')
+    const proposedSource = readFileSync('src/routes/arsiparis/usul-musnah/index.tsx', 'utf8')
 
     expect(listSource).toContain('Berkas Terbuka')
     expect(listSource).toContain('Pemberkasan Arsip Aktif')
@@ -381,6 +387,30 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('EMPTY_BERKAS_CLOSE_MESSAGE')
     expect(detailSource).not.toContain('bg-emerald-50/50 p-4')
     expect(detailSource).not.toContain('File fisik dihapus')
+
+    expect(legacyDetailSource).toContain('Kembali ke Pemberkasan Arsip Aktif')
+    expect(legacyDetailSource).toContain('Detail kanonis read-only berdasarkan arsip.arsip.id.')
+
+    expect(legacyActiveSource).toContain("createFileRoute('/arsiparis/aktif/')")
+    expect(legacyActiveSource).toContain("redirect({ to: '/arsiparis/berkas', replace: true })")
+    expect(legacyActiveSource).not.toContain("apiFetch<ArsipAktifResponse>('/arsiparis/aktif')")
+    expect(legacyActiveSource).not.toContain('Daftar Arsip Aktif')
+    expect(legacyActiveSource).not.toContain('/api/arsiparis/arsip/export?status=AKTIF')
+
+    expect(dashboardSource).toContain("label: 'Pemberkasan Arsip Aktif'")
+    expect(dashboardSource).toContain("apiFetch<BerkasStatsResponse>('/arsiparis/berkas'")
+    expect(dashboardSource).toContain("status_berkas: 'CLOSED'")
+    expect(dashboardSource).toContain("status_arsip: 'AKTIF'")
+    expect(dashboardSource).toContain("window.location.href = '/arsiparis/berkas'")
+    expect(dashboardSource).not.toContain("window.location.href = '/arsiparis/aktif'")
+
+    expect(searchSource).toContain("if (a.status_arsip === 'AKTIF') return '/arsiparis/arsip/' + a.id")
+    expect(searchSource).not.toContain("if (a.status_arsip === 'AKTIF') return '/arsiparis/aktif/' + a.id")
+
+    expect(inactiveSource).toContain("createFileRoute('/arsiparis/inaktif/')")
+    expect(inactiveSource).toContain("apiFetch<ArsipInaktifResponse>('/arsiparis/inaktif')")
+    expect(proposedSource).toContain("createFileRoute('/arsiparis/usul-musnah/')")
+    expect(proposedSource).toContain("apiFetch<UsulMusnahResponse>('/arsiparis/usul-musnah')")
 
     expect(closeDialogSource).toContain('Dialog')
     expect(closeDialogSource).toContain('DialogContent')
