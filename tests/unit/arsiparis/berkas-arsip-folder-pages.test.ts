@@ -30,7 +30,10 @@ vi.mock('#/lib/archive/berkas-arsip-read-model', async (importOriginal) => {
 })
 
 import {
+  buildCloseBerkasRequestBody,
   buildBerkasItemAttachmentFileUrl,
+  canShowCloseBerkasForm,
+  isBerkasEmptyForClose,
 } from '#/routes/arsiparis/berkas/$id'
 import {
   formatBerkasArchiveStatusLabel,
@@ -283,6 +286,47 @@ describe('folder-first berkas archive page formatting', () => {
       .toBe('MUSNAHKAN DATA FILE')
   })
 
+  it('shows close berkas form controls only for OPEN folder details', () => {
+    expect(canShowCloseBerkasForm({ status_berkas: 'OPEN', status_arsip: null })).toBe(true)
+    expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: 'AKTIF' })).toBe(false)
+    expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: 'INAKTIF' })).toBe(false)
+    expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' })).toBe(false)
+    expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: 'DIMUSNAHKAN' })).toBe(false)
+    expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: null })).toBe(false)
+  })
+
+  it('blocks close submission for empty OPEN berkas details', () => {
+    expect(isBerkasEmptyForClose({ item_count: 0, items: [] })).toBe(true)
+    expect(isBerkasEmptyForClose({ item_count: 1, items: [] })).toBe(true)
+    expect(isBerkasEmptyForClose({ item_count: 0, items: [{} as any] })).toBe(true)
+    expect(isBerkasEmptyForClose({ item_count: 1, items: [{} as any] })).toBe(false)
+  })
+
+  it('builds close request bodies with existing close API field names', () => {
+    expect(buildCloseBerkasRequestBody({
+      nomor_spm: '  SPM-001/2026  ',
+      retensi_aktif: '1 Tahun',
+      retensi_inaktif: '3 Tahun',
+      closed_at: '2026-05-30',
+    })).toEqual({
+      nomor_spm: 'SPM-001/2026',
+      retensi_aktif: '1 Tahun',
+      retensi_inaktif: '3 Tahun',
+      closed_at: '2026-05-30',
+    })
+
+    expect(buildCloseBerkasRequestBody({
+      nomor_spm: 'SPM-002/2026',
+      retensi_aktif: '5 Tahun',
+      retensi_inaktif: '10 Tahun',
+      closed_at: '',
+    })).toEqual({
+      nomor_spm: 'SPM-002/2026',
+      retensi_aktif: '5 Tahun',
+      retensi_inaktif: '10 Tahun',
+    })
+  })
+
   it('keeps the active folder page constrained to open and active sections', () => {
     const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
     const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
@@ -309,6 +353,20 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('createBerkasDetailItemsCsv')
     expect(detailSource).toContain('Data file sudah dimusnahkan')
     expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
+    expect(detailSource).toContain('Tutup Berkas')
+    expect(detailSource).toContain('/close')
+    expect(detailSource).toContain('buildCloseBerkasRequestBody(closeForm)')
+    expect(detailSource).toContain('setActionSuccess')
+    expect(detailSource).toContain('await fetchData()')
+    expect(detailSource).toContain('Berkas belum memiliki dokumen. Tambahkan dokumen terlebih dahulu sebelum menutup berkas.')
+    expect(detailSource).toContain('Berkas akan difinalisasi menjadi Arsip Aktif.')
+    expect(detailSource).toContain('Setelah ditutup, Jenis Pembayaran ini tidak bisa menerima dokumen baru.')
+    expect(detailSource).toContain('Dokumen dan file fisik tidak dihapus.')
+    expect(detailSource).toContain('Status berkas menjadi Ditutup dan status arsip menjadi Aktif.')
+    expect(detailSource).toContain('Nomor SPM')
+    expect(detailSource).toContain('Retensi Aktif')
+    expect(detailSource).toContain('Retensi Inaktif')
+    expect(detailSource).toContain('Tanggal Tutup')
     expect(detailSource).not.toContain('File fisik dihapus')
   })
 
