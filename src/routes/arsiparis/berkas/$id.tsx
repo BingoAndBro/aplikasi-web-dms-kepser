@@ -37,9 +37,13 @@ import {
   downloadCsvFile,
 } from '#/lib/archive/berkas-arsip-csv'
 import {
-  MANUAL_ARCHIVE_RETENTION_LABELS,
-  type RetensiLabel,
-} from '#/lib/archive/retention'
+  buildCloseBerkasRequestBody,
+  CloseBerkasDialog,
+  EMPTY_BERKAS_CLOSE_MESSAGE,
+  EMPTY_CLOSE_BERKAS_FORM,
+  isCloseBerkasFormIncomplete,
+  type CloseBerkasFormState,
+} from './-components/CloseBerkasDialog'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/arsiparis/berkas/$id')({ component: BerkasArsipDetailPage })
@@ -97,20 +101,6 @@ type BerkasDetailResponse = {
   error?: string
 }
 
-type CloseBerkasFormState = {
-  nomor_spm: string
-  retensi_aktif: string
-  retensi_inaktif: string
-  closed_at: string
-}
-
-type CloseBerkasRequestBody = {
-  nomor_spm: string
-  retensi_aktif: string
-  retensi_inaktif: string
-  closed_at?: string
-}
-
 function BerkasArsipDetailPage() {
   const { id } = Route.useParams()
   const [detail, setDetail] = useState<BerkasDetail | null>(null)
@@ -121,14 +111,9 @@ function BerkasArsipDetailPage() {
   const [pendingLifecycleAction, setPendingLifecycleAction] = useState(false)
   const [destructionPanelOpen, setDestructionPanelOpen] = useState(false)
   const [destructionPhrase, setDestructionPhrase] = useState('')
-  const [closePanelOpen, setClosePanelOpen] = useState(false)
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [pendingClose, setPendingClose] = useState(false)
-  const [closeForm, setCloseForm] = useState<CloseBerkasFormState>({
-    nomor_spm: '',
-    retensi_aktif: '',
-    retensi_inaktif: '',
-    closed_at: '',
-  })
+  const [closeForm, setCloseForm] = useState<CloseBerkasFormState>(EMPTY_CLOSE_BERKAS_FORM)
 
   async function fetchData() {
     setLoading(true)
@@ -189,7 +174,7 @@ function BerkasArsipDetailPage() {
     const isEmptyFolder = isBerkasEmptyForClose(detail)
     if (!canShowCloseBerkasForm(detail) || isEmptyFolder) return
 
-    if (!closeForm.nomor_spm.trim() || !closeForm.retensi_aktif || !closeForm.retensi_inaktif) {
+    if (isCloseBerkasFormIncomplete(closeForm)) {
       setActionError('Nomor SPM, Retensi Aktif, dan Retensi Inaktif wajib diisi')
       setActionSuccess(null)
       return
@@ -205,13 +190,8 @@ function BerkasArsipDetailPage() {
         body: JSON.stringify(buildCloseBerkasRequestBody(closeForm)),
       })
       setActionSuccess('Berkas berhasil ditutup dan menjadi Arsip Aktif.')
-      setClosePanelOpen(false)
-      setCloseForm({
-        nomor_spm: '',
-        retensi_aktif: '',
-        retensi_inaktif: '',
-        closed_at: '',
-      })
+      setCloseDialogOpen(false)
+      setCloseForm(EMPTY_CLOSE_BERKAS_FORM)
       await fetchData()
     } catch (error) {
       setActionError(resolveErrorMessage(error))
@@ -295,16 +275,24 @@ function BerkasArsipDetailPage() {
                 setActionError(null)
               }}
               onLifecycleAction={submitLifecycleAction}
-              closePanelOpen={closePanelOpen}
-              closeForm={closeForm}
               pendingClose={pendingClose}
-              onToggleClosePanel={() => {
-                setClosePanelOpen((open) => !open)
+              onOpenCloseDialog={() => {
+                setCloseDialogOpen(true)
                 setActionError(null)
                 setActionSuccess(null)
               }}
-              onCloseFormChange={setCloseForm}
-              onSubmitCloseBerkas={submitCloseBerkas}
+            />
+            <CloseBerkasDialog
+              open={closeDialogOpen}
+              form={closeForm}
+              pending={pendingClose}
+              submitDisabled={pendingClose || !detail || isBerkasEmptyForClose(detail) || isCloseBerkasFormIncomplete(closeForm)}
+              onOpenChange={(open) => {
+                setCloseDialogOpen(open)
+                if (!open && !pendingClose) setActionError(null)
+              }}
+              onFormChange={setCloseForm}
+              onSubmit={submitCloseBerkas}
             />
             <ItemList berkasId={detail.berkas_id} statusArsip={detail.status_arsip} items={detail.items} />
           </>
@@ -322,12 +310,8 @@ function FolderMetadataPanel({
   onDestructionPhraseChange,
   onCancelDestruction,
   onLifecycleAction,
-  closePanelOpen,
-  closeForm,
   pendingClose,
-  onToggleClosePanel,
-  onCloseFormChange,
-  onSubmitCloseBerkas,
+  onOpenCloseDialog,
 }: {
   detail: BerkasDetail
   pendingLifecycleAction: boolean
@@ -336,23 +320,14 @@ function FolderMetadataPanel({
   onDestructionPhraseChange: (phrase: string) => void
   onCancelDestruction: () => void
   onLifecycleAction: (options?: { confirmation?: string }) => void
-  closePanelOpen: boolean
-  closeForm: CloseBerkasFormState
   pendingClose: boolean
-  onToggleClosePanel: () => void
-  onCloseFormChange: (form: CloseBerkasFormState) => void
-  onSubmitCloseBerkas: () => void
+  onOpenCloseDialog: () => void
 }) {
   const lifecycleAction = resolveBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
   const canSubmitDestruction = destructionPhrase === BERKAS_DESTRUCTION_CONFIRMATION_PHRASE
     && !pendingLifecycleAction
   const canShowClose = canShowCloseBerkasForm(detail)
   const closeBlockedByEmptyFolder = isBerkasEmptyForClose(detail)
-  const closeSubmitDisabled = pendingClose
-    || closeBlockedByEmptyFolder
-    || !closeForm.nomor_spm.trim()
-    || !closeForm.retensi_aktif
-    || !closeForm.retensi_inaktif
 
   return (
     <div className="rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-sm">
@@ -396,7 +371,7 @@ function FolderMetadataPanel({
               size="sm"
               className="gap-1.5"
               disabled={pendingClose || closeBlockedByEmptyFolder}
-              onClick={onToggleClosePanel}
+              onClick={onOpenCloseDialog}
             >
               {pendingClose ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               {pendingClose ? 'Memproses...' : 'Tutup Berkas'}
@@ -439,90 +414,8 @@ function FolderMetadataPanel({
       )}
       {canShowClose && closeBlockedByEmptyFolder && (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-          Berkas belum memiliki dokumen. Tambahkan dokumen terlebih dahulu sebelum menutup berkas.
+          {EMPTY_BERKAS_CLOSE_MESSAGE}
         </p>
-      )}
-      {canShowClose && closePanelOpen && !closeBlockedByEmptyFolder && (
-        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
-          <div className="mb-4 space-y-2 text-xs text-emerald-900">
-            <p className="font-semibold">Berkas akan difinalisasi menjadi Arsip Aktif.</p>
-            <p>Setelah ditutup, Jenis Pembayaran ini tidak bisa menerima dokumen baru.</p>
-            <p>Dokumen dan file fisik tidak dihapus.</p>
-            <p>Status berkas menjadi Ditutup dan status arsip menjadi Aktif.</p>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-nomor-spm">
-              Nomor SPM <span className="text-error">*</span>
-              <input
-                id="close-berkas-nomor-spm"
-                value={closeForm.nomor_spm}
-                onChange={(event) => onCloseFormChange({ ...closeForm, nomor_spm: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                maxLength={120}
-                autoComplete="off"
-              />
-            </label>
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-closed-at">
-              Tanggal Tutup
-              <input
-                id="close-berkas-closed-at"
-                type="date"
-                value={closeForm.closed_at}
-                onChange={(event) => onCloseFormChange({ ...closeForm, closed_at: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </label>
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-retensi-aktif">
-              Retensi Aktif <span className="text-error">*</span>
-              <select
-                id="close-berkas-retensi-aktif"
-                value={closeForm.retensi_aktif}
-                onChange={(event) => onCloseFormChange({ ...closeForm, retensi_aktif: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Pilih retensi aktif</option>
-                {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <option key={label} value={label}>{label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-retensi-inaktif">
-              Retensi Inaktif <span className="text-error">*</span>
-              <select
-                id="close-berkas-retensi-inaktif"
-                value={closeForm.retensi_inaktif}
-                onChange={(event) => onCloseFormChange({ ...closeForm, retensi_inaktif: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Pilih retensi inaktif</option>
-                {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <option key={label} value={label}>{label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onToggleClosePanel}
-              disabled={pendingClose}
-            >
-              Batal
-            </Button>
-            <Button
-              type="button"
-              className="gap-1.5"
-              onClick={onSubmitCloseBerkas}
-              disabled={closeSubmitDisabled}
-            >
-              {pendingClose ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Finalisasi Berkas
-            </Button>
-          </div>
-        </div>
       )}
       {lifecycleAction?.action === 'approve_destruction' && destructionPanelOpen && (
         <div className="mt-4 rounded-xl border border-error/30 bg-error/5 p-4">
@@ -939,18 +832,6 @@ export function isBerkasEmptyForClose(detail: Pick<BerkasDetail, 'item_count' | 
   return detail.item_count < 1 || detail.items.length < 1
 }
 
-export function buildCloseBerkasRequestBody(form: CloseBerkasFormState): CloseBerkasRequestBody {
-  const body: CloseBerkasRequestBody = {
-    nomor_spm: form.nomor_spm.trim(),
-    retensi_aktif: form.retensi_aktif as RetensiLabel,
-    retensi_inaktif: form.retensi_inaktif as RetensiLabel,
-  }
-
-  if (form.closed_at) body.closed_at = form.closed_at
-
-  return body
-}
-
 function resolveErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     const payload = error.payload
@@ -963,3 +844,5 @@ function resolveErrorMessage(error: unknown): string {
 
   return 'Terjadi kesalahan'
 }
+
+export { buildCloseBerkasRequestBody } from './-components/CloseBerkasDialog'

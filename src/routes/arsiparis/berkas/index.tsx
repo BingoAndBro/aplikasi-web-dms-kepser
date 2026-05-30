@@ -6,6 +6,7 @@ import {
   Download,
   FolderOpen,
   Loader2,
+  Save,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -25,6 +26,14 @@ import {
   createBerkasFolderListCsv,
   downloadCsvFile,
 } from '#/lib/archive/berkas-arsip-csv'
+import {
+  buildCloseBerkasRequestBody,
+  CloseBerkasDialog,
+  EMPTY_BERKAS_CLOSE_MESSAGE,
+  EMPTY_CLOSE_BERKAS_FORM,
+  isCloseBerkasFormIncomplete,
+  type CloseBerkasFormState,
+} from './-components/CloseBerkasDialog'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/arsiparis/berkas/')({ component: BerkasArsipAktifPage })
@@ -74,6 +83,9 @@ function BerkasArsipAktifPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [pendingLifecycleBerkasId, setPendingLifecycleBerkasId] = useState<string | null>(null)
+  const [closeDialogFolder, setCloseDialogFolder] = useState<BerkasFolder | null>(null)
+  const [pendingCloseBerkasId, setPendingCloseBerkasId] = useState<string | null>(null)
+  const [closeForm, setCloseForm] = useState<CloseBerkasFormState>(EMPTY_CLOSE_BERKAS_FORM)
 
   async function fetchData() {
     setLoading(true)
@@ -125,6 +137,48 @@ function BerkasArsipAktifPage() {
     } finally {
       setPendingLifecycleBerkasId(null)
     }
+  }
+
+  async function submitCloseBerkas() {
+    if (!closeDialogFolder) return
+    if (isBerkasEmptyForClose(closeDialogFolder) || isCloseBerkasFormIncomplete(closeForm)) {
+      setActionError(isBerkasEmptyForClose(closeDialogFolder)
+        ? EMPTY_BERKAS_CLOSE_MESSAGE
+        : 'Nomor SPM, Retensi Aktif, dan Retensi Inaktif wajib diisi')
+      setActionSuccess(null)
+      return
+    }
+
+    setPendingCloseBerkasId(closeDialogFolder.berkas_id)
+    setActionError(null)
+    setActionSuccess(null)
+
+    try {
+      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(closeDialogFolder.berkas_id)}/close`, {
+        method: 'POST',
+        body: JSON.stringify(buildCloseBerkasRequestBody(closeForm)),
+      })
+      setActionSuccess('Berkas berhasil ditutup dan menjadi Arsip Aktif.')
+      setCloseDialogFolder(null)
+      setCloseForm(EMPTY_CLOSE_BERKAS_FORM)
+      await fetchData()
+    } catch (error) {
+      setActionError(resolveErrorMessage(error))
+    } finally {
+      setPendingCloseBerkasId(null)
+    }
+  }
+
+  function openCloseDialog(folder: BerkasFolder) {
+    if (isBerkasEmptyForClose(folder)) {
+      setActionError(EMPTY_BERKAS_CLOSE_MESSAGE)
+      setActionSuccess(null)
+      return
+    }
+
+    setCloseDialogFolder(folder)
+    setActionError(null)
+    setActionSuccess(null)
   }
 
   function exportCsv() {
@@ -218,7 +272,9 @@ function BerkasArsipAktifPage() {
               folders={openFolders}
               mode="open"
               pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+              pendingCloseBerkasId={pendingCloseBerkasId}
               onLifecycleAction={submitLifecycleAction}
+              onOpenCloseDialog={openCloseDialog}
             />
             <BerkasSection
               title="Pemberkasan Arsip Aktif"
@@ -228,10 +284,32 @@ function BerkasArsipAktifPage() {
               folders={activeFolders}
               mode="active"
               pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+              pendingCloseBerkasId={pendingCloseBerkasId}
               onLifecycleAction={submitLifecycleAction}
+              onOpenCloseDialog={openCloseDialog}
             />
           </div>
         )}
+        <CloseBerkasDialog
+          open={Boolean(closeDialogFolder)}
+          form={closeForm}
+          pending={Boolean(pendingCloseBerkasId)}
+          submitDisabled={
+            Boolean(pendingCloseBerkasId)
+            || !closeDialogFolder
+            || isBerkasEmptyForClose(closeDialogFolder)
+            || isCloseBerkasFormIncomplete(closeForm)
+          }
+          onOpenChange={(open) => {
+            if (!open && !pendingCloseBerkasId) {
+              setCloseDialogFolder(null)
+              setCloseForm(EMPTY_CLOSE_BERKAS_FORM)
+              setActionError(null)
+            }
+          }}
+          onFormChange={setCloseForm}
+          onSubmit={submitCloseBerkas}
+        />
       </div>
     </PageLayout>
   )
@@ -245,7 +323,9 @@ function BerkasSection({
   folders,
   mode,
   pendingLifecycleBerkasId,
+  pendingCloseBerkasId,
   onLifecycleAction,
+  onOpenCloseDialog,
 }: {
   title: string
   description: string
@@ -254,7 +334,9 @@ function BerkasSection({
   folders: BerkasFolder[]
   mode: BerkasSectionMode
   pendingLifecycleBerkasId: string | null
+  pendingCloseBerkasId: string | null
   onLifecycleAction: (folder: BerkasFolder) => void
+  onOpenCloseDialog: (folder: BerkasFolder) => void
 }) {
   return (
     <section className="space-y-3">
@@ -276,7 +358,9 @@ function BerkasSection({
           folders={folders}
           mode={mode}
           pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+          pendingCloseBerkasId={pendingCloseBerkasId}
           onLifecycleAction={onLifecycleAction}
+          onOpenCloseDialog={onOpenCloseDialog}
         />
       )}
     </section>
@@ -287,12 +371,16 @@ function BerkasTable({
   folders,
   mode,
   pendingLifecycleBerkasId,
+  pendingCloseBerkasId,
   onLifecycleAction,
+  onOpenCloseDialog,
 }: {
   folders: BerkasFolder[]
   mode: BerkasSectionMode
   pendingLifecycleBerkasId: string | null
+  pendingCloseBerkasId: string | null
   onLifecycleAction: (folder: BerkasFolder) => void
+  onOpenCloseDialog: (folder: BerkasFolder) => void
 }) {
   return (
     <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
@@ -356,6 +444,13 @@ function BerkasTable({
                       pending={pendingLifecycleBerkasId === folder.berkas_id}
                       onLifecycleAction={onLifecycleAction}
                     />
+                    {mode === 'open' && (
+                      <CloseBerkasShortcutButton
+                        folder={folder}
+                        pending={pendingCloseBerkasId === folder.berkas_id}
+                        onOpenCloseDialog={onOpenCloseDialog}
+                      />
+                    )}
                   </div>
                 </td>
               </tr>
@@ -364,6 +459,32 @@ function BerkasTable({
         </table>
       </div>
     </div>
+  )
+}
+
+function CloseBerkasShortcutButton({
+  folder,
+  pending,
+  onOpenCloseDialog,
+}: {
+  folder: BerkasFolder
+  pending: boolean
+  onOpenCloseDialog: (folder: BerkasFolder) => void
+}) {
+  const disabled = pending || isBerkasEmptyForClose(folder)
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      className="h-7 gap-1.5 px-2.5 text-[11px]"
+      disabled={disabled}
+      title={isBerkasEmptyForClose(folder) ? EMPTY_BERKAS_CLOSE_MESSAGE : 'Tutup Berkas'}
+      onClick={() => onOpenCloseDialog(folder)}
+    >
+      {pending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+      {pending ? 'Memproses...' : 'Tutup Berkas'}
+    </Button>
   )
 }
 
@@ -429,6 +550,10 @@ function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string |
           : 'border-slate-200 bg-slate-50 text-slate-700'
 
   return <Badge className={className}>{formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}</Badge>
+}
+
+function isBerkasEmptyForClose(folder: Pick<BerkasFolder, 'item_count'>): boolean {
+  return folder.item_count < 1
 }
 
 function resolveErrorMessage(error: unknown): string {
