@@ -290,6 +290,9 @@ describe('folder-first berkas archive page formatting', () => {
 
     expect(listSource).toContain('Berkas Terbuka')
     expect(listSource).toContain('Pemberkasan Arsip Aktif')
+    expect(listSource).toContain('Export CSV')
+    expect(listSource).toContain('createBerkasFolderListCsv')
+    expect(listSource).toContain('Tidak ada data untuk diekspor.')
     expect(listSource).not.toContain('Arsip Inaktif')
     expect(listSource).not.toContain('Usul Musnah')
     expect(listSource).not.toContain('Dimusnahkan')
@@ -302,6 +305,8 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('File fisik tidak dihapus pada fase ini')
     expect(detailSource).toContain('Metadata berkas dan dokumen tetap tersimpan')
     expect(detailSource).toContain('disabled={!canSubmitDestruction}')
+    expect(detailSource).toContain('Export Daftar Dokumen CSV')
+    expect(detailSource).toContain('createBerkasDetailItemsCsv')
     expect(detailSource).toContain('Data file sudah dimusnahkan')
     expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
     expect(detailSource).not.toContain('File fisik dihapus')

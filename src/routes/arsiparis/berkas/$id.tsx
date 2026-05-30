@@ -30,6 +30,11 @@ import {
   resolveBerkasLifecycleAction,
   snippet,
 } from '#/lib/archive/berkas-arsip-page-format'
+import {
+  BERKAS_DETAIL_ITEMS_CSV_FILENAME,
+  createBerkasDetailItemsCsv,
+  downloadCsvFile,
+} from '#/lib/archive/berkas-arsip-csv'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/arsiparis/berkas/$id')({ component: BerkasArsipDetailPage })
@@ -388,6 +393,11 @@ function ItemList({
   items: BerkasDetailItem[]
 }) {
   const [previewing, setPreviewing] = useState<{ href: string; title: string } | null>(null)
+  const canExport = items.length > 0
+
+  function exportCsv() {
+    downloadCsvFile(BERKAS_DETAIL_ITEMS_CSV_FILENAME, createBerkasDetailItemsCsv(items))
+  }
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -399,10 +409,13 @@ function ItemList({
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 py-12">
-        <FileText size={24} className="text-outline" />
-        <p className="font-headline text-base font-bold text-on-surface">Belum ada item dokumen</p>
-        <p className="text-xs text-on-surface-variant">Item workflow atau manual akan muncul setelah masuk ke berkas.</p>
+      <div className="space-y-3">
+        <ItemListHeader canExport={canExport} onExportCsv={exportCsv} />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 py-12">
+          <FileText size={24} className="text-outline" />
+          <p className="font-headline text-base font-bold text-on-surface">Belum ada item dokumen</p>
+          <p className="text-xs text-on-surface-variant">Item workflow atau manual akan muncul setelah masuk ke berkas.</p>
+        </div>
       </div>
     )
   }
@@ -418,10 +431,7 @@ function ItemList({
       )}
 
       <div className="space-y-3">
-        <div>
-          <h3 className="font-headline text-lg font-extrabold text-on-surface">Daftar Dokumen Dalam Berkas</h3>
-          <p className="text-xs text-on-surface-variant">Kartu item ringan dengan file access yang mengikuti status lifecycle folder.</p>
-        </div>
+        <ItemListHeader canExport={canExport} onExportCsv={exportCsv} />
         <div className="grid gap-3">
           {items.map((item, index) => (
             <ItemCard
@@ -436,6 +446,40 @@ function ItemList({
         </div>
       </div>
     </>
+  )
+}
+
+function ItemListHeader({
+  canExport,
+  onExportCsv,
+}: {
+  canExport: boolean
+  onExportCsv: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div>
+        <h3 className="font-headline text-lg font-extrabold text-on-surface">Daftar Dokumen Dalam Berkas</h3>
+        <p className="text-xs text-on-surface-variant">Kartu item ringan dengan file access yang mengikuti status lifecycle folder.</p>
+      </div>
+      <div className="flex flex-col gap-1 md:items-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit gap-1.5"
+          disabled={!canExport}
+          title={canExport ? 'Export daftar dokumen dalam berkas' : 'Tidak ada data untuk diekspor'}
+          onClick={onExportCsv}
+        >
+          <Download size={14} />
+          Export Daftar Dokumen CSV
+        </Button>
+        {!canExport && (
+          <p className="text-xs text-on-surface-variant">Tidak ada data untuk diekspor.</p>
+        )}
+      </div>
+    </div>
   )
 }
 
