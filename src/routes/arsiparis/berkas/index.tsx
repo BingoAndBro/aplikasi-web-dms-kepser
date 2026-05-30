@@ -16,6 +16,7 @@ import {
   formatKlasifikasiLabel,
   formatNominalRupiah,
   formatNullableDateLabel,
+  resolveBerkasLifecycleAction,
 } from '#/lib/archive/berkas-arsip-page-format'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
@@ -54,19 +55,30 @@ type BerkasFolderListResponse = {
   error?: string
 }
 
+type BerkasSectionMode = 'open' | 'active' | 'inactive' | 'proposed' | 'destroyed'
+
 function BerkasArsipAktifPage() {
   const [openFolders, setOpenFolders] = useState<BerkasFolder[]>([])
   const [activeFolders, setActiveFolders] = useState<BerkasFolder[]>([])
+  const [inactiveFolders, setInactiveFolders] = useState<BerkasFolder[]>([])
+  const [proposedFolders, setProposedFolders] = useState<BerkasFolder[]>([])
+  const [destroyedFolders, setDestroyedFolders] = useState<BerkasFolder[]>([])
   const [openSummary, setOpenSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [activeSummary, setActiveSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
+  const [inactiveSummary, setInactiveSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
+  const [proposedSummary, setProposedSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
+  const [destroyedSummary, setDestroyedSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
+  const [pendingLifecycleBerkasId, setPendingLifecycleBerkasId] = useState<string | null>(null)
 
   async function fetchData() {
     setLoading(true)
     setError(null)
     try {
-      const [openJson, activeJson] = await Promise.all([
+      const [openJson, activeJson, inactiveJson, proposedJson, destroyedJson] = await Promise.all([
         apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
           query: {
             status_berkas: 'OPEN',
@@ -79,15 +91,62 @@ function BerkasArsipAktifPage() {
             status_arsip: 'AKTIF',
           },
         }),
+        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+          query: {
+            status_berkas: 'CLOSED',
+            status_arsip: 'INAKTIF',
+          },
+        }),
+        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+          query: {
+            status_berkas: 'CLOSED',
+            status_arsip: 'USUL_MUSNAH',
+          },
+        }),
+        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+          query: {
+            status_berkas: 'CLOSED',
+            status_arsip: 'DIMUSNAHKAN',
+          },
+        }),
       ])
       setOpenFolders(openJson.berkas ?? [])
       setActiveFolders(activeJson.berkas ?? [])
+      setInactiveFolders(inactiveJson.berkas ?? [])
+      setProposedFolders(proposedJson.berkas ?? [])
+      setDestroyedFolders(destroyedJson.berkas ?? [])
       setOpenSummary(openJson.summary ?? null)
       setActiveSummary(activeJson.summary ?? null)
+      setInactiveSummary(inactiveJson.summary ?? null)
+      setProposedSummary(proposedJson.summary ?? null)
+      setDestroyedSummary(destroyedJson.summary ?? null)
     } catch (error) {
       setError(resolveErrorMessage(error))
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function submitLifecycleAction(folder: BerkasFolder) {
+    const lifecycleAction = resolveBerkasLifecycleAction(folder.status_berkas, folder.status_arsip)
+    if (!lifecycleAction) return
+    if (!window.confirm(lifecycleAction.confirmation)) return
+
+    setPendingLifecycleBerkasId(folder.berkas_id)
+    setActionError(null)
+    setActionSuccess(null)
+
+    try {
+      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(folder.berkas_id)}/lifecycle`, {
+        method: 'POST',
+        body: JSON.stringify({ action: lifecycleAction.action }),
+      })
+      setActionSuccess(lifecycleAction.successMessage)
+      await fetchData()
+    } catch (error) {
+      setActionError(resolveErrorMessage(error))
+    } finally {
+      setPendingLifecycleBerkasId(null)
     }
   }
 
@@ -111,22 +170,31 @@ function BerkasArsipAktifPage() {
             </p>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
-            Read-only dari model berkas. Aksi tutup berkas dan lifecycle tidak tersedia di fase ini.
+            Lifecycle berkas bersifat status-only. Dokumen tidak dihapus oleh aksi fase ini.
           </div>
         </div>
 
-        {(openSummary || activeSummary) && (
-          <div className="grid gap-3 md:grid-cols-4">
+        {(openSummary || activeSummary || inactiveSummary || proposedSummary || destroyedSummary) && (
+          <div className="grid gap-3 md:grid-cols-5">
             <SummaryCard label="Berkas Terbuka" value={openSummary?.total_rows_returned ?? 0} />
             <SummaryCard label="Berkas Aktif" value={activeSummary?.total_rows_returned ?? 0} />
+            <SummaryCard label="Arsip Inaktif" value={inactiveSummary?.total_rows_returned ?? 0} />
+            <SummaryCard label="Usul Musnah" value={proposedSummary?.total_rows_returned ?? 0} />
             <SummaryCard
-              label="Dokumen Berjalan"
-              value={openSummary?.item_count_total ?? 0}
+              label="Dimusnahkan"
+              value={destroyedSummary?.total_rows_returned ?? 0}
             />
-            <SummaryCard
-              label="Dokumen Final Aktif"
-              value={activeSummary?.item_count_total ?? 0}
-            />
+          </div>
+        )}
+
+        {(actionError || actionSuccess) && (
+          <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
+            actionError
+              ? 'border-error/20 bg-error/5 text-error'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          }`}
+          >
+            {actionError ?? actionSuccess}
           </div>
         )}
 
@@ -149,6 +217,8 @@ function BerkasArsipAktifPage() {
               emptyDescription="Berkas terbuka akan muncul setelah dokumen workflow atau manual pertama memilih Jenis Pembayaran yang belum final."
               folders={openFolders}
               mode="open"
+              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+              onLifecycleAction={submitLifecycleAction}
             />
             <BerkasSection
               title="Pemberkasan Arsip Aktif"
@@ -157,6 +227,38 @@ function BerkasArsipAktifPage() {
               emptyDescription="Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini."
               folders={activeFolders}
               mode="active"
+              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+              onLifecycleAction={submitLifecycleAction}
+            />
+            <BerkasSection
+              title="Arsip Inaktif"
+              description="Berkas ditutup yang sudah dipindahkan ke lifecycle Inaktif."
+              emptyTitle="Belum ada arsip inaktif"
+              emptyDescription="Berkas lifecycle Inaktif akan muncul di sini."
+              folders={inactiveFolders}
+              mode="inactive"
+              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+              onLifecycleAction={submitLifecycleAction}
+            />
+            <BerkasSection
+              title="Usul Musnah"
+              description="Berkas ditutup yang sudah masuk daftar usulan pemusnahan."
+              emptyTitle="Belum ada usul musnah"
+              emptyDescription="Berkas yang diusulkan musnah akan muncul di sini."
+              folders={proposedFolders}
+              mode="proposed"
+              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+              onLifecycleAction={submitLifecycleAction}
+            />
+            <BerkasSection
+              title="Dimusnahkan"
+              description="Berkas yang ditandai Dimusnahkan tetap terlihat sebagai metadata. Preview dan download diblokir."
+              emptyTitle="Belum ada berkas dimusnahkan"
+              emptyDescription="Berkas status-only Dimusnahkan akan muncul di sini tanpa penghapusan fisik file."
+              folders={destroyedFolders}
+              mode="destroyed"
+              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+              onLifecycleAction={submitLifecycleAction}
             />
           </div>
         )}
@@ -172,13 +274,17 @@ function BerkasSection({
   emptyDescription,
   folders,
   mode,
+  pendingLifecycleBerkasId,
+  onLifecycleAction,
 }: {
   title: string
   description: string
   emptyTitle: string
   emptyDescription: string
   folders: BerkasFolder[]
-  mode: 'open' | 'active'
+  mode: BerkasSectionMode
+  pendingLifecycleBerkasId: string | null
+  onLifecycleAction: (folder: BerkasFolder) => void
 }) {
   return (
     <section className="space-y-3">
@@ -196,13 +302,28 @@ function BerkasSection({
           <p className="max-w-md text-center text-xs text-on-surface-variant">{emptyDescription}</p>
         </div>
       ) : (
-        <BerkasTable folders={folders} mode={mode} />
+        <BerkasTable
+          folders={folders}
+          mode={mode}
+          pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+          onLifecycleAction={onLifecycleAction}
+        />
       )}
     </section>
   )
 }
 
-function BerkasTable({ folders, mode }: { folders: BerkasFolder[]; mode: 'open' | 'active' }) {
+function BerkasTable({
+  folders,
+  mode,
+  pendingLifecycleBerkasId,
+  onLifecycleAction,
+}: {
+  folders: BerkasFolder[]
+  mode: BerkasSectionMode
+  pendingLifecycleBerkasId: string | null
+  onLifecycleAction: (folder: BerkasFolder) => void
+}) {
   return (
     <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -213,7 +334,7 @@ function BerkasTable({ folders, mode }: { folders: BerkasFolder[]; mode: 'open' 
               <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Jenis Pembayaran</th>
               <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Berkas</th>
               <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Arsip</th>
-              {mode === 'active' && (
+              {mode !== 'open' && (
                 <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Nomor SPM</th>
               )}
               <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Jumlah Dokumen</th>
@@ -241,7 +362,7 @@ function BerkasTable({ folders, mode }: { folders: BerkasFolder[]; mode: 'open' 
                 <td className="px-4 py-3">
                   <StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />
                 </td>
-                {mode === 'active' && (
+                {mode !== 'open' && (
                   <td className="px-4 py-3 font-semibold text-on-surface">{folder.nomor_spm ?? '-'}</td>
                 )}
                 <td className="px-4 py-3 text-center text-on-surface">{folder.item_count}</td>
@@ -251,14 +372,21 @@ function BerkasTable({ folders, mode }: { folders: BerkasFolder[]; mode: 'open' 
                 <td className="px-4 py-3 text-center text-on-surface-variant">
                   {formatNullableDateLabel(mode === 'open' ? folder.updated_at : folder.closed_at)}
                 </td>
-                <td className="px-4 py-3 text-center">
-                  <Link
-                    to="/arsiparis/berkas/$id"
-                    params={{ id: folder.berkas_id }}
-                    className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
-                  >
-                    Detail
-                  </Link>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Link
+                      to="/arsiparis/berkas/$id"
+                      params={{ id: folder.berkas_id }}
+                      className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
+                    >
+                      Detail
+                    </Link>
+                    <LifecycleActionButton
+                      folder={folder}
+                      pending={pendingLifecycleBerkasId === folder.berkas_id}
+                      onLifecycleAction={onLifecycleAction}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -266,6 +394,32 @@ function BerkasTable({ folders, mode }: { folders: BerkasFolder[]; mode: 'open' 
         </table>
       </div>
     </div>
+  )
+}
+
+function LifecycleActionButton({
+  folder,
+  pending,
+  onLifecycleAction,
+}: {
+  folder: BerkasFolder
+  pending: boolean
+  onLifecycleAction: (folder: BerkasFolder) => void
+}) {
+  const lifecycleAction = resolveBerkasLifecycleAction(folder.status_berkas, folder.status_arsip)
+  if (!lifecycleAction) return null
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={lifecycleAction.action === 'approve_destruction' ? 'destructive' : 'outline'}
+      className="h-7 px-2.5 text-[11px]"
+      disabled={pending}
+      onClick={() => onLifecycleAction(folder)}
+    >
+      {pending ? 'Memproses...' : lifecycleAction.label}
+    </Button>
   )
 }
 

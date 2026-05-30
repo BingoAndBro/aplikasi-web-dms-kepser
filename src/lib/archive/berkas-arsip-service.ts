@@ -111,6 +111,17 @@ export type CloseBerkasArsipInput = {
   now?: Date
 }
 
+export type BerkasArchiveLifecycleAction =
+  | 'mark_inactive'
+  | 'propose_destruction'
+  | 'approve_destruction'
+
+export type TransitionBerkasArchiveStatusInput = {
+  berkasId: string
+  actorUserId: string
+  action: BerkasArchiveLifecycleAction
+}
+
 export type CloseBerkasPlan = {
   nomorSpm: string
   retensiAktif: CloseBerkasMetadataInput['retensi_aktif']
@@ -146,6 +157,11 @@ export type BerkasArsipRepository = {
     actorUserId: string
     plan: CloseBerkasPlan
   }): Promise<BerkasRow | null>
+  updateBerkasArchiveStatus(input: {
+    berkasId: string
+    currentStatusArsip: BerkasArchiveStatus
+    nextStatusArsip: BerkasArchiveStatus
+  }): Promise<BerkasRow | null>
 }
 
 export type BerkasArsipServiceDeps = {
@@ -159,6 +175,9 @@ export type BerkasArsipErrorCode =
   | 'BERKAS_KLASIFIKASI_CLOSED'
   | 'BERKAS_KLASIFIKASI_CONFLICT'
   | 'BERKAS_NOT_OPEN'
+  | 'BERKAS_LIFECYCLE_NOT_FINAL'
+  | 'BERKAS_LIFECYCLE_UNKNOWN'
+  | 'BERKAS_LIFECYCLE_INVALID'
   | 'BERKAS_EMPTY'
   | 'SOURCE_NOT_FOUND'
   | 'SOURCE_KLASIFIKASI_MISMATCH'
@@ -324,6 +343,47 @@ export async function closeBerkasArsip(
   }
 
   return toBerkasDto(closed)
+}
+
+export async function transitionBerkasArchiveStatus(
+  input: TransitionBerkasArchiveStatusInput,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipDto> {
+  const repository = getRepository(deps)
+  const existing = await repository.findBerkasById(input.berkasId)
+  if (!existing) {
+    throw new BerkasArsipServiceError('BERKAS_NOT_FOUND', 'Berkas tidak ditemukan')
+  }
+
+  if (existing.statusBerkas !== BERKAS_STATUS.CLOSED) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_LIFECYCLE_NOT_FINAL',
+      'Berkas terbuka belum dapat dipindahkan lifecycle',
+    )
+  }
+
+  if (!existing.statusArsip) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_LIFECYCLE_UNKNOWN',
+      'Status arsip berkas belum tersedia',
+    )
+  }
+
+  const nextStatusArsip = nextStatusForBerkasLifecycleAction(input.action, existing.statusArsip)
+  const updated = await repository.updateBerkasArchiveStatus({
+    berkasId: input.berkasId,
+    currentStatusArsip: existing.statusArsip,
+    nextStatusArsip,
+  })
+
+  if (!updated) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_LIFECYCLE_INVALID',
+      'Status arsip berkas sudah berubah',
+    )
+  }
+
+  return toBerkasDto(updated)
 }
 
 export function buildCloseBerkasPlan(
@@ -514,6 +574,24 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
 
     return row ?? null
   },
+
+  async updateBerkasArchiveStatus(input) {
+    const database = await getDatabase()
+    const [row] = await database
+      .update(berkasArsip)
+      .set({
+        statusArsip: input.nextStatusArsip,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(berkasArsip.id, input.berkasId),
+        eq(berkasArsip.statusBerkas, BERKAS_STATUS.CLOSED),
+        eq(berkasArsip.statusArsip, input.currentStatusArsip),
+      ))
+      .returning()
+
+    return row ?? null
+  },
 }
 
 function getRepository(deps: BerkasArsipServiceDeps): BerkasArsipRepository {
@@ -577,6 +655,33 @@ async function insertBerkasItemSafely(
       'Dokumen sudah terhubung ke berkas',
     )
   }
+}
+
+function nextStatusForBerkasLifecycleAction(
+  action: BerkasArchiveLifecycleAction,
+  currentStatus: BerkasArchiveStatus,
+): BerkasArchiveStatus {
+  const allowed: Record<BerkasArchiveLifecycleAction, Partial<Record<BerkasArchiveStatus, BerkasArchiveStatus>>> = {
+    mark_inactive: {
+      [BERKAS_ARCHIVE_STATUS.AKTIF]: BERKAS_ARCHIVE_STATUS.INAKTIF,
+    },
+    propose_destruction: {
+      [BERKAS_ARCHIVE_STATUS.INAKTIF]: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+    },
+    approve_destruction: {
+      [BERKAS_ARCHIVE_STATUS.USUL_MUSNAH]: BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN,
+    },
+  }
+
+  const nextStatus = allowed[action][currentStatus]
+  if (!nextStatus) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_LIFECYCLE_INVALID',
+      'Perubahan status arsip berkas tidak valid',
+    )
+  }
+
+  return nextStatus
 }
 
 function toBerkasDto(row: BerkasRow): BerkasArsipDto {

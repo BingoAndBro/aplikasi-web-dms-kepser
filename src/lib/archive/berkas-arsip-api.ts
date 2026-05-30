@@ -91,6 +91,9 @@ function statusForServiceError(error: BerkasArsipServiceError): number {
     case 'BERKAS_KLASIFIKASI_CLOSED':
     case 'BERKAS_KLASIFIKASI_CONFLICT':
     case 'BERKAS_NOT_OPEN':
+    case 'BERKAS_LIFECYCLE_NOT_FINAL':
+    case 'BERKAS_LIFECYCLE_UNKNOWN':
+    case 'BERKAS_LIFECYCLE_INVALID':
     case 'BERKAS_EMPTY':
     case 'CONFLICT':
       return 409

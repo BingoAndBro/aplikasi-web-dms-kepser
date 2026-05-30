@@ -5,6 +5,13 @@ import type {
 } from '#/lib/constants/archive-status'
 import { formatDate } from '#/lib/utils/format'
 
+export type BerkasLifecycleActionView = {
+  action: 'mark_inactive' | 'propose_destruction' | 'approve_destruction'
+  label: string
+  confirmation: string
+  successMessage: string
+}
+
 export function formatBerkasStatusLabel(status: BerkasStatus | string | null | undefined): string {
   if (status === 'OPEN') return 'Berkas terbuka'
   if (status === 'CLOSED') return 'Berkas ditutup'
@@ -25,6 +32,42 @@ export function formatBerkasArchiveStatusLabel(
   if (!statusArsip) return 'Belum final'
 
   return 'Status arsip tidak dikenal'
+}
+
+export function resolveBerkasLifecycleAction(
+  statusBerkas: BerkasStatus | string | null | undefined,
+  statusArsip: BerkasArchiveStatus | string | null | undefined,
+): BerkasLifecycleActionView | null {
+  if (statusBerkas !== 'CLOSED') return null
+
+  if (statusArsip === 'AKTIF') {
+    return {
+      action: 'mark_inactive',
+      label: 'Jadikan Inaktif',
+      confirmation: 'Berkas akan dipindahkan ke status Inaktif. Dokumen tidak dihapus.',
+      successMessage: 'Berkas berhasil dipindahkan ke status Inaktif.',
+    }
+  }
+
+  if (statusArsip === 'INAKTIF') {
+    return {
+      action: 'propose_destruction',
+      label: 'Usulkan Musnah',
+      confirmation: 'Berkas akan masuk daftar Usul Musnah. Dokumen tidak dihapus.',
+      successMessage: 'Berkas berhasil masuk daftar Usul Musnah.',
+    }
+  }
+
+  if (statusArsip === 'USUL_MUSNAH') {
+    return {
+      action: 'approve_destruction',
+      label: 'Musnahkan Data',
+      confirmation: 'Berkas akan ditandai sebagai Dimusnahkan. Preview dan download akan diblokir. File fisik belum dihapus pada fase ini.',
+      successMessage: 'Berkas berhasil ditandai sebagai Dimusnahkan. File fisik belum dihapus.',
+    }
+  }
+
+  return null
 }
 
 export function formatSourceTypeLabel(sourceType: ArchiveSourceType | string | null | undefined): string {

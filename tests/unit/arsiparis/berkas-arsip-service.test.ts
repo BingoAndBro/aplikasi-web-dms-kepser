@@ -6,6 +6,7 @@ import {
   buildCloseBerkasPlan,
   closeBerkasArsip,
   getOrCreateOpenBerkasForKlasifikasi,
+  transitionBerkasArchiveStatus,
   type BerkasArsipRepository,
 } from '#/lib/archive/berkas-arsip-service'
 import { BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
@@ -17,6 +18,7 @@ const CLOSED_BERKAS_ID = 'berkas-belanja-barang-closed'
 const DOKUMEN_ID = 'dokumen-workflow'
 const MANUAL_ARSIP_ID = 'manual-dokumen'
 const CANONICAL_ARSIP_ID = 'canonical-arsip'
+type TestBerkasArchiveStatus = typeof BERKAS_ARCHIVE_STATUS[keyof typeof BERKAS_ARCHIVE_STATUS]
 
 describe('berkas arsip service foundation', () => {
   it('creates an OPEN berkas from active master classification snapshots', async () => {
@@ -250,6 +252,124 @@ describe('berkas arsip service foundation', () => {
       retensi_inaktif: '3 Tahun',
     })).toThrow(BerkasArsipServiceError)
   })
+
+  it('moves CLOSED AKTIF berkas to INAKTIF without item, source, or storage mutation', async () => {
+    const repository = createFakeRepository()
+
+    const updated = await transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'mark_inactive',
+    }, { repository })
+
+    expect(updated.status_arsip).toBe('INAKTIF')
+    expect(repository.calls).toContainEqual([
+      'updateBerkasArchiveStatus',
+      CLOSED_BERKAS_ID,
+      'AKTIF',
+      'INAKTIF',
+    ])
+    expect(repository.calls.some(([name]) => name === 'insertBerkasItem')).toBe(false)
+    expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('delete'))).toBe(false)
+    expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('storage'))).toBe(false)
+  })
+
+  it('moves CLOSED INAKTIF berkas to USUL_MUSNAH', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.INAKTIF,
+    })
+
+    const updated = await transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'propose_destruction',
+    }, { repository })
+
+    expect(updated.status_arsip).toBe('USUL_MUSNAH')
+    expect(repository.calls).toContainEqual([
+      'updateBerkasArchiveStatus',
+      CLOSED_BERKAS_ID,
+      'INAKTIF',
+      'USUL_MUSNAH',
+    ])
+  })
+
+  it('moves CLOSED USUL_MUSNAH berkas to DIMUSNAHKAN as status-only', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+    })
+
+    const updated = await transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'approve_destruction',
+    }, { repository })
+
+    expect(updated.status_arsip).toBe('DIMUSNAHKAN')
+    expect(repository.calls).toContainEqual([
+      'updateBerkasArchiveStatus',
+      CLOSED_BERKAS_ID,
+      'USUL_MUSNAH',
+      'DIMUSNAHKAN',
+    ])
+    expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('delete'))).toBe(false)
+  })
+
+  it('rejects OPEN/null lifecycle transitions', async () => {
+    const repository = createFakeRepository()
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'mark_inactive',
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_LIFECYCLE_NOT_FINAL',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'updateBerkasArchiveStatus')).toBe(false)
+  })
+
+  it('rejects CLOSED/null transitional lifecycle rows', async () => {
+    const repository = createFakeRepository({ closedStatusArsip: null })
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'mark_inactive',
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_LIFECYCLE_UNKNOWN',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'updateBerkasArchiveStatus')).toBe(false)
+  })
+
+  it('rejects invalid lifecycle jumps', async () => {
+    const repository = createFakeRepository()
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'propose_destruction',
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_LIFECYCLE_INVALID',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'updateBerkasArchiveStatus')).toBe(false)
+  })
+
+  it('rejects terminal DIMUSNAHKAN lifecycle transitions', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN,
+    })
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'mark_inactive',
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_LIFECYCLE_INVALID',
+    })
+  })
 })
 
 function validCloseMetadata() {
@@ -269,6 +389,7 @@ function createFakeRepository(options: {
   insertOpenBerkasError?: unknown
   insertBerkasItemError?: unknown
   openAfterConflict?: boolean
+  closedStatusArsip?: TestBerkasArchiveStatus | null
 } = {}): BerkasArsipRepository & { calls: unknown[][] } {
   const calls: unknown[][] = []
   let openLookupCount = 0
@@ -317,7 +438,12 @@ function createFakeRepository(options: {
     async findBerkasById(id) {
       calls.push(['findBerkasById', id])
       if (id === BERKAS_ID) return openBerkas()
-      if (id === CLOSED_BERKAS_ID) return closedBerkas()
+      if (id === CLOSED_BERKAS_ID) {
+        const statusArsip = Object.prototype.hasOwnProperty.call(options, 'closedStatusArsip')
+          ? options.closedStatusArsip
+          : BERKAS_ARCHIVE_STATUS.AKTIF
+        return closedBerkas({ statusArsip })
+      }
       return null
     },
     async findWorkflowSource(dokumenId) {
@@ -370,6 +496,18 @@ function createFakeRepository(options: {
         closedBy: input.actorUserId,
       }
     },
+    async updateBerkasArchiveStatus(input) {
+      calls.push([
+        'updateBerkasArchiveStatus',
+        input.berkasId,
+        input.currentStatusArsip,
+        input.nextStatusArsip,
+      ])
+      return {
+        ...closedBerkas({ statusArsip: input.nextStatusArsip }),
+        updatedAt: new Date('2026-05-30T00:00:00.000Z'),
+      }
+    },
   }
 }
 
@@ -380,7 +518,9 @@ function openBerkas(overrides: Partial<ReturnType<typeof baseBerkas>> = {}) {
   }
 }
 
-function closedBerkas() {
+function closedBerkas(
+  overrides: Partial<ReturnType<typeof baseBerkas>> & { statusArsip?: TestBerkasArchiveStatus | null } = {},
+) {
   return {
     ...baseBerkas(),
     id: CLOSED_BERKAS_ID,
@@ -393,6 +533,7 @@ function closedBerkas() {
     masaInaktifBerakhir: '2030-05-29',
     closedAt: new Date('2026-05-29T00:00:00.000Z'),
     closedBy: ACTOR_ID,
+    ...overrides,
   }
 }
 

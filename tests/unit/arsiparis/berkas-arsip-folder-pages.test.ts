@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const BERKAS_ID = '22222222-2222-4222-8222-222222222222'
@@ -35,6 +36,7 @@ import {
   formatBerkasArchiveStatusLabel,
   formatBerkasStatusLabel,
   formatItemWarningLabel,
+  resolveBerkasLifecycleAction,
   formatSourceTypeLabel,
 } from '#/lib/archive/berkas-arsip-page-format'
 import { Route as BerkasListRoute } from '#/routes/api/arsiparis/berkas/index'
@@ -144,6 +146,35 @@ describe('folder-first berkas archive read API routes', () => {
     expectNoSensitiveOutput(body)
   })
 
+  it.each([
+    ['INAKTIF', 'Arsip Inaktif'],
+    ['USUL_MUSNAH', 'Usul Musnah'],
+    ['DIMUSNAHKAN', 'Dimusnahkan'],
+  ] as const)('passes CLOSED %s filters for folder-first visibility', async (statusArsip) => {
+    readModelMocks.listBerkasArsipFolders.mockResolvedValueOnce(listResult({
+      row: folderRow({ status_arsip: statusArsip }),
+      summary: listSummary({ status_arsip_counts: { [statusArsip]: 1 } }),
+    }))
+
+    const response = await listGetHandler({
+      request: new Request(`http://localhost/api/arsiparis/berkas?status_berkas=CLOSED&status_arsip=${statusArsip}`),
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(readModelMocks.listBerkasArsipFolders).toHaveBeenCalledWith({
+      status_berkas: 'CLOSED',
+      status_arsip: statusArsip,
+    })
+    expect(body.berkas[0]).toMatchObject({
+      status_berkas: 'CLOSED',
+      status_arsip: statusArsip,
+    })
+    expectNoSensitiveOutput(body)
+  })
+
+
   it('returns OPEN folder detail DTOs without requiring final metadata', async () => {
     readModelMocks.getBerkasArsipDetail.mockResolvedValueOnce({
       status: 'found',
@@ -230,6 +261,49 @@ describe('folder-first berkas archive page formatting', () => {
     expect(formatItemWarningLabel('SOURCE_NOT_FOUND')).toBe('Data sumber tidak ditemukan')
   })
 
+  it('resolves lifecycle buttons only for valid CLOSED folder statuses', () => {
+    expect(resolveBerkasLifecycleAction('CLOSED', 'AKTIF')).toMatchObject({
+      action: 'mark_inactive',
+      label: 'Jadikan Inaktif',
+    })
+    expect(resolveBerkasLifecycleAction('CLOSED', 'INAKTIF')).toMatchObject({
+      action: 'propose_destruction',
+      label: 'Usulkan Musnah',
+    })
+    expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')).toMatchObject({
+      action: 'approve_destruction',
+      label: 'Musnahkan Data',
+    })
+    expect(resolveBerkasLifecycleAction('CLOSED', 'DIMUSNAHKAN')).toBeNull()
+    expect(resolveBerkasLifecycleAction('OPEN', null)).toBeNull()
+    expect(resolveBerkasLifecycleAction('CLOSED', null)).toBeNull()
+    expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmation)
+      .toContain('File fisik belum dihapus pada fase ini')
+  })
+
+  it('keeps all folder visibility sections and DIMUSNAHKAN file block copy on pages', () => {
+    const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
+    const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
+    const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
+
+    for (const label of [
+      'Berkas Terbuka',
+      'Pemberkasan Arsip Aktif',
+      'Arsip Inaktif',
+      'Usul Musnah',
+      'Dimusnahkan',
+    ]) {
+      expect(listSource).toContain(label)
+    }
+
+    expect(formatSource).toContain('Jadikan Inaktif')
+    expect(formatSource).toContain('Usulkan Musnah')
+    expect(formatSource).toContain('Musnahkan Data')
+    expect(detailSource).toContain('Data sudah dimusnahkan')
+    expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
+    expect(detailSource).not.toContain('File fisik dihapus')
+  })
+
   it('builds folder item file-action URLs without raw logical paths', () => {
     const href = buildBerkasItemAttachmentFileUrl(
       BERKAS_ID,
@@ -271,7 +345,7 @@ function listResult(options: {
   }
 }
 
-function listSummary() {
+function listSummary(overrides: Record<string, unknown> = {}) {
   return {
     total_rows_returned: 1,
     status_berkas_counts: { CLOSED: 1 },
@@ -282,6 +356,7 @@ function listSummary() {
     total_nominal_realisasi: 1250000,
     applied_limit: 100,
     applied_offset: 0,
+    ...overrides,
   }
 }
 
@@ -313,7 +388,7 @@ function detailResult() {
   }
 }
 
-function folderRow() {
+function folderRow(overrides: Record<string, unknown> = {}) {
   return {
     berkas_id: BERKAS_ID,
     klasifikasi_id: KLASIFIKASI_ID,
@@ -334,6 +409,7 @@ function folderRow() {
     total_nominal_realisasi: 1250000,
     created_at: '2026-05-29T00:00:00.000Z',
     updated_at: '2026-05-29T00:00:00.000Z',
+    ...overrides,
   }
 }
 

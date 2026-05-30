@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => {
     addWorkflowDocumentToOpenBerkas: vi.fn(),
     addManualDocumentToOpenBerkas: vi.fn(),
     closeBerkasArsip: vi.fn(),
+    transitionBerkasArchiveStatus: vi.fn(),
     BerkasArsipServiceError: MockBerkasArsipServiceError,
   }
 })
@@ -40,11 +41,13 @@ vi.mock('#/lib/archive/berkas-arsip-service', () => ({
   addWorkflowDocumentToOpenBerkas: mocks.addWorkflowDocumentToOpenBerkas,
   addManualDocumentToOpenBerkas: mocks.addManualDocumentToOpenBerkas,
   closeBerkasArsip: mocks.closeBerkasArsip,
+  transitionBerkasArchiveStatus: mocks.transitionBerkasArchiveStatus,
 }))
 
 import { Route as OpenBerkasRoute } from '#/routes/api/arsiparis/berkas/open'
 import { Route as AddBerkasItemRoute } from '#/routes/api/arsiparis/berkas/$id/items'
 import { Route as CloseBerkasRoute } from '#/routes/api/arsiparis/berkas/$id/close'
+import { Route as LifecycleBerkasRoute } from '#/routes/api/arsiparis/berkas/$id/lifecycle'
 
 type PostHandler = (args: {
   request: Request
@@ -63,6 +66,10 @@ const closePostHandler = (CloseBerkasRoute as unknown as {
   options: { server: { handlers: { POST: PostHandler } } }
 }).options.server.handlers.POST
 
+const lifecyclePostHandler = (LifecycleBerkasRoute as unknown as {
+  options: { server: { handlers: { POST: PostHandler } } }
+}).options.server.handlers.POST
+
 describe('berkas arsip API routes', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -72,6 +79,7 @@ describe('berkas arsip API routes', () => {
     mocks.addWorkflowDocumentToOpenBerkas.mockResolvedValue(workflowItemDto())
     mocks.addManualDocumentToOpenBerkas.mockResolvedValue(manualItemDto())
     mocks.closeBerkasArsip.mockResolvedValue(closedBerkasDto())
+    mocks.transitionBerkasArchiveStatus.mockResolvedValue(inactiveBerkasDto())
   })
 
   it('protects POST routes with same-origin before auth or service work', async () => {
@@ -302,6 +310,105 @@ describe('berkas arsip API routes', () => {
     })
     expectNoSensitiveOutput(body)
   })
+
+  it('returns 401 for unauthenticated lifecycle requests', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'mark_inactive',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    expect(response.status).toBe(401)
+    expect(await response.json()).toEqual({ error: 'Unauthorized' })
+    expect(mocks.transitionBerkasArchiveStatus).not.toHaveBeenCalled()
+  })
+
+  it('protects lifecycle POST with same-origin before auth or service work', async () => {
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'mark_inactive',
+      }, 'https://evil.example'),
+      params: { id: BERKAS_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Permintaan tidak diizinkan' })
+    expect(mocks.getLocalServerSession).not.toHaveBeenCalled()
+    expect(mocks.transitionBerkasArchiveStatus).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for ADMIN-only lifecycle requests', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
+
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'mark_inactive',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Akses ditolak' })
+    expect(mocks.transitionBerkasArchiveStatus).not.toHaveBeenCalled()
+  })
+
+  it('validates lifecycle request body before service work', async () => {
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'restore_active',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Aksi lifecycle berkas tidak valid' })
+    expect(mocks.transitionBerkasArchiveStatus).not.toHaveBeenCalled()
+  })
+
+  it('moves lifecycle through the folder service for assigned KEPALA_SUB_BAGIAN_UMUM', async () => {
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'mark_inactive',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({ berkas: inactiveBerkasDto() })
+    expect(mocks.transitionBerkasArchiveStatus).toHaveBeenCalledWith({
+      berkasId: BERKAS_ID,
+      actorUserId: USER_ID,
+      action: 'mark_inactive',
+    })
+    expectNoSensitiveOutput(body)
+  })
+
+  it('maps invalid lifecycle transitions to a safe 409 response', async () => {
+    mocks.transitionBerkasArchiveStatus.mockRejectedValueOnce(
+      new mocks.BerkasArsipServiceError(
+        'BERKAS_LIFECYCLE_INVALID',
+        'Perubahan status arsip berkas tidak valid',
+      ),
+    )
+
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'approve_destruction',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(409)
+    expect(body).toEqual({ error: 'Perubahan status arsip berkas tidak valid' })
+    expectNoSensitiveOutput(body)
+  })
 })
 
 function createSession(roles: string[], userId: string) {
@@ -369,6 +476,13 @@ function closedBerkasDto() {
     masa_inaktif_berakhir: '2030-05-29',
     closed_at: '2026-05-29T00:00:00.000Z',
     closed_by: USER_ID,
+  }
+}
+
+function inactiveBerkasDto() {
+  return {
+    ...closedBerkasDto(),
+    status_arsip: 'INAKTIF',
   }
 }
 

@@ -161,6 +161,7 @@ import { Route as ApiBendaharaDokumenIdRejectRouteImport } from './routes/api/be
 import { Route as ApiBendaharaDokumenIdApproveRouteImport } from './routes/api/bendahara/dokumen/$id/approve'
 import { Route as ApiArsiparisManualArsipIdAttachmentsRouteImport } from './routes/api/arsiparis/manual-arsip/$id/attachments'
 import { Route as ApiArsiparisDokumenIdArchiveRouteImport } from './routes/api/arsiparis/dokumen.$id.archive'
+import { Route as ApiArsiparisBerkasIdLifecycleRouteImport } from './routes/api/arsiparis/berkas/$id/lifecycle'
 import { Route as ApiArsiparisBerkasIdItemsRouteImport } from './routes/api/arsiparis/berkas/$id/items'
 import { Route as ApiArsiparisBerkasIdCloseRouteImport } from './routes/api/arsiparis/berkas/$id/close'
 import { Route as ApiArsiparisArsipIdLifecycleRouteImport } from './routes/api/arsiparis/arsip/$id/lifecycle'
@@ -959,6 +960,12 @@ const ApiArsiparisDokumenIdArchiveRoute =
     path: '/archive',
     getParentRoute: () => ApiArsiparisDokumenIdRoute,
   } as any)
+const ApiArsiparisBerkasIdLifecycleRoute =
+  ApiArsiparisBerkasIdLifecycleRouteImport.update({
+    id: '/lifecycle',
+    path: '/lifecycle',
+    getParentRoute: () => ApiArsiparisBerkasIdRoute,
+  } as any)
 const ApiArsiparisBerkasIdItemsRoute =
   ApiArsiparisBerkasIdItemsRouteImport.update({
     id: '/items',
@@ -1173,6 +1180,7 @@ export interface FileRoutesByFullPath {
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
   '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
+  '/api/arsiparis/berkas/$id/lifecycle': typeof ApiArsiparisBerkasIdLifecycleRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1329,6 +1337,7 @@ export interface FileRoutesByTo {
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
   '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
+  '/api/arsiparis/berkas/$id/lifecycle': typeof ApiArsiparisBerkasIdLifecycleRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1495,6 +1504,7 @@ export interface FileRoutesById {
   '/api/arsiparis/arsip/$id/lifecycle': typeof ApiArsiparisArsipIdLifecycleRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
   '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
+  '/api/arsiparis/berkas/$id/lifecycle': typeof ApiArsiparisBerkasIdLifecycleRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
   '/api/arsiparis/manual-arsip/$id/attachments': typeof ApiArsiparisManualArsipIdAttachmentsRouteWithChildren
   '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
@@ -1662,6 +1672,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/$id/lifecycle'
     | '/api/arsiparis/berkas/$id/close'
     | '/api/arsiparis/berkas/$id/items'
+    | '/api/arsiparis/berkas/$id/lifecycle'
     | '/api/arsiparis/dokumen/$id/archive'
     | '/api/arsiparis/manual-arsip/$id/attachments'
     | '/api/bendahara/dokumen/$id/approve'
@@ -1818,6 +1829,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/$id/lifecycle'
     | '/api/arsiparis/berkas/$id/close'
     | '/api/arsiparis/berkas/$id/items'
+    | '/api/arsiparis/berkas/$id/lifecycle'
     | '/api/arsiparis/dokumen/$id/archive'
     | '/api/arsiparis/manual-arsip/$id/attachments'
     | '/api/bendahara/dokumen/$id/approve'
@@ -1983,6 +1995,7 @@ export interface FileRouteTypes {
     | '/api/arsiparis/arsip/$id/lifecycle'
     | '/api/arsiparis/berkas/$id/close'
     | '/api/arsiparis/berkas/$id/items'
+    | '/api/arsiparis/berkas/$id/lifecycle'
     | '/api/arsiparis/dokumen/$id/archive'
     | '/api/arsiparis/manual-arsip/$id/attachments'
     | '/api/bendahara/dokumen/$id/approve'
@@ -3144,6 +3157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArsiparisDokumenIdArchiveRouteImport
       parentRoute: typeof ApiArsiparisDokumenIdRoute
     }
+    '/api/arsiparis/berkas/$id/lifecycle': {
+      id: '/api/arsiparis/berkas/$id/lifecycle'
+      path: '/lifecycle'
+      fullPath: '/api/arsiparis/berkas/$id/lifecycle'
+      preLoaderRoute: typeof ApiArsiparisBerkasIdLifecycleRouteImport
+      parentRoute: typeof ApiArsiparisBerkasIdRoute
+    }
     '/api/arsiparis/berkas/$id/items': {
       id: '/api/arsiparis/berkas/$id/items'
       path: '/items'
@@ -3608,11 +3628,13 @@ const ApiArsiparisBerkasIdItemsRouteWithChildren =
 interface ApiArsiparisBerkasIdRouteChildren {
   ApiArsiparisBerkasIdCloseRoute: typeof ApiArsiparisBerkasIdCloseRoute
   ApiArsiparisBerkasIdItemsRoute: typeof ApiArsiparisBerkasIdItemsRouteWithChildren
+  ApiArsiparisBerkasIdLifecycleRoute: typeof ApiArsiparisBerkasIdLifecycleRoute
 }
 
 const ApiArsiparisBerkasIdRouteChildren: ApiArsiparisBerkasIdRouteChildren = {
   ApiArsiparisBerkasIdCloseRoute: ApiArsiparisBerkasIdCloseRoute,
   ApiArsiparisBerkasIdItemsRoute: ApiArsiparisBerkasIdItemsRouteWithChildren,
+  ApiArsiparisBerkasIdLifecycleRoute: ApiArsiparisBerkasIdLifecycleRoute,
 }
 
 const ApiArsiparisBerkasIdRouteWithChildren =
