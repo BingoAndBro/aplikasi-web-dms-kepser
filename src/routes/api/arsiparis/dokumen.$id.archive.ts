@@ -295,6 +295,13 @@ function createWorkflowArchiveBerkasRepository(
       return row ?? null
     },
 
+    async findBerkasByKlasifikasiId(klasifikasiId) {
+      return tx
+        .select()
+        .from(berkasArsip)
+        .where(eq(berkasArsip.klasifikasiId, klasifikasiId))
+    },
+
     async insertOpenBerkas(input) {
       const [row] = await tx
         .insert(berkasArsip)
@@ -407,6 +414,8 @@ function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
     case 'SOURCE_NOT_FOUND':
       return 404
     case 'BERKAS_CLOSED':
+    case 'BERKAS_KLASIFIKASI_CLOSED':
+    case 'BERKAS_KLASIFIKASI_CONFLICT':
     case 'BERKAS_NOT_OPEN':
     case 'BERKAS_EMPTY':
     case 'CONFLICT':

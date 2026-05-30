@@ -221,7 +221,9 @@ function ArsiparisDokumenDetailPage() {
   }
 
   useEffect(() => {
-    apiFetch<{ klasifikasi?: Klasifikasi[] }>('/arsiparis/klasifikasi')
+    apiFetch<{ klasifikasi?: Klasifikasi[] }>('/arsiparis/klasifikasi', {
+      query: { eligible_for_berkas: 'true' },
+    })
       .then(json => setKlasifikasiList(json.klasifikasi ?? []))
       .catch(() => {})
   }, [])

@@ -2,8 +2,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { masterKlasifikasiArsip } from '#/db/schema/arsip'
+import { berkasArsip, masterKlasifikasiArsip } from '#/db/schema/arsip'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { filterKlasifikasiTreeForBerkasSelection } from '#/lib/archive/berkas-klasifikasi-eligibility'
 import { ROLES } from '#/lib/constants/roles'
 import { z } from 'zod'
 
@@ -124,8 +125,10 @@ function buildTree(items: Omit<KlasifikasiNode, 'children'>[]): KlasifikasiNode[
 export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }: { request: Request }) => {
         try {
+          const url = new URL(request.url)
+          const eligibleForBerkas = url.searchParams.get('eligible_for_berkas') === 'true'
           const data = await db
             .select({
               id: masterKlasifikasiArsip.id,
@@ -146,10 +149,21 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
           }))
 
           const tree = buildTree(itemsWithRoot)
+          if (!eligibleForBerkas) return Response.json({ klasifikasi: tree })
 
-          return Response.json({ klasifikasi: tree })
+          const berkasRows = await db
+            .select({
+              klasifikasi_id: berkasArsip.klasifikasiId,
+              status_berkas: berkasArsip.statusBerkas,
+              status_arsip: berkasArsip.statusArsip,
+            })
+            .from(berkasArsip)
+
+          return Response.json({
+            klasifikasi: filterKlasifikasiTreeForBerkasSelection(tree, berkasRows),
+          })
         } catch (err) {
-          console.error('[arsiparis/klasifikasi] GET local query error:', err)
+          console.error('[arsiparis/klasifikasi] GET local query error:', toSafeErrorLog(err))
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
       },

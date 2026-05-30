@@ -194,7 +194,9 @@ function PenambahanArsipPage() {
     try {
       const [categoryJson, klasifikasiJson, listJson] = await Promise.all([
         apiFetch<CategoriesResponse>('/arsiparis/manual-arsip/categories'),
-        apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi'),
+        apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi', {
+          query: { eligible_for_berkas: 'true' },
+        }),
         apiFetch<ManualArsipListResponse>('/arsiparis/manual-arsip'),
       ])
 

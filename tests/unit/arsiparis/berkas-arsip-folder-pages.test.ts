@@ -109,6 +109,70 @@ describe('folder-first berkas archive read API routes', () => {
     expect(JSON.stringify(body)).not.toContain('closed_by')
   })
 
+  it('passes OPEN berkas filters with null archive status to the Phase 13N read model', async () => {
+    readModelMocks.listBerkasArsipFolders.mockResolvedValueOnce(listResult({
+      row: openFolderRow(),
+      summary: {
+        total_rows_returned: 1,
+        status_berkas_counts: { OPEN: 1 },
+        status_arsip_counts: { UNKNOWN: 1 },
+        item_count_total: 1,
+        workflow_item_count_total: 1,
+        manual_item_count_total: 0,
+        total_nominal_realisasi: 1000000,
+        applied_limit: 100,
+        applied_offset: 0,
+      },
+    }))
+
+    const response = await listGetHandler({
+      request: new Request('http://localhost/api/arsiparis/berkas?status_berkas=OPEN&status_arsip=null'),
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(readModelMocks.listBerkasArsipFolders).toHaveBeenCalledWith({
+      status_berkas: 'OPEN',
+      status_arsip: null,
+    })
+    expect(body.berkas[0]).toMatchObject({
+      status_berkas: 'OPEN',
+      status_arsip: null,
+      nomor_spm: null,
+    })
+    expectNoSensitiveOutput(body)
+  })
+
+  it('returns OPEN folder detail DTOs without requiring final metadata', async () => {
+    readModelMocks.getBerkasArsipDetail.mockResolvedValueOnce({
+      status: 'found',
+      detail: {
+        ...openFolderRow(),
+        items: [],
+        warnings: ['OPEN_STATUS_ARSIP_NULL'],
+      },
+    })
+
+    const response = await detailGetHandler({
+      request: new Request(`http://localhost/api/arsiparis/berkas/${BERKAS_ID}`),
+      params: { id: BERKAS_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.berkas).toMatchObject({
+      status_berkas: 'OPEN',
+      status_arsip: null,
+      nomor_spm: null,
+      retensi_aktif: null,
+      retensi_inaktif: null,
+      warnings: ['OPEN_STATUS_ARSIP_NULL'],
+    })
+    expectNoSensitiveOutput(body)
+  })
+
   it('rejects invalid list filters before read model work', async () => {
     const response = await listGetHandler({
       request: new Request('http://localhost/api/arsiparis/berkas?status_arsip=TERHAPUS'),
@@ -197,20 +261,27 @@ function createSession(roles: string[]) {
   }
 }
 
-function listResult() {
+function listResult(options: {
+  row?: ReturnType<typeof folderRow> | ReturnType<typeof openFolderRow>
+  summary?: Record<string, unknown>
+} = {}) {
   return {
-    rows: [folderRow()],
-    summary: {
-      total_rows_returned: 1,
-      status_berkas_counts: { CLOSED: 1 },
-      status_arsip_counts: { AKTIF: 1 },
-      item_count_total: 2,
-      workflow_item_count_total: 1,
-      manual_item_count_total: 1,
-      total_nominal_realisasi: 1250000,
-      applied_limit: 100,
-      applied_offset: 0,
-    },
+    rows: [options.row ?? folderRow()],
+    summary: options.summary ?? listSummary(),
+  }
+}
+
+function listSummary() {
+  return {
+    total_rows_returned: 1,
+    status_berkas_counts: { CLOSED: 1 },
+    status_arsip_counts: { AKTIF: 1 },
+    item_count_total: 2,
+    workflow_item_count_total: 1,
+    manual_item_count_total: 1,
+    total_nominal_realisasi: 1250000,
+    applied_limit: 100,
+    applied_offset: 0,
   }
 }
 
@@ -263,6 +334,25 @@ function folderRow() {
     total_nominal_realisasi: 1250000,
     created_at: '2026-05-29T00:00:00.000Z',
     updated_at: '2026-05-29T00:00:00.000Z',
+  }
+}
+
+function openFolderRow() {
+  return {
+    ...folderRow(),
+    status_berkas: 'OPEN',
+    status_arsip: null,
+    nomor_spm: null,
+    retensi_aktif: null,
+    retensi_inaktif: null,
+    masa_aktif_berakhir: null,
+    masa_inaktif_berakhir: null,
+    closed_at: null,
+    closed_by: null,
+    item_count: 1,
+    workflow_item_count: 1,
+    manual_item_count: 0,
+    total_nominal_realisasi: 1000000,
   }
 }
 

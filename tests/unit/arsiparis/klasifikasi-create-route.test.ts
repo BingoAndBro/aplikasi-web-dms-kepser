@@ -25,10 +25,17 @@ import { Route as KlasifikasiCreateRoute } from '#/routes/api/arsiparis/klasifik
 type RoutePostHandler = (args: {
   request: Request
 }) => Promise<Response>
+type RouteGetHandler = (args: {
+  request: Request
+}) => Promise<Response>
 
 const postHandler = (KlasifikasiCreateRoute as unknown as {
-  options: { server: { handlers: { POST: RoutePostHandler } } }
+  options: { server: { handlers: { GET: RouteGetHandler; POST: RoutePostHandler } } }
 }).options.server.handlers.POST
+
+const getHandler = (KlasifikasiCreateRoute as unknown as {
+  options: { server: { handlers: { GET: RouteGetHandler; POST: RoutePostHandler } } }
+}).options.server.handlers.GET
 
 describe('arsiparis klasifikasi create route', () => {
   beforeEach(() => {
@@ -166,6 +173,44 @@ describe('arsiparis klasifikasi create route', () => {
     expect(response.status).toBe(500)
     expect(await response.json()).toEqual({ error: 'Gagal membuat klasifikasi' })
   })
+
+  it('returns all active classifications by default for master-data use', async () => {
+    queueSelectResults(klasifikasiRows())
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/arsiparis/klasifikasi'),
+    })
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.klasifikasi[0].children.map((node: { id: string }) => node.id)).toEqual([
+      'new-leaf',
+      'closed-leaf',
+      'open-leaf',
+    ])
+  })
+
+  it('filters Jenis Pembayaran options for berkas selection eligibility', async () => {
+    queueSelectResults(
+      klasifikasiRows(),
+      [
+        { klasifikasi_id: 'closed-leaf', status_berkas: 'CLOSED', status_arsip: 'AKTIF' },
+        { klasifikasi_id: 'open-leaf', status_berkas: 'OPEN', status_arsip: null },
+      ],
+    )
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/arsiparis/klasifikasi?eligible_for_berkas=true'),
+    })
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.klasifikasi[0].children.map((node: { id: string }) => node.id)).toEqual([
+      'new-leaf',
+      'open-leaf',
+    ])
+    expect(JSON.stringify(body)).not.toContain('closed-leaf')
+  })
 })
 
 function createSession(roles = ['KEPALA_SUB_BAGIAN_UMUM']) {
@@ -194,6 +239,43 @@ function createdKlasifikasi() {
   }
 }
 
+function klasifikasiRows() {
+  return [
+    {
+      id: 'root',
+      nama: 'Root',
+      kode: '000',
+      deskripsi: null,
+      parent_id: null,
+      created_at: '2026-05-22T00:00:00.000Z',
+    },
+    {
+      id: 'new-leaf',
+      nama: 'Jenis Baru',
+      kode: '001',
+      deskripsi: null,
+      parent_id: 'root',
+      created_at: '2026-05-22T00:00:00.000Z',
+    },
+    {
+      id: 'closed-leaf',
+      nama: 'Jenis Ditutup',
+      kode: '002',
+      deskripsi: null,
+      parent_id: 'root',
+      created_at: '2026-05-22T00:00:00.000Z',
+    },
+    {
+      id: 'open-leaf',
+      nama: 'Jenis Terbuka',
+      kode: '003',
+      deskripsi: null,
+      parent_id: 'root',
+      created_at: '2026-05-22T00:00:00.000Z',
+    },
+  ]
+}
+
 function createPostRequest(body: Record<string, unknown>) {
   return new Request('http://localhost/api/arsiparis/klasifikasi', {
     method: 'POST',
@@ -216,6 +298,8 @@ function createSelectBuilder(result: unknown[]): Record<string, unknown> {
   query.from = vi.fn(() => query)
   query.where = vi.fn(() => query)
   query.limit = vi.fn(async () => result)
+  query.orderBy = vi.fn(async () => result)
+  query.then = vi.fn((resolve, reject) => Promise.resolve(result).then(resolve, reject))
 
   return query
 }

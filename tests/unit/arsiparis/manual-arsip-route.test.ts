@@ -563,6 +563,29 @@ describe('manual arsip API foundation routes', () => {
     }))
   })
 
+  it('rejects manual create when the selected jenis pembayaran already has a CLOSED berkas', async () => {
+    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueManualArchiveCreateTransaction({
+      existingOpenBerkas: {
+        ...openBerkasRow(),
+        statusBerkas: 'CLOSED',
+        statusArsip: 'AKTIF',
+      },
+    })
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+    })
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      statusBerkas: 'OPEN',
+    }))
+  })
+
   it('maps duplicate manual berkas item assignment to a safe conflict', async () => {
     queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
@@ -2105,6 +2128,7 @@ function openBerkasRow() {
     klasifikasiKodeSnapshot: '001.02',
     klasifikasiNamaSnapshot: 'Klasifikasi A',
     statusBerkas: 'OPEN',
+    statusArsip: null,
     nomorSpm: null,
     retensiAktif: null,
     retensiInaktif: null,
@@ -2348,7 +2372,7 @@ function queueManualArchiveCreateTransaction(options: {
     : options.manualSource
   const txSelectResults = [
     options.existingOpenBerkas ? [options.existingOpenBerkas] : [],
-    ...(options.existingOpenBerkas ? [] : [[klasifikasiRow()]]),
+    ...(options.existingOpenBerkas ? [] : [[], [klasifikasiRow()]]),
     selectedOpenBerkas ? [selectedOpenBerkas] : [],
     selectedManualSource ? [selectedManualSource] : [],
   ]

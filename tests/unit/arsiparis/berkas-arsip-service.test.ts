@@ -34,8 +34,55 @@ describe('berkas arsip service foundation', () => {
       status_berkas: 'OPEN',
       created_by: ACTOR_ID,
     })
+    expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID])
     expect(repository.calls).toContainEqual(['findActiveKlasifikasi', KLASIFIKASI_ID])
     expect(repository.calls).toContainEqual(['insertOpenBerkas', KLASIFIKASI_ID, 'BB', 'Belanja Barang'])
+  })
+
+  it('reuses an existing OPEN berkas for the selected jenis pembayaran', async () => {
+    const repository = createFakeRepository({
+      existingBerkasRows: [openBerkas()],
+    })
+
+    const berkas = await getOrCreateOpenBerkasForKlasifikasi({
+      klasifikasiId: KLASIFIKASI_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })
+
+    expect(berkas.id).toBe(BERKAS_ID)
+    expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID])
+    expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
+  })
+
+  it('rejects opening a second berkas when the jenis pembayaran already has a CLOSED berkas', async () => {
+    const repository = createFakeRepository({
+      existingBerkasRows: [closedBerkas()],
+    })
+
+    await expect(getOrCreateOpenBerkasForKlasifikasi({
+      klasifikasiId: KLASIFIKASI_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_KLASIFIKASI_CLOSED',
+      message: 'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
+  })
+
+  it('rejects anomalous multiple OPEN berkas rows for one jenis pembayaran', async () => {
+    const repository = createFakeRepository({
+      existingBerkasRows: [openBerkas(), openBerkas({ id: 'berkas-open-lain' })],
+    })
+
+    await expect(getOrCreateOpenBerkasForKlasifikasi({
+      klasifikasiId: KLASIFIKASI_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_KLASIFIKASI_CONFLICT',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
   })
 
   it('recovers get-or-create when concurrent open-folder creation hits a unique conflict', async () => {
@@ -50,7 +97,7 @@ describe('berkas arsip service foundation', () => {
     }, { repository })
 
     expect(berkas.id).toBe(BERKAS_ID)
-    expect(repository.calls.filter(([name]) => name === 'findOpenBerkasByKlasifikasiId')).toHaveLength(2)
+    expect(repository.calls.filter(([name]) => name === 'findBerkasByKlasifikasiId')).toHaveLength(3)
   })
 
   it('rejects adding a workflow document to a CLOSED berkas', async () => {
@@ -218,6 +265,7 @@ function createFakeRepository(options: {
   itemCount?: number
   workflowKlasifikasiId?: string | null
   manualKlasifikasiId?: string | null
+  existingBerkasRows?: ReturnType<typeof baseBerkas>[]
   insertOpenBerkasError?: unknown
   insertBerkasItemError?: unknown
   openAfterConflict?: boolean
@@ -243,6 +291,13 @@ function createFakeRepository(options: {
         return openBerkas()
       }
       return null
+    },
+    async findBerkasByKlasifikasiId(klasifikasiId) {
+      calls.push(['findBerkasByKlasifikasiId', klasifikasiId])
+      openLookupCount += 1
+      if (options.existingBerkasRows) return options.existingBerkasRows
+      if (options.openAfterConflict && openLookupCount > 2) return [openBerkas()]
+      return []
     },
     async insertOpenBerkas(input) {
       calls.push([

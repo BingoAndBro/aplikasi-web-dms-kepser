@@ -2,7 +2,6 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
   ChevronRight,
-  FileText,
   FolderOpen,
   Loader2,
 } from 'lucide-react'
@@ -56,8 +55,10 @@ type BerkasFolderListResponse = {
 }
 
 function BerkasArsipAktifPage() {
-  const [folders, setFolders] = useState<BerkasFolder[]>([])
-  const [summary, setSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
+  const [openFolders, setOpenFolders] = useState<BerkasFolder[]>([])
+  const [activeFolders, setActiveFolders] = useState<BerkasFolder[]>([])
+  const [openSummary, setOpenSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
+  const [activeSummary, setActiveSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -65,14 +66,24 @@ function BerkasArsipAktifPage() {
     setLoading(true)
     setError(null)
     try {
-      const json = await apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
-        query: {
-          status_berkas: 'CLOSED',
-          status_arsip: 'AKTIF',
-        },
-      })
-      setFolders(json.berkas ?? [])
-      setSummary(json.summary ?? null)
+      const [openJson, activeJson] = await Promise.all([
+        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+          query: {
+            status_berkas: 'OPEN',
+            status_arsip: 'null',
+          },
+        }),
+        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+          query: {
+            status_berkas: 'CLOSED',
+            status_arsip: 'AKTIF',
+          },
+        }),
+      ])
+      setOpenFolders(openJson.berkas ?? [])
+      setActiveFolders(activeJson.berkas ?? [])
+      setOpenSummary(openJson.summary ?? null)
+      setActiveSummary(activeJson.summary ?? null)
     } catch (error) {
       setError(resolveErrorMessage(error))
     } finally {
@@ -96,20 +107,26 @@ function BerkasArsipAktifPage() {
             </div>
             <h2 className="font-headline text-2xl font-extrabold text-on-surface">Pemberkasan Arsip Aktif</h2>
             <p className="mt-1 text-xs text-on-surface-variant">
-              Daftar folder arsip aktif berdasarkan berkas yang sudah ditutup dan berstatus Aktif.
+              Daftar berkas terbuka untuk pemberkasan berjalan dan berkas aktif yang sudah final.
             </p>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
-            Read-only dari model berkas. Aksi lifecycle dan file tidak tersedia di fase ini.
+            Read-only dari model berkas. Aksi tutup berkas dan lifecycle tidak tersedia di fase ini.
           </div>
         </div>
 
-        {summary && (
+        {(openSummary || activeSummary) && (
           <div className="grid gap-3 md:grid-cols-4">
-            <SummaryCard label="Jumlah Berkas" value={summary.total_rows_returned} />
-            <SummaryCard label="Jumlah Dokumen" value={summary.item_count_total} />
-            <SummaryCard label="Dokumen Workflow" value={summary.workflow_item_count_total} />
-            <SummaryCard label="Dokumen Manual" value={summary.manual_item_count_total} />
+            <SummaryCard label="Berkas Terbuka" value={openSummary?.total_rows_returned ?? 0} />
+            <SummaryCard label="Berkas Aktif" value={activeSummary?.total_rows_returned ?? 0} />
+            <SummaryCard
+              label="Dokumen Berjalan"
+              value={openSummary?.item_count_total ?? 0}
+            />
+            <SummaryCard
+              label="Dokumen Final Aktif"
+              value={activeSummary?.item_count_total ?? 0}
+            />
           </div>
         )}
 
@@ -123,74 +140,132 @@ function BerkasArsipAktifPage() {
             <p className="text-sm text-on-surface-variant">{error}</p>
             <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
           </div>
-        ) : folders.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 py-20">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/10">
-              <FolderOpen size={24} className="text-emerald-600" />
-            </div>
-            <p className="font-headline text-lg font-bold text-on-surface">Belum ada berkas arsip aktif</p>
-            <p className="max-w-md text-center text-xs text-on-surface-variant">
-              Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini.
-            </p>
-          </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-surface-container-low/30 text-left">
-                    <th className="w-10 px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">No</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Jenis Pembayaran</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Berkas</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Arsip</th>
-                    <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Nomor SPM</th>
-                    <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Jumlah Dokumen</th>
-                    <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Workflow</th>
-                    <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Manual</th>
-                    <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-outline">Total Nominal</th>
-                    <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Tanggal Ditutup</th>
-                    <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {folders.map((folder, index) => (
-                    <tr key={folder.berkas_id} className="border-t border-outline-variant/20 transition-colors hover:bg-primary/5">
-                      <td className="px-4 py-3 text-center text-outline">{index + 1}</td>
-                      <td className="px-4 py-3 text-on-surface">
-                        <p className="font-semibold">
-                          {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBerkasBadge status={folder.status_berkas} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-on-surface">{folder.nomor_spm ?? '-'}</td>
-                      <td className="px-4 py-3 text-center text-on-surface">{folder.item_count}</td>
-                      <td className="px-4 py-3 text-center text-on-surface">{folder.workflow_item_count}</td>
-                      <td className="px-4 py-3 text-center text-on-surface">{folder.manual_item_count}</td>
-                      <td className="px-4 py-3 text-right text-on-surface">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
-                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatNullableDateLabel(folder.closed_at)}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Link
-                          to="/arsiparis/berkas/$id"
-                          params={{ id: folder.berkas_id }}
-                          className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
-                        >
-                          Detail
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="space-y-6">
+            <BerkasSection
+              title="Berkas Terbuka"
+              description="Pemberkasan berjalan untuk Jenis Pembayaran yang masih dapat menerima dokumen."
+              emptyTitle="Belum ada berkas terbuka"
+              emptyDescription="Berkas terbuka akan muncul setelah dokumen workflow atau manual pertama memilih Jenis Pembayaran yang belum final."
+              folders={openFolders}
+              mode="open"
+            />
+            <BerkasSection
+              title="Pemberkasan Arsip Aktif"
+              description="Berkas yang sudah ditutup dan memiliki status arsip Aktif."
+              emptyTitle="Belum ada berkas arsip aktif"
+              emptyDescription="Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini."
+              folders={activeFolders}
+              mode="active"
+            />
           </div>
         )}
       </div>
     </PageLayout>
+  )
+}
+
+function BerkasSection({
+  title,
+  description,
+  emptyTitle,
+  emptyDescription,
+  folders,
+  mode,
+}: {
+  title: string
+  description: string
+  emptyTitle: string
+  emptyDescription: string
+  folders: BerkasFolder[]
+  mode: 'open' | 'active'
+}) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <h3 className="font-headline text-lg font-extrabold text-on-surface">{title}</h3>
+        <p className="text-xs text-on-surface-variant">{description}</p>
+      </div>
+
+      {folders.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 py-12">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/10">
+            <FolderOpen size={24} className="text-emerald-600" />
+          </div>
+          <p className="font-headline text-lg font-bold text-on-surface">{emptyTitle}</p>
+          <p className="max-w-md text-center text-xs text-on-surface-variant">{emptyDescription}</p>
+        </div>
+      ) : (
+        <BerkasTable folders={folders} mode={mode} />
+      )}
+    </section>
+  )
+}
+
+function BerkasTable({ folders, mode }: { folders: BerkasFolder[]; mode: 'open' | 'active' }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-surface-container-low/30 text-left">
+              <th className="w-10 px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">No</th>
+              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Jenis Pembayaran</th>
+              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Berkas</th>
+              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Arsip</th>
+              {mode === 'active' && (
+                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Nomor SPM</th>
+              )}
+              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Jumlah Dokumen</th>
+              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Workflow</th>
+              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Manual</th>
+              <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-outline">Total Nominal</th>
+              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">
+                {mode === 'open' ? 'Terakhir Diperbarui' : 'Tanggal Ditutup'}
+              </th>
+              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {folders.map((folder, index) => (
+              <tr key={folder.berkas_id} className="border-t border-outline-variant/20 transition-colors hover:bg-primary/5">
+                <td className="px-4 py-3 text-center text-outline">{index + 1}</td>
+                <td className="px-4 py-3 text-on-surface">
+                  <p className="font-semibold">
+                    {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+                  </p>
+                </td>
+                <td className="px-4 py-3">
+                  <StatusBerkasBadge status={folder.status_berkas} />
+                </td>
+                <td className="px-4 py-3">
+                  <StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />
+                </td>
+                {mode === 'active' && (
+                  <td className="px-4 py-3 font-semibold text-on-surface">{folder.nomor_spm ?? '-'}</td>
+                )}
+                <td className="px-4 py-3 text-center text-on-surface">{folder.item_count}</td>
+                <td className="px-4 py-3 text-center text-on-surface">{folder.workflow_item_count}</td>
+                <td className="px-4 py-3 text-center text-on-surface">{folder.manual_item_count}</td>
+                <td className="px-4 py-3 text-right text-on-surface">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
+                <td className="px-4 py-3 text-center text-on-surface-variant">
+                  {formatNullableDateLabel(mode === 'open' ? folder.updated_at : folder.closed_at)}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <Link
+                    to="/arsiparis/berkas/$id"
+                    params={{ id: folder.berkas_id }}
+                    className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
+                  >
+                    Detail
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 

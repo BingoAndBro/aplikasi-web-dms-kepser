@@ -123,6 +123,7 @@ export type CloseBerkasPlan = {
 
 export type BerkasArsipRepository = {
   findActiveKlasifikasi(id: string): Promise<KlasifikasiSnapshot | null>
+  findBerkasByKlasifikasiId(klasifikasiId: string): Promise<BerkasRow[]>
   findOpenBerkasByKlasifikasiId(klasifikasiId: string): Promise<BerkasRow | null>
   insertOpenBerkas(input: {
     klasifikasi: KlasifikasiSnapshot
@@ -155,6 +156,8 @@ export type BerkasArsipErrorCode =
   | 'KLASIFIKASI_NOT_FOUND'
   | 'BERKAS_NOT_FOUND'
   | 'BERKAS_CLOSED'
+  | 'BERKAS_KLASIFIKASI_CLOSED'
+  | 'BERKAS_KLASIFIKASI_CONFLICT'
   | 'BERKAS_NOT_OPEN'
   | 'BERKAS_EMPTY'
   | 'SOURCE_NOT_FOUND'
@@ -185,6 +188,9 @@ export async function createOpenBerkasForKlasifikasi(
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto> {
   const repository = getRepository(deps)
+  const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
+  if (existing) return toBerkasDto(existing)
+
   const klasifikasi = await repository.findActiveKlasifikasi(input.klasifikasiId)
   if (!klasifikasi) {
     throw new BerkasArsipServiceError('KLASIFIKASI_NOT_FOUND', 'Jenis pembayaran tidak ditemukan')
@@ -203,7 +209,7 @@ export async function getOrCreateOpenBerkasForKlasifikasi(
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto> {
   const repository = getRepository(deps)
-  const existing = await repository.findOpenBerkasByKlasifikasiId(input.klasifikasiId)
+  const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
   if (existing) return toBerkasDto(existing)
 
   try {
@@ -211,7 +217,7 @@ export async function getOrCreateOpenBerkasForKlasifikasi(
   } catch (error) {
     if (!isUniqueConflict(error)) throw error
 
-    const racedExisting = await repository.findOpenBerkasByKlasifikasiId(input.klasifikasiId)
+    const racedExisting = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
     if (racedExisting) return toBerkasDto(racedExisting)
 
     throw new BerkasArsipServiceError('CONFLICT', 'Gagal membuka berkas karena konflik data')
@@ -383,6 +389,14 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
     return row ?? null
   },
 
+  async findBerkasByKlasifikasiId(klasifikasiId) {
+    const database = await getDatabase()
+    return database
+      .select()
+      .from(berkasArsip)
+      .where(eq(berkasArsip.klasifikasiId, klasifikasiId)) as Promise<BerkasRow[]>
+  },
+
   async insertOpenBerkas(input) {
     const database = await getDatabase()
     const [row] = await database
@@ -521,6 +535,32 @@ function assertSourceMatchesBerkas(
       'Jenis pembayaran dokumen tidak sesuai dengan berkas',
     )
   }
+}
+
+async function resolveExistingBerkasForKlasifikasi(
+  repository: BerkasArsipRepository,
+  klasifikasiId: string,
+): Promise<BerkasRow | null> {
+  const rows = await repository.findBerkasByKlasifikasiId(klasifikasiId)
+  const openRows = rows.filter((row) => row.statusBerkas === BERKAS_STATUS.OPEN)
+
+  if (openRows.length === 1) return openRows[0] ?? null
+
+  if (openRows.length > 1) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_KLASIFIKASI_CONFLICT',
+      'Data berkas untuk Jenis Pembayaran ini perlu ditinjau',
+    )
+  }
+
+  if (rows.length > 0) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_KLASIFIKASI_CLOSED',
+      'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+    )
+  }
+
+  return null
 }
 
 async function insertBerkasItemSafely(

@@ -88,6 +88,8 @@ function statusForServiceError(error: BerkasArsipServiceError): number {
     case 'SOURCE_NOT_FOUND':
       return 404
     case 'BERKAS_CLOSED':
+    case 'BERKAS_KLASIFIKASI_CLOSED':
+    case 'BERKAS_KLASIFIKASI_CONFLICT':
     case 'BERKAS_NOT_OPEN':
     case 'BERKAS_EMPTY':
     case 'CONFLICT':

@@ -217,6 +217,32 @@ describe('workflow archive canonical write route', () => {
     }))
   })
 
+  it('rejects workflow classification when the selected jenis pembayaran already has a CLOSED berkas', async () => {
+    queueSelectResults(
+      [dokumenRow()],
+      [],
+      [klasifikasiRow()],
+    )
+    queueSuccessfulTransaction({
+      txSelectResults: [
+        [closedBerkasRow()],
+      ],
+    })
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+    })
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      statusBerkas: 'OPEN',
+    }))
+  })
+
   it('maps duplicate berkas item assignment to a safe conflict response', async () => {
     queueSelectResults(
       [dokumenRow()],
@@ -406,6 +432,9 @@ function createSelectBuilder(result: unknown[]): Record<string, unknown> {
   query.leftJoin = vi.fn(() => query)
   query.where = vi.fn(() => query)
   query.limit = vi.fn(async () => result)
+  query.then = (resolve: (value: unknown[]) => unknown, reject: (reason: unknown) => unknown) => {
+    return Promise.resolve(result).then(resolve, reject)
+  }
 
   return query
 }
@@ -417,6 +446,7 @@ function queueSuccessfulTransaction(options: {
   mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
     let txInsertCall = 0
     const txSelectResults = [...(options.txSelectResults ?? [
+      [],
       [],
       [klasifikasiRow()],
       [openBerkasRow()],
@@ -464,6 +494,7 @@ function openBerkasRow() {
     klasifikasiKodeSnapshot: 'KA.01',
     klasifikasiNamaSnapshot: 'Keuangan',
     statusBerkas: 'OPEN',
+    statusArsip: null,
     nomorSpm: null,
     retensiAktif: null,
     retensiInaktif: null,
@@ -472,6 +503,21 @@ function openBerkasRow() {
     closedAt: null,
     closedBy: null,
     createdBy: SESSION_USER_ID,
+  }
+}
+
+function closedBerkasRow() {
+  return {
+    ...openBerkasRow(),
+    statusBerkas: 'CLOSED',
+    statusArsip: 'AKTIF',
+    nomorSpm: 'SPM-001/2026',
+    retensiAktif: '1 Tahun',
+    retensiInaktif: '3 Tahun',
+    masaAktifBerakhir: '2027-05-29',
+    masaInaktifBerakhir: '2030-05-29',
+    closedAt: new Date('2026-05-29T00:00:00.000Z'),
+    closedBy: SESSION_USER_ID,
   }
 }
 

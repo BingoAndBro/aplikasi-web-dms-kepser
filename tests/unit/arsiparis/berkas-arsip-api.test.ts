@@ -150,6 +150,26 @@ describe('berkas arsip API routes', () => {
     expectNoSensitiveOutput(body)
   })
 
+  it('maps closed jenis pembayaran open-folder rejection to 409', async () => {
+    mocks.getOrCreateOpenBerkasForKlasifikasi.mockRejectedValueOnce(
+      new mocks.BerkasArsipServiceError(
+        'BERKAS_KLASIFIKASI_CLOSED',
+        'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+      ),
+    )
+
+    const response = await openPostHandler({
+      request: jsonRequest('/api/arsiparis/berkas/open', {
+        klasifikasi_id: KLASIFIKASI_ID,
+      }),
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+    })
+  })
+
   it('rejects invalid add-item bodies before service work', async () => {
     const cases = [
       { source_type: 'WORKFLOW', manual_arsip_id: MANUAL_ARSIP_ID },
