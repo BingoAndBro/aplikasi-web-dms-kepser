@@ -18,6 +18,14 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import {
   BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
   formatAttachmentCount,
   formatBerkasArchiveStatusLabel,
@@ -115,7 +123,7 @@ function BerkasArsipDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [pendingLifecycleAction, setPendingLifecycleAction] = useState(false)
-  const [destructionPanelOpen, setDestructionPanelOpen] = useState(false)
+  const [destructionDialogOpen, setDestructionDialogOpen] = useState(false)
   const [destructionPhrase, setDestructionPhrase] = useState('')
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [pendingClose, setPendingClose] = useState(false)
@@ -141,13 +149,14 @@ function BerkasArsipDetailPage() {
     if (!lifecycleAction) return
     if (lifecycleAction.action === 'approve_destruction') {
       if (options.confirmation !== BERKAS_DESTRUCTION_CONFIRMATION_PHRASE) {
-        setDestructionPanelOpen(true)
+        setDestructionDialogOpen(true)
         setActionError(null)
         setActionSuccess(null)
         return
       }
+    } else if (!window.confirm(lifecycleAction.confirmation)) {
+      return
     }
-    if (!window.confirm(lifecycleAction.confirmation)) return
 
     setPendingLifecycleAction(true)
     setActionError(null)
@@ -164,7 +173,7 @@ function BerkasArsipDetailPage() {
         }),
       })
       setActionSuccess(lifecycleAction.successMessage)
-      setDestructionPanelOpen(false)
+      setDestructionDialogOpen(false)
       setDestructionPhrase('')
       if (lifecycleAction.action === 'mark_inactive') {
         await navigate({ to: '/arsiparis/inaktif' })
@@ -278,13 +287,20 @@ function BerkasArsipDetailPage() {
             <FolderMetadataPanel
               detail={detail}
               pendingLifecycleAction={pendingLifecycleAction}
-              destructionPanelOpen={destructionPanelOpen}
+              destructionDialogOpen={destructionDialogOpen}
               destructionPhrase={destructionPhrase}
               onDestructionPhraseChange={setDestructionPhrase}
               onCancelDestruction={() => {
-                setDestructionPanelOpen(false)
+                setDestructionDialogOpen(false)
                 setDestructionPhrase('')
                 setActionError(null)
+              }}
+              onDestructionOpenChange={(open) => {
+                setDestructionDialogOpen(open)
+                if (!open && !pendingLifecycleAction) {
+                  setDestructionPhrase('')
+                  setActionError(null)
+                }
               }}
               onLifecycleAction={submitLifecycleAction}
               pendingClose={pendingClose}
@@ -317,20 +333,22 @@ function BerkasArsipDetailPage() {
 function FolderMetadataPanel({
   detail,
   pendingLifecycleAction,
-  destructionPanelOpen,
+  destructionDialogOpen,
   destructionPhrase,
   onDestructionPhraseChange,
   onCancelDestruction,
+  onDestructionOpenChange,
   onLifecycleAction,
   pendingClose,
   onOpenCloseDialog,
 }: {
   detail: BerkasDetail
   pendingLifecycleAction: boolean
-  destructionPanelOpen: boolean
+  destructionDialogOpen: boolean
   destructionPhrase: string
   onDestructionPhraseChange: (phrase: string) => void
   onCancelDestruction: () => void
+  onDestructionOpenChange: (open: boolean) => void
   onLifecycleAction: (options?: { confirmation?: string }) => void
   pendingClose: boolean
   onOpenCloseDialog: () => void
@@ -429,33 +447,54 @@ function FolderMetadataPanel({
           {EMPTY_BERKAS_CLOSE_MESSAGE}
         </p>
       )}
-      {lifecycleAction?.action === 'approve_destruction' && destructionPanelOpen && (
-        <div className="mt-4 rounded-xl border border-error/30 bg-error/5 p-4">
-          <div className="mb-4 space-y-2 text-xs font-semibold text-error/90">
-            <p>Status berkas akan menjadi Dimusnahkan.</p>
-            <p>Preview dan download file akan diblokir.</p>
-            <p>File fisik tidak dihapus pada fase ini.</p>
-            <p>Metadata berkas dan dokumen tetap tersimpan.</p>
-          </div>
+      {lifecycleAction?.action === 'approve_destruction' && (
+        <Dialog
+          open={destructionDialogOpen}
+          onOpenChange={(open) => {
+            if (open || !pendingLifecycleAction) onDestructionOpenChange(open)
+          }}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Musnahkan Data</DialogTitle>
+              <DialogDescription>
+                Konfirmasi status-only untuk berkas yang dipilih.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-3">
-            <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-destruction-confirmation">
-              Ketik frasa konfirmasi <span className="text-error">*</span>
-            </label>
-            <input
-              id="berkas-destruction-confirmation"
-              value={destructionPhrase}
-              onChange={(event) => onDestructionPhraseChange(event.target.value)}
-              className="w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
-              placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
-              autoComplete="off"
-            />
-            <p className="text-[10px] font-semibold text-outline">
-              Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
-            </p>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-outline-variant/40 bg-surface-container-low/30 px-3 py-2 text-xs text-on-surface">
+                Berkas: <span className="font-semibold">
+                  {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}
+                </span>
+              </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
+                <p>Status berkas akan menjadi Dimusnahkan.</p>
+                <p>Preview dan download file akan diblokir.</p>
+                <p>File fisik tidak dihapus pada fase ini.</p>
+                <p>Metadata berkas dan dokumen tetap tersimpan.</p>
+              </div>
+
+              <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-detail-destruction-confirmation">
+                Ketik frasa konfirmasi <span className="text-error">*</span>
+                <input
+                  id="berkas-detail-destruction-confirmation"
+                  value={destructionPhrase}
+                  onChange={(event) => onDestructionPhraseChange(event.target.value)}
+                  className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
+                  placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+                  autoComplete="off"
+                />
+              </label>
+              <p className="text-[10px] font-semibold text-outline">
+                Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+              </p>
+            </div>
+
+            <DialogFooter className="gap-2">
               <Button
+                type="button"
                 variant="outline"
                 onClick={onCancelDestruction}
                 disabled={pendingLifecycleAction}
@@ -463,6 +502,7 @@ function FolderMetadataPanel({
                 Batal
               </Button>
               <Button
+                type="button"
                 className="gap-1.5 bg-error text-white hover:bg-error/90"
                 onClick={() => onLifecycleAction({ confirmation: destructionPhrase })}
                 disabled={!canSubmitDestruction}
@@ -472,9 +512,9 @@ function FolderMetadataPanel({
                   : <AlertTriangle size={14} />}
                 Konfirmasi Musnahkan Data
               </Button>
-            </div>
-          </div>
-        </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
