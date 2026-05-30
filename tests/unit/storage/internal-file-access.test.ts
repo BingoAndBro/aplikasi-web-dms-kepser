@@ -36,6 +36,24 @@ function logicalPathPayload(
   }
 }
 
+function documentPayload(
+  overrides: Partial<FileAccessTokenPayload> = {},
+): FileAccessTokenPayload {
+  return {
+    version: 1,
+    purpose: 'preview',
+    expiresAt: FUTURE,
+    issuedAt: NOW,
+    documentId: '11111111-1111-4111-8111-111111111111',
+    lampiranIndex: 0,
+    subjectUserId: 'owner-user',
+    sessionId: 'unit-test-session',
+    statusCheck: 'document',
+    contentDisposition: 'inline',
+    ...overrides,
+  }
+}
+
 function signedToken(payload: FileAccessTokenPayload): string {
   return signFileAccessToken(payload, TEST_SECRET)
 }
@@ -273,6 +291,44 @@ describe('internal file access foundation', () => {
     expect(bodyText).not.toContain('owner-user')
     expect(bodyText).not.toContain('file.pdf')
     expect(bodyText).not.toContain(TEST_ROOT)
+  })
+
+  it('keeps document-token missing files as generic 404 when the document is not in a DIMUSNAHKAN berkas', async () => {
+    const response = await handleDocumentTokenRequestWithMockedContext({
+      document: {
+        id: '11111111-1111-4111-8111-111111111111',
+        createdBy: 'owner-user',
+        status: 'COMPLETED',
+        revisionTarget: null,
+        lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      },
+      archives: [],
+      destroyedBerkasMembership: false,
+    })
+    const bodyText = JSON.stringify(await json(response))
+
+    expect(response.status).toBe(404)
+    expect(bodyText).toBe('{"error":"File not found"}')
+    expectNoSensitiveFileAccessLeak(bodyText)
+  })
+
+  it('returns destroyed-file copy for document-token files whose folder-first berkas is DIMUSNAHKAN', async () => {
+    const response = await handleDocumentTokenRequestWithMockedContext({
+      document: {
+        id: '11111111-1111-4111-8111-111111111111',
+        createdBy: 'owner-user',
+        status: 'COMPLETED',
+        revisionTarget: null,
+        lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      },
+      archives: [],
+      destroyedBerkasMembership: true,
+    })
+    const bodyText = JSON.stringify(await json(response))
+
+    expect(response.status).toBe(410)
+    expect(bodyText).toBe('{"error":"Data file sudah dimusnahkan"}')
+    expectNoSensitiveFileAccessLeak(bodyText)
   })
 
   it('rejects unauthorized non-owner PEGAWAI before checking file existence', async () => {
@@ -529,6 +585,44 @@ describe('internal file access foundation', () => {
     })
   })
 
+  it('blocks document-token access when folder-first berkas membership is DIMUSNAHKAN', async () => {
+    const result = await resolveDocumentTokenWithMockedContext({
+      document: {
+        id: '11111111-1111-4111-8111-111111111111',
+        createdBy: 'owner-user',
+        status: 'COMPLETED',
+        revisionTarget: null,
+        lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      },
+      archives: [],
+      destroyedBerkasMembership: true,
+      session: session('owner-user', [ROLES.PEGAWAI]),
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      status: 410,
+      message: 'Data file sudah dimusnahkan',
+    })
+  })
+
+  it('does not reveal destroyed berkas membership to unauthorized document-token users', async () => {
+    const result = await resolveDocumentTokenWithMockedContext({
+      document: {
+        id: '11111111-1111-4111-8111-111111111111',
+        createdBy: 'owner-user',
+        status: 'COMPLETED',
+        revisionTarget: null,
+        lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      },
+      archives: [],
+      destroyedBerkasMembership: true,
+      session: session('other-user', [ROLES.PEGAWAI]),
+    })
+
+    expect(result).toEqual({ ok: false, status: 403, message: 'Akses ditolak' })
+  })
+
   it('reads the file token secret lazily without fallback defaults', () => {
     expect(getFileTokenSecret({ DMS_FILE_TOKEN_SECRET: ' configured-secret ' })).toBe('configured-secret')
     expect(() => getFileTokenSecret({})).toThrow('not configured')
@@ -578,6 +672,39 @@ async function responseWithMockedVerifiedDownloadFilename(
   }
 }
 
+async function handleDocumentTokenRequestWithMockedContext({
+  document,
+  archives,
+  destroyedBerkasMembership = false,
+}: {
+  document: MockDocumentAccessDocument
+  archives: MockDocumentAccessArchive[]
+  destroyedBerkasMembership?: boolean
+}): Promise<Response> {
+  vi.resetModules()
+  vi.doMock('#/db/client', () => ({
+    db: createDocumentAccessDbMock(document, archives, destroyedBerkasMembership),
+  }))
+
+  try {
+    const { handleInternalFileAccessRequest: mockedHandler } = await import(
+      '#/lib/storage/internal-file-access'
+    )
+
+    return await mockedHandler({
+      request: requestWithToken(signedToken(documentPayload({
+        documentId: document.id,
+      }))),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+    })
+  } finally {
+    vi.doUnmock('#/db/client')
+    vi.resetModules()
+  }
+}
+
 type MockDocumentAccessDocument = {
   id: string
   createdBy: string
@@ -595,15 +722,17 @@ type MockDocumentAccessArchive = {
 async function resolveDocumentTokenWithMockedContext({
   document,
   archives,
+  destroyedBerkasMembership = false,
   session: testSession,
 }: {
   document: MockDocumentAccessDocument
   archives: MockDocumentAccessArchive[]
+  destroyedBerkasMembership?: boolean
   session: ReturnType<typeof session>
 }) {
   vi.resetModules()
   vi.doMock('#/db/client', () => ({
-    db: createDocumentAccessDbMock(document, archives),
+    db: createDocumentAccessDbMock(document, archives, destroyedBerkasMembership),
   }))
 
   try {
@@ -635,6 +764,7 @@ async function resolveDocumentTokenWithMockedContext({
 function createDocumentAccessDbMock(
   document: MockDocumentAccessDocument,
   archives: MockDocumentAccessArchive[],
+  destroyedBerkasMembership = false,
 ) {
   const select = vi.fn()
     .mockReturnValueOnce({
@@ -651,8 +781,36 @@ function createDocumentAccessDbMock(
         })),
       })),
     })
+    .mockReturnValueOnce({
+      from: vi.fn(() => ({
+        innerJoin: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => destroyedBerkasMembership
+              ? [{ id: '22222222-2222-4222-8222-222222222222' }]
+              : []),
+          })),
+        })),
+      })),
+    })
 
   return { select }
+}
+
+function expectNoSensitiveFileAccessLeak(value: string): void {
+  expect(value).not.toContain('owner-user')
+  expect(value).not.toContain('document-id')
+  expect(value).not.toContain('file.pdf')
+  expect(value).not.toContain(TEST_ROOT)
+  expect(value).not.toContain('logicalPath')
+  expect(value).not.toContain('logical_path')
+  expect(value).not.toContain('physical')
+  expect(value).not.toContain('storage')
+  expect(value).not.toContain('token')
+  expect(value).not.toContain('secret')
+  expect(value).not.toContain('session')
+  expect(value).not.toContain('cookie')
+  expect(value).not.toContain('DATABASE_URL')
+  expect(value).not.toContain('DMS_LOCAL_STORAGE_ROOT')
 }
 
 function expectSafeAttachmentFilename(contentDisposition: string | null): string {

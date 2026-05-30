@@ -1,13 +1,18 @@
 // Server-only module. Do not import from client components.
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 
 import { db } from '#/db/client'
-import { arsip } from '#/db/schema/arsip'
+import { arsip, berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
   getLocalServerSession,
   type LocalServerSession,
 } from '#/lib/auth/local-server-auth'
+import {
+  ARCHIVE_SOURCE_TYPE,
+  BERKAS_ARCHIVE_STATUS,
+  BERKAS_STATUS,
+} from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
 import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
 import { createInternalFileAccessUrl } from '#/lib/storage/internal-file-access-url'
@@ -38,6 +43,7 @@ type LampiranFileReference = {
 type DocumentAccessContext = {
   document: DocumentRow
   archives: ArchiveRow[]
+  isInDestroyedBerkas: boolean
 }
 
 type FileReferenceResult =
@@ -192,13 +198,39 @@ async function loadDocumentAccessContext(documentId: string): Promise<DocumentAc
     .where(eq(arsip.dokumenId, documentId))
     .orderBy(desc(arsip.createdAt))
 
-  return { document, archives }
+  const destroyedBerkasRows = await db
+    .select({
+      id: berkasArsip.id,
+    })
+    .from(berkasArsipItem)
+    .innerJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
+    .where(and(
+      eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+      eq(berkasArsipItem.dokumenId, documentId),
+      eq(berkasArsip.statusBerkas, BERKAS_STATUS.CLOSED),
+      eq(berkasArsip.statusArsip, BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN),
+    ))
+    .limit(1)
+
+  return {
+    document,
+    archives,
+    isInDestroyedBerkas: destroyedBerkasRows.length > 0,
+  }
 }
 
 function resolveDocumentLampiranReference(
   context: DocumentAccessContext,
   lampiranIndex: number,
 ): FileReferenceResult {
+  if (context.isInDestroyedBerkas) {
+    return {
+      ok: false,
+      status: 410,
+      message: 'Data file sudah dimusnahkan',
+    }
+  }
+
   if (context.archives.some(row => row.statusArsip === 'DIMUSNAHKAN')) {
     return {
       ok: false,
