@@ -44,12 +44,14 @@ describe('berkas arsip item file access helper', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store')
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
     expect(response.headers.get('Content-Type')).toBe('application/pdf')
-    expect(response.headers.get('Content-Disposition')).toBe('inline; filename="Bukti Pembayaran.pdf"')
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'inline; filename="Bukti Pembayaran_Detail Pembayaran_Kegiatan Pembayaran_2026-05-29.pdf"',
+    )
     expect(await response.text()).toBe(TEST_FILE_CONTENT)
     expectNoLeak(JSON.stringify([...response.headers.entries()]))
   })
 
-  it('preserves a safe original WORKFLOW filename from attachment metadata', async () => {
+  it('uses the existing dokumen persetujuan filename format for WORKFLOW downloads', async () => {
     await writeTestFile(WORKFLOW_LOGICAL_PATH, TEST_FILE_CONTENT)
 
     const response = await createBerkasArsipItemAttachmentFileResponse({
@@ -70,11 +72,13 @@ describe('berkas arsip item file access helper', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="Bukti Transfer Final.pdf"')
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="Label Persetujuan_Detail Pembayaran_Kegiatan Pembayaran_2026-05-29.pdf"',
+    )
     expectNoLeak(JSON.stringify([...response.headers.entries()]))
   })
 
-  it('falls back to a safe WORKFLOW attachment label and logical-path extension when original filename is unsafe or missing', async () => {
+  it('falls back safely when WORKFLOW filename metadata is unsafe or incomplete', async () => {
     await writeTestFile(WORKFLOW_LOGICAL_PATH, TEST_FILE_CONTENT)
 
     const response = await createBerkasArsipItemAttachmentFileResponse({
@@ -95,8 +99,46 @@ describe('berkas arsip item file access helper', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="Bukti Aman.pdf"')
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="Bukti Aman_Detail Pembayaran_Kegiatan Pembayaran_2026-05-29.pdf"',
+    )
     expectNoLeak(JSON.stringify([...response.headers.entries()]))
+  })
+
+  it('uses generic WORKFLOW fallback names only when source metadata has no safe usable name', async () => {
+    await writeTestFile(WORKFLOW_LOGICAL_PATH, TEST_FILE_CONTENT)
+
+    const response = await createBerkasArsipItemAttachmentFileResponse({
+      berkasId: BERKAS_ID,
+      itemId: WORKFLOW_ITEM_ID,
+      lampiranIndex: 0,
+      purpose: 'download',
+    }, {
+      repository: createRepository({
+        workflowDocumentOverrides: {
+          tanggal: null,
+          kegiatan_nama: null,
+          jenis_dokumen_nama: null,
+          jenis_permintaan_nama: null,
+          kategori_permintaan_nama: null,
+          detail_permintaan_nama: null,
+        },
+        workflowLampiranUrls: [{
+          nama: 'https://files.example.test/signed?token=secret',
+          fileName: '../rahasia.pdf',
+          original_filename: 'C:\\storage\\secret-token.pdf',
+          url: WORKFLOW_LOGICAL_PATH,
+          content_type: 'application/pdf',
+        }],
+      }),
+      root: TEST_ROOT,
+    })
+
+    const header = response.headers.get('Content-Disposition') ?? ''
+
+    expect(response.status).toBe(200)
+    expect(header).toBe('attachment; filename="Lampiran 1.pdf"')
+    expectNoLeak(header)
   })
 
   it('delegates a MANUAL item attachment by folder item and lampiran index', async () => {
@@ -278,6 +320,15 @@ type RepositoryOptions = {
   itemBerkasId?: string
   workflowSourceMissing?: boolean
   workflowLampiranUrls?: unknown
+  workflowDocumentOverrides?: Partial<{
+    tanggal: string | null
+    is_non_material: boolean | null
+    kegiatan_nama: string | null
+    jenis_dokumen_nama: string | null
+    jenis_permintaan_nama: string | null
+    kategori_permintaan_nama: string | null
+    detail_permintaan_nama: string | null
+  }>
 }
 
 function createRepository(options: RepositoryOptions = {}): BerkasArsipFileAccessRepository {
@@ -320,11 +371,18 @@ function createRepository(options: RepositoryOptions = {}): BerkasArsipFileAcces
         id: DOKUMEN_ID,
         judul: 'Dokumen Workflow',
         tanggal: '2026-05-29',
+        is_non_material: false,
+        kegiatan_nama: 'Kegiatan Pembayaran',
+        jenis_dokumen_nama: null,
+        jenis_permintaan_nama: 'Jenis Pembayaran',
+        kategori_permintaan_nama: 'Kategori Pembayaran',
+        detail_permintaan_nama: 'Detail Pembayaran',
         lampiran_urls: options.workflowLampiranUrls ?? [{
           nama: 'Bukti Pembayaran',
           url: WORKFLOW_LOGICAL_PATH,
           content_type: 'application/pdf',
         }],
+        ...options.workflowDocumentOverrides,
       }
     },
     async getManualAttachmentByIndex(manualArsipId, lampiranIndex) {

@@ -7,6 +7,7 @@ import {
   type BerkasArsipReadModelRepository,
   type BerkasFolderReadRow,
   type BerkasItemSourceReadRow,
+  type ManualAttachmentNameReadRow,
 } from '#/lib/archive/berkas-arsip-read-model'
 
 const BERKAS_OPEN_ID = 'berkas-open'
@@ -103,6 +104,18 @@ describe('berkas arsip read model', () => {
       source_nominal_realisasi: 1000000,
       source_created_by_display_name: 'Pegawai Workflow',
       attachment_count: 2,
+      attachments: [
+        {
+          label: 'Bukti Pembayaran',
+          previewTitle: 'Bukti Pembayaran_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+          downloadFilename: 'Bukti Pembayaran_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+        },
+        {
+          label: 'Dokumen Pendukung',
+          previewTitle: 'Dokumen Pendukung_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+          downloadFilename: 'Dokumen Pendukung_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+        },
+      ],
       has_attachments: true,
       workflow: {
         status: 'ARCHIVED',
@@ -118,6 +131,13 @@ describe('berkas arsip read model', () => {
       source_nominal_realisasi: 250000,
       source_created_by_display_name: 'Pegawai Manual',
       attachment_count: 1,
+      attachments: [
+        {
+          label: 'Bukti Manual',
+          previewTitle: 'Bukti Manual',
+          downloadFilename: 'Bukti Manual',
+        },
+      ],
       has_attachments: true,
       workflow: null,
       manual: {
@@ -142,6 +162,37 @@ describe('berkas arsip read model', () => {
     expect(serialized).not.toContain('canonical-archive-id')
     expect(serialized).not.toContain('canonical_arsip_id')
     expect(serialized).not.toContain('workflow_lampiran_urls')
+    expect(serialized).not.toContain('secret-token.pdf')
+  })
+
+  it('falls back to generic attachment names for unsafe workflow metadata without leaking paths or tokens', async () => {
+    const repository = createFakeRepository({
+      folderRows: [closedBerkas()],
+      itemRows: [closedWorkflowItem({
+        workflow_lampiran_urls: [
+          {
+            nama: 'https://files.example.test/signed?token=secret',
+            fileName: '../secret.pdf',
+            original_filename: 'C:\\storage\\secret-token.pdf',
+            url: 'owner-user/workflow/report.pdf',
+          },
+        ],
+      })],
+    })
+
+    const result = await getBerkasArsipDetail(BERKAS_CLOSED_ID, { repository })
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') return
+
+    expect(result.detail.items[0].attachments).toEqual([
+      {
+        label: 'Lampiran 1',
+        previewTitle: 'Lampiran 1.pdf',
+        downloadFilename: 'Lampiran 1.pdf',
+      },
+    ])
+    expectNoSensitiveOutput(result.detail)
   })
 
   it('handles a missing source safely with a placeholder and warning', async () => {
@@ -210,7 +261,7 @@ function createFakeRepository(options: {
   folderRows?: BerkasFolderReadRow[]
   itemRows?: BerkasItemSourceReadRow[]
   actorRows?: ActorDisplayReadRow[]
-  manualAttachmentCounts?: Map<string, number>
+  manualAttachments?: Map<string, ManualAttachmentNameReadRow[]>
 } = {}): BerkasArsipReadModelRepository {
   const folderRows = options.folderRows ?? [openBerkas(), closedBerkas()]
   const itemRows = options.itemRows ?? [openWorkflowItem(), closedWorkflowItem(), closedManualItem()]
@@ -218,8 +269,12 @@ function createFakeRepository(options: {
     actorRow(WORKFLOW_CREATOR_ID, 'Pegawai Workflow'),
     actorRow(MANUAL_CREATOR_ID, 'Pegawai Manual'),
   ]
-  const manualAttachmentCounts = options.manualAttachmentCounts ?? new Map([
-    ['manual-source-id', 1],
+  const manualAttachments = options.manualAttachments ?? new Map([
+    ['manual-source-id', [{
+      manual_arsip_id: 'manual-source-id',
+      judul_lampiran: 'Bukti Manual',
+      original_filename: 'bukti-manual.pdf',
+    }]],
   ])
 
   return {
@@ -244,9 +299,9 @@ function createFakeRepository(options: {
     async listItemsForBerkasIds(berkasIds) {
       return itemRows.filter((row) => berkasIds.includes(row.berkas_id))
     },
-    async countManualAttachmentsByManualArsipIds(manualArsipIds) {
+    async listManualAttachmentsByManualArsipIds(manualArsipIds) {
       return new Map(
-        [...manualAttachmentCounts.entries()].filter(([manualArsipId]) => manualArsipIds.includes(manualArsipId)),
+        [...manualAttachments.entries()].filter(([manualArsipId]) => manualArsipIds.includes(manualArsipId)),
       )
     },
     async findActorDisplayNames(actorIds) {
@@ -304,7 +359,7 @@ function openWorkflowItem(): BerkasItemSourceReadRow {
   }
 }
 
-function closedWorkflowItem(): BerkasItemSourceReadRow {
+function closedWorkflowItem(overrides: Partial<BerkasItemSourceReadRow> = {}): BerkasItemSourceReadRow {
   return {
     item_id: 'item-workflow-closed',
     berkas_id: BERKAS_CLOSED_ID,
@@ -320,17 +375,22 @@ function closedWorkflowItem(): BerkasItemSourceReadRow {
     workflow_is_non_material: false,
     workflow_created_by: WORKFLOW_CREATOR_ID,
     workflow_lampiran_urls: [
-      { nama: 'Lampiran Aman', url: 'C:\\storage\\secret.pdf?token=token-value' },
-      { nama: 'Lampiran Aman 2', url: 'select * from secret' },
+      { nama: 'Bukti Pembayaran', url: 'owner-user/workflow/bukti-pembayaran.pdf' },
+      { nama: 'Dokumen Pendukung', url: 'owner-user/workflow/dokumen-pendukung.pdf' },
     ],
     fungsi_nama: 'Fungsi Keuangan',
     kegiatan_nama: 'Kegiatan Pembayaran',
+    jenis_dokumen_nama: null,
+    jenis_permintaan_nama: 'Jenis Pembayaran',
+    kategori_permintaan_nama: 'Kategori Pembayaran',
+    detail_permintaan_nama: 'Detail Pembayaran',
     manual_nama: null,
     manual_date: null,
     manual_nominal_realisasi: null,
     manual_created_by: null,
     manual_category_name: null,
     manual_keterangan: null,
+    ...overrides,
   }
 }
 
@@ -351,6 +411,10 @@ function closedManualItem(): BerkasItemSourceReadRow {
     workflow_lampiran_urls: null,
     fungsi_nama: null,
     kegiatan_nama: null,
+    jenis_dokumen_nama: null,
+    jenis_permintaan_nama: null,
+    kategori_permintaan_nama: null,
+    detail_permintaan_nama: null,
     manual_nama: 'Dokumen Manual',
     manual_date: '2026-05-21',
     manual_nominal_realisasi: '250000',
@@ -384,4 +448,23 @@ function actorRow(id: string, displayName: string): ActorDisplayReadRow {
     nama_lengkap: null,
     email: null,
   }
+}
+
+function expectNoSensitiveOutput(value: unknown): void {
+  const serialized = JSON.stringify(value)
+
+  expect(serialized).not.toContain('C:\\storage')
+  expect(serialized).not.toContain('secret-token')
+  expect(serialized).not.toContain('token=secret')
+  expect(serialized).not.toContain('logical_path')
+  expect(serialized).not.toContain('logicalPath')
+  expect(serialized).not.toContain('physical_path')
+  expect(serialized).not.toContain('physicalPath')
+  expect(serialized).not.toContain('signedUrl')
+  expect(serialized).not.toContain('signed_url')
+  expect(serialized).not.toContain('storage root')
+  expect(serialized).not.toContain('DATABASE_URL')
+  expect(serialized).not.toContain('select ')
+  expect(serialized).not.toContain('from ')
+  expect(serialized).not.toContain('SQL')
 }

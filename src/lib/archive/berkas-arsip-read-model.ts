@@ -11,7 +11,11 @@ import {
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
+  masterDetailPermintaan,
   masterFungsi,
+  masterJenisDokumen,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
   masterKegiatan,
 } from '#/db/schema/master'
 import {
@@ -23,6 +27,11 @@ import {
   type BerkasArchiveStatus,
   type BerkasStatus,
 } from '#/lib/constants/archive-status'
+import {
+  resolveManualAttachmentNames,
+  resolveWorkflowAttachmentNames,
+  type SafeBerkasAttachmentName,
+} from '#/lib/archive/berkas-arsip-attachment-names'
 
 export const BERKAS_ARSIP_READ_MODEL_DEFAULT_LIMIT = 100
 export const BERKAS_ARSIP_READ_MODEL_MAX_LIMIT = 500
@@ -93,6 +102,7 @@ export type BerkasArsipDetailItemDto = {
   source_nominal_realisasi: number | null
   source_created_by_display_name: string | null
   attachment_count: number | null
+  attachments: SafeBerkasAttachmentName[]
   has_attachments: boolean
   workflow: {
     title: string | null
@@ -153,6 +163,10 @@ export type BerkasItemSourceReadRow = {
   workflow_lampiran_urls: unknown
   fungsi_nama: string | null
   kegiatan_nama: string | null
+  jenis_dokumen_nama: string | null
+  jenis_permintaan_nama: string | null
+  kategori_permintaan_nama: string | null
+  detail_permintaan_nama: string | null
   manual_nama: string | null
   manual_date: Date | string | null
   manual_nominal_realisasi: string | number | null
@@ -168,11 +182,17 @@ export type ActorDisplayReadRow = {
   email: string | null
 }
 
+export type ManualAttachmentNameReadRow = {
+  manual_arsip_id: string
+  judul_lampiran: string | null
+  original_filename: string | null
+}
+
 export type BerkasArsipReadModelRepository = {
   listFolders(options: NormalizedListBerkasArsipFolderQuery): Promise<BerkasFolderReadRow[]>
   getFolderById(berkasId: string): Promise<BerkasFolderReadRow | null>
   listItemsForBerkasIds(berkasIds: string[]): Promise<BerkasItemSourceReadRow[]>
-  countManualAttachmentsByManualArsipIds(manualArsipIds: string[]): Promise<Map<string, number>>
+  listManualAttachmentsByManualArsipIds(manualArsipIds: string[]): Promise<Map<string, ManualAttachmentNameReadRow[]>>
   findActorDisplayNames(actorIds: string[]): Promise<Map<string, string>>
 }
 
@@ -215,7 +235,7 @@ export async function getBerkasArsipDetail(
   if (!folderRow) return { status: 'not_found' }
 
   const itemRows = await repository.listItemsForBerkasIds([berkasId])
-  const manualAttachmentCounts = await repository.countManualAttachmentsByManualArsipIds(
+  const manualAttachments = await repository.listManualAttachmentsByManualArsipIds(
     itemRows
       .map((row) => trimToNull(row.manual_arsip_id))
       .filter((id): id is string => Boolean(id)),
@@ -228,7 +248,7 @@ export async function getBerkasArsipDetail(
     status: 'found',
     detail: {
       ...folder,
-      items: itemRows.map((row) => mapItemRowToDetailDto(row, manualAttachmentCounts, actorDisplayNames)),
+      items: itemRows.map((row) => mapItemRowToDetailDto(row, manualAttachments, actorDisplayNames)),
       warnings: collectFolderWarnings(folderRow),
     },
   }
@@ -285,6 +305,10 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
         workflow_lampiran_urls: dokumenTransaksi.lampiranUrls,
         fungsi_nama: masterFungsi.nama,
         kegiatan_nama: masterKegiatan.nama,
+        jenis_dokumen_nama: masterJenisDokumen.nama,
+        jenis_permintaan_nama: masterJenisPermintaan.nama,
+        kategori_permintaan_nama: masterKategoriPermintaan.nama,
+        detail_permintaan_nama: masterDetailPermintaan.nama,
         manual_nama: manualArsip.nama,
         manual_date: manualArsip.tanggal,
         manual_nominal_realisasi: manualArsip.nominalRealisasi,
@@ -296,13 +320,17 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
       .leftJoin(dokumenTransaksi, eq(berkasArsipItem.dokumenId, dokumenTransaksi.id))
       .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
       .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+      .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
+      .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
+      .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
+      .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
       .leftJoin(manualArsip, eq(berkasArsipItem.manualArsipId, manualArsip.id))
       .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
       .where(inArray(berkasArsipItem.berkasId, uniqueIds))
       .orderBy(berkasArsipItem.addedAt, berkasArsipItem.id) as Promise<BerkasItemSourceReadRow[]>
   },
 
-  async countManualAttachmentsByManualArsipIds(manualArsipIds) {
+  async listManualAttachmentsByManualArsipIds(manualArsipIds) {
     const uniqueIds = [...new Set(manualArsipIds.filter(Boolean))]
     if (uniqueIds.length === 0) return new Map()
 
@@ -310,19 +338,18 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
     const rows = await database
       .select({
         manual_arsip_id: manualArsipAttachment.manualArsipId,
-        attachment_count: sql<number>`count(${manualArsipAttachment.id})`,
+        judul_lampiran: manualArsipAttachment.judulLampiran,
+        original_filename: manualArsipAttachment.originalFilename,
       })
       .from(manualArsipAttachment)
       .where(inArray(manualArsipAttachment.manualArsipId, uniqueIds))
-      .groupBy(manualArsipAttachment.manualArsipId) as Array<{
-        manual_arsip_id: string
-        attachment_count: string | number | null
-      }>
+      .orderBy(
+        manualArsipAttachment.manualArsipId,
+        asc(manualArsipAttachment.createdAt),
+        asc(manualArsipAttachment.id),
+      ) as ManualAttachmentNameReadRow[]
 
-    return new Map(rows.map((row) => [
-      row.manual_arsip_id,
-      normalizeCount(row.attachment_count),
-    ]))
+    return groupManualAttachmentsByManualArsipId(rows)
   },
 
   async findActorDisplayNames(actorIds) {
@@ -463,7 +490,7 @@ function mapFolderRowToListDto(
 
 function mapItemRowToDetailDto(
   row: BerkasItemSourceReadRow,
-  manualAttachmentCounts: Map<string, number>,
+  manualAttachments: Map<string, ManualAttachmentNameReadRow[]>,
   actorDisplayNames: Map<string, string>,
 ): BerkasArsipDetailItemDto {
   const sourceType = normalizeSourceType(row.source_type)
@@ -471,7 +498,8 @@ function mapItemRowToDetailDto(
   const sourceCreatedBy = sourceType === ARCHIVE_SOURCE_TYPE.WORKFLOW
     ? trimToNull(row.workflow_created_by)
     : trimToNull(row.manual_created_by)
-  const attachmentCount = getAttachmentCount(row, sourceType, sourceFound, manualAttachmentCounts)
+  const attachments = getAttachmentNames(row, sourceType, sourceFound, manualAttachments)
+  const attachmentCount = getAttachmentCount(row, sourceType, sourceFound, attachments)
   const warnings = collectItemWarnings(row, sourceType, sourceFound, attachmentCount)
 
   return {
@@ -482,6 +510,7 @@ function mapItemRowToDetailDto(
     source_nominal_realisasi: getSourceNominal(row),
     source_created_by_display_name: sourceCreatedBy ? actorDisplayNames.get(sourceCreatedBy) ?? null : null,
     attachment_count: attachmentCount,
+    attachments,
     has_attachments: typeof attachmentCount === 'number' && attachmentCount > 0,
     workflow: sourceType === ARCHIVE_SOURCE_TYPE.WORKFLOW
       ? {
@@ -633,16 +662,43 @@ function getAttachmentCount(
   row: BerkasItemSourceReadRow,
   sourceType: ArchiveSourceType,
   sourceFound: boolean,
-  manualAttachmentCounts: Map<string, number>,
+  attachments: SafeBerkasAttachmentName[],
 ): number | null {
   if (!sourceFound) return null
   if (sourceType === ARCHIVE_SOURCE_TYPE.WORKFLOW) return countJsonArray(row.workflow_lampiran_urls)
-  if (sourceType === ARCHIVE_SOURCE_TYPE.MANUAL) {
-    const manualArsipId = trimToNull(row.manual_arsip_id)
-    return manualArsipId ? manualAttachmentCounts.get(manualArsipId) ?? 0 : null
-  }
+  if (sourceType === ARCHIVE_SOURCE_TYPE.MANUAL) return attachments.length
 
   return null
+}
+
+function getAttachmentNames(
+  row: BerkasItemSourceReadRow,
+  sourceType: ArchiveSourceType,
+  sourceFound: boolean,
+  manualAttachments: Map<string, ManualAttachmentNameReadRow[]>,
+): SafeBerkasAttachmentName[] {
+  if (!sourceFound) return []
+  if (sourceType === ARCHIVE_SOURCE_TYPE.WORKFLOW) {
+    return resolveWorkflowAttachmentNames(row.workflow_lampiran_urls, {
+      id: row.dokumen_id ?? '',
+      judul: row.workflow_title,
+      tanggal: row.workflow_date,
+      is_non_material: row.workflow_is_non_material,
+      kegiatan_nama: row.kegiatan_nama,
+      jenis_dokumen_nama: row.jenis_dokumen_nama,
+      jenis_permintaan_nama: row.jenis_permintaan_nama,
+      kategori_permintaan_nama: row.kategori_permintaan_nama,
+      detail_permintaan_nama: row.detail_permintaan_nama,
+    })
+  }
+  if (sourceType === ARCHIVE_SOURCE_TYPE.MANUAL) {
+    const manualArsipId = trimToNull(row.manual_arsip_id)
+    if (!manualArsipId) return []
+
+    return (manualAttachments.get(manualArsipId) ?? []).map(resolveManualAttachmentNames)
+  }
+
+  return []
 }
 
 function normalizeSourceType(value: string | null | undefined): ArchiveSourceType {
@@ -655,16 +711,6 @@ function normalizeBerkasArchiveStatus(value: string | null | undefined): BerkasA
   return BERKAS_ARCHIVE_STATUS_VALUES.includes(value as BerkasArchiveStatus)
     ? value as BerkasArchiveStatus
     : null
-}
-
-function normalizeCount(value: string | number | null | undefined): number {
-  if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : 0
-  }
-
-  return 0
 }
 
 function normalizeMoney(value: string | number | null | undefined): number | null {
@@ -688,6 +734,20 @@ function countJsonArray(value: unknown): number | null {
   } catch {
     return null
   }
+}
+
+function groupManualAttachmentsByManualArsipId(
+  rows: ManualAttachmentNameReadRow[],
+): Map<string, ManualAttachmentNameReadRow[]> {
+  const grouped = new Map<string, ManualAttachmentNameReadRow[]>()
+
+  for (const row of rows) {
+    const current = grouped.get(row.manual_arsip_id) ?? []
+    current.push(row)
+    grouped.set(row.manual_arsip_id, current)
+  }
+
+  return grouped
 }
 
 function resolveActorDisplayName(row: ActorDisplayReadRow): string | null {

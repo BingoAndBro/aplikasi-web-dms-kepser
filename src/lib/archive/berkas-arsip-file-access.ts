@@ -1,6 +1,5 @@
 // Server-only module. Do not import from client components.
 import { readFile, stat } from 'node:fs/promises'
-import path from 'node:path'
 import { and, asc, eq } from 'drizzle-orm'
 
 import {
@@ -10,17 +9,26 @@ import {
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
+  masterDetailPermintaan,
+  masterJenisDokumen,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
+  masterKegiatan,
+} from '#/db/schema/master'
+import {
   ARCHIVE_SOURCE_TYPE,
   BERKAS_ARCHIVE_STATUS,
   type ArchiveSourceType,
   type BerkasArchiveStatus,
 } from '#/lib/constants/archive-status'
 import {
-  assertSafeLogicalStoragePath,
-  getFileExtension,
   getLocalStorageRoot,
   resolvePhysicalStoragePath,
 } from '#/lib/storage/local-storage-paths'
+import {
+  buildBerkasContentDisposition,
+  resolveWorkflowAttachmentReference,
+} from '#/lib/archive/berkas-arsip-attachment-names'
 
 export type BerkasArsipFileAccessPurpose = 'preview' | 'download'
 
@@ -41,6 +49,12 @@ export type BerkasArsipWorkflowFileSourceRow = {
   id: string
   judul: string | null
   tanggal: Date | string | null
+  is_non_material: boolean | null
+  kegiatan_nama: string | null
+  jenis_dokumen_nama: string | null
+  jenis_permintaan_nama: string | null
+  kategori_permintaan_nama: string | null
+  detail_permintaan_nama: string | null
   lampiran_urls: unknown
 }
 
@@ -65,16 +79,6 @@ export type BerkasArsipFileAccessDeps = {
   }) => Promise<Response>
 }
 
-type WorkflowAttachmentReference = {
-  logicalPath: string
-  attachmentName: string
-  originalFilename: string | null
-  contentType: string | null
-}
-
-const SAFE_MIME_PATTERN = /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/
-const WINDOWS_DRIVE_PATTERN = /^[a-z]:[\\/]/i
-const URL_LIKE_PATTERN = /^[a-z][a-z0-9+.-]*:/i
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
   bmp: 'image/bmp',
   gif: 'image/gif',
@@ -157,7 +161,7 @@ async function createWorkflowItemAttachmentFileResponse({
   const source = await repository.getWorkflowSourceById(item.dokumen_id)
   if (!source) return secureJsonError('Sumber item tidak ditemukan', 404)
 
-  const reference = resolveWorkflowAttachmentReference(source.lampiran_urls, lampiranIndex)
+  const reference = resolveWorkflowAttachmentReference(source.lampiran_urls, source, lampiranIndex)
   if (!reference) return secureJsonError('Lampiran berkas tidak ditemukan', 404)
 
   let physicalPath: string
@@ -186,7 +190,7 @@ async function createWorkflowItemAttachmentFileResponse({
 
   const headers = secureFileHeaders()
   headers.set('Content-Type', reference.contentType ?? inferContentType(reference.logicalPath))
-  headers.set('Content-Disposition', buildContentDisposition(resolveWorkflowFilename(reference), purpose))
+  headers.set('Content-Disposition', buildBerkasContentDisposition(reference.downloadFilename, purpose))
   headers.set('Content-Length', String(fileContent.byteLength || fileSize))
 
   return new Response(fileContent, {
@@ -274,9 +278,20 @@ const defaultBerkasArsipFileAccessRepository: BerkasArsipFileAccessRepository = 
         id: dokumenTransaksi.id,
         judul: dokumenTransaksi.judul,
         tanggal: dokumenTransaksi.tanggal,
+        is_non_material: dokumenTransaksi.isNonMaterial,
+        kegiatan_nama: masterKegiatan.nama,
+        jenis_dokumen_nama: masterJenisDokumen.nama,
+        jenis_permintaan_nama: masterJenisPermintaan.nama,
+        kategori_permintaan_nama: masterKategoriPermintaan.nama,
+        detail_permintaan_nama: masterDetailPermintaan.nama,
         lampiran_urls: dokumenTransaksi.lampiranUrls,
       })
       .from(dokumenTransaksi)
+      .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+      .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
+      .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
+      .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
+      .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
       .where(eq(dokumenTransaksi.id, dokumenId))
       .limit(1) as BerkasArsipWorkflowFileSourceRow[]
 
@@ -304,137 +319,10 @@ async function getDatabase() {
   return client.db
 }
 
-function resolveWorkflowAttachmentReference(
-  lampiranUrls: unknown,
-  lampiranIndex: number,
-): WorkflowAttachmentReference | null {
-  const entries = parseWorkflowAttachmentEntries(lampiranUrls)
-  const entry = entries[lampiranIndex]
-  if (!isRecord(entry)) return null
-
-  const logicalPath = resolveWorkflowAttachmentLogicalPath(entry)
-  if (!logicalPath) return null
-
-  return {
-    logicalPath,
-    attachmentName: firstSafeFilenameText(
-      entry.nama,
-      entry.name,
-      entry.title,
-      entry.displayName,
-      entry.display_name,
-    ) ?? `lampiran-${lampiranIndex + 1}`,
-    originalFilename: firstSafeFilenameText(
-      entry.fileName,
-      entry.file_name,
-      entry.filename,
-      entry.originalFilename,
-      entry.original_filename,
-      entry.name,
-    ),
-    contentType: firstSafeMimeType(
-      entry.mimeType,
-      entry.mime_type,
-      entry.contentType,
-      entry.content_type,
-      entry.type,
-    ),
-  }
-}
-
-function parseWorkflowAttachmentEntries(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value
-  if (typeof value !== 'string') return []
-
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function resolveWorkflowAttachmentLogicalPath(entry: Record<string, unknown>): string | null {
-  const rawPath = entry.url
-  if (typeof rawPath !== 'string' || !rawPath.trim()) return null
-
-  try {
-    return assertSafeLogicalStoragePath(rawPath)
-  } catch {
-    return null
-  }
-}
-
-function resolveWorkflowFilename(reference: WorkflowAttachmentReference): string {
-  if (reference.originalFilename) return reference.originalFilename
-
-  const extension = getFileExtension(reference.logicalPath)
-  if (extension && !path.extname(reference.attachmentName)) {
-    return `${reference.attachmentName}.${extension}`
-  }
-
-  return reference.attachmentName
-}
-
-function firstSafeMimeType(...values: unknown[]): string | null {
-  for (const value of values) {
-    if (typeof value !== 'string') continue
-    const normalized = value.trim().toLowerCase()
-    if (SAFE_MIME_PATTERN.test(normalized)) return normalized
-  }
-
-  return null
-}
-
-function firstSafeFilenameText(...values: unknown[]): string | null {
-  for (const value of values) {
-    const sanitized = sanitizeContentDispositionFilename(value)
-    if (sanitized) return sanitized
-  }
-
-  return null
-}
-
-function buildContentDisposition(
-  filename: string,
-  purpose: BerkasArsipFileAccessPurpose,
-): string {
-  const disposition = purpose === 'download' ? 'attachment' : 'inline'
-  const safeFilename = sanitizeContentDispositionFilename(filename) ?? 'lampiran'
-
-  return `${disposition}; filename="${safeFilename}"`
-}
-
 function inferContentType(logicalPath: string): string {
   const extension = getFileExtension(logicalPath)
 
   return CONTENT_TYPE_BY_EXTENSION[extension] ?? 'application/octet-stream'
-}
-
-function sanitizeContentDispositionFilename(value: unknown): string | null {
-  const trimmed = typeof value === 'string' ? value.trim() : ''
-
-  if (
-    !trimmed
-    || trimmed === '.'
-    || trimmed === '..'
-    || trimmed.includes('/')
-    || trimmed.includes('\\')
-    || trimmed.includes('\r')
-    || trimmed.includes('\n')
-    || trimmed.includes('"')
-    || trimmed.includes('..')
-    || path.isAbsolute(trimmed)
-    || WINDOWS_DRIVE_PATTERN.test(trimmed)
-    || URL_LIKE_PATTERN.test(trimmed)
-  ) {
-    return null
-  }
-
-  const sanitized = trimmed.replace(/[^A-Za-z0-9._ -]/g, '_').replace(/\s+/g, ' ').trim()
-  if (!sanitized || sanitized === '.' || sanitized === '..' || sanitized.includes('..')) return null
-
-  return sanitized.slice(0, 180)
 }
 
 function secureJsonError(message: string, status: number): Response {
@@ -456,8 +344,4 @@ function isMissingFileError(error: unknown): boolean {
     && error !== null
     && 'code' in error
     && (error.code === 'ENOENT' || error.code === 'ENOTDIR')
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

@@ -232,6 +232,13 @@ describe('folder-first berkas archive read API routes', () => {
       item_file_key: '44444444-4444-4444-8444-444444444444',
       source_type: 'WORKFLOW',
       source_title: 'Laporan Pembayaran',
+      attachments: [
+        {
+          label: 'Bukti Pembayaran',
+          previewTitle: 'Bukti Pembayaran_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+          downloadFilename: 'Bukti Pembayaran_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+        },
+      ],
     })
     expectNoSensitiveOutput(body)
     expect(JSON.stringify(body)).not.toContain('item_id')
@@ -361,6 +368,8 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('createBerkasDetailItemsCsv')
     expect(detailSource).toContain('Data file sudah dimusnahkan')
     expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
+    expect(detailSource).toContain('attachment?.label')
+    expect(detailSource).toContain('attachment?.previewTitle')
     expect(detailSource).toContain('Tutup Berkas')
     expect(detailSource).toContain('/close')
     expect(detailSource).toContain('buildCloseBerkasRequestBody(closeForm)')
@@ -461,6 +470,13 @@ function detailResult() {
         source_nominal_realisasi: 1000000,
         source_created_by_display_name: 'Pegawai Workflow',
         attachment_count: 2,
+        attachments: [
+          {
+            label: 'Bukti Pembayaran',
+            previewTitle: 'Bukti Pembayaran_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+            downloadFilename: 'Bukti Pembayaran_Detail Pembayaran_Kegiatan Pembayaran_2026-05-20.pdf',
+          },
+        ],
         has_attachments: true,
         workflow: {
           title: 'Laporan Pembayaran',

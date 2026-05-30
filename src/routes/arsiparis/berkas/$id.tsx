@@ -57,6 +57,11 @@ type BerkasDetailItem = {
   source_nominal_realisasi: number | null
   source_created_by_display_name: string | null
   attachment_count: number | null
+  attachments: Array<{
+    label: string
+    previewTitle: string
+    downloadFilename: string
+  }>
   has_attachments: boolean
   workflow: {
     title: string | null
@@ -674,7 +679,9 @@ function ItemAttachmentActions({
   return (
     <div className="mt-3 grid gap-2">
       {Array.from({ length: attachmentCount }, (_, lampiranIndex) => {
-        const title = attachmentCount === 1 ? 'Lampiran' : `Lampiran ${lampiranIndex + 1}`
+        const attachment = item.attachments[lampiranIndex]
+        const title = attachment?.label ?? (attachmentCount === 1 ? 'Lampiran' : `Lampiran ${lampiranIndex + 1}`)
+        const previewTitle = attachment?.previewTitle ?? title
         const previewHref = buildBerkasItemAttachmentFileUrl(berkasId, item.item_file_key, lampiranIndex, 'preview')
         const downloadHref = buildBerkasItemAttachmentFileUrl(berkasId, item.item_file_key, lampiranIndex, 'download')
 
@@ -689,7 +696,7 @@ function ItemAttachmentActions({
               <Button
                 size="icon-xs"
                 variant="ghost"
-                onClick={() => onPreview(previewHref, title)}
+                onClick={() => onPreview(previewHref, previewTitle)}
                 aria-label={`Pratinjau ${title}`}
               >
                 <Eye size={14} />

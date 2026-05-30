@@ -71,6 +71,7 @@ function safeBerkasDetailItem(item: BerkasArsipDetailItemDto, index: number) {
     source_nominal_realisasi: item.source_nominal_realisasi,
     source_created_by_display_name: item.source_created_by_display_name,
     attachment_count: item.attachment_count,
+    attachments: item.attachments,
     has_attachments: item.has_attachments,
     workflow: item.workflow,
     manual: item.manual,
