@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const BERKAS_ID = '22222222-2222-4222-8222-222222222222'
@@ -408,9 +408,37 @@ describe('folder-first berkas archive page formatting', () => {
     expect(searchSource).not.toContain("if (a.status_arsip === 'AKTIF') return '/arsiparis/aktif/' + a.id")
 
     expect(inactiveSource).toContain("createFileRoute('/arsiparis/inaktif/')")
-    expect(inactiveSource).toContain("apiFetch<ArsipInaktifResponse>('/arsiparis/inaktif')")
+    expect(inactiveSource).toContain("apiFetch<BerkasFolderListResponse>('/arsiparis/berkas'")
+    expect(inactiveSource).toContain("status_berkas: 'CLOSED'")
+    expect(inactiveSource).toContain("status_arsip: 'INAKTIF'")
+    expect(inactiveSource).toContain("body: JSON.stringify({ action: 'propose_destruction' })")
+    expect(inactiveSource).toContain('Usulkan Musnah')
+    expect(inactiveSource).toContain('Folder-first untuk berkas yang sudah ditutup dan berstatus arsip Inaktif.')
+    expect(inactiveSource).toContain('File fisik tidak dihapus.')
+    expect(inactiveSource).toContain('to="/arsiparis/berkas/$id"')
+    expect(inactiveSource).not.toContain("apiFetch<ArsipInaktifResponse>('/arsiparis/inaktif')")
+    expect(inactiveSource).not.toContain('to="/arsiparis/arsip/$id"')
+
     expect(proposedSource).toContain("createFileRoute('/arsiparis/usul-musnah/')")
-    expect(proposedSource).toContain("apiFetch<UsulMusnahResponse>('/arsiparis/usul-musnah')")
+    expect(proposedSource).toContain("apiFetch<BerkasFolderListResponse>('/arsiparis/berkas'")
+    expect(proposedSource).toContain("status_berkas: 'CLOSED'")
+    expect(proposedSource).toContain("status_arsip: 'USUL_MUSNAH'")
+    expect(proposedSource).toContain("action: 'approve_destruction'")
+    expect(proposedSource).toContain('BERKAS_DESTRUCTION_CONFIRMATION_PHRASE')
+    expect(formatSource).toContain("BERKAS_DESTRUCTION_CONFIRMATION_PHRASE = 'MUSNAHKAN DATA FILE'")
+    expect(proposedSource).toContain('disabled={!canSubmitDestruction}')
+    expect(proposedSource).toContain('Musnahkan Data')
+    expect(proposedSource).toContain('Status berkas akan menjadi Dimusnahkan.')
+    expect(proposedSource).toContain('Preview dan download file akan diblokir.')
+    expect(proposedSource).toContain('File fisik tidak dihapus pada fase ini.')
+    expect(proposedSource).toContain('Metadata berkas dan dokumen tetap tersimpan.')
+    expect(proposedSource).toContain('to="/arsiparis/berkas/$id"')
+    expect(proposedSource).not.toContain("apiFetch<UsulMusnahResponse>('/arsiparis/usul-musnah')")
+    expect(proposedSource).not.toContain('to="/arsiparis/arsip/$id"')
+
+    expect(existsSync('src/routes/arsiparis/dimusnahkan')).toBe(false)
+    expect(existsSync('src/routes/arsiparis/dimusnahkan.tsx')).toBe(false)
+    expect(existsSync('src/routes/api/arsiparis/dimusnahkan.ts')).toBe(false)
 
     expect(closeDialogSource).toContain('Dialog')
     expect(closeDialogSource).toContain('DialogContent')
