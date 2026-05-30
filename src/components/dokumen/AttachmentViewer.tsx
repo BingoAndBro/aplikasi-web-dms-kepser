@@ -24,7 +24,14 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle2, XCircle, Eye, Download, Upload, Trash2, X, Loader2 } from 'lucide-react'
 import { Button } from '#/components/ui/button'
-import { getSignedUrl, downloadWithSignedUrl, formatDateTime, downloadFromApi } from '#/lib/storage-client'
+import {
+  downloadFromApi,
+  downloadWithSignedUrl,
+  fetchFileBlobWithSignedUrl,
+  formatDateTime,
+  getSignedUrlDirectResult,
+  getSignedUrlFromApi,
+} from '#/lib/storage-client'
 import { buildStorageFilename } from '#/lib/dokumen-helpers'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
@@ -95,6 +102,12 @@ export function AttachmentViewer({
     return () => document.removeEventListener('keydown', handler)
   }, [previewingIdx])
 
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith('blob:')) URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
+
   // ==========================================================================
   // HELPER: Filter lampiran based on kelengkapan
   // ==========================================================================
@@ -144,27 +157,33 @@ export function AttachmentViewer({
     if (!lamp) return
 
     setPreviewingIdx(idx)
-    setPreviewUrl(null)
+    clearPreviewUrl()
     setPreviewLoading(true)
     setPreviewError(null)
 
     try {
       // Get signed URL from appropriate API
-      let signedUrl: string | null = null
+      let signedUrl: string | undefined
 
       if (apiType === 'default') {
         // Default: use direct signed URL from storage
-        signedUrl = await getSignedUrl(lamp.url)
+        const signedUrlResult = await getSignedUrlDirectResult(lamp.url)
+        if (signedUrlResult.error) {
+          setPreviewError(signedUrlResult.error)
+          setPreviewLoading(false)
+          return
+        }
+        signedUrl = signedUrlResult.signedUrl
       } else {
         // PPK/Bendahara: use their API endpoint
         const apiPath = getPreviewApiPath(idx)
-        try {
-          const res = await fetch(apiPath, { credentials: 'include' })
-          const json = await res.json()
-          signedUrl = json.signedUrl || null
-        } catch {
-          signedUrl = null
+        const signedUrlResult = await getSignedUrlFromApi(apiPath)
+        if (signedUrlResult.error) {
+          setPreviewError(signedUrlResult.error)
+          setPreviewLoading(false)
+          return
         }
+        signedUrl = signedUrlResult.signedUrl
       }
 
       if (!signedUrl) {
@@ -173,10 +192,17 @@ export function AttachmentViewer({
         return
       }
 
+      const previewFile = await fetchFileBlobWithSignedUrl(signedUrl)
+      if (previewFile.error || !previewFile.blob) {
+        setPreviewError(previewFile.error ?? 'Gagal memuat pratinjau')
+        setPreviewLoading(false)
+        return
+      }
+
       // Build filename dari metadata dokumen (client-side)
       const filename = buildStorageFilename(dokumen, lamp)
 
-      setPreviewUrl(signedUrl)
+      setPreviewUrl(URL.createObjectURL(previewFile.blob))
       setPreviewFilename(filename)
     } catch {
       setPreviewError('Terjadi kesalahan')
@@ -199,15 +225,17 @@ export function AttachmentViewer({
     try {
       if (apiType === 'default') {
         // Default: use direct signed URL from storage
-        const signedUrl = await getSignedUrl(lamp.url)
-        if (!signedUrl) {
-          alert('Gagal mengunduh file')
+        const signedUrlResult = await getSignedUrlDirectResult(lamp.url)
+        if (signedUrlResult.error || !signedUrlResult.signedUrl) {
+          alert(signedUrlResult.error ?? 'Gagal mengunduh file')
           return
         }
-        downloadWithSignedUrl(signedUrl, filename)
+        const result = await downloadWithSignedUrl(signedUrlResult.signedUrl, filename)
+        if (result.error) alert(result.error)
       } else {
         // PPK/Bendahara: use their API endpoint
-        await downloadFromApi(apiPath, filename)
+        const result = await downloadFromApi(apiPath, filename)
+        if (result.error) alert(result.error)
       }
     } catch {
       alert('Gagal mengunduh file')
@@ -219,9 +247,16 @@ export function AttachmentViewer({
   // ==========================================================================
   function closePreview() {
     setPreviewingIdx(null)
-    setPreviewUrl(null)
+    clearPreviewUrl()
     setPreviewFilename('')
     setPreviewError(null)
+  }
+
+  function clearPreviewUrl() {
+    setPreviewUrl(current => {
+      if (current?.startsWith('blob:')) URL.revokeObjectURL(current)
+      return null
+    })
   }
 
   // ==========================================================================
