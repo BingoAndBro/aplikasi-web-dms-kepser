@@ -10,7 +10,10 @@ export type BerkasLifecycleActionView = {
   label: string
   confirmation: string
   successMessage: string
+  confirmationPhrase?: string
 }
+
+export const BERKAS_DESTRUCTION_CONFIRMATION_PHRASE = 'MUSNAHKAN DATA FILE'
 
 export function formatBerkasStatusLabel(status: BerkasStatus | string | null | undefined): string {
   if (status === 'OPEN') return 'Berkas terbuka'
@@ -62,7 +65,8 @@ export function resolveBerkasLifecycleAction(
     return {
       action: 'approve_destruction',
       label: 'Musnahkan Data',
-      confirmation: 'Berkas akan ditandai sebagai Dimusnahkan. Preview dan download akan diblokir. File fisik belum dihapus pada fase ini.',
+      confirmation: 'Status berkas akan menjadi Dimusnahkan. Preview dan download file akan diblokir. File fisik tidak dihapus pada fase ini. Metadata tetap tersimpan.',
+      confirmationPhrase: BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
       successMessage: 'Berkas berhasil ditandai sebagai Dimusnahkan. File fisik belum dihapus.',
     }
   }

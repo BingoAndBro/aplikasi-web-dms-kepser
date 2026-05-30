@@ -278,28 +278,31 @@ describe('folder-first berkas archive page formatting', () => {
     expect(resolveBerkasLifecycleAction('OPEN', null)).toBeNull()
     expect(resolveBerkasLifecycleAction('CLOSED', null)).toBeNull()
     expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmation)
-      .toContain('File fisik belum dihapus pada fase ini')
+      .toContain('File fisik tidak dihapus pada fase ini')
+    expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmationPhrase)
+      .toBe('MUSNAHKAN DATA FILE')
   })
 
-  it('keeps all folder visibility sections and DIMUSNAHKAN file block copy on pages', () => {
+  it('keeps the active folder page constrained to open and active sections', () => {
     const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
     const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
     const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
 
-    for (const label of [
-      'Berkas Terbuka',
-      'Pemberkasan Arsip Aktif',
-      'Arsip Inaktif',
-      'Usul Musnah',
-      'Dimusnahkan',
-    ]) {
-      expect(listSource).toContain(label)
-    }
+    expect(listSource).toContain('Berkas Terbuka')
+    expect(listSource).toContain('Pemberkasan Arsip Aktif')
+    expect(listSource).not.toContain('Arsip Inaktif')
+    expect(listSource).not.toContain('Usul Musnah')
+    expect(listSource).not.toContain('Dimusnahkan')
 
     expect(formatSource).toContain('Jadikan Inaktif')
     expect(formatSource).toContain('Usulkan Musnah')
     expect(formatSource).toContain('Musnahkan Data')
-    expect(detailSource).toContain('Data sudah dimusnahkan')
+    expect(formatSource).toContain('MUSNAHKAN DATA FILE')
+    expect(detailSource).toContain('BERKAS_DESTRUCTION_CONFIRMATION_PHRASE')
+    expect(detailSource).toContain('File fisik tidak dihapus pada fase ini')
+    expect(detailSource).toContain('Metadata berkas dan dokumen tetap tersimpan')
+    expect(detailSource).toContain('disabled={!canSubmitDestruction}')
+    expect(detailSource).toContain('Data file sudah dimusnahkan')
     expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
     expect(detailSource).not.toContain('File fisik dihapus')
   })

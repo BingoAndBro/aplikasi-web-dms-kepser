@@ -368,6 +368,25 @@ describe('berkas arsip API routes', () => {
     expect(mocks.transitionBerkasArchiveStatus).not.toHaveBeenCalled()
   })
 
+  it('requires exact typed confirmation for approve_destruction before service work', async () => {
+    for (const body of [
+      { action: 'approve_destruction' },
+      { action: 'approve_destruction', confirmation: 'SETUJUI PEMUSNAHAN ARSIP' },
+    ]) {
+      vi.clearAllMocks()
+      mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+
+      const response = await lifecyclePostHandler({
+        request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, body),
+        params: { id: BERKAS_ID },
+      })
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({ error: 'Aksi lifecycle berkas tidak valid' })
+      expect(mocks.transitionBerkasArchiveStatus).not.toHaveBeenCalled()
+    }
+  })
+
   it('moves lifecycle through the folder service for assigned KEPALA_SUB_BAGIAN_UMUM', async () => {
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
@@ -388,6 +407,27 @@ describe('berkas arsip API routes', () => {
     expectNoSensitiveOutput(body)
   })
 
+  it('moves approve_destruction only with the folder confirmation phrase', async () => {
+    const response = await lifecyclePostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'approve_destruction',
+        confirmation: 'MUSNAHKAN DATA FILE',
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body).toEqual({ berkas: inactiveBerkasDto() })
+    expect(mocks.transitionBerkasArchiveStatus).toHaveBeenCalledWith({
+      berkasId: BERKAS_ID,
+      actorUserId: USER_ID,
+      action: 'approve_destruction',
+    })
+    expectNoSensitiveOutput(body)
+  })
+
   it('maps invalid lifecycle transitions to a safe 409 response', async () => {
     mocks.transitionBerkasArchiveStatus.mockRejectedValueOnce(
       new mocks.BerkasArsipServiceError(
@@ -399,6 +439,7 @@ describe('berkas arsip API routes', () => {
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
+        confirmation: 'MUSNAHKAN DATA FILE',
       }),
       params: { id: BERKAS_ID },
     })

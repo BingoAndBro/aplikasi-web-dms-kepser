@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 
 import { transitionBerkasArchiveStatus } from '#/lib/archive/berkas-arsip-service'
+import { BERKAS_DESTRUCTION_CONFIRMATION_PHRASE } from '#/lib/archive/berkas-arsip-page-format'
 import {
   berkasArsipErrorResponse,
   parseBerkasIdParam,
@@ -10,11 +11,21 @@ import {
 } from '#/lib/archive/berkas-arsip-api'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
-const lifecycleBodySchema = z
+const nonDestructiveLifecycleBodySchema = z
   .object({
-    action: z.enum(['mark_inactive', 'propose_destruction', 'approve_destruction']),
+    action: z.enum(['mark_inactive', 'propose_destruction']),
   })
   .strict()
+const approveDestructionLifecycleBodySchema = z
+  .object({
+    action: z.literal('approve_destruction'),
+    confirmation: z.literal(BERKAS_DESTRUCTION_CONFIRMATION_PHRASE),
+  })
+  .strict()
+const lifecycleBodySchema = z.discriminatedUnion('action', [
+  nonDestructiveLifecycleBodySchema,
+  approveDestructionLifecycleBodySchema,
+])
 
 export const Route = createFileRoute('/api/arsiparis/berkas/$id/lifecycle')({
   server: {

@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
+  ArrowRightCircle,
   ChevronRight,
   FolderOpen,
   Loader2,
@@ -55,19 +56,13 @@ type BerkasFolderListResponse = {
   error?: string
 }
 
-type BerkasSectionMode = 'open' | 'active' | 'inactive' | 'proposed' | 'destroyed'
+type BerkasSectionMode = 'open' | 'active'
 
 function BerkasArsipAktifPage() {
   const [openFolders, setOpenFolders] = useState<BerkasFolder[]>([])
   const [activeFolders, setActiveFolders] = useState<BerkasFolder[]>([])
-  const [inactiveFolders, setInactiveFolders] = useState<BerkasFolder[]>([])
-  const [proposedFolders, setProposedFolders] = useState<BerkasFolder[]>([])
-  const [destroyedFolders, setDestroyedFolders] = useState<BerkasFolder[]>([])
   const [openSummary, setOpenSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [activeSummary, setActiveSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
-  const [inactiveSummary, setInactiveSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
-  const [proposedSummary, setProposedSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
-  const [destroyedSummary, setDestroyedSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -78,7 +73,7 @@ function BerkasArsipAktifPage() {
     setLoading(true)
     setError(null)
     try {
-      const [openJson, activeJson, inactiveJson, proposedJson, destroyedJson] = await Promise.all([
+      const [openJson, activeJson] = await Promise.all([
         apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
           query: {
             status_berkas: 'OPEN',
@@ -91,35 +86,11 @@ function BerkasArsipAktifPage() {
             status_arsip: 'AKTIF',
           },
         }),
-        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
-          query: {
-            status_berkas: 'CLOSED',
-            status_arsip: 'INAKTIF',
-          },
-        }),
-        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
-          query: {
-            status_berkas: 'CLOSED',
-            status_arsip: 'USUL_MUSNAH',
-          },
-        }),
-        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
-          query: {
-            status_berkas: 'CLOSED',
-            status_arsip: 'DIMUSNAHKAN',
-          },
-        }),
       ])
       setOpenFolders(openJson.berkas ?? [])
       setActiveFolders(activeJson.berkas ?? [])
-      setInactiveFolders(inactiveJson.berkas ?? [])
-      setProposedFolders(proposedJson.berkas ?? [])
-      setDestroyedFolders(destroyedJson.berkas ?? [])
       setOpenSummary(openJson.summary ?? null)
       setActiveSummary(activeJson.summary ?? null)
-      setInactiveSummary(inactiveJson.summary ?? null)
-      setProposedSummary(proposedJson.summary ?? null)
-      setDestroyedSummary(destroyedJson.summary ?? null)
     } catch (error) {
       setError(resolveErrorMessage(error))
     } finally {
@@ -174,16 +145,10 @@ function BerkasArsipAktifPage() {
           </div>
         </div>
 
-        {(openSummary || activeSummary || inactiveSummary || proposedSummary || destroyedSummary) && (
-          <div className="grid gap-3 md:grid-cols-5">
+        {(openSummary || activeSummary) && (
+          <div className="grid gap-3 md:grid-cols-2">
             <SummaryCard label="Berkas Terbuka" value={openSummary?.total_rows_returned ?? 0} />
             <SummaryCard label="Berkas Aktif" value={activeSummary?.total_rows_returned ?? 0} />
-            <SummaryCard label="Arsip Inaktif" value={inactiveSummary?.total_rows_returned ?? 0} />
-            <SummaryCard label="Usul Musnah" value={proposedSummary?.total_rows_returned ?? 0} />
-            <SummaryCard
-              label="Dimusnahkan"
-              value={destroyedSummary?.total_rows_returned ?? 0}
-            />
           </div>
         )}
 
@@ -227,36 +192,6 @@ function BerkasArsipAktifPage() {
               emptyDescription="Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini."
               folders={activeFolders}
               mode="active"
-              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
-              onLifecycleAction={submitLifecycleAction}
-            />
-            <BerkasSection
-              title="Arsip Inaktif"
-              description="Berkas ditutup yang sudah dipindahkan ke lifecycle Inaktif."
-              emptyTitle="Belum ada arsip inaktif"
-              emptyDescription="Berkas lifecycle Inaktif akan muncul di sini."
-              folders={inactiveFolders}
-              mode="inactive"
-              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
-              onLifecycleAction={submitLifecycleAction}
-            />
-            <BerkasSection
-              title="Usul Musnah"
-              description="Berkas ditutup yang sudah masuk daftar usulan pemusnahan."
-              emptyTitle="Belum ada usul musnah"
-              emptyDescription="Berkas yang diusulkan musnah akan muncul di sini."
-              folders={proposedFolders}
-              mode="proposed"
-              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
-              onLifecycleAction={submitLifecycleAction}
-            />
-            <BerkasSection
-              title="Dimusnahkan"
-              description="Berkas yang ditandai Dimusnahkan tetap terlihat sebagai metadata. Preview dan download diblokir."
-              emptyTitle="Belum ada berkas dimusnahkan"
-              emptyDescription="Berkas status-only Dimusnahkan akan muncul di sini tanpa penghapusan fisik file."
-              folders={destroyedFolders}
-              mode="destroyed"
               pendingLifecycleBerkasId={pendingLifecycleBerkasId}
               onLifecycleAction={submitLifecycleAction}
             />
@@ -413,11 +348,16 @@ function LifecycleActionButton({
     <Button
       type="button"
       size="sm"
-      variant={lifecycleAction.action === 'approve_destruction' ? 'destructive' : 'outline'}
-      className="h-7 px-2.5 text-[11px]"
+      variant={lifecycleAction.action === 'approve_destruction' ? 'destructive' : 'default'}
+      className={`h-7 gap-1.5 px-2.5 text-[11px] ${
+        lifecycleAction.action === 'approve_destruction' ? 'bg-error text-white hover:bg-error/90' : ''
+      }`}
       disabled={pending}
       onClick={() => onLifecycleAction(folder)}
     >
+      {pending
+        ? <Loader2 size={14} className="animate-spin" />
+        : <ArrowRightCircle size={14} />}
       {pending ? 'Memproses...' : lifecycleAction.label}
     </Button>
   )

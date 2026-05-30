@@ -127,7 +127,7 @@ describe('berkas item file access API routes', () => {
 
   it('propagates the safe DIMUSNAHKAN response from the helper', async () => {
     mocks.createBerkasArsipItemAttachmentFileResponse.mockResolvedValueOnce(
-      Response.json({ error: 'Data sudah dimusnahkan' }, { status: 410 }),
+      Response.json({ error: 'Data file sudah dimusnahkan' }, { status: 410 }),
     )
 
     const response = await previewGetHandler({
@@ -136,7 +136,7 @@ describe('berkas item file access API routes', () => {
     })
 
     expect(response.status).toBe(410)
-    expect(await response.json()).toEqual({ error: 'Data sudah dimusnahkan' })
+    expect(await response.json()).toEqual({ error: 'Data file sudah dimusnahkan' })
   })
 })
 

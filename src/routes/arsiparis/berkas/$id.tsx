@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
+  AlertTriangle,
+  ArrowRightCircle,
   ChevronRight,
   Download,
   Eye,
@@ -15,6 +17,7 @@ import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import {
+  BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
   formatAttachmentCount,
   formatBerkasArchiveStatusLabel,
   formatBerkasStatusLabel,
@@ -92,6 +95,8 @@ function BerkasArsipDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [pendingLifecycleAction, setPendingLifecycleAction] = useState(false)
+  const [destructionPanelOpen, setDestructionPanelOpen] = useState(false)
+  const [destructionPhrase, setDestructionPhrase] = useState('')
 
   async function fetchData() {
     setLoading(true)
@@ -106,11 +111,19 @@ function BerkasArsipDetailPage() {
     }
   }
 
-  async function submitLifecycleAction() {
+  async function submitLifecycleAction(options: { confirmation?: string } = {}) {
     if (!detail) return
 
     const lifecycleAction = resolveBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
     if (!lifecycleAction) return
+    if (lifecycleAction.action === 'approve_destruction') {
+      if (options.confirmation !== BERKAS_DESTRUCTION_CONFIRMATION_PHRASE) {
+        setDestructionPanelOpen(true)
+        setActionError(null)
+        setActionSuccess(null)
+        return
+      }
+    }
     if (!window.confirm(lifecycleAction.confirmation)) return
 
     setPendingLifecycleAction(true)
@@ -120,9 +133,16 @@ function BerkasArsipDetailPage() {
     try {
       await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}/lifecycle`, {
         method: 'POST',
-        body: JSON.stringify({ action: lifecycleAction.action }),
+        body: JSON.stringify({
+          action: lifecycleAction.action,
+          ...(lifecycleAction.action === 'approve_destruction'
+            ? { confirmation: BERKAS_DESTRUCTION_CONFIRMATION_PHRASE }
+            : {}),
+        }),
       })
       setActionSuccess(lifecycleAction.successMessage)
+      setDestructionPanelOpen(false)
+      setDestructionPhrase('')
       await fetchData()
     } catch (error) {
       setActionError(resolveErrorMessage(error))
@@ -197,6 +217,14 @@ function BerkasArsipDetailPage() {
             <FolderMetadataPanel
               detail={detail}
               pendingLifecycleAction={pendingLifecycleAction}
+              destructionPanelOpen={destructionPanelOpen}
+              destructionPhrase={destructionPhrase}
+              onDestructionPhraseChange={setDestructionPhrase}
+              onCancelDestruction={() => {
+                setDestructionPanelOpen(false)
+                setDestructionPhrase('')
+                setActionError(null)
+              }}
               onLifecycleAction={submitLifecycleAction}
             />
             <ItemList berkasId={detail.berkas_id} statusArsip={detail.status_arsip} items={detail.items} />
@@ -210,13 +238,23 @@ function BerkasArsipDetailPage() {
 function FolderMetadataPanel({
   detail,
   pendingLifecycleAction,
+  destructionPanelOpen,
+  destructionPhrase,
+  onDestructionPhraseChange,
+  onCancelDestruction,
   onLifecycleAction,
 }: {
   detail: BerkasDetail
   pendingLifecycleAction: boolean
-  onLifecycleAction: () => void
+  destructionPanelOpen: boolean
+  destructionPhrase: string
+  onDestructionPhraseChange: (phrase: string) => void
+  onCancelDestruction: () => void
+  onLifecycleAction: (options?: { confirmation?: string }) => void
 }) {
   const lifecycleAction = resolveBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
+  const canSubmitDestruction = destructionPhrase === BERKAS_DESTRUCTION_CONFIRMATION_PHRASE
+    && !pendingLifecycleAction
 
   return (
     <div className="rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-sm">
@@ -239,15 +277,23 @@ function FolderMetadataPanel({
             <Button
               type="button"
               size="sm"
-              variant={lifecycleAction.action === 'approve_destruction' ? 'destructive' : 'outline'}
+              variant={lifecycleAction.action === 'approve_destruction' ? 'destructive' : 'default'}
+              className={`gap-1.5 ${
+                lifecycleAction.action === 'approve_destruction' ? 'bg-error text-white hover:bg-error/90' : ''
+              }`}
               disabled={pendingLifecycleAction}
-              onClick={onLifecycleAction}
+              onClick={() => onLifecycleAction()}
             >
+              {pendingLifecycleAction
+                ? <Loader2 size={14} className="animate-spin" />
+                : lifecycleAction.action === 'approve_destruction'
+                  ? <AlertTriangle size={14} />
+                  : <ArrowRightCircle size={14} />}
               {pendingLifecycleAction ? 'Memproses...' : lifecycleAction.label}
             </Button>
           )}
           {detail.status_arsip === 'DIMUSNAHKAN' && (
-            <p className="text-xs font-semibold text-red-700">Data sudah dimusnahkan</p>
+            <p className="text-xs font-semibold text-red-700">Data file sudah dimusnahkan</p>
           )}
         </div>
       </div>
@@ -280,6 +326,53 @@ function FolderMetadataPanel({
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           {lifecycleAction.confirmation}
         </p>
+      )}
+      {lifecycleAction?.action === 'approve_destruction' && destructionPanelOpen && (
+        <div className="mt-4 rounded-xl border border-error/30 bg-error/5 p-4">
+          <div className="mb-4 space-y-2 text-xs font-semibold text-error/90">
+            <p>Status berkas akan menjadi Dimusnahkan.</p>
+            <p>Preview dan download file akan diblokir.</p>
+            <p>File fisik tidak dihapus pada fase ini.</p>
+            <p>Metadata berkas dan dokumen tetap tersimpan.</p>
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-destruction-confirmation">
+              Ketik frasa konfirmasi <span className="text-error">*</span>
+            </label>
+            <input
+              id="berkas-destruction-confirmation"
+              value={destructionPhrase}
+              onChange={(event) => onDestructionPhraseChange(event.target.value)}
+              className="w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
+              placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+              autoComplete="off"
+            />
+            <p className="text-[10px] font-semibold text-outline">
+              Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+            </p>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={onCancelDestruction}
+                disabled={pendingLifecycleAction}
+              >
+                Batal
+              </Button>
+              <Button
+                className="gap-1.5 bg-error text-white hover:bg-error/90"
+                onClick={() => onLifecycleAction({ confirmation: destructionPhrase })}
+                disabled={!canSubmitDestruction}
+              >
+                {pendingLifecycleAction
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <AlertTriangle size={14} />}
+                Konfirmasi Musnahkan Data
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -444,7 +537,7 @@ function ItemAttachmentActions({
   if (fileBlocked) {
     return (
       <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
-        Data sudah dimusnahkan
+        Data file sudah dimusnahkan
       </div>
     )
   }

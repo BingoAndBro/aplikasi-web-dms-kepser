@@ -49,6 +49,56 @@ describe('berkas arsip item file access helper', () => {
     expectNoLeak(JSON.stringify([...response.headers.entries()]))
   })
 
+  it('preserves a safe original WORKFLOW filename from attachment metadata', async () => {
+    await writeTestFile(WORKFLOW_LOGICAL_PATH, TEST_FILE_CONTENT)
+
+    const response = await createBerkasArsipItemAttachmentFileResponse({
+      berkasId: BERKAS_ID,
+      itemId: WORKFLOW_ITEM_ID,
+      lampiranIndex: 0,
+      purpose: 'download',
+    }, {
+      repository: createRepository({
+        workflowLampiranUrls: [{
+          nama: 'Label Persetujuan',
+          fileName: 'Bukti Transfer Final.pdf',
+          url: WORKFLOW_LOGICAL_PATH,
+          content_type: 'application/pdf',
+        }],
+      }),
+      root: TEST_ROOT,
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="Bukti Transfer Final.pdf"')
+    expectNoLeak(JSON.stringify([...response.headers.entries()]))
+  })
+
+  it('falls back to a safe WORKFLOW attachment label and logical-path extension when original filename is unsafe or missing', async () => {
+    await writeTestFile(WORKFLOW_LOGICAL_PATH, TEST_FILE_CONTENT)
+
+    const response = await createBerkasArsipItemAttachmentFileResponse({
+      berkasId: BERKAS_ID,
+      itemId: WORKFLOW_ITEM_ID,
+      lampiranIndex: 0,
+      purpose: 'download',
+    }, {
+      repository: createRepository({
+        workflowLampiranUrls: [{
+          nama: 'Bukti Aman',
+          fileName: '../rahasia.pdf',
+          url: WORKFLOW_LOGICAL_PATH,
+          content_type: 'application/pdf',
+        }],
+      }),
+      root: TEST_ROOT,
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Disposition')).toBe('attachment; filename="Bukti Aman.pdf"')
+    expectNoLeak(JSON.stringify([...response.headers.entries()]))
+  })
+
   it('delegates a MANUAL item attachment by folder item and lampiran index', async () => {
     const manualFileResponse = vi.fn(async () => new Response('manual-file', {
       status: 200,
@@ -97,7 +147,7 @@ describe('berkas arsip item file access helper', () => {
     const body = JSON.stringify(await response.json())
 
     expect(response.status).toBe(410)
-    expect(body).toBe('{"error":"Data sudah dimusnahkan"}')
+    expect(body).toBe('{"error":"Data file sudah dimusnahkan"}')
     expect(manualFileResponse).not.toHaveBeenCalled()
     expectNoLeak(body)
   })
@@ -136,7 +186,7 @@ describe('berkas arsip item file access helper', () => {
 
     expect(first.status).toBe(200)
     expect(stale.status).toBe(410)
-    expect(await stale.json()).toEqual({ error: 'Data sudah dimusnahkan' })
+    expect(await stale.json()).toEqual({ error: 'Data file sudah dimusnahkan' })
   })
 
   it('rejects item references that do not belong to the folder', async () => {

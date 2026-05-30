@@ -108,7 +108,7 @@ export async function createBerkasArsipItemAttachmentFileResponse({
   if (!folder) return secureJsonError('Berkas tidak ditemukan', 404)
 
   if (folder.status_arsip === BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN) {
-    return secureJsonError('Data sudah dimusnahkan', 410)
+    return secureJsonError('Data file sudah dimusnahkan', 410)
   }
 
   const item = await repository.getItemById(berkasId, itemId)
@@ -330,6 +330,7 @@ function resolveWorkflowAttachmentReference(
       entry.filename,
       entry.originalFilename,
       entry.original_filename,
+      entry.name,
     ),
     contentType: firstSafeMimeType(
       entry.mimeType,
@@ -365,12 +366,14 @@ function resolveWorkflowAttachmentLogicalPath(entry: Record<string, unknown>): s
 }
 
 function resolveWorkflowFilename(reference: WorkflowAttachmentReference): string {
-  const extension = getFileExtension(reference.originalFilename ?? reference.logicalPath)
+  if (reference.originalFilename) return reference.originalFilename
+
+  const extension = getFileExtension(reference.logicalPath)
   if (extension && !path.extname(reference.attachmentName)) {
     return `${reference.attachmentName}.${extension}`
   }
 
-  return reference.originalFilename ?? reference.attachmentName
+  return reference.attachmentName
 }
 
 function firstSafeMimeType(...values: unknown[]): string | null {
