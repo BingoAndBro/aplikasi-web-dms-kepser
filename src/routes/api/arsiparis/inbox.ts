@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { and, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { arsip } from '#/db/schema/arsip'
+import { berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { masterFungsi, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 
 // ---------------------------------------------------------------------------
-// GET /api/arsiparis/inbox - list dokumen COMPLETED yang belum diarsipkan
+// GET /api/arsiparis/inbox - list dokumen COMPLETED yang belum masuk berkas
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/arsiparis/inbox')({
@@ -25,7 +26,7 @@ export const Route = createFileRoute('/api/arsiparis/inbox')({
 
         const filters: SQL[] = [
           eq(dokumenTransaksi.status, 'COMPLETED'),
-          isNull(arsip.dokumenId),
+          isNull(berkasArsipItem.dokumenId),
         ]
         if (fungsiId) filters.push(eq(dokumenTransaksi.fungsiId, fungsiId))
         if (startDate) filters.push(sql`${dokumenTransaksi.createdAt} >= ${startDate}`)
@@ -46,7 +47,13 @@ export const Route = createFileRoute('/api/arsiparis/inbox')({
               created_at: dokumenTransaksi.createdAt,
             })
             .from(dokumenTransaksi)
-            .leftJoin(arsip, eq(dokumenTransaksi.id, arsip.dokumenId))
+            .leftJoin(
+              berkasArsipItem,
+              and(
+                eq(dokumenTransaksi.id, berkasArsipItem.dokumenId),
+                eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+              ),
+            )
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
             .where(and(...filters))

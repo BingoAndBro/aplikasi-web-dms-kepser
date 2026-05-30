@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { arsip } from '#/db/schema/arsip'
+import { arsip, berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
@@ -11,6 +11,7 @@ import {
   masterKegiatan,
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 import { parseLampiranUrls } from '#/lib/dokumen'
 
 function isUuid(value: string): boolean {
@@ -92,8 +93,18 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
             .where(eq(arsip.dokumenId, params.id))
             .limit(1)
 
+          const berkasItemRows = await db
+            .select({ id: berkasArsipItem.id })
+            .from(berkasArsipItem)
+            .where(and(
+              eq(berkasArsipItem.dokumenId, params.id),
+              eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+            ))
+            .limit(1)
+
           const bendaharaLog = bendaharaLogs[0]
           const arsipRecord = arsipRows[0]
+          const isClassified = Boolean(arsipRecord || berkasItemRows[0])
 
           return Response.json({
             dokumen: {
@@ -113,7 +124,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
               lampiran_urls: parseLampiranUrls(dok.lampiran_urls),
               created_by: { id: dok.created_by, nama: 'Pegawai' },
               status: dok.status,
-              is_archived: !!arsipRecord,
+              is_archived: isClassified,
             },
             bendahara_approve: bendaharaLog
               ? { nama: 'PPSPM', tanggal: bendaharaLog.timestamp }

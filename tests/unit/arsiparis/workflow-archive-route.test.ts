@@ -1,11 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const SESSION_USER_ID = '11111111-1111-4111-8111-111111111111'
-const DOCUMENT_CREATOR_ID = '22222222-2222-4222-8222-222222222222'
 const DOCUMENT_ID = '33333333-3333-4333-8333-333333333333'
 const KLASIFIKASI_ID = '44444444-4444-4444-8444-444444444444'
 const BERKAS_ID = '55555555-5555-4555-8555-555555555555'
-const CANONICAL_ARSIP_ID = '66666666-6666-4666-8666-666666666666'
 
 const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
@@ -42,7 +40,7 @@ const postHandler = (WorkflowArchiveRoute as unknown as {
   options: { server: { handlers: { POST: RoutePostHandler } } }
 }).options.server.handlers.POST
 
-describe('workflow archive canonical write route', () => {
+describe('workflow classification to berkas route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -53,10 +51,9 @@ describe('workflow archive canonical write route', () => {
     vi.restoreAllMocks()
   })
 
-  it('writes canonical workflow archive fields from server-derived values', async () => {
+  it('classifies a COMPLETED workflow document into a new OPEN berkas without canonical archive writes or status transition', async () => {
     queueSelectResults(
       [dokumenRow()],
-      [],
       [klasifikasiRow()],
     )
     queueSuccessfulTransaction()
@@ -77,48 +74,24 @@ describe('workflow archive canonical write route', () => {
     })
 
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      sourceType: 'WORKFLOW',
-      dokumenId: DOCUMENT_ID,
-      namaArsip: 'Laporan Kinerja - Realisasi Triwulan I',
-      nomorSurat: 'B-123',
-      klasifikasi: 'Keuangan',
-      klasifikasiId: KLASIFIKASI_ID,
-      klasifikasiKodeSnapshot: 'KA.01',
-      klasifikasiNamaSnapshot: 'Keuangan',
-      retensiAktif: '1 Tahun',
-      retensiInaktif: '3 Tahun',
-      masaAktifBerakhir: '2027-05-01',
-      masaInaktifBerakhir: '2030-05-01',
-      archivedBy: SESSION_USER_ID,
-      createdBy: DOCUMENT_CREATOR_ID,
-      statusArsip: 'AKTIF',
-      nominalRealisasi: '1500000.00',
-      lampiranSnapshot: [{
-        kelengkapan_id: 'lampiran-1',
-        nama: 'Bukti',
-        url: 'formal/path.pdf',
-      }],
-    }))
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiKodeSnapshot: 'KA.01',
       klasifikasiNamaSnapshot: 'Keuangan',
       statusBerkas: 'OPEN',
       createdBy: SESSION_USER_ID,
     }))
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
       berkasId: BERKAS_ID,
       sourceType: 'WORKFLOW',
       dokumenId: DOCUMENT_ID,
       manualArsipId: null,
-      canonicalArsipId: CANONICAL_ARSIP_ID,
+      canonicalArsipId: null,
       addedBy: SESSION_USER_ID,
     }))
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(4, expect.objectContaining({
-      dokumenId: DOCUMENT_ID,
-      userId: SESSION_USER_ID,
-      aksi: 'ARCHIVE',
-    }))
+    expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ statusArsip: 'AKTIF' }))
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ archivedBy: SESSION_USER_ID }))
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
 
     const responseText = JSON.stringify(body)
     expect(responseText).not.toContain('logical_path')
@@ -130,7 +103,6 @@ describe('workflow archive canonical write route', () => {
   it('allows initial classification without nomor_surat', async () => {
     queueSelectResults(
       [dokumenRow()],
-      [],
       [klasifikasiRow()],
     )
     queueSuccessfulTransaction()
@@ -149,15 +121,15 @@ describe('workflow archive canonical write route', () => {
       message: 'Dokumen berhasil diklasifikasikan',
     })
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      nomorSurat: null,
       klasifikasiId: KLASIFIKASI_ID,
+      statusBerkas: 'OPEN',
     }))
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('allows initial classification without final retention metadata', async () => {
     queueSelectResults(
       [dokumenRow()],
-      [],
       [klasifikasiRow()],
     )
     queueSuccessfulTransaction()
@@ -178,18 +150,14 @@ describe('workflow archive canonical write route', () => {
       success: true,
       message: 'Dokumen berhasil diklasifikasikan',
     })
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      retensiAktif: null,
-      retensiInaktif: null,
-      masaAktifBerakhir: null,
-      masaInaktifBerakhir: null,
-    }))
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ retensiAktif: expect.anything() }))
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ retensiInaktif: expect.anything() }))
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('reuses an existing OPEN berkas and attaches the workflow item', async () => {
     queueSelectResults(
       [dokumenRow()],
-      [],
       [klasifikasiRow()],
     )
     queueSuccessfulTransaction({
@@ -209,18 +177,18 @@ describe('workflow archive canonical write route', () => {
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
     }))
-    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
       berkasId: BERKAS_ID,
       sourceType: 'WORKFLOW',
       dokumenId: DOCUMENT_ID,
-      canonicalArsipId: CANONICAL_ARSIP_ID,
+      canonicalArsipId: null,
     }))
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects workflow classification when the selected jenis pembayaran already has a CLOSED berkas', async () => {
     queueSelectResults(
       [dokumenRow()],
-      [],
       [klasifikasiRow()],
     )
     queueSuccessfulTransaction({
@@ -241,17 +209,18 @@ describe('workflow archive canonical write route', () => {
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
     }))
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ statusArsip: 'AKTIF' }))
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('maps duplicate berkas item assignment to a safe conflict response', async () => {
     queueSelectResults(
       [dokumenRow()],
-      [],
       [klasifikasiRow()],
     )
     queueSuccessfulTransaction({
       txInsertReturningByCall: {
-        3: Object.assign(new Error('unique conflict'), { code: '23505' }),
+        2: Object.assign(new Error('unique conflict'), { code: '23505' }),
       },
     })
 
@@ -262,6 +231,8 @@ describe('workflow archive canonical write route', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({ error: 'Dokumen sudah terhubung ke berkas' })
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ statusArsip: 'AKTIF' }))
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects missing klasifikasi_id before DB writes', async () => {
@@ -279,10 +250,9 @@ describe('workflow archive canonical write route', () => {
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
-  it('rejects inactive or missing classification without inserting archive rows', async () => {
+  it('rejects inactive or missing classification without inserting berkas items', async () => {
     queueSelectResults(
       [dokumenRow()],
-      [],
       [],
     )
 
@@ -307,6 +277,7 @@ describe('workflow archive canonical write route', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: 'Dokumen sudah diarsipkan' })
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects non-COMPLETED non-ARCHIVED documents with safe not-final copy', async () => {
@@ -320,19 +291,7 @@ describe('workflow archive canonical write route', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: 'Dokumen belum berada di tahap final' })
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
-  })
-
-  it('fails safely when the source document creator is missing', async () => {
-    queueSelectResults([dokumenRow({ created_by: null })])
-
-    const response = await postHandler({
-      request: createPostRequest(validArchiveBody()),
-      params: { id: DOCUMENT_ID },
-    })
-
-    expect(response.status).toBe(500)
-    expect(await response.json()).toEqual({ error: 'Gagal mengarsipkan dokumen' })
-    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('keeps ADMIN-only users out of workflow archive writes', async () => {
@@ -390,7 +349,6 @@ function createPostRequest(body: Record<string, unknown>, origin = 'http://local
 function dokumenRow(overrides: Partial<{
   judul: string | null
   status: string
-  created_by: string | null
   jenis_dokumen_nama: string | null
   kegiatan_nama: string | null
   nominal_realisasi: string | null
@@ -400,7 +358,6 @@ function dokumenRow(overrides: Partial<{
     id: DOCUMENT_ID,
     judul: overrides.judul ?? 'Realisasi Triwulan I',
     status: overrides.status ?? 'COMPLETED',
-    created_by: Object.hasOwn(overrides, 'created_by') ? overrides.created_by ?? null : DOCUMENT_CREATOR_ID,
     jenis_dokumen_nama: overrides.jenis_dokumen_nama ?? 'Laporan Kinerja',
     kegiatan_nama: overrides.kegiatan_nama ?? 'Penyusunan Publikasi',
     nominal_realisasi: overrides.nominal_realisasi ?? '1500000.00',
@@ -524,7 +481,7 @@ function closedBerkasRow() {
 function workflowSourceRow() {
   return {
     id: DOCUMENT_ID,
-    canonicalArsipId: CANONICAL_ARSIP_ID,
+    canonicalArsipId: null,
     klasifikasiId: KLASIFIKASI_ID,
   }
 }
@@ -536,7 +493,7 @@ function berkasItemRow() {
     sourceType: 'WORKFLOW',
     dokumenId: DOCUMENT_ID,
     manualArsipId: null,
-    canonicalArsipId: CANONICAL_ARSIP_ID,
+    canonicalArsipId: null,
     addedBy: SESSION_USER_ID,
   }
 }

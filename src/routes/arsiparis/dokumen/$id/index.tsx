@@ -272,7 +272,7 @@ function ArsiparisDokumenDetailPage() {
           catatan_arsiparis: catatan.trim() || undefined,
         },
       })
-      window.location.href = '/arsiparis/aktif'
+      window.location.href = '/arsiparis/berkas'
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -349,7 +349,7 @@ function ArsiparisDokumenDetailPage() {
     </div>
   )
 
-  const isArchived = !!dokumen.arsip
+  const isArchived = dokumen.is_archived
 
   return (
     <PageLayout>

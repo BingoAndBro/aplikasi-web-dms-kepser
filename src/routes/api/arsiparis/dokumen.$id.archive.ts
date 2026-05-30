@@ -4,14 +4,11 @@ import { and, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db/client'
 import {
-  arsip,
   berkasArsip,
   berkasArsipItem,
   masterKlasifikasiArsip,
 } from '#/db/schema/arsip'
-import type { LampiranSnapshotJson } from '#/db/schema/arsip'
-import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
-import { masterJenisDokumen, masterKegiatan } from '#/db/schema/master'
+import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import {
   addWorkflowDocumentToOpenBerkas,
@@ -19,11 +16,8 @@ import {
   getOrCreateOpenBerkasForKlasifikasi,
   type BerkasArsipRepository,
 } from '#/lib/archive/berkas-arsip-service'
-import { deriveWorkflowNamaArsip } from '#/lib/archive/workflow-nama-arsip'
-import { ARCHIVE_SOURCE_TYPE, BERKAS_STATUS } from '#/lib/constants/archive-status'
+import { BERKAS_STATUS } from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
-import { transition } from '#/lib/fsm'
-import type { StatusDokumen } from '#/lib/types/fsm'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -44,7 +38,7 @@ function toSafeErrorLog(error: unknown): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/arsiparis/dokumen/[id]/archive - transitional document classification write
+// POST /api/arsiparis/dokumen/[id]/archive - workflow classification into an OPEN berkas
 // ---------------------------------------------------------------------------
 
 const RETENSI_OPTIONS = ['1 Tahun', '3 Tahun', '5 Tahun', '10 Tahun', 'Permanen'] as const
@@ -85,29 +79,15 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
 
         let dokRows: Array<{
           id: string
-          judul: string | null
           status: string
-          created_by: string | null
-          jenis_dokumen_nama: string | null
-          kegiatan_nama: string | null
-          nominal_realisasi: string | null
-          lampiran_urls: unknown
         }>
         try {
           dokRows = await db
             .select({
               id: dokumenTransaksi.id,
-              judul: dokumenTransaksi.judul,
               status: dokumenTransaksi.status,
-              created_by: dokumenTransaksi.createdBy,
-              jenis_dokumen_nama: masterJenisDokumen.nama,
-              kegiatan_nama: masterKegiatan.nama,
-              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
-              lampiran_urls: dokumenTransaksi.lampiranUrls,
             })
             .from(dokumenTransaksi)
-            .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
-            .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
             .where(eq(dokumenTransaksi.id, params.id))
             .limit(1)
         } catch (err) {
@@ -119,21 +99,6 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         if (dok.status === 'ARCHIVED') return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
         if (dok.status !== 'COMPLETED') return Response.json({ error: 'Dokumen belum berada di tahap final' }, { status: 400 })
-        if (!dok.created_by) return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
-
-        let existingArsipRows: Array<{ id: string }>
-        try {
-          existingArsipRows = await db
-            .select({ id: arsip.id })
-            .from(arsip)
-            .where(eq(arsip.dokumenId, params.id))
-            .limit(1)
-        } catch (err) {
-          console.error('[archive] existing arsip lookup error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
-        }
-
-        if (existingArsipRows.length > 0) return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
 
         let klasifikasiRows: Array<{
           id: string
@@ -161,67 +126,9 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         const klasifikasi = klasifikasiRows[0]
         if (!klasifikasi) return Response.json({ error: 'Jenis pembayaran tidak ditemukan' }, { status: 400 })
 
-        let lampiranSnapshot: LampiranSnapshotJson = []
-        if (dok.lampiran_urls) {
-          if (typeof dok.lampiran_urls === 'string') {
-            lampiranSnapshot = JSON.parse(dok.lampiran_urls) as LampiranSnapshotJson
-          } else {
-            lampiranSnapshot = Array.isArray(dok.lampiran_urls)
-              ? dok.lampiran_urls as LampiranSnapshotJson
-              : []
-          }
-        }
-
-        const fsResult = transition(dok.status as StatusDokumen, 'ARCHIVE', ROLES.KEPALA_SUB_BAGIAN_UMUM)
-        if (!fsResult.success) {
-          return Response.json({ error: fsResult.error ?? 'Transisi status gagal' }, { status: 400 })
-        }
-
-        const namaArsip = deriveWorkflowNamaArsip({
-          judul: dok.judul,
-          jenisDokumenNama: dok.jenis_dokumen_nama,
-          kegiatanNama: dok.kegiatan_nama,
-        })
-
         try {
           await db.transaction(async (tx) => {
-            await tx.insert(arsip).values({
-              sourceType: 'WORKFLOW',
-              dokumenId: params.id,
-              namaArsip,
-              nomorSurat: data.nomor_surat?.trim() || null,
-              klasifikasi: klasifikasi.nama,
-              klasifikasiId: klasifikasi.id,
-              klasifikasiKodeSnapshot: klasifikasi.kode,
-              klasifikasiNamaSnapshot: klasifikasi.nama,
-              retensiAktif: data.retensi_aktif ?? null,
-              retensiInaktif: data.retensi_inaktif ?? null,
-              masaAktifBerakhir: data.masa_aktif_berakhir ?? null,
-              masaInaktifBerakhir: data.masa_inaktif_berakhir ?? null,
-              catatanArsiparis: data.catatan_arsiparis ?? null,
-              archivedBy: session.user.id,
-              createdBy: dok.created_by,
-              statusArsip: 'AKTIF',
-              lampiranSnapshot,
-              nominalRealisasi: dok.nominal_realisasi ?? null,
-            })
-
-            const updatedRows = await tx
-              .update(dokumenTransaksi)
-              .set({
-                status: fsResult.newStatus,
-                currentStep: fsResult.newCurrentStep,
-                revisionTarget: fsResult.newRevisionTarget,
-                updatedAt: new Date(),
-              })
-              .where(eq(dokumenTransaksi.id, params.id))
-              .returning({ id: dokumenTransaksi.id })
-
-            if (updatedRows.length === 0) {
-              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
-            }
-
-            const berkasRepository = createWorkflowArchiveBerkasRepository(tx)
+            const berkasRepository = createWorkflowArchiveBerkasRepository(tx, klasifikasi.id)
             const openBerkas = await getOrCreateOpenBerkasForKlasifikasi({
               klasifikasiId: klasifikasi.id,
               actorUserId: session.user.id,
@@ -232,14 +139,6 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
               dokumenId: params.id,
               actorUserId: session.user.id,
             }, { repository: berkasRepository })
-
-            await tx.insert(logAktivitas).values({
-              dokumenId: params.id,
-              userId: session.user.id,
-              aksi: 'ARCHIVE',
-              catatan: data.catatan_arsiparis ?? null,
-              stepUrutan: null,
-            })
           })
         } catch (err) {
           if (err instanceof BerkasArsipServiceError) {
@@ -263,6 +162,7 @@ type WorkflowArchiveTransaction = Pick<typeof db, 'select' | 'insert' | 'update'
 
 function createWorkflowArchiveBerkasRepository(
   tx: WorkflowArchiveTransaction,
+  workflowKlasifikasiId: string,
 ): BerkasArsipRepository {
   return {
     async findActiveKlasifikasi(id) {
@@ -332,17 +232,10 @@ function createWorkflowArchiveBerkasRepository(
       const [row] = await tx
         .select({
           id: dokumenTransaksi.id,
-          canonicalArsipId: arsip.id,
-          klasifikasiId: arsip.klasifikasiId,
+          canonicalArsipId: sql<null>`null`,
+          klasifikasiId: sql<string>`${workflowKlasifikasiId}`,
         })
         .from(dokumenTransaksi)
-        .leftJoin(
-          arsip,
-          and(
-            eq(arsip.dokumenId, dokumenTransaksi.id),
-            eq(arsip.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
-          ),
-        )
         .where(eq(dokumenTransaksi.id, dokumenId))
         .limit(1)
 
@@ -400,6 +293,10 @@ function createWorkflowArchiveBerkasRepository(
         .returning()
 
       return row ?? null
+    },
+
+    async updateBerkasArchiveStatus() {
+      throw new Error('BERKAS_LIFECYCLE_NOT_SUPPORTED_IN_WORKFLOW_ARCHIVE_ROUTE')
     },
   }
 }
