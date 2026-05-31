@@ -344,9 +344,10 @@ describe('folder-first berkas archive page formatting', () => {
     const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
     const legacyActiveSource = readFileSync('src/routes/arsiparis/aktif/index.tsx', 'utf8')
     const dashboardSource = readFileSync('src/routes/arsiparis/index.tsx', 'utf8')
-    const searchSource = readFileSync('src/routes/arsiparis/search.tsx', 'utf8')
     const inactiveSource = readFileSync('src/routes/arsiparis/inaktif/index.tsx', 'utf8')
     const proposedSource = readFileSync('src/routes/arsiparis/usul-musnah/index.tsx', 'utf8')
+    const searchSource = readFileSync('src/routes/arsiparis/search.tsx', 'utf8')
+    const headerSource = readFileSync('src/components/layout/AppHeader.tsx', 'utf8')
 
     expect(listSource).toContain('Berkas Terbuka')
     expect(listSource).toContain('Pemberkasan Arsip Aktif')
@@ -420,9 +421,17 @@ describe('folder-first berkas archive page formatting', () => {
     expect(dashboardSource).toContain("status_arsip: 'AKTIF'")
     expect(dashboardSource).toContain("window.location.href = '/arsiparis/berkas'")
     expect(dashboardSource).not.toContain("window.location.href = '/arsiparis/aktif'")
+    expect(dashboardSource).not.toContain("label: 'Pencarian'")
+    expect(dashboardSource).not.toContain("window.location.href = '/arsiparis/search'")
 
-    expect(searchSource).toContain("if (a.status_arsip === 'AKTIF') return '/arsiparis/arsip/' + a.id")
+    expect(searchSource).toContain("createFileRoute('/arsiparis/search')")
+    expect(searchSource).toContain("redirect({ to: '/arsiparis/berkas', replace: true })")
+    expect(searchSource).not.toContain("apiFetch<ArsipSearchResponse>('/arsiparis/search'")
+    expect(searchSource).not.toContain('Pencarian Arsip')
+    expect(searchSource).not.toContain("if (a.status_arsip === 'AKTIF') return '/arsiparis/arsip/' + a.id")
     expect(searchSource).not.toContain("if (a.status_arsip === 'AKTIF') return '/arsiparis/aktif/' + a.id")
+
+    expect(headerSource).toContain("Search documents, archives, or tasks...")
 
     expect(inactiveSource).toContain("createFileRoute('/arsiparis/inaktif/')")
     expect(inactiveSource).toContain("apiFetch<BerkasFolderListResponse>('/arsiparis/berkas'")

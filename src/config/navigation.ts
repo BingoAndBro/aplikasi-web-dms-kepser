@@ -17,7 +17,6 @@ import {
   History,
   LayoutDashboard,
   Network,
-  Search,
   Settings,
   Shield,
   Tag,
@@ -61,12 +60,6 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       ],
     },
     {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
-      ],
-    },
-    {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
@@ -90,12 +83,6 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       ],
     },
     {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
-      ],
-    },
-    {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
@@ -115,12 +102,6 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: ROUTES.BENDAHARA.INBOX },
         { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: ROUTES.BENDAHARA.DITOLAK },
         { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: ROUTES.BENDAHARA.SELESAI },
-      ],
-    },
-    {
-      title: 'ARSIP',
-      items: [
-        { id: 'arsip', label: 'Cari Arsip', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
       ],
     },
     {
@@ -147,7 +128,6 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'penambahan_arsip', label: 'Penambahan Dokumen', icon: FilePlus, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.PENAMBAHAN_ARSIP },
         { id: 'laporan_klasifikasi', label: 'Laporan Klasifikasi Arsip', icon: BarChart3, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.LAPORAN_KLASIFIKASI },
         { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI },
-        { id: 'arsip_search', label: 'Pencarian Arsip', icon: Search, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH },
       ],
     },
     {

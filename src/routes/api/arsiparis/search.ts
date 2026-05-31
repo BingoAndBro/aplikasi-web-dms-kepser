@@ -7,6 +7,10 @@ import { masterFungsi, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 // ---------------------------------------------------------------------------
+// Deprecated compatibility-only canonical search API.
+// No active browser UI should call this after Phase 14B; folder-first archive
+// search/filtering stays local to each archive page/table.
+//
 // GET /api/arsiparis/search - search arsip (semua authenticated user)
 // Hasil difilter berdasarkan role:
 //   - ADMIN/arsiparis: semua arsip

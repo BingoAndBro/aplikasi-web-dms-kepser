@@ -4,7 +4,7 @@ import { apiFetch } from '#/lib/api-client'
 import { DashboardShell } from '#/components/dashboard/DashboardShell'
 import { ROLES } from '#/lib/constants/roles'
 import { motion } from 'framer-motion'
-import { Clock, FolderOpen, Archive, XCircle, Search, Loader2 } from 'lucide-react'
+import { Clock, FolderOpen, Archive, XCircle, Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/')({
   component: KepalaSubBagianUmumDashboard,
@@ -93,7 +93,6 @@ function KepalaSubBagianUmumDashboard() {
     { label: 'Pemberkasan Arsip Aktif', value: stats.aktif, icon: FolderOpen, color: 'text-green-500', key: 'aktif' },
     { label: 'Arsip Inaktif', value: stats.inaktif, icon: Archive, color: 'text-orange-500', key: 'inaktif' },
     { label: 'Usul Musnah', value: stats.usulMusnah, icon: XCircle, color: 'text-error', key: 'usulMusnah' },
-    { label: 'Pencarian', value: null, icon: Search, color: 'text-blue-400', key: 'search' },
   ]
 
   return (
@@ -128,7 +127,6 @@ function KepalaSubBagianUmumDashboard() {
                   else if (stat.key === 'aktif') window.location.href = '/arsiparis/berkas'
                   else if (stat.key === 'inaktif') window.location.href = '/arsiparis/inaktif'
                   else if (stat.key === 'usulMusnah') window.location.href = '/arsiparis/usul-musnah'
-                  else if (stat.key === 'search') window.location.href = '/arsiparis/search'
                 }}
               >
                 <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-125 duration-500" />

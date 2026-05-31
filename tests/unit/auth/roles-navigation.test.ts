@@ -61,4 +61,24 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/arsiparis/berkas')
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF).toBe('/arsiparis/aktif')
   })
+
+  it('does not expose the legacy global archive search route in role navigation', () => {
+    const allItems = Object.values(NAV_CONFIG).flatMap((groups) => groups.flatMap((group) => group.items))
+
+    expect(allItems).not.toContainEqual(
+      expect.objectContaining({
+        label: 'Cari Arsip',
+      }),
+    )
+    expect(allItems).not.toContainEqual(
+      expect.objectContaining({
+        label: 'Pencarian Arsip',
+      }),
+    )
+    expect(allItems).not.toContainEqual(
+      expect.objectContaining({
+        to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH,
+      }),
+    )
+  })
 })
