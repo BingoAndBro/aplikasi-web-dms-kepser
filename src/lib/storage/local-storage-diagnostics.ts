@@ -22,10 +22,9 @@ export type StorageDocumentMetadataRow = {
   lampiranUrls: unknown
 }
 
-export type StorageArchiveMetadataRow = {
+export type StorageManualAttachmentMetadataRow = {
   id: string
-  statusArsip: string
-  lampiranSnapshot: unknown
+  logicalPath: unknown
 }
 
 export type LocalStorageFolderDetails = {
@@ -76,10 +75,27 @@ export type LocalStorageAnalysis = {
   unsupported_paths: string[]
   unsafe_paths: string[]
   metadata_issues: Array<{
-    source: 'dokumen_transaksi.lampiran_urls' | 'arsip.lampiran_snapshot'
+    source: 'dokumen_transaksi.lampiran_urls' | 'manual_arsip_attachment.logical_path'
     sourceId: string
     index: number
     code: 'invalid-local-path' | 'legacy-or-url-reference' | 'non-string-url'
+  }>
+}
+
+export type SafeLocalStorageAnalysisResponse = {
+  summary: LocalStorageAnalysis['summary']
+  referenced_paths_count: number
+  orphan_count: number
+  pending_count: number
+  eligible_pending_count: number
+  recent_pending_count: number
+  unsupported_count: number
+  unsafe_count: number
+  missing_referenced_count: number
+  metadata_issue_counts: Array<{
+    source: LocalStorageAnalysis['metadata_issues'][number]['source']
+    code: LocalStorageAnalysis['metadata_issues'][number]['code']
+    count: number
   }>
 }
 
@@ -111,12 +127,12 @@ type UnsafeStoragePath = {
 
 export async function analyzeLocalStorageReferences({
   documents,
-  archives,
+  manualAttachments,
 }: {
   documents: StorageDocumentMetadataRow[]
-  archives: StorageArchiveMetadataRow[]
+  manualAttachments: StorageManualAttachmentMetadataRow[]
 }): Promise<LocalStorageAnalysis> {
-  const metadata = collectReferencedPaths({ documents, archives })
+  const metadata = collectReferencedPaths({ documents, manualAttachments })
   const scanned = await scanLocalStorage()
   const localPathSet = new Set(scanned.files.map(file => file.logicalPath))
   const folderDetails: Record<string, LocalStorageFolderDetails> = {}
@@ -213,6 +229,23 @@ export async function analyzeLocalStorageReferences({
   }
 }
 
+export function toSafeLocalStorageAnalysisResponse(
+  analysis: LocalStorageAnalysis,
+): SafeLocalStorageAnalysisResponse {
+  return {
+    summary: analysis.summary,
+    referenced_paths_count: analysis.referenced_paths_count,
+    orphan_count: analysis.orphan_paths.length,
+    pending_count: analysis.pending_paths.length,
+    eligible_pending_count: analysis.eligible_pending_paths.length,
+    recent_pending_count: analysis.recent_pending_paths.length,
+    unsupported_count: analysis.unsupported_paths.length,
+    unsafe_count: analysis.unsafe_paths.length,
+    missing_referenced_count: analysis.missing_referenced_paths.length,
+    metadata_issue_counts: summarizeMetadataIssueCounts(analysis.metadata_issues),
+  }
+}
+
 export function getEligiblePendingCleanupPaths(
   pendingPathDetails: LocalPendingStoragePathDetails[],
   minAgeMinutes: number,
@@ -291,10 +324,10 @@ export async function deleteLocalOrphanCandidates(
 
 function collectReferencedPaths({
   documents,
-  archives,
+  manualAttachments,
 }: {
   documents: StorageDocumentMetadataRow[]
-  archives: StorageArchiveMetadataRow[]
+  manualAttachments: StorageManualAttachmentMetadataRow[]
 }): {
   referencedPaths: Set<string>
   issues: LocalStorageAnalysis['metadata_issues']
@@ -312,11 +345,11 @@ function collectReferencedPaths({
     })
   }
 
-  for (const archive of archives) {
-    collectAttachmentReferences({
-      value: archive.lampiranSnapshot,
-      source: 'arsip.lampiran_snapshot',
-      sourceId: archive.id,
+  for (const attachment of manualAttachments) {
+    collectSingleLogicalPathReference({
+      value: attachment.logicalPath,
+      source: 'manual_arsip_attachment.logical_path',
+      sourceId: attachment.id,
       referencedPaths,
       issues,
     })
@@ -333,7 +366,7 @@ function collectAttachmentReferences({
   issues,
 }: {
   value: unknown
-  source: 'dokumen_transaksi.lampiran_urls' | 'arsip.lampiran_snapshot'
+  source: 'dokumen_transaksi.lampiran_urls'
   sourceId: string
   referencedPaths: Set<string>
   issues: LocalStorageAnalysis['metadata_issues']
@@ -473,6 +506,67 @@ async function scanDirectory({
       modifiedAtMs: stats.mtimeMs,
     })
   }
+}
+
+function collectSingleLogicalPathReference({
+  value,
+  source,
+  sourceId,
+  referencedPaths,
+  issues,
+}: {
+  value: unknown
+  source: 'manual_arsip_attachment.logical_path'
+  sourceId: string
+  referencedPaths: Set<string>
+  issues: LocalStorageAnalysis['metadata_issues']
+}): void {
+  if (!value) return
+
+  if (typeof value !== 'string') {
+    issues.push({ source, sourceId, index: 0, code: 'non-string-url' })
+    return
+  }
+
+  if (isUrlLikeStoragePath(value)) {
+    issues.push({ source, sourceId, index: 0, code: 'legacy-or-url-reference' })
+    return
+  }
+
+  try {
+    referencedPaths.add(assertSafeLogicalStoragePath(value))
+  } catch {
+    issues.push({ source, sourceId, index: 0, code: 'invalid-local-path' })
+  }
+}
+
+function summarizeMetadataIssueCounts(
+  issues: LocalStorageAnalysis['metadata_issues'],
+): SafeLocalStorageAnalysisResponse['metadata_issue_counts'] {
+  const counts = new Map<string, {
+    source: LocalStorageAnalysis['metadata_issues'][number]['source']
+    code: LocalStorageAnalysis['metadata_issues'][number]['code']
+    count: number
+  }>()
+
+  for (const issue of issues) {
+    const key = `${issue.source}:${issue.code}`
+    const current = counts.get(key)
+    if (current) {
+      current.count += 1
+    } else {
+      counts.set(key, {
+        source: issue.source,
+        code: issue.code,
+        count: 1,
+      })
+    }
+  }
+
+  return [...counts.values()].sort((left, right) => {
+    const sourceComparison = left.source.localeCompare(right.source)
+    return sourceComparison || left.code.localeCompare(right.code)
+  })
 }
 
 async function inspectDeletableLocalFile(

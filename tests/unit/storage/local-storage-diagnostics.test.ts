@@ -6,15 +6,16 @@ import {
   analyzeLocalStorageReferences,
   deleteLocalOrphanCandidates,
   getEligiblePendingCleanupPaths,
+  toSafeLocalStorageAnalysisResponse,
 } from '#/lib/storage/local-storage-diagnostics'
-import type { StorageArchiveMetadataRow, StorageDocumentMetadataRow } from '#/lib/storage/local-storage-diagnostics'
+import type { StorageDocumentMetadataRow, StorageManualAttachmentMetadataRow } from '#/lib/storage/local-storage-diagnostics'
 
 const TEST_ROOT = path.resolve('.tmp', 'local-storage-diagnostics-root')
 const OWNER_ID = '11111111-1111-4111-8111-111111111111'
 const DOKUMEN_ID = '22222222-2222-4222-8222-222222222222'
-const ARCHIVE_DOKUMEN_ID = '33333333-3333-4333-8333-333333333333'
+const MANUAL_ATTACHMENT_ID = '33333333-3333-4333-8333-333333333333'
 const DOC_REF_PATH = `${OWNER_ID}/${DOKUMEN_ID}/44444444-4444-4444-8444-444444444444.pdf`
-const ARCHIVE_REF_PATH = `${OWNER_ID}/${ARCHIVE_DOKUMEN_ID}/55555555-5555-4555-8555-555555555555.pdf`
+const MANUAL_REF_PATH = `manual-arsip/${OWNER_ID}/55555555-5555-4555-8555-555555555555.pdf`
 const ORPHAN_PATH = `${OWNER_ID}/${DOKUMEN_ID}/66666666-6666-4666-8666-666666666666.pdf`
 const MISSING_REF_PATH = `${OWNER_ID}/${DOKUMEN_ID}/77777777-7777-4777-8777-777777777777.pdf`
 const OLD_PENDING_PATH = `${OWNER_ID}/88888888-8888-4888-8888-888888888888_1778064971564_Bukti.pdf`
@@ -43,9 +44,9 @@ describe('local storage diagnostics', () => {
     await rm(TEST_ROOT, { force: true, recursive: true })
   })
 
-  it('protects document and archive references while reporting orphan, pending, and missing paths', async () => {
+  it('protects workflow and manual source references while reporting orphan, pending, and missing paths internally', async () => {
     await writeLogicalFile(DOC_REF_PATH, 'doc referenced')
-    await writeLogicalFile(ARCHIVE_REF_PATH, 'archive referenced')
+    await writeLogicalFile(MANUAL_REF_PATH, 'manual referenced')
     await writeLogicalFile(ORPHAN_PATH, 'orphan formal')
     await writeLogicalFile(OLD_PENDING_PATH, 'old pending')
     await writeLogicalFile(RECENT_PENDING_PATH, 'recent pending')
@@ -59,10 +60,10 @@ describe('local storage diagnostics', () => {
         lampiran('https://example.test/legacy.pdf'),
         lampiran('../unsafe.pdf'),
       ])],
-      archives: [archiveRow([lampiran(ARCHIVE_REF_PATH)])],
+      manualAttachments: [manualAttachmentRow(MANUAL_REF_PATH)],
     })
 
-    expect(analysis.referenced_paths).toEqual([ARCHIVE_REF_PATH, DOC_REF_PATH].sort())
+    expect(analysis.referenced_paths).toEqual([DOC_REF_PATH, MANUAL_REF_PATH].sort())
     expect(analysis.orphan_paths).toEqual([ORPHAN_PATH])
     expect(analysis.pending_paths).toEqual([OLD_PENDING_PATH, RECENT_PENDING_PATH].sort())
     expect(analysis.eligible_pending_paths).toEqual([OLD_PENDING_PATH])
@@ -81,6 +82,29 @@ describe('local storage diagnostics', () => {
       total_recent_pending_files_for_default_cleanup: 1,
     })
     expectNoPhysicalPathExposure(analysis)
+  })
+
+  it('builds a safe admin analysis response without logical paths', async () => {
+    await writeLogicalFile(DOC_REF_PATH, 'doc referenced')
+    await writeLogicalFile(MANUAL_REF_PATH, 'manual referenced')
+    await writeLogicalFile(ORPHAN_PATH, 'orphan formal')
+
+    const analysis = await analyzeLocalStorageReferences({
+      documents: [documentRow([lampiran(DOC_REF_PATH)])],
+      manualAttachments: [manualAttachmentRow(MANUAL_REF_PATH)],
+    })
+    const safe = toSafeLocalStorageAnalysisResponse(analysis)
+    const serialized = JSON.stringify(safe)
+
+    expect(safe).toMatchObject({
+      referenced_paths_count: 2,
+      orphan_count: 1,
+      pending_count: 0,
+    })
+    expect(serialized).not.toContain(DOC_REF_PATH)
+    expect(serialized).not.toContain(MANUAL_REF_PATH)
+    expect(serialized).not.toContain(ORPHAN_PATH)
+    expectNoPhysicalPathExposure(safe)
   })
 
   it('deletes non-pending orphan candidates and treats missing candidates as no-op', async () => {
@@ -127,7 +151,7 @@ describe('local storage diagnostics', () => {
 
     const analysis = await analyzeLocalStorageReferences({
       documents: [],
-      archives: [],
+      manualAttachments: [],
     })
 
     expect(getEligiblePendingCleanupPaths(analysis.pending_path_details, 1440)).toEqual([OLD_PENDING_PATH])
@@ -144,11 +168,10 @@ function documentRow(lampiranUrls: Array<{ url: string }>): StorageDocumentMetad
   }
 }
 
-function archiveRow(lampiranSnapshot: Array<{ url: string }>): StorageArchiveMetadataRow {
+function manualAttachmentRow(logicalPath: unknown): StorageManualAttachmentMetadataRow {
   return {
-    id: ARCHIVE_DOKUMEN_ID,
-    statusArsip: 'DIMUSNAHKAN',
-    lampiranSnapshot,
+    id: MANUAL_ATTACHMENT_ID,
+    logicalPath,
   }
 }
 

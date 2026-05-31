@@ -7,6 +7,8 @@ import {
   DEFAULT_PENDING_CLEANUP_MIN_AGE_MINUTES,
   deleteLocalOrphanCandidates,
   getEligiblePendingCleanupPaths,
+  toSafeLocalStorageAnalysisResponse,
+  type LocalOrphanCleanupResult,
 } from '#/lib/storage/local-storage-diagnostics'
 
 // ---------------------------------------------------------------------------
@@ -128,9 +130,9 @@ async function handleCleanupRequest(
   try {
     const { db } = await import('#/db/client')
     const { dokumenTransaksi } = await import('#/db/schema/dokumen')
-    const { arsip } = await import('#/db/schema/arsip')
+    const { manualArsipAttachment } = await import('#/db/schema/arsip')
 
-    const [documents, archives] = await Promise.all([
+    const [documents, manualAttachments] = await Promise.all([
       db
         .select({
           id: dokumenTransaksi.id,
@@ -139,17 +141,17 @@ async function handleCleanupRequest(
         .from(dokumenTransaksi),
       db
         .select({
-          id: arsip.id,
-          statusArsip: arsip.statusArsip,
-          lampiranSnapshot: arsip.lampiranSnapshot,
+          id: manualArsipAttachment.id,
+          logicalPath: manualArsipAttachment.logicalPath,
         })
-        .from(arsip),
+        .from(manualArsipAttachment),
     ])
 
     const analysis = await analyzeLocalStorageReferences({
       documents,
-      archives,
+      manualAttachments,
     })
+    const safeAnalysis = toSafeLocalStorageAnalysisResponse(analysis)
     const orphanPaths = pendingOnly ? [] : analysis.orphan_paths
     const pendingPaths = analysis.pending_paths
     const destructiveConfirmed = !dryRun && confirm
@@ -182,7 +184,7 @@ async function handleCleanupRequest(
           ? 'Destructive cleanup requires POST.'
           : pendingOnly ? 'Cleanup pending dry-run' : 'Cleanup dry-run',
         deleted_count: 0,
-        orphan_paths: orphanPaths,
+        orphan_count: orphanPaths.length,
         dry_run: true,
         pending_only: pendingOnly,
         include_pending: includePending,
@@ -190,9 +192,10 @@ async function handleCleanupRequest(
         pending_cleanup_confirmed: confirm,
         skipped_pending_count: pendingPaths.length,
         skipped_recent_pending_count: skippedRecentPendingCount,
-        pending_paths: pendingPaths,
-        eligible_pending_paths: eligiblePendingPaths,
-        analysis_summary: analysis.summary,
+        pending_count: pendingPaths.length,
+        eligible_pending_count: eligiblePendingPaths.length,
+        analysis_summary: safeAnalysis.summary,
+        analysis: safeAnalysis,
       })
     }
 
@@ -200,7 +203,7 @@ async function handleCleanupRequest(
       return Response.json({
         message: 'Cleanup dry-run; destructive cleanup requires confirm=true.',
         deleted_count: 0,
-        orphan_paths: orphanPaths,
+        orphan_count: orphanPaths.length,
         dry_run: true,
         pending_only: pendingOnly,
         include_pending: includePending,
@@ -208,9 +211,10 @@ async function handleCleanupRequest(
         pending_cleanup_confirmed: false,
         skipped_pending_count: pendingPaths.length,
         skipped_recent_pending_count: skippedRecentPendingCount,
-        pending_paths: pendingPaths,
-        eligible_pending_paths: eligiblePendingPaths,
-        analysis_summary: analysis.summary,
+        pending_count: pendingPaths.length,
+        eligible_pending_count: eligiblePendingPaths.length,
+        analysis_summary: safeAnalysis.summary,
+        analysis: safeAnalysis,
       })
     }
 
@@ -222,7 +226,7 @@ async function handleCleanupRequest(
             ? 'Tidak ada file pending yang memenuhi syarat cleanup; file pending hanya dilaporkan'
             : 'Tidak ada file orphan',
         deleted_count: 0,
-        orphan_paths: orphanPaths,
+        orphan_count: orphanPaths.length,
         dry_run: dryRun,
         pending_only: pendingOnly,
         include_pending: includePending,
@@ -230,9 +234,10 @@ async function handleCleanupRequest(
         pending_cleanup_confirmed: confirm,
         skipped_pending_count: skippedPendingCount,
         skipped_recent_pending_count: skippedRecentPendingCount,
-        pending_paths: pendingPaths,
-        eligible_pending_paths: eligiblePendingPaths,
-        analysis_summary: analysis.summary,
+        pending_count: pendingPaths.length,
+        eligible_pending_count: eligiblePendingPaths.length,
+        analysis_summary: safeAnalysis.summary,
+        analysis: safeAnalysis,
       })
     }
 
@@ -240,7 +245,7 @@ async function handleCleanupRequest(
       return Response.json({
         message: 'Cleanup dry-run',
         deleted_count: 0,
-        orphan_paths: orphanPaths,
+        orphan_count: orphanPaths.length,
         dry_run: true,
         pending_only: pendingOnly,
         include_pending: includePending,
@@ -248,9 +253,10 @@ async function handleCleanupRequest(
         pending_cleanup_confirmed: confirm,
         skipped_pending_count: pendingPaths.length,
         skipped_recent_pending_count: skippedRecentPendingCount,
-        pending_paths: pendingPaths,
-        eligible_pending_paths: eligiblePendingPaths,
-        analysis_summary: analysis.summary,
+        pending_count: pendingPaths.length,
+        eligible_pending_count: eligiblePendingPaths.length,
+        analysis_summary: safeAnalysis.summary,
+        analysis: safeAnalysis,
       })
     }
 
@@ -264,10 +270,10 @@ async function handleCleanupRequest(
       return Response.json({
         error: 'Cleanup sebagian gagal',
         deleted_count: cleanup.deletedCount,
-        orphan_paths: orphanPaths,
+        orphan_count: orphanPaths.length,
         missing_count: cleanup.missingCount,
         failed_count: cleanup.failedCount,
-        failures: cleanup.failures,
+        failure_codes: summarizeCleanupFailureCodes(cleanup),
         compensationRequired: true,
         dry_run: false,
         pending_only: pendingOnly,
@@ -276,16 +282,17 @@ async function handleCleanupRequest(
         pending_cleanup_confirmed: confirm,
         skipped_pending_count: skippedPendingCount,
         skipped_recent_pending_count: skippedRecentPendingCount,
-        pending_paths: pendingPaths,
-        eligible_pending_paths: eligiblePendingPaths,
-        analysis_summary: analysis.summary,
+        pending_count: pendingPaths.length,
+        eligible_pending_count: eligiblePendingPaths.length,
+        analysis_summary: safeAnalysis.summary,
+        analysis: safeAnalysis,
       }, { status: 500 })
     }
 
     return Response.json({
       message: 'Cleanup berhasil',
       deleted_count: cleanup.deletedCount,
-      orphan_paths: orphanPaths,
+      orphan_count: orphanPaths.length,
       missing_count: cleanup.missingCount,
       dry_run: false,
       pending_only: pendingOnly,
@@ -294,14 +301,29 @@ async function handleCleanupRequest(
       pending_cleanup_confirmed: confirm,
       skipped_pending_count: skippedPendingCount,
       skipped_recent_pending_count: skippedRecentPendingCount,
-      pending_paths: pendingPaths,
-      eligible_pending_paths: eligiblePendingPaths,
-      analysis_summary: analysis.summary,
+      pending_count: pendingPaths.length,
+      eligible_pending_count: eligiblePendingPaths.length,
+      analysis_summary: safeAnalysis.summary,
+      analysis: safeAnalysis,
     })
   } catch {
     console.error('[admin/cleanup-orphan-files] local cleanup failed')
     return Response.json({ error: 'Gagal cleanup file orphan lokal' }, { status: 500 })
   }
+}
+
+function summarizeCleanupFailureCodes(
+  cleanup: LocalOrphanCleanupResult,
+): Array<{ code: LocalOrphanCleanupResult['failures'][number]['code']; count: number }> {
+  const counts = new Map<LocalOrphanCleanupResult['failures'][number]['code'], number>()
+
+  for (const failure of cleanup.failures) {
+    counts.set(failure.code, (counts.get(failure.code) ?? 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([code, count]) => ({ code, count }))
 }
 
 async function parseCleanupBody(request: Request): Promise<z.infer<typeof cleanupBodySchema> | Response> {

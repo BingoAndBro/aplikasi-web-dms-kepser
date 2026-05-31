@@ -126,7 +126,7 @@ describe('raw preview internal URL runtime verification', () => {
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
-      rawLogicalPathAccessContextResolver: async () => ({ documents: [], archives: [] }),
+      rawLogicalPathAccessContextResolver: async () => ({ documents: [], folders: [] }),
     })
 
     expect(fileResponse.status).toBe(200)
@@ -158,7 +158,7 @@ describe('raw preview internal URL runtime verification', () => {
       session: null,
       secret: TEST_SECRET,
       root: TEST_ROOT,
-      rawLogicalPathAccessContextResolver: async () => ({ documents: [], archives: [] }),
+      rawLogicalPathAccessContextResolver: async () => ({ documents: [], folders: [] }),
     })
 
     expect(response.status).toBe(401)
@@ -172,7 +172,7 @@ describe('raw preview internal URL runtime verification', () => {
       session: session('owner-user'),
       secret: TEST_SECRET,
       root: TEST_ROOT,
-      rawLogicalPathAccessContextResolver: async () => ({ documents: [], archives: [] }),
+      rawLogicalPathAccessContextResolver: async () => ({ documents: [], folders: [] }),
     })
 
     expect(response.status).toBe(404)

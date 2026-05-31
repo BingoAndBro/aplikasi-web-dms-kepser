@@ -37,10 +37,9 @@ vi.mock('#/db/schema/dokumen', () => ({
 }))
 
 vi.mock('#/db/schema/arsip', () => ({
-  arsip: {
-    id: 'arsip.id',
-    statusArsip: 'arsip.statusArsip',
-    lampiranSnapshot: 'arsip.lampiranSnapshot',
+  manualArsipAttachment: {
+    id: 'manualArsipAttachment.id',
+    logicalPath: 'manualArsipAttachment.logicalPath',
   },
 }))
 
@@ -85,11 +84,12 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(body).toMatchObject({
       message: 'Cleanup dry-run',
       deleted_count: 0,
-      orphan_paths: [ORPHAN_PATH],
+      orphan_count: 1,
       dry_run: true,
       pending_only: false,
       include_pending: false,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
@@ -103,12 +103,13 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(body).toMatchObject({
       message: 'Destructive cleanup requires POST.',
       deleted_count: 0,
-      orphan_paths: [ORPHAN_PATH],
+      orphan_count: 1,
       dry_run: true,
-      pending_paths: [OLD_PENDING_PATH, RECENT_PENDING_PATH].sort(),
-      eligible_pending_paths: [],
+      pending_count: 2,
+      eligible_pending_count: 0,
       skipped_pending_count: 2,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
@@ -163,10 +164,11 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(body).toMatchObject({
       message: 'Cleanup dry-run; destructive cleanup requires confirm=true.',
       deleted_count: 0,
-      orphan_paths: [ORPHAN_PATH],
+      orphan_count: 1,
       dry_run: true,
       pending_cleanup_confirmed: false,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
@@ -180,10 +182,11 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(body).toMatchObject({
       message: 'Cleanup dry-run',
       deleted_count: 0,
-      orphan_paths: [ORPHAN_PATH],
+      orphan_count: 1,
       dry_run: true,
       pending_cleanup_confirmed: true,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
@@ -197,11 +200,12 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(body).toMatchObject({
       message: 'Cleanup berhasil',
       deleted_count: 1,
-      orphan_paths: [ORPHAN_PATH],
-      pending_paths: [OLD_PENDING_PATH, RECENT_PENDING_PATH].sort(),
-      eligible_pending_paths: [],
+      orphan_count: 1,
+      pending_count: 2,
+      eligible_pending_count: 0,
       skipped_pending_count: 2,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).toHaveBeenCalledWith([ORPHAN_PATH], {
       allowedClassifications: ['formal'],
     })
@@ -220,13 +224,14 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(response.status).toBe(200)
     expect(body).toMatchObject({
       deleted_count: 0,
-      orphan_paths: [],
+      orphan_count: 0,
       pending_only: true,
       include_pending: true,
       pending_cleanup_confirmed: false,
-      eligible_pending_paths: [OLD_PENDING_PATH],
+      eligible_pending_count: 1,
       skipped_pending_count: 2,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
@@ -240,16 +245,17 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(body).toMatchObject({
       message: 'Cleanup pending dry-run',
       deleted_count: 0,
-      orphan_paths: [],
+      orphan_count: 0,
       dry_run: true,
       pending_only: true,
       include_pending: true,
       pending_cleanup_confirmed: true,
       min_age_minutes: 0,
-      eligible_pending_paths: [OLD_PENDING_PATH, RECENT_PENDING_PATH].sort(),
+      eligible_pending_count: 2,
       skipped_recent_pending_count: 0,
       skipped_pending_count: 2,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).not.toHaveBeenCalled()
   })
 
@@ -267,11 +273,12 @@ describe('/api/admin/cleanup-orphan-files', () => {
     expect(response.status).toBe(200)
     expect(body).toMatchObject({
       deleted_count: 1,
-      orphan_paths: [],
-      eligible_pending_paths: [OLD_PENDING_PATH],
+      orphan_count: 0,
+      eligible_pending_count: 1,
       skipped_recent_pending_count: 1,
       skipped_pending_count: 1,
     })
+    expectNoPathLeak(body)
     expect(mocks.deleteLocalOrphanCandidates).toHaveBeenCalledWith([OLD_PENDING_PATH], {
       allowedClassifications: ['formal', 'pending-dash', 'pending-upload-api'],
     })
@@ -332,6 +339,26 @@ function analysisFixture() {
     unsafe_paths: [],
     metadata_issues: [],
   }
+}
+
+function expectNoPathLeak(value: unknown): void {
+  const serialized = JSON.stringify(value)
+
+  expect(serialized).not.toContain(ORPHAN_PATH)
+  expect(serialized).not.toContain(OLD_PENDING_PATH)
+  expect(serialized).not.toContain(RECENT_PENDING_PATH)
+  expect(serialized).not.toContain('logical_path')
+  expect(serialized).not.toContain('logicalPath')
+  expect(serialized).not.toContain('physical_path')
+  expect(serialized).not.toContain('storage root')
+  expect(serialized).not.toContain('token')
+  expect(serialized).not.toContain('DATABASE_URL')
+  expect(serialized).not.toContain('DMS_LOCAL_STORAGE_ROOT')
+  expect(serialized).not.toContain('cookie')
+  expect(serialized).not.toContain('session')
+  expect(serialized).not.toContain('select ')
+  expect(serialized).not.toContain('from ')
+  expect(serialized).not.toContain('SQL')
 }
 
 function jsonRequest(body: unknown, origin = 'http://localhost'): Request {

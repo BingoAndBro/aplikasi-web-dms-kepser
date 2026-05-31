@@ -1,8 +1,8 @@
 // Server-only module. Do not import from client components.
-import { and, desc, eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 import { db } from '#/db/client'
-import { arsip, berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
+import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
   getLocalServerSession,
@@ -30,19 +30,12 @@ type DocumentRow = {
   lampiranUrls: unknown
 }
 
-type ArchiveRow = {
-  id: string
-  statusArsip: string
-  lampiranSnapshot: unknown
-}
-
 type LampiranFileReference = {
   url: string
 }
 
 type DocumentAccessContext = {
   document: DocumentRow
-  archives: ArchiveRow[]
   isInDestroyedBerkas: boolean
 }
 
@@ -188,16 +181,6 @@ async function loadDocumentAccessContext(documentId: string): Promise<DocumentAc
   const document = documentRows[0]
   if (!document) return null
 
-  const archives = await db
-    .select({
-      id: arsip.id,
-      statusArsip: arsip.statusArsip,
-      lampiranSnapshot: arsip.lampiranSnapshot,
-    })
-    .from(arsip)
-    .where(eq(arsip.dokumenId, documentId))
-    .orderBy(desc(arsip.createdAt))
-
   const destroyedBerkasRows = await db
     .select({
       id: berkasArsip.id,
@@ -214,7 +197,6 @@ async function loadDocumentAccessContext(documentId: string): Promise<DocumentAc
 
   return {
     document,
-    archives,
     isInDestroyedBerkas: destroyedBerkasRows.length > 0,
   }
 }
@@ -231,18 +213,7 @@ function resolveDocumentLampiranReference(
     }
   }
 
-  if (context.archives.some(row => row.statusArsip === 'DIMUSNAHKAN')) {
-    return {
-      ok: false,
-      status: 410,
-      message: 'File asli tidak tersedia - arsip telah dimusnahkan',
-    }
-  }
-
-  const activeArchive = context.archives[0]
-  const lampiranSource = activeArchive
-    ? parseLampiranFileReferences(activeArchive.lampiranSnapshot)
-    : parseLampiranFileReferences(context.document.lampiranUrls)
+  const lampiranSource = parseLampiranFileReferences(context.document.lampiranUrls)
 
   if (lampiranIndex < 0 || lampiranIndex >= lampiranSource.length) {
     return { ok: false, status: 404, message: 'Lampiran tidak ditemukan' }

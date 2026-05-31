@@ -1,7 +1,7 @@
 // Server-only module. Do not import from client components.
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
-import { eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 import { ROLES, type RoleName } from '#/lib/constants/roles'
 import type { LocalServerSession } from '#/lib/auth/local-server-auth'
@@ -44,14 +44,14 @@ type RawLogicalPathAccessDocument = {
   status: string
   revisionTarget: string | null
 }
-type RawLogicalPathAccessArchive = {
+type RawLogicalPathAccessFolder = {
   id: string
-  dokumenId: string
-  statusArsip: string
+  statusBerkas: string
+  statusArsip: string | null
 }
 export type RawLogicalPathAccessContext = {
   documents: RawLogicalPathAccessDocument[]
-  archives: RawLogicalPathAccessArchive[]
+  folders: RawLogicalPathAccessFolder[]
 }
 export type RawLogicalPathAccessContextResolver = (
   logicalPath: string,
@@ -171,15 +171,15 @@ export async function authorizeRawLogicalPathAccess({
     return { ok: false, status: 500, message: 'File access failed' }
   }
 
-  if (context.archives.some(archive => archive.statusArsip === 'DIMUSNAHKAN')) {
+  if (context.folders.some(folder => folder.statusBerkas === 'CLOSED' && folder.statusArsip === 'DIMUSNAHKAN')) {
     return {
       ok: false,
       status: 410,
-      message: 'File asli tidak tersedia - arsip telah dimusnahkan',
+      message: 'Data file sudah dimusnahkan',
     }
   }
 
-  const hasGovernedReference = context.documents.length > 0 || context.archives.length > 0
+  const hasGovernedReference = context.documents.length > 0 || context.folders.length > 0
   const classification = classifyStoragePath(safeLogicalPath)
 
   if (classification === 'pending-dash' || classification === 'pending-upload-api') {
@@ -238,7 +238,7 @@ async function resolveDocumentTokenLogicalPath({
 async function loadRawLogicalPathAccessContext(
   logicalPath: string,
 ): Promise<RawLogicalPathAccessContext> {
-  const [{ db }, { arsip }, { dokumenTransaksi }] = await Promise.all([
+  const [{ db }, { berkasArsip, berkasArsipItem, manualArsipAttachment }, { dokumenTransaksi }] = await Promise.all([
     import('#/db/client'),
     import('#/db/schema/arsip'),
     import('#/db/schema/dokumen'),
@@ -255,60 +255,52 @@ async function loadRawLogicalPathAccessContext(
     .from(dokumenTransaksi)
     .where(sql`${dokumenTransaksi.lampiranUrls} @> ${attachmentJson}::jsonb`)
 
-  const archiveSnapshotRows = await db
+  const workflowFolderRows = await db
     .select({
-      id: arsip.id,
-      dokumenId: arsip.dokumenId,
-      statusArsip: arsip.statusArsip,
-      documentId: dokumenTransaksi.id,
-      documentCreatedBy: dokumenTransaksi.createdBy,
-      documentStatus: dokumenTransaksi.status,
-      documentRevisionTarget: dokumenTransaksi.revisionTarget,
+      id: berkasArsip.id,
+      statusBerkas: berkasArsip.statusBerkas,
+      statusArsip: berkasArsip.statusArsip,
     })
-    .from(arsip)
-    .innerJoin(dokumenTransaksi, eq(arsip.dokumenId, dokumenTransaksi.id))
-    .where(sql`${arsip.lampiranSnapshot} @> ${attachmentJson}::jsonb`)
+    .from(berkasArsipItem)
+    .innerJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
+    .innerJoin(dokumenTransaksi, eq(berkasArsipItem.dokumenId, dokumenTransaksi.id))
+    .where(and(
+      eq(berkasArsipItem.sourceType, 'WORKFLOW'),
+      sql`${dokumenTransaksi.lampiranUrls} @> ${attachmentJson}::jsonb`,
+    ))
+
+  const manualFolderRows = await db
+    .select({
+      id: berkasArsip.id,
+      statusBerkas: berkasArsip.statusBerkas,
+      statusArsip: berkasArsip.statusArsip,
+    })
+    .from(manualArsipAttachment)
+    .innerJoin(berkasArsipItem, eq(manualArsipAttachment.manualArsipId, berkasArsipItem.manualArsipId))
+    .innerJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
+    .where(and(
+      eq(berkasArsipItem.sourceType, 'MANUAL'),
+      eq(manualArsipAttachment.logicalPath, logicalPath),
+    ))
 
   const documentsById = new Map<string, RawLogicalPathAccessDocument>()
-  const archivesById = new Map<string, RawLogicalPathAccessArchive>()
+  const foldersById = new Map<string, RawLogicalPathAccessFolder>()
 
   for (const document of documentRows) {
     documentsById.set(document.id, document)
   }
 
-  for (const row of archiveSnapshotRows) {
-    archivesById.set(row.id, {
+  for (const row of [...workflowFolderRows, ...manualFolderRows]) {
+    foldersById.set(row.id, {
       id: row.id,
-      dokumenId: row.dokumenId,
+      statusBerkas: row.statusBerkas,
       statusArsip: row.statusArsip,
     })
-    documentsById.set(row.documentId, {
-      id: row.documentId,
-      createdBy: row.documentCreatedBy,
-      status: row.documentStatus,
-      revisionTarget: row.documentRevisionTarget,
-    })
-  }
-
-  const referencedDocumentIds = [...documentsById.keys()]
-  if (referencedDocumentIds.length > 0) {
-    const archiveRowsForReferencedDocuments = await db
-      .select({
-        id: arsip.id,
-        dokumenId: arsip.dokumenId,
-        statusArsip: arsip.statusArsip,
-      })
-      .from(arsip)
-      .where(inArray(arsip.dokumenId, referencedDocumentIds))
-
-    for (const archive of archiveRowsForReferencedDocuments) {
-      archivesById.set(archive.id, archive)
-    }
   }
 
   return {
     documents: [...documentsById.values()],
-    archives: [...archivesById.values()],
+    folders: [...foldersById.values()],
   }
 }
 

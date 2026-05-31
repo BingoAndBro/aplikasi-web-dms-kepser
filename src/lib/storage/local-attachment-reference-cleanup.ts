@@ -1,6 +1,6 @@
 // Server-only module. Do not import from client components.
 import { db } from '#/db/client'
-import { arsip } from '#/db/schema/arsip'
+import { manualArsipAttachment } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { parseLampiranUrls } from '#/lib/dokumen'
 import type { LampiranUrl } from '#/lib/dokumen/types'
@@ -62,7 +62,7 @@ export async function cleanupUnreferencedReplacedLocalAttachments({
 async function loadReferencedLocalAttachmentPaths(): Promise<Set<string>> {
   const referencedPaths = new Set<string>()
 
-  const [documentRows, archiveRows] = await Promise.all([
+  const [documentRows, manualAttachmentRows] = await Promise.all([
     db
       .select({
         id: dokumenTransaksi.id,
@@ -71,21 +71,34 @@ async function loadReferencedLocalAttachmentPaths(): Promise<Set<string>> {
       .from(dokumenTransaksi),
     db
       .select({
-        id: arsip.id,
-        lampiranSnapshot: arsip.lampiranSnapshot,
+        id: manualArsipAttachment.id,
+        logicalPath: manualArsipAttachment.logicalPath,
       })
-      .from(arsip),
+      .from(manualArsipAttachment),
   ])
 
   for (const row of documentRows) {
     addReferencedAttachmentPaths(referencedPaths, parseLampiranUrls(row.lampiranUrls))
   }
 
-  for (const row of archiveRows) {
-    addReferencedAttachmentPaths(referencedPaths, parseLampiranUrls(row.lampiranSnapshot))
+  for (const row of manualAttachmentRows) {
+    addReferencedLogicalPath(referencedPaths, row.logicalPath)
   }
 
   return referencedPaths
+}
+
+function addReferencedLogicalPath(
+  referencedPaths: Set<string>,
+  logicalPath: unknown,
+): void {
+  if (typeof logicalPath !== 'string') return
+
+  try {
+    referencedPaths.add(assertSafeLogicalStoragePath(logicalPath))
+  } catch {
+    // Unsafe or legacy metadata must not influence deletion.
+  }
 }
 
 function addReferencedAttachmentPaths(

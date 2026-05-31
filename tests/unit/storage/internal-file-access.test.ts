@@ -84,7 +84,7 @@ function rawContext(
 ): RawLogicalPathAccessContext {
   return {
     documents: [],
-    archives: [],
+    folders: [],
     ...overrides,
   }
 }
@@ -302,7 +302,6 @@ describe('internal file access foundation', () => {
         revisionTarget: null,
         lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
       },
-      archives: [],
       destroyedBerkasMembership: false,
     })
     const bodyText = JSON.stringify(await json(response))
@@ -321,7 +320,6 @@ describe('internal file access foundation', () => {
         revisionTarget: null,
         lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
       },
-      archives: [],
       destroyedBerkasMembership: true,
     })
     const bodyText = JSON.stringify(await json(response))
@@ -428,9 +426,9 @@ describe('internal file access foundation', () => {
           status: 'ARCHIVED',
           revisionTarget: null,
         }],
-        archives: [{
-          id: 'archive-id',
-          dokumenId: 'document-id',
+        folders: [{
+          id: 'berkas-id',
+          statusBerkas: 'CLOSED',
           statusArsip: 'DIMUSNAHKAN',
         }],
       })),
@@ -438,7 +436,7 @@ describe('internal file access foundation', () => {
 
     expect(response.status).toBe(410)
     expect(await json(response)).toEqual({
-      error: 'File asli tidak tersedia - arsip telah dimusnahkan',
+      error: 'Data file sudah dimusnahkan',
     })
   })
 
@@ -461,9 +459,9 @@ describe('internal file access foundation', () => {
           status: 'ARCHIVED',
           revisionTarget: null,
         }],
-        archives: [{
-          id: 'archive-id',
-          dokumenId: 'document-id',
+        folders: [{
+          id: 'berkas-id',
+          statusBerkas: 'CLOSED',
           statusArsip: 'DIMUSNAHKAN',
         }],
       })),
@@ -538,7 +536,6 @@ describe('internal file access foundation', () => {
         revisionTarget: null,
         lampiranUrls: [{ url: 'admin-user/document-id/file.pdf' }],
       },
-      archives: [],
       session: session('admin-user', [ROLES.ADMIN]),
     })
 
@@ -554,14 +551,13 @@ describe('internal file access foundation', () => {
         revisionTarget: null,
         lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
       },
-      archives: [],
       session: session('kasubag-user', [ROLES.KEPALA_SUB_BAGIAN_UMUM]),
     })
 
     expect(result).toEqual({ ok: true, logicalPath: 'owner-user/document-id/file.pdf' })
   })
 
-  it('blocks document-token access when current archive state is DIMUSNAHKAN', async () => {
+  it('does not require old canonical archive snapshots for document-token access', async () => {
     const result = await resolveDocumentTokenWithMockedContext({
       document: {
         id: '11111111-1111-4111-8111-111111111111',
@@ -570,19 +566,10 @@ describe('internal file access foundation', () => {
         revisionTarget: null,
         lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
       },
-      archives: [{
-        id: 'archive-id',
-        statusArsip: 'DIMUSNAHKAN',
-        lampiranSnapshot: [{ url: 'owner-user/document-id/file.pdf' }],
-      }],
       session: session('owner-user', [ROLES.PEGAWAI]),
     })
 
-    expect(result).toEqual({
-      ok: false,
-      status: 410,
-      message: 'File asli tidak tersedia - arsip telah dimusnahkan',
-    })
+    expect(result).toEqual({ ok: true, logicalPath: 'owner-user/document-id/file.pdf' })
   })
 
   it('blocks document-token access when folder-first berkas membership is DIMUSNAHKAN', async () => {
@@ -594,7 +581,6 @@ describe('internal file access foundation', () => {
         revisionTarget: null,
         lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
       },
-      archives: [],
       destroyedBerkasMembership: true,
       session: session('owner-user', [ROLES.PEGAWAI]),
     })
@@ -615,7 +601,6 @@ describe('internal file access foundation', () => {
         revisionTarget: null,
         lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
       },
-      archives: [],
       destroyedBerkasMembership: true,
       session: session('other-user', [ROLES.PEGAWAI]),
     })
@@ -674,16 +659,14 @@ async function responseWithMockedVerifiedDownloadFilename(
 
 async function handleDocumentTokenRequestWithMockedContext({
   document,
-  archives,
   destroyedBerkasMembership = false,
 }: {
   document: MockDocumentAccessDocument
-  archives: MockDocumentAccessArchive[]
   destroyedBerkasMembership?: boolean
 }): Promise<Response> {
   vi.resetModules()
   vi.doMock('#/db/client', () => ({
-    db: createDocumentAccessDbMock(document, archives, destroyedBerkasMembership),
+    db: createDocumentAccessDbMock(document, destroyedBerkasMembership),
   }))
 
   try {
@@ -713,26 +696,18 @@ type MockDocumentAccessDocument = {
   lampiranUrls: unknown
 }
 
-type MockDocumentAccessArchive = {
-  id: string
-  statusArsip: string
-  lampiranSnapshot: unknown
-}
-
 async function resolveDocumentTokenWithMockedContext({
   document,
-  archives,
   destroyedBerkasMembership = false,
   session: testSession,
 }: {
   document: MockDocumentAccessDocument
-  archives: MockDocumentAccessArchive[]
   destroyedBerkasMembership?: boolean
   session: ReturnType<typeof session>
 }) {
   vi.resetModules()
   vi.doMock('#/db/client', () => ({
-    db: createDocumentAccessDbMock(document, archives, destroyedBerkasMembership),
+    db: createDocumentAccessDbMock(document, destroyedBerkasMembership),
   }))
 
   try {
@@ -763,7 +738,6 @@ async function resolveDocumentTokenWithMockedContext({
 
 function createDocumentAccessDbMock(
   document: MockDocumentAccessDocument,
-  archives: MockDocumentAccessArchive[],
   destroyedBerkasMembership = false,
 ) {
   const select = vi.fn()
@@ -771,13 +745,6 @@ function createDocumentAccessDbMock(
       from: vi.fn(() => ({
         where: vi.fn(() => ({
           limit: vi.fn(async () => [document]),
-        })),
-      })),
-    })
-    .mockReturnValueOnce({
-      from: vi.fn(() => ({
-        where: vi.fn(() => ({
-          orderBy: vi.fn(async () => archives),
         })),
       })),
     })

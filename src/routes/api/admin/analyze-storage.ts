@@ -1,6 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
-import { analyzeLocalStorageReferences } from '#/lib/storage/local-storage-diagnostics'
+import {
+  analyzeLocalStorageReferences,
+  toSafeLocalStorageAnalysisResponse,
+} from '#/lib/storage/local-storage-diagnostics'
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/analyze-storage
@@ -21,9 +24,9 @@ export const Route = createFileRoute('/api/admin/analyze-storage')({
         try {
           const { db } = await import('#/db/client')
           const { dokumenTransaksi } = await import('#/db/schema/dokumen')
-          const { arsip } = await import('#/db/schema/arsip')
+          const { manualArsipAttachment } = await import('#/db/schema/arsip')
 
-          const [documents, archives] = await Promise.all([
+          const [documents, manualAttachments] = await Promise.all([
             db
               .select({
                 id: dokumenTransaksi.id,
@@ -32,19 +35,18 @@ export const Route = createFileRoute('/api/admin/analyze-storage')({
               .from(dokumenTransaksi),
             db
               .select({
-                id: arsip.id,
-                statusArsip: arsip.statusArsip,
-                lampiranSnapshot: arsip.lampiranSnapshot,
+                id: manualArsipAttachment.id,
+                logicalPath: manualArsipAttachment.logicalPath,
               })
-              .from(arsip),
+              .from(manualArsipAttachment),
           ])
 
           const analysis = await analyzeLocalStorageReferences({
             documents,
-            archives,
+            manualAttachments,
           })
 
-          return Response.json(analysis)
+          return Response.json(toSafeLocalStorageAnalysisResponse(analysis))
         } catch {
           console.error('[admin/analyze-storage] local diagnostics failed')
           return Response.json({ error: 'Gagal menganalisis storage lokal' }, { status: 500 })
