@@ -147,7 +147,7 @@ describe('berkas arsip read model', () => {
     })
   })
 
-  it('does not expose paths, tokens, raw SQL, raw rows, or canonical bridge ids in detail DTOs', async () => {
+  it('does not expose paths, tokens, raw SQL, raw rows, or bridge ids in detail DTOs', async () => {
     const repository = createFakeRepository()
 
     const result = await getBerkasArsipDetail(BERKAS_CLOSED_ID, { repository })
@@ -159,8 +159,6 @@ describe('berkas arsip read model', () => {
     expect(serialized).not.toContain('C:\\storage')
     expect(serialized).not.toContain('token-value')
     expect(serialized).not.toContain('select *')
-    expect(serialized).not.toContain('canonical-archive-id')
-    expect(serialized).not.toContain('canonical_arsip_id')
     expect(serialized).not.toContain('workflow_lampiran_urls')
     expect(serialized).not.toContain('secret-token.pdf')
   })
@@ -274,21 +272,6 @@ describe('berkas arsip read model', () => {
     })
   })
 
-  it('does not treat legacy canonical_arsip_id as the primary read authority', async () => {
-    const repository = createFakeRepository({
-      folderRows: [closedBerkas()],
-      itemRows: [missingWorkflowItem({ canonical_arsip_id: 'canonical-archive-id' })],
-    })
-
-    const result = await getBerkasArsipDetail(BERKAS_CLOSED_ID, { repository })
-
-    expect(result.status).toBe('found')
-    if (result.status !== 'found') return
-
-    expect(result.detail.items[0].source_title).toBe('Sumber tidak ditemukan')
-    expect(result.detail.items[0].warnings).toEqual(['SOURCE_NOT_FOUND'])
-    expect(JSON.stringify(result.detail)).not.toContain('canonical-archive-id')
-  })
 })
 
 function createFakeRepository(options: {
@@ -400,7 +383,6 @@ function closedWorkflowItem(overrides: Partial<BerkasItemSourceReadRow> = {}): B
     source_type: 'WORKFLOW',
     dokumen_id: 'workflow-source-id',
     manual_arsip_id: null,
-    canonical_arsip_id: 'canonical-archive-id',
     workflow_title: 'Laporan Pembayaran',
     workflow_status: 'ARCHIVED',
     workflow_current_step: null,

@@ -6,7 +6,6 @@ const KLASIFIKASI_ID = '33333333-3333-4333-8333-333333333333'
 const BERKAS_ID = '44444444-4444-4444-8444-444444444444'
 const DOKUMEN_ID = '55555555-5555-4555-8555-555555555555'
 const MANUAL_ARSIP_ID = '66666666-6666-4666-8666-666666666666'
-const CANONICAL_ARSIP_ID = '77777777-7777-4777-8777-777777777777'
 
 const mocks = vi.hoisted(() => {
   class MockBerkasArsipServiceError extends Error {
@@ -261,6 +260,28 @@ describe('berkas arsip API routes', () => {
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({
       error: 'Berkas ini tidak dapat dipilih karena sudah ditutup',
+    })
+  })
+
+  it('maps missing workflow source classification to a safe blocked response', async () => {
+    mocks.addWorkflowDocumentToOpenBerkas.mockRejectedValueOnce(
+      new mocks.BerkasArsipServiceError(
+        'SOURCE_KLASIFIKASI_UNAVAILABLE',
+        'Jenis pembayaran dokumen belum tersedia untuk validasi berkas',
+      ),
+    )
+
+    const response = await addItemPostHandler({
+      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/items`, {
+        source_type: 'WORKFLOW',
+        dokumen_id: DOKUMEN_ID,
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Jenis pembayaran dokumen belum tersedia untuk validasi berkas',
     })
   })
 
@@ -653,7 +674,6 @@ function workflowItemDto() {
     source_type: 'WORKFLOW',
     dokumen_id: DOKUMEN_ID,
     manual_arsip_id: null,
-    canonical_arsip_id: CANONICAL_ARSIP_ID,
     added_by: USER_ID,
   }
 }
@@ -665,7 +685,6 @@ function manualItemDto() {
     source_type: 'MANUAL',
     dokumen_id: null,
     manual_arsip_id: MANUAL_ARSIP_ID,
-    canonical_arsip_id: CANONICAL_ARSIP_ID,
     added_by: USER_ID,
   }
 }

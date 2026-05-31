@@ -64,6 +64,13 @@
       "when": 1780048800000,
       "tag": "0008_berkas_status_arsip_schema_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780238473326,
+      "tag": "0009_drop_legacy_canonical_archive_schema",
+      "breakpoints": true
     }
   ]
 }

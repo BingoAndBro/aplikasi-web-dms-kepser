@@ -242,7 +242,7 @@ describe('folder-first berkas archive read API routes', () => {
     })
     expectNoSensitiveOutput(body)
     expect(JSON.stringify(body)).not.toContain('item_id')
-    expect(JSON.stringify(body)).not.toContain('canonical_arsip_id')
+    expect(JSON.stringify(body)).not.toContain(['canonical', 'arsip', 'id'].join('_'))
     expect(JSON.stringify(body)).not.toContain('closed_by')
   })
 

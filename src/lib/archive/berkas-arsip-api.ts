@@ -61,7 +61,6 @@ export function safeBerkasItemDto(item: BerkasArsipItemDto): BerkasArsipItemDto 
     source_type: item.source_type,
     dokumen_id: item.dokumen_id,
     manual_arsip_id: item.manual_arsip_id,
-    canonical_arsip_id: item.canonical_arsip_id,
     added_by: item.added_by,
   }
 }
@@ -95,6 +94,7 @@ function statusForServiceError(error: BerkasArsipServiceError): number {
     case 'BERKAS_LIFECYCLE_UNKNOWN':
     case 'BERKAS_LIFECYCLE_INVALID':
     case 'BERKAS_EMPTY':
+    case 'SOURCE_KLASIFIKASI_UNAVAILABLE':
     case 'CONFLICT':
       return 409
   }

@@ -11,7 +11,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import { users } from '../auth/users'
 import { dokumenTransaksi } from '../dokumen/dokumen-transaksi'
-import { arsip } from './arsip'
 import { masterKlasifikasiArsip } from './klasifikasi-arsip'
 import { manualArsip } from './manual-arsip'
 import type { StatusArsip } from '#/lib/constants/archive-status'
@@ -82,8 +81,6 @@ export const berkasArsipItem = arsipSchema.table(
       .references(() => dokumenTransaksi.id, { onDelete: 'no action', onUpdate: 'no action' }),
     manualArsipId: uuid('manual_arsip_id')
       .references(() => manualArsip.id, { onDelete: 'no action', onUpdate: 'no action' }),
-    canonicalArsipId: uuid('canonical_arsip_id')
-      .references(() => arsip.id, { onDelete: 'set null', onUpdate: 'no action' }),
     addedBy: uuid('added_by')
       .notNull()
       .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
@@ -93,7 +90,6 @@ export const berkasArsipItem = arsipSchema.table(
     index('idx_berkas_arsip_item_berkas_id').on(table.berkasId),
     index('idx_berkas_arsip_item_source_type').on(table.sourceType),
     index('idx_berkas_arsip_item_added_by').on(table.addedBy),
-    index('idx_berkas_arsip_item_canonical_arsip_id').on(table.canonicalArsipId),
     uniqueIndex('berkas_arsip_item_dokumen_id_unique')
       .on(table.dokumenId)
       .where(sql`${table.dokumenId} is not null`),

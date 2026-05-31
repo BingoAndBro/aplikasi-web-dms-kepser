@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { berkasArsip } from '#/db/schema/arsip/berkas-arsip'
+import * as arsipSchema from '#/db/schema/arsip'
+import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip/berkas-arsip'
+import { manualArsip } from '#/db/schema/arsip/manual-arsip'
 import {
   BERKAS_ARCHIVE_STATUS,
   BERKAS_ARCHIVE_STATUS_VALUES,
@@ -38,6 +40,16 @@ describe('berkas arsip schema foundation', () => {
   it('models folder archive lifecycle as nullable on berkas_arsip', () => {
     expect(berkasArsip.statusArsip.name).toBe('status_arsip')
     expect(berkasArsip.statusArsip.notNull).toBe(false)
+  })
+
+  it('does not export legacy canonical archive schema objects', () => {
+    const exportedKeys = Object.keys(arsipSchema)
+
+    expect(exportedKeys).not.toContain('arsip')
+    expect(exportedKeys).not.toContain(['arsip', 'Usul', 'Musnah'].join(''))
+    expect(berkasArsipItem).not.toHaveProperty(['canonical', 'Arsip', 'Id'].join(''))
+    expect(manualArsip).not.toHaveProperty(['canonical', 'Arsip', 'Id'].join(''))
+    expect(exportedKeys.some((key) => key.includes(['lampiran', 'Snapshot'].join('')))).toBe(false)
   })
 
   it('allows only current source types for folder items', () => {

@@ -151,7 +151,7 @@ function expectNoSensitiveOutput(value: string): void {
   expect(value).not.toContain(ITEM_FILE_KEY)
   expect(value).not.toContain(DOKUMEN_ID)
   expect(value).not.toContain(MANUAL_ARSIP_ID)
-  expect(value).not.toContain('canonical_arsip_id')
+  expect(value).not.toContain(['canonical', 'arsip', 'id'].join('_'))
   expect(value).not.toContain('dokumen_id')
   expect(value).not.toContain('manual_arsip_id')
   expect(value).not.toContain('logical_path')

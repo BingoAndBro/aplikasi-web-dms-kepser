@@ -4,7 +4,6 @@ import {
   berkasArsipItem,
   masterKlasifikasiArsip,
   manualArsip,
-  arsip,
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
@@ -50,7 +49,6 @@ export type BerkasArsipItemDto = {
   source_type: ArchiveSourceType
   dokumen_id: string | null
   manual_arsip_id: string | null
-  canonical_arsip_id: string | null
   added_by: string
 }
 
@@ -77,14 +75,12 @@ type BerkasItemRow = {
   sourceType: ArchiveSourceType
   dokumenId: string | null
   manualArsipId: string | null
-  canonicalArsipId: string | null
   addedBy: string
 }
 
 type SourceReference = {
   id: string
   klasifikasiId: string | null
-  canonicalArsipId: string | null
 }
 
 export type CreateOpenBerkasInput = {
@@ -148,7 +144,6 @@ export type BerkasArsipRepository = {
     sourceType: ArchiveSourceType
     dokumenId: string | null
     manualArsipId: string | null
-    canonicalArsipId: string | null
     actorUserId: string
   }): Promise<BerkasItemRow>
   countBerkasItems(berkasId: string): Promise<number>
@@ -180,6 +175,7 @@ export type BerkasArsipErrorCode =
   | 'BERKAS_LIFECYCLE_INVALID'
   | 'BERKAS_EMPTY'
   | 'SOURCE_NOT_FOUND'
+  | 'SOURCE_KLASIFIKASI_UNAVAILABLE'
   | 'SOURCE_KLASIFIKASI_MISMATCH'
   | 'INVALID_CLOSE_METADATA'
   | 'CONFLICT'
@@ -280,7 +276,6 @@ export async function addWorkflowDocumentToOpenBerkas(
     sourceType: ARCHIVE_SOURCE_TYPE.WORKFLOW,
     dokumenId: input.dokumenId,
     manualArsipId: null,
-    canonicalArsipId: source.canonicalArsipId,
     actorUserId: input.actorUserId,
   })
 
@@ -305,7 +300,6 @@ export async function addManualDocumentToOpenBerkas(
     sourceType: ARCHIVE_SOURCE_TYPE.MANUAL,
     dokumenId: null,
     manualArsipId: input.manualArsipId,
-    canonicalArsipId: source.canonicalArsipId,
     actorUserId: input.actorUserId,
   })
 
@@ -490,17 +484,11 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
     const [row] = await database
       .select({
         id: dokumenTransaksi.id,
-        canonicalArsipId: arsip.id,
-        klasifikasiId: arsip.klasifikasiId,
+        // dokumen_transaksi has no active klasifikasi_id; callers that know the selected
+        // workflow classification must provide a route-scoped repository.
+        klasifikasiId: sql<null>`null`,
       })
       .from(dokumenTransaksi)
-      .leftJoin(
-        arsip,
-        and(
-          eq(arsip.dokumenId, dokumenTransaksi.id),
-          eq(arsip.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
-        ),
-      )
       .where(eq(dokumenTransaksi.id, dokumenId))
       .limit(1)
 
@@ -512,7 +500,6 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
     const [row] = await database
       .select({
         id: manualArsip.id,
-        canonicalArsipId: manualArsip.canonicalArsipId,
         klasifikasiId: manualArsip.klasifikasiId,
       })
       .from(manualArsip)
@@ -531,7 +518,6 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
         sourceType: input.sourceType,
         dokumenId: input.dokumenId,
         manualArsipId: input.manualArsipId,
-        canonicalArsipId: input.canonicalArsipId,
         addedBy: input.actorUserId,
       })
       .returning()
@@ -608,6 +594,13 @@ function assertSourceMatchesBerkas(
   berkas: BerkasArsipDto,
 ): void {
   if (source.klasifikasiId !== berkas.klasifikasi_id) {
+    if (!source.klasifikasiId) {
+      throw new BerkasArsipServiceError(
+        'SOURCE_KLASIFIKASI_UNAVAILABLE',
+        'Jenis pembayaran dokumen belum tersedia untuk validasi berkas',
+      )
+    }
+
     throw new BerkasArsipServiceError(
       'SOURCE_KLASIFIKASI_MISMATCH',
       'Jenis pembayaran dokumen tidak sesuai dengan berkas',
@@ -710,7 +703,6 @@ function toBerkasItemDto(row: BerkasItemRow): BerkasArsipItemDto {
     source_type: row.sourceType,
     dokumen_id: row.dokumenId,
     manual_arsip_id: row.manualArsipId,
-    canonical_arsip_id: row.canonicalArsipId,
     added_by: row.addedBy,
   }
 }

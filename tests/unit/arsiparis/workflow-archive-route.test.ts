@@ -85,7 +85,6 @@ describe('workflow classification to berkas route', () => {
       sourceType: 'WORKFLOW',
       dokumenId: DOCUMENT_ID,
       manualArsipId: null,
-      canonicalArsipId: null,
       addedBy: SESSION_USER_ID,
     }))
     expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
@@ -181,7 +180,6 @@ describe('workflow classification to berkas route', () => {
       berkasId: BERKAS_ID,
       sourceType: 'WORKFLOW',
       dokumenId: DOCUMENT_ID,
-      canonicalArsipId: null,
     }))
     expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
@@ -481,7 +479,6 @@ function closedBerkasRow() {
 function workflowSourceRow() {
   return {
     id: DOCUMENT_ID,
-    canonicalArsipId: null,
     klasifikasiId: KLASIFIKASI_ID,
   }
 }
@@ -493,7 +490,6 @@ function berkasItemRow() {
     sourceType: 'WORKFLOW',
     dokumenId: DOCUMENT_ID,
     manualArsipId: null,
-    canonicalArsipId: null,
     addedBy: SESSION_USER_ID,
   }
 }

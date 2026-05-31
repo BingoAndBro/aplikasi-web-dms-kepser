@@ -232,7 +232,6 @@ function createWorkflowArchiveBerkasRepository(
       const [row] = await tx
         .select({
           id: dokumenTransaksi.id,
-          canonicalArsipId: sql<null>`null`,
           klasifikasiId: sql<string>`${workflowKlasifikasiId}`,
         })
         .from(dokumenTransaksi)
@@ -254,7 +253,6 @@ function createWorkflowArchiveBerkasRepository(
           sourceType: input.sourceType,
           dokumenId: input.dokumenId,
           manualArsipId: input.manualArsipId,
-          canonicalArsipId: input.canonicalArsipId,
           addedBy: input.actorUserId,
         })
         .returning()
@@ -310,6 +308,7 @@ function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
     case 'BERKAS_NOT_FOUND':
     case 'SOURCE_NOT_FOUND':
       return 404
+    case 'SOURCE_KLASIFIKASI_UNAVAILABLE':
     case 'BERKAS_CLOSED':
     case 'BERKAS_KLASIFIKASI_CLOSED':
     case 'BERKAS_KLASIFIKASI_CONFLICT':

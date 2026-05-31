@@ -7,7 +7,6 @@ const ADMIN_ID = '22222222-2222-4222-8222-222222222222'
 const MANUAL_ARSIP_ID = '33333333-3333-4333-8333-333333333333'
 const CATEGORY_ID = '44444444-4444-4444-8444-444444444444'
 const KLASIFIKASI_ID = '55555555-5555-4555-8555-555555555555'
-const CANONICAL_ARSIP_ID = '66666666-6666-4666-8666-666666666666'
 const ATTACHMENT_ID = '77777777-7777-4777-8777-777777777777'
 const BERKAS_ID = '88888888-8888-4888-8888-888888888888'
 const BERKAS_ITEM_ID = '99999999-9999-4999-8999-999999999999'
@@ -494,7 +493,6 @@ describe('manual arsip API foundation routes', () => {
       masaAktifBerakhir: null,
       masaInaktifBerakhir: null,
       nominalRealisasi: '1000',
-      canonicalArsipId: null,
     }))
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
       klasifikasiId: KLASIFIKASI_ID,
@@ -508,7 +506,6 @@ describe('manual arsip API foundation routes', () => {
       sourceType: 'MANUAL',
       dokumenId: null,
       manualArsipId: MANUAL_ARSIP_ID,
-      canonicalArsipId: null,
       addedBy: USER_ID,
     }))
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
@@ -544,7 +541,6 @@ describe('manual arsip API foundation routes', () => {
       berkasId: BERKAS_ID,
       sourceType: 'MANUAL',
       manualArsipId: MANUAL_ARSIP_ID,
-      canonicalArsipId: null,
     }))
   })
 
@@ -657,7 +653,6 @@ describe('manual arsip API foundation routes', () => {
       createdBy: USER_ID,
       nominalRealisasi: '250000',
       statusArsip: 'AKTIF',
-      canonicalArsipId: null,
     }))
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       namaArsip: expect.anything(),
@@ -728,6 +723,21 @@ describe('manual arsip API foundation routes', () => {
       error: 'Metadata tidak boleh berisi field inti atau field akses file',
     })
     expect(mocks.dbInsert).not.toHaveBeenCalled()
+
+    for (const key of ['canonical_arsip_id', 'canonicalArsipId']) {
+      const legacyMetadataResponse = await indexHandlers.POST({
+        request: createPostRequest({
+          ...validCreateBody(),
+          metadata: { [key]: 'legacy-internal-id' },
+        }),
+      })
+
+      expect(legacyMetadataResponse.status).toBe(400)
+      expect(await legacyMetadataResponse.json()).toEqual({
+        error: 'Metadata tidak boleh berisi field inti atau field akses file',
+      })
+      expect(mocks.dbInsert).not.toHaveBeenCalled()
+    }
   })
 
   it('rejects client-provided classification snapshots on create', async () => {
@@ -930,7 +940,6 @@ describe('manual arsip API foundation routes', () => {
       statusArsip: expect.anything(),
       createdBy: expect.anything(),
       archivedBy: expect.anything(),
-      canonicalArsipId: expect.anything(),
     }))
     expect(mocks.txInsert).not.toHaveBeenCalled()
     expect(mocks.txUpdate).not.toHaveBeenCalled()
@@ -958,7 +967,7 @@ describe('manual arsip API foundation routes', () => {
     })
   })
 
-  it('updates AKTIF linked manual archive PATCH as source-only folder-first metadata', async () => {
+  it('updates AKTIF manual archive PATCH as source-only folder-first metadata', async () => {
     const updateBody = {
       ...validCreateBody(),
       nama: 'Arsip manual linked diperbarui',
@@ -972,11 +981,7 @@ describe('manual arsip API foundation routes', () => {
       metadata: { sumber: 'linked-patch' },
     }
 
-    queueSelectResults(
-      [manualArsipEditParentRow('AKTIF', { canonical_arsip_id: CANONICAL_ARSIP_ID })],
-      [manualCategoryRow()],
-      [klasifikasiRow()],
-    )
+    queueSelectResults([manualArsipEditParentRow('AKTIF')], [manualCategoryRow()], [klasifikasiRow()])
     queueUpdateResult([manualArsipRow({
       nama: updateBody.nama,
       tanggal: updateBody.tanggal,
@@ -991,7 +996,6 @@ describe('manual arsip API foundation routes', () => {
       masa_aktif_berakhir: '2031-06-02',
       masa_inaktif_berakhir: '2041-06-02',
       archived_by: ADMIN_ID,
-      canonical_arsip_id: CANONICAL_ARSIP_ID,
       metadata: updateBody.metadata,
       created_by: ADMIN_ID,
       updated_at: new Date('2026-05-24T00:00:00.000Z'),
@@ -1033,7 +1037,6 @@ describe('manual arsip API foundation routes', () => {
       statusArsip: expect.anything(),
       createdBy: expect.anything(),
       archivedBy: expect.anything(),
-      canonicalArsipId: expect.anything(),
     }))
     expect(body.manual_arsip).toMatchObject({
       id: MANUAL_ARSIP_ID,
@@ -2084,17 +2087,13 @@ function berkasItemRow() {
     sourceType: 'MANUAL',
     dokumenId: null,
     manualArsipId: MANUAL_ARSIP_ID,
-    canonicalArsipId: null,
     addedBy: USER_ID,
   }
 }
 
-function manualSourceRow(overrides: Partial<{
-  canonicalArsipId: string | null
-}> = {}) {
+function manualSourceRow() {
   return {
     id: MANUAL_ARSIP_ID,
-    canonicalArsipId: overrides.canonicalArsipId ?? null,
     klasifikasiId: KLASIFIKASI_ID,
   }
 }
@@ -2116,7 +2115,6 @@ function manualArsipRow(overrides: Partial<{
   masa_aktif_berakhir: string | null
   masa_inaktif_berakhir: string | null
   archived_by: string | null
-  canonical_arsip_id: string | null
   metadata: Record<string, unknown>
   created_by: string
   created_at: Date
@@ -2140,7 +2138,6 @@ function manualArsipRow(overrides: Partial<{
     masa_aktif_berakhir: overrides.masa_aktif_berakhir ?? '2027-05-24',
     masa_inaktif_berakhir: overrides.masa_inaktif_berakhir ?? '2030-05-24',
     archived_by: overrides.archived_by ?? USER_ID,
-    canonical_arsip_id: overrides.canonical_arsip_id ?? null,
     metadata: overrides.metadata ?? { sumber: 'manual' },
     created_by: overrides.created_by ?? USER_ID,
     created_at: overrides.created_at ?? new Date('2026-05-22T00:00:00.000Z'),
@@ -2183,14 +2180,10 @@ function manualArsipUploadParentRow(status_arsip: string, overrides: Partial<{
   }
 }
 
-function manualArsipEditParentRow(
-  status_arsip: string,
-  overrides: Partial<{ canonical_arsip_id: string | null }> = {},
-) {
+function manualArsipEditParentRow(status_arsip: string) {
   return {
     id: MANUAL_ARSIP_ID,
     status_arsip,
-    canonical_arsip_id: overrides.canonical_arsip_id ?? null,
   }
 }
 
@@ -2293,14 +2286,10 @@ function queueTransactionInsertResult(result: unknown[]) {
 
 function queueManualArchiveCreateTransaction(options: {
   source?: ReturnType<typeof manualArsipRow>
-  canonical?: { id: string } | null
-  linked?: { id: string; canonical_arsip_id: string | null } | null
   existingOpenBerkas?: ReturnType<typeof openBerkasRow> | null
   openBerkas?: ReturnType<typeof openBerkasRow> | null
   manualSource?: ReturnType<typeof manualSourceRow> | null
   item?: ReturnType<typeof berkasItemRow> | null
-  canonicalError?: Error
-  linkError?: Error
   itemError?: Error
 } = {}) {
   const selectedOpenBerkas = options.openBerkas === undefined
@@ -2326,14 +2315,6 @@ function queueManualArchiveCreateTransaction(options: {
               return [options.source ?? manualArsipRow()]
             }
 
-            if ('namaArsip' in values) {
-              if (options.canonicalError) {
-                throw options.canonicalError
-              }
-
-              return [options.canonical ?? { id: CANONICAL_ARSIP_ID }]
-            }
-
             if (values.statusBerkas === 'OPEN') {
               return [selectedOpenBerkas ?? openBerkasRow()]
             }
@@ -2351,14 +2332,7 @@ function queueManualArchiveCreateTransaction(options: {
       update: mocks.txUpdate.mockImplementation(() => ({
         set: mocks.txUpdateSet.mockImplementation(() => ({
           where: vi.fn(() => ({
-            returning: vi.fn(async () => {
-              if (options.linkError) throw options.linkError
-
-              return [options.linked ?? {
-                id: MANUAL_ARSIP_ID,
-                canonical_arsip_id: CANONICAL_ARSIP_ID,
-              }]
-            }),
+            returning: vi.fn(async () => []),
           })),
         })),
       })),

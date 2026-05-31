@@ -167,7 +167,6 @@ type ManualArsipPatchUpdatedRow = {
   masa_aktif_berakhir: string | null
   masa_inaktif_berakhir: string | null
   archived_by: string | null
-  canonical_arsip_id: string | null
   metadata: unknown
   created_by: string
   created_at: Date | string | null
@@ -259,7 +258,6 @@ export async function createManualArsipRecord(
           metadata: input.metadata ?? {},
           createdBy,
           archivedBy: input.tanggal_diarsipkan ? createdBy : null,
-          canonicalArsipId: null,
         })
         .returning({
           id: manualArsip.id,
@@ -279,7 +277,6 @@ export async function createManualArsipRecord(
           masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
           masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
           archived_by: manualArsip.archivedBy,
-          canonical_arsip_id: manualArsip.canonicalArsipId,
           metadata: manualArsip.metadata,
           created_by: manualArsip.createdBy,
           created_at: manualArsip.createdAt,
@@ -397,7 +394,6 @@ function createManualArchiveBerkasRepository(
       const [row] = await tx
         .select({
           id: manualArsip.id,
-          canonicalArsipId: manualArsip.canonicalArsipId,
           klasifikasiId: manualArsip.klasifikasiId,
         })
         .from(manualArsip)
@@ -415,7 +411,6 @@ function createManualArchiveBerkasRepository(
           sourceType: input.sourceType,
           dokumenId: input.dokumenId,
           manualArsipId: input.manualArsipId,
-          canonicalArsipId: input.canonicalArsipId,
           addedBy: input.actorUserId,
         })
         .returning()
@@ -719,7 +714,6 @@ async function updateManualArsipSourceRecord({
       masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
       masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
       archived_by: manualArsip.archivedBy,
-      canonical_arsip_id: manualArsip.canonicalArsipId,
       metadata: manualArsip.metadata,
       created_by: manualArsip.createdBy,
       created_at: manualArsip.createdAt,

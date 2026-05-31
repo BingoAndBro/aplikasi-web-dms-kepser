@@ -17,7 +17,6 @@ const BERKAS_ID = 'berkas-belanja-barang-open'
 const CLOSED_BERKAS_ID = 'berkas-belanja-barang-closed'
 const DOKUMEN_ID = 'dokumen-workflow'
 const MANUAL_ARSIP_ID = 'manual-dokumen'
-const CANONICAL_ARSIP_ID = 'canonical-arsip'
 type TestBerkasArchiveStatus = typeof BERKAS_ARCHIVE_STATUS[keyof typeof BERKAS_ARCHIVE_STATUS]
 
 describe('berkas arsip service foundation', () => {
@@ -117,7 +116,7 @@ describe('berkas arsip service foundation', () => {
   })
 
   it('adds a manual document only to an OPEN matching berkas when no canonical bridge exists', async () => {
-    const repository = createFakeRepository({ manualCanonicalArsipId: null })
+    const repository = createFakeRepository()
 
     const item = await addManualDocumentToOpenBerkas({
       berkasId: BERKAS_ID,
@@ -129,24 +128,7 @@ describe('berkas arsip service foundation', () => {
       source_type: 'MANUAL',
       manual_arsip_id: MANUAL_ARSIP_ID,
       dokumen_id: null,
-      canonical_arsip_id: null,
       added_by: ACTOR_ID,
-    })
-  })
-
-  it('preserves an existing old manual canonical bridge id when present', async () => {
-    const repository = createFakeRepository({ manualCanonicalArsipId: CANONICAL_ARSIP_ID })
-
-    const item = await addManualDocumentToOpenBerkas({
-      berkasId: BERKAS_ID,
-      manualArsipId: MANUAL_ARSIP_ID,
-      actorUserId: ACTOR_ID,
-    }, { repository })
-
-    expect(item).toMatchObject({
-      source_type: 'MANUAL',
-      manual_arsip_id: MANUAL_ARSIP_ID,
-      canonical_arsip_id: CANONICAL_ARSIP_ID,
     })
   })
 
@@ -161,6 +143,23 @@ describe('berkas arsip service foundation', () => {
       actorUserId: ACTOR_ID,
     }, { repository })).rejects.toMatchObject({
       code: 'SOURCE_KLASIFIKASI_MISMATCH',
+    })
+
+    expect(repository.calls).not.toContainEqual(['insertBerkasItem'])
+  })
+
+  it('rejects workflow sources without an authoritative jenis pembayaran', async () => {
+    const repository = createFakeRepository({
+      workflowKlasifikasiId: null,
+    })
+
+    await expect(addWorkflowDocumentToOpenBerkas({
+      berkasId: BERKAS_ID,
+      dokumenId: DOKUMEN_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      code: 'SOURCE_KLASIFIKASI_UNAVAILABLE',
+      message: 'Jenis pembayaran dokumen belum tersedia untuk validasi berkas',
     })
 
     expect(repository.calls).not.toContainEqual(['insertBerkasItem'])
@@ -401,7 +400,6 @@ function createFakeRepository(options: {
   itemCount?: number
   workflowKlasifikasiId?: string | null
   manualKlasifikasiId?: string | null
-  manualCanonicalArsipId?: string | null
   existingBerkasRows?: ReturnType<typeof baseBerkas>[]
   insertOpenBerkasError?: unknown
   insertBerkasItemError?: unknown
@@ -468,8 +466,9 @@ function createFakeRepository(options: {
       if (dokumenId !== DOKUMEN_ID) return null
       return {
         id: dokumenId,
-        klasifikasiId: options.workflowKlasifikasiId ?? KLASIFIKASI_ID,
-        canonicalArsipId: CANONICAL_ARSIP_ID,
+        klasifikasiId: Object.prototype.hasOwnProperty.call(options, 'workflowKlasifikasiId')
+          ? options.workflowKlasifikasiId ?? null
+          : KLASIFIKASI_ID,
       }
     },
     async findManualSource(manualArsipId) {
@@ -478,9 +477,6 @@ function createFakeRepository(options: {
       return {
         id: manualArsipId,
         klasifikasiId: options.manualKlasifikasiId ?? KLASIFIKASI_ID,
-        canonicalArsipId: Object.prototype.hasOwnProperty.call(options, 'manualCanonicalArsipId')
-          ? options.manualCanonicalArsipId ?? null
-          : CANONICAL_ARSIP_ID,
       }
     },
     async insertBerkasItem(input) {
@@ -492,7 +488,6 @@ function createFakeRepository(options: {
         sourceType: input.sourceType,
         dokumenId: input.dokumenId,
         manualArsipId: input.manualArsipId,
-        canonicalArsipId: input.canonicalArsipId,
         addedBy: input.actorUserId,
       }
     },

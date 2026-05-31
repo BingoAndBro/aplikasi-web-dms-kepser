@@ -152,7 +152,6 @@ export type BerkasItemSourceReadRow = {
   source_type: ArchiveSourceType | string
   dokumen_id: string | null
   manual_arsip_id: string | null
-  canonical_arsip_id: string | null
   workflow_title: string | null
   workflow_status: string | null
   workflow_current_step: string | null
@@ -294,7 +293,6 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
         source_type: berkasArsipItem.sourceType,
         dokumen_id: berkasArsipItem.dokumenId,
         manual_arsip_id: berkasArsipItem.manualArsipId,
-        canonical_arsip_id: berkasArsipItem.canonicalArsipId,
         workflow_title: dokumenTransaksi.judul,
         workflow_status: dokumenTransaksi.status,
         workflow_current_step: dokumenTransaksi.currentStep,
