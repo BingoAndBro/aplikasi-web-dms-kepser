@@ -114,6 +114,8 @@ type BerkasDetailResponse = {
   error?: string
 }
 
+const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
+
 function BerkasArsipDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
@@ -531,10 +533,13 @@ function ItemList({
   items: BerkasDetailItem[]
 }) {
   const [previewing, setPreviewing] = useState<{ href: string; title: string } | null>(null)
-  const canExport = items.length > 0
+  const [searchQuery, setSearchQuery] = useState('')
+  const filteredItems = filterBerkasDetailItems(items, searchQuery)
+  const hasSearchQuery = searchQuery.trim().length > 0
+  const canExport = filteredItems.length > 0
 
   function exportCsv() {
-    downloadCsvFile(BERKAS_DETAIL_ITEMS_CSV_FILENAME, createBerkasDetailItemsCsv(items))
+    downloadCsvFile(BERKAS_DETAIL_ITEMS_CSV_FILENAME, createBerkasDetailItemsCsv(filteredItems))
   }
 
   useEffect(() => {
@@ -549,6 +554,11 @@ function ItemList({
     return (
       <div className="space-y-3">
         <ItemListHeader canExport={canExport} onExportCsv={exportCsv} />
+        <LocalItemSearchField
+          value={searchQuery}
+          resultText={`${filteredItems.length} dari ${items.length} dokumen ditampilkan`}
+          onChange={setSearchQuery}
+        />
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 py-12">
           <FileText size={24} className="text-outline" />
           <p className="font-headline text-base font-bold text-on-surface">Belum ada item dokumen</p>
@@ -570,18 +580,35 @@ function ItemList({
 
       <div className="space-y-3">
         <ItemListHeader canExport={canExport} onExportCsv={exportCsv} />
-        <div className="grid gap-3">
-          {items.map((item, index) => (
-            <ItemCard
-              key={item.item_key}
-              berkasId={berkasId}
-              statusArsip={statusArsip}
-              item={item}
-              index={index}
-              onPreview={(href, title) => setPreviewing({ href, title })}
-            />
-          ))}
-        </div>
+        <LocalItemSearchField
+          value={searchQuery}
+          resultText={`${filteredItems.length} dari ${items.length} dokumen ditampilkan`}
+          onChange={setSearchQuery}
+        />
+        {filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 py-12">
+            <FileText size={24} className="text-outline" />
+            <p className="font-headline text-base font-bold text-on-surface">{LOCAL_NO_MATCH_MESSAGE}</p>
+            <p className="text-xs text-on-surface-variant">
+              {hasSearchQuery
+                ? 'Ubah kata kunci untuk melihat dokumen lain dalam berkas ini.'
+                : 'Dokumen dalam berkas akan muncul di sini.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {filteredItems.map((item, index) => (
+              <ItemCard
+                key={item.item_key}
+                berkasId={berkasId}
+                statusArsip={statusArsip}
+                item={item}
+                index={index}
+                onPreview={(href, title) => setPreviewing({ href, title })}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </>
   )
@@ -616,6 +643,37 @@ function ItemListHeader({
         {!canExport && (
           <p className="text-xs text-on-surface-variant">Tidak ada data untuk diekspor.</p>
         )}
+      </div>
+    </div>
+  )
+}
+
+function LocalItemSearchField({
+  value,
+  resultText,
+  onChange,
+}: {
+  value: string
+  resultText: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
+      <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-detail-local-search">
+        Pencarian lokal dokumen
+        <input
+          id="berkas-detail-local-search"
+          type="search"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          placeholder="Cari dokumen dalam berkas..."
+          autoComplete="off"
+        />
+      </label>
+      <div className="mt-2 flex flex-col gap-1 text-xs text-on-surface-variant md:flex-row md:items-center md:justify-between">
+        <p>Filter lokal berdasarkan judul, sumber, provenance, pembuat, nominal, dan label lampiran.</p>
+        <p className="font-semibold text-outline">{resultText}</p>
       </div>
     </div>
   )
@@ -885,6 +943,41 @@ export function canShowCloseBerkasForm(detail: Pick<BerkasDetail, 'status_berkas
 
 export function isBerkasEmptyForClose(detail: Pick<BerkasDetail, 'item_count' | 'items'>): boolean {
   return detail.item_count < 1 || detail.items.length < 1
+}
+
+function filterBerkasDetailItems(items: BerkasDetailItem[], query: string): BerkasDetailItem[] {
+  const normalizedQuery = normalizeSearchValue(query)
+  if (!normalizedQuery) return items
+
+  return items.filter((item) => buildBerkasDetailItemSearchText(item).includes(normalizedQuery))
+}
+
+function buildBerkasDetailItemSearchText(item: BerkasDetailItem): string {
+  return [
+    item.source_title,
+    item.source_type,
+    formatSourceTypeLabel(item.source_type),
+    formatNullableDateLabel(item.source_date),
+    item.source_created_by_display_name,
+    formatNominalRupiah(item.source_nominal_realisasi),
+    formatAttachmentCount(item.attachment_count),
+    item.workflow?.title,
+    item.workflow?.status,
+    item.workflow?.fungsi_nama,
+    item.workflow?.kegiatan_nama,
+    item.manual?.nama,
+    item.manual?.category_name,
+    item.manual?.keterangan,
+    ...item.attachments.flatMap((attachment) => [
+      attachment.label,
+      attachment.previewTitle,
+      attachment.downloadFilename,
+    ]),
+  ].map(normalizeSearchValue).filter(Boolean).join(' ')
+}
+
+function normalizeSearchValue(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
 }
 
 function resolveErrorMessage(error: unknown): string {

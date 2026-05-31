@@ -65,8 +65,11 @@ type BerkasFolderListResponse = {
   error?: string
 }
 
+const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
+
 function UsulMusnahPage() {
   const [folders, setFolders] = useState<BerkasFolder[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [summary, setSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -151,6 +154,8 @@ function UsulMusnahPage() {
   const canSubmitDestruction = destructionPhrase === BERKAS_DESTRUCTION_CONFIRMATION_PHRASE
     && Boolean(destructionTarget)
     && pendingBerkasId === null
+  const filteredFolders = filterBerkasFolders(folders, searchQuery)
+  const hasSearchQuery = searchQuery.trim().length > 0
 
   return (
     <PageLayout>
@@ -180,6 +185,14 @@ function UsulMusnahPage() {
             <SummaryCard label="Dokumen Manual" value={summary.manual_item_count_total} />
           </div>
         )}
+
+        <LocalSearchField
+          value={searchQuery}
+          placeholder="Cari berkas usul musnah di halaman ini..."
+          helperText="Filter lokal berdasarkan Jenis Pembayaran, Nomor SPM, tanggal tutup, dan jumlah dokumen."
+          resultText={`${filteredFolders.length} dari ${folders.length} berkas ditampilkan`}
+          onChange={setSearchQuery}
+        />
 
         {(actionError || actionSuccess) && (
           <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
@@ -276,25 +289,64 @@ function UsulMusnahPage() {
             <p className="text-sm text-on-surface-variant">{error}</p>
             <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
           </div>
-        ) : folders.length === 0 ? (
+        ) : filteredFolders.length === 0 ? (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 py-20">
             <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-orange-500/10">
               <Trash2 size={24} className="text-orange-600" />
             </div>
-            <p className="font-headline text-lg font-bold text-on-surface">Belum ada berkas usul musnah</p>
+            <p className="font-headline text-lg font-bold text-on-surface">
+              {hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : 'Belum ada berkas usul musnah'}
+            </p>
             <p className="max-w-md text-center text-xs text-on-surface-variant">
-              Berkas Inaktif yang diusulkan musnah akan muncul di halaman ini sampai statusnya menjadi Dimusnahkan.
+              {hasSearchQuery
+                ? 'Ubah kata kunci untuk melihat berkas usul musnah lain di halaman ini.'
+                : 'Berkas Inaktif yang diusulkan musnah akan muncul di halaman ini sampai statusnya menjadi Dimusnahkan.'}
             </p>
           </div>
         ) : (
           <BerkasLifecycleTable
-            folders={folders}
+            folders={filteredFolders}
             pendingBerkasId={pendingBerkasId}
             onOpenDestructionDialog={openDestructionDialog}
           />
         )}
       </div>
     </PageLayout>
+  )
+}
+
+function LocalSearchField({
+  value,
+  placeholder,
+  helperText,
+  resultText,
+  onChange,
+}: {
+  value: string
+  placeholder: string
+  helperText: string
+  resultText: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
+      <label className="block text-xs font-bold text-on-surface" htmlFor="usul-musnah-page-local-search">
+        Pencarian lokal halaman
+        <input
+          id="usul-musnah-page-local-search"
+          type="search"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          placeholder={placeholder}
+          autoComplete="off"
+        />
+      </label>
+      <div className="mt-2 flex flex-col gap-1 text-xs text-on-surface-variant md:flex-row md:items-center md:justify-between">
+        <p>{helperText}</p>
+        <p className="font-semibold text-outline">{resultText}</p>
+      </div>
+    </div>
   )
 }
 
@@ -418,4 +470,29 @@ function resolveErrorMessage(error: unknown): string {
   }
 
   return 'Terjadi kesalahan'
+}
+
+function filterBerkasFolders(folders: BerkasFolder[], query: string): BerkasFolder[] {
+  const normalizedQuery = normalizeSearchValue(query)
+  if (!normalizedQuery) return folders
+
+  return folders.filter((folder) => buildBerkasFolderSearchText(folder).includes(normalizedQuery))
+}
+
+function buildBerkasFolderSearchText(folder: BerkasFolder): string {
+  return [
+    folder.klasifikasi_kode_snapshot,
+    folder.klasifikasi_nama_snapshot,
+    formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot),
+    folder.nomor_spm,
+    formatNullableDateLabel(folder.closed_at),
+    String(folder.item_count),
+    String(folder.workflow_item_count),
+    String(folder.manual_item_count),
+    formatNominalRupiah(folder.total_nominal_realisasi),
+  ].map(normalizeSearchValue).filter(Boolean).join(' ')
+}
+
+function normalizeSearchValue(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
 }

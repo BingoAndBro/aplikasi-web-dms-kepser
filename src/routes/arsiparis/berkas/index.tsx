@@ -73,9 +73,12 @@ type BerkasFolderListResponse = {
 
 type BerkasSectionMode = 'open' | 'active'
 
+const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
+
 function BerkasArsipAktifPage() {
   const [openFolders, setOpenFolders] = useState<BerkasFolder[]>([])
   const [activeFolders, setActiveFolders] = useState<BerkasFolder[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [openSummary, setOpenSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [activeSummary, setActiveSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -183,8 +186,8 @@ function BerkasArsipAktifPage() {
 
   function exportCsv() {
     const csv = createBerkasFolderListCsv([
-      { label: 'Berkas Terbuka', folders: openFolders },
-      { label: 'Pemberkasan Arsip Aktif', folders: activeFolders },
+      { label: 'Berkas Terbuka', folders: filteredOpenFolders },
+      { label: 'Pemberkasan Arsip Aktif', folders: filteredActiveFolders },
     ])
 
     downloadCsvFile(BERKAS_FOLDER_LIST_CSV_FILENAME, csv)
@@ -194,7 +197,10 @@ function BerkasArsipAktifPage() {
     fetchData()
   }, [])
 
-  const exportRowCount = openFolders.length + activeFolders.length
+  const filteredOpenFolders = filterBerkasFolders(openFolders, searchQuery)
+  const filteredActiveFolders = filterBerkasFolders(activeFolders, searchQuery)
+  const hasSearchQuery = searchQuery.trim().length > 0
+  const exportRowCount = filteredOpenFolders.length + filteredActiveFolders.length
   const canExport = exportRowCount > 0 && !loading && !error
 
   return (
@@ -241,6 +247,14 @@ function BerkasArsipAktifPage() {
           </div>
         )}
 
+        <LocalSearchField
+          value={searchQuery}
+          placeholder="Cari berkas di halaman ini..."
+          helperText="Filter lokal untuk Berkas Terbuka dan Pemberkasan Arsip Aktif."
+          resultText={`${exportRowCount} dari ${openFolders.length + activeFolders.length} berkas ditampilkan`}
+          onChange={setSearchQuery}
+        />
+
         {(actionError || actionSuccess) && (
           <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
             actionError
@@ -269,7 +283,8 @@ function BerkasArsipAktifPage() {
               description="Pemberkasan berjalan untuk Jenis Pembayaran yang masih dapat menerima dokumen."
               emptyTitle="Belum ada berkas terbuka"
               emptyDescription="Berkas terbuka akan muncul setelah dokumen workflow atau manual pertama memilih Jenis Pembayaran yang belum final."
-              folders={openFolders}
+              folders={filteredOpenFolders}
+              hasSearchQuery={hasSearchQuery}
               mode="open"
               pendingLifecycleBerkasId={pendingLifecycleBerkasId}
               pendingCloseBerkasId={pendingCloseBerkasId}
@@ -281,7 +296,8 @@ function BerkasArsipAktifPage() {
               description="Berkas yang sudah ditutup dan memiliki status arsip Aktif."
               emptyTitle="Belum ada berkas arsip aktif"
               emptyDescription="Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini."
-              folders={activeFolders}
+              folders={filteredActiveFolders}
+              hasSearchQuery={hasSearchQuery}
               mode="active"
               pendingLifecycleBerkasId={pendingLifecycleBerkasId}
               pendingCloseBerkasId={pendingCloseBerkasId}
@@ -321,6 +337,7 @@ function BerkasSection({
   emptyTitle,
   emptyDescription,
   folders,
+  hasSearchQuery,
   mode,
   pendingLifecycleBerkasId,
   pendingCloseBerkasId,
@@ -332,6 +349,7 @@ function BerkasSection({
   emptyTitle: string
   emptyDescription: string
   folders: BerkasFolder[]
+  hasSearchQuery: boolean
   mode: BerkasSectionMode
   pendingLifecycleBerkasId: string | null
   pendingCloseBerkasId: string | null
@@ -350,8 +368,12 @@ function BerkasSection({
           <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/10">
             <FolderOpen size={24} className="text-emerald-600" />
           </div>
-          <p className="font-headline text-lg font-bold text-on-surface">{emptyTitle}</p>
-          <p className="max-w-md text-center text-xs text-on-surface-variant">{emptyDescription}</p>
+          <p className="font-headline text-lg font-bold text-on-surface">
+            {hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : emptyTitle}
+          </p>
+          <p className="max-w-md text-center text-xs text-on-surface-variant">
+            {hasSearchQuery ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.' : emptyDescription}
+          </p>
         </div>
       ) : (
         <BerkasTable
@@ -462,6 +484,41 @@ function BerkasTable({
   )
 }
 
+function LocalSearchField({
+  value,
+  placeholder,
+  helperText,
+  resultText,
+  onChange,
+}: {
+  value: string
+  placeholder: string
+  helperText: string
+  resultText: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
+      <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-page-local-search">
+        Pencarian lokal halaman
+        <input
+          id="berkas-page-local-search"
+          type="search"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          placeholder={placeholder}
+          autoComplete="off"
+        />
+      </label>
+      <div className="mt-2 flex flex-col gap-1 text-xs text-on-surface-variant md:flex-row md:items-center md:justify-between">
+        <p>{helperText}</p>
+        <p className="font-semibold text-outline">{resultText}</p>
+      </div>
+    </div>
+  )
+}
+
 function CloseBerkasShortcutButton({
   folder,
   pending,
@@ -554,6 +611,36 @@ function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string |
 
 function isBerkasEmptyForClose(folder: Pick<BerkasFolder, 'item_count'>): boolean {
   return folder.item_count < 1
+}
+
+function filterBerkasFolders(folders: BerkasFolder[], query: string): BerkasFolder[] {
+  const normalizedQuery = normalizeSearchValue(query)
+  if (!normalizedQuery) return folders
+
+  return folders.filter((folder) => buildBerkasFolderSearchText(folder).includes(normalizedQuery))
+}
+
+function buildBerkasFolderSearchText(folder: BerkasFolder): string {
+  return [
+    folder.klasifikasi_kode_snapshot,
+    folder.klasifikasi_nama_snapshot,
+    formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot),
+    folder.nomor_spm,
+    folder.status_berkas,
+    formatBerkasStatusLabel(folder.status_berkas),
+    folder.status_arsip,
+    formatBerkasArchiveStatusLabel(folder.status_arsip, folder.status_berkas),
+    String(folder.item_count),
+    String(folder.workflow_item_count),
+    String(folder.manual_item_count),
+    formatNominalRupiah(folder.total_nominal_realisasi),
+    formatNullableDateLabel(folder.closed_at),
+    formatNullableDateLabel(folder.updated_at),
+  ].map(normalizeSearchValue).filter(Boolean).join(' ')
+}
+
+function normalizeSearchValue(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
 }
 
 function resolveErrorMessage(error: unknown): string {
