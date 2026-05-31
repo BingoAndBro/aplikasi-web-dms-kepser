@@ -81,4 +81,25 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
       }),
     )
   })
+
+  it('does not expose the removed Laporan Klasifikasi archive report surface in role navigation', () => {
+    const allItems = Object.values(NAV_CONFIG).flatMap((groups) => groups.flatMap((group) => group.items))
+
+    expect(allItems).not.toContainEqual(
+      expect.objectContaining({
+        id: 'laporan_klasifikasi',
+      }),
+    )
+    expect(allItems).not.toContainEqual(
+      expect.objectContaining({
+        label: 'Laporan Klasifikasi Arsip',
+      }),
+    )
+    expect(allItems).not.toContainEqual(
+      expect.objectContaining({
+        to: '/arsiparis/laporan-klasifikasi',
+      }),
+    )
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('LAPORAN_KLASIFIKASI')
+  })
 })

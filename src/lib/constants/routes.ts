@@ -35,7 +35,6 @@ export const ROUTES = {
     INAKTIF: '/arsiparis/inaktif',
     USUL_MUSNAH: '/arsiparis/usul-musnah',
     PENAMBAHAN_ARSIP: '/arsiparis/penambahan-arsip',
-    LAPORAN_KLASIFIKASI: '/arsiparis/laporan-klasifikasi',
     KLASIFIKASI: '/arsiparis/klasifikasi',
     SEARCH: '/arsiparis/search',
   },
