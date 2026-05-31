@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { arsip, berkasArsipItem } from '#/db/schema/arsip'
+import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
@@ -16,6 +16,20 @@ import { parseLampiranUrls } from '#/lib/dokumen'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function toSafeErrorLog(error: unknown): Record<string, unknown> {
+  if (!error || typeof error !== 'object') return { type: typeof error }
+
+  const candidate = error as {
+    code?: unknown
+    name?: unknown
+  }
+
+  return {
+    name: typeof candidate.name === 'string' ? candidate.name : undefined,
+    code: typeof candidate.code === 'string' ? candidate.code : undefined,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -83,19 +97,16 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
             .orderBy(asc(logAktivitas.timestamp))
             .limit(1)
 
-          const arsipRows = await db
-            .select({
-              id: arsip.id,
-              status_arsip: arsip.statusArsip,
-              nomor_surat: arsip.nomorSurat,
-            })
-            .from(arsip)
-            .where(eq(arsip.dokumenId, params.id))
-            .limit(1)
-
           const berkasItemRows = await db
-            .select({ id: berkasArsipItem.id })
+            .select({
+              item_id: berkasArsipItem.id,
+              berkas_id: berkasArsipItem.berkasId,
+              status_berkas: berkasArsip.statusBerkas,
+              status_arsip: berkasArsip.statusArsip,
+              nomor_spm: berkasArsip.nomorSpm,
+            })
             .from(berkasArsipItem)
+            .leftJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
             .where(and(
               eq(berkasArsipItem.dokumenId, params.id),
               eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
@@ -103,8 +114,8 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
             .limit(1)
 
           const bendaharaLog = bendaharaLogs[0]
-          const arsipRecord = arsipRows[0]
-          const isClassified = Boolean(arsipRecord || berkasItemRows[0])
+          const berkasRecord = berkasItemRows[0]
+          const isClassified = Boolean(berkasRecord)
 
           return Response.json({
             dokumen: {
@@ -129,16 +140,16 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
             bendahara_approve: bendaharaLog
               ? { nama: 'PPSPM', tanggal: bendaharaLog.timestamp }
               : null,
-            arsip: arsipRecord
+            arsip: berkasRecord
               ? {
-                  id: arsipRecord.id,
-                  status_arsip: arsipRecord.status_arsip,
-                  nomor_surat: arsipRecord.nomor_surat,
+                  id: berkasRecord.berkas_id,
+                  status_arsip: berkasRecord.status_arsip,
+                  nomor_surat: berkasRecord.nomor_spm,
                 }
               : null,
           })
         } catch (err) {
-          console.error('[arsiparis/dokumen/:id] GET local query error:', err)
+          console.error('[arsiparis/dokumen/:id] GET local query error:', toSafeErrorLog(err))
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
       },
