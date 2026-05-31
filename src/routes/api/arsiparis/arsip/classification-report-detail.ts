@@ -2,12 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 
 import {
-  getUnifiedArchiveClassificationDetail,
-} from '#/lib/archive/unified-archive-classification-detail'
-import {
-  parseClassificationReportSourceFilter,
-  parseClassificationReportStatusFilter,
-} from '#/lib/archive/unified-archive-classification-report'
+  getBerkasArsipClassificationDetail,
+  parseBerkasArsipReportSourceFilter,
+  parseBerkasArsipReportStatusFilter,
+} from '#/lib/archive/berkas-arsip-report'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { ROLES } from '#/lib/constants/roles'
 
@@ -43,11 +41,11 @@ export const Route = createFileRoute('/api/arsiparis/arsip/classification-report
         }
 
         try {
-          const detail = await getUnifiedArchiveClassificationDetail({
+          const detail = await getBerkasArsipClassificationDetail({
             klasifikasiId: query.data.klasifikasiId ?? undefined,
             missing: query.data.missing === 'true',
-            statusArsip: parseClassificationReportStatusFilter(query.data.status),
-            sourceType: parseClassificationReportSourceFilter(query.data.source),
+            statusArsip: parseBerkasArsipReportStatusFilter(query.data.status),
+            sourceType: parseBerkasArsipReportSourceFilter(query.data.source),
           })
 
           return Response.json(detail)

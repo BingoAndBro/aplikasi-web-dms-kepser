@@ -19,6 +19,9 @@ type ClassificationReportRow = {
   klasifikasiId: string | null
   klasifikasiKode: string
   klasifikasiNama: string
+  totalBerkas: number
+  totalOpenBerkas: number
+  totalClosedBerkas: number
   totalArsip: number
   totalWorkflow: number
   totalManual: number
@@ -33,6 +36,9 @@ type ClassificationReportResponse = {
   report?: {
     rows: ClassificationReportRow[]
     totals: {
+      totalBerkas: number
+      totalOpenBerkas: number
+      totalClosedBerkas: number
       totalArsip: number
       totalWorkflow: number
       totalManual: number
@@ -75,6 +81,9 @@ function LaporanKlasifikasiArsipPage() {
   }, [])
 
   const totals = report?.totals ?? {
+    totalBerkas: 0,
+    totalOpenBerkas: 0,
+    totalClosedBerkas: 0,
     totalArsip: 0,
     totalWorkflow: 0,
     totalManual: 0,
@@ -93,18 +102,19 @@ function LaporanKlasifikasiArsipPage() {
           </div>
           <h2 className="font-headline text-2xl font-extrabold text-on-surface">Laporan Klasifikasi Arsip</h2>
           <p className="mt-1 text-xs text-on-surface-variant">
-            Ringkasan jumlah arsip dan nominal realisasi berdasarkan klasifikasi.
+            Ringkasan berkas, dokumen, dan nominal realisasi berdasarkan klasifikasi folder-first.
           </p>
         </div>
 
         <div className="rounded-xl border border-dashed border-outline-variant/60 bg-surface-container-low/30 px-4 py-3 text-xs text-on-surface-variant">
-          Nominal realisasi dihitung dari arsip workflow/material. Arsip manual tidak menambah nominal.
+          Data bersumber dari berkas arsip dan item berkas. Status Dimusnahkan tetap tampil sebagai metadata, tanpa akses file.
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard label="Total Arsip" value={formatCount(totals.totalArsip)} />
-          <SummaryCard label="Total Workflow" value={formatCount(totals.totalWorkflow)} />
-          <SummaryCard label="Total Manual" value={formatCount(totals.totalManual)} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <SummaryCard label="Total Berkas" value={formatCount(totals.totalBerkas)} />
+          <SummaryCard label="Berkas Terbuka" value={formatCount(totals.totalOpenBerkas)} />
+          <SummaryCard label="Total Dokumen" value={formatCount(totals.totalArsip)} />
+          <SummaryCard label="Workflow / Manual" value={`${formatCount(totals.totalWorkflow)} / ${formatCount(totals.totalManual)}`} />
           <SummaryCard label="Total Nominal Realisasi" value={formatCurrency(totals.totalNominalRealisasi)} />
         </div>
 
@@ -124,7 +134,7 @@ function LaporanKlasifikasiArsipPage() {
               <BarChart3 size={24} className="text-blue-500" />
             </div>
             <p className="font-headline text-lg font-bold text-on-surface">Belum ada data klasifikasi</p>
-            <p className="text-xs text-on-surface-variant">Arsip kanonis akan diringkas di sini setelah tersedia.</p>
+            <p className="text-xs text-on-surface-variant">Berkas arsip akan diringkas di sini setelah tersedia.</p>
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
@@ -134,7 +144,9 @@ function LaporanKlasifikasiArsipPage() {
                   <tr className="bg-surface-container-low/30 text-left">
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kode Klasifikasi</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Nama Klasifikasi</th>
-                    <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Total Arsip</th>
+                    <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Berkas</th>
+                    <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Terbuka</th>
+                    <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Dokumen</th>
                     <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Workflow</th>
                     <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Manual</th>
                     <th className="px-4 py-3 text-right font-semibold text-outline uppercase tracking-wider">Aktif</th>
@@ -150,6 +162,8 @@ function LaporanKlasifikasiArsipPage() {
                     <tr key={`${row.klasifikasiId ?? 'missing'}-${row.klasifikasiKode}-${row.klasifikasiNama}`} className="border-t border-outline-variant/20 hover:bg-primary/5">
                       <td className="px-4 py-3 font-semibold text-on-surface">{row.klasifikasiKode}</td>
                       <td className="px-4 py-3 text-on-surface">{row.klasifikasiNama}</td>
+                      <td className="px-4 py-3 text-right text-on-surface">{formatCount(row.totalBerkas)}</td>
+                      <td className="px-4 py-3 text-right text-on-surface">{formatCount(row.totalOpenBerkas)}</td>
                       <td className="px-4 py-3 text-right text-on-surface">{formatCount(row.totalArsip)}</td>
                       <td className="px-4 py-3 text-right text-on-surface">{formatCount(row.totalWorkflow)}</td>
                       <td className="px-4 py-3 text-right text-on-surface">{formatCount(row.totalManual)}</td>

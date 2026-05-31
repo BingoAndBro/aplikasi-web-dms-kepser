@@ -42,6 +42,7 @@ type ClassificationDetailResponse = {
   }
   items: ClassificationDetailItem[]
   summary: {
+    totalBerkas: number
     totalArsip: number
     totalWorkflow: number
     totalManual: number
@@ -103,6 +104,7 @@ function LaporanKlasifikasiDetailPage() {
     klasifikasiNama: 'Tidak tersedia',
   }
   const summary = detail?.summary ?? {
+    totalBerkas: 0,
     totalArsip: 0,
     totalWorkflow: 0,
     totalManual: 0,
@@ -124,7 +126,7 @@ function LaporanKlasifikasiDetailPage() {
             </div>
             <h2 className="font-headline text-2xl font-extrabold text-on-surface">Daftar Arsip Klasifikasi</h2>
             <p className="mt-1 text-xs text-on-surface-variant">
-              Daftar ini menampilkan arsip kanonis dalam klasifikasi terpilih. Aksi detail per arsip tidak ditampilkan di halaman ini.
+              Daftar ini menampilkan dokumen dalam berkas arsip folder-first. Aksi akses file tidak ditampilkan di halaman ini.
             </p>
           </div>
           <Link
@@ -142,11 +144,12 @@ function LaporanKlasifikasiDetailPage() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard label="Total Arsip" value={formatCount(summary.totalArsip)} />
+          <SummaryCard label="Total Berkas" value={formatCount(summary.totalBerkas)} />
+          <SummaryCard label="Total Dokumen" value={formatCount(summary.totalArsip)} />
           <SummaryCard label="Workflow" value={formatCount(summary.totalWorkflow)} />
           <SummaryCard label="Manual" value={formatCount(summary.totalManual)} />
-          <SummaryCard label="Total Nominal Realisasi" value={formatCurrency(summary.totalNominalRealisasi)} />
         </div>
+        <SummaryCard label="Total Nominal Realisasi" value={formatCurrency(summary.totalNominalRealisasi)} />
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -164,7 +167,7 @@ function LaporanKlasifikasiDetailPage() {
               <FileSearch size={24} className="text-blue-500" />
             </div>
             <p className="font-headline text-lg font-bold text-on-surface">Tidak ada arsip dalam klasifikasi ini</p>
-            <p className="text-xs text-on-surface-variant">Arsip kanonis akan muncul di sini jika tersedia.</p>
+            <p className="text-xs text-on-surface-variant">Dokumen berkas akan muncul di sini jika tersedia.</p>
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
@@ -224,6 +227,8 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
 function StatusBadge({ status }: { status: string }) {
   const className = status === 'AKTIF'
     ? 'bg-emerald-100 text-emerald-700 border-emerald-200 text-xs'
+    : status === 'OPEN'
+      ? 'bg-blue-100 text-blue-700 border-blue-200 text-xs'
     : status === 'INAKTIF'
       ? 'bg-slate-100 text-slate-700 border-slate-200 text-xs'
       : status === 'USUL_MUSNAH'
@@ -242,6 +247,8 @@ function SourceBadge({ sourceType }: { sourceType: 'WORKFLOW' | 'MANUAL' }) {
 }
 
 function formatStatus(status: string): string {
+  if (status === 'OPEN') return 'Berkas Terbuka'
+  if (status === 'BELUM_FINAL') return 'Belum Final'
   if (status === 'AKTIF') return 'Aktif'
   if (status === 'INAKTIF') return 'Inaktif'
   if (status === 'USUL_MUSNAH') return 'Usul Musnah'
