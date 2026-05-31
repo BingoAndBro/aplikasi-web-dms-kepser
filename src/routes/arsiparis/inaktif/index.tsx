@@ -4,6 +4,7 @@ import {
   ArchiveX,
   ArrowRightCircle,
   ChevronRight,
+  Download,
   Loader2,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -19,6 +20,11 @@ import {
   formatNullableDateLabel,
   resolveBerkasLifecycleAction,
 } from '#/lib/archive/berkas-arsip-page-format'
+import {
+  BERKAS_INAKTIF_LIST_CSV_FILENAME,
+  createBerkasFolderListCsv,
+  downloadCsvFile,
+} from '#/lib/archive/berkas-arsip-csv'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
 export const Route = createFileRoute('/arsiparis/inaktif/')({ component: ArsipInaktifPage })
@@ -117,6 +123,15 @@ function ArsipInaktifPage() {
 
   const filteredFolders = filterBerkasFolders(folders, searchQuery)
   const hasSearchQuery = searchQuery.trim().length > 0
+  const canExport = filteredFolders.length > 0 && !loading && !error
+
+  function exportCsv() {
+    const csv = createBerkasFolderListCsv([
+      { label: 'Daftar Arsip Inaktif', folders: filteredFolders },
+    ])
+
+    downloadCsvFile(BERKAS_INAKTIF_LIST_CSV_FILENAME, csv)
+  }
 
   return (
     <PageLayout>
@@ -133,8 +148,25 @@ function ArsipInaktifPage() {
               Folder-first untuk berkas yang sudah ditutup dan berstatus arsip Inaktif.
             </p>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Aksi Usulkan Musnah hanya mengubah status lifecycle berkas. File fisik tidak dihapus.
+          <div className="flex flex-col gap-2 md:items-end">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+              Aksi Usulkan Musnah hanya mengubah status lifecycle berkas. File fisik tidak dihapus.
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit gap-1.5"
+              disabled={!canExport}
+              title={canExport ? 'Export daftar arsip inaktif yang sedang terlihat' : 'Tidak ada data untuk diekspor'}
+              onClick={exportCsv}
+            >
+              <Download size={14} />
+              Export CSV
+            </Button>
+            {!canExport && !loading && !error && (
+              <p className="text-xs text-on-surface-variant">Tidak ada data untuk diekspor.</p>
+            )}
           </div>
         </div>
 

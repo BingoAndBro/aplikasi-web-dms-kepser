@@ -11,6 +11,8 @@ import {
 } from '#/lib/archive/berkas-arsip-page-format'
 
 export const BERKAS_FOLDER_LIST_CSV_FILENAME = 'pemberkasan-arsip-aktif.csv'
+export const BERKAS_INAKTIF_LIST_CSV_FILENAME = 'daftar-arsip-inaktif.csv'
+export const BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME = 'daftar-usul-musnah.csv'
 export const BERKAS_DETAIL_ITEMS_CSV_FILENAME = 'daftar-dokumen-berkas.csv'
 
 type CsvCell = string | number | boolean | null | undefined

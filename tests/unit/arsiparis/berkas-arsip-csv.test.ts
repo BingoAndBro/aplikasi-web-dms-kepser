@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  BERKAS_INAKTIF_LIST_CSV_FILENAME,
+  BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME,
   buildSafeCsv,
   createBerkasDetailItemsCsv,
   createBerkasFolderListCsv,
@@ -83,6 +85,11 @@ describe('folder-first berkas CSV helper', () => {
     expect(csv).toContain('Pemberkasan Arsip Aktif')
     expect(csv).toContain('BB - Belanja Barang')
     expectNoSensitiveOutput(csv)
+  })
+
+  it('provides clear lifecycle list CSV filenames', () => {
+    expect(BERKAS_INAKTIF_LIST_CSV_FILENAME).toBe('daftar-arsip-inaktif.csv')
+    expect(BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME).toBe('daftar-usul-musnah.csv')
   })
 
   it('exports workflow and manual detail item rows with user-friendly provenance only', () => {
