@@ -55,11 +55,11 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     expect(pemberkasanGroup?.items).not.toContainEqual(
       expect.objectContaining({
         id: 'arsip_aktif',
-        to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF,
+        to: '/arsiparis/aktif',
       }),
     )
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/arsiparis/berkas')
-    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.AKTIF).toBe('/arsiparis/aktif')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('AKTIF')
   })
 
   it('does not expose the legacy global archive search route in role navigation', () => {
@@ -77,9 +77,10 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     )
     expect(allItems).not.toContainEqual(
       expect.objectContaining({
-        to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.SEARCH,
+        to: '/arsiparis/search',
       }),
     )
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('SEARCH')
   })
 
   it('does not expose the removed Laporan Klasifikasi archive report surface in role navigation', () => {

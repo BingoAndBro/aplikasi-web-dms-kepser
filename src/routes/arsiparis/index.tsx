@@ -27,14 +27,6 @@ type BerkasStatsResponse = {
   }
 }
 
-type InaktifStatsResponse = {
-  inaktif?: unknown[]
-}
-
-type UsulMusnahStatsResponse = {
-  usul_musnah?: unknown[]
-}
-
 type AuthSessionResponse = {
   session: { userId: string; email: string; userName: string | null } | null
   roles: string[]
@@ -70,14 +62,24 @@ function KepalaSubBagianUmumDashboard() {
               status_arsip: 'AKTIF',
             },
           }).catch(() => ({ summary: { total_rows_returned: 0 } })),
-          apiFetch<InaktifStatsResponse>('/arsiparis/inaktif').catch(() => ({ inaktif: [] })),
-          apiFetch<UsulMusnahStatsResponse>('/arsiparis/usul-musnah').catch(() => ({ usul_musnah: [] })),
+          apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+            query: {
+              status_berkas: 'CLOSED',
+              status_arsip: 'INAKTIF',
+            },
+          }).catch(() => ({ summary: { total_rows_returned: 0 } })),
+          apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+            query: {
+              status_berkas: 'CLOSED',
+              status_arsip: 'USUL_MUSNAH',
+            },
+          }).catch(() => ({ summary: { total_rows_returned: 0 } })),
         ])
         setStats({
           inbox: (inboxJson.inbox ?? []).length,
           aktif: aktifJson.summary?.total_rows_returned ?? 0,
-          inaktif: (inaktifJson.inaktif ?? []).length,
-          usulMusnah: (musnahJson.usul_musnah ?? []).length,
+          inaktif: inaktifJson.summary?.total_rows_returned ?? 0,
+          usulMusnah: musnahJson.summary?.total_rows_returned ?? 0,
         })
       } catch {
         // silent — stats stay at 0

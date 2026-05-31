@@ -3,7 +3,6 @@ import path from 'node:path'
 import { and, asc, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { db } from '#/db/client'
 import {
-  arsip,
   berkasArsip,
   berkasArsipItem,
   manualArsip,
@@ -17,7 +16,6 @@ import {
   type LocalServerSession,
 } from '#/lib/auth/local-server-auth'
 import {
-  ARCHIVE_SOURCE_TYPE,
   ARCHIVE_STATUS,
   BERKAS_STATUS,
 } from '#/lib/constants/archive-status'
@@ -28,9 +26,6 @@ import {
   getOrCreateOpenBerkasForKlasifikasi,
   type BerkasArsipRepository,
 } from '#/lib/archive/berkas-arsip-service'
-import {
-  buildManualArchiveCanonicalUpdateValues,
-} from '#/lib/archive/manual-archive-canonical'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import type {
   CreateManualArsipInput,
@@ -627,7 +622,6 @@ export async function updateManualArsipRecord(
     .select({
       id: manualArsip.id,
       status_arsip: manualArsip.statusArsip,
-      canonical_arsip_id: manualArsip.canonicalArsipId,
     })
     .from(manualArsip)
     .where(eq(manualArsip.id, id))
@@ -678,16 +672,10 @@ export async function updateManualArsipRecord(
     updatedAt: new Date(),
   }
 
-  const updated = existing.canonical_arsip_id
-    ? await updateLinkedManualArsipRecord({
-      id,
-      canonicalArsipId: existing.canonical_arsip_id,
-      updateValues,
-    })
-    : await updateUnlinkedManualArsipRecord({
-      id,
-      updateValues,
-    })
+  const updated = await updateManualArsipSourceRecord({
+    id,
+    updateValues,
+  })
 
   if (!updated) {
     throw new ManualArsipApiError('Dokumen manual hanya dapat diedit saat status AKTIF', 409)
@@ -699,7 +687,7 @@ export async function updateManualArsipRecord(
   }
 }
 
-async function updateUnlinkedManualArsipRecord({
+async function updateManualArsipSourceRecord({
   id,
   updateValues,
 }: {
@@ -739,89 +727,6 @@ async function updateUnlinkedManualArsipRecord({
     })
 
   return updated ?? null
-}
-
-async function updateLinkedManualArsipRecord({
-  id,
-  canonicalArsipId,
-  updateValues,
-}: {
-  id: string
-  canonicalArsipId: string
-  updateValues: ManualArsipPatchUpdateValues
-}): Promise<ManualArsipPatchUpdatedRow | null> {
-  return db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(manualArsip)
-      .set(updateValues)
-      .where(and(
-        eq(manualArsip.id, id),
-        eq(manualArsip.statusArsip, ARCHIVE_STATUS.AKTIF),
-      ))
-      .returning({
-        id: manualArsip.id,
-        nama: manualArsip.nama,
-        tanggal: manualArsip.tanggal,
-        nomor_surat: manualArsip.nomorSurat,
-        tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
-        keterangan: manualArsip.keterangan,
-        nominal_realisasi: manualArsip.nominalRealisasi,
-        status_arsip: manualArsip.statusArsip,
-        category_id: manualArsip.categoryId,
-        klasifikasi_id: manualArsip.klasifikasiId,
-        klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
-        klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
-        retensi_aktif: manualArsip.retensiAktif,
-        retensi_inaktif: manualArsip.retensiInaktif,
-        masa_aktif_berakhir: manualArsip.masaAktifBerakhir,
-        masa_inaktif_berakhir: manualArsip.masaInaktifBerakhir,
-        archived_by: manualArsip.archivedBy,
-        canonical_arsip_id: manualArsip.canonicalArsipId,
-        metadata: manualArsip.metadata,
-        created_by: manualArsip.createdBy,
-        created_at: manualArsip.createdAt,
-        updated_at: manualArsip.updatedAt,
-      })
-
-    if (!updated) return null
-
-    const [canonical] = await tx
-      .update(arsip)
-      .set({
-        ...buildManualArchiveCanonicalUpdateValues({
-          id: updated.id,
-          canonicalArsipId: updated.canonical_arsip_id,
-          nama: updated.nama,
-          nomorSurat: updated.nomor_surat,
-          tanggalDiarsipkan: updated.tanggal_diarsipkan,
-          klasifikasiId: updated.klasifikasi_id,
-          klasifikasiKodeSnapshot: updated.klasifikasi_kode_snapshot,
-          klasifikasiNamaSnapshot: updated.klasifikasi_nama_snapshot,
-          retensiAktif: updated.retensi_aktif,
-          retensiInaktif: updated.retensi_inaktif,
-          masaAktifBerakhir: updated.masa_aktif_berakhir,
-          masaInaktifBerakhir: updated.masa_inaktif_berakhir,
-          archivedBy: updated.archived_by,
-          createdBy: updated.created_by,
-          nominalRealisasi: updated.nominal_realisasi,
-          statusArsip: updated.status_arsip,
-        }),
-        updatedAt: new Date(),
-      })
-      .where(and(
-        eq(arsip.id, canonicalArsipId),
-        eq(arsip.sourceType, ARCHIVE_SOURCE_TYPE.MANUAL),
-      ))
-      .returning({
-        id: arsip.id,
-      })
-
-    if (!canonical) {
-      throw new Error('MANUAL_ARCHIVE_CANONICAL_UPDATE_FAILED')
-    }
-
-    return updated
-  })
 }
 
 export async function uploadManualArsipAttachments(

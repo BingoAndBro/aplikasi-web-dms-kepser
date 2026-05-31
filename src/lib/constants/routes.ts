@@ -31,12 +31,10 @@ export const ROUTES = {
     ROOT: '/arsiparis',
     INBOX: '/arsiparis/inbox',
     BERKAS_AKTIF: '/arsiparis/berkas',
-    AKTIF: '/arsiparis/aktif',
     INAKTIF: '/arsiparis/inaktif',
     USUL_MUSNAH: '/arsiparis/usul-musnah',
     PENAMBAHAN_ARSIP: '/arsiparis/penambahan-arsip',
     KLASIFIKASI: '/arsiparis/klasifikasi',
-    SEARCH: '/arsiparis/search',
   },
   PENANGGUNG_JAWAB_KINERJA: {
     ROOT: '/penanggung-jawab-kinerja',

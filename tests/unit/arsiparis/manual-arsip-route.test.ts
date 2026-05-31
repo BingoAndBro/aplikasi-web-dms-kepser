@@ -958,7 +958,7 @@ describe('manual arsip API foundation routes', () => {
     })
   })
 
-  it('syncs AKTIF linked manual archive PATCH to the canonical MANUAL row in one transaction', async () => {
+  it('updates AKTIF linked manual archive PATCH as source-only folder-first metadata', async () => {
     const updateBody = {
       ...validCreateBody(),
       nama: 'Arsip manual linked diperbarui',
@@ -977,27 +977,25 @@ describe('manual arsip API foundation routes', () => {
       [manualCategoryRow()],
       [klasifikasiRow()],
     )
-    queueManualArchivePatchTransaction({
-      source: manualArsipRow({
-        nama: updateBody.nama,
-        tanggal: updateBody.tanggal,
-        nomor_surat: updateBody.nomor_surat,
-        tanggal_diarsipkan: updateBody.tanggal_diarsipkan,
-        keterangan: updateBody.keterangan,
-        nominal_realisasi: '250000.00',
-        klasifikasi_kode_snapshot: '001.02',
-        klasifikasi_nama_snapshot: 'Klasifikasi A',
-        retensi_aktif: '5 Tahun',
-        retensi_inaktif: '10 Tahun',
-        masa_aktif_berakhir: '2031-06-02',
-        masa_inaktif_berakhir: '2041-06-02',
-        archived_by: ADMIN_ID,
-        canonical_arsip_id: CANONICAL_ARSIP_ID,
-        metadata: updateBody.metadata,
-        created_by: ADMIN_ID,
-        updated_at: new Date('2026-05-24T00:00:00.000Z'),
-      }),
-    })
+    queueUpdateResult([manualArsipRow({
+      nama: updateBody.nama,
+      tanggal: updateBody.tanggal,
+      nomor_surat: updateBody.nomor_surat,
+      tanggal_diarsipkan: updateBody.tanggal_diarsipkan,
+      keterangan: updateBody.keterangan,
+      nominal_realisasi: '250000.00',
+      klasifikasi_kode_snapshot: '001.02',
+      klasifikasi_nama_snapshot: 'Klasifikasi A',
+      retensi_aktif: '5 Tahun',
+      retensi_inaktif: '10 Tahun',
+      masa_aktif_berakhir: '2031-06-02',
+      masa_inaktif_berakhir: '2041-06-02',
+      archived_by: ADMIN_ID,
+      canonical_arsip_id: CANONICAL_ARSIP_ID,
+      metadata: updateBody.metadata,
+      created_by: ADMIN_ID,
+      updated_at: new Date('2026-05-24T00:00:00.000Z'),
+    })])
 
     const response = await detailPatchHandler({
       request: createPatchRequest(updateBody),
@@ -1006,16 +1004,11 @@ describe('manual arsip API foundation routes', () => {
     const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
-    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    expect(mocks.dbUpdate).toHaveBeenCalledOnce()
     expect(mocks.txInsert).not.toHaveBeenCalled()
-    expect(mocks.txUpdate).toHaveBeenCalledTimes(2)
-    expect(mocks.txUpdate.mock.calls[1][0]).toEqual(expect.objectContaining({
-      id: expect.anything(),
-      sourceType: expect.anything(),
-    }))
-    expect(mocks.txWhere).toHaveBeenCalledTimes(2)
-    expect(mocks.txUpdateSet).toHaveBeenNthCalledWith(1, expect.objectContaining({
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
+    expect(mocks.updateSet).toHaveBeenCalledWith(expect.objectContaining({
       nama: 'Arsip manual linked diperbarui',
       tanggal: '2026-05-25',
       keterangan: 'Keterangan linked diperbarui',
@@ -1033,25 +1026,10 @@ describe('manual arsip API foundation routes', () => {
       metadata: { sumber: 'linked-patch' },
       updatedAt: expect.any(Date),
     }))
-    expect(mocks.txUpdateSet).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      namaArsip: 'Arsip manual linked diperbarui',
-      nomorSurat: 'B-010/2026',
-      klasifikasiId: KLASIFIKASI_ID,
-      klasifikasiKodeSnapshot: '001.02',
-      klasifikasiNamaSnapshot: 'Klasifikasi A',
-      retensiAktif: '5 Tahun',
-      retensiInaktif: '10 Tahun',
-      masaAktifBerakhir: '2031-06-02',
-      masaInaktifBerakhir: '2041-06-02',
-      archivedAt: new Date('2026-06-02T00:00:00.000Z'),
-      archivedBy: ADMIN_ID,
-      createdBy: ADMIN_ID,
-      nominalRealisasi: '250000.00',
-      statusArsip: 'AKTIF',
-      metadata: {},
-      updatedAt: expect.any(Date),
+    expect(mocks.updateSet).not.toHaveBeenCalledWith(expect.objectContaining({
+      namaArsip: expect.anything(),
     }))
-    expect(mocks.txUpdateSet).not.toHaveBeenNthCalledWith(1, expect.objectContaining({
+    expect(mocks.updateSet).not.toHaveBeenCalledWith(expect.objectContaining({
       statusArsip: expect.anything(),
       createdBy: expect.anything(),
       archivedBy: expect.anything(),
@@ -1065,36 +1043,6 @@ describe('manual arsip API foundation routes', () => {
       metadata: { sumber: 'linked-patch' },
       created_by: ADMIN_ID,
     })
-  })
-
-  it('fails safely when linked canonical MANUAL update affects no row', async () => {
-    queueSelectResults(
-      [manualArsipEditParentRow('AKTIF', { canonical_arsip_id: CANONICAL_ARSIP_ID })],
-      [manualCategoryRow()],
-      [klasifikasiRow()],
-    )
-    queueManualArchivePatchTransaction({
-      canonical: null,
-    })
-
-    const response = await detailPatchHandler({
-      request: createPatchRequest(validCreateBody()),
-      params: { id: MANUAL_ARSIP_ID },
-    })
-    const body = JSON.stringify(await response.json())
-
-    expect(response.status).toBe(500)
-    expect(body).toBe('{"error":"Gagal memperbarui dokumen manual"}')
-    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
-    expect(mocks.txUpdateSet).toHaveBeenCalledTimes(2)
-    expect(body).not.toContain('logical_path')
-    expect(body).not.toContain('logicalPath')
-    expect(body).not.toContain('physical')
-    expect(body).not.toContain('storage')
-    expect(body).not.toContain('token')
-    expect(body).not.toContain('sql')
-    expect(body).not.toContain('env')
-    expect(body).not.toContain('secret')
   })
 
   it('rejects manual archive metadata PATCH for non-AKTIF statuses with 409', async () => {
@@ -2410,50 +2358,6 @@ function queueManualArchiveCreateTransaction(options: {
                 id: MANUAL_ARSIP_ID,
                 canonical_arsip_id: CANONICAL_ARSIP_ID,
               }]
-            }),
-          })),
-        })),
-      })),
-    }
-
-    return operation(tx)
-  })
-}
-
-function queueManualArchivePatchTransaction(options: {
-  source?: ReturnType<typeof manualArsipRow> | null
-  canonical?: { id: string } | null
-  sourceError?: Error
-  canonicalError?: Error
-} = {}) {
-  const updateResults = [
-    options.source === undefined
-      ? [manualArsipRow({ canonical_arsip_id: CANONICAL_ARSIP_ID })]
-      : options.source === null
-        ? []
-        : [options.source],
-    options.canonical === undefined
-      ? [{ id: CANONICAL_ARSIP_ID }]
-      : options.canonical === null
-        ? []
-        : [options.canonical],
-  ]
-
-  mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
-    const tx = {
-      update: mocks.txUpdate.mockImplementation(() => ({
-        set: mocks.txUpdateSet.mockImplementation(() => ({
-          where: mocks.txWhere.mockImplementation(() => ({
-            returning: vi.fn(async () => {
-              const callNumber = mocks.txUpdateSet.mock.calls.length
-              if (callNumber === 1 && options.sourceError) {
-                throw options.sourceError
-              }
-              if (callNumber === 2 && options.canonicalError) {
-                throw options.canonicalError
-              }
-
-              return updateResults.shift() ?? []
             }),
           })),
         })),
