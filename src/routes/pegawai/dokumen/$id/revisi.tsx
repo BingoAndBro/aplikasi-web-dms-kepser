@@ -1,9 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import {
+  PegawaiFieldCard,
+  PegawaiPageHeader,
+  PegawaiPanel,
+} from '#/components/pegawai/PegawaiPagePrimitives'
 import { Button } from '#/components/ui/button'
-import { Badge } from '#/components/ui/badge'
-import { Skeleton } from '#/components/ui/skeleton'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
 import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
@@ -25,12 +31,8 @@ export const Route = createFileRoute('/pegawai/dokumen/$id/revisi')({
   component: DokumenRevisiPage,
 })
 
-// ---------------------------------------------------------------------------
-// Workflow config
-// ---------------------------------------------------------------------------
-
 const WORKFLOW_STEPS = [
-  { key: 'DRAFT', label: 'Draf' },
+  { key: 'DRAFT', label: 'Draft' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
   { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
@@ -81,10 +83,6 @@ async function fetchKelengkapanForDokumen(dokumen: DokumenRow): Promise<Kelengka
     .map(({ id, nama_dokumen, required }) => ({ id, nama_dokumen, required }))
 }
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
-
 function DokumenRevisiPage() {
   const { id } = Route.useParams()
   const [dok, setDok] = useState<DokumenRow | null>(null)
@@ -121,7 +119,6 @@ function DokumenRevisiPage() {
       setAttachmentDirty(false)
       setGuardEnabled(true)
 
-      // Check if Non-Material
       const nonMaterial = dokumen.is_non_material === true ||
         (!dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)
       setIsNonMaterial(nonMaterial)
@@ -156,7 +153,6 @@ function DokumenRevisiPage() {
     setGuardEnabled(false)
 
     try {
-      // PATCH to save changes
       try {
         await apiMutation(`/api/dokumen/${id}`, {
           method: 'PATCH',
@@ -175,7 +171,6 @@ function DokumenRevisiPage() {
         throw err
       }
 
-      // Submit to next workflow step
       try {
         await apiMutation(`/api/dokumen/${id}/submit`, {
           method: 'POST',
@@ -213,29 +208,28 @@ function DokumenRevisiPage() {
     window.location.href = '/pegawai/revisi'
   }
 
-  if (loading) return (
-    <PageLayout>
-      <div className="space-y-4 max-w-3xl mx-auto">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-48" />
-      </div>
-    </PageLayout>
-  )
-
-  if (error) return (
-    <PageLayout>
-      <div className="flex flex-col items-center justify-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
-        <AlertCircle size={32} className="text-error" />
-        <div className="text-center">
-          <p className="font-headline text-base font-bold text-error">Tidak bisa merevisi</p>
-          <p className="text-on-surface-variant text-xs mt-1">{error}</p>
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="mx-auto max-w-4xl">
+          <LoadingState variant="page" label="Memuat revisi dokumen" />
         </div>
-        <Link to="/pegawai/revisi">
-          <Button variant="outline" size="sm">Kembali ke Daftar</Button>
-        </Link>
-      </div>
-    </PageLayout>
-  )
+      </PageLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <ErrorState
+          title="Tidak bisa merevisi"
+          description={error}
+          variant="page"
+          action={<Link to="/pegawai/revisi"><Button variant="outline" size="sm">Kembali ke Daftar</Button></Link>}
+        />
+      </PageLayout>
+    )
+  }
 
   if (!dok) return null
 
@@ -243,43 +237,40 @@ function DokumenRevisiPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6 max-w-3xl mx-auto">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
-          <FileEdit size={12} />
-          <Link to="/pegawai/revisi" className="hover:text-primary">Revisi Dokumen</Link>
-          <ChevronRight size={10} />
-          <span className="text-primary">Revisi</span>
-        </div>
+      <div className="mx-auto max-w-4xl space-y-6">
+        <PegawaiPageHeader
+          eyebrow={
+            <>
+              <FileEdit size={12} />
+              <Link to="/pegawai/revisi" className="hover:text-orange-900">Revisi Dokumen</Link>
+              <ChevronRight size={10} />
+              <span>Perbaiki</span>
+            </>
+          }
+          title={dok.judul}
+          description="Periksa catatan revisi, sesuaikan lampiran atau nominal jika diperlukan, lalu ajukan ulang dokumen."
+          actions={<StatusBadge status={dok.status} className="text-xs font-semibold" />}
+        />
 
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-headline text-2xl font-extrabold text-on-surface">{dok.judul}</h1>
-          </div>
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs font-semibold shrink-0">
-            Revisi Dokumen
-          </Badge>
-        </div>
-
-        {/* Workflow Timeline */}
-        <div className="bg-white rounded-xl border border-outline-variant/30 p-4 shadow-sm">
-          <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Alur Dokumen</p>
+        <PegawaiPanel className="p-5">
+          <p className="mb-4 text-[10px] font-black uppercase tracking-[0.18em] text-orange-700/70">
+            Alur Dokumen
+          </p>
           <div className="flex items-center gap-0">
             {WORKFLOW_STEPS.map((step, i) => {
               const isCurrent = step.key === dok.status
               const isPast = workflowIdx > i || dok.status === 'COMPLETED'
               const showAsRevision = dok.status === 'NEED_REVISION' && step.key === 'IN_PPK_VALIDATION'
               return (
-                <div key={step.key} className="flex flex-col items-center flex-1 relative">
+                <div key={step.key} className="relative flex flex-1 flex-col items-center">
                   {i < WORKFLOW_STEPS.length - 1 && (
-                    <div className={cn('absolute top-4 -right-1/2 w-full h-0.5 z-0', isPast ? 'bg-primary' : 'bg-outline-variant')} />
+                    <div className={cn('absolute top-4 -right-1/2 z-0 h-0.5 w-full', isPast ? 'bg-orange-500' : 'bg-orange-100')} />
                   )}
                   <div className={cn(
-                    'relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors',
-                    isCurrent || showAsRevision ? 'border-primary bg-primary text-white' :
-                      isPast ? 'border-primary bg-primary text-white' :
-                        'border-outline-variant bg-background text-outline'
+                    'relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors',
+                    isCurrent || showAsRevision ? 'border-orange-500 bg-orange-500 text-white' :
+                      isPast ? 'border-emerald-500 bg-emerald-500 text-white' :
+                        'border-orange-100 bg-white text-zinc-400',
                   )}>
                     {showAsRevision ? (
                       <AlertTriangle size={14} />
@@ -290,8 +281,8 @@ function DokumenRevisiPage() {
                     )}
                   </div>
                   <span className={cn(
-                    'mt-2 text-[10px] font-medium text-center',
-                    isCurrent || showAsRevision ? 'text-primary font-semibold' : isPast ? 'text-primary' : 'text-outline'
+                    'mt-2 text-center text-[10px] font-semibold',
+                    isCurrent || showAsRevision ? 'text-orange-700' : isPast ? 'text-emerald-700' : 'text-zinc-400',
                   )}>
                     {step.label}
                   </span>
@@ -299,68 +290,49 @@ function DokumenRevisiPage() {
               )
             })}
           </div>
-        </div>
+        </PegawaiPanel>
 
-        {/* Revision notes banner */}
         {dok.revision_notes && (
-          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-bold text-amber-700 mb-1">Catatan dari Verifikator</p>
-              <p className="text-xs text-amber-700">{dok.revision_notes}</p>
-            </div>
-          </div>
+          <ErrorState
+            title="Catatan revisi"
+            description={dok.revision_notes}
+            variant="warning"
+          />
         )}
 
-        {/* Info Grid */}
-        <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Fungsi</p>
-              <p className="text-sm font-semibold text-on-surface">{dok.fungsi_nama ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kegiatan</p>
-              <p className="text-sm font-semibold text-on-surface">{dok.kegiatan_nama ?? '—'}</p>
-            </div>
+        <PegawaiPanel className="space-y-4 p-5">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-700/70">
+              Metadata Saat Ini
+            </p>
+            <h2 className="mt-1 text-base font-bold text-zinc-950">Ringkasan dokumen</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PegawaiFieldCard label="Fungsi" value={dok.fungsi_nama ?? '-'} />
+            <PegawaiFieldCard label="Kegiatan" value={dok.kegiatan_nama ?? '-'} />
             {dok.jenis_permintaan_id && (
-              <div>
-                <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Jenis Permintaan</p>
-                <p className="text-sm font-semibold text-on-surface">{dok.jenis_permintaan_nama ?? '—'}</p>
-              </div>
+              <PegawaiFieldCard label="Jenis Permintaan" value={dok.jenis_permintaan_nama ?? '-'} />
             )}
             {dok.kategori_permintaan_id && (
-              <div>
-                <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kategori Permintaan</p>
-                <p className="text-sm font-semibold text-on-surface">{dok.kategori_permintaan_nama ?? '—'}</p>
-              </div>
+              <PegawaiFieldCard label="Kategori Permintaan" value={dok.kategori_permintaan_nama ?? '-'} />
             )}
             {dok.detail_permintaan_id && (
-              <div>
-                <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Detail Permintaan</p>
-                <p className="text-sm font-semibold text-on-surface">{dok.detail_permintaan_nama ?? '—'}</p>
-              </div>
+              <PegawaiFieldCard label="Detail Permintaan" value={dok.detail_permintaan_nama ?? '-'} />
             )}
-            <div>
-              <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tahun</p>
-              <p className="text-sm font-semibold text-on-surface">{dok.tahun ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p>
-              <p className="text-sm font-semibold text-on-surface">{dok.tanggal ? formatDate(dok.tanggal) : '—'}</p>
-            </div>
+            <PegawaiFieldCard label="Tahun" value={dok.tahun ?? '-'} />
+            <PegawaiFieldCard label="Tanggal" value={dok.tanggal ? formatDate(dok.tanggal) : '-'} />
           </div>
-        </div>
+        </PegawaiPanel>
 
-        {/* Submit error */}
         {submitError && (
-          <div className="bg-error/10 border border-error/20 rounded-lg p-4 flex items-start gap-2">
-            <AlertCircle size={16} className="text-error mt-0.5" />
-            <p className="text-sm text-error">{submitError}</p>
-          </div>
+          <ErrorState
+            title="Gagal mengajukan ulang"
+            description={submitError}
+            variant="destructive"
+            className="border-red-200"
+          />
         )}
 
-        {/* Attachment Editor */}
         <AttachmentEditor
           dokumen={dok}
           lampiranUrls={lampiranUrls}
@@ -374,7 +346,6 @@ function DokumenRevisiPage() {
           confirmIfDirty={confirmIfDirty}
         />
 
-        {/* Activity Log */}
         <ActivityLog dokumenId={id} />
       </div>
     </PageLayout>

@@ -25,8 +25,8 @@ export function StepIndicator({ currentStep, onStepClick, completedSteps = [], l
     ? labels.map(label => ({ label }))
     : DEFAULT_STEPS
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between">
+    <div className="w-full overflow-x-auto pb-1">
+      <div className="flex min-w-max items-center justify-between gap-2 sm:min-w-0 sm:gap-0">
         {steps.map((step, i) => {
           const stepNum = i + 1
           const isActive = stepNum === currentStep
@@ -34,13 +34,13 @@ export function StepIndicator({ currentStep, onStepClick, completedSteps = [], l
           const isClickable = onStepClick && (isCompleted || isActive)
 
           return (
-            <div key={step.label} className="flex flex-col items-center relative flex-1">
+            <div key={step.label} className="relative flex min-w-16 flex-1 flex-col items-center">
               {/* Connector line */}
               {i < steps.length - 1 && (
                 <div
                   className={cn(
                     'absolute top-4 left-1/2 w-full h-0.5 z-0 transition-colors',
-                    isCompleted ? 'bg-primary' : 'bg-outline-variant'
+                    isCompleted ? 'bg-emerald-500' : 'bg-orange-100'
                   )}
                   style={{ width: 'calc(100% - 2rem)' }}
                 />
@@ -54,9 +54,9 @@ export function StepIndicator({ currentStep, onStepClick, completedSteps = [], l
                 className={cn(
                   'relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all',
                   'border-2',
-                  isActive && 'border-primary bg-primary text-primary-foreground shadow-sm scale-110',
-                  isCompleted && !isActive && 'border-primary bg-primary text-primary-foreground',
-                  !isActive && !isCompleted && 'border-outline-variant bg-background text-outline hover:border-primary/50',
+                  isActive && 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-110',
+                  isCompleted && !isActive && 'border-emerald-500 bg-emerald-500 text-white',
+                  !isActive && !isCompleted && 'border-orange-100 bg-white text-zinc-400 hover:border-orange-300',
                   isClickable && 'cursor-pointer',
                   !isClickable && 'cursor-default'
                 )}
@@ -72,9 +72,9 @@ export function StepIndicator({ currentStep, onStepClick, completedSteps = [], l
               <span
                 className={cn(
                   'mt-2 text-[10px] font-medium text-center leading-tight',
-                  isActive && 'text-primary font-semibold',
-                  isCompleted && !isActive && 'text-primary',
-                  !isActive && !isCompleted && 'text-outline'
+                  isActive && 'text-orange-700 font-semibold',
+                  isCompleted && !isActive && 'text-emerald-700',
+                  !isActive && !isCompleted && 'text-zinc-400'
                 )}
               >
                 {step.label}

@@ -40,18 +40,18 @@ export function StepJenisPermintaan({
       </h3>
 
       {/* Non-Material Toggle */}
-      <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50/70 p-3">
         <input
           type="checkbox"
           id="isNonMaterial"
           checked={isNonMaterial}
           onChange={(e) => onToggleNonMaterial(e.target.checked)}
-          className="w-4 h-4 rounded border-blue-400 text-primary focus:ring-primary"
+          className="w-4 h-4 rounded border-orange-400 text-primary focus:ring-primary"
         />
-        <label htmlFor="isNonMaterial" className="text-sm text-blue-800 cursor-pointer flex-1">
+        <label htmlFor="isNonMaterial" className="text-sm text-orange-950 cursor-pointer flex-1">
           <span className="font-semibold">Dokumen Non-Material</span>
-          <span className="text-xs text-blue-600 block">
-            Centang jika dokumen tidak memerlukan nominal (misalnya: rapat, perjalanan non-SPD)
+          <span className="text-xs text-orange-800/80 block">
+            Centang jika dokumen tidak memerlukan nominal dan tidak melewati alur PPK/PPSPM.
           </span>
         </label>
       </div>

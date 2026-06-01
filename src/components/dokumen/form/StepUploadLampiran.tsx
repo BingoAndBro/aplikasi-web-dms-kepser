@@ -64,7 +64,7 @@ export function StepUploadLampiran({
       <p className="text-xs text-on-surface-variant">
         Kelengkapan untuk <strong className="text-on-surface">{kegiatanNama}</strong>
         {isNonMaterial ? (
-          <> — <strong className="text-on-surface">{jenisDokumenNama}</strong></>
+          <> - <strong className="text-on-surface">{jenisDokumenNama}</strong></>
         ) : (
           <> — <strong className="text-on-surface">{jenisPermintaanNama}</strong>{' / '}
           <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
@@ -80,7 +80,7 @@ export function StepUploadLampiran({
         <div className={`rounded-lg p-3 transition-all ${
           isKetuaTim
             ? 'bg-green-50 border border-green-200'
-            : 'bg-blue-50 border border-blue-200'
+            : 'bg-orange-50 border border-orange-200'
         }`}>
           <div className="flex items-center gap-3">
             {isChairmanLoading ? (
@@ -88,18 +88,18 @@ export function StepUploadLampiran({
             ) : isKetuaTim ? (
               <Trophy size={18} className="text-green-600" />
             ) : (
-              <Medal size={18} className="text-blue-600" />
+              <Medal size={18} className="text-orange-600" />
             )}
             <div>
               <p className={`text-sm font-semibold ${
-                isKetuaTim ? 'text-green-800' : 'text-blue-800'
+                isKetuaTim ? 'text-green-800' : 'text-orange-800'
               }`}>
                 {isKetuaTim
                   ? 'Anda adalah Ketua Tim di kegiatan ini'
                   : 'Anda adalah Anggota di kegiatan ini'}
               </p>
               <p className={`text-xs mt-0.5 ${
-                isKetuaTim ? 'text-green-600' : 'text-blue-600'
+                isKetuaTim ? 'text-green-600' : 'text-orange-700'
               }`}>
                 {isKetuaTim
                   ? 'Dokumen akan masuk ke Laporan Kegiatan.'
@@ -130,7 +130,7 @@ export function StepUploadLampiran({
       {/* Nominal / Keterangan Section */}
       {isNonMaterial ? (
         // Non-Material: Keterangan Detail
-        <div className="space-y-1.5 p-3 border border-outline-variant/30 rounded-lg bg-muted/30">
+        <div className="space-y-1.5 rounded-xl border border-orange-100 bg-[#FFF8F1] p-3">
           <label className="text-xs font-medium text-on-surface">
             Keterangan Detail Dokumen <span className="text-error">*</span>
           </label>
@@ -149,7 +149,7 @@ export function StepUploadLampiran({
         </div>
       ) : (
         // Material: Nominal Realisasi
-        <div className="space-y-1.5 p-3 border border-outline-variant/30 rounded-lg bg-muted/30">
+        <div className="space-y-1.5 rounded-xl border border-orange-100 bg-[#FFF8F1] p-3">
           <label className="text-xs font-medium text-on-surface">
             Nominal Realisasi (Rp) <span className="text-error">*</span>
           </label>

@@ -1,6 +1,10 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState, useCallback } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import {
+  PegawaiPageHeader,
+  PegawaiPanel,
+} from '#/components/pegawai/PegawaiPagePrimitives'
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
 import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
 import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
@@ -20,7 +24,7 @@ import type {
 } from '#/components/dokumen/form/dokumen-form-types'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { apiFetch } from '#/lib/api-client'
-import { FileText } from 'lucide-react'
+import { ClipboardList, FileText, ShieldCheck } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
   component: AjukanDokumenPage,
@@ -486,35 +490,56 @@ function AjukanDokumenPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6 max-w-2xl mx-auto">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <FileText size={12} />
-            <Link to="/pegawai/dokumen" className="hover:text-primary">Dokumen</Link>
-            <span>/</span>
-            <span className="text-primary">Ajukan Dokumen</span>
-          </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">
-            Ajukan Dokumen Baru
-          </h2>
-          <p className="text-on-surface-variant text-xs mt-1">
-            Ikuti {stepLabels.length} langkah untuk mengajukan dokumen baru.
-          </p>
-        </div>
+      <div className="mx-auto max-w-4xl space-y-6">
+        <PegawaiPageHeader
+          eyebrow={
+            <>
+              <FileText size={12} />
+              <Link to="/pegawai/dokumen" className="hover:text-orange-900">Dokumen</Link>
+              <span>/</span>
+              <span>Ajukan Dokumen</span>
+            </>
+          }
+          title="Ajukan Dokumen Baru"
+          description={`Ikuti ${stepLabels.length} langkah untuk mengajukan dokumen. Material dikirim ke PPK lalu PPSPM, sedangkan Non-Material disimpan sebagai Tersimpan tanpa nominal realisasi.`}
+        />
 
-        {/* Step Indicator */}
-        <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+          <PegawaiPanel className="p-4">
           <StepIndicator
             currentStep={step}
             completedSteps={completedSteps}
             onStepClick={handleStepClick}
             labels={stepLabels}
           />
+          </PegawaiPanel>
+          <PegawaiPanel className="space-y-3 bg-[#FFF8F1]">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+                <ShieldCheck size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-zinc-950">Aturan alur</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-700">
+                  Gunakan istilah dokumen. Jangan unggah data di luar kebutuhan pengajuan.
+                </p>
+              </div>
+            </div>
+            <div className="rounded-xl border border-orange-100 bg-white/80 p-3 text-xs text-zinc-700">
+              <p className="font-semibold text-zinc-950">Langkah aktif</p>
+              <p className="mt-1">{step}. {stepLabels[step - 1]}</p>
+            </div>
+          </PegawaiPanel>
         </div>
 
-        {/* Step Content */}
-        <div className="bg-white rounded-xl border border-outline-variant/30 shadow-sm p-6">
+        <PegawaiPanel className="p-5 sm:p-6">
+          <div className="mb-5 flex items-center gap-2 border-b border-orange-100 pb-4">
+            <ClipboardList size={16} className="text-orange-700" />
+            <div>
+              <p className="text-sm font-bold text-zinc-950">{stepLabels[step - 1]}</p>
+              <p className="text-xs text-zinc-500">Lengkapi bagian ini sebelum lanjut.</p>
+            </div>
+          </div>
           {/* STEP 1: Fungsi & Info Dasar */}
           {step === 1 && (
             <StepFungsiTanggal
@@ -645,7 +670,7 @@ function AjukanDokumenPage() {
               onSubmit={handleSubmit}
             />
           )}
-        </div>
+        </PegawaiPanel>
       </div>
     </PageLayout>
   )

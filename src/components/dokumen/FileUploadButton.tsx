@@ -188,7 +188,7 @@ export function FileUploadButton({
         Unggah File
       </Button>
       <p className="text-[10px] text-outline">
-        PDF, DOC, DOCX, XLS, XLSX · Maks 2MB
+        PDF, DOC, DOCX, XLS, XLSX - Maks 2MB
       </p>
     </div>
   )
