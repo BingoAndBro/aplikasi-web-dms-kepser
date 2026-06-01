@@ -1,7 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import { LogOut, UserCircle } from 'lucide-react'
 
+import { RoleBadge } from '#/components/ui/RoleBadge'
+import type { RoleName } from '#/lib/types/auth'
+
 export function UserDropdown({
+  activeRole,
   displayName,
   email,
   handleLogout,
@@ -9,6 +13,7 @@ export function UserDropdown({
   setUserDropdownOpen,
   userDropdownOpen,
 }: {
+  activeRole: RoleName
   displayName: string
   email?: string
   handleLogout: () => void | Promise<void>
@@ -24,40 +29,53 @@ export function UserDropdown({
         aria-expanded={userDropdownOpen}
         aria-haspopup="menu"
         onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-        className="w-11 h-11 rounded-2xl bg-primary/10 p-0.5 shadow-xl cursor-pointer hover:bg-primary/20 transition-all"
+        className="size-11 rounded-full bg-primary/10 p-0.5 shadow-md shadow-orange-950/10 transition-all hover:bg-primary/20 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary/30"
       >
-        <div className="w-full h-full rounded-[14px] bg-primary flex items-center justify-center border-2 border-background">
-          <span className="text-xs font-extrabold text-white">{initials}</span>
+        <div className="flex size-full items-center justify-center rounded-full border-2 border-white bg-primary">
+          <span className="text-xs font-extrabold tracking-wide text-white">{initials}</span>
         </div>
       </button>
       {userDropdownOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-xl py-2 min-w-[200px]" role="menu">
-            <div className="px-4 py-2 border-b border-outline-variant/10">
-              <p className="text-sm font-bold text-on-surface">{displayName}</p>
-              <p className="text-xs text-outline">{email}</p>
+          <button
+            type="button"
+            aria-label="Tutup menu pengguna"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setUserDropdownOpen(false)}
+          />
+          <div className="absolute right-0 top-full z-50 mt-3 min-w-64 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-xl shadow-orange-950/10" role="menu">
+            <div className="bg-[#FFF8F1] px-4 py-4">
+              <div className="flex items-start gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-extrabold tracking-wide text-white ring-2 ring-white">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-on-surface">{displayName}</p>
+                  <p className="truncate text-xs text-outline">{email}</p>
+                  <RoleBadge role={activeRole} className="mt-2 rounded-full text-[10px]" />
+                </div>
+              </div>
             </div>
-            <div className="py-1">
+            <div className="py-1.5">
               <Link
                 to="/profile"
                 onClick={() => setUserDropdownOpen(false)}
                 role="menuitem"
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:bg-primary/5 hover:text-primary transition-colors"
+                className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-on-surface-variant transition-colors hover:bg-orange-50 hover:text-primary"
               >
                 <UserCircle size={16} />
-                Profil Saya
+                Profile
               </Link>
             </div>
-            <div className="border-t border-outline-variant/10 pt-1">
+            <div className="border-t border-orange-100 pt-1">
               <button
                 type="button"
                 role="menuitem"
                 onClick={() => { setUserDropdownOpen(false); handleLogout() }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-error/5 transition-colors"
+                className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-error transition-colors hover:bg-red-50"
               >
                 <LogOut size={16} />
-                Sign Out
+                Keluar
               </button>
             </div>
           </div>

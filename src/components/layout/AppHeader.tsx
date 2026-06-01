@@ -1,9 +1,9 @@
 import {
   Bell,
-  Search,
-  Settings,
+  Menu,
 } from 'lucide-react'
 
+import { RoleBadge } from '#/components/ui/RoleBadge'
 import { ROLE_DISPLAY } from '#/lib/types/auth'
 
 import type { RoleName } from '#/lib/types/auth'
@@ -19,6 +19,7 @@ export function AppHeader({
   handleRoleSwitch,
   initials,
   isAdmin,
+  onOpenMobileSidebar,
   roleSwitcherOpen,
   setRoleSwitcherOpen,
   setUserDropdownOpen,
@@ -33,58 +34,51 @@ export function AppHeader({
   handleRoleSwitch: (role: RoleName) => void
   initials: string
   isAdmin: boolean
+  onOpenMobileSidebar: () => void
   roleSwitcherOpen: boolean
   setRoleSwitcherOpen: React.Dispatch<React.SetStateAction<boolean>>
   setUserDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>
   userDropdownOpen: boolean
   userRoles: RoleName[]
 }) {
-  return (
-    <header className="h-20 flex justify-between items-center px-10 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10 z-40">
-      <div className="flex items-center gap-12 flex-1">
-        <div className="flex items-center gap-4">
-          {isAdmin ? (
-            <span className="text-xl font-extrabold tracking-tight text-primary shrink-0">Admin Curator</span>
-          ) : (
-            <span className="text-2xl font-black tracking-tighter text-on-surface font-headline shrink-0">
-              {ROLE_DISPLAY[activeRole]}
-            </span>
-          )}
-        </div>
+  const roleTitle = isAdmin ? 'Admin Sistem' : ROLE_DISPLAY[activeRole]
 
-        <div className="relative group flex-1 max-w-2xl">
-          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-outline/40">
-            <Search size={18} />
+  return (
+    <header className="z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-orange-100/70 bg-[#FFF8F1]/90 px-4 shadow-sm shadow-orange-950/5 backdrop-blur-xl md:h-20 md:px-8">
+      <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-5">
+        <button
+          type="button"
+          aria-label="Buka navigasi"
+          onClick={onOpenMobileSidebar}
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-white text-on-surface-variant shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 lg:hidden"
+        >
+          <Menu size={20} />
+        </button>
+
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+            DMS Workspace
+          </p>
+          <div className="mt-1 flex min-w-0 items-center gap-2">
+            <h1 className="truncate font-headline text-xl font-black tracking-tight text-on-surface md:text-2xl">
+              {roleTitle}
+            </h1>
+            <RoleBadge role={activeRole} className="hidden shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold md:inline-flex" />
           </div>
-          <input
-            type="text"
-            aria-label={isAdmin ? 'Cari cepat user' : 'Cari dokumen, arsip, atau tugas'}
-            placeholder={isAdmin ? 'Quick search users...' : 'Search documents, archives, or tasks...'}
-            className="pl-14 pr-6 py-3.5 bg-surface-container/30 border border-outline-variant/20 rounded-2xl w-full text-sm focus:ring-2 focus:ring-primary/40 focus:bg-surface-container placeholder:text-outline/40 outline-none transition-all shadow-inner group-hover:border-outline-variant/40"
-          />
         </div>
       </div>
 
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-5">
-          <button
-            type="button"
-            aria-label="Buka notifikasi"
-            className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all relative"
-          >
-            <Bell size={22} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background" />
-          </button>
-          <button
-            type="button"
-            aria-label="Buka pengaturan"
-            className="text-outline hover:text-primary hover:bg-primary/5 p-2.5 rounded-xl transition-all"
-          >
-            <Settings size={22} />
-          </button>
-        </div>
+      <div className="flex shrink-0 items-center gap-2 md:gap-4">
+        <button
+          type="button"
+          aria-label="Notifikasi visual saja"
+          title="Notifikasi visual saja; belum terhubung ke sumber backend"
+          className="relative inline-flex size-10 items-center justify-center rounded-2xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <Bell size={19} />
+        </button>
 
-        <div className="flex items-center gap-4 pl-8 border-l border-outline-variant/10 relative">
+        <div className="flex items-center gap-3 rounded-full border border-orange-100/80 bg-[#FFFDF9] py-1 pl-2 pr-1 shadow-sm shadow-orange-950/5 md:gap-4 md:pl-4">
           {canSwitchRole && (
             <RoleDropdown
               currentRole={activeRole}
@@ -95,14 +89,17 @@ export function AppHeader({
             />
           )}
 
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-black text-on-surface uppercase tracking-wider">{displayName}</p>
-            <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
-              {isAdmin ? 'Super Administrator' : ROLE_DISPLAY[activeRole]}
+          <div className="hidden min-w-0 text-right sm:block">
+            <p className="max-w-40 truncate text-xs font-black uppercase tracking-wider text-on-surface">
+              {displayName}
+            </p>
+            <p className="max-w-44 truncate text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+              {roleTitle}
             </p>
           </div>
 
           <UserDropdown
+            activeRole={activeRole}
             displayName={displayName}
             email={email}
             handleLogout={handleLogout}

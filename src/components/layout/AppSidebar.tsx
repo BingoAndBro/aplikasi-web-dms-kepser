@@ -3,10 +3,12 @@ import { Link } from '@tanstack/react-router'
 import {
   HelpCircle,
   LogOut,
+  X,
 } from 'lucide-react'
 
 import { NAV_CONFIG } from '#/config/navigation'
 import { ROLE_DISPLAY, ROLES } from '#/lib/constants/roles'
+import { cn } from '#/lib/utils'
 
 import type { RoleName } from '#/lib/types/auth'
 
@@ -26,122 +28,179 @@ export function AppSidebar({
   pathname,
   searchStr,
   hasKetuaTimAssignment,
+  mobileOpen,
+  onMobileOpenChange,
   onLogout,
 }: {
   activeRole: RoleName
   pathname: string
   searchStr?: string
   hasKetuaTimAssignment?: boolean
+  mobileOpen: boolean
+  onMobileOpenChange: (open: boolean) => void
   onLogout: () => void | Promise<void>
 }) {
   const navGroups = React.useMemo(() => {
     const groups = NAV_CONFIG[activeRole] ?? []
-    if (activeRole !== ROLES.PEGAWAI || hasKetuaTimAssignment) {
-      return groups
-    }
+    const visibleGroups =
+      activeRole !== ROLES.PEGAWAI || hasKetuaTimAssignment
+        ? groups
+        : groups
+            .map((group) => ({
+              ...group,
+              items: group.items.filter((item) => item.id !== 'laporan_kegiatan'),
+            }))
+            .filter((group) => group.items.length > 0)
 
-    return groups
+    return visibleGroups
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => item.id !== 'laporan_kegiatan'),
+        items: group.items.filter((item) => item.id !== 'settings'),
       }))
       .filter((group) => group.items.length > 0)
   }, [activeRole, hasKetuaTimAssignment])
   const isAdmin = activeRole === ROLES.ADMIN
+  const workspaceLabel = isAdmin ? 'Manajemen Sistem' : `${ROLE_DISPLAY[activeRole]} Workspace`
 
   return (
-    <aside className="w-72 h-full bg-surface-container-lowest/40 backdrop-blur-2xl flex flex-col py-8 px-6 gap-8 border-r border-white/5 shrink-0 z-50">
-      <div className="px-2">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white shadow-lg shadow-primary/10">
-            <img src="/bps-logo.png" alt="BPS" className="w-7 h-7 object-contain" />
-          </div>
-          <div className="font-headline font-extrabold text-xl tracking-tight text-on-surface">
-            {isAdmin ? 'Curator Admin' : 'DMS Architect'}
-          </div>
-        </div>
-        <p className="text-[10px] uppercase tracking-[0.2em] font-black text-primary ml-11">
-          {isAdmin ? 'System Management' : `${ROLE_DISPLAY[activeRole]} Workspace`}
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 -mr-2 space-y-8">
-        {navGroups.map((group) => (
-          <div key={group.title} className="space-y-3">
-            <p className="text-[10px] font-black text-outline uppercase tracking-[0.25em] px-4">
-              {group.title}
-            </p>
-            <nav className="space-y-1">
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const isActive = isNavItemActive(item.to, pathname, searchStr)
-                const isBuilt = !!item.to
-
-                if (!isBuilt) {
-                  return (
-                    <div
-                      key={item.id}
-                      className="w-full flex items-center justify-between p-3.5 rounded-xl opacity-40 cursor-not-allowed select-none"
-                      title="Fitur belum tersedia"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-outline">
-                          <Icon size={18} />
-                        </span>
-                        <span className="text-sm font-medium text-on-surface-variant">{item.label}</span>
-                      </div>
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-surface-container text-outline font-black uppercase tracking-widest">
-                        Soon
-                      </span>
-                    </div>
-                  )
-                }
-
-                return (
-                  <Link
-                    key={item.id}
-                    to={item.to}
-                    className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 group ${
-                      isActive
-                        ? 'bg-primary text-white shadow-xl shadow-primary/30'
-                        : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`${isActive ? 'text-white' : 'text-outline group-hover:text-primary'} transition-colors`}>
-                        <Icon size={18} />
-                      </span>
-                      <span className={`text-sm tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}>
-                        {item.label}
-                      </span>
-                    </div>
-                    {item.badge && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black ${isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex flex-col gap-1 border-t border-outline-variant/10 pt-6">
-        <button type="button" className="flex items-center gap-3 text-outline text-[11px] font-bold p-3 hover:text-primary transition-all group">
-          <HelpCircle size={16} className="group-hover:rotate-12 transition-transform" />
-          Support Center
-        </button>
+    <>
+      {mobileOpen && (
         <button
           type="button"
-          onClick={onLogout}
-          className="flex items-center gap-3 text-outline text-[11px] font-bold p-3 hover:text-error transition-all group"
-        >
-          <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
-          Sign Out
-        </button>
-      </div>
-    </aside>
+          aria-label="Tutup navigasi"
+          className="fixed inset-0 z-40 bg-orange-950/30 backdrop-blur-sm lg:hidden"
+          onClick={() => onMobileOpenChange(false)}
+        />
+      )}
+
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex h-full w-80 max-w-[86vw] shrink-0 flex-col gap-7 border-r border-orange-100/80 bg-[#FFFDF9] px-5 py-6 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:w-72 lg:max-w-none lg:translate-x-0 lg:shadow-none xl:w-80',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="flex items-start justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md shadow-orange-950/10 ring-1 ring-orange-100">
+                <img src="/bps-logo.png" alt="BPS" className="size-8 object-contain" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-headline text-xl font-black tracking-tight text-on-surface">
+                  {isAdmin ? 'Admin Sistem' : 'DMS Kepser'}
+                </p>
+                <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                  {workspaceLabel}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Tutup navigasi"
+            onClick={() => onMobileOpenChange(false)}
+            className="inline-flex size-9 items-center justify-center rounded-xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:bg-orange-50 hover:text-primary lg:hidden"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
+          <div className="space-y-7">
+            {navGroups.map((group) => (
+              <div key={group.title} className="space-y-2.5">
+                <p className="px-3 text-[10px] font-black uppercase tracking-[0.25em] text-outline">
+                  {group.title}
+                </p>
+                <nav className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const isActive = isNavItemActive(item.to, pathname, searchStr)
+                    const isBuilt = !!item.to
+
+                    if (!isBuilt) {
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex w-full select-none items-center justify-between rounded-2xl px-3.5 py-3 text-on-surface-variant opacity-45"
+                          title="Fitur belum tersedia"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="text-outline">
+                              <Icon size={18} />
+                            </span>
+                            <span className="truncate text-sm font-semibold">{item.label}</span>
+                          </div>
+                          <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-outline">
+                            Soon
+                          </span>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <Link
+                        key={item.id}
+                        to={item.to}
+                        onClick={() => onMobileOpenChange(false)}
+                        className={cn(
+                          'group flex w-full items-center justify-between rounded-2xl px-3.5 py-3 text-left transition-all duration-200',
+                          isActive
+                            ? 'bg-primary text-white shadow-lg shadow-orange-600/20'
+                            : 'text-on-surface-variant hover:bg-orange-50 hover:text-orange-950',
+                        )}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span
+                            className={cn(
+                              'shrink-0 transition-colors',
+                              isActive ? 'text-white' : 'text-outline group-hover:text-primary',
+                            )}
+                          >
+                            <Icon size={18} />
+                          </span>
+                          <span className={cn('truncate text-sm tracking-tight', isActive ? 'font-bold' : 'font-semibold')}>
+                            {item.label}
+                          </span>
+                        </div>
+                        {item.badge && (
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-[10px] font-black',
+                              isActive ? 'bg-white/20 text-white' : 'bg-orange-100 text-primary',
+                            )}
+                          >
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </nav>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1 border-t border-orange-100/80 pt-5">
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-xs font-bold text-outline transition-all hover:bg-orange-50 hover:text-primary"
+          >
+            <HelpCircle size={17} />
+            Bantuan
+          </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-xs font-bold text-outline transition-all hover:bg-red-50 hover:text-error"
+          >
+            <LogOut size={17} />
+            Keluar
+          </button>
+        </div>
+      </aside>
+    </>
   )
 }

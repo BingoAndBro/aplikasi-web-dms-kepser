@@ -1,7 +1,9 @@
-import { ChevronDown } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 
+import { RoleBadge } from '#/components/ui/RoleBadge'
 import { ROLE_DISPLAY } from '#/lib/constants/roles'
 import type { RoleName } from '#/lib/types/auth'
+import { cn } from '#/lib/utils'
 
 export function RoleDropdown({
   currentRole,
@@ -17,38 +19,57 @@ export function RoleDropdown({
   userRoles: RoleName[]
 }) {
   return (
-    <div className="flex flex-col items-end mr-2 relative">
-      <span className="text-[8px] font-black text-outline uppercase tracking-[0.2em] mb-1">Switch Role</span>
+    <div className="relative flex flex-col items-end">
+      <span className="mb-1 hidden text-[8px] font-black uppercase tracking-[0.22em] text-outline md:block">
+        Role aktif
+      </span>
       <button
         type="button"
         aria-label={`Ganti role aktif, saat ini ${ROLE_DISPLAY[currentRole]}`}
         aria-expanded={roleSwitcherOpen}
         aria-haspopup="menu"
         onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-        className="bg-surface-container/50 border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest px-2 py-1 outline-none focus:ring-1 focus:ring-primary/40 cursor-pointer hover:bg-surface-container transition-all flex items-center gap-1"
+        className="flex max-w-28 items-center gap-1.5 rounded-full border border-orange-100 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-on-surface shadow-sm outline-none transition-all hover:border-orange-200 hover:bg-orange-50 focus:ring-2 focus:ring-primary/30 md:max-w-none"
       >
         {ROLE_DISPLAY[currentRole]}
-        <ChevronDown size={10} className={`transition-transform ${roleSwitcherOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={cn('text-outline transition-transform', roleSwitcherOpen && 'rotate-180 text-primary')} />
       </button>
       {roleSwitcherOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setRoleSwitcherOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 bg-surface-container-lowest border border-outline-variant/20 rounded-lg shadow-xl py-1 min-w-[160px]" role="menu">
-            {userRoles.map((role) => (
-              <button
-                key={role}
-                type="button"
-                role="menuitem"
-                onClick={() => handleRoleSwitch(role)}
-                className={`w-full text-left px-3 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
-                  role === currentRole
-                    ? 'bg-primary text-white'
-                    : 'text-on-surface-variant hover:bg-primary/5 hover:text-primary'
-                }`}
-              >
-                {ROLE_DISPLAY[role]}
-              </button>
-            ))}
+          <button
+            type="button"
+            aria-label="Tutup pilihan role"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setRoleSwitcherOpen(false)}
+          />
+          <div className="absolute right-0 top-full z-50 mt-2 min-w-64 rounded-2xl border border-orange-100 bg-white p-2 shadow-xl shadow-orange-950/10" role="menu">
+            <p className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-outline">
+              Pilih role kerja
+            </p>
+            <div className="space-y-1">
+              {userRoles.map((role) => {
+                const isCurrent = role === currentRole
+
+                return (
+                  <button
+                    key={role}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setRoleSwitcherOpen(false)
+                      handleRoleSwitch(role)
+                    }}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors',
+                      isCurrent ? 'bg-orange-50 text-primary' : 'text-on-surface-variant hover:bg-orange-50 hover:text-orange-950',
+                    )}
+                  >
+                    <RoleBadge role={role} className="max-w-48 truncate rounded-full text-[10px]" />
+                    {isCurrent && <Check size={15} className="shrink-0 text-primary" />}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </>
       )}

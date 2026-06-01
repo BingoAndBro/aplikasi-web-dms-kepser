@@ -8,6 +8,7 @@ import { clearClientAuthState, setClientAuthState, updateClientAuthState } from 
 import { logDev } from '#/lib/dev-logger'
 import { MESH_ROUTES, ROUTES } from '#/lib/constants/routes'
 import { ROLES } from '#/lib/constants/roles'
+import { AppToastProvider } from '#/components/ui/AppToast'
 
 import type { RoleName } from '#/lib/types/auth'
 import { AppSidebar } from './AppSidebar'
@@ -63,6 +64,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [hasSession, setHasSession] = React.useState(false)
   const [roleSwitcherOpen, setRoleSwitcherOpen] = React.useState(false)
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false)
 
   const pathname = routerState.location.pathname
   const isMeshPage = MESH_ROUTES.some((route) => route === pathname)
@@ -242,10 +244,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex h-screen overflow-hidden bg-background relative selection:bg-primary-container selection:text-on-primary-container">
+      <AppToastProvider>
+      <div className="relative flex h-screen overflow-hidden bg-[#FFF8F1] selection:bg-primary-container selection:text-on-primary-container">
         <AppSidebar
           activeRole={activeRole}
           hasKetuaTimAssignment={chairmanKegiatan.length > 0}
+          mobileOpen={mobileSidebarOpen}
+          onMobileOpenChange={setMobileSidebarOpen}
           pathname={routerState.location.pathname}
           searchStr={routerState.location.searchStr}
           onLogout={handleLogout}
@@ -261,6 +266,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             handleRoleSwitch={handleRoleSwitch}
             initials={initials}
             isAdmin={isAdmin}
+            onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
             roleSwitcherOpen={roleSwitcherOpen}
             setRoleSwitcherOpen={setRoleSwitcherOpen}
             setUserDropdownOpen={setUserDropdownOpen}
@@ -268,22 +274,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             userRoles={userRoles}
           />
 
-          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <section className="flex-1 overflow-y-auto custom-scrollbar bg-background border-r border-outline-variant/15">
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#FFF8F1]">
+            <section className="flex-1 overflow-y-auto custom-scrollbar border-r border-orange-100/60 bg-[radial-gradient(circle_at_top_right,rgba(255,219,203,0.45),transparent_32rem),linear-gradient(180deg,#FFF8F1_0%,#FFF4E8_100%)]">
               {children}
             </section>
-            <footer className="w-full py-4 flex justify-center gap-8 items-center border-t border-outline-variant/15 shrink-0 bg-surface-container-lowest">
+            <footer className="w-full py-3 flex flex-wrap justify-center gap-x-8 gap-y-2 items-center border-t border-orange-100/70 shrink-0 bg-[#FFFDF9]/90">
               <span className="font-body text-[10px] font-bold tracking-widest text-outline uppercase">
                 © {new Date().getFullYear()} BPS Kabupaten Kepulauan Seribu
               </span>
               <div className="flex gap-6">
-                <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Support</button>
+                <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Bantuan</button>
                 <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Kebijakan</button>
               </div>
             </footer>
           </main>
         </div>
       </div>
+      </AppToastProvider>
     </>
   )
 }
