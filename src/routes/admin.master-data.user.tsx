@@ -989,7 +989,7 @@ function MasterUserPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <div className="flex justify-center gap-1 transition-opacity">
                         <Button size="icon-xs" variant="ghost" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
                           <Edit2 size={14} />
                         </Button>

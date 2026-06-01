@@ -166,7 +166,7 @@ function KegiatanPage() {
                     <TableCell><span className="text-xs font-medium px-2 py-0.5 bg-surface rounded-lg text-on-surface-variant">{item.fungsi_nama ?? '—'}</span></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <div className="flex justify-center gap-1 transition-opacity">
                         <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit kegiatan ${item.nama}`}><Edit2 size={14} /></Button>
                         <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus kegiatan ${item.nama}`}><Trash2 size={14} /></Button>
                       </div>

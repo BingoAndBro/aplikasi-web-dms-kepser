@@ -95,7 +95,7 @@ export function AppHeader({
               <div
                 role="dialog"
                 aria-label="Notifikasi"
-                className="absolute right-0 top-full z-50 mt-3 w-80 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-xl shadow-orange-950/10 sm:w-96"
+                className="fixed left-3 right-3 top-20 z-50 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-xl shadow-orange-950/10 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-96"
               >
                 <div className="bg-[#FFF8F1] px-4 py-4">
                   <p className="text-sm font-black text-on-surface">Notifikasi</p>

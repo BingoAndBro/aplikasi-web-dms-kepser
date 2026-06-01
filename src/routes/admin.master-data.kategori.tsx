@@ -203,7 +203,7 @@ function KategoriPage() {
                       <span className="text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary rounded-lg">{item.jumlah_detail ?? 0}</span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <div className="flex justify-center gap-1 transition-opacity">
                         <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit kategori ${item.nama}`}><Edit2 size={14} /></Button>
                         <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus kategori ${item.nama}`}><Trash2 size={14} /></Button>
                       </div>

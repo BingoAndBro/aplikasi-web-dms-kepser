@@ -523,7 +523,7 @@ function KelengkapanSection({ title, items, onAdd, onEdit, onDelete, chainLabel 
                 </div>
                 <p className="mt-1 text-[10px] font-semibold text-zinc-500">Format: mengikuti dokumen yang diunggah</p>
               </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+              <div className="flex gap-1 shrink-0 transition-opacity">
                 <Button size="icon-xs" variant="ghost" onClick={() => onEdit(item)} aria-label={`Edit kelengkapan ${item.nama_dokumen}`}><Edit2 size={12} /></Button>
                 <Button size="icon-xs" variant="ghost" onClick={() => onDelete(item)} className="hover:text-error" aria-label={`Hapus kelengkapan ${item.nama_dokumen}`}><Trash2 size={12} /></Button>
               </div>

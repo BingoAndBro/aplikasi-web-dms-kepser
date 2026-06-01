@@ -31,8 +31,8 @@ export function RoleDropdown({
         onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
         className="flex max-w-28 items-center gap-1.5 rounded-full border border-orange-100 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-on-surface shadow-sm outline-none transition-all hover:border-orange-200 hover:bg-orange-50 focus:ring-2 focus:ring-primary/30 md:max-w-none"
       >
-        {ROLE_DISPLAY[currentRole]}
-        <ChevronDown size={12} className={cn('text-outline transition-transform', roleSwitcherOpen && 'rotate-180 text-primary')} />
+        <span className="min-w-0 truncate">{ROLE_DISPLAY[currentRole]}</span>
+        <ChevronDown size={12} className={cn('shrink-0 text-outline transition-transform', roleSwitcherOpen && 'rotate-180 text-primary')} />
       </button>
       {roleSwitcherOpen && (
         <>
