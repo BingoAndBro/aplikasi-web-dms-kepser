@@ -1,10 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { arsip as arsipTable } from '#/db/schema/arsip'
+import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { ARCHIVE_SOURCE_TYPE, ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { updateNominalSchema, validateNominalForMaterial } from '#/lib/schemas/dokumen'
 
@@ -117,17 +118,21 @@ export const Route = createFileRoute('/api/dokumen/$id/nominal')({
         try {
           archiveRows = await db
             .select({
-              status_arsip: arsipTable.statusArsip,
+              status_arsip: berkasArsip.statusArsip,
             })
-            .from(arsipTable)
-            .where(eq(arsipTable.dokumenId, params.id))
+            .from(berkasArsipItem)
+            .leftJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
+            .where(and(
+              eq(berkasArsipItem.dokumenId, params.id),
+              eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+            ))
             .limit(1)
         } catch (err) {
           console.error('[dokumen-nominal] archive lookup error:', err)
           return Response.json({ error: 'Update gagal' }, { status: 500 })
         }
 
-        if (archiveRows.some((row) => row.status_arsip === 'DIMUSNAHKAN')) {
+        if (archiveRows.some((row) => row.status_arsip === ARCHIVE_STATUS.DIMUSNAHKAN)) {
           return Response.json(
             { error: 'Tidak bisa update dokumen yang sudah dimusnahkan' },
             { status: 400 },
