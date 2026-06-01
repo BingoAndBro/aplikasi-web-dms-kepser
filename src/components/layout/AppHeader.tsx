@@ -1,3 +1,4 @@
+import * as React from 'react'
 import {
   Bell,
   Menu,
@@ -42,6 +43,7 @@ export function AppHeader({
   userRoles: RoleName[]
 }) {
   const roleTitle = isAdmin ? 'Admin Sistem' : ROLE_DISPLAY[activeRole]
+  const [notificationOpen, setNotificationOpen] = React.useState(false)
 
   return (
     <header className="z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-orange-100/70 bg-[#FFF8F1]/90 px-4 shadow-sm shadow-orange-950/5 backdrop-blur-xl md:h-20 md:px-8">
@@ -69,14 +71,50 @@ export function AppHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 md:gap-4">
-        <button
-          type="button"
-          aria-label="Notifikasi visual saja"
-          title="Notifikasi visual saja; belum terhubung ke sumber backend"
-          className="relative inline-flex size-10 items-center justify-center rounded-2xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-        >
-          <Bell size={19} />
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            aria-label="Buka panel notifikasi visual"
+            aria-expanded={notificationOpen}
+            aria-haspopup="dialog"
+            title="Notifikasi visual saja; belum terhubung ke sumber backend"
+            onClick={() => setNotificationOpen((open) => !open)}
+            className="relative inline-flex size-10 items-center justify-center rounded-2xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <Bell size={19} />
+          </button>
+
+          {notificationOpen && (
+            <>
+              <button
+                type="button"
+                aria-label="Tutup panel notifikasi"
+                className="fixed inset-0 z-40 cursor-default"
+                onClick={() => setNotificationOpen(false)}
+              />
+              <div
+                role="dialog"
+                aria-label="Notifikasi"
+                className="absolute right-0 top-full z-50 mt-3 w-80 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-xl shadow-orange-950/10 sm:w-96"
+              >
+                <div className="bg-[#FFF8F1] px-4 py-4">
+                  <p className="text-sm font-black text-on-surface">Notifikasi</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-on-surface-variant">
+                    Panel visual-only. Belum ada sumber backend notifikasi pada phase ini.
+                  </p>
+                </div>
+                <div className="p-4">
+                  <div className="rounded-2xl border border-dashed border-orange-200 bg-[#FFFDF9] px-4 py-6 text-center">
+                    <p className="text-sm font-bold text-on-surface">Belum ada notifikasi aktif</p>
+                    <p className="mt-1 text-xs leading-5 text-outline">
+                      Tidak ada hitungan unread atau status operasional yang ditampilkan tanpa API resmi.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="flex items-center gap-3 rounded-full border border-orange-100/80 bg-[#FFFDF9] py-1 pl-2 pr-1 shadow-sm shadow-orange-950/5 md:gap-4 md:pl-4">
           {canSwitchRole && (

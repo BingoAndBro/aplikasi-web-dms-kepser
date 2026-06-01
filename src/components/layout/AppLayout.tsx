@@ -245,7 +245,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <AppToastProvider>
-      <div className="relative flex h-screen overflow-hidden bg-[#FFF8F1] selection:bg-primary-container selection:text-on-primary-container">
+        <div className="relative flex h-screen overflow-hidden bg-[#FFF8F1] selection:bg-primary-container selection:text-on-primary-container">
         <AppSidebar
           activeRole={activeRole}
           hasKetuaTimAssignment={chairmanKegiatan.length > 0}
@@ -280,7 +280,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </section>
             <footer className="w-full py-3 flex flex-wrap justify-center gap-x-8 gap-y-2 items-center border-t border-orange-100/70 shrink-0 bg-[#FFFDF9]/90">
               <span className="font-body text-[10px] font-bold tracking-widest text-outline uppercase">
-                © {new Date().getFullYear()} BPS Kabupaten Kepulauan Seribu
+                &copy; {new Date().getFullYear()} BPS Kabupaten Kepulauan Seribu
               </span>
               <div className="flex gap-6">
                 <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Bantuan</button>
@@ -289,7 +289,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </footer>
           </main>
         </div>
-      </div>
+        </div>
       </AppToastProvider>
     </>
   )
