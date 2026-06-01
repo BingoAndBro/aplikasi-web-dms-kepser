@@ -5,15 +5,21 @@ import { DEV_SEED_USERS, SEED_ENV, SEED_USER_IDS } from './constants'
 
 type SeedDb = typeof db
 
+const ARGON2ID_PREFIX = '$argon2id$'
+const INVALID_DEV_PASSWORD_HASH_ERROR =
+  'Invalid DMS_DEV_SEED_PASSWORD_HASH: expected an Argon2id PHC hash starting with $argon2id$.'
+
 export async function seedDevelopmentUsers(database: SeedDb) {
   const passwordHash = process.env[SEED_ENV.devPasswordHash]
 
-  if (!passwordHash) {
+  if (passwordHash === undefined) {
     console.log(
       `Skipping development users. Set ${SEED_ENV.devPasswordHash} to an argon2id password hash to enable user seeding.`,
     )
     return { seeded: false, userIds: null }
   }
+
+  validateDevSeedPasswordHash(passwordHash)
 
   const roleNames = Array.from(new Set(DEV_SEED_USERS.flatMap((user) => user.roles)))
   const roleRows = await database
@@ -96,6 +102,12 @@ export async function seedDevelopmentUsers(database: SeedDb) {
       admin: requireSeededUserId(userIdsByKey, 'admin'),
       ppk: requireSeededUserId(userIdsByKey, 'ppk'),
     },
+  }
+}
+
+function validateDevSeedPasswordHash(passwordHash: string) {
+  if (!passwordHash.startsWith(ARGON2ID_PREFIX)) {
+    throw new Error(INVALID_DEV_PASSWORD_HASH_ERROR)
   }
 }
 
