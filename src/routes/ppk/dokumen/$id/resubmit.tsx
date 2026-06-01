@@ -2,12 +2,22 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
-import { Badge } from '#/components/ui/badge'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
+import {
+  RevisionNotePanel,
+  WorkflowFieldCard,
+  WorkflowPageHeader,
+  WorkflowPanel,
+  WorkflowTimeline,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
 import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
 import { useNoChangeSubmitGuard } from '#/hooks/useNoChangeSubmitGuard'
 import {
+  FileText,
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
@@ -221,17 +231,20 @@ function PpkResubmitPage() {
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <Loader2 size={24} className="animate-spin text-primary" />
-    </div>
+    <PageLayout>
+      <LoadingState label="Memuat revisi PPK" />
+    </PageLayout>
   )
 
   if (fetchError || !dokumen) return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
-      <AlertTriangle size={32} className="text-error" />
-      <p className="text-sm text-on-surface-variant">{fetchError ?? 'Dokumen tidak ditemukan'}</p>
-      <Button variant="outline" size="sm" onClick={() => navigate({ to: '/ppk/revisi' })}>Kembali ke Revisi</Button>
-    </div>
+    <PageLayout>
+      <ErrorState
+        title="Dokumen revisi tidak dapat dibuka"
+        description={fetchError ?? 'Dokumen tidak ditemukan'}
+        variant="page"
+        action={<Button variant="outline" size="sm" onClick={() => navigate({ to: '/ppk/revisi' })}>Kembali ke Revisi</Button>}
+      />
+    </PageLayout>
   )
 
   const workflowIdx = getWorkflowIndex(dokumen.status)

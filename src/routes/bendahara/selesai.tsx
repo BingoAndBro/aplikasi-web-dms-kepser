@@ -3,14 +3,22 @@ import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
-import { Badge } from '#/components/ui/badge'
-import { FileText, ChevronRight, Eye, AlertCircle, CheckCircle2, Banknote } from 'lucide-react'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
+import {
+  WorkflowMobileCard,
+  WorkflowMobileList,
+  WorkflowPageHeader,
+  WorkflowTableShell,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
+import { ChevronRight, Eye, CheckCircle2, Banknote } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 
 type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string }
 type BendaharaSelesaiResponse = { dokumen?: Item[]; error?: string }
-
 
 export const Route = createFileRoute('/bendahara/selesai')({ component: BendaharaSelesaiPage })
 
@@ -33,34 +41,35 @@ function BendaharaSelesaiPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <Banknote size={12} />
-            <Link to="/bendahara" className="hover:text-primary">PPSPM</Link>
-            <ChevronRight size={10} />
-            <span className="text-primary">Dokumen Selesai</span>
-          </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Dokumen Selesai</h2>
-          <p className="text-on-surface-variant text-xs mt-1">{items.length} dokumen telah disetujui pencairannya.</p>
-        </div>
+        <WorkflowPageHeader
+          tone="ppspm"
+          eyebrow={
+            <>
+              <Banknote size={12} />
+              <Link to="/bendahara" className="hover:text-orange-900">PPSPM</Link>
+              <ChevronRight size={10} />
+              <span>Dokumen Selesai</span>
+            </>
+          }
+          title="Dokumen Selesai"
+          description={`${items.length} dokumen telah disetujui PPSPM dan berstatus selesai.`}
+        />
         {loading ? (
-          <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+          <LoadingState variant="list" rows={4} />
         ) : error ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
-            <AlertCircle size={32} className="text-error" /><p className="text-sm text-on-surface-variant">{error}</p>
-          </div>
+          <ErrorState title="Gagal memuat data" description={error} variant="page" />
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
-            <div className="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center"><CheckCircle2 size={24} className="text-green-500" /></div>
-            <p className="font-headline text-lg font-bold text-on-surface">Belum ada dokumen</p>
-            <p className="text-on-surface-variant text-xs">Dokumen yang telah Anda setujui akan muncul di sini.</p>
-          </div>
+          <EmptyState
+            title="Belum ada dokumen"
+            description="Dokumen yang telah Anda setujui akan muncul di sini."
+            icon={<CheckCircle2 size={20} />}
+          />
         ) : (
-          <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <>
+            <WorkflowTableShell>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-surface-container-low/30">
+                  <TableRow className="bg-orange-50/50">
                     <TableHead className="w-12 text-center">No</TableHead>
                     <TableHead>Judul</TableHead>
                     <TableHead>Fungsi</TableHead>
@@ -73,16 +82,14 @@ function BendaharaSelesaiPage() {
                 </TableHeader>
                 <TableBody>
                   {items.map((d, i) => (
-                    <TableRow key={d.id} className="group hover:bg-primary/5 transition-colors">
+                    <TableRow key={d.id} className="group hover:bg-orange-50/60 transition-colors">
                       <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                       <TableCell><p className="font-semibold text-sm text-on-surface line-clamp-1">{d.judul}</p></TableCell>
-                      <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '—'}</span></TableCell>
-                      <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '—'}</span></TableCell>
+                      <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '-'}</span></TableCell>
+                      <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '-'}</span></TableCell>
                       <TableCell className="text-center"><span className="text-xs font-semibold text-on-surface">{d.tahun}</span></TableCell>
                       <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.updated_at)}</span></TableCell>
-                      <TableCell className="text-center">
-                        <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px] font-semibold">Selesai</Badge>
-                      </TableCell>
+                      <TableCell className="text-center"><StatusBadge status="COMPLETED" className="text-[10px] font-semibold" /></TableCell>
                       <TableCell className="text-center">
                         <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}><Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button></Link>
                       </TableCell>
@@ -90,8 +97,32 @@ function BendaharaSelesaiPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          </div>
+            </WorkflowTableShell>
+
+            <WorkflowMobileList>
+              {items.map((d) => (
+                <WorkflowMobileCard
+                  key={d.id}
+                  title={d.judul}
+                  subtitle={d.fungsi_nama ?? '-'}
+                  status={<StatusBadge status="COMPLETED" className="text-[10px] font-semibold" />}
+                  meta={[
+                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-' },
+                    { label: 'Tahun', value: d.tahun },
+                    { label: 'Tanggal Selesai', value: formatDate(d.updated_at) },
+                  ]}
+                  action={
+                    <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>
+                      <Button variant="outline" size="sm" className="w-full gap-1.5">
+                        <Eye size={14} />
+                        Lihat Detail
+                      </Button>
+                    </Link>
+                  }
+                />
+              ))}
+            </WorkflowMobileList>
+          </>
         )}
       </div>
     </PageLayout>

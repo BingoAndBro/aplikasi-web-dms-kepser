@@ -3,16 +3,23 @@ import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
-import { Badge } from '#/components/ui/badge'
-import { FileText, ChevronRight, Eye, AlertCircle, Banknote } from 'lucide-react'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import {
+  WorkflowMobileCard,
+  WorkflowMobileList,
+  WorkflowPageHeader,
+  WorkflowTableShell,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
+import { FileText, ChevronRight, Eye, Banknote } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 
 type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string; revision_notes: string | null }
 type BendaharaDitolakResponse = { dokumen?: Item[]; error?: string }
 
-function truncate(str: string | null, len = 50): string { if (!str) return '—'; return str.length > len ? str.slice(0, len) + '...' : str }
-
+function truncate(str: string | null, len = 50): string { if (!str) return '-'; return str.length > len ? str.slice(0, len) + '...' : str }
 
 export const Route = createFileRoute('/bendahara/ditolak')({ component: BendaharaDitolakPage })
 
@@ -35,34 +42,35 @@ function BendaharaDitolakPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <Banknote size={12} />
-            <Link to="/bendahara" className="hover:text-primary">PPSPM</Link>
-            <ChevronRight size={10} />
-            <span className="text-primary">Dokumen Ditolak</span>
-          </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Dokumen Ditolak</h2>
-          <p className="text-on-surface-variant text-xs mt-1">{items.length} dokumen ditolak dan dikembalikan ke PPK.</p>
-        </div>
+        <WorkflowPageHeader
+          tone="ppspm"
+          eyebrow={
+            <>
+              <Banknote size={12} />
+              <Link to="/bendahara" className="hover:text-orange-900">PPSPM</Link>
+              <ChevronRight size={10} />
+              <span>Dokumen Ditolak</span>
+            </>
+          }
+          title="Dokumen Ditolak"
+          description={`${items.length} dokumen ditolak PPSPM dan dikembalikan ke PPK untuk perbaikan.`}
+        />
         {loading ? (
-          <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+          <LoadingState variant="list" rows={4} />
         ) : error ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
-            <AlertCircle size={32} className="text-error" /><p className="text-sm text-on-surface-variant">{error}</p>
-          </div>
+          <ErrorState title="Gagal memuat data" description={error} variant="page" />
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
-            <div className="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center"><FileText size={24} className="text-green-500" /></div>
-            <p className="font-headline text-lg font-bold text-on-surface">Tidak ada dokumen</p>
-            <p className="text-on-surface-variant text-xs">Dokumen yang Anda tolak akan muncul di sini.</p>
-          </div>
+          <EmptyState
+            title="Tidak ada dokumen"
+            description="Dokumen yang Anda tolak akan muncul di sini."
+            icon={<FileText size={20} />}
+          />
         ) : (
-          <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <>
+            <WorkflowTableShell>
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-surface-container-low/30">
+                  <TableRow className="bg-orange-50/50">
                     <TableHead className="w-12 text-center">No</TableHead>
                     <TableHead>Judul</TableHead>
                     <TableHead>Fungsi</TableHead>
@@ -75,11 +83,11 @@ function BendaharaDitolakPage() {
                 </TableHeader>
                 <TableBody>
                   {items.map((d, i) => (
-                    <TableRow key={d.id} className="group hover:bg-primary/5 transition-colors">
+                    <TableRow key={d.id} className="group hover:bg-orange-50/60 transition-colors">
                       <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                       <TableCell><p className="font-semibold text-sm text-on-surface line-clamp-1">{d.judul}</p></TableCell>
-                      <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '—'}</span></TableCell>
-                      <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '—'}</span></TableCell>
+                      <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '-'}</span></TableCell>
+                      <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '-'}</span></TableCell>
                       <TableCell className="text-center"><span className="text-xs font-semibold text-on-surface">{d.tahun}</span></TableCell>
                       <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.updated_at)}</span></TableCell>
                       <TableCell><span className="text-xs text-on-surface-variant" title={d.revision_notes ?? undefined}>{truncate(d.revision_notes, 50)}</span></TableCell>
@@ -90,8 +98,32 @@ function BendaharaDitolakPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          </div>
+            </WorkflowTableShell>
+
+            <WorkflowMobileList>
+              {items.map((d) => (
+                <WorkflowMobileCard
+                  key={d.id}
+                  title={d.judul}
+                  subtitle={d.fungsi_nama ?? '-'}
+                  meta={[
+                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-' },
+                    { label: 'Tahun', value: d.tahun },
+                    { label: 'Tanggal Penolakan', value: formatDate(d.updated_at) },
+                    { label: 'Catatan', value: truncate(d.revision_notes, 80) },
+                  ]}
+                  action={
+                    <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>
+                      <Button variant="outline" size="sm" className="w-full gap-1.5">
+                        <Eye size={14} />
+                        Lihat Detail
+                      </Button>
+                    </Link>
+                  }
+                />
+              ))}
+            </WorkflowMobileList>
+          </>
         )}
       </div>
     </PageLayout>

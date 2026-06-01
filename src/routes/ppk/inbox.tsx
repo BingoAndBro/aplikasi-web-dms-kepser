@@ -10,18 +10,25 @@ import {
   TableCell,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
-import { Badge } from '#/components/ui/badge'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
-  Search,
+  WorkflowMobileCard,
+  WorkflowMobileList,
+  WorkflowPageHeader,
+  WorkflowPagination,
+  WorkflowSearchPanel,
+  WorkflowTableShell,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
+import {
   FileText,
   ChevronRight,
-  ChevronLeft,
   Eye,
-  AlertCircle,
   ClipboardList,
 } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
-import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 
 type InboxItem = {
@@ -116,38 +123,29 @@ function PpkInboxPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <ClipboardList size={12} />
-            <Link to="/ppk" className="hover:text-primary">PPK</Link>
-            <ChevronRight size={10} />
-            <span className="text-primary">Validasi Dokumen</span>
-          </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">
-            Dokumen Menunggu Validasi
-          </h2>
-          <p className="text-on-surface-variant text-xs mt-1">
-            {items.length} dokumen menunggu validasi Anda.
-          </p>
-        </div>
+        <WorkflowPageHeader
+          eyebrow={
+            <>
+              <ClipboardList size={12} />
+              <Link to="/ppk" className="hover:text-orange-900">PPK</Link>
+              <ChevronRight size={10} />
+              <span>Validasi Dokumen</span>
+            </>
+          }
+          title="Dokumen Menunggu Validasi"
+          description={`${items.length} dokumen Material menunggu validasi PPK. Validasi akan meneruskan dokumen ke PPSPM.`}
+        />
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input
-              type="text"
-              placeholder="Cari judul, fungsi, kegiatan..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(0) }}
-              className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
-            />
-          </div>
+        <WorkflowSearchPanel
+          search={search}
+          onSearchChange={(value) => { setSearch(value); setPage(0) }}
+          placeholder="Cari judul, fungsi, kegiatan..."
+          resultLabel={`${filtered.length} dokumen ditemukan`}
+        >
           <select
             value={fungsiFilter}
             onChange={e => { setFungsiFilter(e.target.value); setPage(0) }}
-            className="px-3 py-2 bg-white border border-border rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-ring/40 cursor-pointer"
+            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
           >
             <option value="">Semua Fungsi</option>
             {fungsiList.map(f => (
@@ -158,14 +156,14 @@ function PpkInboxPage() {
             type="date"
             value={startDate}
             onChange={e => { setStartDate(e.target.value); setPage(0) }}
-            className="px-3 py-2 bg-white border border-border rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-ring/40 cursor-pointer"
+            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
             title="Tanggal mulai"
           />
           <input
             type="date"
             value={endDate}
             onChange={e => { setEndDate(e.target.value); setPage(0) }}
-            className="px-3 py-2 bg-white border border-border rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-ring/40 cursor-pointer"
+            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
             title="Tanggal akhir"
           />
           {(fungsiFilter || startDate || endDate) && (
@@ -183,45 +181,32 @@ function PpkInboxPage() {
               Reset
             </Button>
           )}
-        </div>
+        </WorkflowSearchPanel>
 
         {/* Table */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
+          <LoadingState variant="list" rows={4} />
         ) : fetchError ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
-            <AlertCircle size={32} className="text-error" />
-            <div className="text-center">
-              <p className="font-headline text-base font-bold text-error">Gagal memuat data</p>
-              <p className="text-on-surface-variant text-xs mt-1">{fetchError}</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={fetchData}>
-              Coba Lagi
-            </Button>
-          </div>
+          <ErrorState
+            title="Gagal memuat data"
+            description={fetchError}
+            variant="page"
+            action={<Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>}
+          />
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-surface-container-low/30 rounded-2xl border border-outline-variant/20">
-            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
-              <FileText size={24} className="text-primary" />
-            </div>
-            <div className="text-center">
-              <p className="font-headline text-lg font-bold text-on-surface">Tidak ada dokumen</p>
-              <p className="text-on-surface-variant text-xs mt-1">
-                {search || fungsiFilter || startDate || endDate
-                  ? 'Tidak ada dokumen yang cocok dengan filter Anda.'
-                  : 'Belum ada dokumen yang menunggu validasi.'}
-              </p>
-            </div>
-          </div>
+          <EmptyState
+            title="Tidak ada dokumen"
+            description={search || fungsiFilter || startDate || endDate
+              ? 'Tidak ada dokumen yang cocok dengan filter Anda.'
+              : 'Belum ada dokumen yang menunggu validasi PPK.'}
+            icon={<FileText size={20} />}
+          />
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
+            <WorkflowTableShell>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-surface-container-low/30">
+                    <TableRow className="bg-orange-50/50">
                       <TableHead className="w-12 text-center">No</TableHead>
                       <TableHead>Judul</TableHead>
                       <TableHead>Fungsi</TableHead>
@@ -259,9 +244,7 @@ function PpkInboxPage() {
                           <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] font-semibold">
-                            Validasi PPK
-                          </Badge>
+                          <StatusBadge status="IN_PPK_VALIDATION" className="text-[10px] font-semibold" />
                         </TableCell>
                         <TableCell className="text-center">
                           <Link to="/ppk/dokumen/$id" params={{ id: dok.id }}>
@@ -274,33 +257,39 @@ function PpkInboxPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-            </div>
+            </WorkflowTableShell>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  size="icon-xs" variant="outline"
-                  aria-label="Halaman sebelumnya"
-                  onClick={() => setPage(p => Math.max(0, p - 1))}
-                  disabled={page === 0}
-                >
-                  <ChevronLeft size={14} />
-                </Button>
-                <span className="text-xs text-on-surface-variant">
-                  Halaman {page + 1} dari {totalPages}
-                </span>
-                <Button
-                  size="icon-xs" variant="outline"
-                  aria-label="Halaman berikutnya"
-                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                  disabled={page >= totalPages - 1}
-                >
-                  <ChevronRight size={14} />
-                </Button>
-              </div>
-            )}
+            <WorkflowMobileList>
+              {paginated.map((dok) => (
+                <WorkflowMobileCard
+                  key={dok.id}
+                  title={dok.judul}
+                  subtitle={`Diajukan ${formatDate(dok.created_at)}`}
+                  status={<StatusBadge status="IN_PPK_VALIDATION" className="text-[10px] font-semibold" />}
+                  meta={[
+                    { label: 'Fungsi', value: dok.fungsi_nama ?? '-' },
+                    { label: 'Kegiatan', value: dok.kegiatan_nama ?? '-' },
+                    { label: 'Tahun', value: dok.tahun },
+                    { label: 'Tanggal Ajuan', value: formatDate(dok.tanggal) },
+                  ]}
+                  action={
+                    <Link to="/ppk/dokumen/$id" params={{ id: dok.id }}>
+                      <Button variant="outline" size="sm" className="w-full gap-1.5">
+                        <Eye size={14} />
+                        Lihat Detail
+                      </Button>
+                    </Link>
+                  }
+                />
+              ))}
+            </WorkflowMobileList>
+
+            <WorkflowPagination
+              page={page}
+              totalPages={totalPages}
+              onPrevious={() => setPage(p => Math.max(0, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            />
           </>
         )}
       </div>
