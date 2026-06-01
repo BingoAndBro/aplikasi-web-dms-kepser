@@ -2,9 +2,9 @@ import { lstat, realpath, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { arsip as arsipTable } from '#/db/schema/arsip'
+import { berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
@@ -15,6 +15,7 @@ import {
   masterKegiatan,
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 import { getDokumenValidationErrorMessage, updateDokumenSchema } from '#/lib/schemas/dokumen'
 import { type LampiranUrl } from '#/lib/dokumen-helpers'
 import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
@@ -691,10 +692,13 @@ export const Route = createFileRoute('/api/dokumen/$id')({
         try {
           archiveRows = await db
             .select({
-              id: arsipTable.id,
+              id: berkasArsipItem.id,
             })
-            .from(arsipTable)
-            .where(eq(arsipTable.dokumenId, params.id))
+            .from(berkasArsipItem)
+            .where(and(
+              eq(berkasArsipItem.dokumenId, params.id),
+              eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+            ))
             .limit(1)
         } catch (err) {
           console.error('[API/dokumen/:id] DELETE archive lookup error:', err)

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
@@ -205,6 +206,13 @@ describe('/api/dokumen/$id/nominal UUID guard', () => {
     expect(mocks.dbSelect).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
+
+  it('does not reintroduce legacy canonical archive table evidence', () => {
+    const routeSource = readFileSync('src/routes/api/dokumen/$id.nominal.ts', 'utf8')
+
+    expect(routeSource).not.toContain('arsip as arsipTable')
+    expect(routeSource).not.toContain('arsipTable')
+  })
 })
 
 function createSession(userId: string, roles: string[], activeRole: string) {
@@ -259,6 +267,7 @@ function createQueryBuilder(result: unknown[]): Record<string, unknown> {
   const query: Record<string, unknown> = {}
 
   query.from = vi.fn(() => query)
+  query.leftJoin = vi.fn(() => query)
   query.where = vi.fn(() => query)
   query.limit = vi.fn(async () => result)
 
