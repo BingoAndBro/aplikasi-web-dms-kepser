@@ -1,12 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import {
+  AdminPageHeader,
+  AdminSearchPanel,
+  AdminTableShell,
+} from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { Plus, Edit2, Trash2, Search, ClipboardList, ChevronRight } from 'lucide-react'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { Plus, Edit2, Trash2, ClipboardList } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import type { FungsiRow, KegiatanRow } from '#/lib/master-data/shared'
@@ -102,19 +109,12 @@ function KegiatanPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-              <ClipboardList size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
-              <span className="text-primary">Master Kegiatan</span>
-            </div>
-            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Master Kegiatan</h1>
-            <p className="text-on-surface-variant text-xs mt-1">Kelola jenis kegiatan per departemen/fungsi.</p>
-          </div>
-          <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={fungsis.length === 0}>
-            <Plus size={14} />Tambah Kegiatan
-          </Button>
-        </div>
+        <AdminPageHeader
+          eyebrow={<><ClipboardList size={12} /><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
+          title="Master Kegiatan"
+          description="Kelola kegiatan di bawah fungsi/departemen yang menjadi dasar Ketua Tim dan konfigurasi dokumen."
+          actions={<Button onClick={openCreate} size="sm" className="gap-1.5" disabled={fungsis.length === 0}><Plus size={14} />Tambah Kegiatan</Button>}
+        />
 
         {successMsg && (
           <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
@@ -122,36 +122,35 @@ function KegiatanPage() {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3">
+        <AdminSearchPanel
+          id="kegiatan-search"
+          label="Cari kegiatan"
+          value={search}
+          onChange={setSearch}
+          placeholder="Cari kegiatan..."
+          resultText={`${filtered.length} dari ${items.length} kegiatan`}
+        >
           <select value={filterFungsi} onChange={e => setFilterFungsi(e.target.value)} aria-label="Filter kegiatan berdasarkan fungsi"
-            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
+            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
             <option value="">Semua Fungsi</option>
             {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
           </select>
-          <div className="relative flex-1 max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" aria-label="Cari kegiatan" placeholder="Cari kegiatan..." value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40" />
-          </div>
-        </div>
+        </AdminSearchPanel>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+          <LoadingState variant="list" label="Memuat kegiatan" />
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
-            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center"><ClipboardList size={24} className="text-primary" /></div>
-            <div className="text-center">
-              <p className="font-headline text-lg font-bold text-on-surface">Belum ada kegiatan</p>
-              <p className="text-on-surface-variant text-xs mt-1">{filterFungsi ? 'Tidak ada kegiatan untuk fungsi ini.' : 'Tambahkan kegiatan pertama.'}</p>
-            </div>
-            {fungsis.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kegiatan</Button>}
-          </div>
+          <EmptyState
+            title="Belum ada kegiatan"
+            description={filterFungsi ? 'Tidak ada kegiatan untuk fungsi ini.' : 'Tambahkan kegiatan pertama.'}
+            icon={<ClipboardList size={18} />}
+            action={fungsis.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kegiatan</Button>}
+          />
         ) : (
-          <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+          <AdminTableShell>
             <Table>
               <TableHeader>
-                <TableRow className="bg-surface-container-low/30">
+                <TableRow className="bg-orange-50/70">
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama Kegiatan</TableHead>
                   <TableHead>Fungsi</TableHead>
@@ -176,7 +175,7 @@ function KegiatanPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </AdminTableShell>
         )}
       </div>
 

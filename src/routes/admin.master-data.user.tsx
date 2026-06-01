@@ -1,6 +1,13 @@
 "use client"
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, useCallback } from 'react'
+import {
+  AdminNotice,
+  AdminPageHeader,
+  AdminSearchPanel,
+  AdminSummaryCard,
+  AdminTableShell,
+} from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
   Table,
@@ -19,19 +26,22 @@ import {
   DialogFooter,
 } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
-import { Badge } from '#/components/ui/badge'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { RoleBadge } from '#/components/ui/RoleBadge'
 import {
-  Search,
   Edit2,
   Trash2,
   UserPlus,
   Shield,
-  ChevronRight,
   RefreshCw,
   UserCheck,
   UserX,
   Loader2,
   X,
+  Users,
+  ClipboardList,
 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
@@ -66,6 +76,10 @@ const ALL_ROLES: RoleName[] = [
   'PENANGGUNG_JAWAB_KINERJA',
   'ADMIN',
 ]
+
+function getAdminRoleLabel(role: RoleName) {
+  return role === 'ADMIN' ? 'Admin Sistem' : ROLE_DISPLAY[role]
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -176,6 +190,8 @@ function MasterUserPage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'aktif' | 'nonaktif'>('all')
+  const [filterRole, setFilterRole] = useState<'all' | RoleName>('all')
+  const [filterKetuaTim, setFilterKetuaTim] = useState<'all' | 'ketua' | 'bukan-ketua'>('all')
 
   // Chairman assignments state
   const [chairmanAssignments, setChairmanAssignments] = useState<Record<string, ChairmanAssignment[]>>({})
@@ -298,8 +314,19 @@ function MasterUserPage() {
       (filterStatus === 'aktif' && user.isActive) ||
       (filterStatus === 'nonaktif' && !user.isActive)
 
-    return matchSearch && matchStatus
+    const matchRole = filterRole === 'all' || user.roles.includes(filterRole)
+
+    const isKetuaTim = (chairmanAssignments[user.id]?.length ?? 0) > 0
+    const matchKetuaTim = filterKetuaTim === 'all' ||
+      (filterKetuaTim === 'ketua' && isKetuaTim) ||
+      (filterKetuaTim === 'bukan-ketua' && !isKetuaTim)
+
+    return matchSearch && matchStatus && matchRole && matchKetuaTim
   })
+
+  const activeUsers = users.filter(user => user.isActive).length
+  const usedRoles = new Set(users.flatMap(user => user.roles)).size
+  const ketuaTimUsers = Object.values(chairmanAssignments).filter(assignments => assignments.length > 0).length
 
   // ---------------------------------------------------------------------------
   // Dialog handlers
@@ -778,66 +805,120 @@ function MasterUserPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
+        <AdminPageHeader
+          eyebrow={(
+            <>
               <Shield size={12} />
-              <span>Admin / Master Data</span>
-              <ChevronRight size={10} />
-              <span className="text-primary">Master User</span>
-            </div>
-            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Master User</h1>
-            <p className="text-on-surface-variant text-xs mt-1">
-              Kelola akses dan data pengguna sistem DMS BPS Kabupaten Kepulauan Seribu.
-            </p>
-          </div>
-          <Button size="sm" className="gap-1.5" onClick={openCreate}>
-            <UserPlus size={14} />
-            Tambah User
-          </Button>
+              <span>Admin Sistem</span>
+              <span>/</span>
+              <span>Master User</span>
+            </>
+          )}
+          title="Master User"
+          description="Kelola akun, role, status aktif, reset password admin, dan penugasan Ketua Tim tanpa mengubah batas server/API."
+          actions={(
+            <Button size="sm" className="gap-1.5" onClick={openCreate}>
+              <UserPlus size={14} />
+              Tambah User
+            </Button>
+          )}
+        />
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <AdminSummaryCard
+            label="Total User"
+            value={users.length}
+            helper="Seluruh akun yang terbaca dari API user."
+            icon={<Users size={20} />}
+            emphasis
+          />
+          <AdminSummaryCard
+            label="User Aktif"
+            value={activeUsers}
+            helper="Akun yang dapat login."
+            icon={<UserCheck size={20} />}
+          />
+          <AdminSummaryCard
+            label="Role Terpakai"
+            value={usedRoles}
+            helper="Jumlah role berbeda pada akun saat ini."
+            icon={<Shield size={20} />}
+          />
+          <AdminSummaryCard
+            label="Ketua Tim"
+            value={loadingChairmen ? '...' : ketuaTimUsers}
+            helper="User yang memimpin minimal satu kegiatan."
+            icon={<ClipboardList size={20} />}
+          />
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-wrap gap-3">
+        <AdminNotice>
+          ADMIN adalah role konfigurasi sistem. Penugasan role di halaman ini tidak memindahkan otorisasi ke client; server/API tetap menjadi batas RBAC.
+        </AdminNotice>
+
+        <AdminSearchPanel
+          id="admin-user-search"
+          label="Cari user"
+          value={search}
+          onChange={setSearch}
+          placeholder="Cari nama, email, atau NIP..."
+          resultText={`${filteredUsers.length} dari ${users.length} user`}
+          helperText="Filter ini hanya bekerja pada daftar user yang sudah dikembalikan API."
+        >
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}
             aria-label="Filter user berdasarkan status"
-            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[140px]"
+            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
           >
             <option value="all">Semua Status</option>
             <option value="aktif">Aktif</option>
             <option value="nonaktif">Nonaktif</option>
           </select>
-          <div className="relative flex-1 max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input
-              type="text"
-              aria-label="Cari user"
-              placeholder="Cari user..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
-            />
-          </div>
+          <select
+            value={filterRole}
+            onChange={e => setFilterRole(e.target.value as typeof filterRole)}
+            aria-label="Filter user berdasarkan role"
+            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+          >
+            <option value="all">Semua Role</option>
+            {ALL_ROLES.map(role => (
+              <option key={role} value={role}>{getAdminRoleLabel(role)}</option>
+            ))}
+          </select>
+          <select
+            value={filterKetuaTim}
+            onChange={e => setFilterKetuaTim(e.target.value as typeof filterKetuaTim)}
+            aria-label="Filter user berdasarkan penugasan Ketua Tim"
+            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+          >
+            <option value="all">Semua Ketua Tim</option>
+            <option value="ketua">Ketua Tim</option>
+            <option value="bukan-ketua">Bukan Ketua Tim</option>
+          </select>
           <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} aria-label="Muat ulang daftar user">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </Button>
-        </div>
+        </AdminSearchPanel>
 
-        {/* Error state */}
         {error && (
-          <div className="bg-destructive/10 text-destructive p-4 rounded-lg text-sm">
-            {error}
-          </div>
+          <ErrorState title="Gagal memuat Master User" description={error} variant="destructive" />
         )}
 
-        {/* Table */}
-        <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+        {loading ? (
+          <LoadingState variant="list" label="Memuat daftar user" />
+        ) : filteredUsers.length === 0 ? (
+          <EmptyState
+            title="Tidak ada user yang cocok"
+            description="Ubah kata kunci, status, role, atau filter Ketua Tim untuk melihat data lain."
+            icon={<Users size={18} />}
+            action={<Button onClick={openCreate} size="sm" variant="outline">Tambah User</Button>}
+          />
+        ) : (
+        <AdminTableShell>
           <Table>
             <TableHeader>
-              <TableRow className="bg-surface-container-low/30">
+              <TableRow className="bg-orange-50/70">
                 <TableHead className="w-12 text-center">No</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead className="text-center">Hak Akses</TableHead>
@@ -847,20 +928,7 @@ function MasterUserPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <Loader2 size={20} className="animate-spin mx-auto text-outline" />
-                  </TableCell>
-                </TableRow>
-              ) : filteredUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-outline">
-                    Tidak ada user yang ditemukan
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredUsers.map((user, i) => (
+              {filteredUsers.map((user, i) => (
                   <TableRow key={user.id} className="group hover:bg-primary/5 transition-colors">
                     <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                     <TableCell>
@@ -883,12 +951,11 @@ function MasterUserPage() {
                       <div className="flex flex-wrap gap-1 justify-center">
                         {user.roles.length > 0 ? (
                           user.roles.map(role => (
-                            <Badge
+                            <RoleBadge
                               key={role}
-                              className={ROLE_COLORS[role]}
-                            >
-                              {ROLE_DISPLAY[role]}
-                            </Badge>
+                              role={role}
+                              className="text-[10px]"
+                            />
                           ))
                         ) : (
                           <span className="text-xs text-outline">-</span>
@@ -941,18 +1008,17 @@ function MasterUserPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ))}
             </TableBody>
           </Table>
 
-          {/* Pagination info */}
-          <div className="px-6 py-4 bg-surface-container-low/30 border-t border-outline-variant/20 flex items-center justify-between">
-            <p className="text-[10px] text-outline font-bold uppercase tracking-widest">
-              Showing {filteredUsers.length} of {users.length} users
+          <div className="flex items-center justify-between border-t border-orange-100 bg-[#FFFDF9] px-6 py-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+              Menampilkan {filteredUsers.length} dari {users.length} user
             </p>
           </div>
-        </div>
+        </AdminTableShell>
+        )}
       </div>
 
       {/* Create User Dialog */}
@@ -1031,7 +1097,7 @@ function MasterUserPage() {
                         : 'bg-white border-border text-outline hover:bg-muted'
                     } ${isRoleButtonDisabled(role, createForm.roles, 'create') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {ROLE_DISPLAY[role]}
+                    {getAdminRoleLabel(role)}
                     {role === 'PEGAWAI' && !createForm.roles.includes('ADMIN') && ' (wajib)'}
                     {role === 'ADMIN' && ' (tunggal)'}
                   </button>
@@ -1109,7 +1175,7 @@ function MasterUserPage() {
                         : 'bg-white border-border text-outline hover:bg-muted'
                     } ${isRoleButtonDisabled(role, editForm.roles, 'edit') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {ROLE_DISPLAY[role]}
+                    {getAdminRoleLabel(role)}
                     {role === 'PEGAWAI' && !editForm.roles.includes('ADMIN') && ' (wajib)'}
                     {role === 'ADMIN' && ' (tunggal)'}
                   </button>
@@ -1225,7 +1291,7 @@ function MasterUserPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Konfirmasi *</label>
+              <label className="text-xs font-medium text-on-surface mb-1 block">Konfirmasi Password *</label>
               <Input
                 type="password"
                 value={confirmResetPassword}

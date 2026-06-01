@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { AdminPageHeader, AdminSearchPanel, AdminTableShell } from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
   Table,
@@ -19,13 +20,13 @@ import {
 } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { LoadingState } from '#/components/ui/LoadingState'
 import {
   Plus,
   Edit2,
   Trash2,
-  Search,
   Tag,
-  ChevronRight,
 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
@@ -154,54 +155,35 @@ function KategoriPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-              <Tag size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
-              <span className="text-primary">Kategori Permintaan</span>
-            </div>
-            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Kategori Permintaan</h1>
-            <p className="text-on-surface-variant text-xs mt-1">Kelola kategori permintaan yang bergantung pada jenis permintaan.</p>
-          </div>
-          <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={jenisList.length === 0}><Plus size={14} />Tambah Kategori</Button>
-        </div>
+        <AdminPageHeader
+          eyebrow={<><Tag size={12} /><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
+          title="Kategori Permintaan"
+          description="Kelola kategori permintaan sebagai turunan dari Jenis Permintaan."
+          actions={<Button onClick={openCreate} size="sm" className="gap-1.5" disabled={jenisList.length === 0}><Plus size={14} />Tambah Kategori</Button>}
+        />
 
         {successMsg && (
           <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
             {successMsg}
           </div>
         )}
-        <div className="flex flex-wrap gap-3">
+        <AdminSearchPanel id="kategori-search" label="Cari kategori permintaan" value={search} onChange={setSearch} placeholder="Cari kategori..." resultText={`${filtered.length} dari ${items.length} kategori`}>
           <select value={filterJenis} onChange={e => setFilterJenis(e.target.value)} aria-label="Filter kategori berdasarkan jenis permintaan"
-            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
+            className="h-10 min-w-[160px] rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
             <option value="">Semua Jenis</option>
             {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
           </select>
-          <div className="relative flex-1 max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" aria-label="Cari kategori permintaan" placeholder="Cari kategori..." value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
-            />
-          </div>
-        </div>
+        </AdminSearchPanel>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
+          <LoadingState variant="list" label="Memuat kategori permintaan" />
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
-            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center"><Tag size={24} className="text-primary" /></div>
-            <div className="text-center">
-              <p className="font-headline text-lg font-bold text-on-surface">Belum ada kategori</p>
-              <p className="text-on-surface-variant text-xs mt-1">Pilih jenis dan tambahkan kategori pertama.</p>
-            </div>
-            {jenisList.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kategori</Button>}
-          </div>
+          <EmptyState title="Belum ada kategori" description="Pilih jenis dan tambahkan kategori pertama." icon={<Tag size={18} />} action={jenisList.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kategori</Button>} />
         ) : (
-          <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+          <AdminTableShell>
             <Table>
               <TableHeader>
-                <TableRow className="bg-surface-container-low/30">
+                <TableRow className="bg-orange-50/70">
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>Jenis Induk</TableHead>
@@ -230,7 +212,7 @@ function KategoriPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </AdminTableShell>
         )}
       </div>
 
