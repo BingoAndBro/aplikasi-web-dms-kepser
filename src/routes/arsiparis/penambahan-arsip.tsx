@@ -17,9 +17,14 @@ import {
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent, ReactNode, RefObject } from 'react'
 
+import {
+  ArchivePageHeader,
+  ArchiveSummaryCard,
+} from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { StatusBadge as SharedStatusBadge } from '#/components/ui/StatusBadge'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
 import { ROLES } from '#/lib/constants/roles'
@@ -259,26 +264,23 @@ function PenambahanArsipPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-              <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
+        <ArchivePageHeader
+          eyebrow={
+            <>
+              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
               <ChevronRight size={10} />
-              <span className="text-primary">Penambahan Dokumen</span>
-            </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Penambahan Dokumen</h2>
-            <p className="text-on-surface-variant text-xs mt-1">
-              Dokumen manual ini akan mengikuti alur pengklasifikasian. Metadata arsip final diisi saat tutup berkas.
-            </p>
-          </div>
-
-          {authChecked && !accessDenied && (
+              Penambahan Dokumen
+            </>
+          }
+          title="Penambahan Dokumen"
+          description="Tambahkan dokumen manual ke berkas berdasarkan Jenis Pembayaran. Nomor SPM dan metadata final tetap diisi saat Tutup Berkas."
+          actions={authChecked && !accessDenied ? (
             <Button onClick={openCreateModal} className="w-full lg:w-auto">
               <Plus size={14} />
               Tambah Dokumen
             </Button>
-          )}
-        </div>
+          ) : undefined}
+        />
 
         {notice && (
           <NoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
@@ -295,9 +297,9 @@ function PenambahanArsipPage() {
         {authChecked && !accessDenied && (
           <>
             <div className="grid gap-3 md:grid-cols-3">
-              <SummaryCard label="Dokumen Manual" value={String(items.length)} />
-              <SummaryCard label="Total Nominal Tampil" value={formatCurrency(totalNominal)} />
-              <SummaryCard label="Batas API" value={limit ? `${limit} record` : '-'} />
+              <ArchiveSummaryCard label="Dokumen Manual" value={String(items.length)} />
+              <ArchiveSummaryCard label="Total Nominal Tampil" value={formatCurrency(totalNominal)} />
+              <ArchiveSummaryCard label="Batas API" value={limit ? `${limit} record` : '-'} />
             </div>
 
             {loading ? (
@@ -423,11 +425,11 @@ function ManualArsipTable({
         />
       )}
 
-      <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-surface-container-low/30 text-left">
+              <tr className="bg-orange-50/60 text-left">
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider min-w-52">Nama Dokumen</th>
                 <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal</th>
@@ -463,7 +465,7 @@ function ManualArsipTable({
                       </td>
                       <td className="px-4 py-3 text-right text-on-surface">{formatNullableCurrency(item.nominal_realisasi)}</td>
                       <td className="px-4 py-3 text-center">
-                        <StatusBadge status={item.status_arsip} />
+                        <ManualStatusBadge status={item.status_arsip} />
                       </td>
                       <td className="px-4 py-3 text-center text-on-surface-variant">{formatDateTime(item.updated_at)}</td>
                       <td className="px-4 py-3 text-center">
@@ -566,7 +568,7 @@ function ManualArsipAttachmentPanel({
 
       {fileUnavailable && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          File tidak tersedia - dokumen telah dimusnahkan
+          Data file sudah dimusnahkan
         </div>
       )}
 
@@ -617,7 +619,7 @@ function ManualArsipAttachmentRow({
 
       {fileUnavailable ? (
         <p className="text-xs font-medium text-red-700 sm:text-right">
-          File tidak tersedia - dokumen telah dimusnahkan
+          Data file sudah dimusnahkan
         </p>
       ) : (
         <div className="flex shrink-0 gap-2">
@@ -1412,15 +1414,6 @@ function NoticeBanner({
   )
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-outline-variant/30 bg-white p-4 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-outline">{label}</p>
-      <p className="mt-2 text-xl font-extrabold text-on-surface">{value}</p>
-    </div>
-  )
-}
-
 function LoadingState({ label }: { label: string }) {
   return (
     <div className="flex items-center justify-center py-20">
@@ -1479,24 +1472,8 @@ function AccessDeniedState() {
   )
 }
 
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'AKTIF') {
-    return <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">AKTIF</Badge>
-  }
-
-  if (status === 'INAKTIF') {
-    return <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">INAKTIF</Badge>
-  }
-
-  if (status === 'USUL_MUSNAH') {
-    return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">USUL MUSNAH</Badge>
-  }
-
-  if (status === 'DIMUSNAHKAN') {
-    return <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">DIMUSNAHKAN</Badge>
-  }
-
-  return <Badge variant="outline" className="text-xs">{status}</Badge>
+function ManualStatusBadge({ status }: { status: string }) {
+  return <SharedStatusBadge kind="archive" status={status} fallbackLabel={status} />
 }
 
 function buildManualArsipAttachmentFileUrl(

@@ -1,13 +1,22 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import {
+  ArchiveMobileCard,
+  ArchiveMobileList,
+  ArchivePageHeader,
+  ArchivePanel,
+  ArchiveTableShell,
+} from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import {
-  FileText, ChevronRight, Eye, AlertCircle, Loader2,
+  ChevronRight, Eye,
   Banknote, Clock,
 } from 'lucide-react'
-import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 
 export const Route = createFileRoute('/arsiparis/inbox')({ component: ArsiparisInboxPage })
@@ -73,55 +82,57 @@ function ArsiparisInboxPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-            <Banknote size={12} />
-            <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
-            <ChevronRight size={10} />
-            <span className="text-primary">Pengklasifikasian Dokumen</span>
-          </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Pengklasifikasian Dokumen</h2>
-          <p className="text-on-surface-variant text-xs mt-1">{items.length} dokumen menunggu pengklasifikasian jenis pembayaran.</p>
-        </div>
+        <ArchivePageHeader
+          eyebrow={
+            <>
+              <Banknote size={13} />
+              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
+              <ChevronRight size={10} />
+              Pengklasifikasian Dokumen
+            </>
+          }
+          title="Pengklasifikasian Dokumen"
+          description={`${items.length} dokumen selesai PPSPM menunggu pemilihan Jenis Pembayaran. Metadata final seperti Nomor SPM dan retensi tetap diisi saat Tutup Berkas.`}
+        />
 
-        <div className="flex gap-3">
+        <ArchivePanel className="p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <select
             value={fungsiFilter}
             onChange={e => setFungsiFilter(e.target.value)}
-            className="px-3 py-2 bg-white border border-border rounded-lg text-xs cursor-pointer"
+              className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
           >
             <option value="">Semua Fungsi</option>
             {fungsiList.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
           </select>
-          {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter('')}>Reset</Button>}
-        </div>
+            <div className="flex items-center gap-2 text-xs text-zinc-600">
+              <span className="font-semibold">{items.length} dokumen ditampilkan</span>
+              {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter('')}>Reset</Button>}
+            </div>
+          </div>
+        </ArchivePanel>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="animate-spin text-primary" />
-          </div>
+          <LoadingState variant="list" label="Memuat dokumen pengklasifikasian" />
         ) : error ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
-            <AlertCircle size={32} className="text-error" />
-            <p className="text-sm text-on-surface-variant">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
-          </div>
+          <ErrorState
+            title="Gagal memuat dokumen"
+            description={error}
+            action={<Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>}
+            variant="page"
+          />
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
-            <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <Clock size={24} className="text-blue-500" />
-            </div>
-            <p className="font-headline text-lg font-bold text-on-surface">Tidak ada dokumen</p>
-            <p className="text-on-surface-variant text-xs text-center max-w-sm">
-              Dokumen yang telah disetujui PPSPM dan belum diklasifikasikan akan muncul di sini.
-            </p>
-          </div>
+          <EmptyState
+            title="Tidak ada dokumen"
+            description="Dokumen yang telah disetujui PPSPM dan belum diklasifikasikan akan muncul di sini."
+            icon={<Clock size={22} />}
+          />
         ) : (
-          <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+          <>
+            <ArchiveTableShell>
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-surface-container-low/30 text-left">
+                  <tr className="bg-orange-50/60 text-left">
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Judul</th>
                     <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Fungsi</th>
@@ -151,8 +162,31 @@ function ArsiparisInboxPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
+            </ArchiveTableShell>
+            <ArchiveMobileList>
+              {items.map((d) => (
+                <ArchiveMobileCard
+                  key={d.id}
+                  title={d.judul}
+                  subtitle={`Diajukan oleh ${d.nama_pegawai}`}
+                  meta={[
+                    { label: 'Fungsi', value: d.fungsi_nama ?? '-' },
+                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-' },
+                    { label: 'Tahun', value: d.tahun },
+                    { label: 'Tanggal approve', value: d.bendahara_approve_at ? formatDate(d.bendahara_approve_at) : '-' },
+                  ]}
+                  action={
+                    <Link to="/arsiparis/dokumen/$id" params={{ id: d.id }}>
+                      <Button size="sm" variant="outline" className="w-full gap-1.5">
+                        <Eye size={14} />
+                        Klasifikasikan
+                      </Button>
+                    </Link>
+                  }
+                />
+              ))}
+            </ArchiveMobileList>
+          </>
         )}
       </div>
     </PageLayout>

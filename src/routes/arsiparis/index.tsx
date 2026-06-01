@@ -1,10 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Archive, Clock, FolderOpen, Loader2, Plus, Tags, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { apiFetch } from '#/lib/api-client'
+
+import {
+  ArchivePageHeader,
+  ArchiveSummaryCard,
+} from '#/components/archive/ArchivePagePrimitives'
 import { DashboardShell } from '#/components/dashboard/DashboardShell'
+import { apiFetch } from '#/lib/api-client'
 import { ROLES } from '#/lib/constants/roles'
-import { motion } from 'framer-motion'
-import { Clock, FolderOpen, Archive, XCircle, Loader2 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/')({
   component: KepalaSubBagianUmumDashboard,
@@ -82,7 +86,7 @@ function KepalaSubBagianUmumDashboard() {
           usulMusnah: musnahJson.summary?.total_rows_returned ?? 0,
         })
       } catch {
-        // silent — stats stay at 0
+        // Silent: dashboard counts are non-authoritative entry summaries.
       } finally {
         setLoading(false)
       }
@@ -91,65 +95,95 @@ function KepalaSubBagianUmumDashboard() {
   }, [])
 
   const statCards = [
-    { label: 'Menunggu Arsip', value: stats.inbox, icon: Clock, color: 'text-primary', key: 'inbox' },
-    { label: 'Pemberkasan Arsip Aktif', value: stats.aktif, icon: FolderOpen, color: 'text-green-500', key: 'aktif' },
-    { label: 'Arsip Inaktif', value: stats.inaktif, icon: Archive, color: 'text-orange-500', key: 'inaktif' },
-    { label: 'Usul Musnah', value: stats.usulMusnah, icon: XCircle, color: 'text-error', key: 'usulMusnah' },
+    {
+      label: 'Pengklasifikasian Dokumen',
+      value: stats.inbox,
+      icon: Clock,
+      href: '/arsiparis/inbox',
+      helper: 'Dokumen selesai PPSPM yang menunggu Jenis Pembayaran.',
+    },
+    {
+      label: 'Pemberkasan Arsip Aktif',
+      value: stats.aktif,
+      icon: FolderOpen,
+      href: '/arsiparis/berkas',
+      helper: 'Berkas terbuka dan berkas aktif yang sudah ditutup.',
+    },
+    {
+      label: 'Arsip Inaktif',
+      value: stats.inaktif,
+      icon: Archive,
+      href: '/arsiparis/inaktif',
+      helper: 'Berkas tertutup dengan status lifecycle Inaktif.',
+    },
+    {
+      label: 'Usul Musnah',
+      value: stats.usulMusnah,
+      icon: XCircle,
+      href: '/arsiparis/usul-musnah',
+      helper: 'Berkas tertutup yang menunggu konfirmasi pemusnahan.',
+    },
   ]
 
   return (
     <DashboardShell role={ROLES.KEPALA_SUB_BAGIAN_UMUM}>
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-primary" />
-        </div>
-      ) : (
-        <motion.div
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
-          }}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
-        >
-          {statCards.map((stat) => {
-            const Icon = stat.icon
-            return (
-              <motion.div
-                key={stat.key}
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group relative overflow-hidden cursor-pointer"
-                onClick={() => {
-                  if (stat.key === 'inbox') window.location.href = '/arsiparis/inbox'
-                  else if (stat.key === 'aktif') window.location.href = '/arsiparis/berkas'
-                  else if (stat.key === 'inaktif') window.location.href = '/arsiparis/inaktif'
-                  else if (stat.key === 'usulMusnah') window.location.href = '/arsiparis/usul-musnah'
-                }}
+      <div className="space-y-6">
+        <ArchivePageHeader
+          eyebrow={
+            <>
+              <Archive size={13} />
+              Kepala Sub Bagian Umum
+            </>
+          }
+          title="Ruang Kerja Arsip Folder-First"
+          description="Pantau dokumen yang perlu diklasifikasikan, kelola Penambahan Dokumen, dan lanjutkan lifecycle berkas dari Arsip Aktif sampai Usul Musnah."
+          actions={
+            <>
+              <a
+                href="/arsiparis/inbox"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700"
               >
-                <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-125 duration-500" />
-                <div className="flex items-start justify-between relative">
-                  <div>
-                    <p className="text-[10px] font-black text-on-surface-variant/60 uppercase tracking-[0.15em] mb-3">
-                      {stat.label}
-                    </p>
-                    <h3 className={`text-3xl font-headline font-black text-on-surface ${stat.color}`}>
-                      {stat.value !== null ? (loading ? '—' : stat.value) : '→'}
-                    </h3>
-                  </div>
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                    <Icon size={22} className={stat.color} />
-                  </div>
-                </div>
-              </motion.div>
-            )
-          })}
-        </motion.div>
-      )}
+                <Tags size={16} />
+                Pengklasifikasian
+              </a>
+              <a
+                href="/arsiparis/penambahan-arsip"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-orange-800 shadow-sm transition hover:bg-orange-50"
+              >
+                <Plus size={16} />
+                Penambahan Dokumen
+              </a>
+            </>
+          }
+        />
+
+        {loading ? (
+          <div className="flex items-center justify-center rounded-2xl border border-orange-100 bg-white py-12 shadow-sm">
+            <Loader2 size={24} className="animate-spin text-orange-600" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {statCards.map((stat) => {
+              const Icon = stat.icon
+              return (
+                <a
+                  key={stat.href}
+                  href={stat.href}
+                  className="group block transition hover:-translate-y-0.5"
+                >
+                  <ArchiveSummaryCard
+                    label={stat.label}
+                    value={stat.value}
+                    helper={stat.helper}
+                    icon={<Icon size={20} />}
+                    className="h-full transition group-hover:border-orange-200 group-hover:shadow-md"
+                  />
+                </a>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </DashboardShell>
   )
 }

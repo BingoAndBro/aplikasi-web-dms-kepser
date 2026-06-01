@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
-  AlertCircle,
   ArrowRightCircle,
   ChevronRight,
   Download,
@@ -10,9 +9,21 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import {
+  ArchiveMobileCard,
+  ArchiveMobileList,
+  ArchiveNotice,
+  ArchivePageHeader,
+  ArchiveSearchPanel,
+  ArchiveSummaryCard,
+  ArchiveTableShell,
+} from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
-import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
   formatBerkasArchiveStatusLabel,
   formatBerkasStatusLabel,
@@ -206,22 +217,21 @@ function BerkasArsipAktifPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-outline">
-              <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
+        <ArchivePageHeader
+          eyebrow={
+            <>
+              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
               <ChevronRight size={10} />
-              <span className="text-primary">Pemberkasan Arsip Aktif</span>
-            </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Pemberkasan Arsip Aktif</h2>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              Daftar berkas terbuka untuk pemberkasan berjalan dan berkas aktif yang sudah final.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 md:items-end">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
-              Lifecycle berkas bersifat status-only. Dokumen tidak dihapus oleh aksi fase ini.
-            </div>
+              Pemberkasan Arsip Aktif
+            </>
+          }
+          title="Pemberkasan Arsip Aktif"
+          description="Daftar folder/berkas terbuka untuk pemberkasan berjalan dan berkas aktif yang sudah ditutup dengan metadata final."
+          actions={
+            <div className="flex flex-col gap-2 sm:items-end">
+              <ArchiveNotice tone="success">
+                Lifecycle berkas mengikuti alur folder-first. Tutup Berkas mengisi Nomor SPM dan retensi final.
+              </ArchiveNotice>
             <Button
               type="button"
               variant="outline"
@@ -237,17 +247,20 @@ function BerkasArsipAktifPage() {
             {!canExport && !loading && !error && (
               <p className="text-xs text-on-surface-variant">Tidak ada data untuk diekspor.</p>
             )}
-          </div>
-        </div>
+            </div>
+          }
+        />
 
         {(openSummary || activeSummary) && (
           <div className="grid gap-3 md:grid-cols-2">
-            <SummaryCard label="Berkas Terbuka" value={openSummary?.total_rows_returned ?? 0} />
-            <SummaryCard label="Berkas Aktif" value={activeSummary?.total_rows_returned ?? 0} />
+            <ArchiveSummaryCard label="Berkas Terbuka" value={openSummary?.total_rows_returned ?? 0} icon={<FolderOpen size={20} />} />
+            <ArchiveSummaryCard label="Berkas Aktif" value={activeSummary?.total_rows_returned ?? 0} icon={<Save size={20} />} />
           </div>
         )}
 
-        <LocalSearchField
+        <ArchiveSearchPanel
+          id="berkas-page-local-search"
+          label="Pencarian lokal halaman"
           value={searchQuery}
           placeholder="Cari berkas di halaman ini..."
           helperText="Filter lokal untuk Berkas Terbuka dan Pemberkasan Arsip Aktif."
@@ -267,15 +280,14 @@ function BerkasArsipAktifPage() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="animate-spin text-primary" />
-          </div>
+          <LoadingState variant="list" label="Memuat daftar berkas" />
         ) : error ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-error/20 bg-error/5 py-20">
-            <AlertCircle size={32} className="text-error" />
-            <p className="text-sm text-on-surface-variant">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
-          </div>
+          <ErrorState
+            title="Gagal memuat daftar berkas"
+            description={error}
+            action={<Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>}
+            variant="page"
+          />
         ) : (
           <div className="space-y-6">
             <BerkasSection
@@ -364,17 +376,11 @@ function BerkasSection({
       </div>
 
       {folders.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 py-12">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/10">
-            <FolderOpen size={24} className="text-emerald-600" />
-          </div>
-          <p className="font-headline text-lg font-bold text-on-surface">
-            {hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : emptyTitle}
-          </p>
-          <p className="max-w-md text-center text-xs text-on-surface-variant">
-            {hasSearchQuery ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.' : emptyDescription}
-          </p>
-        </div>
+        <EmptyState
+          title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : emptyTitle}
+          description={hasSearchQuery ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.' : emptyDescription}
+          icon={<FolderOpen size={22} />}
+        />
       ) : (
         <BerkasTable
           folders={folders}
@@ -405,11 +411,11 @@ function BerkasTable({
   onOpenCloseDialog: (folder: BerkasFolder) => void
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
-      <div className="overflow-x-auto">
+    <>
+      <ArchiveTableShell>
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-surface-container-low/30 text-left">
+            <tr className="bg-orange-50/60 text-left">
               <th className="w-10 px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">No</th>
               <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Jenis Pembayaran</th>
               <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Berkas</th>
@@ -479,43 +485,49 @@ function BerkasTable({
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  )
-}
-
-function LocalSearchField({
-  value,
-  placeholder,
-  helperText,
-  resultText,
-  onChange,
-}: {
-  value: string
-  placeholder: string
-  helperText: string
-  resultText: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
-      <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-page-local-search">
-        Pencarian lokal halaman
-        <input
-          id="berkas-page-local-search"
-          type="search"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-          placeholder={placeholder}
-          autoComplete="off"
-        />
-      </label>
-      <div className="mt-2 flex flex-col gap-1 text-xs text-on-surface-variant md:flex-row md:items-center md:justify-between">
-        <p>{helperText}</p>
-        <p className="font-semibold text-outline">{resultText}</p>
-      </div>
-    </div>
+      </ArchiveTableShell>
+      <ArchiveMobileList>
+        {folders.map((folder) => (
+          <ArchiveMobileCard
+            key={folder.berkas_id}
+            title={formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+            subtitle={mode === 'open' ? 'Berkas terbuka' : `Nomor SPM: ${folder.nomor_spm ?? '-'}`}
+            status={<StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />}
+            meta={[
+              { label: 'Status berkas', value: <StatusBerkasBadge status={folder.status_berkas} /> },
+              { label: 'Jumlah dokumen', value: folder.item_count },
+              { label: 'Workflow', value: folder.workflow_item_count },
+              { label: 'Manual', value: folder.manual_item_count },
+              { label: 'Total nominal', value: formatNominalRupiah(folder.total_nominal_realisasi) },
+              { label: mode === 'open' ? 'Diperbarui' : 'Tanggal tutup', value: formatNullableDateLabel(mode === 'open' ? folder.updated_at : folder.closed_at) },
+            ]}
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to="/arsiparis/berkas/$id"
+                  params={{ id: folder.berkas_id }}
+                  className="inline-flex h-8 items-center rounded-lg border border-orange-200 px-3 text-xs font-semibold text-orange-800 hover:bg-orange-50"
+                >
+                  Detail
+                </Link>
+                <LifecycleActionButton
+                  folder={folder}
+                  pending={pendingLifecycleBerkasId === folder.berkas_id}
+                  onLifecycleAction={onLifecycleAction}
+                />
+                {mode === 'open' && (
+                  <CloseBerkasShortcutButton
+                    folder={folder}
+                    pending={pendingCloseBerkasId === folder.berkas_id}
+                    onOpenCloseDialog={onOpenCloseDialog}
+                  />
+                )}
+              </div>
+            }
+          />
+        ))}
+      </ArchiveMobileList>
+    </>
   )
 }
 
@@ -576,37 +588,18 @@ function LifecycleActionButton({
   )
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-outline-variant/30 bg-white p-4 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-outline">{label}</p>
-      <p className="mt-2 font-headline text-2xl font-extrabold text-on-surface">{value}</p>
-    </div>
-  )
-}
-
 function StatusBerkasBadge({ status }: { status: string }) {
-  const className = status === 'CLOSED'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : status === 'OPEN'
-      ? 'border-blue-200 bg-blue-50 text-blue-700'
-      : 'border-slate-200 bg-slate-50 text-slate-700'
-
-  return <Badge className={className}>{formatBerkasStatusLabel(status)}</Badge>
+  return <StatusBadge kind="folder" status={status} fallbackLabel={formatBerkasStatusLabel(status)} />
 }
 
 function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string | null; statusBerkas: string }) {
-  const className = statusArsip === 'AKTIF'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : statusArsip === 'INAKTIF'
-      ? 'border-amber-200 bg-amber-50 text-amber-700'
-      : statusArsip === 'USUL_MUSNAH'
-        ? 'border-orange-200 bg-orange-50 text-orange-700'
-        : statusArsip === 'DIMUSNAHKAN'
-          ? 'border-red-200 bg-red-50 text-red-700'
-          : 'border-slate-200 bg-slate-50 text-slate-700'
-
-  return <Badge className={className}>{formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}</Badge>
+  return (
+    <StatusBadge
+      kind="archive"
+      status={statusArsip}
+      fallbackLabel={formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}
+    />
+  )
 }
 
 function isBerkasEmptyForClose(folder: Pick<BerkasFolder, 'item_count'>): boolean {

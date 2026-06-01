@@ -1,8 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArchivePageHeader,
+  ArchivePanel,
+} from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
   ChevronRight, AlertCircle,
   Loader2, CheckCircle2,
@@ -336,17 +343,16 @@ function ArsiparisDokumenDetailPage() {
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <Loader2 size={24} className="animate-spin text-primary" />
-    </div>
+    <LoadingState label="Memuat detail dokumen" />
   )
 
   if (fetchError || !dokumen) return (
-    <div className="text-center py-20">
-      <AlertCircle size={32} className="text-error mx-auto mb-3" />
-      <p className="text-sm text-on-surface-variant">{fetchError ?? 'Dokumen tidak ditemukan'}</p>
-      <Button variant="outline" size="sm" className="mt-4" onClick={() => window.location.href = '/arsiparis/inbox'}>Kembali ke Inbox</Button>
-    </div>
+    <ErrorState
+      title="Dokumen tidak dapat dimuat"
+      description={fetchError ?? 'Dokumen tidak ditemukan'}
+      action={<Button variant="outline" size="sm" onClick={() => window.location.href = '/arsiparis/inbox'}>Kembali ke Pengklasifikasian</Button>}
+      variant="page"
+    />
   )
 
   const isArchived = dokumen.is_archived
@@ -355,24 +361,28 @@ function ArsiparisDokumenDetailPage() {
     <PageLayout>
       <div className="max-w-3xl mx-auto space-y-6">
 
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest">
-          <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
-          <ChevronRight size={10} />
-          <Link to="/arsiparis/inbox" className="hover:text-primary">Pengklasifikasian</Link>
-          <ChevronRight size={10} />
-          <span className="text-primary">Detail</span>
-        </div>
-
-        <h2 className="font-headline text-xl font-extrabold text-on-surface">{dokumen.judul}</h2>
+        <ArchivePageHeader
+          eyebrow={
+            <>
+              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
+              <ChevronRight size={10} />
+              <Link to="/arsiparis/inbox" className="hover:text-orange-900">Pengklasifikasian Dokumen</Link>
+              <ChevronRight size={10} />
+              Detail
+            </>
+          }
+          title={dokumen.judul}
+          description="Pilih Jenis Pembayaran leaf node untuk memasukkan dokumen selesai ke berkas terbuka. Nomor SPM dan retensi tidak diisi pada tahap ini."
+        />
 
         <div className="flex items-center gap-3">
-          <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">COMPLETED</Badge>
+          <StatusBadge status="COMPLETED" />
           {isArchived && (
-            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">Sudah Diklasifikasikan</Badge>
+            <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">Sudah Diklasifikasikan</Badge>
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
+        <ArchivePanel>
           <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Informasi Dokumen</p>
           <div className="grid grid-cols-2 gap-4">
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Fungsi</p><p className="text-sm font-semibold text-on-surface">{dokumen.fungsi.nama ?? '—'}</p></div>
@@ -394,7 +404,7 @@ function ArsiparisDokumenDetailPage() {
               <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi</p><p className="text-sm font-semibold text-on-surface">Rp {dokumen.nominal_realisasi.toLocaleString('id-ID')}</p></div>
             )}
           </div>
-        </div>
+        </ArchivePanel>
 
         {/* Lampiran */}
         <AttachmentViewer dokumen={dokumen as any} lampiranUrls={dokumen.lampiran_urls} />
@@ -410,7 +420,7 @@ function ArsiparisDokumenDetailPage() {
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
+          <ArchivePanel>
             <p className="text-xs font-bold text-outline uppercase tracking-widest mb-4">Formulir Pengklasifikasian Dokumen</p>
             <p className="text-xs text-on-surface-variant mb-4">
               Pilih jenis pembayaran untuk tahap awal. Metadata final berkas dan retensi diisi pada fase tutup berkas.
@@ -568,7 +578,7 @@ function ArsiparisDokumenDetailPage() {
                 </Button>
               </div>
             </div>
-          </div>
+          </ArchivePanel>
         )}
 
         <Link to="/arsiparis/inbox">

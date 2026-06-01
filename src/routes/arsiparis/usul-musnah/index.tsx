@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
-  AlertCircle,
   AlertTriangle,
   ChevronRight,
   Download,
@@ -9,9 +8,21 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import {
+  ArchiveMobileCard,
+  ArchiveMobileList,
+  ArchiveNotice,
+  ArchivePageHeader,
+  ArchiveSearchPanel,
+  ArchiveSummaryCard,
+  ArchiveTableShell,
+} from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
-import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
   Dialog,
   DialogContent,
@@ -175,22 +186,21 @@ function UsulMusnahPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-outline">
-              <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
+        <ArchivePageHeader
+          eyebrow={
+            <>
+              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
               <ChevronRight size={10} />
-              <span className="text-primary">Usul Musnah</span>
-            </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Usul Musnah</h2>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              Folder-first untuk berkas yang sudah ditutup dan berstatus Usul Musnah.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 md:items-end">
-            <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs text-orange-800">
-              Musnahkan Data mengubah status menjadi Dimusnahkan dan menghapus file fisik terkait berkas.
-            </div>
+              Usul Musnah
+            </>
+          }
+          title="Usul Musnah"
+          description="Folder-first untuk berkas yang sudah ditutup dan berstatus Usul Musnah. Konfirmasi pemusnahan tetap memakai frasa persis yang sudah berlaku."
+          actions={
+            <div className="flex flex-col gap-2 sm:items-end">
+              <ArchiveNotice tone="destructive">
+                Musnahkan Data mengubah status menjadi Dimusnahkan, memblokir preview/download, dan mempertahankan metadata berkas.
+              </ArchiveNotice>
             <Button
               type="button"
               variant="outline"
@@ -206,19 +216,22 @@ function UsulMusnahPage() {
             {!canExport && !loading && !error && (
               <p className="text-xs text-on-surface-variant">Tidak ada data untuk diekspor.</p>
             )}
-          </div>
-        </div>
+            </div>
+          }
+        />
 
         {summary && (
           <div className="grid gap-3 md:grid-cols-4">
-            <SummaryCard label="Berkas Usul Musnah" value={summary.total_rows_returned} />
-            <SummaryCard label="Jumlah Dokumen" value={summary.item_count_total} />
-            <SummaryCard label="Dokumen Workflow" value={summary.workflow_item_count_total} />
-            <SummaryCard label="Dokumen Manual" value={summary.manual_item_count_total} />
+            <ArchiveSummaryCard label="Berkas Usul Musnah" value={summary.total_rows_returned} />
+            <ArchiveSummaryCard label="Jumlah Dokumen" value={summary.item_count_total} />
+            <ArchiveSummaryCard label="Dokumen Workflow" value={summary.workflow_item_count_total} />
+            <ArchiveSummaryCard label="Dokumen Manual" value={summary.manual_item_count_total} />
           </div>
         )}
 
-        <LocalSearchField
+        <ArchiveSearchPanel
+          id="usul-musnah-page-local-search"
+          label="Pencarian lokal halaman"
           value={searchQuery}
           placeholder="Cari berkas usul musnah di halaman ini..."
           helperText="Filter lokal berdasarkan Jenis Pembayaran, Nomor SPM, tanggal tutup, dan jumlah dokumen."
@@ -247,7 +260,7 @@ function UsulMusnahPage() {
             <DialogHeader>
               <DialogTitle>Musnahkan Data</DialogTitle>
               <DialogDescription>
-                Konfirmasi final untuk mengubah status dan menghapus file fisik terkait berkas.
+                Konfirmasi final untuk mengubah status berkas menjadi Dimusnahkan.
               </DialogDescription>
             </DialogHeader>
 
@@ -265,7 +278,6 @@ function UsulMusnahPage() {
 
               <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
                 <p>Status berkas akan menjadi Dimusnahkan.</p>
-                <p>File fisik terkait berkas akan dihapus.</p>
                 <p>Preview dan download file akan tetap diblokir.</p>
                 <p>Metadata berkas dan dokumen tetap tersimpan.</p>
                 <p>Aksi ini tidak mudah dibalik.</p>
@@ -312,29 +324,22 @@ function UsulMusnahPage() {
         </Dialog>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="animate-spin text-primary" />
-          </div>
+          <LoadingState variant="list" label="Memuat usul musnah" />
         ) : error ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-error/20 bg-error/5 py-20">
-            <AlertCircle size={32} className="text-error" />
-            <p className="text-sm text-on-surface-variant">{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
-          </div>
+          <ErrorState
+            title="Gagal memuat usul musnah"
+            description={error}
+            action={<Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>}
+            variant="page"
+          />
         ) : filteredFolders.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 py-20">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-orange-500/10">
-              <Trash2 size={24} className="text-orange-600" />
-            </div>
-            <p className="font-headline text-lg font-bold text-on-surface">
-              {hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : 'Belum ada berkas usul musnah'}
-            </p>
-            <p className="max-w-md text-center text-xs text-on-surface-variant">
-              {hasSearchQuery
-                ? 'Ubah kata kunci untuk melihat berkas usul musnah lain di halaman ini.'
-                : 'Berkas Inaktif yang diusulkan musnah akan muncul di halaman ini sampai statusnya menjadi Dimusnahkan.'}
-            </p>
-          </div>
+          <EmptyState
+            title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : 'Belum ada berkas usul musnah'}
+            description={hasSearchQuery
+              ? 'Ubah kata kunci untuk melihat berkas usul musnah lain di halaman ini.'
+              : 'Berkas Inaktif yang diusulkan musnah akan muncul di halaman ini sampai statusnya menjadi Dimusnahkan.'}
+            icon={<Trash2 size={22} />}
+          />
         ) : (
           <BerkasLifecycleTable
             folders={filteredFolders}
@@ -344,41 +349,6 @@ function UsulMusnahPage() {
         )}
       </div>
     </PageLayout>
-  )
-}
-
-function LocalSearchField({
-  value,
-  placeholder,
-  helperText,
-  resultText,
-  onChange,
-}: {
-  value: string
-  placeholder: string
-  helperText: string
-  resultText: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
-      <label className="block text-xs font-bold text-on-surface" htmlFor="usul-musnah-page-local-search">
-        Pencarian lokal halaman
-        <input
-          id="usul-musnah-page-local-search"
-          type="search"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-          placeholder={placeholder}
-          autoComplete="off"
-        />
-      </label>
-      <div className="mt-2 flex flex-col gap-1 text-xs text-on-surface-variant md:flex-row md:items-center md:justify-between">
-        <p>{helperText}</p>
-        <p className="font-semibold text-outline">{resultText}</p>
-      </div>
-    </div>
   )
 }
 
@@ -392,11 +362,11 @@ function BerkasLifecycleTable({
   onOpenDestructionDialog: (folder: BerkasFolder) => void
 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm">
-      <div className="overflow-x-auto">
+    <>
+      <ArchiveTableShell>
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-surface-container-low/30 text-left">
+            <tr className="bg-orange-50/60 text-left">
               <th className="w-10 px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">No</th>
               <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Jenis Pembayaran</th>
               <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Berkas</th>
@@ -459,36 +429,65 @@ function BerkasLifecycleTable({
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
-  )
-}
-
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-outline-variant/30 bg-white p-4 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-outline">{label}</p>
-      <p className="mt-2 font-headline text-2xl font-extrabold text-on-surface">{value}</p>
-    </div>
+      </ArchiveTableShell>
+      <ArchiveMobileList>
+        {folders.map((folder) => (
+          <ArchiveMobileCard
+            key={folder.berkas_id}
+            title={formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+            subtitle={`Nomor SPM: ${folder.nomor_spm ?? '-'}`}
+            status={<StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />}
+            meta={[
+              { label: 'Status berkas', value: <StatusBerkasBadge status={folder.status_berkas} /> },
+              { label: 'Jumlah dokumen', value: folder.item_count },
+              { label: 'Workflow', value: folder.workflow_item_count },
+              { label: 'Manual', value: folder.manual_item_count },
+              { label: 'Total nominal', value: formatNominalRupiah(folder.total_nominal_realisasi) },
+              { label: 'Tanggal tutup', value: formatNullableDateLabel(folder.closed_at) },
+            ]}
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to="/arsiparis/berkas/$id"
+                  params={{ id: folder.berkas_id }}
+                  className="inline-flex h-8 items-center rounded-lg border border-orange-200 px-3 text-xs font-semibold text-orange-800 hover:bg-orange-50"
+                >
+                  Detail
+                </Link>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  className="h-8 gap-1.5 px-3 text-xs"
+                  disabled={pendingBerkasId === folder.berkas_id}
+                  onClick={() => onOpenDestructionDialog(folder)}
+                >
+                  {pendingBerkasId === folder.berkas_id
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : <AlertTriangle size={14} />}
+                  {pendingBerkasId === folder.berkas_id ? 'Memproses...' : 'Musnahkan Data'}
+                </Button>
+              </div>
+            }
+          />
+        ))}
+      </ArchiveMobileList>
+    </>
   )
 }
 
 function StatusBerkasBadge({ status }: { status: string }) {
-  const className = status === 'CLOSED'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : status === 'OPEN'
-      ? 'border-blue-200 bg-blue-50 text-blue-700'
-      : 'border-slate-200 bg-slate-50 text-slate-700'
-
-  return <Badge className={className}>{formatBerkasStatusLabel(status)}</Badge>
+  return <StatusBadge kind="folder" status={status} fallbackLabel={formatBerkasStatusLabel(status)} />
 }
 
 function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string | null; statusBerkas: string }) {
-  const className = statusArsip === 'USUL_MUSNAH'
-    ? 'border-orange-200 bg-orange-50 text-orange-700'
-    : 'border-slate-200 bg-slate-50 text-slate-700'
-
-  return <Badge className={className}>{formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}</Badge>
+  return (
+    <StatusBadge
+      kind="archive"
+      status={statusArsip}
+      fallbackLabel={formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}
+    />
+  )
 }
 
 function resolveErrorMessage(error: unknown): string {

@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
-  AlertCircle,
   AlertTriangle,
   ArrowRightCircle,
   ChevronRight,
@@ -14,9 +13,18 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import {
+  ArchivePageHeader,
+  ArchivePanel,
+  ArchiveTabs,
+} from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { EmptyState } from '#/components/ui/EmptyState'
+import { ErrorState } from '#/components/ui/ErrorState'
+import { LoadingState } from '#/components/ui/LoadingState'
+import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
   Dialog,
   DialogContent,
@@ -115,6 +123,7 @@ type BerkasDetailResponse = {
 }
 
 const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
+type DetailTab = 'metadata' | 'documents' | 'history'
 
 function BerkasArsipDetailPage() {
   const { id } = Route.useParams()
@@ -130,6 +139,7 @@ function BerkasArsipDetailPage() {
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [pendingClose, setPendingClose] = useState(false)
   const [closeForm, setCloseForm] = useState<CloseBerkasFormState>(EMPTY_CLOSE_BERKAS_FORM)
+  const [activeTab, setActiveTab] = useState<DetailTab>('documents')
 
   async function fetchData() {
     setLoading(true)
@@ -227,22 +237,28 @@ function BerkasArsipDetailPage() {
     fetchData()
   }, [id])
 
+  useEffect(() => {
+    if (detail && canShowCloseBerkasForm(detail) && activeTab === 'metadata') {
+      setActiveTab('documents')
+    }
+  }, [detail?.status_berkas, detail?.status_arsip, activeTab])
+
   return (
     <PageLayout>
       <div className="space-y-6">
-        <div>
-          <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-outline">
-            <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
-            <ChevronRight size={10} />
-            <Link to="/arsiparis/berkas" className="hover:text-primary">Pemberkasan Arsip Aktif</Link>
-            <ChevronRight size={10} />
-            <span className="text-primary">Detail Berkas</span>
-          </div>
-          <h2 className="font-headline text-2xl font-extrabold text-on-surface">Detail Berkas Arsip</h2>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            Detail folder-first dengan lifecycle berkas dan akses lampiran melalui endpoint server terotorisasi.
-          </p>
-        </div>
+        <ArchivePageHeader
+          eyebrow={
+            <>
+              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
+              <ChevronRight size={10} />
+              <Link to="/arsiparis/berkas" className="hover:text-orange-900">Pemberkasan Arsip Aktif</Link>
+              <ChevronRight size={10} />
+              Detail Berkas
+            </>
+          }
+          title="Detail Berkas Arsip"
+          description="Detail folder-first dengan lifecycle berkas dan akses lampiran melalui endpoint server terotorisasi."
+        />
 
         {(actionError || actionSuccess) && (
           <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
@@ -256,76 +272,141 @@ function BerkasArsipDetailPage() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="animate-spin text-primary" />
-          </div>
+          <LoadingState label="Memuat detail berkas" />
         ) : error ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-error/20 bg-error/5 py-20">
-            <AlertCircle size={32} className="text-error" />
-            <p className="text-sm text-on-surface-variant">{error}</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
+          <ErrorState
+            title="Gagal memuat detail berkas"
+            description={error}
+            action={
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
+                <Link
+                  to="/arsiparis/berkas"
+                  className="inline-flex h-8 items-center rounded-lg border border-orange-200 px-3 text-xs font-semibold text-orange-800 hover:bg-orange-50"
+                >
+                  Kembali
+                </Link>
+              </div>
+            }
+            variant="page"
+          />
+        ) : !detail ? (
+          <EmptyState
+            title="Berkas tidak ditemukan"
+            description="Berkas mungkin sudah tidak tersedia untuk konteks akses saat ini."
+            icon={<FolderOpen size={22} />}
+            action={
               <Link
                 to="/arsiparis/berkas"
-                className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
+                className="inline-flex h-8 items-center rounded-lg border border-orange-200 px-3 text-xs font-semibold text-orange-800 hover:bg-orange-50"
               >
-                Kembali
+                Kembali ke daftar
               </Link>
-            </div>
-          </div>
-        ) : !detail ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 py-20">
-            <FolderOpen size={28} className="text-outline" />
-            <p className="font-headline text-lg font-bold text-on-surface">Berkas tidak ditemukan</p>
-            <Link
-              to="/arsiparis/berkas"
-              className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
-            >
-              Kembali ke daftar
-            </Link>
-          </div>
+            }
+          />
         ) : (
-          <>
-            <FolderMetadataPanel
-              detail={detail}
-              pendingLifecycleAction={pendingLifecycleAction}
-              destructionDialogOpen={destructionDialogOpen}
-              destructionPhrase={destructionPhrase}
-              onDestructionPhraseChange={setDestructionPhrase}
-              onCancelDestruction={() => {
-                setDestructionDialogOpen(false)
-                setDestructionPhrase('')
-                setActionError(null)
-              }}
-              onDestructionOpenChange={(open) => {
-                setDestructionDialogOpen(open)
-                if (!open && !pendingLifecycleAction) {
-                  setDestructionPhrase('')
-                  setActionError(null)
-                }
-              }}
-              onLifecycleAction={submitLifecycleAction}
-              pendingClose={pendingClose}
-              onOpenCloseDialog={() => {
-                setCloseDialogOpen(true)
-                setActionError(null)
-                setActionSuccess(null)
-              }}
-            />
-            <CloseBerkasDialog
-              open={closeDialogOpen}
-              form={closeForm}
-              pending={pendingClose}
-              submitDisabled={pendingClose || !detail || isBerkasEmptyForClose(detail) || isCloseBerkasFormIncomplete(closeForm)}
-              onOpenChange={(open) => {
-                setCloseDialogOpen(open)
-                if (!open && !pendingClose) setActionError(null)
-              }}
-              onFormChange={setCloseForm}
-              onSubmit={submitCloseBerkas}
-            />
-            <ItemList berkasId={detail.berkas_id} statusArsip={detail.status_arsip} items={detail.items} />
-          </>
+          (() => {
+            const isOpenFolder = canShowCloseBerkasForm(detail)
+            const tabs = isOpenFolder
+              ? [
+                { id: 'documents' as const, label: 'Daftar Dokumen' },
+                { id: 'history' as const, label: 'Riwayat Aktivitas Berkas' },
+              ]
+              : [
+                { id: 'metadata' as const, label: 'Metadata Arsip' },
+                { id: 'documents' as const, label: 'Daftar Dokumen' },
+                { id: 'history' as const, label: 'Riwayat Aktivitas' },
+              ]
+            const resolvedActiveTab = isOpenFolder && activeTab === 'metadata' ? 'documents' : activeTab
+
+            return (
+              <>
+                <ArchiveTabs
+                  tabs={tabs}
+                  activeTab={resolvedActiveTab}
+                  onChange={(tab) => setActiveTab(tab)}
+                />
+                {resolvedActiveTab === 'metadata' && (
+                  <FolderMetadataPanel
+                    detail={detail}
+                    pendingLifecycleAction={pendingLifecycleAction}
+                    destructionDialogOpen={destructionDialogOpen}
+                    destructionPhrase={destructionPhrase}
+                    onDestructionPhraseChange={setDestructionPhrase}
+                    onCancelDestruction={() => {
+                      setDestructionDialogOpen(false)
+                      setDestructionPhrase('')
+                      setActionError(null)
+                    }}
+                    onDestructionOpenChange={(open) => {
+                      setDestructionDialogOpen(open)
+                      if (!open && !pendingLifecycleAction) {
+                        setDestructionPhrase('')
+                        setActionError(null)
+                      }
+                    }}
+                    onLifecycleAction={submitLifecycleAction}
+                    pendingClose={pendingClose}
+                    onOpenCloseDialog={() => {
+                      setCloseDialogOpen(true)
+                      setActionError(null)
+                      setActionSuccess(null)
+                    }}
+                  />
+                )}
+                {resolvedActiveTab === 'documents' && (
+                  <>
+                    {isOpenFolder && (
+                      <FolderMetadataPanel
+                        detail={detail}
+                        pendingLifecycleAction={pendingLifecycleAction}
+                        destructionDialogOpen={destructionDialogOpen}
+                        destructionPhrase={destructionPhrase}
+                        onDestructionPhraseChange={setDestructionPhrase}
+                        onCancelDestruction={() => {
+                          setDestructionDialogOpen(false)
+                          setDestructionPhrase('')
+                          setActionError(null)
+                        }}
+                        onDestructionOpenChange={(open) => {
+                          setDestructionDialogOpen(open)
+                          if (!open && !pendingLifecycleAction) {
+                            setDestructionPhrase('')
+                            setActionError(null)
+                          }
+                        }}
+                        onLifecycleAction={submitLifecycleAction}
+                        pendingClose={pendingClose}
+                        onOpenCloseDialog={() => {
+                          setCloseDialogOpen(true)
+                          setActionError(null)
+                          setActionSuccess(null)
+                        }}
+                      />
+                    )}
+                    <ItemList berkasId={detail.berkas_id} statusArsip={detail.status_arsip} items={detail.items} />
+                  </>
+                )}
+                {resolvedActiveTab === 'history' && (
+                  <FolderHistoryPanel detail={detail} />
+                )}
+              </>
+            )
+          })()
+        )}
+        {detail && (
+          <CloseBerkasDialog
+            open={closeDialogOpen}
+            form={closeForm}
+            pending={pendingClose}
+            submitDisabled={pendingClose || !detail || isBerkasEmptyForClose(detail) || isCloseBerkasFormIncomplete(closeForm)}
+            onOpenChange={(open) => {
+              setCloseDialogOpen(open)
+              if (!open && !pendingClose) setActionError(null)
+            }}
+            onFormChange={setCloseForm}
+            onSubmit={submitCloseBerkas}
+          />
         )}
       </div>
     </PageLayout>
@@ -360,6 +441,7 @@ function FolderMetadataPanel({
     && !pendingLifecycleAction
   const canShowClose = canShowCloseBerkasForm(detail)
   const closeBlockedByEmptyFolder = isBerkasEmptyForClose(detail)
+  const isOpenFolder = canShowClose
 
   return (
     <div className="rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-sm">
@@ -428,16 +510,22 @@ function FolderMetadataPanel({
       <div className="mt-5 grid gap-3 md:grid-cols-4">
         <MetadataCell label="Status Berkas" value={formatBerkasStatusLabel(detail.status_berkas)} />
         <MetadataCell label="Status Arsip" value={formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)} />
-        <MetadataCell label="Nomor SPM" value={detail.nomor_spm ?? '-'} />
-        <MetadataCell label="Tanggal Ditutup" value={formatNullableDateLabel(detail.closed_at)} />
         <MetadataCell label="Jumlah Dokumen" value={String(detail.item_count)} />
+        <MetadataCell label="Total Nominal" value={formatNominalRupiah(detail.total_nominal_realisasi)} />
         <MetadataCell label="Dokumen Workflow" value={String(detail.workflow_item_count)} />
         <MetadataCell label="Dokumen Manual" value={String(detail.manual_item_count)} />
-        <MetadataCell label="Total Nominal" value={formatNominalRupiah(detail.total_nominal_realisasi)} />
-        <MetadataCell label="Retensi Aktif" value={detail.retensi_aktif ?? '-'} />
-        <MetadataCell label="Retensi Inaktif" value={detail.retensi_inaktif ?? '-'} />
-        <MetadataCell label="Masa Aktif Berakhir" value={formatNullableDateLabel(detail.masa_aktif_berakhir)} />
-        <MetadataCell label="Masa Inaktif Berakhir" value={formatNullableDateLabel(detail.masa_inaktif_berakhir)} />
+        <MetadataCell label="Dibuat" value={formatNullableDateLabel(detail.created_at)} />
+        <MetadataCell label="Terakhir Diperbarui" value={formatNullableDateLabel(detail.updated_at)} />
+        {!isOpenFolder && (
+          <>
+            <MetadataCell label="Nomor SPM" value={detail.nomor_spm ?? '-'} />
+            <MetadataCell label="Tanggal Ditutup" value={formatNullableDateLabel(detail.closed_at)} />
+            <MetadataCell label="Retensi Aktif" value={detail.retensi_aktif ?? '-'} />
+            <MetadataCell label="Retensi Inaktif" value={detail.retensi_inaktif ?? '-'} />
+            <MetadataCell label="Masa Aktif Berakhir" value={formatNullableDateLabel(detail.masa_aktif_berakhir)} />
+            <MetadataCell label="Masa Inaktif Berakhir" value={formatNullableDateLabel(detail.masa_inaktif_berakhir)} />
+          </>
+        )}
       </div>
       {lifecycleAction && (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -460,7 +548,7 @@ function FolderMetadataPanel({
             <DialogHeader>
               <DialogTitle>Musnahkan Data</DialogTitle>
               <DialogDescription>
-                Konfirmasi final untuk mengubah status dan menghapus file fisik terkait berkas.
+                Konfirmasi final untuk mengubah status berkas menjadi Dimusnahkan.
               </DialogDescription>
             </DialogHeader>
 
@@ -473,7 +561,6 @@ function FolderMetadataPanel({
 
               <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
                 <p>Status berkas akan menjadi Dimusnahkan.</p>
-                <p>File fisik terkait berkas akan dihapus.</p>
                 <p>Preview dan download file akan tetap diblokir.</p>
                 <p>Metadata berkas dan dokumen tetap tersimpan.</p>
                 <p>Aksi ini tidak mudah dibalik.</p>
@@ -887,38 +974,79 @@ function MetadataLine({ label, value }: { label: string; value: string }) {
   )
 }
 
-function SourceBadge({ sourceType }: { sourceType: string }) {
-  const className = sourceType === 'WORKFLOW'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : sourceType === 'MANUAL'
-      ? 'border-sky-200 bg-sky-50 text-sky-700'
-      : 'border-slate-200 bg-slate-50 text-slate-700'
+function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
+  const historyItems = [
+    {
+      label: 'Berkas dibuat',
+      value: formatNullableDateLabel(detail.created_at),
+    },
+    ...(detail.closed_at
+      ? [{
+        label: 'Berkas ditutup',
+        value: formatNullableDateLabel(detail.closed_at),
+      }]
+      : []),
+    {
+      label: 'Terakhir diperbarui',
+      value: formatNullableDateLabel(detail.updated_at),
+    },
+  ]
 
-  return <Badge className={className}>{formatSourceTypeLabel(sourceType)}</Badge>
+  return (
+    <ArchivePanel>
+      <div className="mb-4">
+        <h3 className="font-headline text-lg font-extrabold text-on-surface">
+          Riwayat Aktivitas Berkas
+        </h3>
+        <p className="mt-1 text-xs text-on-surface-variant">
+          Ringkasan aktivitas yang tersedia dari data berkas saat ini.
+        </p>
+      </div>
+      <div className="space-y-3">
+        {historyItems.map((item, index) => (
+          <div key={`${item.label}-${index}`} className="grid grid-cols-[28px_1fr] gap-3">
+            <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-700">
+              {index + 1}
+            </div>
+            <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-3">
+              <p className="text-sm font-semibold text-on-surface">{item.label}</p>
+              <p className="mt-1 text-xs text-on-surface-variant">{item.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {detail.warnings.length > 0 && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <p className="font-semibold">Catatan validasi berkas</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {detail.warnings.map((warning) => (
+              <Badge key={warning} className="border-amber-200 bg-white text-amber-700">
+                {formatFolderWarningLabel(warning)}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+    </ArchivePanel>
+  )
+}
+
+function SourceBadge({ sourceType }: { sourceType: string }) {
+  return <StatusBadge kind="source" status={sourceType} fallbackLabel={formatSourceTypeLabel(sourceType)} />
 }
 
 function StatusBerkasBadge({ status }: { status: string }) {
-  const className = status === 'CLOSED'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : status === 'OPEN'
-      ? 'border-blue-200 bg-blue-50 text-blue-700'
-      : 'border-slate-200 bg-slate-50 text-slate-700'
-
-  return <Badge className={className}>{formatBerkasStatusLabel(status)}</Badge>
+  return <StatusBadge kind="folder" status={status} fallbackLabel={formatBerkasStatusLabel(status)} />
 }
 
 function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string | null; statusBerkas: string }) {
-  const className = statusArsip === 'AKTIF'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    : statusArsip === 'INAKTIF'
-      ? 'border-amber-200 bg-amber-50 text-amber-700'
-      : statusArsip === 'USUL_MUSNAH'
-        ? 'border-orange-200 bg-orange-50 text-orange-700'
-        : statusArsip === 'DIMUSNAHKAN'
-          ? 'border-red-200 bg-red-50 text-red-700'
-          : 'border-slate-200 bg-slate-50 text-slate-700'
-
-  return <Badge className={className}>{formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}</Badge>
+  return (
+    <StatusBadge
+      kind="archive"
+      status={statusArsip}
+      fallbackLabel={formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}
+    />
+  )
 }
 
 export function buildBerkasItemAttachmentFileUrl(
