@@ -160,7 +160,7 @@ function ArsipInaktifPage() {
           actions={
             <div className="flex flex-col gap-2 sm:items-end">
               <ArchiveNotice tone="warning">
-                Usulkan Musnah hanya memindahkan lifecycle ke Usul Musnah melalui API berkas. Preview/download tetap mengikuti status berkas saat ini.
+                Usulkan Musnah hanya memindahkan lifecycle ke Usul Musnah melalui API berkas. File fisik tidak dihapus. Preview/download tetap mengikuti status berkas saat ini.
               </ArchiveNotice>
             <Button
               type="button"

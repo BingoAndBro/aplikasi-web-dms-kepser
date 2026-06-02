@@ -65,9 +65,9 @@ export function resolveBerkasLifecycleAction(
     return {
       action: 'approve_destruction',
       label: 'Musnahkan Data',
-      confirmation: 'Status berkas akan menjadi Dimusnahkan. File fisik terkait berkas akan dihapus, metadata tetap tersimpan, dan preview/download akan tetap diblokir.',
+      confirmation: 'Status berkas akan menjadi Dimusnahkan. File fisik terkait berkas akan dihapus. Preview dan download file tidak akan tersedia setelah pemusnahan. Metadata berkas dan dokumen tetap tersimpan. Aksi ini tidak mudah dibalik.',
       confirmationPhrase: BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
-      successMessage: 'Berkas berhasil dimusnahkan. File fisik terkait berkas diproses untuk penghapusan dan metadata tetap tersimpan.',
+      successMessage: 'Berkas berhasil dimusnahkan. File fisik terkait berkas dihapus jika ditemukan dan metadata tetap tersimpan.',
     }
   }
 

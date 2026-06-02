@@ -199,7 +199,7 @@ function UsulMusnahPage() {
           actions={
             <div className="flex flex-col gap-2 sm:items-end">
               <ArchiveNotice tone="destructive">
-                Musnahkan Data mengubah status menjadi Dimusnahkan, memblokir preview/download, dan mempertahankan metadata berkas.
+                Musnahkan Data mengubah status menjadi Dimusnahkan, menghapus file fisik terkait, membuat preview/download tidak tersedia, dan mempertahankan metadata berkas.
               </ArchiveNotice>
             <Button
               type="button"
@@ -278,7 +278,8 @@ function UsulMusnahPage() {
 
               <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
                 <p>Status berkas akan menjadi Dimusnahkan.</p>
-                <p>Preview dan download file akan tetap diblokir.</p>
+                <p>File fisik terkait berkas akan dihapus.</p>
+                <p>Preview dan download file tidak akan tersedia setelah pemusnahan.</p>
                 <p>Metadata berkas dan dokumen tetap tersimpan.</p>
                 <p>Aksi ini tidak mudah dibalik.</p>
               </div>

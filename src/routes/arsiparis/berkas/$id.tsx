@@ -561,7 +561,8 @@ function FolderMetadataPanel({
 
               <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
                 <p>Status berkas akan menjadi Dimusnahkan.</p>
-                <p>Preview dan download file akan tetap diblokir.</p>
+                <p>File fisik terkait berkas akan dihapus.</p>
+                <p>Preview dan download file tidak akan tersedia setelah pemusnahan.</p>
                 <p>Metadata berkas dan dokumen tetap tersimpan.</p>
                 <p>Aksi ini tidak mudah dibalik.</p>
               </div>
