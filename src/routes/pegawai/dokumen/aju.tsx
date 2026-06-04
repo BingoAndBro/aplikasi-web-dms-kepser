@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { ReactNode } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
   PegawaiFieldCard,
@@ -62,14 +61,6 @@ type SubmitResponse = {
   dokumen: SubmittedDocument
 }
 
-type GroupedFormSectionProps = {
-  number: number
-  title: string
-  description: string
-  complete: boolean
-  children: ReactNode
-}
-
 const MAJOR_STEP_LABELS = [
   'Informasi Dasar',
   'Kelengkapan',
@@ -91,44 +82,6 @@ const MAJOR_STEP_DESCRIPTIONS = [
 const SUBMIT_STATUS_LABELS: Record<string, string> = {
   IN_PPK_VALIDATION: 'Menunggu PPK',
   TERSIMPAN: 'Tersimpan',
-}
-
-function GroupedFormSection({
-  number,
-  title,
-  description,
-  complete,
-  children,
-}: GroupedFormSectionProps) {
-  return (
-    <section className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white">
-      <div className="flex items-start gap-3 bg-[#FFFAF5] p-4">
-        <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
-            complete
-              ? 'bg-emerald-500 text-white'
-              : 'bg-orange-100 text-orange-700'
-          }`}
-        >
-          {complete ? <CheckCircle2 size={15} /> : number}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-headline text-sm font-bold text-zinc-950">{title}</h2>
-            <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-              complete
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-white text-zinc-500'
-            }`}>
-              {complete ? 'Lengkap' : 'Perlu dilengkapi'}
-            </span>
-          </div>
-          <p className="mt-1 text-xs font-medium leading-relaxed text-zinc-600">{description}</p>
-        </div>
-      </div>
-      <div className="border-t border-zinc-100 p-4">{children}</div>
-    </section>
-  )
 }
 
 function AjukanDokumenPage() {
@@ -668,7 +621,7 @@ function AjukanDokumenPage() {
           : 'Pantau pada detail dokumen'
 
     return (
-      <PageLayout>
+      <PageLayout className="min-h-full bg-[#FFFBF7] px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="mx-auto max-w-5xl space-y-4">
           <PegawaiPageHeader
             className="rounded-2xl border-orange-100/60 bg-white/70 p-4 shadow-none sm:p-5"
@@ -796,10 +749,10 @@ function AjukanDokumenPage() {
   }
 
   return (
-    <PageLayout>
-      <div className="mx-auto max-w-5xl space-y-4">
+    <PageLayout className="min-h-full bg-[#FFFBF7] px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
+      <div className="mx-auto max-w-[90rem] space-y-3">
         <PegawaiPageHeader
-          className="rounded-2xl border-orange-100/60 bg-white/70 p-4 shadow-none sm:p-5"
+          className="rounded-none border-0 bg-transparent p-0 shadow-none sm:p-0"
           eyebrow={
             <>
               <FileText size={12} />
@@ -809,14 +762,23 @@ function AjukanDokumenPage() {
             </>
           }
           title="Ajukan Dokumen Baru"
-          description="Lengkapi tiga bagian pengajuan. Dokumen Material mengikuti alur validasi dan persetujuan yang berlaku, sedangkan Non-Material disimpan sebagai Tersimpan tanpa nominal realisasi."
         />
 
-        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
-          <PegawaiPanel className="min-w-0 overflow-hidden border-zinc-200/70 p-0 shadow-sm">
-            <div className="border-b border-orange-100 bg-[#FFF3E8] p-4">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start">
+          <PegawaiPanel className="min-w-0 overflow-hidden border-[#F1E5DA] bg-white p-0 shadow-none">
+            <div className="border-b border-[#F1E5DA] bg-[#FFFCF9] px-4 py-3.5 sm:px-5">
+              <StepIndicator
+                currentStep={step}
+                completedSteps={completedSteps}
+                onStepClick={handleStepClick}
+                labels={stepLabels}
+                subtitles={MAJOR_STEP_SUBTITLES}
+              />
+            </div>
+
+            <div className="bg-orange-500 p-4 text-white">
               <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white">
                   {step === 1 ? (
                     <Info size={17} />
                   ) : step === 2 ? (
@@ -827,45 +789,108 @@ function AjukanDokumenPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[10px] font-semibold text-orange-700">
+                    <p className="text-[10px] font-semibold text-white/75">
                       Bagian {step} dari {stepLabels.length}
                     </p>
-                    <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-orange-700">
+                    <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white">
                       {progressPercentage}% selesai
                     </span>
                   </div>
-                  <h2 className="mt-1 font-headline text-lg font-bold tracking-tight text-zinc-950">
+                  <h2 className="mt-1 font-headline text-lg font-bold tracking-tight text-white">
                     {stepLabels[step - 1]}
                   </h2>
-                  <p className="mt-1 max-w-2xl text-xs font-medium leading-relaxed text-zinc-600">
+                  <p className="mt-1 max-w-2xl text-xs font-medium leading-relaxed text-orange-50">
                     {MAJOR_STEP_DESCRIPTIONS[step - 1]}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="border-b border-zinc-100 bg-white px-4 py-3.5 sm:px-5">
-              <StepIndicator
-                currentStep={step}
-                completedSteps={completedSteps}
-                onStepClick={handleStepClick}
-                labels={stepLabels}
-                subtitles={MAJOR_STEP_SUBTITLES}
-              />
-            </div>
-
             <div className="min-w-0 p-4 sm:p-5">
 
           {step === 1 && (
-            <div className="space-y-4">
-              <GroupedFormSection
-                number={1}
-                title="Informasi Dasar"
-                description="Pilih fungsi dan tanggal dokumen."
-                complete={canAdvanceFromStep1}
-              >
+            <div className="space-y-5">
+              <StepFungsiTanggal
+                grouped
+                showTanggal={false}
+                fungsiId={fungsiId}
+                fungsiList={fungsiList}
+                loadingFungsi={loadingFungsi}
+                tanggal={tanggal}
+                tanggalError={tanggalError}
+                tahun={tahun}
+                canAdvanceFromStep1={canAdvanceFromStep1}
+                onFungsiChange={handleFungsiChange}
+                onTanggalChange={handleTanggalChange}
+                onNext={handleNextFromInformation}
+              />
+
+              {fungsiId && (
+                <StepKegiatan
+                  grouped
+                  fungsiId={fungsiId}
+                  kegiatanId={kegiatanId}
+                  kegiatanList={kegiatanList}
+                  loadingKegiatan={loadingKegiatan}
+                  canAdvanceFromStep2={canAdvanceFromStep2}
+                  onKegiatanChange={handleKegiatanChange}
+                  onBack={handleBack}
+                  onNext={handleNextFromInformation}
+                />
+              )}
+
+              {kegiatanId && (
+                <StepJenisPermintaan
+                  grouped
+                  kegiatanId={kegiatanId}
+                  isNonMaterial={isNonMaterial}
+                  jenisPermintaanId={jenisPermintaanId}
+                  jenisList={jenisList}
+                  loadingJenis={loadingJenis}
+                  jenisDokumenId={jenisDokumenId}
+                  jenisDokumenList={jenisDokumenList}
+                  canAdvanceFromStep3={canAdvanceFromStep3}
+                  onToggleNonMaterial={handleToggleNonMaterial}
+                  onJenisChange={handleJenisChange}
+                  onJenisDokumenChange={handleJenisDokumenChange}
+                  onBack={handleBack}
+                  onNext={handleNextFromInformation}
+                />
+              )}
+
+              {!isNonMaterial && jenisPermintaanId && (
+                <StepKategoriPermintaan
+                  grouped
+                  jenisPermintaanId={jenisPermintaanId}
+                  jenisPermintaanNama={jenisPermintaanNama}
+                  kategoriPermintaanId={kategoriPermintaanId}
+                  kategoriList={kategoriList}
+                  loadingKategori={loadingKategori}
+                  canAdvanceFromStep4={canAdvanceFromStep4}
+                  onKategoriChange={handleKategoriChange}
+                  onBack={handleBack}
+                  onNext={handleNextFromInformation}
+                />
+              )}
+
+              {!isNonMaterial && kategoriPermintaanId && kategoriHasDetail && (
+                <StepDetailPermintaan
+                  grouped
+                  kategoriPermintaanId={kategoriPermintaanId}
+                  kategoriPermintaanNama={kategoriPermintaanNama}
+                  detailPermintaanId={detailPermintaanId}
+                  detailList={detailList}
+                  canAdvanceFromStep5={canAdvanceFromStep5}
+                  onDetailChange={handleDetailChange}
+                  onBack={handleBack}
+                  onNext={handleNextFromInformation}
+                />
+              )}
+
+              {kegiatanId && (
                 <StepFungsiTanggal
                   grouped
+                  showFungsi={false}
                   fungsiId={fungsiId}
                   fungsiList={fungsiList}
                   loadingFungsi={loadingFungsi}
@@ -877,99 +902,9 @@ function AjukanDokumenPage() {
                   onTanggalChange={handleTanggalChange}
                   onNext={handleNextFromInformation}
                 />
-              </GroupedFormSection>
-
-              {fungsiId && (
-                <GroupedFormSection
-                  number={2}
-                  title="Detail Kegiatan"
-                  description="Pilih kegiatan yang menjadi konteks pengajuan."
-                  complete={canAdvanceFromStep2}
-                >
-                  <StepKegiatan
-                    grouped
-                    fungsiId={fungsiId}
-                    kegiatanId={kegiatanId}
-                    kegiatanList={kegiatanList}
-                    loadingKegiatan={loadingKegiatan}
-                    canAdvanceFromStep2={canAdvanceFromStep2}
-                    onKegiatanChange={handleKegiatanChange}
-                    onBack={handleBack}
-                    onNext={handleNextFromInformation}
-                  />
-                </GroupedFormSection>
               )}
 
-              {kegiatanId && (
-                <GroupedFormSection
-                  number={3}
-                  title="Jenis Dokumen"
-                  description="Tentukan apakah dokumen Material atau Non-Material dan pilih jenisnya."
-                  complete={canAdvanceFromStep3}
-                >
-                  <StepJenisPermintaan
-                    grouped
-                    kegiatanId={kegiatanId}
-                    isNonMaterial={isNonMaterial}
-                    jenisPermintaanId={jenisPermintaanId}
-                    jenisList={jenisList}
-                    loadingJenis={loadingJenis}
-                    jenisDokumenId={jenisDokumenId}
-                    jenisDokumenList={jenisDokumenList}
-                    canAdvanceFromStep3={canAdvanceFromStep3}
-                    onToggleNonMaterial={handleToggleNonMaterial}
-                    onJenisChange={handleJenisChange}
-                    onJenisDokumenChange={handleJenisDokumenChange}
-                    onBack={handleBack}
-                    onNext={handleNextFromInformation}
-                  />
-                </GroupedFormSection>
-              )}
-
-              {!isNonMaterial && jenisPermintaanId && (
-                <GroupedFormSection
-                  number={4}
-                  title="Kategori Permintaan"
-                  description="Pilih kategori yang sesuai dengan jenis permintaan."
-                  complete={canAdvanceFromStep4}
-                >
-                  <StepKategoriPermintaan
-                    grouped
-                    jenisPermintaanId={jenisPermintaanId}
-                    jenisPermintaanNama={jenisPermintaanNama}
-                    kategoriPermintaanId={kategoriPermintaanId}
-                    kategoriList={kategoriList}
-                    loadingKategori={loadingKategori}
-                    canAdvanceFromStep4={canAdvanceFromStep4}
-                    onKategoriChange={handleKategoriChange}
-                    onBack={handleBack}
-                    onNext={handleNextFromInformation}
-                  />
-                </GroupedFormSection>
-              )}
-
-              {!isNonMaterial && kategoriPermintaanId && kategoriHasDetail && (
-                <GroupedFormSection
-                  number={5}
-                  title="Detail Permintaan"
-                  description="Pilih detail wajib untuk kategori ini."
-                  complete={canAdvanceFromStep5}
-                >
-                  <StepDetailPermintaan
-                    grouped
-                    kategoriPermintaanId={kategoriPermintaanId}
-                    kategoriPermintaanNama={kategoriPermintaanNama}
-                    detailPermintaanId={detailPermintaanId}
-                    detailList={detailList}
-                    canAdvanceFromStep5={canAdvanceFromStep5}
-                    onDetailChange={handleDetailChange}
-                    onBack={handleBack}
-                    onNext={handleNextFromInformation}
-                  />
-                </GroupedFormSection>
-              )}
-
-              <div className="sticky bottom-3 z-10 rounded-2xl border border-zinc-200/80 bg-white/95 p-3 shadow-sm backdrop-blur sm:flex sm:justify-end">
+              <div className="flex border-t border-[#F1E5DA] pt-4 sm:justify-end">
                 <Button
                   type="button"
                   size="lg"
@@ -1060,8 +995,8 @@ function AjukanDokumenPage() {
             </div>
         </PegawaiPanel>
 
-          <aside className="min-w-0 space-y-3 lg:sticky lg:top-6">
-            <PegawaiPanel className="hidden border-zinc-200/70 p-4 shadow-none lg:block">
+          <aside className="min-w-0 space-y-3 lg:sticky lg:top-6 lg:pt-[4.5rem]">
+            <PegawaiPanel className="hidden border-[#F1E5DA] bg-white p-4 shadow-none lg:block">
               <p className="text-xs font-semibold text-zinc-600">
                 Progress Pengajuan
               </p>
@@ -1122,7 +1057,7 @@ function AjukanDokumenPage() {
               </div>
             </PegawaiPanel>
 
-            <PegawaiPanel className="border-zinc-200/70 bg-white/70 p-4 shadow-none">
+            <PegawaiPanel className="border-[#F1E5DA] bg-[#FFF9F4] p-4 shadow-none">
               <div className="flex items-start gap-3">
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
                   <ShieldCheck size={18} />
@@ -1134,7 +1069,7 @@ function AjukanDokumenPage() {
                   </p>
                 </div>
               </div>
-              <div className="mt-3 rounded-xl bg-[#FFFAF5] p-3">
+              <div className="mt-3 rounded-xl bg-white p-3">
                 <div className="flex items-start gap-2">
                   <Sparkles size={14} className="mt-0.5 shrink-0 text-orange-500" />
                   <p className="text-[10px] font-semibold leading-relaxed text-zinc-600">

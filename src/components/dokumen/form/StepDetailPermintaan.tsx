@@ -33,16 +33,15 @@ export function StepDetailPermintaan({
         </h3>
       )}
 
-      <p className="text-xs text-on-surface-variant">
-        Untuk kategori <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
-      </p>
-
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-zinc-700">
-          Detail <span className="text-error">*</span>
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-1">
+          <label className="text-[11px] font-bold text-zinc-700">
+            Pilih Detail Permintaan <span className="text-orange-500">*</span>
+          </label>
+          <span className="text-[10px] font-medium text-zinc-500">{kategoriPermintaanNama}</span>
+        </div>
         <Select value={detailPermintaanId} onValueChange={v => onDetailChange(v ?? '')}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="min-h-11 w-full rounded-xl border-[#F1E5DA] bg-[#FFFCF9] px-4 text-sm hover:border-orange-200">
             <SelectValue placeholder="Pilih detail...">
               {v => detailList.find(d => d.id === v)?.nama ?? ''}
             </SelectValue>

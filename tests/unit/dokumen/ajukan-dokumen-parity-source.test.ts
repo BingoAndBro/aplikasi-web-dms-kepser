@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const source = readFileSync('src/routes/pegawai/dokumen/aju.tsx', 'utf8')
+const fungsiTanggalSource = readFileSync('src/components/dokumen/form/StepFungsiTanggal.tsx', 'utf8')
+const kegiatanSource = readFileSync('src/components/dokumen/form/StepKegiatan.tsx', 'utf8')
+const jenisPermintaanSource = readFileSync('src/components/dokumen/form/StepJenisPermintaan.tsx', 'utf8')
+const kategoriPermintaanSource = readFileSync('src/components/dokumen/form/StepKategoriPermintaan.tsx', 'utf8')
 
 describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
   it('uses three grouped presentation stages with confirmation and an in-page success state', () => {
@@ -26,6 +30,25 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(source).toContain('<AppDialog')
     expect(source).not.toContain('<ConfirmDialog')
     expect(source).not.toContain('#/routes/api')
+  })
+
+  it('keeps Step 1 visually direct without nested grouped-section cards', () => {
+    expect(source).not.toContain('GroupedFormSection')
+    expect(source).not.toContain('Perlu dilengkapi')
+    expect(source).toContain('showTanggal={false}')
+    expect(source).toContain('showFungsi={false}')
+    expect(source).toContain('bg-orange-500 p-4 text-white')
+
+    expect(fungsiTanggalSource).toContain('Pilih Fungsi')
+    expect(fungsiTanggalSource).toContain('Pilih Tanggal Laporan')
+    expect(fungsiTanggalSource).toContain('aria-pressed={selected}')
+    expect(kegiatanSource).toContain('Pilih Kegiatan')
+    expect(jenisPermintaanSource).toContain('Karakteristik Dokumen')
+    expect(jenisPermintaanSource).toContain('aria-pressed={!isNonMaterial}')
+    expect(jenisPermintaanSource).toContain('aria-pressed={isNonMaterial}')
+    expect(jenisPermintaanSource).not.toContain('type="checkbox"')
+    expect(jenisPermintaanSource).toContain('Pilih Jenis Permintaan')
+    expect(kategoriPermintaanSource).toContain('Pilih Kategori Permintaan')
   })
 
   it('preserves the submit endpoint and business payload identifiers', () => {

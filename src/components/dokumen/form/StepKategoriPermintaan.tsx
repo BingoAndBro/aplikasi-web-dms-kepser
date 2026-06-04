@@ -35,25 +35,24 @@ export function StepKategoriPermintaan({
         </h3>
       )}
 
-      <p className="text-xs text-on-surface-variant">
-        Untuk <strong className="text-on-surface">{jenisPermintaanNama}</strong>
-      </p>
-
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-zinc-700">
-          Kategori <span className="text-error">*</span>
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-1">
+          <label className="text-[11px] font-bold text-zinc-700">
+            Pilih Kategori Permintaan <span className="text-orange-500">*</span>
+          </label>
+          <span className="text-[10px] font-medium text-zinc-500">{jenisPermintaanNama}</span>
+        </div>
         {loadingKategori ? (
-          <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+          <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : kategoriList.length === 0 ? (
-          <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
+          <p className="rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] p-3 text-xs text-zinc-500">
             Tidak ada kategori untuk jenis yang dipilih.
           </p>
         ) : (
           <Select value={kategoriPermintaanId} onValueChange={v => onKategoriChange(v ?? '')}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="min-h-11 w-full rounded-xl border-[#F1E5DA] bg-[#FFFCF9] px-4 text-sm hover:border-orange-200">
               <SelectValue placeholder="Pilih kategori...">
                 {v => kategoriList.find(k => k.id === v)?.nama ?? ''}
               </SelectValue>

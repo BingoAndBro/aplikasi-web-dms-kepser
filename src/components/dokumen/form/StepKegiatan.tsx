@@ -34,20 +34,20 @@ export function StepKegiatan({
       )}
 
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-zinc-700">
-          Kegiatan <span className="text-error">*</span>
+        <label className="text-[11px] font-bold text-zinc-700">
+          Pilih Kegiatan <span className="text-orange-500">*</span>
         </label>
         {loadingKegiatan ? (
-          <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+          <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : kegiatanList.length === 0 ? (
-          <p className="text-xs text-on-surface-variant p-3 bg-muted rounded-lg">
+          <p className="rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] p-3 text-xs text-zinc-500">
             Tidak ada kegiatan untuk fungsi yang dipilih.
           </p>
         ) : (
           <Select value={kegiatanId} onValueChange={v => onKegiatanChange(v ?? '')}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="min-h-11 w-full rounded-xl border-[#F1E5DA] bg-[#FFFCF9] px-4 text-sm hover:border-orange-200">
               <SelectValue placeholder="Pilih kegiatan...">
                 {v => kegiatanList.find(k => k.id === v)?.nama ?? ''}
               </SelectValue>
