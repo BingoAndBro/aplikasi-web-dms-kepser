@@ -115,7 +115,7 @@ export function FileUploadButton({
 
   if (state === 'uploaded') {
     return (
-      <div className={cn('flex min-w-0 items-center gap-3 rounded-xl border border-emerald-100 bg-white p-2.5', className)}>
+      <div className={cn('flex min-w-0 items-center gap-3 rounded-xl border border-zinc-200/70 bg-white p-2.5', className)}>
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
           <CheckCircle2 size={16} />
         </div>
@@ -143,9 +143,9 @@ export function FileUploadButton({
 
   if (state === 'uploading') {
     return (
-      <div className={cn('flex items-center gap-2 rounded-xl border border-orange-100 bg-orange-50/60 p-3', className)}>
-        <Loader2 size={16} className="shrink-0 animate-spin text-orange-600" />
-        <p className="text-xs font-semibold text-orange-800">Mengunggah...</p>
+      <div className={cn('flex items-center gap-2 rounded-xl border border-zinc-200/70 bg-[#FFFAF5] p-3', className)}>
+        <Loader2 size={16} className="shrink-0 animate-spin text-orange-500" />
+        <p className="text-xs font-semibold text-zinc-700">Mengunggah...</p>
       </div>
     )
   }
@@ -183,7 +183,7 @@ export function FileUploadButton({
         type="button"
         variant="outline"
         size="sm"
-        className="w-full gap-1.5 border-orange-200 bg-white text-orange-800 hover:bg-orange-50 sm:w-auto"
+        className="w-full gap-1.5 border-zinc-200 bg-white text-orange-700 hover:bg-orange-50 sm:w-auto"
         onClick={() => inputRef.current?.click()}
       >
         <Upload size={14} />

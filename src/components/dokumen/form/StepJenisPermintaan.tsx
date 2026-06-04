@@ -44,7 +44,7 @@ export function StepJenisPermintaan({
       )}
 
       {/* Non-Material Toggle */}
-      <div className="flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50/70 p-3">
+      <div className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-[#FFFAF5] p-3">
         <input
           type="checkbox"
           id="isNonMaterial"
@@ -52,9 +52,9 @@ export function StepJenisPermintaan({
           onChange={(e) => onToggleNonMaterial(e.target.checked)}
           className="w-4 h-4 rounded border-orange-400 text-primary focus:ring-primary"
         />
-        <label htmlFor="isNonMaterial" className="text-sm text-orange-950 cursor-pointer flex-1">
+        <label htmlFor="isNonMaterial" className="flex-1 cursor-pointer text-sm text-zinc-800">
           <span className="font-semibold">Dokumen Non-Material</span>
-          <span className="block text-xs text-orange-800/80">
+          <span className="block text-xs text-zinc-500">
             Centang jika dokumen tidak memerlukan nominal dan disimpan sebagai Tersimpan.
           </span>
         </label>
@@ -63,7 +63,7 @@ export function StepJenisPermintaan({
       {isNonMaterial ? (
         // Non-Material: Jenis Dokumen dropdown
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
+          <label className="text-xs font-semibold text-zinc-700">
             Jenis Dokumen <span className="text-error">*</span>
           </label>
           {jenisDokumenList.length === 0 ? (
@@ -93,7 +93,7 @@ export function StepJenisPermintaan({
       ) : (
         // Material: Jenis Permintaan dropdown
         <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
+          <label className="text-xs font-semibold text-zinc-700">
             Jenis Permintaan <span className="text-error">*</span>
           </label>
           {loadingJenis ? (

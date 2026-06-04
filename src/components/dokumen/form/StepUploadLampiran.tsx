@@ -77,29 +77,29 @@ export function StepUploadLampiran({
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-700">
+          <p className="text-xs font-semibold text-orange-600">
             Kelengkapan Dokumen
           </p>
-          <h3 className="mt-1 font-headline text-lg font-extrabold tracking-tight text-zinc-950">
+          <h3 className="mt-1 font-headline text-lg font-bold tracking-tight text-zinc-950">
             Unggah lampiran dan lengkapi detail
           </h3>
           <p className="mt-1 max-w-2xl text-xs font-medium leading-relaxed text-zinc-600">
             Lampiran yang dibutuhkan mengikuti kegiatan, karakteristik dokumen, dan peran yang terdeteksi.
           </p>
         </div>
-        <span className="w-fit rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-800">
+        <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-[10px] font-semibold text-orange-700">
           {isNonMaterial ? 'Non-Material' : 'Material'}
         </span>
       </div>
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <div className="min-w-0 rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4">
+        <div className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
           <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               <FileCheck2 size={18} />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
+              <p className="text-[10px] font-semibold text-zinc-500">
                 Konteks Kelengkapan
               </p>
               <p className="mt-1 break-words text-xs font-black leading-relaxed text-zinc-950">
@@ -112,13 +112,13 @@ export function StepUploadLampiran({
           </div>
         </div>
 
-        <div className="min-w-0 rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4">
+        <div className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
           <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               {isKetuaTim ? <Trophy size={18} /> : <Medal size={18} />}
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
+              <p className="text-[10px] font-semibold text-zinc-500">
                 Peran pada Kegiatan
               </p>
               <p className="mt-1 text-xs font-black text-zinc-950">
@@ -136,7 +136,7 @@ export function StepUploadLampiran({
         <div className={`rounded-2xl border p-4 transition-all ${
           isKetuaTim
             ? 'border-emerald-200 bg-emerald-50'
-            : 'border-orange-200 bg-orange-50'
+            : 'border-zinc-200 bg-white'
         }`}>
           <div className="flex items-center gap-3">
             {isChairmanLoading ? (
@@ -144,18 +144,18 @@ export function StepUploadLampiran({
             ) : isKetuaTim ? (
               <Trophy size={18} className="text-emerald-600" />
             ) : (
-              <Medal size={18} className="text-orange-600" />
+              <Medal size={18} className="text-orange-500" />
             )}
             <div>
               <p className={`text-sm font-semibold ${
-                isKetuaTim ? 'text-emerald-800' : 'text-orange-800'
+                isKetuaTim ? 'text-emerald-800' : 'text-zinc-800'
               }`}>
                 {isKetuaTim
                   ? 'Anda adalah Ketua Tim di kegiatan ini'
                   : 'Anda adalah Anggota di kegiatan ini'}
               </p>
               <p className={`mt-0.5 text-xs ${
-                isKetuaTim ? 'text-emerald-700' : 'text-orange-700'
+                isKetuaTim ? 'text-emerald-700' : 'text-zinc-600'
               }`}>
                 {isKetuaTim
                   ? 'Dokumen akan masuk ke Laporan Kegiatan.'
@@ -167,19 +167,19 @@ export function StepUploadLampiran({
       )}
 
       {!chairmanBadgeVisible && (
-        <div className="flex items-center justify-center rounded-2xl border border-orange-100 bg-orange-50/60 py-4">
+        <div className="flex items-center justify-center rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] py-4">
           <Loader2 size={18} className="animate-spin text-outline" />
           <span className="ml-2 text-sm text-on-surface-variant">Memeriksa peran...</span>
         </div>
       )}
 
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 sm:p-5">
-        <div className="mb-4 flex items-center gap-3 border-b border-orange-100 pb-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+      <section className="rounded-2xl border border-zinc-200/70 bg-white p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-3 border-b border-zinc-100 pb-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
             <UploadCloud size={18} />
           </div>
           <div>
-            <h4 className="text-sm font-black text-zinc-950">Lampiran Dokumen</h4>
+            <h4 className="text-sm font-bold text-zinc-950">Lampiran Dokumen</h4>
             <p className="text-[10px] font-medium leading-relaxed text-zinc-500">
               Unggah seluruh lampiran wajib dan dokumen tambahan yang diperlukan.
             </p>
@@ -198,18 +198,18 @@ export function StepUploadLampiran({
       </section>
 
       {isNonMaterial ? (
-        <section className="rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4 sm:p-5">
+        <section className="rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4 sm:p-5">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               <ReceiptText size={18} />
             </div>
             <div>
-              <h4 className="text-sm font-black text-zinc-950">Keterangan Detail</h4>
+              <h4 className="text-sm font-bold text-zinc-950">Keterangan Detail</h4>
               <p className="text-[10px] font-medium text-zinc-500">Berikan konteks singkat untuk dokumen Non-Material.</p>
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
+            <label className="text-xs font-semibold text-zinc-700">
               Keterangan Detail Dokumen <span className="text-error">*</span>
             </label>
             <input
@@ -217,7 +217,7 @@ export function StepUploadLampiran({
               value={keteranganDetail}
               onChange={(e) => onKeteranganDetailChange(e.target.value)}
               placeholder={`Contoh: ${jenisDokumenNama || 'Judul kegiatan'}...`}
-              className="w-full rounded-xl border border-orange-200 bg-white px-3.5 py-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-200/70"
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
             />
             <p className="text-[10px] font-medium leading-relaxed text-zinc-500">
               Jelaskan detail dokumen, contoh: "{jenisDokumenNama || 'Rapat'} Bersama Pimpinan"
@@ -225,18 +225,18 @@ export function StepUploadLampiran({
           </div>
         </section>
       ) : (
-        <section className="rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4 sm:p-5">
+        <section className="rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4 sm:p-5">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               <ReceiptText size={18} />
             </div>
             <div>
-              <h4 className="text-sm font-black text-zinc-950">Nominal Realisasi</h4>
+              <h4 className="text-sm font-bold text-zinc-950">Nominal Realisasi</h4>
               <p className="text-[10px] font-medium text-zinc-500">Masukkan nilai realisasi dokumen Material.</p>
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
+            <label className="text-xs font-semibold text-zinc-700">
               Nominal Realisasi (Rp) <span className="text-error">*</span>
             </label>
             <input
@@ -244,7 +244,7 @@ export function StepUploadLampiran({
               value={nominalRealisasi}
               onChange={(e) => onNominalRealisasiChange(e.target.value)}
               placeholder="Contoh: 1.500.000"
-              className="w-full rounded-xl border border-orange-200 bg-white px-3.5 py-3 text-sm font-bold text-zinc-950 outline-none transition placeholder:font-normal placeholder:text-zinc-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-200/70"
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm font-bold text-zinc-950 outline-none transition placeholder:font-normal placeholder:text-zinc-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
             />
             {nominalError && (
               <p className="flex items-center gap-1 text-[10px] font-semibold text-error">

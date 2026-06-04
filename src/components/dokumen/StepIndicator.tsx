@@ -34,7 +34,7 @@ export function StepIndicator({
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 gap-1 sm:gap-3">
         {steps.map((step, i) => {
           const stepNum = i + 1
           const isActive = stepNum === currentStep
@@ -46,8 +46,8 @@ export function StepIndicator({
               {i < steps.length - 1 && (
                 <div
                   className={cn(
-                    'absolute left-[calc(50%+1rem)] right-[calc(-50%+1rem)] top-4 z-0 h-0.5 rounded-full transition-colors',
-                    isCompleted ? 'bg-emerald-400' : 'bg-orange-100',
+                    'absolute left-[calc(50%+0.875rem)] right-[calc(-50%+0.875rem)] top-3.5 z-0 h-px rounded-full transition-colors',
+                    isCompleted ? 'bg-emerald-300' : 'bg-zinc-200',
                   )}
                 />
               )}
@@ -63,10 +63,10 @@ export function StepIndicator({
               >
                 <span
                   className={cn(
-                    'flex size-8 items-center justify-center rounded-full border-2 bg-white text-xs font-black transition-all',
-                    isActive && 'scale-110 border-orange-500 bg-orange-500 text-white shadow-md shadow-orange-500/25',
-                    isCompleted && !isActive && 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20',
-                    !isActive && !isCompleted && 'border-orange-100 text-zinc-400',
+                    'flex size-7 items-center justify-center rounded-full border bg-white text-[11px] font-bold transition-colors',
+                    isActive && 'border-orange-500 bg-orange-500 text-white',
+                    isCompleted && !isActive && 'border-emerald-500 bg-emerald-500 text-white',
+                    !isActive && !isCompleted && 'border-zinc-200 text-zinc-400',
                   )}
                 >
                   {isCompleted && !isActive ? (
@@ -77,8 +77,8 @@ export function StepIndicator({
                 </span>
                 <span
                   className={cn(
-                    'mt-2 block max-w-full text-[10px] font-black leading-tight sm:text-[11px]',
-                    isActive && 'text-orange-800',
+                    'mt-2 block max-w-full text-[10px] font-semibold leading-tight sm:text-[11px]',
+                    isActive && 'text-orange-700',
                     isCompleted && !isActive && 'text-emerald-700',
                     !isActive && !isCompleted && 'text-zinc-400',
                   )}
@@ -86,7 +86,7 @@ export function StepIndicator({
                   {step.label}
                 </span>
                 {subtitles[i] && (
-                  <span className="mt-1 hidden max-w-full text-[9px] font-medium leading-tight text-zinc-500 min-[360px]:block">
+                  <span className="mt-0.5 hidden max-w-full text-[9px] font-medium leading-tight text-zinc-400 min-[360px]:block">
                     {subtitles[i]}
                   </span>
                 )}

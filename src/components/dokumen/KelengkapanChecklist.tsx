@@ -238,7 +238,7 @@ export function KelengkapanChecklist({
   return (
     <div className="space-y-4">
       {/* Summary */}
-      <div className="rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4">
+      <div className="rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
@@ -249,7 +249,7 @@ export function KelengkapanChecklist({
               {attachmentReady ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
             </div>
             <div>
-              <p className="text-sm font-black text-zinc-950">Progress Lampiran</p>
+              <p className="text-sm font-bold text-zinc-950">Progress Lampiran</p>
               <p className="mt-0.5 text-[10px] font-medium text-zinc-600">
                 {lampiranUrls.length} dari {totalCount} dokumen diunggah
                 {requiredCount > 0 && ` - ${uploadedCount}/${requiredCount} wajib`}
@@ -259,20 +259,20 @@ export function KelengkapanChecklist({
             </div>
           </div>
           {!attachmentReady ? (
-            <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800">
+            <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-800">
               {requiredCount > uploadedCount
                 ? `${requiredCount - uploadedCount} wajib belum diunggah`
                 : 'Belum ada lampiran'}
             </span>
           ) : (
-            <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">
+            <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold text-emerald-800">
               Lampiran wajib siap
             </span>
           )}
         </div>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-orange-100">
+        <div className="mt-4 h-1 overflow-hidden rounded-full bg-zinc-100">
           <div
-            className="h-full rounded-full bg-orange-500 transition-[width]"
+            className="h-full rounded-full bg-orange-400 transition-[width]"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -281,7 +281,7 @@ export function KelengkapanChecklist({
       {/* Admin Kelengkapan */}
       {!isNonMaterial && items.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-xs font-semibold text-zinc-600">
             Kelengkapan Admin
           </p>
           {items.map(item => {
@@ -295,7 +295,7 @@ export function KelengkapanChecklist({
                     ? 'border-emerald-200 bg-emerald-50/60'
                     : item.required
                       ? 'border-amber-200 bg-amber-50/50'
-                      : 'border-orange-100 bg-[#FFFDF9]'
+                      : 'border-zinc-200/70 bg-white'
                 )}
               >
                 <div className="shrink-0 mt-0.5">
@@ -315,7 +315,7 @@ export function KelengkapanChecklist({
                       </span>
                     )}
                     {!item.required && (
-                      <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
+                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600">
                         OPSIONAL
                       </span>
                     )}
@@ -347,7 +347,7 @@ export function KelengkapanChecklist({
       {/* User-Created Documents Section - always shown */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-700">
+          <p className="text-xs font-semibold text-zinc-700">
             {isNonMaterial ? 'Dokumen Pendukung' : 'Dokumen Tambahan Anda'}
           </p>
           {!showAddForm && (
@@ -365,7 +365,7 @@ export function KelengkapanChecklist({
 
         {/* Add Form */}
         {showAddForm && (
-          <div className="flex flex-col gap-2 rounded-2xl border border-orange-200 bg-orange-50/60 p-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-[#FFFAF5] p-3 sm:flex-row sm:items-center">
             <Input
               value={newDocTitle}
               onChange={(e) => {
@@ -418,7 +418,7 @@ export function KelengkapanChecklist({
                 'flex min-w-0 flex-col gap-3 rounded-2xl border p-3.5 transition-colors sm:flex-row',
                 uploaded
                   ? 'border-emerald-200 bg-emerald-50/60'
-                  : 'border-orange-200 bg-orange-50/50'
+                  : 'border-zinc-200 bg-white'
               )}
             >
               <div className="shrink-0 mt-0.5">
@@ -430,7 +430,7 @@ export function KelengkapanChecklist({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-xs font-bold text-zinc-950">{doc.nama_dokumen}</p>
-                  <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
+                  <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
                     TAMBAHAN ANDA
                   </span>
                 </div>

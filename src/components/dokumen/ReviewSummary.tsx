@@ -26,13 +26,13 @@ type SummaryItemProps = {
 
 function SummaryItem({ icon, label, value, className = '' }: SummaryItemProps) {
   return (
-    <div className={`min-w-0 rounded-xl border border-orange-100 bg-white p-3.5 ${className}`}>
+    <div className={`min-w-0 rounded-xl border border-zinc-200/70 bg-white p-3.5 ${className}`}>
       <div className="flex items-start gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
           {icon}
         </div>
         <div className="min-w-0">
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
+          <p className="text-[10px] font-semibold text-zinc-500">
             {label}
           </p>
           <div className="mt-1 break-words text-xs font-bold leading-relaxed text-zinc-950">
@@ -77,29 +77,29 @@ export function ReviewSummary({
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-700">
+          <p className="text-xs font-semibold text-orange-600">
             Ringkasan Pengajuan
           </p>
-          <h3 className="mt-1 font-headline text-lg font-extrabold tracking-tight text-zinc-950">
+          <h3 className="mt-1 font-headline text-lg font-bold tracking-tight text-zinc-950">
             Periksa data sebelum konfirmasi
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-zinc-600">
             Pastikan konteks, karakteristik, dan lampiran dokumen sudah sesuai.
           </p>
         </div>
-        <span className="w-fit rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-800">
+        <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-[10px] font-semibold text-orange-700">
           Dokumen {isNonMaterial ? 'Non-Material' : 'Material'}
         </span>
       </div>
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <section className="min-w-0 rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4 sm:p-5">
+        <section className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               <Building2 size={18} />
             </div>
             <div>
-              <h4 className="text-sm font-black text-zinc-950">Konteks Dokumen</h4>
+              <h4 className="text-sm font-bold text-zinc-950">Konteks Dokumen</h4>
               <p className="text-[10px] font-medium text-zinc-500">Fungsi, kegiatan, tanggal, dan peran</p>
             </div>
           </div>
@@ -118,13 +118,13 @@ export function ReviewSummary({
           </div>
         </section>
 
-        <section className="min-w-0 rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4 sm:p-5">
+        <section className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
               <Tags size={18} />
             </div>
             <div>
-              <h4 className="text-sm font-black text-zinc-950">Karakteristik Dokumen</h4>
+              <h4 className="text-sm font-bold text-zinc-950">Karakteristik Dokumen</h4>
               <p className="text-[10px] font-medium text-zinc-500">
                 {isNonMaterial ? 'Jenis dan keterangan dokumen' : 'Jenis, kategori, detail, dan nominal'}
               </p>
@@ -168,9 +168,9 @@ export function ReviewSummary({
             )}
           </div>
 
-          <div className="mt-3 flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
-            <FileCheck2 size={15} className="mt-0.5 shrink-0 text-orange-700" />
-            <p className="text-[10px] font-semibold leading-relaxed text-orange-900">
+          <div className="mt-3 flex items-start gap-3 rounded-xl bg-orange-50/70 p-3">
+            <FileCheck2 size={15} className="mt-0.5 shrink-0 text-orange-600" />
+            <p className="text-[10px] font-semibold leading-relaxed text-zinc-700">
               {isNonMaterial
                 ? 'Dokumen akan disimpan sebagai Tersimpan tanpa nominal realisasi.'
                 : 'Dokumen akan mengikuti alur validasi dan persetujuan yang berlaku.'}
@@ -179,21 +179,21 @@ export function ReviewSummary({
         </section>
       </div>
 
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 sm:p-5">
+      <section className="rounded-2xl border border-zinc-200/70 bg-white p-4">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
               <FileCheck2 size={18} />
             </div>
             <div>
-              <h4 className="text-sm font-black text-zinc-950">Ringkasan Kelengkapan</h4>
+              <h4 className="text-sm font-bold text-zinc-950">Ringkasan Kelengkapan</h4>
               <p className="text-[10px] font-medium text-zinc-500">
                 {lampiranUrls.length} lampiran terunggah dan siap diperiksa
               </p>
             </div>
           </div>
           {lampiranUrls.length > 0 && (
-            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">
+            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700">
               Kelengkapan siap
             </span>
           )}

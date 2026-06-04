@@ -40,7 +40,7 @@ export function StepKategoriPermintaan({
       </p>
 
       <div className="space-y-2">
-        <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
+        <label className="text-xs font-semibold text-zinc-700">
           Kategori <span className="text-error">*</span>
         </label>
         {loadingKategori ? (
