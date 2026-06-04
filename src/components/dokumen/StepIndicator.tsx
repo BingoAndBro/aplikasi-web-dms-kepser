@@ -18,15 +18,23 @@ interface StepIndicatorProps {
   onStepClick?: (step: number) => void
   completedSteps?: number[]
   labels?: string[]
+  subtitles?: string[]
 }
 
-export function StepIndicator({ currentStep, onStepClick, completedSteps = [], labels }: StepIndicatorProps) {
+export function StepIndicator({
+  currentStep,
+  onStepClick,
+  completedSteps = [],
+  labels,
+  subtitles = [],
+}: StepIndicatorProps) {
   const steps = labels
     ? labels.map(label => ({ label }))
     : DEFAULT_STEPS
+
   return (
-    <div className="w-full overflow-x-auto pb-1">
-      <div className="flex min-w-max items-center justify-between gap-2 sm:min-w-0 sm:gap-0">
+    <div className="w-full">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {steps.map((step, i) => {
           const stepNum = i + 1
           const isActive = stepNum === currentStep
@@ -34,51 +42,55 @@ export function StepIndicator({ currentStep, onStepClick, completedSteps = [], l
           const isClickable = onStepClick && (isCompleted || isActive)
 
           return (
-            <div key={step.label} className="relative flex min-w-16 flex-1 flex-col items-center">
-              {/* Connector line */}
+            <div key={step.label} className="relative min-w-0">
               {i < steps.length - 1 && (
                 <div
                   className={cn(
-                    'absolute top-4 left-1/2 w-full h-0.5 z-0 transition-colors',
-                    isCompleted ? 'bg-emerald-500' : 'bg-orange-100'
+                    'absolute left-[calc(50%+1rem)] right-[calc(-50%+1rem)] top-4 z-0 h-0.5 rounded-full transition-colors',
+                    isCompleted ? 'bg-emerald-400' : 'bg-orange-100',
                   )}
-                  style={{ width: 'calc(100% - 2rem)' }}
                 />
               )}
 
-              {/* Circle */}
               <button
                 type="button"
                 disabled={!isClickable}
                 onClick={() => isClickable && onStepClick?.(stepNum)}
                 className={cn(
-                  'relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all',
-                  'border-2',
-                  isActive && 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20 scale-110',
-                  isCompleted && !isActive && 'border-emerald-500 bg-emerald-500 text-white',
-                  !isActive && !isCompleted && 'border-orange-100 bg-white text-zinc-400 hover:border-orange-300',
-                  isClickable && 'cursor-pointer',
-                  !isClickable && 'cursor-default'
+                  'group relative z-10 flex w-full min-w-0 flex-col items-center text-center',
+                  isClickable ? 'cursor-pointer' : 'cursor-default',
                 )}
               >
-                {isCompleted && !isActive ? (
-                  <Check size={14} strokeWidth={3} />
-                ) : (
-                  stepNum
+                <span
+                  className={cn(
+                    'flex size-8 items-center justify-center rounded-full border-2 bg-white text-xs font-black transition-all',
+                    isActive && 'scale-110 border-orange-500 bg-orange-500 text-white shadow-md shadow-orange-500/25',
+                    isCompleted && !isActive && 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20',
+                    !isActive && !isCompleted && 'border-orange-100 text-zinc-400',
+                  )}
+                >
+                  {isCompleted && !isActive ? (
+                    <Check size={14} strokeWidth={3} />
+                  ) : (
+                    stepNum
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    'mt-2 block max-w-full text-[10px] font-black leading-tight sm:text-[11px]',
+                    isActive && 'text-orange-800',
+                    isCompleted && !isActive && 'text-emerald-700',
+                    !isActive && !isCompleted && 'text-zinc-400',
+                  )}
+                >
+                  {step.label}
+                </span>
+                {subtitles[i] && (
+                  <span className="mt-1 hidden max-w-full text-[9px] font-medium leading-tight text-zinc-500 min-[360px]:block">
+                    {subtitles[i]}
+                  </span>
                 )}
               </button>
-
-              {/* Label */}
-              <span
-                className={cn(
-                  'mt-2 text-[10px] font-medium text-center leading-tight',
-                  isActive && 'text-orange-700 font-semibold',
-                  isCompleted && !isActive && 'text-emerald-700',
-                  !isActive && !isCompleted && 'text-zinc-400'
-                )}
-              >
-                {step.label}
-              </span>
             </div>
           )
         })}

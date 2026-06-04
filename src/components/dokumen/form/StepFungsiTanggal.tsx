@@ -33,12 +33,14 @@ export function StepFungsiTanggal({
 }: StepFungsiTanggalProps) {
   return (
     <div className="space-y-4">
-      <h3 className="font-headline text-base font-bold text-on-surface">
-        {grouped ? 'Fungsi dan Tanggal' : '1. Pilih Fungsi & Informasi Dasar'}
-      </h3>
+      {!grouped && (
+        <h3 className="font-headline text-base font-bold text-on-surface">
+          1. Pilih Fungsi & Informasi Dasar
+        </h3>
+      )}
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-on-surface">
+      <div className="space-y-2">
+        <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
           Fungsi <span className="text-error">*</span>
         </label>
         {loadingFungsi ? (
@@ -63,8 +65,8 @@ export function StepFungsiTanggal({
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-on-surface">
+      <div className="space-y-2">
+        <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
           Tanggal <span className="text-error">*</span>
         </label>
         <DatePicker

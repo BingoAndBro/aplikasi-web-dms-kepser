@@ -8,7 +8,7 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(source).toContain("'Informasi Dasar'")
     expect(source).toContain("'Kelengkapan'")
     expect(source).toContain("'Review & Ajukan'")
-    expect(source).toContain('title="Ajukan dokumen ini?"')
+    expect(source).toContain('Ajukan dokumen ini?')
     expect(source).toContain('Pastikan jenis permintaan, kegiatan, nominal realisasi, dan kelengkapan sudah benar.')
     expect(source).toContain('setSubmittedDocument(response.dokumen)')
     expect(source).toContain('Lihat Daftar Dokumen')
@@ -16,6 +16,16 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(source).toContain('Lihat Detail Dokumen')
     expect(source).toContain('useAppToast()')
     expect(source).toContain('submitInFlightRef.current')
+  })
+
+  it('keeps the visual parity pass bounded to response-backed Ajukan presentation', () => {
+    expect(source).toContain('Progress Pengajuan')
+    expect(source).toContain('MAJOR_STEP_SUBTITLES')
+    expect(source).toContain('Konsekuensi pengajuan')
+    expect(source).toContain('Pengajuan selesai')
+    expect(source).toContain('<AppDialog')
+    expect(source).not.toContain('<ConfirmDialog')
+    expect(source).not.toContain('#/routes/api')
   })
 
   it('preserves the submit endpoint and business payload identifiers', () => {

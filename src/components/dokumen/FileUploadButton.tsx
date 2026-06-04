@@ -115,12 +115,14 @@ export function FileUploadButton({
 
   if (state === 'uploaded') {
     return (
-      <div className={cn('flex items-center gap-2', className)}>
-        <CheckCircle2 size={16} className="text-green-500 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-on-surface truncate">{filename}</p>
+      <div className={cn('flex min-w-0 items-center gap-3 rounded-xl border border-emerald-100 bg-white p-2.5', className)}>
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+          <CheckCircle2 size={16} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold text-zinc-950">{filename}</p>
           {fileSize > 0 && (
-            <p className="text-[10px] text-green-600">{formatFileSize(fileSize)}</p>
+            <p className="mt-0.5 text-[10px] font-medium text-emerald-600">{formatFileSize(fileSize)}</p>
           )}
         </div>
         <button
@@ -131,7 +133,7 @@ export function FileUploadButton({
             setFileSize(0)
             onRemoved?.()
           }}
-          className="text-[10px] text-error hover:underline"
+          className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold text-error transition hover:bg-red-50"
         >
           Hapus
         </button>
@@ -141,19 +143,19 @@ export function FileUploadButton({
 
   if (state === 'uploading') {
     return (
-      <div className={cn('flex items-center gap-2', className)}>
-        <Loader2 size={16} className="text-primary animate-spin shrink-0" />
-        <p className="text-xs text-on-surface-variant">Mengunggah...</p>
+      <div className={cn('flex items-center gap-2 rounded-xl border border-orange-100 bg-orange-50/60 p-3', className)}>
+        <Loader2 size={16} className="shrink-0 animate-spin text-orange-600" />
+        <p className="text-xs font-semibold text-orange-800">Mengunggah...</p>
       </div>
     )
   }
 
   if (state === 'error') {
     return (
-      <div className={cn('flex flex-col gap-1', className)}>
+      <div className={cn('flex flex-col gap-2 rounded-xl border border-red-100 bg-red-50 p-3', className)}>
         <div className="flex items-center gap-2">
           <XCircle size={16} className="text-error shrink-0" />
-          <p className="text-xs text-error">{errorMsg}</p>
+          <p className="text-xs font-semibold text-error">{errorMsg}</p>
         </div>
         <Button
           type="button"
@@ -169,7 +171,7 @@ export function FileUploadButton({
   }
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex min-w-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center', className)}>
       <input
         ref={inputRef}
         type="file"
@@ -181,13 +183,13 @@ export function FileUploadButton({
         type="button"
         variant="outline"
         size="sm"
-        className="gap-1.5"
+        className="w-full gap-1.5 border-orange-200 bg-white text-orange-800 hover:bg-orange-50 sm:w-auto"
         onClick={() => inputRef.current?.click()}
       >
         <Upload size={14} />
         Unggah File
       </Button>
-      <p className="text-[10px] text-outline">
+      <p className="text-[10px] font-medium leading-relaxed text-zinc-500">
         PDF, DOC, DOCX, XLS, XLSX - Maks 2MB
       </p>
     </div>

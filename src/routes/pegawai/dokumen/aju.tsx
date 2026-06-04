@@ -16,8 +16,9 @@ import { StepDetailPermintaan } from '#/components/dokumen/form/StepDetailPermin
 import { StepUploadLampiran } from '#/components/dokumen/form/StepUploadLampiran'
 import { StepReview } from '#/components/dokumen/form/StepReview'
 import { Button } from '#/components/ui/button'
-import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
+import { AppDialog } from '#/components/ui/AppDialog'
 import { useAppToast } from '#/components/ui/AppToast'
+import { DialogClose } from '#/components/ui/dialog'
 import type {
   LampiranUrl,
   FungsiRow,
@@ -30,12 +31,18 @@ import type {
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { apiFetch } from '#/lib/api-client'
 import {
+  ArrowRight,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  FileCheck2,
   FileText,
+  Info,
+  Loader2,
+  Send,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -69,6 +76,18 @@ const MAJOR_STEP_LABELS = [
   'Review & Ajukan',
 ]
 
+const MAJOR_STEP_SUBTITLES = [
+  'Konteks & jenis',
+  'Lampiran & detail',
+  'Konfirmasi akhir',
+]
+
+const MAJOR_STEP_DESCRIPTIONS = [
+  'Lengkapi fungsi, kegiatan, tanggal, dan karakteristik dokumen.',
+  'Unggah lampiran serta lengkapi nominal atau keterangan detail.',
+  'Tinjau ringkasan dan konfirmasi konsekuensi pengajuan.',
+]
+
 const SUBMIT_STATUS_LABELS: Record<string, string> = {
   IN_PPK_VALIDATION: 'Menunggu PPK',
   TERSIMPAN: 'Tersimpan',
@@ -82,23 +101,32 @@ function GroupedFormSection({
   children,
 }: GroupedFormSectionProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-orange-100 bg-[#FFFDF9]">
-      <div className="flex items-start gap-3 border-b border-orange-100 bg-[#FFF8F1] p-4">
+    <section className="overflow-hidden rounded-2xl border border-orange-100 bg-[#FFFDF9] shadow-sm shadow-orange-950/[0.02]">
+      <div className="flex items-start gap-3 border-b border-orange-100 bg-[#FFF8F1] p-4 sm:p-5">
         <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+          className={`flex size-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
             complete
-              ? 'bg-emerald-500 text-white'
+              ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
               : 'bg-orange-100 text-orange-800'
           }`}
         >
           {complete ? <CheckCircle2 size={16} /> : number}
         </div>
-        <div>
-          <h2 className="font-headline text-sm font-bold text-zinc-950">{title}</h2>
-          <p className="mt-1 text-xs leading-relaxed text-zinc-600">{description}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-headline text-sm font-extrabold text-zinc-950">{title}</h2>
+            <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] ${
+              complete
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-orange-100 text-orange-700'
+            }`}>
+              {complete ? 'Lengkap' : 'Perlu dilengkapi'}
+            </span>
+          </div>
+          <p className="mt-1 text-xs font-medium leading-relaxed text-zinc-600">{description}</p>
         </div>
       </div>
-      <div className="p-4 sm:p-5">{children}</div>
+      <div className="p-4 sm:p-5 sm:pt-4">{children}</div>
     </section>
   )
 }
@@ -356,6 +384,7 @@ function AjukanDokumenPage() {
   }
 
   const stepLabels = MAJOR_STEP_LABELS
+  const progressPercentage = Math.round((step / stepLabels.length) * 100)
   const completedSteps = stepLabels
     .map((_, index) => index + 1)
     .filter(stepNumber => stepNumber < step)
@@ -640,7 +669,7 @@ function AjukanDokumenPage() {
 
     return (
       <PageLayout>
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto max-w-5xl space-y-6">
           <PegawaiPageHeader
             eyebrow={
               <>
@@ -658,58 +687,108 @@ function AjukanDokumenPage() {
             }
           />
 
-          <PegawaiPanel className="overflow-hidden p-0">
-            <div className="flex flex-col items-center border-b border-emerald-100 bg-emerald-50 px-5 py-8 text-center sm:px-8">
-              <div className="flex size-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 size={32} />
+          <PegawaiPanel className="overflow-hidden border-emerald-100 p-0 shadow-lg shadow-emerald-950/5">
+            <div className="border-b border-emerald-100 bg-[linear-gradient(145deg,#ECFDF5_0%,#FFF9F3_55%,#FFFDF9_100%)] px-5 py-8 sm:px-8 sm:py-10">
+              <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+                <div className="relative">
+                  <div className="absolute inset-0 scale-150 rounded-full bg-emerald-200/40 blur-xl" />
+                  <div className="relative flex size-20 items-center justify-center rounded-3xl border-4 border-white bg-emerald-500 text-white shadow-xl shadow-emerald-500/25">
+                    <CheckCircle2 size={38} />
+                  </div>
+                </div>
+                <span className="mt-5 rounded-full border border-emerald-200 bg-white/80 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                  Pengajuan selesai
+                </span>
+                <h2 className="mt-3 font-headline text-2xl font-extrabold tracking-tight text-emerald-950 sm:text-3xl">
+                  {submittedDocument.is_non_material ? 'Dokumen Berhasil Tersimpan' : 'Pengajuan Berhasil'}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-emerald-800">
+                  Pengajuan telah diterima sistem. Ringkasan hasil dan tindakan berikutnya tersedia di bawah.
+                </p>
               </div>
-              <h2 className="mt-5 font-headline text-xl font-extrabold text-emerald-950 sm:text-2xl">
-                {submittedDocument.judul || 'Dokumen baru'}
-              </h2>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-emerald-800">
-                Pengajuan telah diterima sistem. Gunakan tindakan di bawah untuk melihat hasil atau mengajukan dokumen lain.
-              </p>
             </div>
 
-            <div className="space-y-5 p-5 sm:p-6">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <PegawaiFieldCard
-                  label="Jenis Dokumen"
-                  value={submittedDocument.is_non_material ? 'Non-Material' : 'Material'}
-                />
-                <PegawaiFieldCard label="Status Hasil" value={statusLabel} />
-                <PegawaiFieldCard label="Tahap Berikutnya" value={nextStepLabel} />
+            <div className="grid min-w-0 gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:p-8">
+              <div className="min-w-0 space-y-4">
+                <div className="rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4 sm:p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-700">
+                    Dokumen diproses
+                  </p>
+                  <h3 className="mt-2 break-words font-headline text-lg font-extrabold leading-tight text-zinc-950 sm:text-xl">
+                    {submittedDocument.judul || 'Dokumen baru'}
+                  </h3>
+                  <p className="mt-2 text-xs font-medium leading-relaxed text-zinc-600">
+                    {submittedDocument.is_non_material
+                      ? 'Dokumen Non-Material telah disimpan sebagai Tersimpan tanpa nominal realisasi.'
+                      : 'Dokumen Material telah diajukan dan akan mengikuti alur validasi serta persetujuan yang berlaku.'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <PegawaiFieldCard
+                    label="Jenis Dokumen"
+                    value={submittedDocument.is_non_material ? 'Non-Material' : 'Material'}
+                    className="bg-white"
+                  />
+                  <PegawaiFieldCard label="Status Hasil" value={statusLabel} className="bg-white" />
+                  <PegawaiFieldCard label="Tahap Berikutnya" value={nextStepLabel} className="bg-white" />
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <aside className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 sm:p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
+                    <FileCheck2 size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-emerald-950">Semua tahap selesai</p>
+                    <p className="text-[10px] font-medium text-emerald-700">3 dari 3 bagian pengajuan</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {MAJOR_STEP_LABELS.map(label => (
+                    <div key={label} className="flex items-center gap-2 rounded-xl bg-white/80 px-3 py-2">
+                      <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
+                      <span className="text-[10px] font-bold text-emerald-950">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </aside>
+            </div>
+
+            <div className="border-t border-orange-100 bg-[#FFF9F3] p-4 sm:p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                 <Button
                   type="button"
+                  size="lg"
                   onClick={() => navigate({ to: '/pegawai/dokumen' })}
-                  className="w-full sm:w-auto"
+                  className="w-full gap-1.5 bg-orange-600 text-white shadow-md shadow-orange-600/20 hover:bg-orange-700 sm:w-auto"
                 >
-                  Lihat Daftar Dokumen
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSubmitAnother}
-                  className="w-full sm:w-auto"
-                >
-                  Ajukan Dokumen Lain
+                  Lihat Daftar Dokumen <ArrowRight size={14} />
                 </Button>
                 {submittedDocument.id && (
                   <Button
                     type="button"
                     variant="outline"
+                    size="lg"
                     onClick={() => navigate({
                       to: '/pegawai/dokumen/$id',
                       params: { id: submittedDocument.id },
                     })}
-                    className="w-full sm:w-auto"
+                    className="w-full border-orange-200 bg-white sm:w-auto"
                   >
                     Lihat Detail Dokumen
                   </Button>
                 )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleSubmitAnother}
+                  className="w-full border-orange-200 bg-white sm:w-auto"
+                >
+                  Ajukan Dokumen Lain
+                </Button>
               </div>
             </div>
           </PegawaiPanel>
@@ -734,48 +813,49 @@ function AjukanDokumenPage() {
           description="Lengkapi tiga bagian pengajuan. Dokumen Material mengikuti alur validasi dan persetujuan yang berlaku, sedangkan Non-Material disimpan sebagai Tersimpan tanpa nominal realisasi."
         />
 
-        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
-          <PegawaiPanel className="min-w-0 p-4">
-            <StepIndicator
-              currentStep={step}
-              completedSteps={completedSteps}
-              onStepClick={handleStepClick}
-              labels={stepLabels}
-            />
-          </PegawaiPanel>
-          <PegawaiPanel className="space-y-3 bg-[#FFF8F1]">
-            <div className="flex items-start gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-                <ShieldCheck size={18} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-zinc-950">Aturan alur</p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-700">
-                  Gunakan istilah dokumen. Jangan unggah data di luar kebutuhan pengajuan.
-                </p>
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+          <PegawaiPanel className="min-w-0 overflow-hidden p-0 shadow-lg shadow-orange-950/5">
+            <div className="bg-gradient-to-r from-orange-700 via-orange-600 to-orange-500 p-4 text-white sm:p-5">
+              <div className="flex items-start gap-4">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 shadow-inner ring-1 ring-white/20">
+                  {step === 1 ? (
+                    <Info size={20} />
+                  ) : step === 2 ? (
+                    <FileCheck2 size={20} />
+                  ) : (
+                    <ClipboardList size={20} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
+                      Bagian {step} dari {stepLabels.length}
+                    </p>
+                    <span className="rounded-full bg-white/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-white ring-1 ring-white/20">
+                      {progressPercentage}% selesai
+                    </span>
+                  </div>
+                  <h2 className="mt-1 font-headline text-lg font-extrabold tracking-tight sm:text-xl">
+                    {stepLabels[step - 1]}
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-[10px] font-semibold leading-relaxed text-white/75 sm:text-xs">
+                    {MAJOR_STEP_DESCRIPTIONS[step - 1]}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="rounded-xl border border-orange-100 bg-white/80 p-3 text-xs text-zinc-700">
-              <p className="font-semibold text-zinc-950">Bagian aktif</p>
-              <p className="mt-1">{step}. {stepLabels[step - 1]}</p>
-            </div>
-          </PegawaiPanel>
-        </div>
 
-        <PegawaiPanel className="min-w-0 p-4 sm:p-6">
-          <div className="mb-5 flex items-center gap-2 border-b border-orange-100 pb-4">
-            <ClipboardList size={16} className="text-orange-700" />
-            <div>
-              <p className="text-sm font-bold text-zinc-950">{stepLabels[step - 1]}</p>
-              <p className="text-xs text-zinc-500">
-                {step === 1
-                  ? 'Lengkapi informasi dasar dan jenis dokumen.'
-                  : step === 2
-                    ? 'Lengkapi lampiran dan detail pengajuan.'
-                    : 'Tinjau ringkasan sebelum mengajukan dokumen.'}
-              </p>
+            <div className="border-b border-orange-100 bg-[#FFF9F3] p-4 sm:p-5">
+              <StepIndicator
+                currentStep={step}
+                completedSteps={completedSteps}
+                onStepClick={handleStepClick}
+                labels={stepLabels}
+                subtitles={MAJOR_STEP_SUBTITLES}
+              />
             </div>
-          </div>
+
+            <div className="min-w-0 p-4 sm:p-6">
 
           {step === 1 && (
             <div className="space-y-4">
@@ -890,12 +970,13 @@ function AjukanDokumenPage() {
                 </GroupedFormSection>
               )}
 
-              <div className="sticky bottom-3 z-10 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex sm:justify-end">
+              <div className="sticky bottom-3 z-10 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-xl shadow-orange-950/5 backdrop-blur sm:flex sm:justify-end">
                 <Button
                   type="button"
+                  size="lg"
                   onClick={handleNextFromInformation}
                   disabled={!canAdvanceFromInformation}
-                  className="w-full gap-1.5 sm:w-auto"
+                  className="w-full gap-1.5 bg-orange-600 px-5 text-white shadow-md shadow-orange-600/20 hover:bg-orange-700 sm:w-auto"
                 >
                   Lanjut ke Kelengkapan <ChevronRight size={14} />
                 </Button>
@@ -932,20 +1013,22 @@ function AjukanDokumenPage() {
                 onNext={handleNextFromDetails}
               />
 
-              <div className="sticky bottom-3 z-10 flex flex-col gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:justify-between">
+              <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-xl shadow-orange-950/5 backdrop-blur sm:flex-row sm:justify-between">
                 <Button
                   type="button"
                   variant="outline"
+                  size="lg"
                   onClick={handleBack}
-                  className="w-full gap-1.5 sm:w-auto"
+                  className="w-full gap-1.5 border-orange-200 bg-white sm:w-auto"
                 >
                   <ChevronLeft size={14} /> Kembali
                 </Button>
                 <Button
                   type="button"
+                  size="lg"
                   onClick={handleNextFromDetails}
                   disabled={!canAdvanceFromStep6()}
-                  className="w-full gap-1.5 sm:w-auto"
+                  className="w-full gap-1.5 bg-orange-600 px-5 text-white shadow-md shadow-orange-600/20 hover:bg-orange-700 sm:w-auto"
                 >
                   Review Pengajuan <ChevronRight size={14} />
                 </Button>
@@ -975,26 +1058,180 @@ function AjukanDokumenPage() {
               onSubmit={handleRequestSubmit}
             />
           )}
+            </div>
         </PegawaiPanel>
+
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-6">
+            <PegawaiPanel className="hidden p-5 lg:block">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                Progress Pengajuan
+              </p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <span className="font-headline text-4xl font-extrabold tracking-tight text-zinc-950">
+                  {progressPercentage}%
+                </span>
+                <span className="mb-1 text-[10px] font-bold text-zinc-500">
+                  {step} dari {stepLabels.length} bagian
+                </span>
+              </div>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-orange-100">
+                <div
+                  className="h-full rounded-full bg-orange-500 transition-[width]"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {stepLabels.map((label, index) => {
+                  const stepNumber = index + 1
+                  const isActive = stepNumber === step
+                  const isComplete = stepNumber < step
+
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      disabled={!isComplete && !isActive}
+                      onClick={() => handleStepClick(stepNumber)}
+                      className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
+                        isActive
+                          ? 'border-orange-200 bg-orange-50'
+                          : isComplete
+                            ? 'border-emerald-100 bg-emerald-50/70'
+                            : 'border-orange-100 bg-[#FFFDF9]'
+                      }`}
+                    >
+                      <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black ${
+                        isActive
+                          ? 'bg-orange-600 text-white'
+                          : isComplete
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-orange-100 text-zinc-400'
+                      }`}>
+                        {isComplete ? <CheckCircle2 size={13} /> : stepNumber}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[10px] font-black text-zinc-950">{label}</span>
+                        <span className="mt-0.5 block text-[9px] font-medium text-zinc-500">
+                          {MAJOR_STEP_SUBTITLES[index]}
+                        </span>
+                      </span>
+                      {isActive && <span className="size-2 shrink-0 rounded-full bg-orange-500" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </PegawaiPanel>
+
+            <PegawaiPanel className="border-orange-200 bg-[#FFF8F1] p-4 sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-zinc-950">Sebelum melanjutkan</p>
+                  <p className="mt-1 text-xs font-medium leading-relaxed text-zinc-700">
+                    Pastikan data sesuai dokumen dan unggah hanya lampiran yang diperlukan.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-xl border border-orange-100 bg-white/80 p-3">
+                <div className="flex items-start gap-2">
+                  <Sparkles size={14} className="mt-0.5 shrink-0 text-orange-600" />
+                  <p className="text-[10px] font-semibold leading-relaxed text-zinc-600">
+                    Tahap review menampilkan ringkasan akhir sebelum konfirmasi diproses.
+                  </p>
+                </div>
+              </div>
+            </PegawaiPanel>
+          </aside>
+        </div>
       </div>
 
-      <ConfirmDialog
+      <AppDialog
         open={submitConfirmationOpen}
         onOpenChange={(open) => {
           if (!submitting) setSubmitConfirmationOpen(open)
         }}
-        title="Ajukan dokumen ini?"
+        title={
+          <span className="flex items-center gap-3 pr-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+              <Send size={20} />
+            </span>
+            <span className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">
+              Ajukan dokumen ini?
+            </span>
+          </span>
+        }
         description={
           isNonMaterial
             ? 'Pastikan jenis dokumen, kegiatan, keterangan detail, dan kelengkapan sudah benar. Dokumen Non-Material akan disimpan sebagai Tersimpan.'
             : 'Pastikan jenis permintaan, kegiatan, nominal realisasi, dan kelengkapan sudah benar. Dokumen Material akan mengikuti alur validasi dan persetujuan yang berlaku.'
         }
-        confirmLabel={isNonMaterial ? 'Simpan Dokumen' : 'Ajukan Dokumen'}
-        cancelLabel="Periksa Kembali"
-        onConfirm={handleSubmit}
-        pending={submitting}
-        disabled={submitting}
-      />
+        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
+        contentClassName="border-orange-100 bg-[#FFFDF9] shadow-2xl shadow-orange-950/10 sm:rounded-3xl sm:p-6"
+        showCloseButton={!submitting}
+        size="md"
+        footer={
+          <>
+            <DialogClose render={<Button variant="outline" size="lg" disabled={submitting} className="border-orange-200 bg-white" />}>
+              Periksa Kembali
+            </DialogClose>
+            <Button
+              type="button"
+              size="lg"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="bg-orange-600 text-white shadow-md shadow-orange-600/20 hover:bg-orange-700"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Memproses...
+                </>
+              ) : (
+                <>
+                  {isNonMaterial ? 'Simpan Dokumen' : 'Ajukan Dokumen'}
+                  <Send size={14} />
+                </>
+              )}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-orange-100 bg-white p-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                Karakteristik
+              </p>
+              <p className="mt-1 text-sm font-extrabold text-zinc-950">
+                Dokumen {isNonMaterial ? 'Non-Material' : 'Material'}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-orange-100 bg-white p-4">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                Lampiran
+              </p>
+              <p className="mt-1 text-sm font-extrabold text-zinc-950">
+                {lampiranUrls.length} file siap diproses
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+            <Info size={17} className="mt-0.5 shrink-0 text-orange-700" />
+            <div>
+              <p className="text-xs font-black text-orange-950">Konsekuensi pengajuan</p>
+              <p className="mt-1 text-xs font-medium leading-relaxed text-orange-900">
+                {isNonMaterial
+                  ? 'Dokumen akan disimpan sebagai Tersimpan tanpa nominal realisasi.'
+                  : 'Dokumen akan masuk ke alur validasi dan persetujuan yang berlaku.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </AppDialog>
     </PageLayout>
   )
 }

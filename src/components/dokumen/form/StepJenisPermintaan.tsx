@@ -37,11 +37,11 @@ export function StepJenisPermintaan({
 }: StepJenisPermintaanProps) {
   return (
     <div className="space-y-4">
-      <h3 className="font-headline text-base font-bold text-on-surface">
-        {grouped
-          ? (isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan')
-          : `3. ${isNonMaterial ? 'Pilih Jenis Dokumen' : 'Pilih Jenis Permintaan'}`}
-      </h3>
+      {!grouped && (
+        <h3 className="font-headline text-base font-bold text-on-surface">
+          {`3. ${isNonMaterial ? 'Pilih Jenis Dokumen' : 'Pilih Jenis Permintaan'}`}
+        </h3>
+      )}
 
       {/* Non-Material Toggle */}
       <div className="flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50/70 p-3">
@@ -54,16 +54,16 @@ export function StepJenisPermintaan({
         />
         <label htmlFor="isNonMaterial" className="text-sm text-orange-950 cursor-pointer flex-1">
           <span className="font-semibold">Dokumen Non-Material</span>
-          <span className="text-xs text-orange-800/80 block">
-            Centang jika dokumen tidak memerlukan nominal dan tidak melewati alur PPK/PPSPM.
+          <span className="block text-xs text-orange-800/80">
+            Centang jika dokumen tidak memerlukan nominal dan disimpan sebagai Tersimpan.
           </span>
         </label>
       </div>
 
       {isNonMaterial ? (
         // Non-Material: Jenis Dokumen dropdown
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-on-surface">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
             Jenis Dokumen <span className="text-error">*</span>
           </label>
           {jenisDokumenList.length === 0 ? (
@@ -92,8 +92,8 @@ export function StepJenisPermintaan({
         </div>
       ) : (
         // Material: Jenis Permintaan dropdown
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-on-surface">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
             Jenis Permintaan <span className="text-error">*</span>
           </label>
           {loadingJenis ? (

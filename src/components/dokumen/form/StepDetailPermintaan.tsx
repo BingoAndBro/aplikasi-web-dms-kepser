@@ -27,16 +27,18 @@ export function StepDetailPermintaan({
 }: StepDetailPermintaanProps) {
   return (
     <div className="space-y-4">
-      <h3 className="font-headline text-base font-bold text-on-surface">
-        {grouped ? 'Detail Permintaan' : '5. Pilih Detail Permintaan'}
-      </h3>
+      {!grouped && (
+        <h3 className="font-headline text-base font-bold text-on-surface">
+          5. Pilih Detail Permintaan
+        </h3>
+      )}
 
       <p className="text-xs text-on-surface-variant">
         Untuk kategori <strong className="text-on-surface">{kategoriPermintaanNama}</strong>
       </p>
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-on-surface">
+      <div className="space-y-2">
+        <label className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-600">
           Detail <span className="text-error">*</span>
         </label>
         <Select value={detailPermintaanId} onValueChange={v => onDetailChange(v ?? '')}>

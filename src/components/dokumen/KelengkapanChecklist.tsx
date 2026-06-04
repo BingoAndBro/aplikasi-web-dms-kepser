@@ -5,7 +5,7 @@
  * For Material: shows admin kelengkapan + user-created optional documents.
  */
 import { useEffect, useState } from 'react'
-import { FileText, AlertCircle, Plus, X, User, Trash2 } from 'lucide-react'
+import { FileText, AlertCircle, CheckCircle2, Plus, X, User, Trash2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { createClientId } from '#/lib/utils/client-id'
 import { apiFetch } from '#/lib/api-client'
@@ -228,36 +228,60 @@ export function KelengkapanChecklist({
   const userUploadedCount = lampiranUrls.filter(l =>
     userDocs.some(d => d.id === l.kelengkapan_id)
   ).length
+  const totalCount = items.length + userDocs.length
+  const progressPercentage = totalCount > 0
+    ? Math.min(100, Math.round((lampiranUrls.length / totalCount) * 100))
+    : 0
+  const requiredReady = requiredCount === 0 || uploadedCount >= requiredCount
+  const attachmentReady = requiredReady && lampiranUrls.length > 0
 
   return (
     <div className="space-y-4">
       {/* Summary */}
-      <div className="flex items-center justify-between text-xs text-on-surface-variant">
-        <span>
-          {lampiranUrls.length} dari {items.length + userDocs.length} dokumen diunggah
-          {requiredCount > 0 && (
-            <span className="ml-1">
-              ({uploadedCount}/{requiredCount} wajib)
+      <div className="rounded-2xl border border-orange-100 bg-[#FFF9F3] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+              attachmentReady
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {attachmentReady ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            </div>
+            <div>
+              <p className="text-sm font-black text-zinc-950">Progress Lampiran</p>
+              <p className="mt-0.5 text-[10px] font-medium text-zinc-600">
+                {lampiranUrls.length} dari {totalCount} dokumen diunggah
+                {requiredCount > 0 && ` - ${uploadedCount}/${requiredCount} wajib`}
+                {userDocs.length > 0 && ` - ${userUploadedCount}/${userDocs.length} tambahan`}
+                {totalCount === 0 && ' - tambahkan minimal satu dokumen pendukung'}
+              </p>
+            </div>
+          </div>
+          {!attachmentReady ? (
+            <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800">
+              {requiredCount > uploadedCount
+                ? `${requiredCount - uploadedCount} wajib belum diunggah`
+                : 'Belum ada lampiran'}
+            </span>
+          ) : (
+            <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">
+              Lampiran wajib siap
             </span>
           )}
-          {userDocs.length > 0 && (
-            <span className="ml-1 text-blue-600">
-              ({userUploadedCount}/{userDocs.length} tambahan)
-            </span>
-          )}
-        </span>
-        {requiredCount > 0 && uploadedCount < requiredCount && (
-          <span className="flex items-center gap-1 text-amber-600">
-            <AlertCircle size={12} />
-            {requiredCount - uploadedCount} wajib belum diunggah
-          </span>
-        )}
+        </div>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-orange-100">
+          <div
+            className="h-full rounded-full bg-orange-500 transition-[width]"
+            style={{ width: `${progressPercentage}%` }}
+          />
+        </div>
       </div>
 
       {/* Admin Kelengkapan */}
       {!isNonMaterial && items.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
             Kelengkapan Admin
           </p>
           {items.map(item => {
@@ -266,32 +290,32 @@ export function KelengkapanChecklist({
               <div
                 key={item.id}
                 className={cn(
-                  'flex items-start gap-3 p-3 rounded-lg border transition-colors',
+                  'flex min-w-0 flex-col gap-3 rounded-2xl border p-3.5 transition-colors sm:flex-row',
                   uploaded
-                    ? 'border-green-200 bg-green-50/50'
+                    ? 'border-emerald-200 bg-emerald-50/60'
                     : item.required
-                      ? 'border-amber-200 bg-amber-50/30'
-                      : 'border-border bg-background'
+                      ? 'border-amber-200 bg-amber-50/50'
+                      : 'border-orange-100 bg-[#FFFDF9]'
                 )}
               >
                 <div className="shrink-0 mt-0.5">
                   <FileText
                     size={14}
                     className={cn(
-                      uploaded ? 'text-green-500' : item.required ? 'text-amber-500' : 'text-outline'
+                      uploaded ? 'text-emerald-600' : item.required ? 'text-amber-600' : 'text-orange-500'
                     )}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-xs font-medium text-on-surface">{item.nama_dokumen}</p>
+                    <p className="text-xs font-bold text-zinc-950">{item.nama_dokumen}</p>
                     {item.required && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
                         WAJIB
                       </span>
                     )}
                     {!item.required && (
-                      <span className="text-[10px] font-medium px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                      <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
                         OPSIONAL
                       </span>
                     )}
@@ -323,7 +347,7 @@ export function KelengkapanChecklist({
       {/* User-Created Documents Section - always shown */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-700">
             {isNonMaterial ? 'Dokumen Pendukung' : 'Dokumen Tambahan Anda'}
           </p>
           {!showAddForm && (
@@ -331,7 +355,7 @@ export function KelengkapanChecklist({
               variant="ghost"
               size="sm"
               onClick={() => setShowAddForm(true)}
-              className="gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              className="gap-1 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
             >
               <Plus size={14} />
               <span className="text-xs">Tambah Dokumen</span>
@@ -341,7 +365,7 @@ export function KelengkapanChecklist({
 
         {/* Add Form */}
         {showAddForm && (
-          <div className="flex items-center gap-2 p-3 border border-blue-200 bg-blue-50/30 rounded-lg">
+          <div className="flex flex-col gap-2 rounded-2xl border border-orange-200 bg-orange-50/60 p-3 sm:flex-row sm:items-center">
             <Input
               value={newDocTitle}
               onChange={(e) => {
@@ -391,26 +415,26 @@ export function KelengkapanChecklist({
             <div
               key={doc.id}
               className={cn(
-                'flex items-start gap-3 p-3 rounded-lg border transition-colors',
+                'flex min-w-0 flex-col gap-3 rounded-2xl border p-3.5 transition-colors sm:flex-row',
                 uploaded
-                  ? 'border-green-200 bg-green-50/50'
-                  : 'border-blue-200 bg-blue-50/30'
+                  ? 'border-emerald-200 bg-emerald-50/60'
+                  : 'border-orange-200 bg-orange-50/50'
               )}
             >
               <div className="shrink-0 mt-0.5">
                 <User
                   size={14}
-                  className={uploaded ? 'text-green-500' : 'text-blue-500'}
+                  className={uploaded ? 'text-emerald-600' : 'text-orange-600'}
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-xs font-medium text-on-surface">{doc.nama_dokumen}</p>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                  <p className="text-xs font-bold text-zinc-950">{doc.nama_dokumen}</p>
+                  <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
                     TAMBAHAN ANDA
                   </span>
                 </div>
-                <div className="mt-1.5 flex items-center gap-2">
+                <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                   {uploaded ? (
                     <FileUploadButton
                       kelengkapanId={doc.id}
