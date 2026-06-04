@@ -1,8 +1,7 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
-  PegawaiFieldCard,
   PegawaiPageHeader,
   PegawaiPanel,
 } from '#/components/pegawai/PegawaiPagePrimitives'
@@ -40,7 +39,6 @@ import {
   Info,
   Loader2,
   Send,
-  Sparkles,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -139,6 +137,7 @@ function AjukanDokumenPage() {
   const [missingRequired, setMissingRequired] = useState<any[]>([])
   const [nominalRealisasi, setNominalRealisasi] = useState('')
   const [keteranganDetail, setKeteranganDetail] = useState('')
+  const [attachmentDirty, setAttachmentDirty] = useState(false)
 
   // Data lists
   const [fungsiList, setFungsiList] = useState<FungsiRow[]>([])
@@ -152,6 +151,47 @@ function AjukanDokumenPage() {
   const [loadingKegiatan, setLoadingKegiatan] = useState(false)
   const [loadingJenis, setLoadingJenis] = useState(false)
   const [loadingKategori, setLoadingKategori] = useState(false)
+
+  const hasFormDirty = Boolean(
+    fungsiId
+    || kegiatanId
+    || isNonMaterial
+    || jenisPermintaanId
+    || jenisDokumenId
+    || kategoriPermintaanId
+    || detailPermintaanId
+    || nominalRealisasi
+    || keteranganDetail.trim()
+    || lampiranUrls.length > 0
+    || tanggal !== today
+    || tahun !== new Date().getFullYear()
+  )
+  const isDirty = !submittedDocument && !submitting && (hasFormDirty || attachmentDirty)
+  const shouldBlockLeave = useCallback(
+    ({ current, next }: { current: { pathname: string }; next: { pathname: string } }) => {
+      return isDirty && current.pathname !== next.pathname
+    },
+    [isDirty],
+  )
+  const leaveBlocker = useBlocker({
+    shouldBlockFn: shouldBlockLeave,
+    enableBeforeUnload: false,
+    disabled: !isDirty,
+    withResolver: true,
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isDirty) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = 'Perubahan yang belum disimpan akan hilang.'
+      return 'Perubahan yang belum disimpan akan hilang.'
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty])
 
   // Load fungsi on mount
   useEffect(() => {
@@ -537,6 +577,7 @@ function AjukanDokumenPage() {
       })
 
       setSubmittedDocument(response.dokumen)
+      setAttachmentDirty(false)
       showToast({
         title: isNonMaterial
           ? 'Dokumen Non-Material berhasil tersimpan'
@@ -606,6 +647,7 @@ function AjukanDokumenPage() {
     setMissingRequired([])
     setNominalRealisasi('')
     setKeteranganDetail('')
+    setAttachmentDirty(false)
   }
 
   if (submittedDocument) {
@@ -620,94 +662,41 @@ function AjukanDokumenPage() {
           : 'Pantau pada detail dokumen'
 
     return (
-      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
-        <div className="mx-auto max-w-5xl space-y-4">
-          <PegawaiPageHeader
-            className="rounded-none border-0 bg-transparent p-0 shadow-none sm:p-0"
-            eyebrow={
-              <>
-                <CheckCircle2 size={12} />
-                <span>Ajukan Dokumen</span>
-                <span>/</span>
-                <span>Berhasil</span>
-              </>
-            }
-            title={submittedDocument.is_non_material ? 'Dokumen Berhasil Tersimpan' : 'Pengajuan Berhasil'}
-            description={
-              submittedDocument.is_non_material
-                ? 'Dokumen Non-Material telah disimpan sebagai Tersimpan tanpa nominal realisasi.'
-                : 'Dokumen Material telah diajukan dan akan mengikuti alur validasi serta persetujuan yang berlaku.'
-            }
-          />
-
-          <PegawaiPanel className="overflow-hidden border-[#F0E1D5] p-0 shadow-none">
-            <div className="border-b border-[#DCEDE2] bg-[#F1FBF5] px-5 py-5 sm:px-7 sm:py-6">
-              <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-                <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-500 text-white">
-                  <CheckCircle2 size={22} />
-                </div>
-                <span className="mt-3 rounded-md bg-white px-2.5 py-1 text-[9px] font-semibold text-emerald-700">
-                  Pengajuan selesai
-                </span>
-                <h2 className="mt-2 font-headline text-xl font-bold tracking-tight text-emerald-950">
-                  {submittedDocument.is_non_material ? 'Dokumen Berhasil Tersimpan' : 'Pengajuan Berhasil'}
-                </h2>
-                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-emerald-800">
-                  Pengajuan telah diterima sistem. Ringkasan hasil dan tindakan berikutnya tersedia di bawah.
-                </p>
-              </div>
+      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex min-h-[calc(100vh-9rem)] items-center justify-center">
+          <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+            <div className="flex size-20 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600">
+              <CheckCircle2 size={38} strokeWidth={2.4} />
             </div>
 
-            <div className="grid min-w-0 gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
-              <div className="min-w-0 space-y-4">
-                <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-4">
-                  <p className="text-[10px] font-semibold text-[#B45309]">
-                    Dokumen diproses
-                  </p>
-                  <h3 className="mt-2 break-words font-headline text-lg font-extrabold leading-tight text-zinc-950 sm:text-xl">
-                    {submittedDocument.judul || 'Dokumen baru'}
-                  </h3>
-                  <p className="mt-2 text-xs font-medium leading-relaxed text-zinc-600">
-                    {submittedDocument.is_non_material
-                      ? 'Dokumen Non-Material telah disimpan sebagai Tersimpan tanpa nominal realisasi.'
-                      : 'Dokumen Material telah diajukan dan akan mengikuti alur validasi serta persetujuan yang berlaku.'}
-                  </p>
-                </div>
+            <h1 className="mt-8 font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
+              {submittedDocument.is_non_material ? 'Dokumen Berhasil Tersimpan' : 'Pengajuan Berhasil'}
+            </h1>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <PegawaiFieldCard
-                    label="Jenis Dokumen"
-                    value={submittedDocument.is_non_material ? 'Non-Material' : 'Material'}
-                    className="bg-white"
-                  />
-                  <PegawaiFieldCard label="Status Hasil" value={statusLabel} className="bg-white" />
-                  <PegawaiFieldCard label="Tahap Berikutnya" value={nextStepLabel} className="bg-white" />
-                </div>
-              </div>
+            <p className="mt-4 max-w-2xl text-sm font-medium leading-relaxed text-zinc-700 sm:text-base">
+              Dokumen <span className="font-extrabold text-zinc-950">{submittedDocument.judul || 'baru'}</span>
+              {' '}telah diterima sistem.
+            </p>
 
-              <aside className="rounded-xl border border-[#DCEDE2] bg-[#F1FBF5] p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
-                    <FileCheck2 size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-emerald-950">Semua tahap selesai</p>
-                    <p className="text-[10px] font-medium text-emerald-700">3 dari 3 bagian pengajuan</p>
-                  </div>
-                </div>
-                <div className="mt-4 space-y-2">
-                  {MAJOR_STEP_LABELS.map(label => (
-                    <div key={label} className="flex items-center gap-2 rounded-xl bg-white/80 px-3 py-2">
-                      <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
-                      <span className="text-[10px] font-bold text-emerald-950">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </aside>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-zinc-600">
+              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+                {submittedDocument.is_non_material ? 'Non-Material' : 'Material'}
+              </span>
+              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+                {statusLabel}
+              </span>
+              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+                {lampiranUrls.length} file lampiran
+              </span>
             </div>
 
-            <div className="border-t border-[#F0E1D5] bg-[#FFFAF6] p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+            <p className="mt-4 max-w-xl text-xs font-medium leading-relaxed text-zinc-500 sm:text-sm">
+              {nextStepLabel === 'Tidak ada alur persetujuan lanjutan'
+                ? 'Dokumen Non-Material tersimpan dan dapat dipantau dari daftar dokumen.'
+                : `Tahap berikutnya: ${nextStepLabel}. Pantau status terbaru dari daftar atau detail dokumen.`}
+            </p>
+
+            <div className="mt-10 flex w-full flex-col items-stretch justify-center gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                 <Button
                   type="button"
                   size="lg"
@@ -740,8 +729,7 @@ function AjukanDokumenPage() {
                   Ajukan Dokumen Lain
                 </Button>
               </div>
-            </div>
-          </PegawaiPanel>
+          </div>
         </div>
       </PageLayout>
     )
@@ -938,11 +926,13 @@ function AjukanDokumenPage() {
                 isKetuaTim={isKetuaTim}
                 isChairmanLoading={isChairmanLoading}
                 chairmanBadgeVisible={chairmanBadgeVisible}
+                lampiranUrls={lampiranUrls}
                 keteranganDetail={keteranganDetail}
                 nominalRealisasi={nominalRealisasi}
                 nominalError={nominalError}
                 canAdvanceFromStep6={canAdvanceFromStep6}
                 onKelengkapanComplete={handleKelengkapanComplete}
+                onAttachmentDirtyChange={setAttachmentDirty}
                 onKeteranganDetailChange={handleKeteranganDetailChange}
                 onNominalRealisasiChange={handleNominalRealisasiChange}
                 onBack={handleBack}
@@ -974,7 +964,6 @@ function AjukanDokumenPage() {
 
           {step === 3 && (
             <StepReview
-              stepCount={3}
               fungsiNama={fungsiNama}
               kegiatanNama={kegiatanNama}
               tahun={tahun}
@@ -1073,6 +1062,49 @@ function AjukanDokumenPage() {
           </aside>
         </div>
       </div>
+
+      <AppDialog
+        open={leaveBlocker.status === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open && leaveBlocker.status === 'blocked') leaveBlocker.reset()
+        }}
+        title={
+          <span className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
+              <Info size={22} />
+            </span>
+            <span className="font-headline text-lg font-bold tracking-tight text-zinc-950">
+              Keluar tanpa menyimpan?
+            </span>
+          </span>
+        }
+        description="Perubahan yang belum disimpan akan hilang."
+        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
+        contentClassName="border-[#F0E1D5] bg-white shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
+        showCloseButton
+        size="sm"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => leaveBlocker.status === 'blocked' && leaveBlocker.reset()}
+              className="border-[#F0E1D5] bg-[#FFFAF6]"
+            >
+              Tetap di halaman
+            </Button>
+            <Button
+              type="button"
+              onClick={() => leaveBlocker.status === 'blocked' && leaveBlocker.proceed()}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+            >
+              Keluar tanpa menyimpan
+            </Button>
+          </>
+        }
+      >
+        <div />
+      </AppDialog>
 
       <AppDialog
         open={submitConfirmationOpen}

@@ -11,6 +11,7 @@ import { createClientId } from '#/lib/utils/client-id'
 import { apiFetch } from '#/lib/api-client'
 import { FileUploadButton } from './FileUploadButton'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
+import { extractFilenameFromPath } from '#/lib/utils/file'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import {
@@ -43,6 +44,7 @@ interface KelengkapanChecklistProps {
   isKetuaTim: boolean
   initialLampirans?: LampiranUrl[]
   onComplete: (lampirans: LampiranUrl[], missingRequired: KelengkapanItem[]) => void
+  onDirtyChange?: (dirty: boolean) => void
   jenisPermintaanId?: string
   kategoriPermintaanId?: string
   detailPermintaanId?: string
@@ -86,6 +88,7 @@ export function KelengkapanChecklist({
   isKetuaTim,
   initialLampirans = [],
   onComplete,
+  onDirtyChange,
   jenisPermintaanId,
   kategoriPermintaanId,
   detailPermintaanId,
@@ -101,6 +104,19 @@ export function KelengkapanChecklist({
   const [showAddForm, setShowAddForm] = useState(false)
   const [newDocTitle, setNewDocTitle] = useState('')
   const [userDocError, setUserDocError] = useState('')
+
+  useEffect(() => {
+    setLampiranUrls(initialLampirans)
+    setUserDocs(
+      initialLampirans
+        .filter(lampiran => lampiran.kelengkapan_id.startsWith('user-custom-'))
+        .map(lampiran => ({
+          id: lampiran.kelengkapan_id,
+          nama_dokumen: lampiran.nama,
+          lampiran,
+        }))
+    )
+  }, [])
 
   useEffect(() => {
     async function fetchKelengkapan() {
@@ -152,6 +168,15 @@ export function KelengkapanChecklist({
     )
     onComplete(lampiranUrls, missing)
   }, [lampiranUrls, items, onComplete])
+
+  useEffect(() => {
+    onDirtyChange?.(
+      lampiranUrls.length > 0
+      || userDocs.length > 0
+      || showAddForm
+      || newDocTitle.trim().length > 0
+    )
+  }, [lampiranUrls.length, newDocTitle, onDirtyChange, showAddForm, userDocs.length])
 
   // User-created document handlers
   function handleUploaded(kelengkapanId: string, lampiran: LampiranUrl) {
@@ -229,6 +254,11 @@ export function KelengkapanChecklist({
   const requiredReady = requiredCount === 0 || uploadedCount >= requiredCount
   const attachmentReady = requiredReady && lampiranUrls.length > 0
 
+  function getUploadedFilename(lampiran: LampiranUrl | undefined): string {
+    if (!lampiran?.url) return ''
+    return extractFilenameFromPath(lampiran.url)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -255,15 +285,15 @@ export function KelengkapanChecklist({
               <div
                 key={item.id}
                 className={cn(
-                  'flex min-w-0 flex-col gap-3 rounded-2xl border px-4 py-4 transition-colors sm:flex-row sm:items-center',
+                  'flex min-w-0 flex-col gap-3 rounded-[1.5rem] border px-5 py-4 transition-colors sm:flex-row sm:items-center',
                   uploaded
-                    ? 'border-emerald-200 bg-white'
+                    ? 'border-emerald-200 bg-emerald-50/45'
                     : 'border-stone-200 bg-white',
                 )}
               >
                 <div className={cn(
                   'flex size-10 shrink-0 items-center justify-center rounded-xl',
-                  uploaded ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-400',
+                  uploaded ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-400',
                 )}>
                   {uploaded ? <CheckCircle2 size={18} /> : <FileText size={18} />}
                 </div>
@@ -277,9 +307,16 @@ export function KelengkapanChecklist({
                       {item.required ? 'WAJIB' : 'OPSIONAL'}
                     </span>
                   </div>
-                  <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
-                    Format PDF
-                  </p>
+                  {uploaded ? (
+                    <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-emerald-700">
+                      <FileText size={12} className="shrink-0" />
+                      <span className="truncate">{getUploadedFilename(uploaded)}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+                      Format PDF
+                    </p>
+                  )}
                 </div>
                 <FileUploadButton
                   kelengkapanId={item.id}
@@ -287,7 +324,7 @@ export function KelengkapanChecklist({
                   initialLampiran={uploaded}
                   onUploaded={(lamp) => handleUploaded(item.id, lamp)}
                   onRemoved={() => handleRemoved(item.id)}
-                  className="shrink-0"
+                  className="w-full shrink-0 sm:w-auto"
                 />
               </div>
             )
@@ -366,21 +403,28 @@ export function KelengkapanChecklist({
             <div
               key={doc.id}
               className={cn(
-                'flex min-w-0 flex-col gap-3 rounded-2xl border px-4 py-4 transition-colors sm:flex-row sm:items-center',
-                uploaded ? 'border-emerald-200 bg-white' : 'border-stone-200 bg-white',
+                'flex min-w-0 flex-col gap-3 rounded-[1.5rem] border px-5 py-4 transition-colors sm:flex-row sm:items-center',
+                uploaded ? 'border-emerald-200 bg-emerald-50/45' : 'border-stone-200 bg-white',
               )}
             >
               <div className={cn(
                 'flex size-10 shrink-0 items-center justify-center rounded-xl',
-                uploaded ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-400',
+                uploaded ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-400',
               )}>
                 {uploaded ? <CheckCircle2 size={15} /> : <FileText size={15} />}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-stone-900">{doc.nama_dokumen}</p>
-                <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
-                  PDF, Word, atau Excel
-                </p>
+                {uploaded ? (
+                  <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-emerald-700">
+                    <FileText size={12} className="shrink-0" />
+                    <span className="truncate">{getUploadedFilename(uploaded)}</span>
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    PDF, Word, atau Excel
+                  </p>
+                )}
               </div>
               <FileUploadButton
                 kelengkapanId={doc.id}
@@ -388,7 +432,7 @@ export function KelengkapanChecklist({
                 initialLampiran={uploaded}
                 onUploaded={(lamp) => handleUploaded(doc.id, lamp)}
                 onRemoved={() => handleRemoved(doc.id)}
-                className="shrink-0"
+                className="w-full shrink-0 sm:w-auto"
               />
               <Button
                 variant="ghost"

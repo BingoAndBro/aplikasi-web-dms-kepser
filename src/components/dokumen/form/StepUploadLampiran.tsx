@@ -28,11 +28,13 @@ interface StepUploadLampiranProps {
   isKetuaTim: boolean
   isChairmanLoading: boolean
   chairmanBadgeVisible: boolean
+  lampiranUrls: LampiranUrl[]
   keteranganDetail: string
   nominalRealisasi: string
   nominalError: string
   canAdvanceFromStep6: () => boolean
   onKelengkapanComplete: (lampirans: LampiranUrl[], missing: any[]) => void
+  onAttachmentDirtyChange?: (dirty: boolean) => void
   onKeteranganDetailChange: (value: string) => void
   onNominalRealisasiChange: (value: string) => void
   onBack: () => void
@@ -56,11 +58,13 @@ export function StepUploadLampiran({
   isKetuaTim,
   isChairmanLoading,
   chairmanBadgeVisible,
+  lampiranUrls,
   keteranganDetail,
   nominalRealisasi,
   nominalError,
   canAdvanceFromStep6,
   onKelengkapanComplete,
+  onAttachmentDirtyChange,
   onKeteranganDetailChange,
   onNominalRealisasiChange,
   onBack,
@@ -120,7 +124,9 @@ export function StepUploadLampiran({
       <KelengkapanChecklist
         kegiatanId={kegiatanId}
         isKetuaTim={isKetuaTim}
+        initialLampirans={lampiranUrls}
         onComplete={onKelengkapanComplete}
+        onDirtyChange={onAttachmentDirtyChange}
         jenisPermintaanId={!isNonMaterial ? jenisPermintaanId || undefined : undefined}
         kategoriPermintaanId={!isNonMaterial ? kategoriPermintaanId || undefined : undefined}
         detailPermintaanId={!isNonMaterial ? detailPermintaanId || undefined : undefined}
