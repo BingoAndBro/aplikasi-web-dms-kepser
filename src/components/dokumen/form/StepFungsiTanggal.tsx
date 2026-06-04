@@ -5,6 +5,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#
 import type { FungsiRow } from './dokumen-form-types'
 
 interface StepFungsiTanggalProps {
+  grouped?: boolean
   fungsiId: string
   fungsiList: FungsiRow[]
   loadingFungsi: boolean
@@ -18,6 +19,7 @@ interface StepFungsiTanggalProps {
 }
 
 export function StepFungsiTanggal({
+  grouped = false,
   fungsiId,
   fungsiList,
   loadingFungsi,
@@ -32,7 +34,7 @@ export function StepFungsiTanggal({
   return (
     <div className="space-y-4">
       <h3 className="font-headline text-base font-bold text-on-surface">
-        1. Pilih Fungsi & Informasi Dasar
+        {grouped ? 'Fungsi dan Tanggal' : '1. Pilih Fungsi & Informasi Dasar'}
       </h3>
 
       <div className="space-y-1.5">
@@ -81,9 +83,11 @@ export function StepFungsiTanggal({
         ) : null}
       </div>
 
-      <Button onClick={onNext} disabled={!canAdvanceFromStep1} className="w-full gap-1.5">
-        Lanjut <ChevronRight size={14} />
-      </Button>
+      {!grouped && (
+        <Button onClick={onNext} disabled={!canAdvanceFromStep1} className="w-full gap-1.5">
+          Lanjut <ChevronRight size={14} />
+        </Button>
+      )}
     </div>
   )
 }

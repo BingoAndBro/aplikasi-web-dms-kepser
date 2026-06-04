@@ -4,6 +4,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#
 import type { KategoriRow } from './dokumen-form-types'
 
 interface StepKategoriPermintaanProps {
+  grouped?: boolean
   jenisPermintaanId: string
   jenisPermintaanNama: string
   kategoriPermintaanId: string
@@ -16,6 +17,7 @@ interface StepKategoriPermintaanProps {
 }
 
 export function StepKategoriPermintaan({
+  grouped = false,
   jenisPermintaanNama,
   kategoriPermintaanId,
   kategoriList,
@@ -28,7 +30,7 @@ export function StepKategoriPermintaan({
   return (
     <div className="space-y-4">
       <h3 className="font-headline text-base font-bold text-on-surface">
-        4. Pilih Kategori Permintaan
+        {grouped ? 'Kategori Permintaan' : '4. Pilih Kategori Permintaan'}
       </h3>
 
       <p className="text-xs text-on-surface-variant">
@@ -68,14 +70,16 @@ export function StepKategoriPermintaan({
         )}
       </div>
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
-          <ChevronLeft size={14} />Kembali
-        </Button>
-        <Button onClick={onNext} disabled={!canAdvanceFromStep4} className="gap-1.5 flex-1">
-          Lanjut <ChevronRight size={14} />
-        </Button>
-      </div>
+      {!grouped && (
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
+            <ChevronLeft size={14} />Kembali
+          </Button>
+          <Button onClick={onNext} disabled={!canAdvanceFromStep4} className="gap-1.5 flex-1">
+            Lanjut <ChevronRight size={14} />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

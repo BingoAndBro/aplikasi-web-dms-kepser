@@ -4,6 +4,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#
 import type { KegiatanRow } from './dokumen-form-types'
 
 interface StepKegiatanProps {
+  grouped?: boolean
   fungsiId: string
   kegiatanId: string
   kegiatanList: KegiatanRow[]
@@ -15,6 +16,7 @@ interface StepKegiatanProps {
 }
 
 export function StepKegiatan({
+  grouped = false,
   kegiatanId,
   kegiatanList,
   loadingKegiatan,
@@ -26,7 +28,7 @@ export function StepKegiatan({
   return (
     <div className="space-y-4">
       <h3 className="font-headline text-base font-bold text-on-surface">
-        2. Pilih Kegiatan
+        {grouped ? 'Kegiatan' : '2. Pilih Kegiatan'}
       </h3>
 
       <div className="space-y-1.5">
@@ -59,14 +61,16 @@ export function StepKegiatan({
         )}
       </div>
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
-          <ChevronLeft size={14} />Kembali
-        </Button>
-        <Button onClick={onNext} disabled={!canAdvanceFromStep2} className="gap-1.5 flex-1">
-          Lanjut <ChevronRight size={14} />
-        </Button>
-      </div>
+      {!grouped && (
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
+            <ChevronLeft size={14} />Kembali
+          </Button>
+          <Button onClick={onNext} disabled={!canAdvanceFromStep2} className="gap-1.5 flex-1">
+            Lanjut <ChevronRight size={14} />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

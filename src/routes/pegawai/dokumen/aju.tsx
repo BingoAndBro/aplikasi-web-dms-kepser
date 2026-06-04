@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import type { ReactNode } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
+  PegawaiFieldCard,
   PegawaiPageHeader,
   PegawaiPanel,
 } from '#/components/pegawai/PegawaiPagePrimitives'
@@ -13,6 +15,9 @@ import { StepKategoriPermintaan } from '#/components/dokumen/form/StepKategoriPe
 import { StepDetailPermintaan } from '#/components/dokumen/form/StepDetailPermintaan'
 import { StepUploadLampiran } from '#/components/dokumen/form/StepUploadLampiran'
 import { StepReview } from '#/components/dokumen/form/StepReview'
+import { Button } from '#/components/ui/button'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
+import { useAppToast } from '#/components/ui/AppToast'
 import type {
   LampiranUrl,
   FungsiRow,
@@ -24,24 +29,88 @@ import type {
 } from '#/components/dokumen/form/dokumen-form-types'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { apiFetch } from '#/lib/api-client'
-import { ClipboardList, FileText, ShieldCheck } from 'lucide-react'
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  ShieldCheck,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
   component: AjukanDokumenPage,
 })
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+type SubmittedDocument = {
+  id: string
+  judul: string
+  status: string
+  current_step: string | null
+  is_non_material: boolean
+}
 
-// ---------------------------------------------------------------------------
-// Main Page
-// ---------------------------------------------------------------------------
+type SubmitResponse = {
+  success: true
+  dokumen: SubmittedDocument
+}
+
+type GroupedFormSectionProps = {
+  number: number
+  title: string
+  description: string
+  complete: boolean
+  children: ReactNode
+}
+
+const MAJOR_STEP_LABELS = [
+  'Informasi Dasar',
+  'Kelengkapan',
+  'Review & Ajukan',
+]
+
+const SUBMIT_STATUS_LABELS: Record<string, string> = {
+  IN_PPK_VALIDATION: 'Menunggu PPK',
+  TERSIMPAN: 'Tersimpan',
+}
+
+function GroupedFormSection({
+  number,
+  title,
+  description,
+  complete,
+  children,
+}: GroupedFormSectionProps) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-orange-100 bg-[#FFFDF9]">
+      <div className="flex items-start gap-3 border-b border-orange-100 bg-[#FFF8F1] p-4">
+        <div
+          className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+            complete
+              ? 'bg-emerald-500 text-white'
+              : 'bg-orange-100 text-orange-800'
+          }`}
+        >
+          {complete ? <CheckCircle2 size={16} /> : number}
+        </div>
+        <div>
+          <h2 className="font-headline text-sm font-bold text-zinc-950">{title}</h2>
+          <p className="mt-1 text-xs leading-relaxed text-zinc-600">{description}</p>
+        </div>
+      </div>
+      <div className="p-4 sm:p-5">{children}</div>
+    </section>
+  )
+}
 
 function AjukanDokumenPage() {
   const navigate = useNavigate()
+  const { showToast } = useAppToast()
+  const submitInFlightRef = useRef(false)
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
+  const [submitConfirmationOpen, setSubmitConfirmationOpen] = useState(false)
+  const [submittedDocument, setSubmittedDocument] = useState<SubmittedDocument | null>(null)
   const [submitError, setSubmitError] = useState('')
   const [tanggalError, setTanggalError] = useState('')
   const [nominalError, setNominalError] = useState('')
@@ -286,35 +355,11 @@ function AjukanDokumenPage() {
     }
   }
 
-  // Dynamic step labels
-  // Material: Fungsi -> Kegiatan -> Jenis -> Kategori -> Detail -> Unggah -> Review
-  // Non-Material: Fungsi -> Kegiatan -> Jenis Dokumen -> Unggah -> Review
-  const getStepLabels = () => {
-    if (isNonMaterial) {
-      return ['Fungsi', 'Kegiatan', 'Jenis Dokumen', 'Unggah', 'Review']
-    }
-    return kategoriHasDetail
-      ? ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Detail', 'Unggah', 'Review']
-      : ['Fungsi', 'Kegiatan', 'Jenis', 'Kategori', 'Unggah', 'Review']
-  }
+  const stepLabels = MAJOR_STEP_LABELS
+  const completedSteps = stepLabels
+    .map((_, index) => index + 1)
+    .filter(stepNumber => stepNumber < step)
 
-  const stepLabels = getStepLabels()
-
-  // Completed steps
-  const getCompletedSteps = () => {
-    const completed: number[] = []
-    if (step > 1) completed.push(1)
-    if (step > 2) completed.push(2)
-    if (step > 3) completed.push(3)
-    if (step > 4) completed.push(4)
-    if (step > 5) completed.push(5)
-    if (step > 6) completed.push(6)
-    if (step > 7) completed.push(7)
-    return completed
-  }
-  const completedSteps = getCompletedSteps()
-
-  // Step validation
   const canAdvanceFromStep1 = !!fungsiId && !!tahun && !!tanggal && !tanggalError
   const canAdvanceFromStep2 = !!kegiatanId
   const canAdvanceFromStep3 = isNonMaterial ? !!jenisDokumenId : !!jenisPermintaanId
@@ -335,14 +380,24 @@ function AjukanDokumenPage() {
     }
   }
 
-  function handleNext() {
-    if (step === 1 && tanggal > today) {
+  const canAdvanceFromInformation =
+    canAdvanceFromStep1
+    && canAdvanceFromStep2
+    && canAdvanceFromStep3
+    && canAdvanceFromStep4
+    && canAdvanceFromStep5
+
+  function handleNextFromInformation() {
+    if (tanggal > today) {
       setTanggalError('Tanggal tidak boleh melewati hari ini')
       return
     }
 
-    // Validate nominal when advancing from step 6 (Material docs)
-    if (step === stepLabels.length - 1 && !isNonMaterial) {
+    if (canAdvanceFromInformation) setStep(2)
+  }
+
+  function handleNextFromDetails() {
+    if (!isNonMaterial) {
       const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
       if (!rawNominal || rawNominal === '0') {
         setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0')
@@ -355,8 +410,7 @@ function AjukanDokumenPage() {
       }
     }
 
-    const maxStep = stepLabels.length
-    if (step < maxStep) setStep(step + 1)
+    if (canAdvanceFromStep6()) setStep(3)
   }
 
   function handleBack() {
@@ -412,46 +466,77 @@ function AjukanDokumenPage() {
     }
   }
 
-  async function handleSubmit() {
-    // Validate based on document type
+  function validateSubmission(): string | null {
     if (!isNonMaterial) {
-      // Strip dots before validation (e.g., "1.000.000" -> "1000000")
       const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
       const nominal = parseInt(rawNominal, 10)
       if (isNaN(nominal) || nominal <= 0) {
         setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0 untuk dokumen Material')
-        return
+        return 'Nominal Realisasi wajib diisi dan harus lebih dari 0 untuk dokumen Material'
       }
-    } else {
-      if (!keteranganDetail.trim()) {
-        setSubmitError('Keterangan detail dokumen wajib diisi untuk dokumen Non-Material')
-        return
-      }
+    } else if (!keteranganDetail.trim()) {
+      return 'Keterangan detail dokumen wajib diisi untuk dokumen Non-Material'
     }
 
-    if (missingRequired.length > 0) return
+    if (missingRequired.length > 0) {
+      return 'Lengkapi seluruh lampiran wajib sebelum mengajukan dokumen'
+    }
+
     if (lampiranUrls.length === 0) {
-      setSubmitError('Minimal upload satu lampiran sebelum mengajukan dokumen')
-      return
+      return 'Minimal upload satu lampiran sebelum mengajukan dokumen'
     }
 
     if (!chairmanBadgeVisible && !isChairmanLoading) {
-      setSubmitError('Peran belum ditentukan. Silakan pilih kegiatan terlebih dahulu.')
+      return 'Peran belum ditentukan. Silakan pilih kegiatan terlebih dahulu.'
+    }
+
+    return null
+  }
+
+  function handleRequestSubmit() {
+    const validationError = validateSubmission()
+    if (validationError) {
+      setSubmitError(validationError)
+      showToast({
+        title: 'Dokumen belum dapat diajukan',
+        description: 'Periksa kembali data dan kelengkapan dokumen.',
+        variant: 'error',
+      })
       return
     }
 
+    setSubmitError('')
+    setSubmitConfirmationOpen(true)
+  }
+
+  async function handleSubmit() {
+    if (submitting || submitInFlightRef.current) return
+
+    const validationError = validateSubmission()
+    if (validationError) {
+      setSubmitConfirmationOpen(false)
+      setSubmitError(validationError)
+      showToast({
+        title: 'Dokumen belum dapat diajukan',
+        description: 'Periksa kembali data dan kelengkapan dokumen.',
+        variant: 'error',
+      })
+      return
+    }
+
+    setSubmitConfirmationOpen(false)
+    submitInFlightRef.current = true
     setSubmitting(true)
     setSubmitError('')
 
     try {
-      // Strip dots from formatted number (e.g., "1.000.000" -> "1000000") before parsing
       const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
       const nominalValue = isNonMaterial ? null : (parseInt(rawNominal, 10) || null)
       const selectedJenisPermintaanId = jenisPermintaanId || undefined
       const selectedKategoriPermintaanId = kategoriPermintaanId || undefined
       const selectedDetailPermintaanId = detailPermintaanId || undefined
 
-      await apiMutation('/api/dokumen/submit', {
+      const response = await apiMutation<SubmitResponse>('/api/dokumen/submit', {
         method: 'POST',
         body: {
           fungsiId,
@@ -470,7 +555,16 @@ function AjukanDokumenPage() {
         },
       })
 
-      navigate({ to: '/pegawai/dokumen' })
+      setSubmittedDocument(response.dokumen)
+      showToast({
+        title: isNonMaterial
+          ? 'Dokumen Non-Material berhasil tersimpan'
+          : 'Dokumen berhasil diajukan',
+        description: isNonMaterial
+          ? 'Status dokumen: Tersimpan.'
+          : 'Dokumen akan mengikuti alur validasi dan persetujuan yang berlaku.',
+        variant: 'success',
+      })
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -479,18 +573,154 @@ function AjukanDokumenPage() {
           : 'Gagal mengajukan dokumen'
 
         setSubmitError(errorMessage)
+        showToast({
+          title: 'Gagal mengajukan dokumen',
+          description: 'Periksa kembali data dan kelengkapan, lalu coba lagi.',
+          variant: 'error',
+        })
         return
       }
 
       setSubmitError('Terjadi kesalahan. Coba lagi.')
+      showToast({
+        title: 'Gagal mengajukan dokumen',
+        description: 'Terjadi kesalahan. Coba lagi.',
+        variant: 'error',
+      })
     } finally {
+      submitInFlightRef.current = false
       setSubmitting(false)
     }
   }
 
+  function handleSubmitAnother() {
+    setStep(1)
+    submitInFlightRef.current = false
+    setSubmitting(false)
+    setSubmitConfirmationOpen(false)
+    setSubmittedDocument(null)
+    setSubmitError('')
+    setTanggalError('')
+    setNominalError('')
+    setFungsiId('')
+    setFungsiNama('')
+    setTahun(new Date().getFullYear())
+    setTanggal(today)
+    setKegiatanId('')
+    setKegiatanNama('')
+    setIsNonMaterial(false)
+    setJenisPermintaanId('')
+    setJenisPermintaanNama('')
+    setJenisDokumenId('')
+    setJenisDokumenNama('')
+    setKategoriPermintaanId('')
+    setKategoriPermintaanNama('')
+    setDetailPermintaanId('')
+    setDetailPermintaanNama('')
+    setKategoriHasDetail(false)
+    setIsKetuaTim(false)
+    setIsChairmanLoading(false)
+    setChairmanBadgeVisible(false)
+    setLampiranUrls([])
+    setMissingRequired([])
+    setNominalRealisasi('')
+    setKeteranganDetail('')
+  }
+
+  if (submittedDocument) {
+    const statusLabel =
+      SUBMIT_STATUS_LABELS[submittedDocument.status] ?? 'Berhasil diproses'
+    const nextStepLabel = submittedDocument.is_non_material
+      ? 'Tidak ada alur persetujuan lanjutan'
+      : submittedDocument.current_step === 'PPK'
+        ? 'Validasi PPK'
+        : submittedDocument.current_step === 'BENDAHARA'
+          ? 'Persetujuan PPSPM'
+          : 'Pantau pada detail dokumen'
+
+    return (
+      <PageLayout>
+        <div className="mx-auto max-w-4xl space-y-6">
+          <PegawaiPageHeader
+            eyebrow={
+              <>
+                <CheckCircle2 size={12} />
+                <span>Ajukan Dokumen</span>
+                <span>/</span>
+                <span>Berhasil</span>
+              </>
+            }
+            title={submittedDocument.is_non_material ? 'Dokumen Berhasil Tersimpan' : 'Pengajuan Berhasil'}
+            description={
+              submittedDocument.is_non_material
+                ? 'Dokumen Non-Material telah disimpan sebagai Tersimpan tanpa nominal realisasi.'
+                : 'Dokumen Material telah diajukan dan akan mengikuti alur validasi serta persetujuan yang berlaku.'
+            }
+          />
+
+          <PegawaiPanel className="overflow-hidden p-0">
+            <div className="flex flex-col items-center border-b border-emerald-100 bg-emerald-50 px-5 py-8 text-center sm:px-8">
+              <div className="flex size-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
+                <CheckCircle2 size={32} />
+              </div>
+              <h2 className="mt-5 font-headline text-xl font-extrabold text-emerald-950 sm:text-2xl">
+                {submittedDocument.judul || 'Dokumen baru'}
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-emerald-800">
+                Pengajuan telah diterima sistem. Gunakan tindakan di bawah untuk melihat hasil atau mengajukan dokumen lain.
+              </p>
+            </div>
+
+            <div className="space-y-5 p-5 sm:p-6">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <PegawaiFieldCard
+                  label="Jenis Dokumen"
+                  value={submittedDocument.is_non_material ? 'Non-Material' : 'Material'}
+                />
+                <PegawaiFieldCard label="Status Hasil" value={statusLabel} />
+                <PegawaiFieldCard label="Tahap Berikutnya" value={nextStepLabel} />
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Button
+                  type="button"
+                  onClick={() => navigate({ to: '/pegawai/dokumen' })}
+                  className="w-full sm:w-auto"
+                >
+                  Lihat Daftar Dokumen
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSubmitAnother}
+                  className="w-full sm:w-auto"
+                >
+                  Ajukan Dokumen Lain
+                </Button>
+                {submittedDocument.id && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate({
+                      to: '/pegawai/dokumen/$id',
+                      params: { id: submittedDocument.id },
+                    })}
+                    className="w-full sm:w-auto"
+                  >
+                    Lihat Detail Dokumen
+                  </Button>
+                )}
+              </div>
+            </div>
+          </PegawaiPanel>
+        </div>
+      </PageLayout>
+    )
+  }
+
   return (
     <PageLayout>
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <PegawaiPageHeader
           eyebrow={
             <>
@@ -501,17 +731,17 @@ function AjukanDokumenPage() {
             </>
           }
           title="Ajukan Dokumen Baru"
-          description={`Ikuti ${stepLabels.length} langkah untuk mengajukan dokumen. Material dikirim ke PPK lalu PPSPM, sedangkan Non-Material disimpan sebagai Tersimpan tanpa nominal realisasi.`}
+          description="Lengkapi tiga bagian pengajuan. Dokumen Material mengikuti alur validasi dan persetujuan yang berlaku, sedangkan Non-Material disimpan sebagai Tersimpan tanpa nominal realisasi."
         />
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
-          <PegawaiPanel className="p-4">
-          <StepIndicator
-            currentStep={step}
-            completedSteps={completedSteps}
-            onStepClick={handleStepClick}
-            labels={stepLabels}
-          />
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]">
+          <PegawaiPanel className="min-w-0 p-4">
+            <StepIndicator
+              currentStep={step}
+              completedSteps={completedSteps}
+              onStepClick={handleStepClick}
+              labels={stepLabels}
+            />
           </PegawaiPanel>
           <PegawaiPanel className="space-y-3 bg-[#FFF8F1]">
             <div className="flex items-start gap-3">
@@ -526,131 +756,206 @@ function AjukanDokumenPage() {
               </div>
             </div>
             <div className="rounded-xl border border-orange-100 bg-white/80 p-3 text-xs text-zinc-700">
-              <p className="font-semibold text-zinc-950">Langkah aktif</p>
+              <p className="font-semibold text-zinc-950">Bagian aktif</p>
               <p className="mt-1">{step}. {stepLabels[step - 1]}</p>
             </div>
           </PegawaiPanel>
         </div>
 
-        <PegawaiPanel className="p-5 sm:p-6">
+        <PegawaiPanel className="min-w-0 p-4 sm:p-6">
           <div className="mb-5 flex items-center gap-2 border-b border-orange-100 pb-4">
             <ClipboardList size={16} className="text-orange-700" />
             <div>
               <p className="text-sm font-bold text-zinc-950">{stepLabels[step - 1]}</p>
-              <p className="text-xs text-zinc-500">Lengkapi bagian ini sebelum lanjut.</p>
+              <p className="text-xs text-zinc-500">
+                {step === 1
+                  ? 'Lengkapi informasi dasar dan jenis dokumen.'
+                  : step === 2
+                    ? 'Lengkapi lampiran dan detail pengajuan.'
+                    : 'Tinjau ringkasan sebelum mengajukan dokumen.'}
+              </p>
             </div>
           </div>
-          {/* STEP 1: Fungsi & Info Dasar */}
+
           {step === 1 && (
-            <StepFungsiTanggal
-              fungsiId={fungsiId}
-              fungsiList={fungsiList}
-              loadingFungsi={loadingFungsi}
-              tanggal={tanggal}
-              tanggalError={tanggalError}
-              tahun={tahun}
-              canAdvanceFromStep1={canAdvanceFromStep1}
-              onFungsiChange={handleFungsiChange}
-              onTanggalChange={handleTanggalChange}
-              onNext={handleNext}
-            />
+            <div className="space-y-4">
+              <GroupedFormSection
+                number={1}
+                title="Informasi Dasar"
+                description="Pilih fungsi dan tanggal dokumen."
+                complete={canAdvanceFromStep1}
+              >
+                <StepFungsiTanggal
+                  grouped
+                  fungsiId={fungsiId}
+                  fungsiList={fungsiList}
+                  loadingFungsi={loadingFungsi}
+                  tanggal={tanggal}
+                  tanggalError={tanggalError}
+                  tahun={tahun}
+                  canAdvanceFromStep1={canAdvanceFromStep1}
+                  onFungsiChange={handleFungsiChange}
+                  onTanggalChange={handleTanggalChange}
+                  onNext={handleNextFromInformation}
+                />
+              </GroupedFormSection>
+
+              {fungsiId && (
+                <GroupedFormSection
+                  number={2}
+                  title="Detail Kegiatan"
+                  description="Pilih kegiatan yang menjadi konteks pengajuan."
+                  complete={canAdvanceFromStep2}
+                >
+                  <StepKegiatan
+                    grouped
+                    fungsiId={fungsiId}
+                    kegiatanId={kegiatanId}
+                    kegiatanList={kegiatanList}
+                    loadingKegiatan={loadingKegiatan}
+                    canAdvanceFromStep2={canAdvanceFromStep2}
+                    onKegiatanChange={handleKegiatanChange}
+                    onBack={handleBack}
+                    onNext={handleNextFromInformation}
+                  />
+                </GroupedFormSection>
+              )}
+
+              {kegiatanId && (
+                <GroupedFormSection
+                  number={3}
+                  title="Jenis Dokumen"
+                  description="Tentukan apakah dokumen Material atau Non-Material dan pilih jenisnya."
+                  complete={canAdvanceFromStep3}
+                >
+                  <StepJenisPermintaan
+                    grouped
+                    kegiatanId={kegiatanId}
+                    isNonMaterial={isNonMaterial}
+                    jenisPermintaanId={jenisPermintaanId}
+                    jenisList={jenisList}
+                    loadingJenis={loadingJenis}
+                    jenisDokumenId={jenisDokumenId}
+                    jenisDokumenList={jenisDokumenList}
+                    canAdvanceFromStep3={canAdvanceFromStep3}
+                    onToggleNonMaterial={handleToggleNonMaterial}
+                    onJenisChange={handleJenisChange}
+                    onJenisDokumenChange={handleJenisDokumenChange}
+                    onBack={handleBack}
+                    onNext={handleNextFromInformation}
+                  />
+                </GroupedFormSection>
+              )}
+
+              {!isNonMaterial && jenisPermintaanId && (
+                <GroupedFormSection
+                  number={4}
+                  title="Kategori Permintaan"
+                  description="Pilih kategori yang sesuai dengan jenis permintaan."
+                  complete={canAdvanceFromStep4}
+                >
+                  <StepKategoriPermintaan
+                    grouped
+                    jenisPermintaanId={jenisPermintaanId}
+                    jenisPermintaanNama={jenisPermintaanNama}
+                    kategoriPermintaanId={kategoriPermintaanId}
+                    kategoriList={kategoriList}
+                    loadingKategori={loadingKategori}
+                    canAdvanceFromStep4={canAdvanceFromStep4}
+                    onKategoriChange={handleKategoriChange}
+                    onBack={handleBack}
+                    onNext={handleNextFromInformation}
+                  />
+                </GroupedFormSection>
+              )}
+
+              {!isNonMaterial && kategoriPermintaanId && kategoriHasDetail && (
+                <GroupedFormSection
+                  number={5}
+                  title="Detail Permintaan"
+                  description="Pilih detail wajib untuk kategori ini."
+                  complete={canAdvanceFromStep5}
+                >
+                  <StepDetailPermintaan
+                    grouped
+                    kategoriPermintaanId={kategoriPermintaanId}
+                    kategoriPermintaanNama={kategoriPermintaanNama}
+                    detailPermintaanId={detailPermintaanId}
+                    detailList={detailList}
+                    canAdvanceFromStep5={canAdvanceFromStep5}
+                    onDetailChange={handleDetailChange}
+                    onBack={handleBack}
+                    onNext={handleNextFromInformation}
+                  />
+                </GroupedFormSection>
+              )}
+
+              <div className="sticky bottom-3 z-10 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex sm:justify-end">
+                <Button
+                  type="button"
+                  onClick={handleNextFromInformation}
+                  disabled={!canAdvanceFromInformation}
+                  className="w-full gap-1.5 sm:w-auto"
+                >
+                  Lanjut ke Kelengkapan <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
           )}
 
-          {/* STEP 2: Kegiatan */}
           {step === 2 && (
-            <StepKegiatan
-              fungsiId={fungsiId}
-              kegiatanId={kegiatanId}
-              kegiatanList={kegiatanList}
-              loadingKegiatan={loadingKegiatan}
-              canAdvanceFromStep2={canAdvanceFromStep2}
-              onKegiatanChange={handleKegiatanChange}
-              onBack={handleBack}
-              onNext={handleNext}
-            />
+            <div className="space-y-5">
+              <StepUploadLampiran
+                grouped
+                isNonMaterial={isNonMaterial}
+                kategoriHasDetail={kategoriHasDetail}
+                kegiatanId={kegiatanId}
+                kegiatanNama={kegiatanNama}
+                jenisDokumenNama={jenisDokumenNama}
+                jenisPermintaanId={jenisPermintaanId}
+                jenisPermintaanNama={jenisPermintaanNama}
+                kategoriPermintaanId={kategoriPermintaanId}
+                kategoriPermintaanNama={kategoriPermintaanNama}
+                detailPermintaanId={detailPermintaanId}
+                detailPermintaanNama={detailPermintaanNama}
+                isKetuaTim={isKetuaTim}
+                isChairmanLoading={isChairmanLoading}
+                chairmanBadgeVisible={chairmanBadgeVisible}
+                keteranganDetail={keteranganDetail}
+                nominalRealisasi={nominalRealisasi}
+                nominalError={nominalError}
+                canAdvanceFromStep6={canAdvanceFromStep6}
+                onKelengkapanComplete={handleKelengkapanComplete}
+                onKeteranganDetailChange={handleKeteranganDetailChange}
+                onNominalRealisasiChange={handleNominalRealisasiChange}
+                onBack={handleBack}
+                onNext={handleNextFromDetails}
+              />
+
+              <div className="sticky bottom-3 z-10 flex flex-col gap-2 rounded-2xl border border-orange-100 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBack}
+                  className="w-full gap-1.5 sm:w-auto"
+                >
+                  <ChevronLeft size={14} /> Kembali
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleNextFromDetails}
+                  disabled={!canAdvanceFromStep6()}
+                  className="w-full gap-1.5 sm:w-auto"
+                >
+                  Review Pengajuan <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
           )}
 
-          {/* STEP 3: Jenis Permintaan (Material) / Jenis Dokumen (Non-Material) */}
           {step === 3 && (
-            <StepJenisPermintaan
-              kegiatanId={kegiatanId}
-              isNonMaterial={isNonMaterial}
-              jenisPermintaanId={jenisPermintaanId}
-              jenisList={jenisList}
-              loadingJenis={loadingJenis}
-              jenisDokumenId={jenisDokumenId}
-              jenisDokumenList={jenisDokumenList}
-              canAdvanceFromStep3={canAdvanceFromStep3}
-              onToggleNonMaterial={handleToggleNonMaterial}
-              onJenisChange={handleJenisChange}
-              onJenisDokumenChange={handleJenisDokumenChange}
-              onBack={handleBack}
-              onNext={handleNext}
-            />
-          )}
-
-          {/* STEP 4: Kategori Permintaan (Material only) */}
-          {!isNonMaterial && step === 4 && (
-            <StepKategoriPermintaan
-              jenisPermintaanId={jenisPermintaanId}
-              jenisPermintaanNama={jenisPermintaanNama}
-              kategoriPermintaanId={kategoriPermintaanId}
-              kategoriList={kategoriList}
-              loadingKategori={loadingKategori}
-              canAdvanceFromStep4={canAdvanceFromStep4}
-              onKategoriChange={handleKategoriChange}
-              onBack={handleBack}
-              onNext={handleNext}
-            />
-          )}
-
-          {/* STEP 5: Detail Permintaan (Material only, opsional) */}
-          {!isNonMaterial && step === 5 && kategoriHasDetail && (
-            <StepDetailPermintaan
-              kategoriPermintaanId={kategoriPermintaanId}
-              kategoriPermintaanNama={kategoriPermintaanNama}
-              detailPermintaanId={detailPermintaanId}
-              detailList={detailList}
-              canAdvanceFromStep5={canAdvanceFromStep5}
-              onDetailChange={handleDetailChange}
-              onBack={handleBack}
-              onNext={handleNext}
-            />
-          )}
-
-          {/* STEP: Unggah + Nominal/Keterangan */}
-          {(step === (isNonMaterial ? 4 : (kategoriHasDetail ? 6 : 5))) && (
-            <StepUploadLampiran
-              isNonMaterial={isNonMaterial}
-              kategoriHasDetail={kategoriHasDetail}
-              kegiatanId={kegiatanId}
-              kegiatanNama={kegiatanNama}
-              jenisDokumenNama={jenisDokumenNama}
-              jenisPermintaanId={jenisPermintaanId}
-              jenisPermintaanNama={jenisPermintaanNama}
-              kategoriPermintaanId={kategoriPermintaanId}
-              kategoriPermintaanNama={kategoriPermintaanNama}
-              detailPermintaanId={detailPermintaanId}
-              detailPermintaanNama={detailPermintaanNama}
-              isKetuaTim={isKetuaTim}
-              isChairmanLoading={isChairmanLoading}
-              chairmanBadgeVisible={chairmanBadgeVisible}
-              keteranganDetail={keteranganDetail}
-              nominalRealisasi={nominalRealisasi}
-              nominalError={nominalError}
-              canAdvanceFromStep6={canAdvanceFromStep6}
-              onKelengkapanComplete={handleKelengkapanComplete}
-              onKeteranganDetailChange={handleKeteranganDetailChange}
-              onNominalRealisasiChange={handleNominalRealisasiChange}
-              onBack={handleBack}
-              onNext={handleNext}
-            />
-          )}
-
-          {/* STEP: Review */}
-          {step === stepLabels.length && (
             <StepReview
-              stepCount={stepLabels.length}
+              stepCount={3}
               fungsiNama={fungsiNama}
               kegiatanNama={kegiatanNama}
               tahun={tahun}
@@ -667,11 +972,29 @@ function AjukanDokumenPage() {
               submitting={submitting}
               submitDisabled={submitting || missingRequired.length > 0 || lampiranUrls.length === 0}
               onBack={handleBack}
-              onSubmit={handleSubmit}
+              onSubmit={handleRequestSubmit}
             />
           )}
         </PegawaiPanel>
       </div>
+
+      <ConfirmDialog
+        open={submitConfirmationOpen}
+        onOpenChange={(open) => {
+          if (!submitting) setSubmitConfirmationOpen(open)
+        }}
+        title="Ajukan dokumen ini?"
+        description={
+          isNonMaterial
+            ? 'Pastikan jenis dokumen, kegiatan, keterangan detail, dan kelengkapan sudah benar. Dokumen Non-Material akan disimpan sebagai Tersimpan.'
+            : 'Pastikan jenis permintaan, kegiatan, nominal realisasi, dan kelengkapan sudah benar. Dokumen Material akan mengikuti alur validasi dan persetujuan yang berlaku.'
+        }
+        confirmLabel={isNonMaterial ? 'Simpan Dokumen' : 'Ajukan Dokumen'}
+        cancelLabel="Periksa Kembali"
+        onConfirm={handleSubmit}
+        pending={submitting}
+        disabled={submitting}
+      />
     </PageLayout>
   )
 }

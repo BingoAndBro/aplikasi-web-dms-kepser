@@ -45,7 +45,7 @@ export function ReviewSummary({
       <h3 className="font-headline text-base font-bold text-on-surface">Ringkasan Dokumen</h3>
 
       {/* Info Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex items-start gap-2 p-3 bg-surface-container-low/30 rounded-lg">
           <Building2 size={14} className="text-primary mt-0.5 shrink-0" />
           <div>
@@ -122,7 +122,7 @@ export function ReviewSummary({
 
         {/* Nominal Realisasi (Material) / Keterangan Detail (Non-Material) */}
         {isNonMaterial ? (
-          <div className="flex items-start gap-2 p-3 bg-blue-50/30 rounded-lg col-span-2">
+          <div className="flex items-start gap-2 p-3 bg-blue-50/30 rounded-lg sm:col-span-2">
             <FileCheck size={14} className="text-primary mt-0.5 shrink-0" />
             <div>
               <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">Keterangan Detail</p>
@@ -132,7 +132,7 @@ export function ReviewSummary({
             </div>
           </div>
         ) : (
-          <div className="flex items-start gap-2 p-3 bg-surface-container-low/30 rounded-lg col-span-2">
+          <div className="flex items-start gap-2 p-3 bg-surface-container-low/30 rounded-lg sm:col-span-2">
             <Banknote size={14} className="text-primary mt-0.5 shrink-0" />
             <div>
               <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mb-0.5">Nominal Realisasi</p>

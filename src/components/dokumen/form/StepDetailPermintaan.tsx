@@ -4,6 +4,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#
 import type { DetailRow } from './dokumen-form-types'
 
 interface StepDetailPermintaanProps {
+  grouped?: boolean
   kategoriPermintaanId: string
   kategoriPermintaanNama: string
   detailPermintaanId: string
@@ -15,6 +16,7 @@ interface StepDetailPermintaanProps {
 }
 
 export function StepDetailPermintaan({
+  grouped = false,
   kategoriPermintaanNama,
   detailPermintaanId,
   detailList,
@@ -26,7 +28,7 @@ export function StepDetailPermintaan({
   return (
     <div className="space-y-4">
       <h3 className="font-headline text-base font-bold text-on-surface">
-        5. Pilih Detail Permintaan
+        {grouped ? 'Detail Permintaan' : '5. Pilih Detail Permintaan'}
       </h3>
 
       <p className="text-xs text-on-surface-variant">
@@ -56,14 +58,16 @@ export function StepDetailPermintaan({
         </Select>
       </div>
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
-          <ChevronLeft size={14} />Kembali
-        </Button>
-        <Button onClick={onNext} disabled={!canAdvanceFromStep5} className="gap-1.5 flex-1">
-          Lanjut <ChevronRight size={14} />
-        </Button>
-      </div>
+      {!grouped && (
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
+            <ChevronLeft size={14} />Kembali
+          </Button>
+          <Button onClick={onNext} disabled={!canAdvanceFromStep5} className="gap-1.5 flex-1">
+            Lanjut <ChevronRight size={14} />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { ReviewSummary } from '#/components/dokumen/ReviewSummary'
 import type { LampiranUrl } from './dokumen-form-types'
 import { StepperControls } from './StepperControls'
@@ -47,8 +47,22 @@ export function StepReview({
   return (
     <div className="space-y-4">
       <h3 className="font-headline text-base font-bold text-on-surface">
-        {stepCount}. Review & Ajukan
+        {stepCount}. Review dan Pengajuan
       </h3>
+
+      <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
+          <CheckCircle2 size={20} />
+        </div>
+        <div>
+          <p className="font-headline text-sm font-bold text-emerald-950">Siap diajukan</p>
+          <p className="mt-1 text-xs leading-relaxed text-emerald-800">
+            {isNonMaterial
+              ? 'Dokumen Non-Material akan disimpan sebagai Tersimpan tanpa nominal realisasi.'
+              : 'Dokumen Material akan mengikuti alur validasi dan persetujuan yang berlaku.'}
+          </p>
+        </div>
+      </div>
 
       <ReviewSummary
         fungsiNama={fungsiNama}

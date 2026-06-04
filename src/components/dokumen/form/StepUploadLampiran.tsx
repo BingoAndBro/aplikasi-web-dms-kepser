@@ -4,6 +4,7 @@ import { KelengkapanChecklist } from '#/components/dokumen/KelengkapanChecklist'
 import type { LampiranUrl } from './dokumen-form-types'
 
 interface StepUploadLampiranProps {
+  grouped?: boolean
   isNonMaterial: boolean
   kategoriHasDetail: boolean
   kegiatanId: string
@@ -30,6 +31,7 @@ interface StepUploadLampiranProps {
 }
 
 export function StepUploadLampiran({
+  grouped = false,
   isNonMaterial,
   kategoriHasDetail,
   kegiatanId,
@@ -57,8 +59,9 @@ export function StepUploadLampiran({
   return (
     <div className="space-y-4">
       <h3 className="font-headline text-base font-bold text-on-surface">
-        {isNonMaterial ? '4' : (kategoriHasDetail ? '6' : '5')}. Unggah Lampiran
-        {isNonMaterial ? '' : ' & Nominal'}
+        {grouped
+          ? `Kelengkapan dan ${isNonMaterial ? 'Keterangan Detail' : 'Nominal Realisasi'}`
+          : `${isNonMaterial ? '4' : (kategoriHasDetail ? '6' : '5')}. Unggah Lampiran${isNonMaterial ? '' : ' & Nominal'}`}
       </h3>
 
       <p className="text-xs text-on-surface-variant">
@@ -173,18 +176,20 @@ export function StepUploadLampiran({
         </div>
       )}
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
-          <ChevronLeft size={14} />Kembali
-        </Button>
-        <Button
-          onClick={onNext}
-          disabled={!canAdvanceFromStep6()}
-          className="gap-1.5 flex-1"
-        >
-          Lanjut <ChevronRight size={14} />
-        </Button>
-      </div>
+      {!grouped && (
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
+            <ChevronLeft size={14} />Kembali
+          </Button>
+          <Button
+            onClick={onNext}
+            disabled={!canAdvanceFromStep6()}
+            className="gap-1.5 flex-1"
+          >
+            Lanjut <ChevronRight size={14} />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

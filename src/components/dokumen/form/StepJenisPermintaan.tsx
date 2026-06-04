@@ -4,6 +4,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '#
 import type { JenisDokumenRow, JenisRow } from './dokumen-form-types'
 
 interface StepJenisPermintaanProps {
+  grouped?: boolean
   kegiatanId: string
   isNonMaterial: boolean
   jenisPermintaanId: string
@@ -20,6 +21,7 @@ interface StepJenisPermintaanProps {
 }
 
 export function StepJenisPermintaan({
+  grouped = false,
   isNonMaterial,
   jenisPermintaanId,
   jenisList,
@@ -36,7 +38,9 @@ export function StepJenisPermintaan({
   return (
     <div className="space-y-4">
       <h3 className="font-headline text-base font-bold text-on-surface">
-        3. {isNonMaterial ? 'Pilih Jenis Dokumen' : 'Pilih Jenis Permintaan'}
+        {grouped
+          ? (isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan')
+          : `3. ${isNonMaterial ? 'Pilih Jenis Dokumen' : 'Pilih Jenis Permintaan'}`}
       </h3>
 
       {/* Non-Material Toggle */}
@@ -122,14 +126,16 @@ export function StepJenisPermintaan({
         </div>
       )}
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
-          <ChevronLeft size={14} />Kembali
-        </Button>
-        <Button onClick={onNext} disabled={!canAdvanceFromStep3} className="gap-1.5 flex-1">
-          Lanjut <ChevronRight size={14} />
-        </Button>
-      </div>
+      {!grouped && (
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onBack} className="gap-1.5 flex-1">
+            <ChevronLeft size={14} />Kembali
+          </Button>
+          <Button onClick={onNext} disabled={!canAdvanceFromStep3} className="gap-1.5 flex-1">
+            Lanjut <ChevronRight size={14} />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
