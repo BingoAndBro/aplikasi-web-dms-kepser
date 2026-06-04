@@ -26,10 +26,8 @@ import { CheckCircle2, XCircle, Eye, Download, Upload, Trash2, X, Loader2 } from
 import { Button } from '#/components/ui/button'
 import {
   downloadFromApi,
-  downloadWithSignedUrl,
   fetchFileBlobWithSignedUrl,
   formatDateTime,
-  getSignedUrlDirectResult,
   getSignedUrlFromApi,
 } from '#/lib/storage-client'
 import { buildStorageFilename } from '#/lib/dokumen-helpers'
@@ -162,29 +160,14 @@ export function AttachmentViewer({
     setPreviewError(null)
 
     try {
-      // Get signed URL from appropriate API
-      let signedUrl: string | undefined
-
-      if (apiType === 'default') {
-        // Default: use direct signed URL from storage
-        const signedUrlResult = await getSignedUrlDirectResult(lamp.url)
-        if (signedUrlResult.error) {
-          setPreviewError(signedUrlResult.error)
-          setPreviewLoading(false)
-          return
-        }
-        signedUrl = signedUrlResult.signedUrl
-      } else {
-        // PPK/Bendahara: use their API endpoint
-        const apiPath = getPreviewApiPath(idx)
-        const signedUrlResult = await getSignedUrlFromApi(apiPath)
-        if (signedUrlResult.error) {
-          setPreviewError(signedUrlResult.error)
-          setPreviewLoading(false)
-          return
-        }
-        signedUrl = signedUrlResult.signedUrl
+      const apiPath = getPreviewApiPath(idx)
+      const signedUrlResult = await getSignedUrlFromApi(apiPath)
+      if (signedUrlResult.error) {
+        setPreviewError(signedUrlResult.error)
+        setPreviewLoading(false)
+        return
       }
+      const signedUrl = signedUrlResult.signedUrl
 
       if (!signedUrl) {
         setPreviewError('Gagal memuat pratinjau')
@@ -223,20 +206,8 @@ export function AttachmentViewer({
     const apiPath = getDownloadApiPath(idx)
 
     try {
-      if (apiType === 'default') {
-        // Default: use direct signed URL from storage
-        const signedUrlResult = await getSignedUrlDirectResult(lamp.url)
-        if (signedUrlResult.error || !signedUrlResult.signedUrl) {
-          alert(signedUrlResult.error ?? 'Gagal mengunduh file')
-          return
-        }
-        const result = await downloadWithSignedUrl(signedUrlResult.signedUrl, filename)
-        if (result.error) alert(result.error)
-      } else {
-        // PPK/Bendahara: use their API endpoint
-        const result = await downloadFromApi(apiPath, filename)
-        if (result.error) alert(result.error)
-      }
+      const result = await downloadFromApi(apiPath, filename)
+      if (result.error) alert(result.error)
     } catch {
       alert('Gagal mengunduh file')
     }
