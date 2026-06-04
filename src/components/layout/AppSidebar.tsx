@@ -61,6 +61,7 @@ export function AppSidebar({
   }, [activeRole, hasKetuaTimAssignment])
   const isAdmin = activeRole === ROLES.ADMIN
   const workspaceLabel = isAdmin ? 'Manajemen Sistem' : `${ROLE_DISPLAY[activeRole]} Workspace`
+  const useCompactDesktopWidth = pathname === '/pegawai/dokumen/aju'
 
   return (
     <>
@@ -75,7 +76,8 @@ export function AppSidebar({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full w-80 max-w-[86vw] shrink-0 flex-col gap-7 border-r border-orange-100/80 bg-[#FFFDF9] px-5 py-6 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:w-72 lg:max-w-none lg:translate-x-0 lg:shadow-none xl:w-80',
+          'fixed inset-y-0 left-0 z-50 flex h-full w-80 max-w-[86vw] shrink-0 flex-col gap-7 border-r border-orange-100/80 bg-[#FFFDF9] px-5 py-6 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none',
+          useCompactDesktopWidth ? 'lg:w-64 xl:w-72' : 'lg:w-72 xl:w-80',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >

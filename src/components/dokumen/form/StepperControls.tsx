@@ -1,4 +1,4 @@
-import { ChevronLeft, Loader2, Send } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 
 interface StepperControlsProps {
@@ -17,22 +17,13 @@ export function StepperControls({
   submitLabel = 'Ajukan Dokumen',
 }: StepperControlsProps) {
   return (
-    <div className="sticky bottom-3 z-10 rounded-2xl border border-zinc-200/80 bg-white/95 p-3 shadow-sm backdrop-blur sm:static sm:bg-[#FFFAF5] sm:p-4 sm:shadow-none">
-      <div className="mb-3 hidden items-center justify-between gap-4 sm:flex">
-        <div>
-          <p className="text-xs font-black text-zinc-950">Konfirmasi diperlukan</p>
-          <p className="mt-0.5 text-[10px] font-medium text-zinc-500">
-            Tombol utama akan membuka ringkasan konsekuensi sebelum diproses.
-          </p>
-        </div>
-        <Send size={18} className="shrink-0 text-orange-600" />
-      </div>
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+    <div className="sticky bottom-0 z-10 -mx-4 border-t border-[#F0E1D5] bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
         <Button
           variant="outline"
           size="lg"
           onClick={onBack}
-          className="w-full gap-1.5 border-zinc-200 bg-white sm:w-auto"
+          className="w-full gap-1.5 border-[#F0E1D5] bg-white sm:w-auto"
           disabled={submitting}
         >
           <ChevronLeft size={14} />Kembali
@@ -41,7 +32,7 @@ export function StepperControls({
           size="lg"
           onClick={onSubmit}
           disabled={submitDisabled}
-          className="w-full gap-1.5 bg-orange-500 px-5 text-white hover:bg-orange-600 sm:w-auto"
+          className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-[#EA580C] sm:w-auto"
         >
           {submitting ? (
             <>
@@ -51,7 +42,7 @@ export function StepperControls({
           ) : (
             <>
               {submitLabel}
-              <Send size={14} />
+              <ChevronRight size={14} />
             </>
           )}
         </Button>

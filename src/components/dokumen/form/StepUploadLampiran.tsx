@@ -2,12 +2,9 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  FileCheck2,
+  Crown,
   Loader2,
-  Medal,
-  ReceiptText,
-  Trophy,
-  UploadCloud,
+  Users,
 } from 'lucide-react'
 
 import { KelengkapanChecklist } from '#/components/dokumen/KelengkapanChecklist'
@@ -19,6 +16,7 @@ interface StepUploadLampiranProps {
   isNonMaterial: boolean
   kategoriHasDetail: boolean
   kegiatanId: string
+  fungsiNama: string
   kegiatanNama: string
   jenisDokumenNama: string
   jenisPermintaanId: string
@@ -46,6 +44,7 @@ export function StepUploadLampiran({
   isNonMaterial,
   kategoriHasDetail,
   kegiatanId,
+  fungsiNama,
   kegiatanNama,
   jenisDokumenNama,
   jenisPermintaanId,
@@ -67,194 +66,106 @@ export function StepUploadLampiran({
   onBack,
   onNext,
 }: StepUploadLampiranProps) {
-  const characteristicLabel = isNonMaterial
-    ? jenisDokumenNama
-    : [jenisPermintaanNama, kategoriPermintaanNama, detailPermintaanNama]
-      .filter(Boolean)
-      .join(' / ')
+  const contextParts = [
+    fungsiNama,
+    kegiatanNama,
+    isNonMaterial ? jenisDokumenNama : jenisPermintaanNama,
+    !isNonMaterial ? kategoriPermintaanNama : '',
+    !isNonMaterial ? detailPermintaanNama : '',
+  ].filter(Boolean)
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold text-orange-600">
-            Kelengkapan Dokumen
-          </p>
-          <h3 className="mt-1 font-headline text-lg font-bold tracking-tight text-zinc-950">
-            Unggah lampiran dan lengkapi detail
-          </h3>
-          <p className="mt-1 max-w-2xl text-xs font-medium leading-relaxed text-zinc-600">
-            Lampiran yang dibutuhkan mengikuti kegiatan, karakteristik dokumen, dan peran yang terdeteksi.
-          </p>
-        </div>
-        <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-[10px] font-semibold text-orange-700">
-          {isNonMaterial ? 'Non-Material' : 'Material'}
-        </span>
+    <div className="space-y-4">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 py-2.5">
+        {contextParts.map((part, index) => (
+          <div key={`${part}-${index}`} className="flex min-w-0 items-center gap-1.5">
+            {index > 0 && <ChevronRight size={12} className="shrink-0 text-stone-300" />}
+            <span className={index === 0
+              ? 'max-w-full truncate rounded-md bg-[#EEF7F1] px-2 py-1 text-[10px] font-semibold text-emerald-700'
+              : 'max-w-full truncate rounded-md bg-[#FFF3D6] px-2 py-1 text-[10px] font-semibold text-[#B45309]'
+            }>
+              {part}
+            </span>
+          </div>
+        ))}
       </div>
 
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <div className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-              <FileCheck2 size={18} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-zinc-500">
-                Konteks Kelengkapan
-              </p>
-              <p className="mt-1 break-words text-xs font-black leading-relaxed text-zinc-950">
-                {kegiatanNama}
-              </p>
-              <p className="mt-1 break-words text-[10px] font-medium leading-relaxed text-zinc-600">
-                {characteristicLabel}
-              </p>
-            </div>
-          </div>
+      <div className="flex items-start gap-3 rounded-xl border border-[#F6C768] bg-white p-3.5">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
+          {isChairmanLoading || !chairmanBadgeVisible
+            ? <Loader2 size={16} className="animate-spin" />
+            : isKetuaTim
+              ? <Crown size={18} />
+              : <Users size={18} />}
         </div>
-
-        <div className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-              {isKetuaTim ? <Trophy size={18} /> : <Medal size={18} />}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-zinc-500">
-                Peran pada Kegiatan
-              </p>
-              <p className="mt-1 text-xs font-black text-zinc-950">
-                {isKetuaTim ? 'Ketua Tim' : 'Anggota'}
-              </p>
-              <p className="mt-1 text-[10px] font-medium leading-relaxed text-zinc-600">
-                {isKetuaTim ? 'Dokumen masuk ke Laporan Kegiatan.' : 'Dokumen masuk ke Laporan Saya.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {chairmanBadgeVisible && (
-        <div className={`rounded-2xl border p-4 transition-all ${
-          isKetuaTim
-            ? 'border-emerald-200 bg-emerald-50'
-            : 'border-zinc-200 bg-white'
-        }`}>
-          <div className="flex items-center gap-3">
-            {isChairmanLoading ? (
-              <Loader2 size={18} className="animate-spin text-primary" />
-            ) : isKetuaTim ? (
-              <Trophy size={18} className="text-emerald-600" />
-            ) : (
-              <Medal size={18} className="text-orange-500" />
-            )}
-            <div>
-              <p className={`text-sm font-semibold ${
-                isKetuaTim ? 'text-emerald-800' : 'text-zinc-800'
-              }`}>
-                {isKetuaTim
-                  ? 'Anda adalah Ketua Tim di kegiatan ini'
-                  : 'Anda adalah Anggota di kegiatan ini'}
-              </p>
-              <p className={`mt-0.5 text-xs ${
-                isKetuaTim ? 'text-emerald-700' : 'text-zinc-600'
-              }`}>
-                {isKetuaTim
-                  ? 'Dokumen akan masuk ke Laporan Kegiatan.'
-                  : 'Dokumen akan masuk ke Laporan Saya.'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!chairmanBadgeVisible && (
-        <div className="flex items-center justify-center rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] py-4">
-          <Loader2 size={18} className="animate-spin text-outline" />
-          <span className="ml-2 text-sm text-on-surface-variant">Memeriksa peran...</span>
-        </div>
-      )}
-
-      <section className="rounded-2xl border border-zinc-200/70 bg-white p-4 sm:p-5">
-        <div className="mb-4 flex items-center gap-3 border-b border-zinc-100 pb-4">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-            <UploadCloud size={18} />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-zinc-950">Lampiran Dokumen</h4>
-            <p className="text-[10px] font-medium leading-relaxed text-zinc-500">
-              Unggah seluruh lampiran wajib dan dokumen tambahan yang diperlukan.
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-stone-900">
+            {isChairmanLoading || !chairmanBadgeVisible
+              ? 'Memeriksa peran pada kegiatan...'
+              : `Status kegiatan Anda: ${isKetuaTim ? 'Ketua Tim' : 'Anggota'}`}
             </p>
+            {!isChairmanLoading && chairmanBadgeVisible && (
+              <span className="rounded-full border border-[#F6C768] bg-[#FFF8E8] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#B45309]">
+                {isKetuaTim ? 'Ketua Tim' : 'Anggota'}
+              </span>
+            )}
           </div>
+          <p className="mt-1 text-[10px] leading-relaxed text-stone-500">
+            Sistem menentukan status ini otomatis berdasarkan assignment kegiatan.
+          </p>
         </div>
+      </div>
 
-        <KelengkapanChecklist
-          kegiatanId={kegiatanId}
-          isKetuaTim={isKetuaTim}
-          onComplete={onKelengkapanComplete}
-          jenisPermintaanId={!isNonMaterial ? jenisPermintaanId || undefined : undefined}
-          kategoriPermintaanId={!isNonMaterial ? kategoriPermintaanId || undefined : undefined}
-          detailPermintaanId={!isNonMaterial ? detailPermintaanId || undefined : undefined}
-          isNonMaterial={isNonMaterial}
-        />
-      </section>
+      <KelengkapanChecklist
+        kegiatanId={kegiatanId}
+        isKetuaTim={isKetuaTim}
+        onComplete={onKelengkapanComplete}
+        jenisPermintaanId={!isNonMaterial ? jenisPermintaanId || undefined : undefined}
+        kategoriPermintaanId={!isNonMaterial ? kategoriPermintaanId || undefined : undefined}
+        detailPermintaanId={!isNonMaterial ? detailPermintaanId || undefined : undefined}
+        isNonMaterial={isNonMaterial}
+      />
 
-      {isNonMaterial ? (
-        <section className="rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4 sm:p-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-              <ReceiptText size={18} />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-zinc-950">Keterangan Detail</h4>
-              <p className="text-[10px] font-medium text-zinc-500">Berikan konteks singkat untuk dokumen Non-Material.</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-700">
-              Keterangan Detail Dokumen <span className="text-error">*</span>
-            </label>
-            <input
-              type="text"
+      <div className="space-y-2 border-t border-[#F0E1D5] pt-4">
+        <label className="text-[11px] font-semibold text-stone-700">
+          {isNonMaterial ? 'Keterangan Detail Dokumen' : 'Nominal Realisasi'}
+          {' '}
+          <span className="text-[#D97706]">*</span>
+        </label>
+        {isNonMaterial ? (
+          <>
+            <textarea
               value={keteranganDetail}
               onChange={(e) => onKeteranganDetailChange(e.target.value)}
-              placeholder={`Contoh: ${jenisDokumenNama || 'Judul kegiatan'}...`}
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              placeholder="Masukkan keterangan detail dokumen..."
+              rows={5}
+              className="min-h-32 w-full resize-none rounded-2xl border border-[#F0E1D5] bg-[#FFFAF6] px-4 py-3.5 text-sm leading-relaxed text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-[#F97316] focus:ring-2 focus:ring-[#FFEDD5]"
             />
-            <p className="text-[10px] font-medium leading-relaxed text-zinc-500">
-              Jelaskan detail dokumen, contoh: "{jenisDokumenNama || 'Rapat'} Bersama Pimpinan"
+            <p className="text-[10px] leading-relaxed text-stone-500">
+              Jelaskan konteks singkat dokumen Non-Material.
             </p>
-          </div>
-        </section>
-      ) : (
-        <section className="rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4 sm:p-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-              <ReceiptText size={18} />
+          </>
+        ) : (
+          <>
+            <div className="flex min-h-10 items-center rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3.5 focus-within:border-[#F97316] focus-within:ring-2 focus-within:ring-[#FFEDD5]">
+              <span className="mr-2 text-xs font-medium text-stone-400">Rp</span>
+              <input
+                type="text"
+                value={nominalRealisasi}
+                onChange={(e) => onNominalRealisasiChange(e.target.value)}
+                placeholder="Masukkan nominal realisasi"
+                className="min-w-0 flex-1 bg-transparent py-2.5 text-sm font-semibold text-stone-950 outline-none placeholder:font-normal placeholder:text-stone-400"
+              />
             </div>
-            <div>
-              <h4 className="text-sm font-bold text-zinc-950">Nominal Realisasi</h4>
-              <p className="text-[10px] font-medium text-zinc-500">Masukkan nilai realisasi dokumen Material.</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-700">
-              Nominal Realisasi (Rp) <span className="text-error">*</span>
-            </label>
-            <input
-              type="text"
-              value={nominalRealisasi}
-              onChange={(e) => onNominalRealisasiChange(e.target.value)}
-              placeholder="Contoh: 1.500.000"
-              className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-sm font-bold text-zinc-950 outline-none transition placeholder:font-normal placeholder:text-zinc-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-            />
             {nominalError && (
               <p className="flex items-center gap-1 text-[10px] font-semibold text-error">
                 <AlertCircle size={12} /> {nominalError}
               </p>
             )}
-            <p className="text-[10px] font-medium text-zinc-500">Masukkan nominal dalam rupiah.</p>
-          </div>
-        </section>
-      )}
+          </>
+        )}
+      </div>
 
       {!grouped && (
         <div className="flex gap-3">

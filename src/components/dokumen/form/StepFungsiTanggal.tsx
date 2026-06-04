@@ -41,7 +41,7 @@ export function StepFungsiTanggal({
   onNext,
 }: StepFungsiTanggalProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {!grouped && (
         <h3 className="font-headline text-base font-bold text-on-surface">
           1. Pilih Fungsi & Informasi Dasar
@@ -51,14 +51,14 @@ export function StepFungsiTanggal({
       {showFungsi && (
         <div className="space-y-2.5">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Fungsi <span className="text-orange-500">*</span>
+            Pilih Fungsi <span className="text-[#D97706]">*</span>
           </label>
           {loadingFungsi ? (
-            <div className="flex min-h-20 items-center justify-center gap-2 rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] text-xs text-zinc-500">
+            <div className="flex min-h-16 items-center justify-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] text-xs text-zinc-500">
               <Loader2 size={14} className="animate-spin" />Memuat fungsi...
             </div>
           ) : fungsiList.length === 0 ? (
-            <p className="rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] p-3 text-xs text-zinc-500">
+            <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
               Tidak ada fungsi tersedia.
             </p>
           ) : (
@@ -72,10 +72,10 @@ export function StepFungsiTanggal({
                     type="button"
                     aria-pressed={selected}
                     onClick={() => onFungsiChange(fungsi.id)}
-                    className={`relative min-h-20 rounded-xl border p-3 pr-8 text-left transition ${
+                    className={`relative min-h-16 rounded-xl border p-3 pr-8 text-left transition ${
                       selected
-                        ? 'border-orange-500 bg-orange-50/70 ring-1 ring-orange-100'
-                        : 'border-[#F1E5DA] bg-[#FFFCF9] hover:border-orange-200 hover:bg-orange-50/30'
+                        ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
+                        : 'border-[#F0E1D5] bg-[#FFFAF6] hover:border-[#FFBC80] hover:bg-[#FFF4EA]'
                     }`}
                   >
                     <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold ${
@@ -89,7 +89,7 @@ export function StepFungsiTanggal({
                         : 'Fungsi tersedia'}
                     </span>
                     {selected && (
-                      <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-orange-500 text-white">
+                      <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-[#F97316] text-white">
                         <Check size={12} strokeWidth={3} />
                       </span>
                     )}
@@ -104,12 +104,12 @@ export function StepFungsiTanggal({
       {showTanggal && (
         <div className="space-y-2">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Tanggal Laporan <span className="text-orange-500">*</span>
+            Pilih Tanggal Laporan <span className="text-[#D97706]">*</span>
           </label>
           <DatePicker
             value={tanggal}
             onChange={onTanggalChange}
-            placeholder="Pilih tanggal pelaksanaan..."
+            placeholder="-- Pilih Tanggal Pelaksanaan --"
           />
           {tanggalError ? (
             <p className="flex items-center gap-1 text-[10px] text-error">

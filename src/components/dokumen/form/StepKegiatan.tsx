@@ -26,7 +26,7 @@ export function StepKegiatan({
   onNext,
 }: StepKegiatanProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {!grouped && (
         <h3 className="font-headline text-base font-bold text-on-surface">
           2. Pilih Kegiatan
@@ -35,21 +35,21 @@ export function StepKegiatan({
 
       <div className="space-y-2">
         <label className="text-[11px] font-bold text-zinc-700">
-          Pilih Kegiatan <span className="text-orange-500">*</span>
+          Pilih Kegiatan <span className="text-[#D97706]">*</span>
         </label>
         {loadingKegiatan ? (
-          <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] px-3 text-xs text-zinc-500">
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : kegiatanList.length === 0 ? (
-          <p className="rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] p-3 text-xs text-zinc-500">
+          <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
             Tidak ada kegiatan untuk fungsi yang dipilih.
           </p>
         ) : (
-          <Select value={kegiatanId} onValueChange={v => onKegiatanChange(v ?? '')}>
-            <SelectTrigger className="min-h-11 w-full rounded-xl border-[#F1E5DA] bg-[#FFFCF9] px-4 text-sm hover:border-orange-200">
-              <SelectValue placeholder="Pilih kegiatan...">
-                {v => kegiatanList.find(k => k.id === v)?.nama ?? ''}
+          <Select value={kegiatanId || null} onValueChange={v => onKegiatanChange(v ?? '')}>
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+              <SelectValue placeholder="-- Pilih Kegiatan --">
+                {v => v ? (kegiatanList.find(k => k.id === v)?.nama ?? '') : '-- Pilih Kegiatan --'}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>

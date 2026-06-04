@@ -1,13 +1,10 @@
 import type { ReactNode } from 'react'
 import {
-  Banknote,
   Building2,
-  Calendar,
   CheckCircle2,
   FileCheck2,
-  FileText,
+  Info,
   Tags,
-  Users,
 } from 'lucide-react'
 
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
@@ -18,29 +15,43 @@ function formatFileNameFromUrl(url: string): string {
 }
 
 type SummaryItemProps = {
-  icon: ReactNode
   label: string
   value: ReactNode
   className?: string
 }
 
-function SummaryItem({ icon, label, value, className = '' }: SummaryItemProps) {
+function SummaryItem({ label, value, className = '' }: SummaryItemProps) {
   return (
-    <div className={`min-w-0 rounded-xl border border-zinc-200/70 bg-white p-3.5 ${className}`}>
-      <div className="flex items-start gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+    <div className={`min-w-0 rounded-lg border border-[#F0E1D5] bg-white px-3 py-2.5 ${className}`}>
+      <p className="text-[9px] font-semibold text-stone-400">{label}</p>
+      <div className="mt-1 break-words text-[11px] font-semibold leading-relaxed text-stone-900">
+        {value}
+      </div>
+    </div>
+  )
+}
+
+type SummaryGroupProps = {
+  icon: ReactNode
+  title: string
+  subtitle: string
+  children: ReactNode
+}
+
+function SummaryGroup({ icon, title, subtitle, children }: SummaryGroupProps) {
+  return (
+    <section className="min-w-0 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3">
+      <div className="mb-3 flex items-center gap-2.5">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#FFF3D6] text-[#D97706]">
           {icon}
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold text-zinc-500">
-            {label}
-          </p>
-          <div className="mt-1 break-words text-xs font-bold leading-relaxed text-zinc-950">
-            {value}
-          </div>
+          <h4 className="text-xs font-bold text-stone-950">{title}</h4>
+          <p className="mt-0.5 text-[9px] text-stone-500">{subtitle}</p>
         </div>
       </div>
-    </div>
+      {children}
+    </section>
   )
 }
 
@@ -74,147 +85,95 @@ export function ReviewSummary({
   keteranganDetail,
 }: ReviewSummaryProps) {
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-orange-600">
-            Ringkasan Pengajuan
-          </p>
-          <h3 className="mt-1 font-headline text-lg font-bold tracking-tight text-zinc-950">
+          <p className="text-[10px] font-semibold text-[#B45309]">Ringkasan Pengajuan</p>
+          <h3 className="mt-0.5 font-headline text-base font-bold tracking-tight text-stone-950">
             Periksa data sebelum konfirmasi
           </h3>
-          <p className="mt-1 text-xs leading-relaxed text-zinc-600">
-            Pastikan konteks, karakteristik, dan lampiran dokumen sudah sesuai.
-          </p>
         </div>
-        <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-[10px] font-semibold text-orange-700">
-          Dokumen {isNonMaterial ? 'Non-Material' : 'Material'}
+        <span className="rounded-md bg-[#FFF3D6] px-2.5 py-1 text-[9px] font-semibold text-[#92400E]">
+          {isNonMaterial ? 'Non-Material' : 'Material'}
         </span>
       </div>
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <section className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-              <Building2 size={18} />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-zinc-950">Konteks Dokumen</h4>
-              <p className="text-[10px] font-medium text-zinc-500">Fungsi, kegiatan, tanggal, dan peran</p>
-            </div>
-          </div>
-
+      <div className="grid min-w-0 gap-3 lg:grid-cols-2">
+        <SummaryGroup
+          icon={<Building2 size={15} />}
+          title="Informasi Dokumen"
+          subtitle="Fungsi, kegiatan, tanggal, dan peran"
+        >
           <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-            <SummaryItem icon={<Building2 size={14} />} label="Fungsi" value={fungsiNama} />
-            <SummaryItem icon={<FileText size={14} />} label="Kegiatan" value={kegiatanNama} />
-            <SummaryItem icon={<Calendar size={14} />} label="Tanggal" value={formatDate(tanggal)} />
-            <SummaryItem icon={<Calendar size={14} />} label="Tahun" value={tahun} />
+            <SummaryItem label="Fungsi" value={fungsiNama} />
+            <SummaryItem label="Kegiatan" value={kegiatanNama} />
+            <SummaryItem label="Tanggal Laporan" value={`${formatDate(tanggal)} - ${tahun}`} />
+            <SummaryItem label="Peran" value={isKetuaTim ? 'Ketua Tim' : 'Anggota'} />
+          </div>
+        </SummaryGroup>
+
+        <SummaryGroup
+          icon={<Tags size={15} />}
+          title="Karakteristik Dokumen"
+          subtitle={isNonMaterial ? 'Jenis dan keterangan dokumen' : 'Jenis, kategori, detail, dan nominal'}
+        >
+          <div className="grid min-w-0 gap-2 sm:grid-cols-2">
             <SummaryItem
-              icon={<Users size={14} />}
-              label="Peran"
-              value={isKetuaTim ? 'Ketua Tim' : 'Anggota'}
+              label={isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan'}
+              value={jenisPermintaanNama || '-'}
+              className={isNonMaterial ? 'sm:col-span-2' : ''}
+            />
+            {!isNonMaterial && (
+              <SummaryItem label="Kategori" value={kategoriPermintaanNama || '-'} />
+            )}
+            {!isNonMaterial && detailPermintaanNama && (
+              <SummaryItem label="Detail" value={detailPermintaanNama} />
+            )}
+            <SummaryItem
+              label={isNonMaterial ? 'Keterangan Detail' : 'Nominal Realisasi'}
+              value={isNonMaterial
+                ? keteranganDetail || <span className="text-error">Belum diisi</span>
+                : nominalRealisasi
+                  ? `Rp ${nominalRealisasi}`
+                  : <span className="text-error">Belum diisi</span>}
               className="sm:col-span-2"
             />
           </div>
-        </section>
-
-        <section className="min-w-0 rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-              <Tags size={18} />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-zinc-950">Karakteristik Dokumen</h4>
-              <p className="text-[10px] font-medium text-zinc-500">
-                {isNonMaterial ? 'Jenis dan keterangan dokumen' : 'Jenis, kategori, detail, dan nominal'}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-            {jenisPermintaanNama && (
-              <SummaryItem
-                icon={<Tags size={14} />}
-                label={isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan'}
-                value={jenisPermintaanNama}
-                className={isNonMaterial ? 'sm:col-span-2' : ''}
-              />
-            )}
-            {kategoriPermintaanNama && (
-              <SummaryItem icon={<Tags size={14} />} label="Kategori" value={kategoriPermintaanNama} />
-            )}
-            {detailPermintaanNama && (
-              <SummaryItem
-                icon={<Tags size={14} />}
-                label="Detail"
-                value={detailPermintaanNama}
-                className="sm:col-span-2"
-              />
-            )}
-            {isNonMaterial ? (
-              <SummaryItem
-                icon={<FileCheck2 size={14} />}
-                label="Keterangan Detail"
-                value={keteranganDetail || <span className="text-error">Belum diisi</span>}
-                className="sm:col-span-2"
-              />
-            ) : (
-              <SummaryItem
-                icon={<Banknote size={14} />}
-                label="Nominal Realisasi"
-                value={nominalRealisasi ? `Rp ${nominalRealisasi}` : <span className="text-error">Belum diisi</span>}
-                className="sm:col-span-2"
-              />
-            )}
-          </div>
-
-          <div className="mt-3 flex items-start gap-3 rounded-xl bg-orange-50/70 p-3">
-            <FileCheck2 size={15} className="mt-0.5 shrink-0 text-orange-600" />
-            <p className="text-[10px] font-semibold leading-relaxed text-zinc-700">
-              {isNonMaterial
-                ? 'Dokumen akan disimpan sebagai Tersimpan tanpa nominal realisasi.'
-                : 'Dokumen akan mengikuti alur validasi dan persetujuan yang berlaku.'}
-            </p>
-          </div>
-        </section>
+        </SummaryGroup>
       </div>
 
-      <section className="rounded-2xl border border-zinc-200/70 bg-white p-4">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <FileCheck2 size={18} />
+      <section className="rounded-xl border border-[#F0E1D5] bg-white p-3">
+        <div className="mb-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-[#FFF3D6] text-[#D97706]">
+              <FileCheck2 size={15} />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-zinc-950">Ringkasan Kelengkapan</h4>
-              <p className="text-[10px] font-medium text-zinc-500">
-                {lampiranUrls.length} lampiran terunggah dan siap diperiksa
-              </p>
+              <h4 className="text-xs font-bold text-stone-950">Kelengkapan Lampiran</h4>
+              <p className="text-[9px] text-stone-500">Dokumen yang akan ikut diajukan</p>
             </div>
           </div>
-          {lampiranUrls.length > 0 && (
-            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700">
-              Kelengkapan siap
-            </span>
-          )}
+          <span className="rounded-md bg-[#FFF3D6] px-2 py-1 text-[9px] font-semibold text-[#92400E]">
+            {lampiranUrls.length} dokumen
+          </span>
         </div>
 
         {lampiranUrls.length === 0 ? (
-          <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-semibold text-error">
+          <p className="rounded-lg border border-red-100 bg-red-50 p-3 text-xs font-semibold text-error">
             Belum ada lampiran diunggah.
           </p>
         ) : (
           <ul className="grid min-w-0 gap-2 sm:grid-cols-2">
-            {lampiranUrls.map(l => (
+            {lampiranUrls.map(lampiran => (
               <li
-                key={l.kelengkapan_id}
-                className="flex min-w-0 items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3"
+                key={lampiran.kelengkapan_id}
+                className="flex min-w-0 items-center gap-2.5 rounded-lg border border-[#F0E1D5] bg-[#FFFAF6] px-3 py-2.5"
               >
-                <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
+                <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-zinc-950">{l.nama}</p>
-                  <p className="mt-0.5 truncate text-[9px] font-medium text-zinc-500">
-                    {formatFileNameFromUrl(l.url)}
+                  <p className="truncate text-[10px] font-semibold text-stone-800">{lampiran.nama}</p>
+                  <p className="mt-0.5 truncate text-[9px] text-stone-400">
+                    {formatFileNameFromUrl(lampiran.url)}
                   </p>
                 </div>
               </li>
@@ -222,6 +181,20 @@ export function ReviewSummary({
           </ul>
         )}
       </section>
+
+      <div className="flex items-start gap-3 rounded-xl border border-[#F6C768] bg-[#FFF8E8] p-3">
+        <Info size={14} className="mt-0.5 shrink-0 text-[#D97706]" />
+        <div>
+          <p className="text-[10px] font-semibold text-[#92400E]">
+            {isNonMaterial
+              ? 'Dokumen akan disimpan sebagai Tersimpan tanpa proses persetujuan.'
+              : 'Dokumen akan dikirim ke PPK untuk mengikuti alur validasi dan persetujuan.'}
+          </p>
+          <p className="mt-0.5 text-[9px] leading-relaxed text-stone-500">
+            Dengan mengajukan, Anda menyatakan data dan lampiran yang diberikan sudah benar.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

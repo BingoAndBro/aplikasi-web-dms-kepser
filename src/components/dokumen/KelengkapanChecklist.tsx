@@ -5,7 +5,7 @@
  * For Material: shows admin kelengkapan + user-created optional documents.
  */
 import { useEffect, useState } from 'react'
-import { FileText, AlertCircle, CheckCircle2, Plus, X, User, Trash2 } from 'lucide-react'
+import { FileText, AlertCircle, CheckCircle2, Plus, X, Trash2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { createClientId } from '#/lib/utils/client-id'
 import { apiFetch } from '#/lib/api-client'
@@ -225,155 +225,105 @@ export function KelengkapanChecklist({
     items.some(i => i.id === l.kelengkapan_id && i.required)
   ).length
 
-  const userUploadedCount = lampiranUrls.filter(l =>
-    userDocs.some(d => d.id === l.kelengkapan_id)
-  ).length
   const totalCount = items.length + userDocs.length
-  const progressPercentage = totalCount > 0
-    ? Math.min(100, Math.round((lampiranUrls.length / totalCount) * 100))
-    : 0
   const requiredReady = requiredCount === 0 || uploadedCount >= requiredCount
   const attachmentReady = requiredReady && lampiranUrls.length > 0
 
   return (
-    <div className="space-y-4">
-      {/* Summary */}
-      <div className="rounded-2xl border border-zinc-200/70 bg-[#FFFAF5] p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
-              attachmentReady
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-amber-100 text-amber-700'
-            }`}>
-              {attachmentReady ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-            </div>
-            <div>
-              <p className="text-sm font-bold text-zinc-950">Progress Lampiran</p>
-              <p className="mt-0.5 text-[10px] font-medium text-zinc-600">
-                {lampiranUrls.length} dari {totalCount} dokumen diunggah
-                {requiredCount > 0 && ` - ${uploadedCount}/${requiredCount} wajib`}
-                {userDocs.length > 0 && ` - ${userUploadedCount}/${userDocs.length} tambahan`}
-                {totalCount === 0 && ' - tambahkan minimal satu dokumen pendukung'}
-              </p>
-            </div>
-          </div>
-          {!attachmentReady ? (
-            <span className="w-fit rounded-full bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-800">
-              {requiredCount > uploadedCount
-                ? `${requiredCount - uploadedCount} wajib belum diunggah`
-                : 'Belum ada lampiran'}
-            </span>
-          ) : (
-            <span className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-semibold text-emerald-800">
-              Lampiran wajib siap
-            </span>
-          )}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {isNonMaterial ? 'Dokumen Pendukung' : 'Dokumen Wajib'}
+          </p>
         </div>
-        <div className="mt-4 h-1 overflow-hidden rounded-full bg-zinc-100">
-          <div
-            className="h-full rounded-full bg-orange-400 transition-[width]"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
+        <span className={cn(
+          'rounded-lg border px-2.5 py-1.5 text-[9px] font-bold',
+          attachmentReady
+            ? 'border-emerald-200 text-emerald-700'
+            : 'border-[#F6C768] text-[#C55A00]',
+        )}>
+          {lampiranUrls.length}/{Math.max(totalCount, 1)} diunggah
+        </span>
       </div>
 
-      {/* Admin Kelengkapan */}
       {!isNonMaterial && items.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-zinc-600">
-            Kelengkapan Admin
-          </p>
+        <div className="space-y-3">
           {items.map(item => {
             const uploaded = lampiranUrls.find(l => l.kelengkapan_id === item.id)
             return (
               <div
                 key={item.id}
                 className={cn(
-                  'flex min-w-0 flex-col gap-3 rounded-2xl border p-3.5 transition-colors sm:flex-row',
+                  'flex min-w-0 flex-col gap-3 rounded-2xl border px-4 py-4 transition-colors sm:flex-row sm:items-center',
                   uploaded
-                    ? 'border-emerald-200 bg-emerald-50/60'
-                    : item.required
-                      ? 'border-amber-200 bg-amber-50/50'
-                      : 'border-zinc-200/70 bg-white'
+                    ? 'border-emerald-200 bg-white'
+                    : 'border-stone-200 bg-white',
                 )}
               >
-                <div className="shrink-0 mt-0.5">
-                  <FileText
-                    size={14}
-                    className={cn(
-                      uploaded ? 'text-emerald-600' : item.required ? 'text-amber-600' : 'text-orange-500'
-                    )}
-                  />
+                <div className={cn(
+                  'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                  uploaded ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-400',
+                )}>
+                  {uploaded ? <CheckCircle2 size={18} /> : <FileText size={18} />}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-xs font-bold text-zinc-950">{item.nama_dokumen}</p>
-                    {item.required && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
-                        WAJIB
-                      </span>
-                    )}
-                    {!item.required && (
-                      <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold text-zinc-600">
-                        OPSIONAL
-                      </span>
-                    )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-stone-900">{item.nama_dokumen}</p>
+                    <span className={item.required
+                      ? 'rounded bg-[#FFF0F0] px-1.5 py-0.5 text-[8px] font-semibold text-rose-600'
+                      : 'rounded bg-stone-100 px-1.5 py-0.5 text-[8px] font-semibold text-stone-500'
+                    }>
+                      {item.required ? 'WAJIB' : 'OPSIONAL'}
+                    </span>
                   </div>
-                  <div className="mt-1.5">
-                    {uploaded ? (
-                      <FileUploadButton
-                        kelengkapanId={item.id}
-                        namaDokumen={item.nama_dokumen}
-                        initialLampiran={uploaded}
-                        onUploaded={(lamp) => handleUploaded(item.id, lamp)}
-                        onRemoved={() => handleRemoved(item.id)}
-                      />
-                    ) : (
-                      <FileUploadButton
-                        kelengkapanId={item.id}
-                        namaDokumen={item.nama_dokumen}
-                        onUploaded={(lamp) => handleUploaded(item.id, lamp)}
-                      />
-                    )}
-                  </div>
+                  <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+                    Format PDF
+                  </p>
                 </div>
+                <FileUploadButton
+                  kelengkapanId={item.id}
+                  namaDokumen={item.nama_dokumen}
+                  initialLampiran={uploaded}
+                  onUploaded={(lamp) => handleUploaded(item.id, lamp)}
+                  onRemoved={() => handleRemoved(item.id)}
+                  className="shrink-0"
+                />
               </div>
             )
           })}
         </div>
       )}
 
-      {/* User-Created Documents Section - always shown */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-zinc-700">
-            {isNonMaterial ? 'Dokumen Pendukung' : 'Dokumen Tambahan Anda'}
-          </p>
-          {!showAddForm && (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {isNonMaterial ? 'Dokumen Tambahan' : 'Dokumen Opsional'}
+            </p>
+          </div>
+          {!showAddForm && userDocs.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowAddForm(true)}
-              className="gap-1 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+              className="gap-1 text-[#B45309] hover:bg-[#FFF3D6] hover:text-[#92400E]"
             >
-              <Plus size={14} />
-              <span className="text-xs">Tambah Dokumen</span>
+              <Plus size={13} /> Tambah
             </Button>
           )}
         </div>
 
-        {/* Add Form */}
         {showAddForm && (
-          <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-[#FFFAF5] p-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-[#F6C768] bg-white p-4 sm:flex-row sm:items-center">
             <Input
               value={newDocTitle}
               onChange={(e) => {
                 setNewDocTitle(e.target.value)
                 setUserDocError('')
               }}
-              placeholder="Ketik judul dokumen..."
-              className="flex-1 h-8 text-xs"
+              placeholder="Nama dokumen..."
+              className="h-10 flex-1 border-[#F6C768] bg-white text-sm"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -386,7 +336,9 @@ export function KelengkapanChecklist({
               }}
               autoFocus
             />
-            <Button size="sm" onClick={addUserDoc} className="h-8">Tambah</Button>
+            <Button size="sm" onClick={addUserDoc} className="h-10 bg-[#F97316] px-5 font-bold uppercase tracking-wide text-white hover:bg-[#EA580C]">
+              Tambah
+            </Button>
             <Button
               variant="ghost"
               size="icon-xs"
@@ -396,81 +348,69 @@ export function KelengkapanChecklist({
                 setNewDocTitle('')
                 setUserDocError('')
               }}
-              className="h-8 w-8"
+              className="h-9 w-9"
             >
               <X size={14} />
             </Button>
           </div>
         )}
         {userDocError && (
-          <p className="text-xs text-error flex items-center gap-1">
+          <p className="flex items-center gap-1 text-xs text-error">
             <AlertCircle size={12} /> {userDocError}
           </p>
         )}
 
-        {/* User Documents List */}
         {userDocs.map(doc => {
           const uploaded = lampiranUrls.find(l => l.kelengkapan_id === doc.id)
           return (
             <div
               key={doc.id}
               className={cn(
-                'flex min-w-0 flex-col gap-3 rounded-2xl border p-3.5 transition-colors sm:flex-row',
-                uploaded
-                  ? 'border-emerald-200 bg-emerald-50/60'
-                  : 'border-zinc-200 bg-white'
+                'flex min-w-0 flex-col gap-3 rounded-2xl border px-4 py-4 transition-colors sm:flex-row sm:items-center',
+                uploaded ? 'border-emerald-200 bg-white' : 'border-stone-200 bg-white',
               )}
             >
-              <div className="shrink-0 mt-0.5">
-                <User
-                  size={14}
-                  className={uploaded ? 'text-emerald-600' : 'text-orange-600'}
-                />
+              <div className={cn(
+                'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                uploaded ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-400',
+              )}>
+                {uploaded ? <CheckCircle2 size={15} /> : <FileText size={15} />}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-xs font-bold text-zinc-950">{doc.nama_dokumen}</p>
-                  <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
-                    TAMBAHAN ANDA
-                  </span>
-                </div>
-                <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-                  {uploaded ? (
-                    <FileUploadButton
-                      kelengkapanId={doc.id}
-                      namaDokumen={doc.nama_dokumen}
-                      initialLampiran={uploaded}
-                      onUploaded={(lamp) => handleUploaded(doc.id, lamp)}
-                      onRemoved={() => handleRemoved(doc.id)}
-                    />
-                  ) : (
-                    <FileUploadButton
-                      kelengkapanId={doc.id}
-                      namaDokumen={doc.nama_dokumen}
-                      onUploaded={(lamp) => handleUploaded(doc.id, lamp)}
-                    />
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`Hapus dokumen pendukung ${doc.nama_dokumen}`}
-                    onClick={() => removeUserDoc(doc.id)}
-                    className="text-error hover:text-error hover:bg-error/10"
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-stone-900">{doc.nama_dokumen}</p>
+                <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+                  PDF, Word, atau Excel
+                </p>
               </div>
+              <FileUploadButton
+                kelengkapanId={doc.id}
+                namaDokumen={doc.nama_dokumen}
+                initialLampiran={uploaded}
+                onUploaded={(lamp) => handleUploaded(doc.id, lamp)}
+                onRemoved={() => handleRemoved(doc.id)}
+                className="shrink-0"
+              />
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`Hapus dokumen pendukung ${doc.nama_dokumen}`}
+                onClick={() => removeUserDoc(doc.id)}
+                className="shrink-0 text-stone-400 hover:bg-red-50 hover:text-error"
+              >
+                <Trash2 size={14} />
+              </Button>
             </div>
           )
         })}
 
         {userDocs.length === 0 && !showAddForm && (
-          <p className="text-xs text-on-surface-variant italic">
-            {isNonMaterial
-              ? 'Klik "+ Tambah Dokumen" untuk menambahkan dokumen pendukung.'
-              : 'Belum ada dokumen tambahan. Klik "+ Tambah Dokumen" untuk menambahkan.'}
-          </p>
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#F0E1D5] bg-[#FFFAF6] px-3 py-3 text-[10px] font-semibold text-stone-500 transition hover:border-[#F6C768] hover:bg-[#FFF8E8] hover:text-[#B45309]"
+          >
+            <Plus size={14} /> Tambah Dokumen Opsional
+          </button>
         )}
       </div>
     </div>

@@ -45,61 +45,46 @@ export function StepReview({
   onSubmit,
 }: StepReviewProps) {
   return (
-    <div className="space-y-5">
-      <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50/60">
-        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="flex items-start gap-4">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
-              <CheckCircle2 size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold text-emerald-700">
-                Tahap {stepCount} dari {stepCount}
-              </p>
-              <h3 className="mt-1 font-headline text-xl font-bold tracking-tight text-emerald-950">
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-xl border border-[#CDE9D7] bg-[#F1FBF5]">
+        <div className="flex items-start gap-3 p-3.5">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-white">
+            <CheckCircle2 size={18} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-headline text-base font-bold tracking-tight text-emerald-900">
                 Siap diajukan
               </h3>
-              <p className="mt-1 max-w-2xl text-xs font-medium leading-relaxed text-emerald-800">
-                Tinjau ringkasan dan konsekuensi pengajuan sebelum melanjutkan ke konfirmasi akhir.
-              </p>
+              <span className="rounded-md bg-white px-2 py-1 text-[9px] font-semibold text-emerald-700">
+                Tahap {stepCount} dari {stepCount} - {isNonMaterial ? 'Non-Material' : 'Material'}
+              </span>
             </div>
+            <p className="mt-1 text-[10px] leading-relaxed text-emerald-800">
+              Tinjau ringkasan dan konsekuensi pengajuan sebelum membuka konfirmasi akhir.
+            </p>
           </div>
-          <span className="w-fit rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-emerald-700">
-            {isNonMaterial ? 'Non-Material' : 'Material'}
-          </span>
         </div>
 
-        <div className="grid gap-3 border-t border-emerald-100 bg-white/60 p-4 sm:grid-cols-2">
-          <div className="flex items-start gap-3 rounded-xl bg-white p-3.5">
-            <FileCheck2 size={17} className="mt-0.5 shrink-0 text-emerald-600" />
+        <div className="grid gap-px border-t border-[#CDE9D7] bg-[#CDE9D7] sm:grid-cols-2">
+          <div className="flex items-start gap-2.5 bg-white/80 px-3.5 py-2.5">
+            <FileCheck2 size={14} className="mt-0.5 shrink-0 text-emerald-600" />
             <div>
-              <p className="text-[10px] font-semibold text-zinc-500">
-                Hasil Pengajuan
-              </p>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-zinc-950">
+              <p className="text-[9px] font-semibold text-stone-400">Hasil Pengajuan</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-stone-800">
                 {isNonMaterial ? 'Disimpan sebagai Tersimpan' : 'Masuk ke alur validasi dan persetujuan'}
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl bg-white p-3.5">
-            <ShieldCheck size={17} className="mt-0.5 shrink-0 text-emerald-600" />
+          <div className="flex items-start gap-2.5 bg-white/80 px-3.5 py-2.5">
+            <ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600" />
             <div>
-              <p className="text-[10px] font-semibold text-zinc-500">
-                Konfirmasi Akhir
-              </p>
-              <p className="mt-1 text-xs font-bold leading-relaxed text-zinc-950">
-                Periksa kembali data dan lampiran sebelum diproses sistem.
+              <p className="text-[9px] font-semibold text-stone-400">Konfirmasi Akhir</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-stone-800">
+                Periksa kembali data dan lampiran sebelum diproses.
               </p>
             </div>
           </div>
-        </div>
-
-        <div className="border-t border-emerald-100 px-5 py-3">
-          <p className="text-[10px] font-semibold leading-relaxed text-emerald-800">
-            {isNonMaterial
-              ? 'Dokumen Non-Material akan disimpan sebagai Tersimpan tanpa nominal realisasi.'
-              : 'Dokumen Material akan mengikuti alur validasi dan persetujuan yang berlaku.'}
-          </p>
         </div>
       </div>
 

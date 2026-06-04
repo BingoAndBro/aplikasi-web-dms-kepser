@@ -28,7 +28,7 @@ export function StepKategoriPermintaan({
   onNext,
 }: StepKategoriPermintaanProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {!grouped && (
         <h3 className="font-headline text-base font-bold text-on-surface">
           4. Pilih Kategori Permintaan
@@ -38,23 +38,23 @@ export function StepKategoriPermintaan({
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-1">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Kategori Permintaan <span className="text-orange-500">*</span>
+            Pilih Kategori Permintaan <span className="text-[#D97706]">*</span>
           </label>
           <span className="text-[10px] font-medium text-zinc-500">{jenisPermintaanNama}</span>
         </div>
         {loadingKategori ? (
-          <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] px-3 text-xs text-zinc-500">
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : kategoriList.length === 0 ? (
-          <p className="rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] p-3 text-xs text-zinc-500">
+          <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
             Tidak ada kategori untuk jenis yang dipilih.
           </p>
         ) : (
-          <Select value={kategoriPermintaanId} onValueChange={v => onKategoriChange(v ?? '')}>
-            <SelectTrigger className="min-h-11 w-full rounded-xl border-[#F1E5DA] bg-[#FFFCF9] px-4 text-sm hover:border-orange-200">
-              <SelectValue placeholder="Pilih kategori...">
-                {v => kategoriList.find(k => k.id === v)?.nama ?? ''}
+          <Select value={kategoriPermintaanId || null} onValueChange={v => onKategoriChange(v ?? '')}>
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+              <SelectValue placeholder="-- Pilih Kategori Permintaan --">
+                {v => v ? (kategoriList.find(k => k.id === v)?.nama ?? '') : '-- Pilih Kategori Permintaan --'}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>

@@ -36,7 +36,7 @@ export function StepJenisPermintaan({
   onNext,
 }: StepJenisPermintaanProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {!grouped && (
         <h3 className="font-headline text-base font-bold text-on-surface">
           {`3. ${isNonMaterial ? 'Pilih Jenis Dokumen' : 'Pilih Jenis Permintaan'}`}
@@ -45,7 +45,7 @@ export function StepJenisPermintaan({
 
       <div className="space-y-2.5">
         <label className="text-[11px] font-bold text-zinc-700">
-          Karakteristik Dokumen <span className="text-orange-500">*</span>
+          Karakteristik Dokumen <span className="text-[#D97706]">*</span>
         </label>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           <button
@@ -56,8 +56,8 @@ export function StepJenisPermintaan({
             }}
             className={`relative rounded-xl border p-3 text-left transition ${
               !isNonMaterial
-                ? 'border-orange-500 bg-orange-50/70 ring-1 ring-orange-100'
-                : 'border-[#F1E5DA] bg-[#FFFCF9] hover:border-orange-200 hover:bg-orange-50/30'
+                ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
+                : 'border-[#F0E1D5] bg-[#FFFAF6] hover:border-[#FFBC80] hover:bg-[#FFF4EA]'
             }`}
           >
             <span className="text-[11px] font-bold text-zinc-950">Material</span>
@@ -65,7 +65,7 @@ export function StepJenisPermintaan({
               Memiliki nominal realisasi dan mengikuti proses validasi serta persetujuan.
             </span>
             {!isNonMaterial && (
-              <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-orange-500 text-white">
+              <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-[#F97316] text-white">
                 <Check size={12} strokeWidth={3} />
               </span>
             )}
@@ -79,8 +79,8 @@ export function StepJenisPermintaan({
             }}
             className={`relative rounded-xl border p-3 text-left transition ${
               isNonMaterial
-                ? 'border-orange-500 bg-orange-50/70 ring-1 ring-orange-100'
-                : 'border-[#F1E5DA] bg-[#FFFCF9] hover:border-orange-200 hover:bg-orange-50/30'
+                ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
+                : 'border-[#F0E1D5] bg-[#FFFAF6] hover:border-[#FFBC80] hover:bg-[#FFF4EA]'
             }`}
           >
             <span className="text-[11px] font-bold text-zinc-950">Non-Material</span>
@@ -88,7 +88,7 @@ export function StepJenisPermintaan({
               Tanpa nominal realisasi dan disimpan sebagai Tersimpan.
             </span>
             {isNonMaterial && (
-              <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-orange-500 text-white">
+              <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-[#F97316] text-white">
                 <Check size={12} strokeWidth={3} />
               </span>
             )}
@@ -99,17 +99,17 @@ export function StepJenisPermintaan({
       {isNonMaterial ? (
         <div className="space-y-2">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Jenis Dokumen <span className="text-orange-500">*</span>
+            Pilih Jenis Dokumen <span className="text-[#D97706]">*</span>
           </label>
           {jenisDokumenList.length === 0 ? (
-            <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] px-3 text-xs text-zinc-500">
+            <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
               <Loader2 size={14} className="animate-spin" />Memuat jenis dokumen...
             </div>
           ) : (
-            <Select value={jenisDokumenId} onValueChange={v => onJenisDokumenChange(v ?? '')}>
-              <SelectTrigger className="min-h-11 w-full rounded-xl border-[#F1E5DA] bg-[#FFFCF9] px-4 text-sm hover:border-orange-200">
-                <SelectValue placeholder="Pilih jenis dokumen...">
-                  {v => jenisDokumenList.find(j => j.id === v)?.nama ?? ''}
+            <Select value={jenisDokumenId || null} onValueChange={v => onJenisDokumenChange(v ?? '')}>
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+                <SelectValue placeholder="-- Pilih Jenis Dokumen --">
+                  {v => v ? (jenisDokumenList.find(j => j.id === v)?.nama ?? '') : '-- Pilih Jenis Dokumen --'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -128,21 +128,21 @@ export function StepJenisPermintaan({
       ) : (
         <div className="space-y-2">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Jenis Permintaan <span className="text-orange-500">*</span>
+            Pilih Jenis Permintaan <span className="text-[#D97706]">*</span>
           </label>
           {loadingJenis ? (
-            <div className="flex min-h-11 items-center gap-2 rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] px-3 text-xs text-zinc-500">
+            <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
               <Loader2 size={14} className="animate-spin" />Memuat...
             </div>
           ) : jenisList.length === 0 ? (
-            <p className="rounded-xl border border-[#F1E5DA] bg-[#FFFCF9] p-3 text-xs text-zinc-500">
+            <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
               Tidak ada jenis permintaan tersedia.
             </p>
           ) : (
-            <Select value={jenisPermintaanId} onValueChange={v => onJenisChange(v ?? '')}>
-              <SelectTrigger className="min-h-11 w-full rounded-xl border-[#F1E5DA] bg-[#FFFCF9] px-4 text-sm hover:border-orange-200">
-                <SelectValue placeholder="Pilih jenis permintaan...">
-                  {v => jenisList.find(j => j.id === v)?.nama ?? ''}
+            <Select value={jenisPermintaanId || null} onValueChange={v => onJenisChange(v ?? '')}>
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+                <SelectValue placeholder="-- Pilih Jenis Permintaan --">
+                  {v => v ? (jenisList.find(j => j.id === v)?.nama ?? '') : '-- Pilih Jenis Permintaan --'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
