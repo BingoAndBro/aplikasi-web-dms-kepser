@@ -99,7 +99,7 @@ export function WorkflowPanel({ children, className }: WorkflowPanelProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100/80 bg-white p-4 shadow-sm',
+        'rounded-2xl border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm',
         className,
       )}
     >
@@ -139,7 +139,7 @@ export function WorkflowSearchPanel({
               placeholder={placeholder}
               value={search ?? ''}
               onChange={(event) => onSearchChange(event.target.value)}
-              className="h-10 w-full rounded-[20px] border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+              className="h-10 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
             />
           </label>
         )}
@@ -186,7 +186,7 @@ export function WorkflowStatusSelect({
       <SelectTrigger
         aria-label={ariaLabel}
         className={cn(
-          'h-11 w-full min-w-[148px] rounded-[22px] border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 shadow-[0_2px_8px_rgba(15,23,42,0.08)] hover:border-zinc-300 hover:bg-[#FFFDF9] focus-visible:border-orange-200 focus-visible:ring-orange-100/70 sm:w-fit [&_svg]:text-zinc-950',
+          'h-11 w-full min-w-[148px] rounded-[22px] border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-medium text-zinc-950 shadow-[0_2px_8px_rgba(15,23,42,0.08)] hover:border-zinc-300 hover:bg-[#FFF8F1] focus-visible:border-orange-200 focus-visible:ring-orange-100/70 sm:w-fit [&_svg]:text-zinc-950',
           className,
         )}
       >
@@ -197,7 +197,7 @@ export function WorkflowStatusSelect({
       <SelectContent
         align="start"
         sideOffset={8}
-        className="rounded-[18px] border border-zinc-100 bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.14)]"
+        className="rounded-[18px] border border-zinc-100 bg-[#FFFDF9] p-2 shadow-[0_12px_32px_rgba(15,23,42,0.14)]"
       >
         {options.map(option => (
           <SelectItem
@@ -218,7 +218,7 @@ export function WorkflowTableShell({ children, className }: WorkflowPanelProps) 
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
+        'hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
         className,
       )}
     >
@@ -256,7 +256,7 @@ export function WorkflowMobileCard({
   action,
 }: WorkflowMobileCardProps) {
   return (
-    <div className="group rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]">
+    <div className="group rounded-[22px] border border-zinc-200/80 bg-[#FFFDF9] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFF8F1]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{title}</h3>
@@ -404,7 +404,7 @@ export function WorkflowPagination({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="rounded-full border border-orange-100 bg-white px-3 py-1 text-xs font-semibold text-zinc-600">
+      <span className="rounded-full border border-orange-100 bg-[#FFFDF9] px-3 py-1 text-xs font-semibold text-zinc-600">
         Halaman {page + 1} dari {totalPages}
       </span>
       <Button
@@ -519,7 +519,7 @@ export function WorkflowDashboardCard({
   return (
     <a
       href={href}
-      className="group cursor-pointer rounded-2xl border border-orange-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+      className="group cursor-pointer rounded-2xl border border-orange-100 bg-[#FFFDF9] p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
     >
       <div className="mb-4 flex size-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-700 transition group-hover:bg-orange-600 group-hover:text-white">
         {icon}

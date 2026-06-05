@@ -288,7 +288,7 @@ export function KelengkapanChecklist({
                   'flex min-w-0 flex-col gap-3 rounded-[1.5rem] border px-5 py-4 transition-colors sm:flex-row sm:items-center',
                   uploaded
                     ? 'border-emerald-200 bg-emerald-50/45'
-                    : 'border-stone-200 bg-white',
+                    : 'border-stone-200 bg-[#FFFDF9]',
                 )}
               >
                 <div className={cn(
@@ -332,7 +332,7 @@ export function KelengkapanChecklist({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-orange-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-orange-200 bg-[#FFFDF9]">
         <div className="border-b border-orange-100 px-3.5 py-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

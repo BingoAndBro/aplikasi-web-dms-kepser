@@ -94,7 +94,7 @@ export function StepUploadLampiran({
         ))}
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-[#F6C768] bg-white p-3.5">
+      <div className="flex items-start gap-3 rounded-xl border border-[#F6C768] bg-[#FFFDF9] p-3.5">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
           {isChairmanLoading || !chairmanBadgeVisible
             ? <Loader2 size={16} className="animate-spin" />

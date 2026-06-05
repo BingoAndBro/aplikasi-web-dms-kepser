@@ -392,7 +392,7 @@ function DokumenRevisiPage() {
             Dokumen <span className="font-bold text-zinc-950">{resubmitSuccess.title}</span> telah dikirim kembali ke {resubmitSuccess.targetLabel}.
           </p>
 
-          <div className="mt-6 grid w-full gap-3 rounded-2xl border border-[#F0E1D5] bg-white p-4 text-left shadow-sm sm:grid-cols-3">
+          <div className="mt-6 grid w-full gap-3 rounded-2xl border border-[#F0E1D5] bg-[#FFFAF6] p-4 text-left shadow-sm sm:grid-cols-3">
             <div>
               <p className="text-[10px] font-semibold text-zinc-500">Jenis Dokumen</p>
               <p className="mt-1 text-sm font-bold text-zinc-950">
@@ -496,7 +496,7 @@ function DokumenRevisiPage() {
                     className={cn(
                       'flex min-h-8 min-w-32 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
-                        ? 'bg-white text-[#FF5A00] shadow-sm'
+                        ? 'bg-[#FFFAF6] text-[#FF5A00] shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
@@ -537,12 +537,12 @@ function DokumenRevisiPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-2xl border border-t-0 border-[#F1E5DA] bg-white p-3 sm:p-4">
+            <div className="min-w-0 rounded-b-2xl border border-t-0 border-[#F1E5DA] bg-[#FFFAF6] p-3 sm:p-4">
 
             <section className={cn(activeTab === 'summary' ? 'block' : 'hidden', 'space-y-3')}>
               <div className="rounded-xl border border-orange-200/70 bg-[#FFF5EC] p-2.5">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-white text-[#EA580C]">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFFAF6] text-[#EA580C]">
                     <AlertCircle size={14} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -554,7 +554,7 @@ function DokumenRevisiPage() {
                         {dok.updated_at ? formatDate(dok.updated_at) : 'Perlu revisi'}
                       </p>
                     </div>
-                    <div className="mt-1.5 rounded-xl border border-orange-100 bg-white/70 px-3 py-1.5">
+                    <div className="mt-1.5 rounded-xl border border-orange-100 bg-[#FFFAF6] px-3 py-1.5">
                       <p className="text-xs font-medium italic leading-relaxed text-orange-950">
                         {dok.revision_notes || 'Tidak ada catatan revisi tertulis.'}
                       </p>
@@ -604,7 +604,7 @@ function DokumenRevisiPage() {
                     <div
                       key={label}
                       className={cn(
-                        'rounded-xl border bg-[#FFFDF9] px-3 py-2.5',
+                        'rounded-xl border bg-[#FFFAF6] px-3 py-2.5',
                         label === 'Nominal Realisasi' ? 'border-orange-200 bg-orange-50/35' : 'border-orange-100',
                       )}
                     >
@@ -659,7 +659,7 @@ function DokumenRevisiPage() {
           <aside className="min-w-0 space-y-2.5 xl:sticky xl:top-3">
             <PegawaiPanel className="border-rose-100 bg-rose-50/55 p-3 shadow-none">
               <div className="flex items-start gap-2">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white text-rose-600">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#FFFAF6] text-rose-600">
                   <AlertCircle size={13} />
                 </span>
                 <div className="min-w-0">
@@ -667,7 +667,7 @@ function DokumenRevisiPage() {
                   <p className="mt-1.5 text-[11px] font-medium text-rose-700">
                     Dikembalikan oleh: <span className="font-bold">PPK</span>
                   </p>
-                  <div className="mt-1.5 rounded-lg bg-white/75 p-2">
+                  <div className="mt-1.5 rounded-lg bg-[#FFFAF6] p-2">
                     <p className="line-clamp-3 text-[11px] font-medium italic leading-relaxed text-rose-950">
                       "{dok.revision_notes || 'Tidak ada catatan revisi tertulis.'}"
                     </p>
@@ -690,7 +690,7 @@ function DokumenRevisiPage() {
               </div>
             </PegawaiPanel>
 
-            <PegawaiPanel className="space-y-2 border-[#F1E5DA] bg-white p-2.5 shadow-none">
+            <PegawaiPanel className="space-y-2 border-[#F1E5DA] bg-[#FFFAF6] p-2.5 shadow-none">
               <div className="flex items-center justify-between gap-2 px-1 text-[11px]">
                 <span className="font-semibold text-zinc-500">Kelengkapan</span>
                 <span className="font-bold text-zinc-900">
@@ -766,7 +766,7 @@ function DokumenRevisiPage() {
         }
         description="Perubahan yang belum disimpan akan hilang."
         descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-white shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
+        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
         showCloseButton
         size="sm"
         footer={
@@ -841,13 +841,13 @@ function DokumenRevisiPage() {
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#F0E1D5] bg-white p-4">
+            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">Lampiran</p>
               <p className="mt-1 text-sm font-extrabold text-zinc-950">
                 {submitConfirmation?.lampiranUrls.length ?? 0} file akan diproses
               </p>
             </div>
-            <div className="rounded-xl border border-[#F0E1D5] bg-white p-4">
+            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">Nominal</p>
               <p className="mt-1 text-sm font-extrabold text-zinc-950">
                 {isNonMaterial ? '-' : formatCurrency(submitConfirmation?.nominalRealisasi)}

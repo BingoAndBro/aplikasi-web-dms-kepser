@@ -410,7 +410,7 @@ function PpkResubmitPage() {
             Dokumen <span className="font-bold text-zinc-950">{resubmitSuccess.title}</span> telah dikirim kembali ke PPSPM.
           </p>
 
-          <div className="mt-6 grid w-full gap-3 rounded-2xl border border-[#F0E1D5] bg-white p-4 text-left shadow-sm sm:grid-cols-3">
+          <div className="mt-6 grid w-full gap-3 rounded-2xl border border-[#F0E1D5] bg-[#FFFDF9] p-4 text-left shadow-sm sm:grid-cols-3">
             <div>
               <p className="text-[10px] font-semibold text-zinc-500">Jenis Dokumen</p>
               <p className="mt-1 text-sm font-bold text-zinc-950">
@@ -514,7 +514,7 @@ function PpkResubmitPage() {
                     className={cn(
                       'flex min-h-8 min-w-32 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
-                        ? 'bg-white text-[#FF5A00] shadow-sm'
+                        ? 'bg-[#FFFDF9] text-[#FF5A00] shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
@@ -555,7 +555,7 @@ function PpkResubmitPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-2xl border border-t-0 border-[#F1E5DA] bg-white p-3 sm:p-4">
+            <div className="min-w-0 rounded-b-2xl border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-3 sm:p-4">
               <section className={cn(activeTab === 'summary' ? 'block' : 'hidden', 'space-y-3')}>
                 <div className="rounded-xl border border-orange-200/70 bg-[#FFF5EC] p-2.5">
                   <div className="flex items-start gap-3">
@@ -708,7 +708,7 @@ function PpkResubmitPage() {
               </div>
             </WorkflowPanel>
 
-            <WorkflowPanel className="space-y-2 border-[#F1E5DA] bg-white p-2.5 shadow-none">
+            <WorkflowPanel className="space-y-2 border-[#F1E5DA] bg-[#FFFDF9] p-2.5 shadow-none">
               <div className="flex items-center justify-between gap-2 px-1 text-[11px]">
                 <span className="font-semibold text-zinc-500">Kelengkapan</span>
                 <span className="font-bold text-zinc-900">
@@ -795,7 +795,7 @@ function PpkResubmitPage() {
         }
         description="Perubahan yang belum disimpan akan hilang."
         descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-white shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
+        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
         showCloseButton
         size="sm"
         footer={
@@ -870,13 +870,13 @@ function PpkResubmitPage() {
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#F0E1D5] bg-white p-4">
+            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">Lampiran</p>
               <p className="mt-1 text-sm font-extrabold text-zinc-950">
                 {submitConfirmation?.lampiranUrls.length ?? 0} file akan diproses
               </p>
             </div>
-            <div className="rounded-xl border border-[#F0E1D5] bg-white p-4">
+            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">Nominal</p>
               <p className="mt-1 text-sm font-extrabold text-zinc-950">
                 {dokIsNonMaterial ? '-' : formatCurrency(submitConfirmation?.nominalRealisasi)}
@@ -944,7 +944,7 @@ function PpkResubmitPage() {
           </>
         }
       >
-        <div className="rounded-xl border border-orange-100 bg-white p-4">
+        <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-4">
           <p className="text-xs font-bold text-zinc-950">Perubahan editor yang belum diajukan tidak ikut disimpan.</p>
           <p className="mt-1 text-xs font-medium leading-relaxed text-zinc-600">
             Gunakan aksi ini hanya jika dokumen memang perlu dikembalikan kepada Pegawai.

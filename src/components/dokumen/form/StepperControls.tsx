@@ -17,7 +17,7 @@ export function StepperControls({
   submitLabel = 'Ajukan Dokumen',
 }: StepperControlsProps) {
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 border-t border-[#F0E1D5] bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
+    <div className="sticky bottom-0 z-10 -mx-4 border-t border-[#F0E1D5] bg-[#FFFDF9]/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
         <Button
           variant="outline"

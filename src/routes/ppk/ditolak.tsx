@@ -118,7 +118,7 @@ function PpkDitolakPage() {
                   {filtered.map((d, i) => (
                     <TableRow
                       key={d.id}
-                      className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"
+                      className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
                       onClick={() => openDocument(d)}
                       tabIndex={0}
                       onKeyDown={(event) => {

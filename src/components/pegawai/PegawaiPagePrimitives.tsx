@@ -55,7 +55,7 @@ export function PegawaiPanel({ children, className }: PegawaiPanelProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100/80 bg-white p-4 shadow-sm',
+        'rounded-2xl border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm',
         className,
       )}
     >
@@ -159,7 +159,7 @@ export function PegawaiPagination({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="rounded-full border border-orange-100 bg-white px-3 py-1 text-xs font-semibold text-zinc-600">
+      <span className="rounded-full border border-orange-100 bg-[#FFFDF9] px-3 py-1 text-xs font-semibold text-zinc-600">
         Halaman {page + 1} dari {totalPages}
       </span>
       <Button

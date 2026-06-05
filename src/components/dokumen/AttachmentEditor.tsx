@@ -827,7 +827,7 @@ export function AttachmentEditor({
         {/* ========== NOMINAL REALISASI ========== */}
         {!isNonMaterial && (
           <div className={cn(
-            'rounded-xl border bg-white p-3 transition-colors',
+            'rounded-xl border bg-[#FFFAF6] p-3 transition-colors',
             hasNominalChanged ? 'border-orange-300 bg-orange-50/20' : 'border-[#F0E1D5]'
           )}>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
@@ -864,7 +864,7 @@ export function AttachmentEditor({
         {/* Material documents: show kelengkapan from master + dokumen pendukung */}
         {/* Non-Material documents: only show empty dokumen pendukung section */}
         {!isNonMaterial && kelengkapan.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-[#F0E1D5] bg-white">
+          <div className="overflow-hidden rounded-xl border border-[#F0E1D5] bg-[#FFFAF6]">
             <div className="border-b border-[#F0E1D5] px-3.5 py-2.5">
               <h3 className="text-[13px] font-semibold text-on-surface">Kelengkapan Dokumen</h3>
               <p className="mt-0.5 text-[11px] text-on-surface-variant">
@@ -948,7 +948,7 @@ export function AttachmentEditor({
         )}
 
         {/* ========== DOKUMEN PENDUKUNG ========== */}
-        <div className="overflow-hidden rounded-xl border border-orange-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-orange-200 bg-[#FFFAF6]">
           <div className="border-b border-orange-100 px-3.5 py-2.5">
             <h3 className="text-[13px] font-semibold text-[#FF5A00]">Dokumen Pendukung</h3>
             <p className="mt-0.5 text-[11px] text-[#FF5A00]">

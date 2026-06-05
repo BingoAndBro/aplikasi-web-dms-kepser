@@ -68,7 +68,7 @@ export function ActivityLog({ dokumenId, className = '' }: ActivityLogProps) {
 
   if (loading) {
     return (
-      <div className={`bg-white rounded-xl border border-outline-variant/30 p-5 ${className}`}>
+      <div className={`bg-[#FFFDF9] rounded-xl border border-outline-variant/30 p-5 ${className}`}>
         <div className="flex items-center gap-2 mb-4">
           <Clock size={16} className="text-primary" />
           <h3 className="text-sm font-semibold text-on-surface">Riwayat Aktivitas</h3>
@@ -82,7 +82,7 @@ export function ActivityLog({ dokumenId, className = '' }: ActivityLogProps) {
 
   if (error) {
     return (
-      <div className={`bg-white rounded-xl border border-outline-variant/30 p-5 ${className}`}>
+      <div className={`bg-[#FFFDF9] rounded-xl border border-outline-variant/30 p-5 ${className}`}>
         <div className="flex items-center gap-2 mb-4">
           <Clock size={16} className="text-primary" />
           <h3 className="text-sm font-semibold text-on-surface">Riwayat Aktivitas</h3>
@@ -93,7 +93,7 @@ export function ActivityLog({ dokumenId, className = '' }: ActivityLogProps) {
   }
 
   return (
-    <div className={`bg-white rounded-xl border border-outline-variant/30 p-5 ${className}`}>
+    <div className={`bg-[#FFFDF9] rounded-xl border border-outline-variant/30 p-5 ${className}`}>
       <div className="flex items-center gap-2 mb-4">
         <Clock size={16} className="text-primary" />
         <h3 className="text-sm font-semibold text-on-surface">Riwayat Aktivitas</h3>

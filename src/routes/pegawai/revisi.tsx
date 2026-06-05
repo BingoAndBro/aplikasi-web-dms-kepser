@@ -128,7 +128,7 @@ function PegawaiRevisiPage() {
           />
         ) : (
           <>
-            <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+            <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
                 <Table className="text-left">
                   <TableHeader>
                     <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -144,7 +144,7 @@ function PegawaiRevisiPage() {
                     {paginated.map((dok, i) => (
                       <TableRow
                         key={dok.id}
-                        className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"
+                        className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
                         onClick={() => openRevision(dok)}
                         tabIndex={0}
                         onKeyDown={(event) => {

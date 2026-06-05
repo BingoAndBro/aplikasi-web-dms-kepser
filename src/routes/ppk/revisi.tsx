@@ -123,7 +123,7 @@ function PpkRevisiPage() {
                   {paginated.map((dok, i) => (
                     <TableRow
                       key={dok.id}
-                      className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"
+                      className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
                       onClick={() => openRevision(dok)}
                       tabIndex={0}
                       onKeyDown={(event) => {

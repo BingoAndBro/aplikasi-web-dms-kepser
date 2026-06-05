@@ -679,13 +679,13 @@ function AjukanDokumenPage() {
             </p>
 
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-zinc-600">
-              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
                 {submittedDocument.is_non_material ? 'Non-Material' : 'Material'}
               </span>
-              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
                 {statusLabel}
               </span>
-              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
                 {lampiranUrls.length} file lampiran
               </span>
             </div>
@@ -795,7 +795,7 @@ function AjukanDokumenPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-white p-4 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
 
           {step === 1 && (
             <div className="space-y-4">
@@ -939,7 +939,7 @@ function AjukanDokumenPage() {
                 onNext={handleNextFromDetails}
               />
 
-              <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-[#F0E1D5] bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0">
+              <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-[#F0E1D5] bg-[#FFFDF9]/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0">
                 <Button
                   type="button"
                   variant="outline"
@@ -987,7 +987,7 @@ function AjukanDokumenPage() {
         </PegawaiPanel>
 
           <aside className="min-w-0 space-y-4 xl:sticky xl:top-6">
-            <PegawaiPanel className="hidden border-[#F1E5DA] bg-white p-5 shadow-none xl:block">
+            <PegawaiPanel className="hidden border-[#F1E5DA] bg-[#FFFDF9] p-5 shadow-none xl:block">
               <p className="text-xs font-semibold text-zinc-600">
                 Progress Pengajuan
               </p>
@@ -1080,7 +1080,7 @@ function AjukanDokumenPage() {
         }
         description="Perubahan yang belum disimpan akan hilang."
         descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-white shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
+        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
         showCloseButton
         size="sm"
         footer={
@@ -1159,7 +1159,7 @@ function AjukanDokumenPage() {
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#F0E1D5] bg-white p-4">
+            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">
                 Karakteristik
               </p>
@@ -1167,7 +1167,7 @@ function AjukanDokumenPage() {
                 Dokumen {isNonMaterial ? 'Non-Material' : 'Material'}
               </p>
             </div>
-            <div className="rounded-xl border border-[#F0E1D5] bg-white p-4">
+            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">
                 Lampiran
               </p>
