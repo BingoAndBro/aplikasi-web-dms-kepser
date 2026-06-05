@@ -471,37 +471,31 @@ function PpkResubmitPage() {
   ]
 
   return (
-    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-3 sm:px-5 lg:px-6 lg:py-3">
-      <div className="mx-auto max-w-[92rem] space-y-2.5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              to="/ppk/revisi"
-              aria-label="Kembali ke daftar revisi PPK"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
-            >
-              <ChevronLeft size={17} />
-            </Link>
-            <div className="min-w-0">
-              <h1 className="font-headline text-lg font-bold tracking-tight text-zinc-950 sm:text-xl">
-                Revisi Dokumen PPK
-              </h1>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                <FileEdit size={13} className="text-zinc-500" />
-                <span className="font-medium text-zinc-800">Dokumen Perlu Revisi PPK</span>
-                <ChevronRight size={12} className="text-zinc-300" />
-                <span className="truncate">{dokumen.judul}</span>
-              </div>
+    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+      <div className="mx-auto max-w-[92rem] space-y-4">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/ppk/revisi"
+            aria-label="Kembali ke daftar revisi PPK"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
+          >
+            <ChevronLeft size={18} />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">
+              Revisi Dokumen PPK
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <FileEdit size={13} className="text-zinc-500" />
+              <span className="font-medium text-zinc-800">Dokumen Perlu Revisi PPK</span>
+              <ChevronRight size={12} className="text-zinc-300" />
+              <span className="truncate">{dokumen.judul}</span>
             </div>
           </div>
-          <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-[12px] font-bold text-rose-700">
-            <AlertCircle size={13} />
-            Perlu Revisi
-          </span>
         </div>
 
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_16rem]">
-          <div className="min-w-0">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0 px-1 py-1 sm:px-2">
             <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
               {REVISION_TABS.map(tab => {
                 const selected = activeTab === tab.key
@@ -527,26 +521,26 @@ function PpkResubmitPage() {
           </div>
         </div>
 
-        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_16rem] xl:items-start">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
           <WorkflowPanel className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none">
-            <div className="rounded-t-2xl bg-gradient-to-r from-[#F97316] to-[#FB923C] px-3 py-2.5 text-white sm:px-4">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-white/15 text-white">
+            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
                   {activeTab === 'summary' ? (
-                    <Info size={15} />
+                    <Info size={17} />
                   ) : activeTab === 'edit' ? (
-                    <FileEdit size={15} />
+                    <FileEdit size={17} />
                   ) : (
-                    <CheckCircle2 size={15} />
+                    <CheckCircle2 size={17} />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="font-headline text-sm font-bold tracking-tight text-white sm:text-base">
+                  <h2 className="font-headline text-base font-bold tracking-tight text-white sm:text-lg">
                     {REVISION_TABS.find(tab => tab.key === activeTab)?.label}
                   </h2>
-                  <p className="mt-0.5 truncate text-[10px] font-medium text-white/90 sm:text-[11px]">
+                  <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
                     {activeTab === 'summary'
-                      ? 'Catatan PPSPM, alur, dan metadata utama.'
+                      ? 'Alur dan metadata utama.'
                       : activeTab === 'edit'
                         ? 'Perbarui metadata atau lampiran.'
                         : 'Riwayat aktivitas dokumen.'}
@@ -555,31 +549,8 @@ function PpkResubmitPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-2xl border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-3 sm:p-4">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
               <section className={cn(activeTab === 'summary' ? 'block' : 'hidden', 'space-y-3')}>
-                <div className="rounded-xl border border-orange-200/70 bg-[#FFF5EC] p-2.5">
-                  <div className="flex items-start gap-3">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-white text-[#EA580C]">
-                      <AlertCircle size={14} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.11em] text-orange-950">
-                          Catatan dari PPSPM
-                        </p>
-                        <p className="text-[10px] font-semibold text-orange-800/70">
-                          {dokumen.updated_at ? formatDate(dokumen.updated_at) : 'Perlu revisi'}
-                        </p>
-                      </div>
-                      <div className="mt-1.5 rounded-xl border border-orange-100 bg-white/70 px-3 py-1.5">
-                        <p className="text-xs font-medium italic leading-relaxed text-orange-950">
-                          {dokumen.revision_notes || 'Tidak ada catatan revisi tertulis.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500">Alur Dokumen</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
@@ -708,7 +679,7 @@ function PpkResubmitPage() {
               </div>
             </WorkflowPanel>
 
-            <WorkflowPanel className="space-y-2 border-[#F1E5DA] bg-[#FFFDF9] p-2.5 shadow-none">
+            <div className="space-y-2.5 px-0.5 py-1">
               <div className="flex items-center justify-between gap-2 px-1 text-[11px]">
                 <span className="font-semibold text-zinc-500">Kelengkapan</span>
                 <span className="font-bold text-zinc-900">
@@ -718,10 +689,10 @@ function PpkResubmitPage() {
                 </span>
               </div>
               <div className={cn(
-                'flex items-center justify-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em]',
+                'flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em]',
                 attachmentDirty
                   ? 'border-amber-200 bg-amber-50 text-amber-700'
-                  : 'border-[#F0E1D5] bg-[#F7F2EC] text-zinc-500',
+                  : 'border-[#E8E2DC] bg-[#F7F2EC] text-zinc-500',
               )}>
                 {attachmentDirty ? (
                   <>
@@ -735,7 +706,7 @@ function PpkResubmitPage() {
                   </>
                 )}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <Button
                   type="button"
                   size="lg"
@@ -743,7 +714,7 @@ function PpkResubmitPage() {
                     setActiveTab('edit')
                     setSubmitRequestSignal(current => current + 1)
                   }}
-                  className="h-9 w-full gap-2 rounded-xl bg-[#FF5A00] text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]"
+                  className="h-10 w-full gap-2 rounded-xl bg-[#FF5A00] text-sm font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]"
                 >
                   <Send size={15} />
                   Ajukan Ulang
@@ -754,7 +725,7 @@ function PpkResubmitPage() {
                   variant="outline"
                   onClick={() => setReturnConfirmationOpen(true)}
                   disabled={kembalikanLoading}
-                  className="h-9 w-full gap-2 rounded-xl border-orange-200 bg-white text-xs font-bold text-[#EA580C] hover:bg-orange-50 hover:text-[#C2410C]"
+                  className="h-10 w-full gap-2 rounded-xl border-orange-300 bg-transparent text-sm font-bold text-[#EA580C] hover:bg-orange-50 hover:text-[#C2410C]"
                 >
                   {kembalikanLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowLeft size={15} />}
                   Kembalikan ke Pegawai
@@ -767,13 +738,13 @@ function PpkResubmitPage() {
                     setActiveTab('edit')
                     setCancelRequestSignal(current => current + 1)
                   }}
-                  className="h-9 w-full gap-2 rounded-xl border-rose-300 bg-white text-xs font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  className="h-10 w-full gap-2 rounded-xl border-rose-400 bg-transparent text-sm font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                 >
                   <X size={15} />
                   Batal
                 </Button>
               </div>
-            </WorkflowPanel>
+            </div>
           </aside>
         </div>
       </div>
