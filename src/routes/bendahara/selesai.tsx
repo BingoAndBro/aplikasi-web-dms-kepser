@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
@@ -6,14 +6,14 @@ import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
+  DocumentListStatusBadge,
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
   WorkflowTableShell,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
-import { ChevronRight, Eye, CheckCircle2, Banknote } from 'lucide-react'
+import { ChevronRight, CheckCircle2, Banknote } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 
@@ -23,6 +23,7 @@ type BendaharaSelesaiResponse = { dokumen?: Item[]; error?: string }
 export const Route = createFileRoute('/bendahara/selesai')({ component: BendaharaSelesaiPage })
 
 function BendaharaSelesaiPage() {
+  const navigate = useNavigate()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -37,6 +38,10 @@ function BendaharaSelesaiPage() {
         setLoading(false)
       })
   }, [])
+
+  function openDocument(dok: Item) {
+    navigate({ to: '/bendahara/dokumen/$id', params: { id: dok.id } })
+  }
 
   return (
     <PageLayout>
@@ -74,7 +79,6 @@ function BendaharaSelesaiPage() {
                     <TableHead>Judul</TableHead>
                     <TableHead>Fungsi</TableHead>
                     <TableHead>Kegiatan</TableHead>
-                    <TableHead className="text-center">Tahun</TableHead>
                     <TableHead className="text-center">Tanggal Selesai</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center w-20">Aksi</TableHead>
@@ -82,16 +86,27 @@ function BendaharaSelesaiPage() {
                 </TableHeader>
                 <TableBody>
                   {items.map((d, i) => (
-                    <TableRow key={d.id} className="group hover:bg-orange-50/60 transition-colors">
+                    <TableRow
+                      key={d.id}
+                      className="group cursor-pointer hover:bg-orange-50/60 transition-colors"
+                      onClick={() => openDocument(d)}
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          openDocument(d)
+                        }
+                      }}
+                      aria-label={`Buka dokumen ${d.judul}`}
+                    >
                       <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                       <TableCell><p className="font-semibold text-sm text-on-surface line-clamp-1">{d.judul}</p></TableCell>
                       <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '-'}</span></TableCell>
                       <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '-'}</span></TableCell>
-                      <TableCell className="text-center"><span className="text-xs font-semibold text-on-surface">{d.tahun}</span></TableCell>
                       <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.updated_at)}</span></TableCell>
-                      <TableCell className="text-center"><StatusBadge status="COMPLETED" className="text-[10px] font-semibold" /></TableCell>
+                      <TableCell className="text-center"><DocumentListStatusBadge status="COMPLETED" /></TableCell>
                       <TableCell className="text-center">
-                        <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}><Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button></Link>
+                        <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen ${d.judul}`}><ChevronRight size={14} /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -105,17 +120,16 @@ function BendaharaSelesaiPage() {
                   key={d.id}
                   title={d.judul}
                   subtitle={d.fungsi_nama ?? '-'}
-                  status={<StatusBadge status="COMPLETED" className="text-[10px] font-semibold" />}
+                  status={<DocumentListStatusBadge status="COMPLETED" />}
                   meta={[
-                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-' },
-                    { label: 'Tahun', value: d.tahun },
+                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-', wide: true },
                     { label: 'Tanggal Selesai', value: formatDate(d.updated_at) },
                   ]}
                   action={
                     <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>
                       <Button variant="outline" size="sm" className="w-full gap-1.5">
-                        <Eye size={14} />
-                        Lihat Detail
+                        <ChevronRight size={14} />
+                        Buka Dokumen
                       </Button>
                     </Link>
                   }

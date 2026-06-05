@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
@@ -7,12 +7,13 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import {
+  DocumentListStatusBadge,
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
   WorkflowTableShell,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
-import { FileText, ChevronRight, Eye, FileX } from 'lucide-react'
+import { FileText, ChevronRight, FileX } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { formatDate } from '#/lib/utils/format'
 
@@ -29,7 +30,12 @@ function truncate(str: string | null, len = 50): string {
   return str.length > len ? str.slice(0, len) + '...' : str
 }
 
+function RejectedBadge() {
+  return <DocumentListStatusBadge status="NEED_REVISION" label="Ditolak PPK" />
+}
+
 function PpkDitolakPage() {
+  const navigate = useNavigate()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -44,6 +50,10 @@ function PpkDitolakPage() {
         setLoading(false)
       })
   }, [])
+
+  function openDocument(dok: Item) {
+    navigate({ to: '/ppk/dokumen/$id', params: { id: dok.id } })
+  }
 
   return (
     <PageLayout>
@@ -81,26 +91,36 @@ function PpkDitolakPage() {
                     <TableHead>Judul</TableHead>
                     <TableHead>Fungsi</TableHead>
                     <TableHead>Kegiatan</TableHead>
-                    <TableHead className="text-center">Tahun</TableHead>
                     <TableHead className="text-center">Tanggal Penolakan</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
                     <TableHead>Catatan</TableHead>
                     <TableHead className="text-center w-20">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map((d, i) => (
-                    <TableRow key={d.id} className="group hover:bg-orange-50/60 transition-colors">
+                    <TableRow
+                      key={d.id}
+                      className="group cursor-pointer hover:bg-orange-50/60 transition-colors"
+                      onClick={() => openDocument(d)}
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          openDocument(d)
+                        }
+                      }}
+                      aria-label={`Buka dokumen ${d.judul}`}
+                    >
                       <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                       <TableCell><p className="font-semibold text-sm text-on-surface line-clamp-1">{d.judul}</p></TableCell>
                       <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '-'}</span></TableCell>
                       <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '-'}</span></TableCell>
-                      <TableCell className="text-center"><span className="text-xs font-semibold text-on-surface">{d.tahun}</span></TableCell>
                       <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.updated_at)}</span></TableCell>
+                      <TableCell className="text-center"><RejectedBadge /></TableCell>
                       <TableCell><span className="text-xs text-on-surface-variant" title={d.revision_notes ?? undefined}>{truncate(d.revision_notes)}</span></TableCell>
                       <TableCell className="text-center">
-                        <Link to="/ppk/dokumen/$id" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button>
-                        </Link>
+                        <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen ${d.judul}`}><ChevronRight size={14} /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -114,17 +134,17 @@ function PpkDitolakPage() {
                   key={d.id}
                   title={d.judul}
                   subtitle={d.fungsi_nama ?? '-'}
+                  status={<RejectedBadge />}
                   meta={[
-                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-' },
-                    { label: 'Tahun', value: d.tahun },
+                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-', wide: true },
                     { label: 'Tanggal Penolakan', value: formatDate(d.updated_at) },
-                    { label: 'Catatan', value: truncate(d.revision_notes, 80) },
+                    { label: 'Catatan', value: truncate(d.revision_notes, 80), wide: true },
                   ]}
                   action={
                     <Link to="/ppk/dokumen/$id" params={{ id: d.id }}>
                       <Button variant="outline" size="sm" className="w-full gap-1.5">
-                        <Eye size={14} />
-                        Lihat Detail
+                        <ChevronRight size={14} />
+                        Buka Dokumen
                       </Button>
                     </Link>
                   }

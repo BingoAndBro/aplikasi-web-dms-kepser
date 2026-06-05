@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
@@ -12,11 +12,10 @@ import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
+import { DocumentListStatusBadge } from '#/components/workflow/PpkPpspmPagePrimitives'
 import {
   FileText,
   ChevronRight,
-  FileEdit,
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -41,19 +40,10 @@ export const Route = createFileRoute('/pegawai/revisi')({
   component: PegawaiRevisiPage,
 })
 
-function StepBadge({ step }: { step: string | null }) {
-  if (!step) return null
-  const label = step === 'PPK' ? 'Step 1: PPK' : 'Step 2: PPSPM'
-  return (
-    <span className="rounded-full border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
-      {label}
-    </span>
-  )
-}
-
 const PAGE_SIZE = 10
 
 function PegawaiRevisiPage() {
+  const navigate = useNavigate()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +78,10 @@ function PegawaiRevisiPage() {
   })
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  function openRevision(dok: Item) {
+    navigate({ to: '/pegawai/dokumen/$id/revisi', params: { id: dok.id } })
+  }
 
   return (
     <PageLayout>
@@ -134,7 +128,6 @@ function PegawaiRevisiPage() {
                       <TableHead className="w-12 text-center">No</TableHead>
                       <TableHead>Judul</TableHead>
                       <TableHead>Kegiatan</TableHead>
-                      <TableHead className="text-center">Tahun</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center">Tanggal</TableHead>
                       <TableHead className="text-center w-20">Aksi</TableHead>
@@ -142,7 +135,19 @@ function PegawaiRevisiPage() {
                   </TableHeader>
                   <TableBody>
                     {paginated.map((dok, i) => (
-                      <TableRow key={dok.id} className="group hover:bg-orange-50/50 transition-colors">
+                      <TableRow
+                        key={dok.id}
+                        className="group cursor-pointer hover:bg-orange-50/50 transition-colors"
+                        onClick={() => openRevision(dok)}
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            openRevision(dok)
+                          }
+                        }}
+                        aria-label={`Buka dokumen revisi ${dok.judul}`}
+                      >
                         <TableCell className="text-center text-xs text-outline">
                           {page * PAGE_SIZE + i + 1}
                         </TableCell>
@@ -156,19 +161,15 @@ function PegawaiRevisiPage() {
                           <span className="text-xs text-on-surface">{dok.kegiatan_nama ?? '-'}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <span className="text-xs font-semibold text-on-surface">{dok.tahun}</span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <StatusBadge status={dok.status} className="text-[10px] font-semibold" />
-                            <StepBadge step={dok.current_step} />
-                          </div>
+                          <DocumentListStatusBadge status={dok.status} />
                         </TableCell>
                         <TableCell className="text-center">
                           <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <RevisionActionLink dok={dok} />
+                          <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen revisi ${dok.judul}`}>
+                            <ChevronRight size={14} />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -187,28 +188,27 @@ function PegawaiRevisiPage() {
                       </p>
                       <h2 className="mt-1 line-clamp-2 text-sm font-bold text-zinc-950">{dok.judul}</h2>
                     </div>
-                    <StatusBadge status={dok.status} className="shrink-0 text-[10px] font-semibold" />
+                    <DocumentListStatusBadge status={dok.status} className="shrink-0" />
                   </div>
                   <div className="space-y-2 rounded-xl bg-orange-50/50 p-3 text-xs text-zinc-700">
                     <p className="font-semibold text-zinc-950">Catatan revisi</p>
                     <p className="line-clamp-3">{dok.revision_notes ?? 'Tidak ada catatan tambahan.'}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
-                    <div>
+                    <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
                       <p className="font-semibold text-zinc-500">Fungsi</p>
                       <p className="mt-0.5 text-zinc-900">{dok.fungsi_nama ?? '-'}</p>
                     </div>
-                    <div>
+                    <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
                       <p className="font-semibold text-zinc-500">Tanggal</p>
                       <p className="mt-0.5 text-zinc-900">{formatDate(dok.tanggal)}</p>
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-2 rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
                       <p className="font-semibold text-zinc-500">Kegiatan</p>
                       <p className="mt-0.5 text-zinc-900">{dok.kegiatan_nama ?? '-'}</p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-orange-100 pt-3">
-                    <StepBadge step={dok.current_step} />
+                  <div className="space-y-3 border-t border-orange-100 pt-3">
                     <RevisionActionLink dok={dok} mobile />
                   </div>
                 </PegawaiPanel>
@@ -230,15 +230,15 @@ function PegawaiRevisiPage() {
 
 function RevisionActionLink({ dok, mobile = false }: { dok: Item; mobile?: boolean }) {
   return (
-    <Link to="/pegawai/dokumen/$id/revisi" params={{ id: dok.id }}>
+    <Link to="/pegawai/dokumen/$id/revisi" params={{ id: dok.id }} className={mobile ? 'block w-full' : undefined}>
       <Button
         size={mobile ? 'sm' : 'icon-xs'}
         variant={mobile ? 'default' : 'ghost'}
-        className={mobile ? 'gap-1.5' : undefined}
+        className={mobile ? 'w-full gap-1.5' : undefined}
         aria-label={`Revisi dokumen ${dok.judul}`}
       >
-        <FileEdit size={14} className={mobile ? undefined : 'text-amber-500'} />
-        {mobile ? 'Perbaiki' : null}
+        <ChevronRight size={14} />
+        {mobile ? 'Buka Dokumen' : null}
       </Button>
     </Link>
   )

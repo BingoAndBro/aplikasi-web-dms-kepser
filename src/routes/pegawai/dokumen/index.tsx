@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { PageLayout } from '#/components/dashboard/PageLayout'
@@ -20,13 +20,11 @@ import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
+import { DocumentListStatusBadge } from '#/components/workflow/PpkPpspmPagePrimitives'
 import {
   Plus,
   FileText,
   ChevronRight,
-  Eye,
-  FileEdit,
 } from 'lucide-react'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
@@ -39,16 +37,6 @@ export const Route = createFileRoute('/pegawai/dokumen/')({
   component: DokumenSayaPage,
 })
 
-function StepBadge({ step }: { step: string | null }) {
-  if (!step) return null
-  const label = step === 'PPK' ? 'Step 1: PPK' : 'Step 2: PPSPM'
-  return (
-    <span className="rounded-full border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
-      {label}
-    </span>
-  )
-}
-
 const PAGE_SIZE = 10
 
 type AuthSessionResponse = {
@@ -58,6 +46,7 @@ type AuthSessionResponse = {
 }
 
 function DokumenSayaPage() {
+  const navigate = useNavigate()
   const { status: statusParam } = Route.useSearch()
   const [items, setItems] = useState<DokumenRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,6 +102,19 @@ function DokumenSayaPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
+  function getDocumentHref(dok: DokumenRow) {
+    const isRevision = dok.status === 'NEED_REVISION' && dok.revision_target === 'USER'
+    return {
+      to: isRevision ? '/pegawai/dokumen/$id/revisi' as const : '/pegawai/dokumen/$id' as const,
+      params: { id: dok.id },
+    }
+  }
+
+  function openDocument(dok: DokumenRow) {
+    const target = getDocumentHref(dok)
+    navigate(target)
+  }
+
   return (
     <PageLayout>
       <div className="space-y-6">
@@ -122,11 +124,11 @@ function DokumenSayaPage() {
               <FileText size={12} />
               <span>Dokumen</span>
               <ChevronRight size={10} />
-              <span>Dokumen Saya</span>
+              <span>Dokumen Diajukan</span>
             </>
           }
-          title="Dokumen Saya"
-          description="Pantau dokumen Material dan Non-Material yang Anda ajukan, termasuk status validasi PPK, persetujuan PPSPM, revisi, dan dokumen yang sudah selesai."
+          title="Dokumen Diajukan"
+          description="Pantau status dan progres persetujuan dokumen yang Anda ajukan, termasuk validasi PPK, persetujuan PPSPM, revisi, dan dokumen yang sudah selesai."
           actions={
             <Link to="/pegawai/dokumen/aju">
               <Button size="sm" className="gap-1.5">
@@ -141,7 +143,7 @@ function DokumenSayaPage() {
           search={search}
           onSearchChange={(value) => { setSearch(value); setPage(0) }}
           placeholder="Cari judul, fungsi, kegiatan..."
-          resultLabel={`${filtered.length} dari ${items.length} dokumen`}
+          resultLabel={`${filtered.length} dari ${items.length} dokumen ditemukan`}
         >
           <select
             value={statusFilter}
@@ -194,7 +196,6 @@ function DokumenSayaPage() {
                       <TableHead className="w-12 text-center">No</TableHead>
                       <TableHead>Judul</TableHead>
                       <TableHead>Kegiatan</TableHead>
-                      <TableHead className="text-center">Tahun</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center">Tanggal</TableHead>
                       <TableHead className="text-center w-20">Aksi</TableHead>
@@ -202,7 +203,19 @@ function DokumenSayaPage() {
                   </TableHeader>
                   <TableBody>
                     {paginated.map((dok, i) => (
-                      <TableRow key={dok.id} className="group hover:bg-orange-50/50 transition-colors">
+                      <TableRow
+                        key={dok.id}
+                        className="group cursor-pointer hover:bg-orange-50/50 transition-colors"
+                        onClick={() => openDocument(dok)}
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            openDocument(dok)
+                          }
+                        }}
+                        aria-label={`Buka dokumen ${dok.judul}`}
+                      >
                         <TableCell className="text-center text-xs text-outline">
                           {page * PAGE_SIZE + i + 1}
                         </TableCell>
@@ -216,19 +229,15 @@ function DokumenSayaPage() {
                           <span className="text-xs text-on-surface">{dok.kegiatan_nama ?? '-'}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <span className="text-xs font-semibold text-on-surface">{dok.tahun}</span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <StatusBadge status={dok.status} className="text-[10px] font-semibold" />
-                            <StepBadge step={dok.current_step} />
-                          </div>
+                          <DocumentListStatusBadge status={dok.status} />
                         </TableCell>
                         <TableCell className="text-center">
                           <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <DocumentActionLink dok={dok} />
+                          <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen ${dok.judul}`}>
+                            <ChevronRight size={14} />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -239,7 +248,6 @@ function DokumenSayaPage() {
 
             <div className="space-y-3 md:hidden">
               {paginated.map((dok, i) => {
-                const isRevision = dok.status === 'NEED_REVISION' && dok.revision_target === 'USER'
                 return (
                   <PegawaiPanel key={dok.id} className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
@@ -249,27 +257,23 @@ function DokumenSayaPage() {
                         </p>
                         <h2 className="mt-1 line-clamp-2 text-sm font-bold text-zinc-950">{dok.judul}</h2>
                       </div>
-                      <StatusBadge status={dok.status} className="shrink-0 text-[10px] font-semibold" />
+                      <DocumentListStatusBadge status={dok.status} className="shrink-0" />
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
-                      <div>
+                      <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
                         <p className="font-semibold text-zinc-500">Fungsi</p>
                         <p className="mt-0.5 text-zinc-900">{dok.fungsi_nama ?? '-'}</p>
                       </div>
-                      <div>
-                        <p className="font-semibold text-zinc-500">Tahun</p>
-                        <p className="mt-0.5 text-zinc-900">{dok.tahun}</p>
+                      <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
+                        <p className="font-semibold text-zinc-500">Tanggal</p>
+                        <p className="mt-0.5 text-zinc-900">{formatDate(dok.tanggal)}</p>
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-2 rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
                         <p className="font-semibold text-zinc-500">Kegiatan</p>
                         <p className="mt-0.5 text-zinc-900">{dok.kegiatan_nama ?? '-'}</p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3 border-t border-orange-100 pt-3">
-                      <div className="space-y-1">
-                        <p className="text-xs text-zinc-500">{formatDate(dok.tanggal)}</p>
-                        <StepBadge step={dok.current_step} />
-                      </div>
+                    <div className="space-y-3 border-t border-orange-100 pt-3">
                       <DocumentActionLink dok={dok} mobile />
                     </div>
                   </PegawaiPanel>
@@ -296,19 +300,16 @@ function DocumentActionLink({ dok, mobile = false }: { dok: DokumenRow; mobile?:
     <Link
       to={isRevision ? '/pegawai/dokumen/$id/revisi' : '/pegawai/dokumen/$id'}
       params={{ id: dok.id }}
+      className={mobile ? 'block w-full' : undefined}
     >
       <Button
         size={mobile ? 'sm' : 'icon-xs'}
         variant={mobile && isRevision ? 'default' : mobile ? 'outline' : 'ghost'}
-        className={mobile ? 'gap-1.5' : undefined}
+        className={mobile ? 'w-full gap-1.5' : undefined}
         aria-label={isRevision ? `Revisi dokumen ${dok.judul}` : `Lihat detail dokumen ${dok.judul}`}
       >
-        {isRevision ? (
-          <FileEdit size={14} className={mobile ? undefined : 'text-amber-500'} />
-        ) : (
-          <Eye size={14} />
-        )}
-        {mobile ? (isRevision ? 'Revisi' : 'Detail') : null}
+        <ChevronRight size={14} />
+        {mobile ? 'Buka Dokumen' : null}
       </Button>
     </Link>
   )

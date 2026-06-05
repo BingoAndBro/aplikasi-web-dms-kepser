@@ -1,12 +1,13 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'
 import {
+  DocumentListStatusBadge,
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
@@ -14,7 +15,7 @@ import {
   WorkflowTableShell,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
 import {
-  FileText, ChevronRight, Eye, Banknote,
+  FileText, ChevronRight, Banknote,
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -30,6 +31,7 @@ type InboxItem = {
 type FungsiOption = { id: string; nama: string }
 
 function BendaharaInboxPage() {
+  const navigate = useNavigate()
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -63,6 +65,10 @@ function BendaharaInboxPage() {
   }
 
   useEffect(() => { fetchData() }, [fungsiFilter])
+
+  function openDocument(dok: InboxItem) {
+    navigate({ to: '/bendahara/dokumen/$id', params: { id: dok.id } })
+  }
 
   return (
     <PageLayout>
@@ -111,42 +117,50 @@ function BendaharaInboxPage() {
         ) : (
           <>
             <WorkflowTableShell>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-orange-50/50 text-left">
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Judul</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Fungsi</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kegiatan</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tahun</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Divalidasi Oleh</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Validasi</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Status</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-20">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-orange-50/50">
+                    <TableHead className="w-12 text-center">No</TableHead>
+                    <TableHead>Judul</TableHead>
+                    <TableHead>Fungsi</TableHead>
+                    <TableHead>Kegiatan</TableHead>
+                    <TableHead className="text-center">Tanggal</TableHead>
+                    <TableHead className="text-center">Divalidasi Oleh</TableHead>
+                    <TableHead className="text-center">Tanggal Validasi</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center w-20">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {items.map((d, i) => (
-                    <tr key={d.id} className="border-t border-outline-variant/20 hover:bg-orange-50/60 transition-colors">
-                      <td className="px-4 py-3 text-center text-outline">{i + 1}</td>
-                      <td className="px-4 py-3"><p className="font-semibold text-on-surface line-clamp-1">{d.judul}</p></td>
-                      <td className="px-4 py-3 text-on-surface">{d.fungsi_nama ?? '-'}</td>
-                      <td className="px-4 py-3 text-on-surface">{d.kegiatan_nama ?? '-'}</td>
-                      <td className="px-4 py-3 text-center font-semibold text-on-surface">{d.tahun}</td>
-                      <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(d.tanggal)}</td>
-                      <td className="px-4 py-3 text-center text-on-surface-variant">{d.ppk_validated_at ? 'PPK' : '-'}</td>
-                      <td className="px-4 py-3 text-center text-on-surface-variant">{d.ppk_validated_at ? formatDate(d.ppk_validated_at) : '-'}</td>
-                      <td className="px-4 py-3 text-center"><StatusBadge status="IN_BENDAHARA_APPROVAL" className="text-[10px] font-semibold" /></td>
-                      <td className="px-4 py-3 text-center">
-                        <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button>
-                        </Link>
-                      </td>
-                    </tr>
+                    <TableRow
+                      key={d.id}
+                      className="group cursor-pointer hover:bg-orange-50/60 transition-colors"
+                      onClick={() => openDocument(d)}
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          openDocument(d)
+                        }
+                      }}
+                      aria-label={`Buka dokumen ${d.judul}`}
+                    >
+                      <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
+                      <TableCell><p className="font-semibold text-sm text-on-surface line-clamp-1">{d.judul}</p></TableCell>
+                      <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '-'}</span></TableCell>
+                      <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '-'}</span></TableCell>
+                      <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.tanggal)}</span></TableCell>
+                      <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{d.ppk_validated_at ? 'PPK' : '-'}</span></TableCell>
+                      <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{d.ppk_validated_at ? formatDate(d.ppk_validated_at) : '-'}</span></TableCell>
+                      <TableCell className="text-center"><DocumentListStatusBadge status="IN_BENDAHARA_APPROVAL" /></TableCell>
+                      <TableCell className="text-center">
+                        <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen ${d.judul}`}><ChevronRight size={14} /></Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </WorkflowTableShell>
 
             <WorkflowMobileList>
@@ -155,18 +169,17 @@ function BendaharaInboxPage() {
                   key={d.id}
                   title={d.judul}
                   subtitle={d.fungsi_nama ?? '-'}
-                  status={<StatusBadge status="IN_BENDAHARA_APPROVAL" className="text-[10px] font-semibold" />}
+                  status={<DocumentListStatusBadge status="IN_BENDAHARA_APPROVAL" />}
                   meta={[
-                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-' },
-                    { label: 'Tahun', value: d.tahun },
+                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-', wide: true },
                     { label: 'Tanggal', value: formatDate(d.tanggal) },
                     { label: 'Tanggal Validasi PPK', value: d.ppk_validated_at ? formatDate(d.ppk_validated_at) : '-' },
                   ]}
                   action={
                     <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>
                       <Button variant="outline" size="sm" className="w-full gap-1.5">
-                        <Eye size={14} />
-                        Lihat Detail
+                        <ChevronRight size={14} />
+                        Buka Dokumen
                       </Button>
                     </Link>
                   }

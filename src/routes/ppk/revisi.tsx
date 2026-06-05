@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
@@ -6,8 +6,8 @@ import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
+  DocumentListStatusBadge,
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
@@ -18,7 +18,6 @@ import {
 import {
   FileText,
   ChevronRight,
-  FileEdit,
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -31,19 +30,10 @@ type Item = {
 
 export const Route = createFileRoute('/ppk/revisi')({ component: PpkRevisiPage })
 
-function StepBadge({ step }: { step: string | null }) {
-  if (!step) return null
-  const label = step === 'PPK' ? 'Step PPK' : 'Step PPSPM'
-  return (
-    <span className="rounded-full border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
-      {label}
-    </span>
-  )
-}
-
 const PAGE_SIZE = 10
 
 function PpkRevisiPage() {
+  const navigate = useNavigate()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -77,6 +67,10 @@ function PpkRevisiPage() {
   })
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  function openRevision(dok: Item) {
+    navigate({ to: '/ppk/dokumen/$id/resubmit', params: { id: dok.id } })
+  }
 
   return (
     <PageLayout>
@@ -120,7 +114,6 @@ function PpkRevisiPage() {
                     <TableHead className="w-12 text-center">No</TableHead>
                     <TableHead>Judul</TableHead>
                     <TableHead>Kegiatan</TableHead>
-                    <TableHead className="text-center">Tahun</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-center">Tanggal</TableHead>
                     <TableHead className="text-center w-20">Aksi</TableHead>
@@ -128,7 +121,19 @@ function PpkRevisiPage() {
                 </TableHeader>
                 <TableBody>
                   {paginated.map((dok, i) => (
-                    <TableRow key={dok.id} className="group hover:bg-orange-50/60 transition-colors">
+                    <TableRow
+                      key={dok.id}
+                      className="group cursor-pointer hover:bg-orange-50/60 transition-colors"
+                      onClick={() => openRevision(dok)}
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          openRevision(dok)
+                        }
+                      }}
+                      aria-label={`Buka dokumen revisi ${dok.judul}`}
+                    >
                       <TableCell className="text-center text-xs text-outline">
                         {page * PAGE_SIZE + i + 1}
                       </TableCell>
@@ -139,25 +144,19 @@ function PpkRevisiPage() {
                         </div>
                       </TableCell>
                       <TableCell><span className="text-xs text-on-surface">{dok.kegiatan_nama ?? '-'}</span></TableCell>
-                      <TableCell className="text-center"><span className="text-xs font-semibold text-on-surface">{dok.tahun}</span></TableCell>
                       <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <StatusBadge status={dok.status ?? 'NEED_REVISION'} className="text-[10px] font-semibold" />
-                          <StepBadge step={dok.current_step ?? 'PPK'} />
-                        </div>
+                        <DocumentListStatusBadge status={dok.status ?? 'NEED_REVISION'} />
                       </TableCell>
                       <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span></TableCell>
                       <TableCell className="text-center">
-                        <Link to="/ppk/dokumen/$id/resubmit" params={{ id: dok.id }}>
-                          <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            aria-label={`Revisi dokumen ${dok.judul}`}
-                            title={dok.revision_notes ?? undefined}
-                          >
-                            <FileEdit size={14} className="text-amber-600" />
-                          </Button>
-                        </Link>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          aria-label={`Buka dokumen revisi ${dok.judul}`}
+                          title={dok.revision_notes ?? undefined}
+                        >
+                          <ChevronRight size={14} />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -171,19 +170,17 @@ function PpkRevisiPage() {
                   key={dok.id}
                   title={dok.judul}
                   subtitle={dok.fungsi_nama ?? '-'}
-                  status={<StatusBadge status={dok.status ?? 'NEED_REVISION'} className="text-[10px] font-semibold" />}
+                  status={<DocumentListStatusBadge status={dok.status ?? 'NEED_REVISION'} />}
                   meta={[
-                    { label: 'Kegiatan', value: dok.kegiatan_nama ?? '-' },
-                    { label: 'Step', value: dok.current_step === 'BENDAHARA' ? 'PPSPM' : dok.current_step ?? 'PPK' },
-                    { label: 'Tahun', value: dok.tahun },
+                    { label: 'Kegiatan', value: dok.kegiatan_nama ?? '-', wide: true },
                     { label: 'Tanggal', value: formatDate(dok.tanggal) },
-                    { label: 'Catatan', value: dok.revision_notes ?? '-' },
+                    { label: 'Catatan', value: dok.revision_notes ?? '-', wide: true },
                   ]}
                   action={
                     <Link to="/ppk/dokumen/$id/resubmit" params={{ id: dok.id }}>
                       <Button variant="outline" size="sm" className="w-full gap-1.5">
-                        <FileEdit size={14} />
-                        Perbaiki Dokumen
+                        <ChevronRight size={14} />
+                        Buka Dokumen
                       </Button>
                     </Link>
                   }

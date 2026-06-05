@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
@@ -13,8 +13,8 @@ import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
+  DocumentListStatusBadge,
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
@@ -25,7 +25,6 @@ import {
 import {
   FileText,
   ChevronRight,
-  Eye,
   ClipboardList,
 } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -62,6 +61,7 @@ const PAGE_SIZE = 10
 
 
 function PpkInboxPage() {
+  const navigate = useNavigate()
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -119,6 +119,10 @@ function PpkInboxPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  function openDocument(dok: InboxItem) {
+    navigate({ to: '/ppk/dokumen/$id', params: { id: dok.id } })
+  }
 
   return (
     <PageLayout>
@@ -211,7 +215,6 @@ function PpkInboxPage() {
                       <TableHead>Judul</TableHead>
                       <TableHead>Fungsi</TableHead>
                       <TableHead>Kegiatan</TableHead>
-                      <TableHead className="text-center">Tahun</TableHead>
                       <TableHead className="text-center">Tanggal Ajuan</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center w-20">Aksi</TableHead>
@@ -219,7 +222,19 @@ function PpkInboxPage() {
                   </TableHeader>
                   <TableBody>
                     {paginated.map((dok, i) => (
-                      <TableRow key={dok.id} className="group hover:bg-primary/5 transition-colors">
+                      <TableRow
+                        key={dok.id}
+                        className="group cursor-pointer hover:bg-orange-50/60 transition-colors"
+                        onClick={() => openDocument(dok)}
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            openDocument(dok)
+                          }
+                        }}
+                        aria-label={`Buka dokumen ${dok.judul}`}
+                      >
                         <TableCell className="text-center text-xs text-outline">
                           {page * PAGE_SIZE + i + 1}
                         </TableCell>
@@ -238,20 +253,15 @@ function PpkInboxPage() {
                           <span className="text-xs text-on-surface">{dok.kegiatan_nama ?? '—'}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <span className="text-xs font-semibold text-on-surface">{dok.tahun}</span>
-                        </TableCell>
-                        <TableCell className="text-center">
                           <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <StatusBadge status="IN_PPK_VALIDATION" className="text-[10px] font-semibold" />
+                          <DocumentListStatusBadge status="IN_PPK_VALIDATION" />
                         </TableCell>
                         <TableCell className="text-center">
-                          <Link to="/ppk/dokumen/$id" params={{ id: dok.id }}>
-                            <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${dok.judul}`}>
-                              <Eye size={14} />
-                            </Button>
-                          </Link>
+                          <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen ${dok.judul}`}>
+                            <ChevronRight size={14} />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -265,18 +275,17 @@ function PpkInboxPage() {
                   key={dok.id}
                   title={dok.judul}
                   subtitle={`Diajukan ${formatDate(dok.created_at)}`}
-                  status={<StatusBadge status="IN_PPK_VALIDATION" className="text-[10px] font-semibold" />}
+                  status={<DocumentListStatusBadge status="IN_PPK_VALIDATION" />}
                   meta={[
                     { label: 'Fungsi', value: dok.fungsi_nama ?? '-' },
-                    { label: 'Kegiatan', value: dok.kegiatan_nama ?? '-' },
-                    { label: 'Tahun', value: dok.tahun },
+                    { label: 'Kegiatan', value: dok.kegiatan_nama ?? '-', wide: true },
                     { label: 'Tanggal Ajuan', value: formatDate(dok.tanggal) },
                   ]}
                   action={
                     <Link to="/ppk/dokumen/$id" params={{ id: dok.id }}>
                       <Button variant="outline" size="sm" className="w-full gap-1.5">
-                        <Eye size={14} />
-                        Lihat Detail
+                        <ChevronRight size={14} />
+                        Buka Dokumen
                       </Button>
                     </Link>
                   }

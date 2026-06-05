@@ -7,8 +7,8 @@ import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 type WorkflowRoleTone = 'ppk' | 'ppspm'
 
 const toneClassName: Record<WorkflowRoleTone, string> = {
-  ppk: 'from-amber-50 via-[#FFF8F1] to-white border-orange-100 text-orange-800',
-  ppspm: 'from-orange-50 via-[#FFF8F1] to-white border-orange-100 text-orange-800',
+  ppk: 'border-orange-100 bg-[#FFF8F1] text-orange-800',
+  ppspm: 'border-orange-100 bg-[#FFF8F1] text-orange-800',
 }
 
 type WorkflowPageHeaderProps = {
@@ -31,7 +31,7 @@ export function WorkflowPageHeader({
   return (
     <div
       className={cn(
-        'rounded-3xl border bg-gradient-to-br p-5 shadow-sm sm:p-6',
+        'rounded-3xl border p-5 shadow-sm sm:p-6',
         toneClassName[tone],
         className,
       )}
@@ -126,7 +126,7 @@ export function WorkflowTableShell({ children, className }: WorkflowPanelProps) 
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm md:block',
+        'hidden overflow-hidden rounded-2xl border border-orange-100/80 bg-white shadow-sm md:block',
         className,
       )}
     >
@@ -152,7 +152,7 @@ type WorkflowMobileCardProps = {
   title: ReactNode
   subtitle?: ReactNode
   status?: ReactNode
-  meta?: Array<{ label: ReactNode; value: ReactNode }>
+  meta?: Array<{ label: ReactNode; value: ReactNode; wide?: boolean }>
   action?: ReactNode
 }
 
@@ -164,7 +164,7 @@ export function WorkflowMobileCard({
   action,
 }: WorkflowMobileCardProps) {
   return (
-    <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-orange-100/80 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-bold text-zinc-950">{title}</h3>
@@ -173,17 +173,71 @@ export function WorkflowMobileCard({
         {status && <div className="shrink-0">{status}</div>}
       </div>
       {meta.length > 0 && (
-        <div className="mt-4 grid gap-2 text-xs text-zinc-600">
+        <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-zinc-600">
           {meta.map((item, index) => (
-            <div key={index} className="flex items-start justify-between gap-3">
-              <span className="font-semibold text-zinc-500">{item.label}</span>
-              <span className="text-right font-medium text-zinc-800">{item.value}</span>
+            <div
+              key={index}
+              className={cn(
+                'min-w-0 rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5',
+                item.wide && 'col-span-2',
+              )}
+            >
+              <p className="font-semibold text-zinc-500">{item.label}</p>
+              <div className="mt-0.5 break-words font-medium text-zinc-900">{item.value}</div>
             </div>
           ))}
         </div>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-4 border-t border-orange-100 pt-3">{action}</div>}
     </div>
+  )
+}
+
+const documentListStatusClassName: Record<string, string> = {
+  DRAFT: 'border-slate-200 bg-slate-50 text-slate-700',
+  IN_PPK_VALIDATION: 'border-amber-200 bg-amber-50 text-amber-700',
+  IN_BENDAHARA_APPROVAL: 'border-sky-200 bg-sky-50 text-sky-700',
+  NEED_REVISION: 'border-rose-200 bg-rose-50 text-rose-700',
+  COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  TERSIMPAN: 'border-slate-200 bg-slate-50 text-slate-700',
+  ARCHIVED: 'border-slate-200 bg-slate-50 text-slate-700',
+}
+
+const documentListStatusLabel: Record<string, string> = {
+  DRAFT: 'Draft',
+  IN_PPK_VALIDATION: 'Validasi PPK',
+  IN_BENDAHARA_APPROVAL: 'Menunggu Persetujuan',
+  NEED_REVISION: 'Perlu Revisi',
+  COMPLETED: 'Selesai',
+  TERSIMPAN: 'Tersimpan',
+  ARCHIVED: 'Diarsipkan',
+}
+
+type DocumentListStatusBadgeProps = {
+  status: string | null | undefined
+  label?: ReactNode
+  className?: string
+}
+
+export function DocumentListStatusBadge({
+  status,
+  label,
+  className,
+}: DocumentListStatusBadgeProps) {
+  const key = status ?? ''
+  const resolvedLabel = label ?? documentListStatusLabel[key] ?? 'Status'
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase text-nowrap',
+        documentListStatusClassName[key] ?? 'border-slate-200 bg-slate-50 text-slate-700',
+        className,
+      )}
+      title={typeof resolvedLabel === 'string' ? resolvedLabel : undefined}
+    >
+      {resolvedLabel}
+    </span>
   )
 }
 
