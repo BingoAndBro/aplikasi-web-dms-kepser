@@ -1,19 +1,19 @@
 import { createFileRoute, Link, useBlocker, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import { Button } from '#/components/ui/button'
 import { AppDialog } from '#/components/ui/AppDialog'
 import { useAppToast } from '#/components/ui/AppToast'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowLeft,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   FileEdit,
   Info,
@@ -453,38 +453,38 @@ function DokumenRevisiPage() {
   ]
 
   return (
-    <PageLayout>
+    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
-        <div className="border-b border-[#F0E1D5] bg-transparent px-1 pb-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              to="/pegawai/revisi"
+              aria-label="Kembali ke daftar revisi dokumen"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
+            >
+              <ChevronLeft size={18} />
+            </Link>
             <div className="min-w-0">
-              <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500">
-                <Link
-                  to="/pegawai/revisi"
-                  aria-label="Kembali ke daftar revisi dokumen"
-                  className="flex size-8 items-center justify-center rounded-full bg-white text-zinc-500 transition hover:bg-[#FFF1E7] hover:text-[#EA580C]"
-                >
-                  <ArrowLeft size={15} />
-                </Link>
-                <FileEdit size={13} className="text-[#EA580C]" />
-                <Link to="/pegawai/revisi" className="hover:text-[#EA580C]">Revisi Dokumen</Link>
-                <ChevronRight size={12} className="text-zinc-300" />
-                <span>Perbaiki</span>
-              </div>
               <h1 className="font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">
-                {dok.judul}
+                Revisi Dokumen
               </h1>
-              <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-zinc-600">
-                Periksa catatan revisi, ubah metadata atau lampiran yang diperlukan, lalu ajukan ulang dokumen.
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                <FileEdit size={13} className="text-zinc-500" />
+                <span className="font-medium text-zinc-800">Dokumen Perlu Revisi</span>
+                <ChevronRight size={12} className="text-zinc-300" />
+                <span className="truncate">{dok.judul}</span>
+              </div>
             </div>
-            <StatusBadge status={dok.status} className="self-start text-xs font-semibold" />
           </div>
+          <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-[12px] font-bold text-rose-700">
+              <AlertCircle size={13} />
+              Perlu Revisi
+            </span>
         </div>
 
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_22.5rem] xl:items-start">
-          <main className="min-w-0 space-y-4 xl:border-r xl:border-[#F0E1D5] xl:pr-6">
-            <div className="flex w-full max-w-3xl flex-wrap gap-1 rounded-2xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0 px-1 py-1 sm:px-2">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
               {REVISION_TABS.map(tab => {
                 const selected = activeTab === tab.key
 
@@ -494,7 +494,7 @@ function DokumenRevisiPage() {
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
                     className={cn(
-                      'flex min-h-10 flex-1 items-center justify-center rounded-xl px-3 text-xs font-bold transition',
+                      'flex min-h-8 min-w-36 items-center justify-center rounded-lg px-4 text-[12px] font-bold transition',
                       selected
                         ? 'bg-white text-[#FF5A00] shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
@@ -506,24 +506,56 @@ function DokumenRevisiPage() {
                 )
               })}
             </div>
+          </div>
+        </div>
+
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
+          <PegawaiPanel className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none">
+            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
+                  {activeTab === 'summary' ? (
+                    <Info size={17} />
+                  ) : activeTab === 'edit' ? (
+                    <FileEdit size={17} />
+                  ) : (
+                    <CheckCircle2 size={17} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-headline text-base font-bold tracking-tight text-white sm:text-lg">
+                    {REVISION_TABS.find(tab => tab.key === activeTab)?.label}
+                  </h2>
+                  <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
+                    {activeTab === 'summary'
+                      ? 'Tinjau catatan revisi, alur dokumen, dan metadata utama.'
+                      : activeTab === 'edit'
+                        ? 'Perbarui metadata atau lampiran sesuai catatan revisi.'
+                        : 'Lihat riwayat aktivitas dokumen sebelum diajukan ulang.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-white p-4 sm:p-5">
 
             <section className={cn(activeTab === 'summary' ? 'block' : 'hidden', 'space-y-4')}>
-              <div className="rounded-2xl border border-orange-200/70 bg-[#FFF5EC] p-4">
+              <div className="rounded-xl border border-orange-200/70 bg-[#FFF5EC] p-3">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-white text-[#EA580C]">
-                    <AlertCircle size={18} />
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-white text-[#EA580C]">
+                    <AlertCircle size={15} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-orange-950">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.11em] text-orange-950">
                         Catatan dari PPK
                       </p>
                       <p className="text-[10px] font-semibold text-orange-800/70">
                         {dok.updated_at ? formatDate(dok.updated_at) : 'Perlu revisi'}
                       </p>
                     </div>
-                    <div className="mt-3 rounded-xl border border-orange-100 bg-white/70 px-3 py-2">
-                      <p className="text-sm font-medium leading-relaxed text-orange-950">
+                    <div className="mt-2 rounded-xl border border-orange-100 bg-white/70 px-3 py-2">
+                      <p className="text-xs font-medium italic leading-relaxed text-orange-950">
                         {dok.revision_notes || 'Tidak ada catatan revisi tertulis.'}
                       </p>
                     </div>
@@ -531,30 +563,33 @@ function DokumenRevisiPage() {
                 </div>
               </div>
 
-              <div className="py-1">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-500">Alur Dokumen</p>
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500">Alur Dokumen</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
                   {WORKFLOW_STEPS.map((step, i) => {
                     const isCurrent = step.key === dok.status
                     const isPast = workflowIdx > i || dok.status === 'COMPLETED'
                     const showAsRevision = dok.status === 'NEED_REVISION' && step.key === 'IN_PPK_VALIDATION'
+                    const showAsRevisionDraft = dok.status === 'NEED_REVISION' && step.key === 'DRAFT'
                     return (
-                      <div key={step.key} className="flex items-center gap-3">
+                      <div key={step.key} className="flex items-center gap-2">
                         <span className={cn(
-                          'inline-flex items-center gap-1.5 text-sm font-semibold',
-                          isCurrent || showAsRevision ? 'text-[#FF5A00]' : isPast ? 'text-emerald-700' : 'text-zinc-500',
+                          'inline-flex items-center gap-1 text-xs font-semibold',
+                          showAsRevision ? 'text-rose-600' :
+                            isCurrent || showAsRevisionDraft ? 'text-[#FF5A00]' :
+                              isPast ? 'text-emerald-700' : 'text-zinc-500',
                         )}>
                           {showAsRevision ? (
-                            <AlertTriangle size={14} />
-                          ) : isPast && !isCurrent ? (
-                            <CheckCircle2 size={14} />
+                            <AlertTriangle size={13} />
+                          ) : (showAsRevisionDraft || isPast) && !isCurrent ? (
+                            <CheckCircle2 size={13} />
                           ) : (
                             <span className="size-1.5 rounded-full bg-current" />
                           )}
                           {step.label}
                         </span>
                         {i < WORKFLOW_STEPS.length - 1 && (
-                          <ChevronRight size={13} className="text-[#D8C8BA]" />
+                          <ChevronRight size={12} className="text-[#D8C8BA]" />
                         )}
                       </div>
                     )
@@ -562,13 +597,13 @@ function DokumenRevisiPage() {
                 </div>
               </div>
 
-              <div className="pt-2">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-500">Metadata Dokumen</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="pt-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500">Metadata Dokumen</p>
+                <div className="mt-2 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                   {metadataItems.map(([label, value]) => (
-                    <div key={label} className="rounded-2xl bg-white px-4 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500">{label}</p>
-                      <p className="mt-1 text-sm font-semibold text-zinc-950">{value}</p>
+                    <div key={label} className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-3">
+                      <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+                      <p className="text-sm font-semibold leading-relaxed text-zinc-950">{value}</p>
                     </div>
                   ))}
                 </div>
@@ -606,43 +641,44 @@ function DokumenRevisiPage() {
             <section className={cn(activeTab === 'history' ? 'block' : 'hidden')}>
               <ActivityLog dokumenId={id} />
             </section>
-          </main>
+            </div>
+          </PegawaiPanel>
 
           <aside className="min-w-0 space-y-4 xl:sticky xl:top-6">
-            <div className="rounded-[1.35rem] border border-rose-100 bg-rose-50/55 p-4">
-              <div className="flex items-start gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-rose-600">
-                  <AlertCircle size={17} />
+            <PegawaiPanel className="border-rose-100 bg-rose-50/55 p-5 shadow-none">
+              <div className="flex items-start gap-2.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-rose-600">
+                  <AlertCircle size={15} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-rose-700">Catatan Revisi</p>
-                  <p className="mt-3 text-xs font-medium text-rose-700">
+                  <p className="text-[13px] font-bold text-rose-700">Catatan Revisi</p>
+                  <p className="mt-2 text-xs font-medium text-rose-700">
                     Dikembalikan oleh: <span className="font-bold">PPK</span>
                   </p>
-                  <div className="mt-4 rounded-xl bg-white/75 p-3">
-                    <p className="text-sm font-medium italic leading-relaxed text-rose-950">
+                  <div className="mt-3 rounded-xl bg-white/75 p-2.5">
+                    <p className="text-xs font-medium italic leading-relaxed text-rose-950">
                       "{dok.revision_notes || 'Tidak ada catatan revisi tertulis.'}"
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
+            </PegawaiPanel>
 
-            <div className="rounded-[1.35rem] border border-orange-200/70 bg-[#FFF5EC] p-4">
-              <div className="flex items-start gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-[#FF5A00]">
-                  <Info size={17} />
+            <PegawaiPanel className="border-[#FDBA8C] bg-[#FFF1E7] p-5 shadow-none">
+              <div className="flex items-start gap-2.5">
+                <span className="flex size-7 shrink-0 items-center justify-center text-[#FF5A00]">
+                  <Info size={15} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-[#FF5A00]">Aksi Revisi</p>
-                  <p className="mt-3 text-sm font-medium leading-relaxed text-[#FF5A00]">
+                  <p className="text-[13px] font-bold text-[#FF5A00]">Aksi Revisi</p>
+                  <p className="mt-2 text-[13px] font-medium leading-relaxed text-[#FF5A00]">
                     Anda dapat mengubah metadata atau lampiran jika diperlukan. Jika dokumen sudah sesuai, Anda dapat langsung mengajukan ulang.
                   </p>
                 </div>
               </div>
-            </div>
+            </PegawaiPanel>
 
-            <div className="space-y-4 rounded-[1.35rem] bg-white/70 p-3">
+            <PegawaiPanel className="space-y-3 border-[#F1E5DA] bg-white p-4 shadow-none">
               <div className="flex items-center justify-between gap-3 px-1 text-xs">
                 <span className="font-semibold text-zinc-500">Kelengkapan</span>
                 <span className="font-bold text-zinc-900">
@@ -652,7 +688,7 @@ function DokumenRevisiPage() {
                 </span>
               </div>
               <div className={cn(
-                'flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-[10px] font-bold uppercase tracking-[0.1em]',
+                'flex items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.08em]',
                 attachmentDirty
                   ? 'border-amber-200 bg-amber-50 text-amber-700'
                   : 'border-[#F0E1D5] bg-[#F7F2EC] text-zinc-500',
@@ -664,12 +700,12 @@ function DokumenRevisiPage() {
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 size={13} />
+                    <CheckCircle2 size={12} />
                     Tidak ada perubahan
                   </>
                 )}
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <Button
                   type="button"
                   size="lg"
@@ -677,9 +713,9 @@ function DokumenRevisiPage() {
                     setActiveTab('edit')
                     setSubmitRequestSignal(current => current + 1)
                   }}
-                  className="w-full gap-2 rounded-2xl bg-[#FF5A00] text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]"
+                  className="h-11 w-full gap-2 rounded-2xl bg-[#FF5A00] text-sm font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]"
                 >
-                  <Send size={16} />
+                  <Send size={15} />
                   Ajukan Ulang
                 </Button>
                 <Button
@@ -690,13 +726,13 @@ function DokumenRevisiPage() {
                     setActiveTab('edit')
                     setCancelRequestSignal(current => current + 1)
                   }}
-                  className="w-full gap-2 rounded-2xl border-rose-300 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  className="h-11 w-full gap-2 rounded-2xl border-rose-300 bg-white text-sm font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                 >
-                  <X size={16} />
+                  <X size={15} />
                   Batal
                 </Button>
               </div>
-            </div>
+            </PegawaiPanel>
           </aside>
         </div>
       </div>

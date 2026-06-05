@@ -1,11 +1,11 @@
 /**
  * KelengkapanChecklist — shows required/optional documents for a kegiatan + role.
  * Allows file upload per kelengkapan item.
- * For Non-Material: only shows user-created optional documents.
- * For Material: shows admin kelengkapan + user-created optional documents.
+ * For Non-Material: only shows user-created supporting documents.
+ * For Material: shows admin kelengkapan + user-created supporting documents.
  */
 import { useEffect, useState } from 'react'
-import { FileText, AlertCircle, CheckCircle2, Plus, X, Trash2 } from 'lucide-react'
+import { FileText, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { createClientId } from '#/lib/utils/client-id'
 import { apiFetch } from '#/lib/api-client'
@@ -332,130 +332,142 @@ export function KelengkapanChecklist({
         </div>
       )}
 
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {isNonMaterial ? 'Dokumen Tambahan' : 'Dokumen Opsional'}
-            </p>
-          </div>
-          {!showAddForm && userDocs.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAddForm(true)}
-              className="gap-1 text-[#B45309] hover:bg-[#FFF3D6] hover:text-[#92400E]"
-            >
-              <Plus size={13} /> Tambah
-            </Button>
-          )}
-        </div>
-
-        {showAddForm && (
-          <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-[#F6C768] bg-white p-4 sm:flex-row sm:items-center">
-            <Input
-              value={newDocTitle}
-              onChange={(e) => {
-                setNewDocTitle(e.target.value)
-                setUserDocError('')
-              }}
-              placeholder="Nama dokumen..."
-              className="h-10 flex-1 border-[#F6C768] bg-white text-sm"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  addUserDoc()
-                }
-                if (e.key === 'Escape') {
-                  setShowAddForm(false)
-                  setNewDocTitle('')
-                }
-              }}
-              autoFocus
-            />
-            <Button size="sm" onClick={addUserDoc} className="h-10 bg-[#F97316] px-5 font-bold uppercase tracking-wide text-white hover:bg-[#EA580C]">
-              Tambah
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Batal tambah dokumen pendukung"
-              onClick={() => {
-                setShowAddForm(false)
-                setNewDocTitle('')
-                setUserDocError('')
-              }}
-              className="h-9 w-9"
-            >
-              <X size={14} />
-            </Button>
-          </div>
-        )}
-        {userDocError && (
-          <p className="flex items-center gap-1 text-xs text-error">
-            <AlertCircle size={12} /> {userDocError}
-          </p>
-        )}
-
-        {userDocs.map(doc => {
-          const uploaded = lampiranUrls.find(l => l.kelengkapan_id === doc.id)
-          return (
-            <div
-              key={doc.id}
-              className={cn(
-                'flex min-w-0 flex-col gap-3 rounded-[1.5rem] border px-5 py-4 transition-colors sm:flex-row sm:items-center',
-                uploaded ? 'border-emerald-200 bg-emerald-50/45' : 'border-stone-200 bg-white',
-              )}
-            >
-              <div className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-xl',
-                uploaded ? 'bg-emerald-500 text-white' : 'bg-stone-100 text-stone-400',
-              )}>
-                {uploaded ? <CheckCircle2 size={15} /> : <FileText size={15} />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-stone-900">{doc.nama_dokumen}</p>
-                {uploaded ? (
-                  <p className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-emerald-700">
-                    <FileText size={12} className="shrink-0" />
-                    <span className="truncate">{getUploadedFilename(uploaded)}</span>
-                  </p>
-                ) : (
-                  <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
-                    PDF, Word, atau Excel
-                  </p>
-                )}
-              </div>
-              <FileUploadButton
-                kelengkapanId={doc.id}
-                namaDokumen={doc.nama_dokumen}
-                initialLampiran={uploaded}
-                onUploaded={(lamp) => handleUploaded(doc.id, lamp)}
-                onRemoved={() => handleRemoved(doc.id)}
-                className="w-full shrink-0 sm:w-auto"
-              />
+      <div className="overflow-hidden rounded-xl border border-orange-200 bg-white">
+        <div className="border-b border-orange-100 px-3.5 py-2.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-[13px] font-semibold text-[#FF5A00]">Dokumen Pendukung</h3>
+              <p className="mt-0.5 text-[11px] text-[#FF5A00]">
+                Tambahkan dokumen pendukung untuk melengkapi
+              </p>
+            </div>
+            {!showAddForm && userDocs.length > 0 && (
               <Button
                 variant="ghost"
-                size="icon-xs"
-                aria-label={`Hapus dokumen pendukung ${doc.nama_dokumen}`}
-                onClick={() => removeUserDoc(doc.id)}
-                className="shrink-0 text-stone-400 hover:bg-red-50 hover:text-error"
+                size="sm"
+                onClick={() => setShowAddForm(true)}
+                className="h-8 shrink-0 cursor-pointer gap-1 text-[#FF5A00] hover:bg-[#FFF1E7] hover:text-[#EA580C]"
               >
-                <Trash2 size={14} />
+                <Plus size={13} /> Tambah
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-2.5 p-2.5">
+          {userDocs.length === 0 && !showAddForm && (
+            <div className="py-1.5 text-center text-[11px] text-on-surface-variant">
+              Belum ada dokumen. Klik tombol di bawah untuk menambahkan.
+            </div>
+          )}
+
+          {userDocs.map(doc => {
+            const uploaded = lampiranUrls.find(l => l.kelengkapan_id === doc.id)
+            return (
+              <div
+                key={doc.id}
+                className={cn(
+                  'flex min-w-0 flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
+                  uploaded ? 'border-orange-100 bg-[#FFF7F0]' : 'border-[#F4E7DC] bg-[#FFFCF8]',
+                )}
+              >
+                <div className={cn(
+                  'flex size-8 shrink-0 items-center justify-center rounded-lg',
+                  uploaded ? 'bg-emerald-500 text-white' : 'bg-orange-50 text-orange-300',
+                )}>
+                  {uploaded ? <CheckCircle2 size={14} /> : <FileText size={14} />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-medium text-stone-900">{doc.nama_dokumen}</p>
+                  {uploaded ? (
+                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-emerald-700">
+                      <FileText size={12} className="shrink-0" />
+                      <span className="truncate">{getUploadedFilename(uploaded)}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-400">
+                      PDF, Word, atau Excel
+                    </p>
+                  )}
+                </div>
+                <FileUploadButton
+                  kelengkapanId={doc.id}
+                  namaDokumen={doc.nama_dokumen}
+                  initialLampiran={uploaded}
+                  onUploaded={(lamp) => handleUploaded(doc.id, lamp)}
+                  onRemoved={() => handleRemoved(doc.id)}
+                  className="w-full shrink-0 sm:w-auto"
+                />
+                {!uploaded && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label={`Hapus dokumen pendukung ${doc.nama_dokumen}`}
+                    onClick={() => removeUserDoc(doc.id)}
+                    className="shrink-0 text-error hover:bg-red-50 hover:text-red-700"
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                )}
+              </div>
+            )
+          })}
+
+          {showAddForm ? (
+            <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-[#FFF7F0] p-2.5 sm:flex-row sm:items-center">
+              <Input
+                value={newDocTitle}
+                onChange={(e) => {
+                  setNewDocTitle(e.target.value)
+                  setUserDocError('')
+                }}
+                placeholder="Nama dokumen (misal: Bukti Transfer)"
+                className="h-8 flex-1 border-orange-200 bg-white text-sm focus:ring-[#FF5A00]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addUserDoc()
+                  }
+                  if (e.key === 'Escape') {
+                    setShowAddForm(false)
+                    setNewDocTitle('')
+                  }
+                }}
+                autoFocus
+              />
+              <Button size="sm" onClick={addUserDoc} disabled={!newDocTitle.trim()} className="h-8 bg-[#FF5A00] px-4 text-xs font-bold text-white hover:bg-[#EA580C]">
+                Simpan
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowAddForm(false)
+                  setNewDocTitle('')
+                  setUserDocError('')
+                }}
+                className="h-8 px-3 text-xs"
+              >
+                Batal
               </Button>
             </div>
-          )
-        })}
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-[#FF5A00] transition-colors hover:border-[#FF5A00] hover:bg-[#FFF1E7]"
+            >
+              <Plus size={14} />
+              <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>
+            </button>
+          )}
 
-        {userDocs.length === 0 && !showAddForm && (
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#F0E1D5] bg-[#FFFAF6] px-3 py-3 text-[10px] font-semibold text-stone-500 transition hover:border-[#F6C768] hover:bg-[#FFF8E8] hover:text-[#B45309]"
-          >
-            <Plus size={14} /> Tambah Dokumen Opsional
-          </button>
-        )}
+          {userDocError && (
+            <p className="flex items-center gap-1 text-xs text-error">
+              <AlertCircle size={12} /> {userDocError}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

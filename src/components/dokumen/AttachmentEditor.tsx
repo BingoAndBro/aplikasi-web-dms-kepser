@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { CheckCircle2, XCircle, Eye, Download, Upload, RotateCcw, X, Loader2, Plus, AlertCircle } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { buildStorageFilename } from '#/lib/dokumen-helpers'
@@ -53,6 +53,68 @@ type UploadResponse = {
   error?: unknown
 }
 
+function ResetActionButton({
+  onClick,
+  className,
+}: {
+  onClick: () => void | Promise<void>
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => { void onClick() }}
+      className={cn(
+        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-orange-100 px-2.5 text-[11px] font-semibold text-[#E65100] transition-colors hover:bg-orange-200',
+        className,
+      )}
+    >
+      <RotateCcw size={12} />
+      Reset
+    </button>
+  )
+}
+
+function FileActionButton({
+  onClick,
+  children,
+  ariaLabel,
+}: {
+  onClick: () => void | Promise<void>
+  children: ReactNode
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => { void onClick() }}
+      aria-label={ariaLabel}
+      className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#F0E1D5] bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-[#FFF7F0] hover:text-[#FF5A00]"
+    >
+      {children}
+    </button>
+  )
+}
+
+function UploadReplaceButton({
+  hasFile,
+  onClick,
+}: {
+  hasFile: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xl border border-[#FF5A00] bg-white px-3 text-xs font-semibold text-[#FF5A00] transition-colors hover:bg-[#FFF1E7]"
+    >
+      <Upload size={13} />
+      {hasFile ? 'Ganti' : 'Unggah'}
+    </button>
+  )
+}
+
 interface AttachmentEditorProps {
   dokumen: DokumenRow
   lampiranUrls: LampiranUrl[]
@@ -60,7 +122,7 @@ interface AttachmentEditorProps {
   isNonMaterial?: boolean
   nominalValue?: number | null
   submitLabel: string
-  extraActions?: React.ReactNode
+  extraActions?: ReactNode
   hideDefaultActions?: boolean
   submitRequestSignal?: number
   cancelRequestSignal?: number
@@ -730,16 +792,16 @@ export function AttachmentEditor({
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-2.5">
         {/* ========== NOMINAL REALISASI ========== */}
         {!isNonMaterial && (
           <div className={cn(
-            'bg-white rounded-xl border p-5 shadow-sm transition-colors',
-            hasNominalChanged ? 'border-amber-400 bg-amber-50/30' : 'border-outline-variant/30'
+            'rounded-xl border bg-white p-3 transition-colors',
+            hasNominalChanged ? 'border-orange-300 bg-orange-50/20' : 'border-[#F0E1D5]'
           )}>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
               <div className="flex-1">
-                <label className="block text-xs font-semibold text-on-surface mb-1.5">
+                <label className="mb-1 block text-xs font-semibold text-on-surface">
                   Nominal Realisasi (Rp) <span className="text-error">*</span>
                 </label>
                 <input
@@ -748,10 +810,10 @@ export function AttachmentEditor({
                   onChange={e => handleNominalChange(e.target.value)}
                   placeholder="Contoh: 1.500.000"
                   className={cn(
-                    'w-full px-3 py-2 border rounded-lg text-sm bg-surface text-on-surface',
+                    'w-full rounded-lg border bg-surface px-3 py-1.5 text-sm text-on-surface',
                     'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
                     'placeholder:text-outline',
-                    hasNominalChanged ? 'border-amber-400' : 'border-border'
+                    hasNominalChanged ? 'border-orange-300' : 'border-border'
                   )}
                 />
                 {nominalError && (
@@ -761,13 +823,7 @@ export function AttachmentEditor({
                 )}
               </div>
               {hasNominalChanged && (
-                <button
-                  onClick={handleResetNominal}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors shrink-0 mt-5"
-                >
-                  <RotateCcw size={14} />
-                  Reset
-                </button>
+                <ResetActionButton onClick={handleResetNominal} />
               )}
             </div>
           </div>
@@ -777,16 +833,16 @@ export function AttachmentEditor({
         {/* Material documents: show kelengkapan from master + dokumen pendukung */}
         {/* Non-Material documents: only show empty dokumen pendukung section */}
         {!isNonMaterial && kelengkapan.length > 0 && (
-          <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-            <div className="bg-surface-container-low/30 px-4 py-3 border-b border-outline-variant/30">
-              <h3 className="text-sm font-semibold text-on-surface">Kelengkapan Dokumen</h3>
-              <p className="text-xs text-on-surface-variant mt-0.5">
+          <div className="overflow-hidden rounded-xl border border-[#F0E1D5] bg-white">
+            <div className="border-b border-[#F0E1D5] px-3.5 py-2.5">
+              <h3 className="text-[13px] font-semibold text-on-surface">Kelengkapan Dokumen</h3>
+              <p className="mt-0.5 text-[11px] text-on-surface-variant">
                 {requiredItems.length > 0
                   ? `${requiredItems.filter(r => uploadedIds.has(r.id)).length} dari ${requiredItems.length} lampiran wajib terunggah`
-                  : 'Kelola kelengkapan dokumen'}
+                : 'Kelola kelengkapan dokumen'}
               </p>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="space-y-2 p-2.5">
               {kelengkapan.map(kel => {
                 const lamp = lampiranUrls.find(l => l.kelengkapan_id === kel.id)
                 const isPending = pendingFiles.has(kel.id)
@@ -795,45 +851,39 @@ export function AttachmentEditor({
                 return (
                   <div key={kel.id} className="space-y-1.5">
                     <div className={cn(
-                      'flex items-center gap-3 p-3 rounded-lg transition-colors',
-                      isPending ? 'bg-amber-50 border border-amber-200' : 'bg-surface-container-low/20'
+                      'flex flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
+                      isPending ? 'border-orange-200 bg-orange-50/30' : 'border-[#F4E7DC] bg-[#FFFCF8]'
                     )}>
                       {/* Status icon */}
                       {isPending ? (
-                        <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                        <CheckCircle2 size={14} className="text-green-600 shrink-0" />
                       ) : lamp ? (
-                        <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                        <CheckCircle2 size={14} className="text-green-600 shrink-0" />
                       ) : kel.required ? (
-                        <XCircle size={16} className="text-red-500 shrink-0" />
+                        <XCircle size={14} className="text-red-500 shrink-0" />
                       ) : (
-                        <div className="w-4 h-4 rounded-full border border-outline shrink-0" />
+                        <div className="size-3.5 shrink-0 rounded-full border border-outline" />
                       )}
 
                       {/* Nama kelengkapan */}
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm text-on-surface font-medium">{kel.nama_dokumen}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[13px] text-on-surface font-medium">{kel.nama_dokumen}</span>
                         {kel.required && <span className="text-red-500 ml-1">*</span>}
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                         {lamp && (
                           <>
-                            <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(kel.id)} aria-label={`Pratinjau ${kel.nama_dokumen}`}>
-                              <Eye size={14} />
-                            </Button>
+                            <FileActionButton onClick={() => handlePreview(kel.id)} ariaLabel={`Pratinjau ${kel.nama_dokumen}`}>
+                              <Eye size={13} />
+                            </FileActionButton>
                             {isPending ? (
-                              <button
-                                onClick={() => handleResetFile(kel.id)}
-                                className="inline-flex items-center gap-1 h-6 px-2 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors"
-                              >
-                                <RotateCcw size={12} />
-                                Reset
-                              </button>
+                              <ResetActionButton onClick={() => handleResetFile(kel.id)} />
                             ) : (
-                              <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(kel.id)} aria-label={`Unduh ${kel.nama_dokumen}`}>
-                                <Download size={14} />
-                              </Button>
+                              <FileActionButton onClick={() => handleDownload(kel.id)} ariaLabel={`Unduh ${kel.nama_dokumen}`}>
+                                <Download size={13} />
+                              </FileActionButton>
                             )}
                           </>
                         )}
@@ -845,13 +895,10 @@ export function AttachmentEditor({
                           className="hidden"
                           onChange={e => handleFileChange(kel.id, e)}
                         />
-                        <button
+                        <UploadReplaceButton
+                          hasFile={!!lamp}
                           onClick={() => fileInputRefs.current.get(kel.id)?.click()}
-                          className="inline-flex items-center gap-1 h-6 px-2 text-xs font-medium border border-border bg-background hover:bg-muted text-foreground rounded transition-colors"
-                        >
-                          <Upload size={12} />
-                          {lamp ? 'Ganti' : 'Unggah'}
-                        </button>
+                        />
                       </div>
                     </div>
 
@@ -870,16 +917,16 @@ export function AttachmentEditor({
         )}
 
         {/* ========== DOKUMEN PENDUKUNG ========== */}
-        <div className="bg-white rounded-xl border border-blue-200 overflow-hidden shadow-sm">
-          <div className="bg-blue-50/50 px-4 py-3 border-b border-blue-200">
-            <h3 className="text-sm font-semibold text-blue-700">Dokumen Pendukung</h3>
-            <p className="text-xs text-blue-600 mt-0.5">
+        <div className="overflow-hidden rounded-xl border border-orange-200 bg-white">
+          <div className="border-b border-orange-100 px-3.5 py-2.5">
+            <h3 className="text-[13px] font-semibold text-[#FF5A00]">Dokumen Pendukung</h3>
+            <p className="mt-0.5 text-[11px] text-[#FF5A00]">
               Tambahkan dokumen pendukung untuk melengkapi
             </p>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="space-y-2.5 p-2.5">
             {userDocs.length === 0 && !showAddForm && (
-              <div className="text-center py-4 text-on-surface-variant text-xs">
+              <div className="py-1.5 text-center text-[11px] text-on-surface-variant">
                 Belum ada dokumen. Klik tombol di bawah untuk menambahkan.
               </div>
             )}
@@ -893,43 +940,37 @@ export function AttachmentEditor({
               return (
                 <div key={doc.id} className="space-y-1.5">
                   <div className={cn(
-                    'flex items-center gap-3 p-3 rounded-lg transition-colors',
-                    isPending ? 'bg-amber-50 border border-amber-200' : hasFile ? 'bg-blue-50/50' : 'bg-blue-50/30'
+                    'flex flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
+                    isPending ? 'border-orange-200 bg-orange-50/30' : hasFile ? 'border-orange-100 bg-[#FFF7F0]' : 'border-[#F4E7DC] bg-[#FFFCF8]'
                   )}>
                     {/* Status icon */}
                     {isPending ? (
-                      <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                      <CheckCircle2 size={14} className="text-green-600 shrink-0" />
                     ) : hasFile ? (
-                      <CheckCircle2 size={16} className="text-green-600 shrink-0" />
+                      <CheckCircle2 size={14} className="text-green-600 shrink-0" />
                     ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-blue-300 shrink-0" />
+                      <div className="size-3.5 shrink-0 rounded-full border-2 border-orange-200" />
                     )}
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">{doc.nama}</span>
-                      <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium ml-2">TAMBAHAN</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[13px] font-medium">{doc.nama}</span>
+                      <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-[#E65100]">TAMBAHAN</span>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                       {hasFile && (
                         <>
-                          <Button size="icon-xs" variant="ghost" onClick={() => handlePreview(doc.id)} aria-label={`Pratinjau ${doc.nama_dokumen}`}>
-                            <Eye size={14} />
-                          </Button>
+                          <FileActionButton onClick={() => handlePreview(doc.id)} ariaLabel={`Pratinjau ${doc.nama}`}>
+                            <Eye size={13} />
+                          </FileActionButton>
                           {isPending ? (
-                            <button
-                              onClick={() => handleResetFile(doc.id)}
-                              className="inline-flex items-center gap-1 h-6 px-2 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors"
-                            >
-                              <RotateCcw size={12} />
-                              Reset
-                            </button>
+                            <ResetActionButton onClick={() => handleResetFile(doc.id)} />
                           ) : (
-                            <Button size="icon-xs" variant="ghost" onClick={() => handleDownload(doc.id)} aria-label={`Unduh ${doc.nama_dokumen}`}>
-                              <Download size={14} />
-                            </Button>
+                            <FileActionButton onClick={() => handleDownload(doc.id)} ariaLabel={`Unduh ${doc.nama}`}>
+                              <Download size={13} />
+                            </FileActionButton>
                           )}
                         </>
                       )}
@@ -941,23 +982,20 @@ export function AttachmentEditor({
                         className="hidden"
                         onChange={e => handleFileChange(doc.id, e)}
                       />
-                      <button
+                      <UploadReplaceButton
+                        hasFile={hasFile}
                         onClick={() => fileInputRefs.current.get(doc.id)?.click()}
-                        className="inline-flex items-center gap-1 h-6 px-2 text-xs font-medium border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded transition-colors"
-                      >
-                        <Upload size={12} />
-                        {hasFile ? 'Ganti' : 'Unggah'}
-                      </button>
+                      />
 
                       {/* X button - only if no file uploaded */}
                       {!hasFile && (
                         <button
                           type="button"
-                          aria-label={`Hapus dokumen pendukung ${doc.nama_dokumen}`}
+                          aria-label={`Hapus dokumen pendukung ${doc.nama}`}
                           onClick={() => handleRemoveUserDoc(doc.id)}
-                          className="w-6 h-6 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                          className="flex size-7 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
                         >
-                          <X size={14} />
+                          <X size={13} />
                         </button>
                       )}
                     </div>
@@ -976,7 +1014,7 @@ export function AttachmentEditor({
 
             {/* Add form */}
             {showAddForm ? (
-              <div className="flex items-center gap-2 p-3 bg-blue-50/30 rounded-lg">
+              <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-[#FFF7F0] p-2.5 sm:flex-row sm:items-center">
                 <input
                   type="text"
                   value={newDocTitle}
@@ -985,7 +1023,7 @@ export function AttachmentEditor({
                     setUserDocError('')
                   }}
                   placeholder="Nama dokumen (misal: Bukti Transfer)"
-                  className="flex-1 h-8 px-3 text-sm border border-blue-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="h-8 flex-1 rounded-lg border border-orange-200 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#FF5A00]"
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleAddUserDoc()
                     if (e.key === 'Escape') { setShowAddForm(false); setNewDocTitle('') }
@@ -998,10 +1036,10 @@ export function AttachmentEditor({
             ) : (
               <button
                 onClick={() => setShowAddForm(true)}
-                className="flex items-center gap-2 w-full p-3 rounded-lg border border-dashed border-blue-300 text-blue-600 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-[#FF5A00] transition-colors hover:border-[#FF5A00] hover:bg-[#FFF1E7]"
               >
-                <Plus size={16} />
-                <span className="text-sm font-medium">Tambah Dokumen</span>
+                <Plus size={14} />
+                <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>
               </button>
             )}
             {userDocError && (

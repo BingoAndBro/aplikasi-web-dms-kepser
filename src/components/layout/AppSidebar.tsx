@@ -76,22 +76,22 @@ export function AppSidebar({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full w-80 max-w-[86vw] shrink-0 flex-col gap-7 border-r border-orange-100/80 bg-[#FFFDF9] px-5 py-6 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none',
-          useCompactDesktopWidth ? 'lg:w-64 xl:w-72' : 'lg:w-72 xl:w-80',
+          'fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[82vw] shrink-0 flex-col gap-5 border-r border-orange-100/80 bg-[#FFFDF9] px-4 py-5 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none',
+          useCompactDesktopWidth ? 'lg:w-56 xl:w-60' : 'lg:w-60 xl:w-60',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex items-start justify-between gap-3 px-1">
+        <div className="flex items-start justify-between gap-2 px-1">
           <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md shadow-orange-950/10 ring-1 ring-orange-100">
-                <img src="/bps-logo.png" alt="BPS" className="size-8 object-contain" />
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm shadow-orange-950/10 ring-1 ring-orange-100">
+                <img src="/bps-logo.png" alt="BPS" className="size-6 object-contain" />
               </div>
               <div className="min-w-0">
-                <p className="truncate font-headline text-xl font-black tracking-tight text-on-surface">
+                <p className="truncate font-headline text-[17px] font-black tracking-tight text-on-surface">
                   {isAdmin ? 'Admin Sistem' : 'DMS Kepser'}
                 </p>
-                <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                <p className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-primary">
                   {workspaceLabel}
                 </p>
               </div>
@@ -102,17 +102,17 @@ export function AppSidebar({
             type="button"
             aria-label="Tutup navigasi"
             onClick={() => onMobileOpenChange(false)}
-            className="inline-flex size-9 items-center justify-center rounded-xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:bg-orange-50 hover:text-primary lg:hidden"
+            className="inline-flex size-8 items-center justify-center rounded-xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:bg-orange-50 hover:text-primary lg:hidden"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-          <div className="space-y-7">
+          <div className="space-y-4">
             {navGroups.map((group) => (
-              <div key={group.title} className="space-y-2.5">
-                <p className="px-3 text-[10px] font-black uppercase tracking-[0.25em] text-outline">
+              <div key={group.title} className="space-y-2">
+                <p className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-outline">
                   {group.title}
                 </p>
                 <nav className="space-y-1">
@@ -125,14 +125,14 @@ export function AppSidebar({
                       return (
                         <div
                           key={item.id}
-                          className="flex w-full select-none items-center justify-between rounded-2xl px-3.5 py-3 text-on-surface-variant opacity-45"
+                          className="flex w-full select-none items-center justify-between rounded-xl px-3 py-2 text-on-surface-variant opacity-45"
                           title="Fitur belum tersedia"
                         >
-                          <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-2.5">
                             <span className="text-outline">
-                              <Icon size={18} />
+                              <Icon size={15} />
                             </span>
-                            <span className="truncate text-sm font-semibold">{item.label}</span>
+                            <span className="truncate text-[13px] font-semibold">{item.label}</span>
                           </div>
                           <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-outline">
                             Soon
@@ -147,29 +147,29 @@ export function AppSidebar({
                         to={item.to}
                         onClick={() => onMobileOpenChange(false)}
                         className={cn(
-                          'group flex w-full items-center justify-between rounded-2xl px-3.5 py-3 text-left transition-all duration-200',
+                          'group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-200',
                           isActive
-                            ? 'bg-primary text-white shadow-lg shadow-orange-600/20'
+                            ? 'bg-primary text-white shadow-md shadow-orange-600/15'
                             : 'text-on-surface-variant hover:bg-orange-50 hover:text-orange-950',
                         )}
                       >
-                        <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
                           <span
                             className={cn(
                               'shrink-0 transition-colors',
                               isActive ? 'text-white' : 'text-outline group-hover:text-primary',
                             )}
                           >
-                            <Icon size={18} />
+                            <Icon size={15} />
                           </span>
-                          <span className={cn('truncate text-sm tracking-tight', isActive ? 'font-bold' : 'font-semibold')}>
+                          <span className={cn('truncate text-[13px] tracking-tight', isActive ? 'font-bold' : 'font-semibold')}>
                             {item.label}
                           </span>
                         </div>
                         {item.badge && (
                           <span
                             className={cn(
-                              'rounded-full px-2 py-0.5 text-[10px] font-black',
+                              'rounded-full px-2 py-0.5 text-[9px] font-black',
                               isActive ? 'bg-white/20 text-white' : 'bg-orange-100 text-primary',
                             )}
                           >
@@ -185,20 +185,20 @@ export function AppSidebar({
           </div>
         </div>
 
-        <div className="space-y-1 border-t border-orange-100/80 pt-5">
+        <div className="space-y-1 border-t border-orange-100/80 pt-4">
           <button
             type="button"
-            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-xs font-bold text-outline transition-all hover:bg-orange-50 hover:text-primary"
+            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-bold text-outline transition-all hover:bg-orange-50 hover:text-primary"
           >
-            <HelpCircle size={17} />
+            <HelpCircle size={15} />
             Bantuan
           </button>
           <button
             type="button"
             onClick={onLogout}
-            className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-xs font-bold text-outline transition-all hover:bg-red-50 hover:text-error"
+            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-bold text-outline transition-all hover:bg-red-50 hover:text-error"
           >
-            <LogOut size={17} />
+            <LogOut size={15} />
             Keluar
           </button>
         </div>

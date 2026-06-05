@@ -213,7 +213,7 @@ export function FileUploadButton({
                 setFilename('')
                 onRemoved?.()
               }}
-              className="text-stone-400 hover:bg-red-50 hover:text-error"
+              className="text-error hover:bg-red-50 hover:text-red-700"
             >
               <Trash2 size={13} />
             </Button>
