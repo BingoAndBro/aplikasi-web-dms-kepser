@@ -23,6 +23,7 @@ import {
   FileText,
   ChevronRight,
   Search,
+  Clock3,
 } from 'lucide-react'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
@@ -36,6 +37,7 @@ export const Route = createFileRoute('/pegawai/dokumen/')({
 })
 
 const PAGE_SIZE = 10
+const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
 
 type AuthSessionResponse = {
   session: { userId: string; email: string; userName?: string | null } | null
@@ -205,12 +207,12 @@ function DokumenSayaPage() {
               <Table className="text-left">
                 <TableHeader>
                   <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
-                    <TableHead className="w-16 px-6 py-4 text-center text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-950">No</TableHead>
-                    <TableHead className="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-950">Judul Dokumen</TableHead>
-                    <TableHead className="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-950">Kegiatan</TableHead>
-                    <TableHead className="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-950">Status</TableHead>
-                    <TableHead className="px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-950">Tanggal Ajuan</TableHead>
-                    <TableHead className="w-20 px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-950">Aksi</TableHead>
+                    <TableHead className={`w-16 text-center ${TABLE_HEAD_CLASS}`}>No</TableHead>
+                    <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
+                    <TableHead className={TABLE_HEAD_CLASS}>Kegiatan</TableHead>
+                    <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
+                    <TableHead className={TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>
+                    <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-zinc-100 text-[13px]">
@@ -246,16 +248,16 @@ function DokumenSayaPage() {
                         <PegawaiDocumentStatusBadge dok={dok} />
                       </TableCell>
                       <TableCell className="px-6 py-5">
-                        <span className="text-sm font-normal text-zinc-900">{formatDate(dok.tanggal)}</span>
+                        <DateCell value={dok.tanggal} />
                       </TableCell>
                       <TableCell className="px-6 py-5 text-right">
                         <Button
-                          size="icon-xs"
+                          size="icon-lg"
                           variant="ghost"
-                          className="rounded-xl bg-[#FFF8F1] text-orange-600 opacity-80 transition group-hover:bg-orange-50 group-hover:opacity-100"
+                          className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
                           aria-label={`Buka dokumen ${dok.judul}`}
                         >
-                          <ChevronRight size={14} />
+                          <ChevronRight strokeWidth={2.35} />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -287,7 +289,7 @@ function DokumenSayaPage() {
                       </div>
                       <div className="rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
                         <p className="font-semibold text-zinc-500">Tanggal</p>
-                        <p className="mt-0.5 text-zinc-900">{formatDate(dok.tanggal)}</p>
+                        <DateCell value={dok.tanggal} className="mt-1" />
                       </div>
                       <div className="col-span-2 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
                         <p className="font-semibold text-zinc-500">Kegiatan</p>
@@ -312,6 +314,20 @@ function DokumenSayaPage() {
         )}
       </div>
     </PageLayout>
+  )
+}
+
+function DateCell({ value, className }: { value: string; className?: string }) {
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-2 text-sm font-semibold text-zinc-500',
+        className ?? '',
+      ].join(' ')}
+    >
+      <Clock3 size={16} strokeWidth={1.8} className="shrink-0 text-zinc-500" aria-hidden="true" />
+      {formatDate(value)}
+    </span>
   )
 }
 
