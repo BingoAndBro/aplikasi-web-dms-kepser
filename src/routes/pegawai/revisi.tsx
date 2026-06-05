@@ -14,11 +14,11 @@ import {
   DocumentListStatusBadge,
   WorkflowActionButton,
   WorkflowDateCell,
+  WorkflowSearchPanel,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
 import {
   FileText,
   ChevronRight,
-  Search,
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -44,7 +44,8 @@ export const Route = createFileRoute('/pegawai/revisi')({
 })
 
 const PAGE_SIZE = 10
-const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
+const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
+const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, kegiatan, atau catatan...'
 
 function PegawaiRevisiPage() {
   const navigate = useNavigate()
@@ -106,28 +107,12 @@ function PegawaiRevisiPage() {
           </div>
         </section>
 
-        <section className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <label className="relative min-w-0 flex-1 md:max-w-xl">
-              <span className="sr-only">Cari dokumen revisi</span>
-              <Search
-                size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                placeholder="Cari judul, fungsi, kegiatan, atau catatan..."
-                value={search}
-                onChange={(event) => { setSearch(event.target.value); setPage(0) }}
-                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
-              />
-            </label>
-            <p className="text-xs font-semibold text-zinc-500">
-              {filtered.length} dokumen perlu ditinjau
-            </p>
-          </div>
-        </section>
+        <WorkflowSearchPanel
+          search={search}
+          onSearchChange={(value) => { setSearch(value); setPage(0) }}
+          placeholder={WORKFLOW_SEARCH_PLACEHOLDER}
+          resultLabel={`Total ${filtered.length} Dokumen`}
+        />
 
         {loading ? (
           <LoadingState variant="list" rows={4} label="Memuat revisi dokumen" />
@@ -143,19 +128,15 @@ function PegawaiRevisiPage() {
           />
         ) : (
           <>
-            <p className="px-1 text-sm font-bold text-zinc-950">
-              {filtered.length} Dokumen Ditemukan
-            </p>
-
             <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
                 <Table className="text-left">
                   <TableHeader>
-                    <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                    <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
                       <TableHead className={`w-16 text-center ${TABLE_HEAD_CLASS}`}>No</TableHead>
                       <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
                       <TableHead className={TABLE_HEAD_CLASS}>Kegiatan</TableHead>
                       <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
-                      <TableHead className={TABLE_HEAD_CLASS}>Tanggal</TableHead>
+                      <TableHead className={TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>
                       <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>

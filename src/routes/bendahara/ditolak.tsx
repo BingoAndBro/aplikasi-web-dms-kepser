@@ -13,6 +13,7 @@ import {
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
+  WorkflowSearchPanel,
   WorkflowTableShell,
   WORKFLOW_TABLE_HEAD_CLASS,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
@@ -22,6 +23,8 @@ import { formatDate } from '#/lib/utils/format'
 
 type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string; revision_notes: string | null }
 type BendaharaDitolakResponse = { dokumen?: Item[]; error?: string }
+
+const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, kegiatan, atau catatan...'
 
 function truncate(str: string | null, len = 50): string { if (!str) return '-'; return str.length > len ? str.slice(0, len) + '...' : str }
 
@@ -36,6 +39,7 @@ function BendaharaDitolakPage() {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     apiFetch<BendaharaDitolakResponse>('/bendahara/ditolak')
@@ -52,6 +56,15 @@ function BendaharaDitolakPage() {
     navigate({ to: '/bendahara/dokumen/$id', params: { id: dok.id } })
   }
 
+  const filtered = items.filter(d => {
+    const query = search.toLowerCase()
+    return !query
+      || d.judul.toLowerCase().includes(query)
+      || (d.fungsi_nama ?? '').toLowerCase().includes(query)
+      || (d.kegiatan_nama ?? '').toLowerCase().includes(query)
+      || (d.revision_notes ?? '').toLowerCase().includes(query)
+  })
+
   return (
     <PageLayout>
       <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
@@ -64,38 +77,38 @@ function BendaharaDitolakPage() {
           title="Dokumen Ditolak"
           description={`${items.length} dokumen ditolak PPSPM dan dikembalikan ke PPK untuk perbaikan.`}
         />
+        <WorkflowSearchPanel
+          search={search}
+          onSearchChange={setSearch}
+          placeholder={WORKFLOW_SEARCH_PLACEHOLDER}
+          resultLabel={`Total ${filtered.length} Dokumen`}
+        />
         {loading ? (
           <LoadingState variant="list" rows={4} />
         ) : error ? (
           <ErrorState title="Gagal memuat data" description={error} variant="page" />
-        ) : items.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState
             title="Tidak ada dokumen"
-            description="Dokumen yang Anda tolak akan muncul di sini."
+            description={search ? 'Tidak ada dokumen yang cocok dengan pencarian Anda.' : 'Dokumen yang Anda tolak akan muncul di sini.'}
             icon={<FileText size={20} />}
           />
         ) : (
           <>
-            <p className="px-1 text-sm font-bold text-zinc-950">
-              {items.length} Dokumen Ditemukan
-            </p>
-
             <WorkflowTableShell>
               <Table className="text-left">
                 <TableHeader>
-                  <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                  <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
                     <TableHead className={`w-16 text-center ${WORKFLOW_TABLE_HEAD_CLASS}`}>No</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
-                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Fungsi</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Kegiatan</TableHead>
-                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Penolakan</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>
-                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Catatan</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal</TableHead>
                     <TableHead className={`w-20 text-right ${WORKFLOW_TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-zinc-100 text-[13px]">
-                  {items.map((d, i) => (
+                  {filtered.map((d, i) => (
                     <TableRow
                       key={d.id}
                       className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"
@@ -110,12 +123,15 @@ function BendaharaDitolakPage() {
                       aria-label={`Buka dokumen ${d.judul}`}
                     >
                       <TableCell className="px-6 py-5 text-center text-sm font-normal text-zinc-950">{i + 1}</TableCell>
-                      <TableCell className="max-w-[320px] px-6 py-5"><p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{d.judul}</p></TableCell>
-                      <TableCell className="max-w-[180px] px-6 py-5"><span className="block truncate text-sm font-normal text-zinc-900">{d.fungsi_nama ?? '-'}</span></TableCell>
+                      <TableCell className="max-w-[420px] px-6 py-5">
+                        <div>
+                          <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{d.judul}</p>
+                          <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">{d.fungsi_nama ?? '-'}</p>
+                        </div>
+                      </TableCell>
                       <TableCell className="max-w-[220px] px-6 py-5"><span className="block truncate text-sm font-normal text-zinc-900">{d.kegiatan_nama ?? '-'}</span></TableCell>
-                      <TableCell className="px-6 py-5"><WorkflowDateCell value={formatDate(d.updated_at)} /></TableCell>
                       <TableCell className="px-6 py-5"><RejectedBadge /></TableCell>
-                      <TableCell className="max-w-[220px] px-6 py-5"><span className="line-clamp-2 text-sm font-medium text-zinc-500" title={d.revision_notes ?? undefined}>{truncate(d.revision_notes, 50)}</span></TableCell>
+                      <TableCell className="px-6 py-5"><WorkflowDateCell value={formatDate(d.updated_at)} /></TableCell>
                       <TableCell className="px-6 py-5 text-right">
                         <WorkflowActionButton label={`Buka dokumen ${d.judul}`} />
                       </TableCell>
@@ -126,7 +142,7 @@ function BendaharaDitolakPage() {
             </WorkflowTableShell>
 
             <WorkflowMobileList>
-              {items.map((d) => (
+              {filtered.map((d) => (
                 <WorkflowMobileCard
                   key={d.id}
                   title={d.judul}

@@ -1,6 +1,13 @@
 import type { ReactNode } from 'react'
 
 import { Button } from '#/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
 import { cn } from '#/lib/utils'
 import { ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react'
 
@@ -11,7 +18,7 @@ const toneClassName: Record<WorkflowRoleTone, string> = {
   ppspm: 'border-orange-100 bg-[#FFF8F1] text-orange-800',
 }
 
-export const WORKFLOW_TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
+export const WORKFLOW_TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
 
 type WorkflowPageHeaderProps = {
   tone?: WorkflowRoleTone
@@ -112,40 +119,98 @@ type WorkflowSearchPanelProps = {
 export function WorkflowSearchPanel({
   search,
   onSearchChange,
-  placeholder = 'Cari dokumen...',
+  placeholder = 'Cari judul, fungsi, atau kegiatan...',
   children,
   resultLabel,
 }: WorkflowSearchPanelProps) {
   return (
-    <WorkflowPanel className="rounded-[26px] border-zinc-200/80 p-5 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
-          {onSearchChange && (
-            <label className="relative min-w-0 flex-1 md:max-w-xl">
-              <span className="sr-only">Cari dokumen</span>
-              <Search
-                size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                placeholder={placeholder}
-                value={search ?? ''}
-                onChange={(event) => onSearchChange(event.target.value)}
-                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
-              />
-            </label>
-          )}
-          {children}
-        </div>
-        {resultLabel && (
-          <div className="text-xs font-semibold text-zinc-500">
-            {resultLabel}
-          </div>
+    <WorkflowPanel className="rounded-[26px] border-zinc-200/80 p-4 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {onSearchChange && (
+          <label className="relative min-w-0 flex-1 lg:max-w-xl">
+            <span className="sr-only">Cari dokumen</span>
+            <Search
+              size={17}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              placeholder={placeholder}
+              value={search ?? ''}
+              onChange={(event) => onSearchChange(event.target.value)}
+              className="h-10 w-full rounded-[20px] border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            />
+          </label>
         )}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          {children}
+          {resultLabel && (
+            <div className="shrink-0 text-xs font-medium text-zinc-600 sm:text-right">
+              {resultLabel}
+            </div>
+          )}
+        </div>
       </div>
     </WorkflowPanel>
+  )
+}
+
+type WorkflowStatusSelectOption = {
+  value: string
+  label: string
+}
+
+type WorkflowStatusSelectProps = {
+  value: string
+  onChange: (value: string) => void
+  options: WorkflowStatusSelectOption[]
+  ariaLabel?: string
+  className?: string
+}
+
+export function WorkflowStatusSelect({
+  value,
+  onChange,
+  options,
+  ariaLabel = 'Filter status',
+  className,
+}: WorkflowStatusSelectProps) {
+  const normalizedValue = value || 'ALL'
+
+  return (
+    <Select
+      value={normalizedValue}
+      onValueChange={(nextValue) => onChange(nextValue === 'ALL' ? '' : nextValue ?? '')}
+    >
+      <SelectTrigger
+        aria-label={ariaLabel}
+        className={cn(
+          'h-11 w-full min-w-[148px] rounded-[22px] border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-950 shadow-[0_2px_8px_rgba(15,23,42,0.08)] hover:border-zinc-300 hover:bg-[#FFFDF9] focus-visible:border-orange-200 focus-visible:ring-orange-100/70 sm:w-fit [&_svg]:text-zinc-950',
+          className,
+        )}
+      >
+        <SelectValue>
+          {(selectedValue) => options.find(option => option.value === selectedValue)?.label ?? 'Semua Status'}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent
+        align="start"
+        sideOffset={8}
+        className="rounded-[18px] border border-zinc-100 bg-white p-2 shadow-[0_12px_32px_rgba(15,23,42,0.14)]"
+      >
+        {options.map(option => (
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            label={option.label}
+            className="min-h-10 rounded-xl px-3 py-2 text-sm font-medium text-zinc-900 focus:bg-[#FFF1E6] focus:text-[#FF4D00] data-[selected]:bg-[#FFF1E6] data-[selected]:text-[#FF4D00]"
+          >
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 

@@ -7,6 +7,10 @@ import {
   PegawaiPanel,
 } from '#/components/pegawai/PegawaiPagePrimitives'
 import {
+  WorkflowSearchPanel,
+  WorkflowStatusSelect,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
+import {
   Table,
   TableHeader,
   TableBody,
@@ -22,7 +26,6 @@ import {
   Plus,
   FileText,
   ChevronRight,
-  Search,
   Clock3,
 } from 'lucide-react'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
@@ -37,7 +40,18 @@ export const Route = createFileRoute('/pegawai/dokumen/')({
 })
 
 const PAGE_SIZE = 10
-const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
+const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
+const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, atau kegiatan...'
+const STATUS_FILTER_OPTIONS = [
+  { value: 'ALL', label: 'Semua Status' },
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'IN_PPK_VALIDATION', label: 'Validasi PPK' },
+  { value: 'IN_BENDAHARA_APPROVAL', label: 'Menunggu Persetujuan' },
+  { value: 'NEED_REVISION', label: 'Perlu Revisi' },
+  { value: 'COMPLETED', label: 'Selesai' },
+  { value: 'TERSIMPAN', label: 'Tersimpan' },
+  { value: 'ARCHIVED', label: 'Diarsipkan' },
+]
 
 type AuthSessionResponse = {
   session: { userId: string; email: string; userName?: string | null } | null
@@ -138,39 +152,18 @@ function DokumenSayaPage() {
           </div>
         </section>
 
-        <section className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <label className="relative min-w-0 flex-1 md:max-w-xl">
-              <span className="sr-only">Cari dokumen</span>
-              <Search
-                size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                placeholder="Cari dokumen..."
-                value={search}
-                onChange={(event) => { setSearch(event.target.value); setPage(0) }}
-                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
-              />
-            </label>
-            <select
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setPage(0) }}
-              className="h-12 rounded-2xl border border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-semibold text-zinc-700 outline-none transition hover:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60 md:w-56"
-            >
-              <option value="">Semua Status</option>
-              <option value="DRAFT">Draft</option>
-              <option value="IN_PPK_VALIDATION">Validasi PPK</option>
-              <option value="IN_BENDAHARA_APPROVAL">Menunggu Persetujuan</option>
-              <option value="NEED_REVISION">Perlu Revisi</option>
-              <option value="COMPLETED">Selesai</option>
-              <option value="TERSIMPAN">Tersimpan</option>
-              <option value="ARCHIVED">Diarsipkan</option>
-            </select>
-          </div>
-        </section>
+        <WorkflowSearchPanel
+          search={search}
+          onSearchChange={(value) => { setSearch(value); setPage(0) }}
+          placeholder={WORKFLOW_SEARCH_PLACEHOLDER}
+          resultLabel={`Total ${filtered.length} Dokumen`}
+        >
+          <WorkflowStatusSelect
+            value={statusFilter}
+            onChange={(value) => { setStatusFilter(value); setPage(0) }}
+            options={STATUS_FILTER_OPTIONS}
+          />
+        </WorkflowSearchPanel>
 
         {loading ? (
           <LoadingState variant="list" rows={5} label="Memuat dokumen pegawai" />
@@ -199,14 +192,10 @@ function DokumenSayaPage() {
           />
         ) : (
           <>
-            <p className="px-1 text-sm font-bold text-zinc-950">
-              {filtered.length} Dokumen Ditemukan
-            </p>
-
             <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
               <Table className="text-left">
                 <TableHeader>
-                  <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                  <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
                     <TableHead className={`w-16 text-center ${TABLE_HEAD_CLASS}`}>No</TableHead>
                     <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
                     <TableHead className={TABLE_HEAD_CLASS}>Kegiatan</TableHead>

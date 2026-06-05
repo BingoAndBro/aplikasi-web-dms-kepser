@@ -51,16 +51,12 @@ type PpkInboxResponse = {
   error?: string
 }
 
-type FungsiOption = {
-  id: string
-  nama: string
-}
-
 export const Route = createFileRoute('/ppk/inbox')({
   component: PpkInboxPage,
 })
 
 const PAGE_SIZE = 10
+const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, atau kegiatan...'
 
 
 function PpkInboxPage() {
@@ -69,30 +65,14 @@ function PpkInboxPage() {
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [fungsiList, setFungsiList] = useState<{ id: string; nama: string }[]>([])
-  const [fungsiFilter, setFungsiFilter] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(0)
-
-  // Fetch fungsi list for filter dropdown
-  useEffect(() => {
-    apiFetch<FungsiOption[]>('/master-fungsi')
-      .then(data => { setFungsiList(data) })
-      .catch(() => { setFungsiList([]) })
-  }, [])
 
   // Fetch inbox data
   async function fetchData() {
     setLoading(true)
     setFetchError(null)
     try {
-      const params = new URLSearchParams()
-      if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      if (startDate) params.set('start_date', startDate)
-      if (endDate) params.set('end_date', endDate)
-
-      const json = await apiFetch<PpkInboxResponse>('/ppk/inbox', { query: params })
+      const json = await apiFetch<PpkInboxResponse>('/ppk/inbox')
       setItems(json.dokumen ?? [])
     } catch (err) {
       if (err instanceof ApiError) {
@@ -110,14 +90,14 @@ function PpkInboxPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [fungsiFilter, startDate, endDate])
+  useEffect(() => { fetchData() }, [])
 
   // Client-side search filter
   const filtered = items.filter(d =>
     !search ||
     d.judul.toLowerCase().includes(search.toLowerCase()) ||
-    d.fungsi_nama.toLowerCase().includes(search.toLowerCase()) ||
-    d.kegiatan_nama.toLowerCase().includes(search.toLowerCase())
+    (d.fungsi_nama ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (d.kegiatan_nama ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -142,41 +122,15 @@ function PpkInboxPage() {
         <WorkflowSearchPanel
           search={search}
           onSearchChange={(value) => { setSearch(value); setPage(0) }}
-          placeholder="Cari judul, fungsi, kegiatan..."
-          resultLabel={`${filtered.length} dokumen ditemukan`}
+          placeholder={WORKFLOW_SEARCH_PLACEHOLDER}
+          resultLabel={`Total ${filtered.length} Dokumen`}
         >
-          <select
-            value={fungsiFilter}
-            onChange={e => { setFungsiFilter(e.target.value); setPage(0) }}
-            className="h-12 rounded-2xl border border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-semibold text-zinc-700 outline-none transition hover:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
-          >
-            <option value="">Semua Fungsi</option>
-            {fungsiList.map(f => (
-              <option key={f.id} value={f.id}>{f.nama}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={startDate}
-            onChange={e => { setStartDate(e.target.value); setPage(0) }}
-            className="h-12 rounded-2xl border border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-semibold text-zinc-700 outline-none transition hover:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
-            title="Tanggal mulai"
-          />
-          <input
-            type="date"
-            value={endDate}
-            onChange={e => { setEndDate(e.target.value); setPage(0) }}
-            className="h-12 rounded-2xl border border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-semibold text-zinc-700 outline-none transition hover:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
-            title="Tanggal akhir"
-          />
-          {(fungsiFilter || startDate || endDate) && (
+          {search && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
-                setFungsiFilter('')
-                setStartDate('')
-                setEndDate('')
+                setSearch('')
                 setPage(0)
               }}
               className="text-xs"
@@ -199,27 +153,22 @@ function PpkInboxPage() {
         ) : filtered.length === 0 ? (
           <EmptyState
             title="Tidak ada dokumen"
-            description={search || fungsiFilter || startDate || endDate
+            description={search
               ? 'Tidak ada dokumen yang cocok dengan filter Anda.'
               : 'Belum ada dokumen yang menunggu validasi PPK.'}
             icon={<FileText size={20} />}
           />
         ) : (
           <>
-            <p className="px-1 text-sm font-bold text-zinc-950">
-              {filtered.length} Dokumen Ditemukan
-            </p>
-
             <WorkflowTableShell>
                 <Table className="text-left">
                   <TableHeader>
-                    <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                    <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
                       <TableHead className={`w-16 text-center ${WORKFLOW_TABLE_HEAD_CLASS}`}>No</TableHead>
                       <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
-                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Fungsi</TableHead>
                       <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Kegiatan</TableHead>
-                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>
                       <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>
+                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>
                       <TableHead className={`w-20 text-right ${WORKFLOW_TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -249,17 +198,14 @@ function PpkInboxPage() {
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-[200px] px-6 py-5">
-                          <span className="block truncate text-sm font-normal text-zinc-900">{dok.fungsi_nama ?? '-'}</span>
-                        </TableCell>
                         <TableCell className="max-w-[260px] px-6 py-5">
                           <span className="block truncate text-sm font-normal text-zinc-900">{dok.kegiatan_nama ?? '-'}</span>
                         </TableCell>
                         <TableCell className="px-6 py-5">
-                          <WorkflowDateCell value={formatDate(dok.tanggal)} />
+                          <DocumentListStatusBadge status="IN_PPK_VALIDATION" />
                         </TableCell>
                         <TableCell className="px-6 py-5">
-                          <DocumentListStatusBadge status="IN_PPK_VALIDATION" />
+                          <WorkflowDateCell value={formatDate(dok.tanggal)} />
                         </TableCell>
                         <TableCell className="px-6 py-5 text-right">
                           <WorkflowActionButton label={`Buka dokumen ${dok.judul}`} />

@@ -34,6 +34,7 @@ type Item = {
 export const Route = createFileRoute('/ppk/revisi')({ component: PpkRevisiPage })
 
 const PAGE_SIZE = 10
+const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, kegiatan, atau catatan...'
 
 function PpkRevisiPage() {
   const navigate = useNavigate()
@@ -90,8 +91,8 @@ function PpkRevisiPage() {
         <WorkflowSearchPanel
           search={search}
           onSearchChange={(value) => { setSearch(value); setPage(0) }}
-          placeholder="Cari judul, fungsi, kegiatan, atau catatan..."
-          resultLabel={`${filtered.length} dokumen ditemukan`}
+          placeholder={WORKFLOW_SEARCH_PLACEHOLDER}
+          resultLabel={`Total ${filtered.length} Dokumen`}
         />
 
         {loading ? (
@@ -106,19 +107,15 @@ function PpkRevisiPage() {
           />
         ) : (
           <>
-            <p className="px-1 text-sm font-bold text-zinc-950">
-              {filtered.length} Dokumen Ditemukan
-            </p>
-
             <WorkflowTableShell>
               <Table className="text-left">
                 <TableHeader>
-                  <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                  <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
                     <TableHead className={`w-16 text-center ${WORKFLOW_TABLE_HEAD_CLASS}`}>No</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Kegiatan</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>
-                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>
                     <TableHead className={`w-20 text-right ${WORKFLOW_TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>

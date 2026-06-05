@@ -18,8 +18,15 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     expect(workflowPrimitives).toContain("ppspm: 'border-orange-100 bg-[#FFF8F1] text-orange-800'")
     expect(workflowPrimitives).toContain("variant?: 'panel' | 'list'")
     expect(workflowPrimitives).toContain("export const WORKFLOW_TABLE_HEAD_CLASS")
+    expect(workflowPrimitives).toContain('text-neutral-500')
     expect(workflowPrimitives).toContain('export function WorkflowDateCell')
     expect(workflowPrimitives).toContain('export function WorkflowActionButton')
+    expect(workflowPrimitives).toContain('export function WorkflowStatusSelect')
+    expect(workflowPrimitives).toContain('className="h-10 w-full rounded-[20px]')
+    expect(workflowPrimitives).toContain('min-w-[148px] rounded-[22px]')
+    expect(workflowPrimitives).toContain('text-sm font-medium text-zinc-950')
+    expect(workflowPrimitives).toContain("className=\"rounded-[18px] border border-zinc-100 bg-white p-2")
+    expect(workflowPrimitives).toContain("focus:bg-[#FFF1E6] focus:text-[#FF4D00]")
     expect(workflowPrimitives).toContain("meta?: Array<{ label: ReactNode; value: ReactNode; wide?: boolean }>")
     expect(workflowPrimitives).toContain("item.wide && 'col-span-2'")
     expect(workflowPrimitives).toContain("border-t border-zinc-100 pt-3")
@@ -34,7 +41,9 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
 
   it('aligns Pegawai document/revision mobile list actions and metadata cards', () => {
     expect(pegawaiDokumen).toContain('Dokumen Diajukan')
-    expect(pegawaiDokumen).toContain('Dokumen Ditemukan')
+    expect(pegawaiDokumen).toContain('WorkflowSearchPanel')
+    expect(pegawaiDokumen).toContain('resultLabel={`Total ${filtered.length} Dokumen`}')
+    expect(pegawaiDokumen).toContain('text-neutral-500')
     expect(pegawaiDokumen).toContain('max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10')
     expect(pegawaiDokumen).toContain('text-zinc-950 transition-colors group-hover:text-[#FF4D00]')
     expect(pegawaiDokumen).toContain('font-normal text-zinc-900')
@@ -47,6 +56,9 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
 
     expect(pegawaiRevisi).toContain("className={mobile ? 'block w-full' : undefined}")
     expect(pegawaiRevisi).toContain("className={mobile ? 'w-full gap-1.5' : undefined}")
+    expect(pegawaiRevisi).toContain('WorkflowSearchPanel')
+    expect(pegawaiRevisi).toContain('resultLabel={`Total ${filtered.length} Dokumen`}')
+    expect(pegawaiRevisi).toContain('text-neutral-500')
     expect(pegawaiRevisi).toContain("rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5")
     expect(pegawaiRevisi).toContain('className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"')
     expect(pegawaiRevisi).toContain('WorkflowDateCell')
@@ -64,7 +76,7 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     expect(pegawaiDokumen).toContain("navigate({ to: '/pegawai/dokumen/$id/revisi', params: { id: dok.id } })")
     expect(pegawaiDokumen).toContain("navigate({ to: '/pegawai/dokumen/$id', params: { id: dok.id } })")
     expect(pegawaiDokumen).toContain('Pantau status dan progres persetujuan dokumen tiket Anda yang sedang berjalan.')
-    expect(pegawaiDokumen).toContain('placeholder="Cari dokumen..."')
+    expect(pegawaiDokumen).toContain("const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, atau kegiatan...'")
     expect(pegawaiDokumen).toContain('Tanggal Ajuan')
     expect(pegawaiDokumen).not.toContain('PegawaiPageHeader')
     expect(pegawaiDokumen).not.toContain('PegawaiSearchPanel')
@@ -93,6 +105,8 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
       expect(source).toContain('WORKFLOW_TABLE_HEAD_CLASS')
       expect(source).toContain('variant="list"')
       expect(source).toContain('Buka Dokumen')
+      expect(source).not.toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Fungsi</TableHead>')
+      expect(source).not.toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Catatan</TableHead>')
       expect(source).not.toContain('<TableHead className="text-center">Tahun</TableHead>')
       expect(source).not.toContain("{ label: 'Tahun'")
       expect(source).not.toContain('Lihat Detail')
@@ -100,16 +114,90 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     }
   })
 
+  it('uses a neutral table header row while keeping body rows visually distinct', () => {
+    for (const source of [
+      pegawaiDokumen,
+      pegawaiRevisi,
+      ppkInbox,
+      ppkTervalidasi,
+      ppkDitolak,
+      ppkRevisi,
+      bendaharaInbox,
+      bendaharaSelesai,
+      bendaharaDitolak,
+    ]) {
+      expect(source).toContain('border-neutral-200 bg-neutral-100 hover:bg-neutral-100')
+      expect(source).not.toContain('bg-[#FFFCF8] hover:bg-[#FFFCF8]')
+    }
+
+    expect(workflowPrimitives).toContain('text-neutral-500')
+    expect(pegawaiDokumen).toContain('text-neutral-500')
+    expect(pegawaiRevisi).toContain('text-neutral-500')
+  })
+
   it('keeps rejected PPK/PPSPM list context visible without adding workflow transitions', () => {
     expect(ppkDitolak).toContain('Ditolak PPK')
     expect(ppkDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>')
+    expect(ppkDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>')
     expect(ppkDitolak).toContain("value: truncate(d.revision_notes, 80), wide: true")
     expect(ppkDitolak).toContain('<DocumentListStatusBadge status="NEED_REVISION" label="Ditolak PPK" />')
 
     expect(bendaharaDitolak).toContain('Ditolak PPSPM')
     expect(bendaharaDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>')
+    expect(bendaharaDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal</TableHead>')
     expect(bendaharaDitolak).toContain("value: truncate(d.revision_notes, 80), wide: true")
     expect(bendaharaDitolak).toContain('<DocumentListStatusBadge status="NEED_REVISION" label="Ditolak PPSPM" />')
+  })
+
+  it('keeps workflow list search and result count consistent without redundant fixed-status filters', () => {
+    const routesWithSearch = [
+      pegawaiDokumen,
+      pegawaiRevisi,
+      ppkInbox,
+      ppkTervalidasi,
+      ppkDitolak,
+      ppkRevisi,
+      bendaharaInbox,
+      bendaharaSelesai,
+      bendaharaDitolak,
+    ]
+
+    for (const source of routesWithSearch) {
+      expect(source).toContain('Total')
+      expect(source).toContain('Dokumen')
+      expect(source).toContain('toLowerCase()')
+      expect(source).not.toContain('dokumen ditemukan')
+      expect(source).not.toContain('Dokumen Ditemukan')
+    }
+
+    for (const source of [ppkDitolak, ppkRevisi, bendaharaSelesai, bendaharaDitolak]) {
+      expect(source).toContain('WorkflowSearchPanel')
+      expect(source).not.toContain('Semua Status')
+      expect(source).not.toContain('statusFilter')
+    }
+
+    for (const source of [pegawaiRevisi, ppkDitolak, ppkRevisi, bendaharaDitolak]) {
+      expect(source).toContain("const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, kegiatan, atau catatan...'")
+      expect(source).toContain('revision_notes ??')
+    }
+
+    for (const source of [pegawaiDokumen, ppkInbox, ppkTervalidasi, bendaharaInbox, bendaharaSelesai]) {
+      expect(source).toContain("const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, atau kegiatan...'")
+    }
+
+    expect(pegawaiDokumen).toContain("{ value: 'ALL', label: 'Semua Status' }")
+    expect(pegawaiDokumen).toContain('WorkflowStatusSelect')
+    expect(pegawaiDokumen).toContain('resultLabel={`Total ${filtered.length} Dokumen`}')
+    expect(ppkTervalidasi).toContain("{ value: 'ALL', label: 'Semua Status' }")
+    expect(ppkTervalidasi).toContain('statusFilter')
+    expect(ppkTervalidasi).toContain('WorkflowStatusSelect')
+    expect(ppkInbox).not.toContain('<option value="">Semua Fungsi</option>')
+    expect(ppkInbox).not.toContain('type="date"')
+    expect(ppkInbox).not.toContain('fungsiFilter')
+    expect(ppkInbox).not.toContain('/master-fungsi')
+    expect(bendaharaInbox).not.toContain('<option value="">Semua Fungsi</option>')
+    expect(bendaharaInbox).not.toContain('fungsiFilter')
+    expect(bendaharaInbox).not.toContain('/master-fungsi')
   })
 
   it('does not introduce forbidden legacy or backend surfaces in touched list sources', () => {
