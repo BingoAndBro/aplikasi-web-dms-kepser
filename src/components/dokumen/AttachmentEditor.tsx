@@ -65,7 +65,7 @@ function ResetActionButton({
       type="button"
       onClick={() => { void onClick() }}
       className={cn(
-        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-orange-100 px-2.5 text-[11px] font-semibold text-[#E65100] transition-colors hover:bg-orange-200',
+        'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-orange-100 px-2.5 text-[11px] font-semibold text-[#E65100] transition-colors hover:bg-orange-200',
         className,
       )}
     >
@@ -89,7 +89,7 @@ function FileActionButton({
       type="button"
       onClick={() => { void onClick() }}
       aria-label={ariaLabel}
-      className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-[#F0E1D5] bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-[#FFF7F0] hover:text-[#FF5A00]"
+      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#F0E1D5] bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-[#FFF7F0] hover:text-[#FF5A00]"
     >
       {children}
     </button>
@@ -107,7 +107,7 @@ function UploadReplaceButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xl border border-[#FF5A00] bg-white px-3 text-xs font-semibold text-[#FF5A00] transition-colors hover:bg-[#FFF1E7]"
+      className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-[#FF5A00] bg-white px-3 text-xs font-semibold text-[#FF5A00] transition-colors hover:bg-[#FFF1E7]"
     >
       <Upload size={13} />
       {hasFile ? 'Ganti' : 'Unggah'}
@@ -771,7 +771,7 @@ export function AttachmentEditor({
               <CheckCircle2 size={16} className="text-primary shrink-0" />
               <p className="text-sm font-semibold text-on-surface truncate flex-1">{previewFilename}</p>
               <span className="text-[10px] text-outline hidden sm:block">ESC</span>
-              <button type="button" onClick={closePreview} aria-label="Tutup pratinjau" className="w-7 h-7 rounded-full hover:bg-surface-container-low flex items-center justify-center">
+              <button type="button" onClick={closePreview} aria-label="Tutup pratinjau" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-surface-container-low">
                 <X size={16} />
               </button>
             </div>
@@ -993,7 +993,7 @@ export function AttachmentEditor({
                           type="button"
                           aria-label={`Hapus dokumen pendukung ${doc.nama}`}
                           onClick={() => handleRemoveUserDoc(doc.id)}
-                          className="flex size-7 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                          className="flex size-7 cursor-pointer items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
                         >
                           <X size={13} />
                         </button>
@@ -1035,8 +1035,9 @@ export function AttachmentEditor({
               </div>
             ) : (
               <button
+                type="button"
                 onClick={() => setShowAddForm(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-[#FF5A00] transition-colors hover:border-[#FF5A00] hover:bg-[#FFF1E7]"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-[#FF5A00] transition-colors hover:border-[#FF5A00] hover:bg-[#FFF1E7]"
               >
                 <Plus size={14} />
                 <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>

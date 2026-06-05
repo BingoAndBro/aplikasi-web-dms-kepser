@@ -346,7 +346,7 @@ export function ArchiveTabs<T extends string>({
               type="button"
               onClick={() => onChange(tab.id)}
               className={cn(
-                'rounded-xl px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition',
+                'cursor-pointer rounded-xl px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition',
                 active
                   ? 'bg-orange-600 text-white shadow-sm'
                   : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-800',

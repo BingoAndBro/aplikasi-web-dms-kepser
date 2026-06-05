@@ -123,6 +123,17 @@ input[type="date"]::-webkit-datetime-edit-placeholder {
   * {
     @apply border-border;
   }
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
   body {
     @apply bg-background text-on-surface font-sans antialiased;
     -webkit-font-smoothing: antialiased;

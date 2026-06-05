@@ -234,7 +234,7 @@ export function FileUploadButton({
                   type="button"
                   onClick={closePreview}
                   aria-label="Tutup pratinjau"
-                  className="flex size-7 items-center justify-center rounded-full text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+                  className="flex size-7 cursor-pointer items-center justify-center rounded-full text-stone-500 hover:bg-stone-100 hover:text-stone-900"
                 >
                   <X size={16} />
                 </button>

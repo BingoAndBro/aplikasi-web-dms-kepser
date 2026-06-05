@@ -351,7 +351,7 @@ export function WorkflowDashboardCard({
   return (
     <a
       href={href}
-      className="group rounded-2xl border border-orange-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+      className="group cursor-pointer rounded-2xl border border-orange-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
     >
       <div className="mb-4 flex size-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-700 transition group-hover:bg-orange-600 group-hover:text-white">
         {icon}

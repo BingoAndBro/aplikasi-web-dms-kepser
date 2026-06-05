@@ -394,7 +394,7 @@ export function AttachmentViewer({
               <span className="text-[10px] text-outline hidden sm:block">ESC</span>
               <button
                 onClick={closePreview}
-                className="w-7 h-7 rounded-full hover:bg-surface-container-low flex items-center justify-center"
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-surface-container-low"
               >
                 <X size={16} />
               </button>
