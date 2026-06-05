@@ -22,6 +22,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckCircle2, XCircle, Eye, Download, Upload, Trash2, X, Loader2 } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import {
@@ -378,53 +379,71 @@ export function AttachmentViewer({
   return (
     <>
       {/* Preview Modal */}
-      {previewingIdx !== null && (
+      {previewingIdx !== null && createPortal((
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4"
           onClick={e => { if (e.target === e.currentTarget) closePreview() }}
         >
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl flex flex-col max-h-[70vh]">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
+          <div
+            className="relative z-10 flex h-[calc(100dvh-1rem)] max-h-[90dvh] w-full max-w-[92vw] flex-col overflow-hidden rounded-2xl bg-zinc-950 shadow-2xl ring-1 ring-white/10 sm:h-[88vh] sm:max-w-[88vw]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Pratinjau lampiran"
+          >
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
-              <CheckCircle2 size={16} className="text-primary shrink-0" />
-              <p className="text-sm font-semibold text-on-surface truncate flex-1">
-                {previewFilename}
-              </p>
-              <span className="text-[10px] text-outline hidden sm:block">ESC</span>
+            <div className="flex min-h-12 shrink-0 items-center gap-3 border-b border-white/10 bg-zinc-950 px-3 py-2 text-white sm:px-4">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold leading-5 text-white">
+                  {previewFilename || 'Pratinjau lampiran'}
+                </p>
+                <p className="hidden text-[11px] leading-4 text-zinc-400 sm:block">Mode pratinjau dokumen</p>
+              </div>
               <button
-                onClick={closePreview}
-                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full hover:bg-surface-container-low"
+                type="button"
+                onClick={() => { if (previewingIdx !== null) void handleDownload(previewingIdx) }}
+                disabled={previewingIdx === null}
+                aria-label={`Unduh ${previewFilename || 'lampiran'}`}
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-zinc-200 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:text-zinc-600 disabled:hover:bg-transparent"
               >
-                <X size={16} />
+                <Download size={17} />
+              </button>
+              <span className="hidden text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:block">ESC</span>
+              <button
+                type="button"
+                onClick={closePreview}
+                aria-label="Tutup pratinjau"
+                className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-zinc-200 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <X size={18} />
               </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto bg-surface-container-low/30">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-zinc-900 p-2 sm:p-4">
               {previewLoading ? (
-                <div className="flex items-center justify-center h-48">
-                  <Loader2 size={22} className="animate-spin text-primary" />
+                <div className="flex h-full min-h-60 w-full items-center justify-center">
+                  <Loader2 size={26} className="animate-spin text-white" />
                 </div>
               ) : previewUrl ? (
                 <iframe
                   src={previewUrl}
-                  className="w-full h-[calc(70vh-96px)] border-0"
+                  className="h-full min-h-[60vh] w-full max-w-6xl border-0 bg-white shadow-2xl shadow-black/40"
                   title={previewFilename}
                 />
               ) : (
-                <div className="flex items-center justify-center h-48">
+                <div className="flex h-full min-h-60 w-full items-center justify-center rounded-xl bg-zinc-950/60 px-4 text-center">
                   {previewError ? (
-                    <p className="text-sm text-error">{previewError}</p>
+                    <p className="text-sm font-medium text-red-300">{previewError}</p>
                   ) : (
-                    <p className="text-sm text-on-surface-variant">Gagal memuat pratinjau.</p>
+                    <p className="text-sm text-zinc-300">Gagal memuat pratinjau.</p>
                   )}
                 </div>
               )}
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {/* Sections */}
       <div className="space-y-4">

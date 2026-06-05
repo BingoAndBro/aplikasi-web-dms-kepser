@@ -34,4 +34,25 @@ describe('AttachmentViewer destroyed-file UX wiring', () => {
     expect(source).not.toContain('/api/dokumen/preview-url?url=')
     expect(source).not.toContain('/api/dokumen/download-url?url=')
   })
+
+  it('keeps the unified document preview overlay visual-only and route-safe', () => {
+    const viewerSource = readFileSync('src/components/dokumen/AttachmentViewer.tsx', 'utf8')
+    const editorSource = readFileSync('src/components/dokumen/AttachmentEditor.tsx', 'utf8')
+
+    for (const source of [viewerSource, editorSource]) {
+      expect(source).toContain('bg-black/85 backdrop-blur-sm')
+      expect(source).toContain('createPortal((')
+      expect(source).toContain('z-[100]')
+      expect(source).toContain('max-h-[90dvh]')
+      expect(source).toContain('sm:max-w-[88vw]')
+      expect(source).toContain('bg-zinc-950')
+      expect(source).toContain('bg-zinc-900')
+      expect(source).toContain('Mode pratinjau dokumen')
+      expect(source).toContain('aria-label={`Unduh ${previewFilename || \'lampiran\'}`}')
+      expect(source).toContain('aria-label="Tutup pratinjau"')
+      expect(source).not.toContain('DMS_LOCAL_STORAGE_ROOT')
+      expect(source).not.toContain('document.cookie')
+      expect(source).not.toContain('localStorage')
+    }
+  })
 })
