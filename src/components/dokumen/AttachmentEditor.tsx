@@ -61,10 +61,18 @@ interface AttachmentEditorProps {
   nominalValue?: number | null
   submitLabel: string
   extraActions?: React.ReactNode
+  hideDefaultActions?: boolean
+  submitRequestSignal?: number
+  cancelRequestSignal?: number
   onSubmit: (data: {
     lampiranUrls: LampiranUrl[]
     nominalRealisasi: number | null
   }) => Promise<void> | void
+  confirmBeforeSubmit?: (data: {
+    lampiranUrls: LampiranUrl[]
+    nominalRealisasi: number | null
+    hasUnsavedChanges: boolean
+  }) => Promise<boolean> | boolean
   onCancel: () => void
   onDirtyChange?: (isDirty: boolean) => void
   confirmIfDirty?: (callback: () => void | Promise<void>) => void | Promise<void>
@@ -81,7 +89,11 @@ export function AttachmentEditor({
   nominalValue,
   submitLabel,
   extraActions,
+  hideDefaultActions = false,
+  submitRequestSignal,
+  cancelRequestSignal,
   onSubmit,
+  confirmBeforeSubmit,
   onCancel,
   onDirtyChange,
   confirmIfDirty,
@@ -117,6 +129,8 @@ export function AttachmentEditor({
   const lampiranUrlsRef = useRef<LampiranUrl[]>(initialLampirans)
   const pendingFilesRef = useRef<Map<string, PendingFile>>(new Map())
   const sessionPendingUrlsRef = useRef<Set<string>>(new Set())
+  const lastSubmitRequestSignalRef = useRef(submitRequestSignal)
+  const lastCancelRequestSignalRef = useRef(cancelRequestSignal)
 
   // ---------------------------------------------------------------------------
   // Effect: Initialize
@@ -579,6 +593,8 @@ export function AttachmentEditor({
       }
     }
 
+    if (!canSubmit) return
+
     setIsSubmitting(true)
 
     try {
@@ -596,6 +612,16 @@ export function AttachmentEditor({
       const nominalValueFinal = !isNonMaterial
         ? parseInt(nominalRealisasi.replace(/[^\d]/g, ''), 10) || null
         : null
+
+      if (confirmBeforeSubmit) {
+        const confirmed = await confirmBeforeSubmit({
+          lampiranUrls: finalLampirans,
+          nominalRealisasi: nominalValueFinal,
+          hasUnsavedChanges,
+        })
+
+        if (!confirmed) return
+      }
 
       await cleanupUnreferencedSessionPendingUrls(finalLampirans, 'submit-before-persist')
 
@@ -616,6 +642,22 @@ export function AttachmentEditor({
       setIsSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    if (submitRequestSignal === undefined) return
+    if (lastSubmitRequestSignalRef.current === submitRequestSignal) return
+
+    lastSubmitRequestSignalRef.current = submitRequestSignal
+    void handleSubmit()
+  }, [submitRequestSignal])
+
+  useEffect(() => {
+    if (cancelRequestSignal === undefined) return
+    if (lastCancelRequestSignalRef.current === cancelRequestSignal) return
+
+    lastCancelRequestSignalRef.current = cancelRequestSignal
+    void handleCancel()
+  }, [cancelRequestSignal])
 
   // ---------------------------------------------------------------------------
   // Computed
@@ -971,20 +1013,22 @@ export function AttachmentEditor({
         </div>
 
         {/* ========== ACTIONS ========== */}
-        <div className="flex items-center justify-end gap-3">
-          <Button variant="outline" onClick={handleCancel} disabled={isCancelling}>
-            {isCancelling ? <Loader2 size={14} className="animate-spin" /> : 'Batal'}
-          </Button>
-          {extraActions}
-          <Button onClick={handleSubmit} disabled={isSubmitting || !canSubmit} className="gap-1.5">
-            {isSubmitting ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <CheckCircle2 size={14} />
-            )}
-            {submitLabel}
-          </Button>
-        </div>
+        {!hideDefaultActions && (
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="outline" onClick={handleCancel} disabled={isCancelling}>
+              {isCancelling ? <Loader2 size={14} className="animate-spin" /> : 'Batal'}
+            </Button>
+            {extraActions}
+            <Button onClick={handleSubmit} disabled={isSubmitting || !canSubmit} className="gap-1.5">
+              {isSubmitting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={14} />
+              )}
+              {submitLabel}
+            </Button>
+          </div>
+        )}
       </div>
     </>
   )
