@@ -8,10 +8,13 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import {
   DocumentListStatusBadge,
+  WorkflowActionButton,
+  WorkflowDateCell,
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
   WorkflowTableShell,
+  WORKFLOW_TABLE_HEAD_CLASS,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
 import { ChevronRight, CheckCircle2, Banknote } from 'lucide-react'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -45,16 +48,12 @@ function BendaharaSelesaiPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
         <WorkflowPageHeader
+          variant="list"
           tone="ppspm"
           eyebrow={
-            <>
-              <Banknote size={12} />
-              <Link to="/bendahara" className="hover:text-orange-900">PPSPM</Link>
-              <ChevronRight size={10} />
-              <span>Dokumen Selesai</span>
-            </>
+            <Banknote size={22} />
           }
           title="Dokumen Selesai"
           description={`${items.length} dokumen telah disetujui PPSPM dan berstatus selesai.`}
@@ -71,24 +70,28 @@ function BendaharaSelesaiPage() {
           />
         ) : (
           <>
+            <p className="px-1 text-sm font-bold text-zinc-950">
+              {items.length} Dokumen Ditemukan
+            </p>
+
             <WorkflowTableShell>
-              <Table>
+              <Table className="text-left">
                 <TableHeader>
-                  <TableRow className="bg-orange-50/50">
-                    <TableHead className="w-12 text-center">No</TableHead>
-                    <TableHead>Judul</TableHead>
-                    <TableHead>Fungsi</TableHead>
-                    <TableHead>Kegiatan</TableHead>
-                    <TableHead className="text-center">Tanggal Selesai</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center w-20">Aksi</TableHead>
+                  <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                    <TableHead className={`w-16 text-center ${WORKFLOW_TABLE_HEAD_CLASS}`}>No</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Fungsi</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Kegiatan</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Selesai</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>
+                    <TableHead className={`w-20 text-right ${WORKFLOW_TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="divide-y divide-zinc-100 text-[13px]">
                   {items.map((d, i) => (
                     <TableRow
                       key={d.id}
-                      className="group cursor-pointer hover:bg-orange-50/60 transition-colors"
+                      className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"
                       onClick={() => openDocument(d)}
                       tabIndex={0}
                       onKeyDown={(event) => {
@@ -99,14 +102,14 @@ function BendaharaSelesaiPage() {
                       }}
                       aria-label={`Buka dokumen ${d.judul}`}
                     >
-                      <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
-                      <TableCell><p className="font-semibold text-sm text-on-surface line-clamp-1">{d.judul}</p></TableCell>
-                      <TableCell><span className="text-xs text-on-surface">{d.fungsi_nama ?? '-'}</span></TableCell>
-                      <TableCell><span className="text-xs text-on-surface">{d.kegiatan_nama ?? '-'}</span></TableCell>
-                      <TableCell className="text-center"><span className="text-xs text-on-surface-variant">{formatDate(d.updated_at)}</span></TableCell>
-                      <TableCell className="text-center"><DocumentListStatusBadge status="COMPLETED" /></TableCell>
-                      <TableCell className="text-center">
-                        <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen ${d.judul}`}><ChevronRight size={14} /></Button>
+                      <TableCell className="px-6 py-5 text-center text-sm font-normal text-zinc-950">{i + 1}</TableCell>
+                      <TableCell className="max-w-[360px] px-6 py-5"><p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{d.judul}</p></TableCell>
+                      <TableCell className="max-w-[200px] px-6 py-5"><span className="block truncate text-sm font-normal text-zinc-900">{d.fungsi_nama ?? '-'}</span></TableCell>
+                      <TableCell className="max-w-[260px] px-6 py-5"><span className="block truncate text-sm font-normal text-zinc-900">{d.kegiatan_nama ?? '-'}</span></TableCell>
+                      <TableCell className="px-6 py-5"><WorkflowDateCell value={formatDate(d.updated_at)} /></TableCell>
+                      <TableCell className="px-6 py-5"><DocumentListStatusBadge status="COMPLETED" /></TableCell>
+                      <TableCell className="px-6 py-5 text-right">
+                        <WorkflowActionButton label={`Buka dokumen ${d.judul}`} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -123,7 +126,7 @@ function BendaharaSelesaiPage() {
                   status={<DocumentListStatusBadge status="COMPLETED" />}
                   meta={[
                     { label: 'Kegiatan', value: d.kegiatan_nama ?? '-', wide: true },
-                    { label: 'Tanggal Selesai', value: formatDate(d.updated_at) },
+                    { label: 'Tanggal Selesai', value: <WorkflowDateCell value={formatDate(d.updated_at)} className="mt-1" /> },
                   ]}
                   action={
                     <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>

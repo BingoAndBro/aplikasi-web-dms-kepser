@@ -2,20 +2,23 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
-  PegawaiPageHeader,
   PegawaiPagination,
   PegawaiPanel,
-  PegawaiSearchPanel,
 } from '#/components/pegawai/PegawaiPagePrimitives'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { DocumentListStatusBadge } from '#/components/workflow/PpkPpspmPagePrimitives'
+import {
+  DocumentListStatusBadge,
+  WorkflowActionButton,
+  WorkflowDateCell,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
 import {
   FileText,
   ChevronRight,
+  Search,
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
@@ -41,6 +44,7 @@ export const Route = createFileRoute('/pegawai/revisi')({
 })
 
 const PAGE_SIZE = 10
+const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
 
 function PegawaiRevisiPage() {
   const navigate = useNavigate()
@@ -85,26 +89,45 @@ function PegawaiRevisiPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
-        <PegawaiPageHeader
-          eyebrow={
-            <>
-              <FileText size={12} />
-              <span>Dokumen</span>
-              <ChevronRight size={10} />
-              <span>Revisi Dokumen</span>
-            </>
-          }
-          title="Revisi Dokumen"
-          description="Dokumen yang dikembalikan untuk diperbaiki muncul di sini. Baca catatan revisi, perbarui lampiran atau metadata yang diminta, lalu ajukan ulang."
-        />
+      <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-5">
+            <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+              <FileText size={22} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
+                Revisi Dokumen
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
+                Tinjau catatan revisi, perbarui dokumen yang diminta, lalu ajukan ulang.
+              </p>
+            </div>
+          </div>
+        </section>
 
-        <PegawaiSearchPanel
-          search={search}
-          onSearchChange={(value) => { setSearch(value); setPage(0) }}
-          placeholder="Cari judul, fungsi, kegiatan, atau catatan..."
-          resultLabel={`${filtered.length} dokumen perlu ditinjau`}
-        />
+        <section className="rounded-[26px] border border-zinc-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <label className="relative min-w-0 flex-1 md:max-w-xl">
+              <span className="sr-only">Cari dokumen revisi</span>
+              <Search
+                size={17}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+                aria-hidden="true"
+              />
+              <input
+                type="search"
+                placeholder="Cari judul, fungsi, kegiatan, atau catatan..."
+                value={search}
+                onChange={(event) => { setSearch(event.target.value); setPage(0) }}
+                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+              />
+            </label>
+            <p className="text-xs font-semibold text-zinc-500">
+              {filtered.length} dokumen perlu ditinjau
+            </p>
+          </div>
+        </section>
 
         {loading ? (
           <LoadingState variant="list" rows={4} label="Memuat revisi dokumen" />
@@ -120,24 +143,27 @@ function PegawaiRevisiPage() {
           />
         ) : (
           <>
-            <PegawaiPanel className="hidden overflow-hidden p-0 md:block">
-              <div className="overflow-x-auto">
-                <Table>
+            <p className="px-1 text-sm font-bold text-zinc-950">
+              {filtered.length} Dokumen Ditemukan
+            </p>
+
+            <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+                <Table className="text-left">
                   <TableHeader>
-                    <TableRow className="bg-orange-50/70">
-                      <TableHead className="w-12 text-center">No</TableHead>
-                      <TableHead>Judul</TableHead>
-                      <TableHead>Kegiatan</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-center">Tanggal</TableHead>
-                      <TableHead className="text-center w-20">Aksi</TableHead>
+                    <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                      <TableHead className={`w-16 text-center ${TABLE_HEAD_CLASS}`}>No</TableHead>
+                      <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
+                      <TableHead className={TABLE_HEAD_CLASS}>Kegiatan</TableHead>
+                      <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
+                      <TableHead className={TABLE_HEAD_CLASS}>Tanggal</TableHead>
+                      <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="divide-y divide-zinc-100 text-[13px]">
                     {paginated.map((dok, i) => (
                       <TableRow
                         key={dok.id}
-                        className="group cursor-pointer hover:bg-orange-50/50 transition-colors"
+                        className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"
                         onClick={() => openRevision(dok)}
                         tabIndex={0}
                         onKeyDown={(event) => {
@@ -148,67 +174,64 @@ function PegawaiRevisiPage() {
                         }}
                         aria-label={`Buka dokumen revisi ${dok.judul}`}
                       >
-                        <TableCell className="text-center text-xs text-outline">
+                        <TableCell className="px-6 py-5 text-center text-sm font-normal text-zinc-950">
                           {page * PAGE_SIZE + i + 1}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="max-w-[420px] px-6 py-5">
                           <div>
-                            <p className="font-semibold text-sm text-on-surface line-clamp-1">{dok.judul}</p>
-                            <p className="text-[10px] text-on-surface-variant mt-0.5">{dok.fungsi_nama ?? '-'}</p>
+                            <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</p>
+                            <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">{dok.fungsi_nama ?? '-'}</p>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-xs text-on-surface">{dok.kegiatan_nama ?? '-'}</span>
+                        <TableCell className="max-w-[260px] px-6 py-5">
+                          <span className="block truncate text-sm font-normal text-zinc-900">{dok.kegiatan_nama ?? '-'}</span>
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="px-6 py-5">
                           <DocumentListStatusBadge status={dok.status} />
                         </TableCell>
-                        <TableCell className="text-center">
-                          <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
+                        <TableCell className="px-6 py-5">
+                          <WorkflowDateCell value={formatDate(dok.tanggal)} />
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen revisi ${dok.judul}`}>
-                            <ChevronRight size={14} />
-                          </Button>
+                        <TableCell className="px-6 py-5 text-right">
+                          <WorkflowActionButton label={`Buka dokumen revisi ${dok.judul}`} />
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </div>
-            </PegawaiPanel>
+            </div>
 
             <div className="space-y-3 md:hidden">
               {paginated.map((dok, i) => (
-                <PegawaiPanel key={dok.id} className="space-y-3">
+                <PegawaiPanel key={dok.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
                         Revisi #{page * PAGE_SIZE + i + 1}
                       </p>
-                      <h2 className="mt-1 line-clamp-2 text-sm font-bold text-zinc-950">{dok.judul}</h2>
+                      <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</h2>
                     </div>
                     <DocumentListStatusBadge status={dok.status} className="shrink-0" />
                   </div>
-                  <div className="space-y-2 rounded-xl bg-orange-50/50 p-3 text-xs text-zinc-700">
+                    <div className="space-y-2 rounded-xl border border-amber-200/70 bg-amber-50/70 p-3 text-xs text-amber-900">
                     <p className="font-semibold text-zinc-950">Catatan revisi</p>
                     <p className="line-clamp-3">{dok.revision_notes ?? 'Tidak ada catatan tambahan.'}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
-                    <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
+                    <div className="rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
                       <p className="font-semibold text-zinc-500">Fungsi</p>
                       <p className="mt-0.5 text-zinc-900">{dok.fungsi_nama ?? '-'}</p>
                     </div>
-                    <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
+                    <div className="rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
                       <p className="font-semibold text-zinc-500">Tanggal</p>
-                      <p className="mt-0.5 text-zinc-900">{formatDate(dok.tanggal)}</p>
+                      <WorkflowDateCell value={formatDate(dok.tanggal)} className="mt-1" />
                     </div>
-                    <div className="col-span-2 rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5">
+                    <div className="col-span-2 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
                       <p className="font-semibold text-zinc-500">Kegiatan</p>
                       <p className="mt-0.5 text-zinc-900">{dok.kegiatan_nama ?? '-'}</p>
                     </div>
                   </div>
-                  <div className="space-y-3 border-t border-orange-100 pt-3">
+                  <div className="space-y-3 border-t border-zinc-100 pt-3">
                     <RevisionActionLink dok={dok} mobile />
                   </div>
                 </PegawaiPanel>

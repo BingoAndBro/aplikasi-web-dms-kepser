@@ -15,12 +15,15 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import {
   DocumentListStatusBadge,
+  WorkflowActionButton,
+  WorkflowDateCell,
   WorkflowMobileCard,
   WorkflowMobileList,
   WorkflowPageHeader,
   WorkflowPagination,
   WorkflowSearchPanel,
   WorkflowTableShell,
+  WORKFLOW_TABLE_HEAD_CLASS,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
 import {
   FileText,
@@ -126,15 +129,11 @@ function PpkInboxPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
         <WorkflowPageHeader
+          variant="list"
           eyebrow={
-            <>
-              <ClipboardList size={12} />
-              <Link to="/ppk" className="hover:text-orange-900">PPK</Link>
-              <ChevronRight size={10} />
-              <span>Validasi Dokumen</span>
-            </>
+            <ClipboardList size={22} />
           }
           title="Dokumen Menunggu Validasi"
           description={`${items.length} dokumen Material menunggu validasi PPK. Validasi akan meneruskan dokumen ke PPSPM.`}
@@ -149,7 +148,7 @@ function PpkInboxPage() {
           <select
             value={fungsiFilter}
             onChange={e => { setFungsiFilter(e.target.value); setPage(0) }}
-            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+            className="h-12 rounded-2xl border border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-semibold text-zinc-700 outline-none transition hover:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
           >
             <option value="">Semua Fungsi</option>
             {fungsiList.map(f => (
@@ -160,14 +159,14 @@ function PpkInboxPage() {
             type="date"
             value={startDate}
             onChange={e => { setStartDate(e.target.value); setPage(0) }}
-            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+            className="h-12 rounded-2xl border border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-semibold text-zinc-700 outline-none transition hover:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
             title="Tanggal mulai"
           />
           <input
             type="date"
             value={endDate}
             onChange={e => { setEndDate(e.target.value); setPage(0) }}
-            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+            className="h-12 rounded-2xl border border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-semibold text-zinc-700 outline-none transition hover:bg-white focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
             title="Tanggal akhir"
           />
           {(fungsiFilter || startDate || endDate) && (
@@ -207,24 +206,28 @@ function PpkInboxPage() {
           />
         ) : (
           <>
+            <p className="px-1 text-sm font-bold text-zinc-950">
+              {filtered.length} Dokumen Ditemukan
+            </p>
+
             <WorkflowTableShell>
-                <Table>
+                <Table className="text-left">
                   <TableHeader>
-                    <TableRow className="bg-orange-50/50">
-                      <TableHead className="w-12 text-center">No</TableHead>
-                      <TableHead>Judul</TableHead>
-                      <TableHead>Fungsi</TableHead>
-                      <TableHead>Kegiatan</TableHead>
-                      <TableHead className="text-center">Tanggal Ajuan</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-center w-20">Aksi</TableHead>
+                    <TableRow className="border-zinc-100 bg-[#FFFCF8] hover:bg-[#FFFCF8]">
+                      <TableHead className={`w-16 text-center ${WORKFLOW_TABLE_HEAD_CLASS}`}>No</TableHead>
+                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
+                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Fungsi</TableHead>
+                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Kegiatan</TableHead>
+                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>
+                      <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>
+                      <TableHead className={`w-20 text-right ${WORKFLOW_TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="divide-y divide-zinc-100 text-[13px]">
                     {paginated.map((dok, i) => (
                       <TableRow
                         key={dok.id}
-                        className="group cursor-pointer hover:bg-orange-50/60 transition-colors"
+                        className="group cursor-pointer border-zinc-100 transition-colors hover:bg-[#FFF8F1]/70"
                         onClick={() => openDocument(dok)}
                         tabIndex={0}
                         onKeyDown={(event) => {
@@ -235,33 +238,31 @@ function PpkInboxPage() {
                         }}
                         aria-label={`Buka dokumen ${dok.judul}`}
                       >
-                        <TableCell className="text-center text-xs text-outline">
+                        <TableCell className="px-6 py-5 text-center text-sm font-normal text-zinc-950">
                           {page * PAGE_SIZE + i + 1}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="max-w-[360px] px-6 py-5">
                           <div>
-                            <p className="font-semibold text-sm text-on-surface line-clamp-1">{dok.judul}</p>
-                            <p className="text-[10px] text-on-surface-variant mt-0.5">
+                            <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</p>
+                            <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">
                               Diajukan: {formatDate(dok.created_at)}
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-xs text-on-surface">{dok.fungsi_nama ?? '—'}</span>
+                        <TableCell className="max-w-[200px] px-6 py-5">
+                          <span className="block truncate text-sm font-normal text-zinc-900">{dok.fungsi_nama ?? '-'}</span>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-xs text-on-surface">{dok.kegiatan_nama ?? '—'}</span>
+                        <TableCell className="max-w-[260px] px-6 py-5">
+                          <span className="block truncate text-sm font-normal text-zinc-900">{dok.kegiatan_nama ?? '-'}</span>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <span className="text-xs text-on-surface-variant">{formatDate(dok.tanggal)}</span>
+                        <TableCell className="px-6 py-5">
+                          <WorkflowDateCell value={formatDate(dok.tanggal)} />
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="px-6 py-5">
                           <DocumentListStatusBadge status="IN_PPK_VALIDATION" />
                         </TableCell>
-                        <TableCell className="text-center">
-                          <Button size="icon-xs" variant="ghost" aria-label={`Buka dokumen ${dok.judul}`}>
-                            <ChevronRight size={14} />
-                          </Button>
+                        <TableCell className="px-6 py-5 text-right">
+                          <WorkflowActionButton label={`Buka dokumen ${dok.judul}`} />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -279,7 +280,7 @@ function PpkInboxPage() {
                   meta={[
                     { label: 'Fungsi', value: dok.fungsi_nama ?? '-' },
                     { label: 'Kegiatan', value: dok.kegiatan_nama ?? '-', wide: true },
-                    { label: 'Tanggal Ajuan', value: formatDate(dok.tanggal) },
+                    { label: 'Tanggal Ajuan', value: <WorkflowDateCell value={formatDate(dok.tanggal)} className="mt-1" /> },
                   ]}
                   action={
                     <Link to="/ppk/dokumen/$id" params={{ id: dok.id }}>

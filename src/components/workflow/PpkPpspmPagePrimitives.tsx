@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react'
 
 type WorkflowRoleTone = 'ppk' | 'ppspm'
 
@@ -11,6 +11,8 @@ const toneClassName: Record<WorkflowRoleTone, string> = {
   ppspm: 'border-orange-100 bg-[#FFF8F1] text-orange-800',
 }
 
+export const WORKFLOW_TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
+
 type WorkflowPageHeaderProps = {
   tone?: WorkflowRoleTone
   eyebrow: ReactNode
@@ -18,6 +20,7 @@ type WorkflowPageHeaderProps = {
   description?: ReactNode
   actions?: ReactNode
   className?: string
+  variant?: 'panel' | 'list'
 }
 
 export function WorkflowPageHeader({
@@ -27,7 +30,31 @@ export function WorkflowPageHeader({
   description,
   actions,
   className,
+  variant = 'panel',
 }: WorkflowPageHeaderProps) {
+  if (variant === 'list') {
+    return (
+      <section className={cn('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}>
+        <div className="flex min-w-0 items-start gap-5">
+          <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+            {eyebrow}
+          </div>
+          <div className="min-w-0">
+            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
+              {title}
+            </h1>
+            {description && (
+              <div className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
+                {description}
+              </div>
+            )}
+          </div>
+        </div>
+        {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+      </section>
+    )
+  }
+
   return (
     <div
       className={cn(
@@ -90,23 +117,23 @@ export function WorkflowSearchPanel({
   resultLabel,
 }: WorkflowSearchPanelProps) {
   return (
-    <WorkflowPanel className="p-3">
+    <WorkflowPanel className="rounded-[26px] border-zinc-200/80 p-5 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
           {onSearchChange && (
-            <label className="relative min-w-0 flex-1 md:max-w-md">
+            <label className="relative min-w-0 flex-1 md:max-w-xl">
               <span className="sr-only">Cari dokumen</span>
               <Search
-                size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-700/50"
+                size={17}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
                 aria-hidden="true"
               />
               <input
-                type="text"
+                type="search"
                 placeholder={placeholder}
                 value={search ?? ''}
                 onChange={(event) => onSearchChange(event.target.value)}
-                className="h-10 w-full rounded-xl border border-orange-100 bg-[#FFFDF9] pl-9 pr-4 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 placeholder:text-zinc-400"
+                className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
               />
             </label>
           )}
@@ -126,7 +153,7 @@ export function WorkflowTableShell({ children, className }: WorkflowPanelProps) 
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-2xl border border-orange-100/80 bg-white shadow-sm md:block',
+        'hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
         className,
       )}
     >
@@ -164,11 +191,11 @@ export function WorkflowMobileCard({
   action,
 }: WorkflowMobileCardProps) {
   return (
-    <div className="rounded-2xl border border-orange-100/80 bg-white p-4 shadow-sm">
+    <div className="group rounded-[22px] border border-zinc-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="line-clamp-2 text-sm font-bold text-zinc-950">{title}</h3>
-          {subtitle && <div className="mt-1 text-xs text-zinc-600">{subtitle}</div>}
+          <h3 className="line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{title}</h3>
+          {subtitle && <div className="mt-1 text-xs font-medium text-zinc-500">{subtitle}</div>}
         </div>
         {status && <div className="shrink-0">{status}</div>}
       </div>
@@ -178,7 +205,7 @@ export function WorkflowMobileCard({
             <div
               key={index}
               className={cn(
-                'min-w-0 rounded-xl border border-orange-100 bg-[#FFFDF9] p-2.5',
+                'min-w-0 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5',
                 item.wide && 'col-span-2',
               )}
             >
@@ -188,7 +215,7 @@ export function WorkflowMobileCard({
           ))}
         </div>
       )}
-      {action && <div className="mt-4 border-t border-orange-100 pt-3">{action}</div>}
+      {action && <div className="mt-4 border-t border-zinc-100 pt-3">{action}</div>}
     </div>
   )
 }
@@ -230,7 +257,7 @@ export function DocumentListStatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md border px-2.5 py-1 text-[11px] font-bold uppercase text-nowrap',
+        'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap',
         documentListStatusClassName[key] ?? 'border-slate-200 bg-slate-50 text-slate-700',
         className,
       )}
@@ -238,6 +265,28 @@ export function DocumentListStatusBadge({
     >
       {resolvedLabel}
     </span>
+  )
+}
+
+export function WorkflowDateCell({ value, className }: { value: string; className?: string }) {
+  return (
+    <span className={cn('inline-flex items-center gap-2 text-sm font-semibold text-zinc-500', className)}>
+      <Clock3 size={16} strokeWidth={1.8} className="shrink-0 text-zinc-500" aria-hidden="true" />
+      {value}
+    </span>
+  )
+}
+
+export function WorkflowActionButton({ label }: { label: string }) {
+  return (
+    <Button
+      size="icon-lg"
+      variant="ghost"
+      className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
+      aria-label={label}
+    >
+      <ChevronRight strokeWidth={2.35} />
+    </Button>
   )
 }
 
