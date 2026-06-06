@@ -23,7 +23,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { CheckCircle2, XCircle, Eye, Download, Upload, Trash2, X, Loader2 } from 'lucide-react'
+import { Eye, Download, Upload, Trash2, X, Loader2, FileText } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import {
   downloadFromApi,
@@ -259,66 +259,79 @@ export function AttachmentViewer({
     e.target.value = ''
   }
 
+  function getFileFormat(lamp: LampiranUrl): string {
+    const source = lamp.nama || lamp.url || ''
+    const clean = source.split('?')[0] ?? ''
+    const extension = clean.includes('.') ? clean.split('.').pop() : ''
+    return extension ? String(extension).toUpperCase() : 'File'
+  }
+
   // Helper function to render a single lampiran item
   // globalIdx is the index in the original lampiranUrls array (for callbacks)
   // labelColor: 'gray' for admin, 'blue' for user docs
   // showBadge: show "TAMBAHAN" badge for user docs
   function renderLampiranItem(lamp: LampiranUrl, globalIdx: number, labelColor: 'gray' | 'blue', showBadge: boolean) {
     const hasFile = !!lamp.url
+    const fileFormat = getFileFormat(lamp)
 
     return (
       <div
         key={globalIdx}
         className={cn(
-          'flex items-center gap-3 p-3 rounded-lg',
-          labelColor === 'blue' ? 'bg-blue-50/30' : 'bg-surface-container-low/20'
+          'flex min-h-16 items-center gap-3 rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3',
+          labelColor === 'blue'
+            ? 'border-[#F1E5DA] bg-[#FFFDF9]'
+            : 'border-[#F1E5DA] bg-[#FFFDF9]'
         )}
       >
-        {/* Status Icon */}
-        {hasFile ? (
-          <CheckCircle2 size={16} className="text-green-600 shrink-0" />
-        ) : (
-          <XCircle size={16} className="text-red-500 shrink-0" />
-        )}
+        <span className={cn(
+          'flex size-10 shrink-0 items-center justify-center rounded-2xl border',
+          labelColor === 'blue'
+            ? 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-800'
+            : 'border-orange-100 bg-orange-50 text-[#FF5A00]',
+        )}>
+          <FileText size={18} />
+        </span>
 
-        {/* Nama Kelengkapan */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className={cn('text-xs font-medium truncate', labelColor === 'blue' ? 'text-blue-700' : 'text-on-surface')}>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <p className="truncate text-sm font-bold text-zinc-950">
               {lamp.nama || 'Tanpa Nama'}
             </p>
             {showBadge && (
-              <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">TAMBAHAN</span>
+              <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">Tambahan</span>
             )}
           </div>
-          {hasFile && (
-            <p className={cn('text-[10px]', labelColor === 'blue' ? 'text-blue-600' : 'text-outline')}>
-              {formatDateTime(lamp.uploaded_at)}
-            </p>
-          )}
+          <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">
+            {fileFormat}{labelColor === 'gray' ? ' - Wajib' : ''}
+            {hasFile && lamp.uploaded_at ? ` - ${formatDateTime(lamp.uploaded_at)}` : ''}
+          </p>
         </div>
 
-        {/* Action Buttons - Common (hanya jika ada file) */}
         {hasFile && (
-          <>
+          <div className="flex shrink-0 items-center gap-2">
             <Button
-              size="icon-xs"
+              size="sm"
               variant="ghost"
               onClick={() => handlePreview(globalIdx)}
+              className="h-8 gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-950 hover:bg-orange-50 hover:text-[#FF5A00]"
               aria-label={`Pratinjau ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
             >
-              <Eye size={14} />
+              <Eye size={15} />
+              Preview
             </Button>
 
             <Button
-              size="icon-xs"
+              size="sm"
               variant="ghost"
               onClick={() => handleDownload(globalIdx)}
+              className="h-8 gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-950 hover:bg-orange-50 hover:text-[#FF5A00]"
               aria-label={`Unduh ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
             >
-              <Download size={14} />
+              <Download size={15} />
+              Unduh
             </Button>
-          </>
+          </div>
         )}
 
         {/* Action Buttons - Editable Mode */}
@@ -343,12 +356,7 @@ export function AttachmentViewer({
                 onChange={e => handleFileChange(globalIdx, e)}
                 accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
               />
-              <span className={cn(
-                'inline-flex items-center gap-1 h-6 px-2 rounded-[min(var(--radius-md),10px)] text-xs font-medium border',
-                labelColor === 'blue'
-                  ? 'border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700'
-                  : 'border-border bg-background hover:bg-muted text-foreground'
-              )}>
+              <span className="inline-flex h-8 items-center gap-1 rounded-xl border border-orange-200 bg-[#FFFDF9] px-2 text-xs font-bold text-[#FF5A00] hover:bg-orange-50">
                 <Upload size={12} />
                 {hasFile ? 'Ganti' : 'Unggah'}
               </span>
@@ -364,9 +372,12 @@ export function AttachmentViewer({
   // ==========================================================================
   if (lampiranUrls.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-        <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">Kelengkapan Dokumen (0)</p>
-        <p className="text-xs text-center py-4 text-on-surface-variant">
+      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm">
+        <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Lampiran & Kelengkapan Wajib</h2>
+        <p className="mt-0.5 text-xs font-medium leading-relaxed text-zinc-700 sm:text-sm">
+          Seluruh dokumen yang wajib dipenuhi sebagai prasyarat utama verifikasi dan pelunasan anggaran.
+        </p>
+        <p className="py-6 text-center text-xs font-medium text-zinc-500">
           Belum ada kelengkapan.
         </p>
       </div>
@@ -449,11 +460,14 @@ export function AttachmentViewer({
       <div className="space-y-4">
         {/* Section 1: Admin Kelengkapan (Kelengkapan Dokumen) */}
         {hasAdminDocs && (
-          <div className="bg-white rounded-xl border border-outline-variant/30 p-5 shadow-sm">
-            <p className="text-xs font-bold text-outline uppercase tracking-widest mb-3">
-              Kelengkapan Dokumen ({adminLampirans.length})
-            </p>
-            <div className="space-y-2">
+          <div>
+            <div className="mb-3">
+              <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Lampiran & Kelengkapan Wajib</h2>
+              <p className="mt-0.5 text-xs font-medium leading-relaxed text-zinc-700 sm:text-sm">
+                Seluruh dokumen yang wajib dipenuhi sebagai prasyarat utama verifikasi dan pelunasan anggaran.
+              </p>
+            </div>
+            <div className="space-y-2.5">
               {adminLampirans.map((lamp) => {
                 const globalIdx = lampiranUrls.indexOf(lamp)
                 return renderLampiranItem(lamp, globalIdx, 'gray', false)
@@ -464,14 +478,14 @@ export function AttachmentViewer({
 
         {/* Section 2: User-Created Documents (Dokumen Pendukung) */}
         {hasUserDocs && (
-          <div className="bg-white rounded-xl border border-blue-200 overflow-hidden shadow-sm">
-            <div className="bg-blue-50/50 px-4 py-3 border-b border-blue-200">
-              <h3 className="text-sm font-semibold text-blue-700">Dokumen Pendukung</h3>
-              <p className="text-xs text-blue-600 mt-0.5">
-                {userLampirans.length} dokumen tambahan
+          <div>
+            <div className="mb-3">
+              <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Dokumen Pendukung Tambahan</h2>
+              <p className="mt-0.5 text-xs font-medium leading-relaxed text-zinc-700 sm:text-sm">
+                Dokumen sekunder seperti lampiran surat pertanggungjawaban tambahan, kuitansi pendukung, dan bukti fisik kegiatan.
               </p>
             </div>
-            <div className="p-4 space-y-2">
+            <div className="space-y-2.5">
               {userLampirans.map((lamp) => {
                 const globalIdx = lampiranUrls.indexOf(lamp)
                 return renderLampiranItem(lamp, globalIdx, 'blue', true)

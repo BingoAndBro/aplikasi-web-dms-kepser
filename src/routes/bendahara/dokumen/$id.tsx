@@ -11,13 +11,12 @@ import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import {
   RevisionNotePanel,
   WorkflowFieldCard,
-  WorkflowPageHeader,
   WorkflowPanel,
   WorkflowTimeline,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
 import {
-  ChevronRight, AlertTriangle,
-  CheckCircle2, Loader2, X, Banknote,
+  ChevronLeft, ChevronRight, AlertTriangle,
+  CheckCircle2, FileText, History, Info, Loader2, X, Banknote,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
@@ -49,6 +48,15 @@ const WORKFLOW_STEPS = [
   { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
+
+const DETAIL_TABS = [
+  { key: 'metadata', label: 'Metadata Dokumen', icon: Info },
+  { key: 'lampiran', label: 'Lampiran', icon: FileText },
+  { key: 'riwayat', label: 'Riwayat', icon: History },
+] as const
+
+type DetailTab = typeof DETAIL_TABS[number]['key']
+
 function getWorkflowIdx(status: string) { return WORKFLOW_STEPS.findIndex(s => s.key === status) }
 
 function BendaharaDokumenDetailPage() {
@@ -62,6 +70,7 @@ function BendaharaDokumenDetailPage() {
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectCatatan, setRejectCatatan] = useState('')
   const [rejectError, setRejectError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
 
   useEffect(() => { fetchData() }, [id])
 
@@ -154,8 +163,8 @@ function BendaharaDokumenDetailPage() {
   const workflowIdx = getWorkflowIdx(dokumen.status)
 
   return (
-    <PageLayout>
-      <div className="mx-auto max-w-4xl space-y-6">
+    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+      <div className="mx-auto max-w-[92rem] space-y-4">
         <ConfirmDialog
           open={approveOpen}
           onOpenChange={setApproveOpen}
@@ -170,7 +179,7 @@ function BendaharaDokumenDetailPage() {
         {rejectOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) { setRejectOpen(false); setRejectCatatan(''); setRejectError(null) } }}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
+            <div className="relative z-10 mx-4 w-full max-w-md rounded-3xl border border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10">
               <div className="flex items-center gap-3 px-5 py-4 border-b border-orange-100">
                 <AlertTriangle size={18} className="text-error shrink-0" />
                 <p className="font-semibold text-on-surface">Tolak Dokumen</p>
@@ -180,7 +189,7 @@ function BendaharaDokumenDetailPage() {
                   <label className="block text-xs font-semibold mb-1.5">Catatan Penolakan <span className="text-error">*</span></label>
                   <textarea value={rejectCatatan} onChange={e => { setRejectCatatan(e.target.value); setRejectError(null) }} rows={4}
                     placeholder="Jelaskan mengapa dokumen ditolak dan perlu dikembalikan ke PPK..."
-                    className={cn('w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-1 focus:ring-ring resize-none', rejectError ? 'border-error' : 'border-border')} />
+                    className={cn('w-full rounded-xl border bg-[#FFFDF9] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-100 resize-none', rejectError ? 'border-error' : 'border-[#F0E1D5]')} />
                   <p className="text-[10px] text-outline mt-1">{rejectCatatan.length}/2000 karakter (min. 10)</p>
                   {rejectError && <p className="text-[10px] text-error mt-1">{rejectError}</p>}
                 </div>
@@ -195,87 +204,189 @@ function BendaharaDokumenDetailPage() {
           </div>
         )}
 
-        <WorkflowPageHeader
-          tone="ppspm"
-          eyebrow={
-            <>
-              <Banknote size={12} />
-              <Link to="/bendahara" className="hover:text-orange-900">PPSPM</Link>
-              <ChevronRight size={10} />
-              <Link to="/bendahara/inbox" className="hover:text-orange-900">Persetujuan</Link>
-              <ChevronRight size={10} />
-              <span>Detail Dokumen</span>
-            </>
-          }
-          title={dokumen.judul}
-          description="Tinjau hasil validasi PPK, metadata, lampiran, dan riwayat aktivitas sebelum mengambil keputusan PPSPM."
-          actions={<StatusBadge status={dokumen.status} className="text-xs font-semibold" />}
-        />
-
-        <WorkflowTimeline
-          steps={WORKFLOW_STEPS}
-          status={dokumen.status}
-          currentIndex={workflowIdx}
-          revisionStepKey="IN_BENDAHARA_APPROVAL"
-          revisionIcon={<AlertTriangle size={14} />}
-        />
-
-        {dokumen.status === 'NEED_REVISION' && (
-          <RevisionNotePanel title="Catatan Revisi dari PPSPM">
-            {dokumen.revision_notes || 'Tidak ada catatan'}
-          </RevisionNotePanel>
-        )}
-
-        <WorkflowPanel className="p-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <WorkflowFieldCard label="Fungsi" value={dokumen.fungsi_nama ?? '-'} />
-            <WorkflowFieldCard label="Kegiatan" value={dokumen.kegiatan_nama ?? '-'} />
-            {dokumen.jenis_permintaan_id && (
-              <WorkflowFieldCard label="Jenis Permintaan" value={dokumen.jenis_permintaan_nama ?? '-'} />
-            )}
-            {dokumen.kategori_permintaan_id && (
-              <WorkflowFieldCard label="Kategori Permintaan" value={dokumen.kategori_permintaan_nama ?? '-'} />
-            )}
-            {dokumen.detail_permintaan_id && (
-              <WorkflowFieldCard label="Detail Permintaan" value={dokumen.detail_permintaan_nama ?? '-'} />
-            )}
-            <WorkflowFieldCard label="Tahun" value={dokumen.tahun} />
-            <WorkflowFieldCard label="Tanggal" value={formatDate(dokumen.tanggal)} />
-            <WorkflowFieldCard label="Peran" value={dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'} />
-            <WorkflowFieldCard label="Diajukan" value={formatDate(dokumen.created_at)} />
-            {dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined && (
-              <WorkflowFieldCard label="Nominal Realisasi" value={`Rp ${dokumen.nominal_realisasi.toLocaleString('id-ID')}`} />
-            )}
+        <div className="flex items-center gap-3">
+          <Link
+            to="/bendahara/inbox"
+            aria-label="Kembali ke inbox PPSPM"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
+          >
+            <ChevronLeft size={18} />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <h1 className="line-clamp-2 font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">
+              {dokumen.judul}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <Banknote size={13} className="text-zinc-500" />
+              <span className="font-medium text-zinc-800">PPSPM</span>
+              <ChevronRight size={12} className="text-zinc-300" />
+              <span>Persetujuan Dokumen</span>
+            </div>
           </div>
-        </WorkflowPanel>
+          <div className="hidden shrink-0 sm:block">
+            <StatusBadge status={dokumen.status} className="text-xs font-semibold" />
+          </div>
+        </div>
 
-        <AttachmentViewer dokumen={dokumen as any} lampiranUrls={dokumen.lampiran_urls} apiType="bendahara" />
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0 px-1 py-1 sm:px-2">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
+              {DETAIL_TABS.map(tab => {
+                const selected = activeTab === tab.key
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={cn(
+                      'flex min-h-8 min-w-28 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
+                      selected
+                        ? 'bg-[#FFFDF9] text-[#FF5A00] shadow-sm'
+                        : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
+                    )}
+                    aria-pressed={selected}
+                  >
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
 
-        <ActivityLog dokumenId={id} />
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
+          <WorkflowPanel className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none">
+            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
+                  {(() => {
+                    const Icon = DETAIL_TABS.find(tab => tab.key === activeTab)?.icon ?? Info
+                    return <Icon size={17} />
+                  })()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-headline text-base font-bold tracking-tight text-white sm:text-lg">
+                    {DETAIL_TABS.find(tab => tab.key === activeTab)?.label}
+                  </h2>
+                  <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
+                    {activeTab === 'metadata'
+                      ? 'Tinjau hasil validasi PPK, status, dan metadata sebelum persetujuan PPSPM.'
+                      : activeTab === 'lampiran'
+                        ? 'Kelengkapan dokumen dengan aksi pratinjau dan unduh.'
+                        : 'Riwayat aktivitas dokumen.'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-        {dokumen.status === 'IN_BENDAHARA_APPROVAL' && (
-          <WorkflowPanel className="flex flex-col gap-3 sm:flex-row">
-            <Link to="/bendahara/inbox"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
-            <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { setRejectCatatan(''); setRejectError(null); setRejectOpen(true) }} disabled={!!actionLoading}>
-              {actionLoading === 'reject' ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
-              Tolak
-            </Button>
-            <Button size="sm" className="gap-1.5 sm:flex-1" onClick={() => setApproveOpen(true)} disabled={!!actionLoading}>
-              {actionLoading === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-              Setujui Dokumen
-            </Button>
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
+              <section className={cn(activeTab === 'metadata' ? 'block' : 'hidden', 'space-y-4')}>
+                <WorkflowTimeline
+                  steps={WORKFLOW_STEPS}
+                  status={dokumen.status}
+                  currentIndex={workflowIdx}
+                  revisionStepKey="IN_BENDAHARA_APPROVAL"
+                  revisionIcon={<AlertTriangle size={14} />}
+                />
+
+                {dokumen.status === 'NEED_REVISION' && (
+                  <RevisionNotePanel title="Catatan Revisi dari PPSPM">
+                    {dokumen.revision_notes || 'Tidak ada catatan'}
+                  </RevisionNotePanel>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <WorkflowFieldCard label="Fungsi" value={dokumen.fungsi_nama ?? '-'} />
+                  <WorkflowFieldCard label="Kegiatan" value={dokumen.kegiatan_nama ?? '-'} />
+                  {dokumen.jenis_permintaan_id && (
+                    <WorkflowFieldCard label="Jenis Permintaan" value={dokumen.jenis_permintaan_nama ?? '-'} />
+                  )}
+                  {dokumen.kategori_permintaan_id && (
+                    <WorkflowFieldCard label="Kategori Permintaan" value={dokumen.kategori_permintaan_nama ?? '-'} />
+                  )}
+                  {dokumen.detail_permintaan_id && (
+                    <WorkflowFieldCard label="Detail Permintaan" value={dokumen.detail_permintaan_nama ?? '-'} />
+                  )}
+                  <WorkflowFieldCard label="Tahun" value={dokumen.tahun} />
+                  <WorkflowFieldCard label="Tanggal" value={formatDate(dokumen.tanggal)} />
+                  <WorkflowFieldCard label="Peran" value={dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'} />
+                  <WorkflowFieldCard label="Diajukan" value={formatDate(dokumen.created_at)} />
+                  {dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined && (
+                    <WorkflowFieldCard
+                      label="Nominal Realisasi"
+                      value={`Rp ${dokumen.nominal_realisasi.toLocaleString('id-ID')}`}
+                      className="border-orange-200 bg-orange-50/35"
+                    />
+                  )}
+                </div>
+              </section>
+
+              <section className={cn(activeTab === 'lampiran' ? 'block' : 'hidden')}>
+                <AttachmentViewer dokumen={dokumen as any} lampiranUrls={dokumen.lampiran_urls} apiType="bendahara" />
+              </section>
+
+              <section className={cn(activeTab === 'riwayat' ? 'block' : 'hidden')}>
+                <ActivityLog dokumenId={id} />
+              </section>
+            </div>
           </WorkflowPanel>
-        )}
-        {dokumen.status === 'COMPLETED' && (
-          <WorkflowPanel className="flex gap-3">
-            <Link to="/bendahara/selesai"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
-          </WorkflowPanel>
-        )}
-        {dokumen.status === 'NEED_REVISION' && (
-          <WorkflowPanel className="flex gap-3">
-            <Link to="/bendahara/ditolak"><Button variant="outline" size="sm" className="gap-1.5"><ChevronRight size={14} className="rotate-180" />Kembali</Button></Link>
-          </WorkflowPanel>
-        )}
+
+          <aside className="min-w-0 space-y-2.5 xl:sticky xl:top-3">
+            <WorkflowPanel className="border-[#FDBA8C] bg-[#FFF1E7] p-3 shadow-none">
+              <div className="flex items-start gap-2">
+                <span className="flex size-6 shrink-0 items-center justify-center text-[#FF5A00]">
+                  <Info size={13} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[#FF5A00]">Tugas PPSPM</p>
+                  <div className="mt-2">
+                    <StatusBadge status={dokumen.status} className="text-xs font-semibold" />
+                  </div>
+                  <p className="mt-2 text-[11px] font-medium leading-relaxed text-zinc-700">
+                    Tinjau dokumen yang sudah divalidasi PPK sebelum menyelesaikan persetujuan PPSPM.
+                  </p>
+                </div>
+              </div>
+            </WorkflowPanel>
+
+            <div className="space-y-2.5 px-0.5 py-1">
+              <Link to="/bendahara/inbox" className="block">
+                <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9]">
+                  <ChevronLeft size={14} />
+                  Kembali
+                </Button>
+              </Link>
+              {dokumen.status === 'IN_BENDAHARA_APPROVAL' && (
+                <>
+                  <Button variant="destructive" size="lg" className="h-10 w-full gap-2 rounded-xl text-sm font-bold" onClick={() => { setRejectCatatan(''); setRejectError(null); setRejectOpen(true) }} disabled={!!actionLoading}>
+                    {actionLoading === 'reject' ? <Loader2 size={15} className="animate-spin" /> : <X size={15} />}
+                    Tolak
+                  </Button>
+                  <Button size="lg" className="h-10 w-full gap-2 rounded-xl bg-[#FF5A00] text-sm font-bold text-white hover:bg-[#EA580C]" onClick={() => setApproveOpen(true)} disabled={!!actionLoading}>
+                    {actionLoading === 'approve' ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                    Setujui Dokumen
+                  </Button>
+                </>
+              )}
+              {dokumen.status === 'COMPLETED' && (
+                <Link to="/bendahara/selesai" className="block">
+                  <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9]">
+                    <ChevronLeft size={14} />
+                    Kembali
+                  </Button>
+                </Link>
+              )}
+              {dokumen.status === 'NEED_REVISION' && (
+                <Link to="/bendahara/ditolak" className="block">
+                  <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9]">
+                    <ChevronLeft size={14} />
+                    Kembali
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
     </PageLayout>
   )

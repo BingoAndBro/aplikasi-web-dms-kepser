@@ -1,11 +1,7 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
-import {
-  PegawaiFieldCard,
-  PegawaiPageHeader,
-  PegawaiPanel,
-} from '#/components/pegawai/PegawaiPagePrimitives'
+import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import { Button } from '#/components/ui/button'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
@@ -14,18 +10,18 @@ import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import {
   FileText,
+  ChevronLeft,
   ChevronRight,
   AlertTriangle,
   CheckCircle2,
   ClipboardList,
+  History,
+  Info,
   Pencil,
-  Trash2,
-  Loader2,
 } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
-import { apiMutation } from '#/lib/api-mutation'
 
 export const Route = createFileRoute('/pegawai/dokumen/$id/')({
   component: DokumenDetailPage,
@@ -45,6 +41,7 @@ type DokumenDetail = {
   tanggal: string
   created_at: string
   created_by: string
+  pengaju_nama?: string | null
   is_non_material: boolean
   nominal_realisasi: number | null
   keterangan_detail: string | null
@@ -70,6 +67,14 @@ const WORKFLOW_STEPS_NON_MATERIAL = [
   { key: 'TERSIMPAN', label: 'Tersimpan' },
 ]
 
+const DETAIL_TABS = [
+  { key: 'metadata', label: 'Metadata Dokumen', icon: Info },
+  { key: 'lampiran', label: 'Lampiran', icon: FileText },
+  { key: 'riwayat', label: 'Riwayat', icon: History },
+] as const
+
+type DetailTab = typeof DETAIL_TABS[number]['key']
+
 function getWorkflowIndexMaterial(status: string): number {
   if (status === 'NEED_REVISION') return -1
   return WORKFLOW_STEPS_MATERIAL.findIndex(s => s.key === status)
@@ -81,11 +86,10 @@ function getWorkflowIndexNonMaterial(status: string): number {
 
 function DokumenDetailPage() {
   const { id } = Route.useParams()
-  const navigate = useNavigate()
   const [dok, setDok] = useState<DokumenDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
 
   useEffect(() => { fetchData() }, [id])
 
@@ -106,29 +110,6 @@ function DokumenDetailPage() {
       setFetchError('Terjadi kesalahan')
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!confirm('Yakin ingin menghapus dokumen ini?')) return
-    setDeleting(true)
-    try {
-      await apiMutation(`/api/dokumen/${id}`, {
-        method: 'DELETE',
-      })
-      navigate({ to: '/pegawai/dokumen' })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
-          ? (payload as { error?: string }).error || 'Gagal menghapus dokumen'
-          : 'Gagal menghapus dokumen')
-        return
-      }
-
-      alert('Gagal menghapus dokumen')
-    } finally {
-      setDeleting(false)
     }
   }
 
@@ -177,197 +158,372 @@ function DokumenDetailPage() {
     : getWorkflowIndexMaterial(dok.status)
 
   return (
-    <PageLayout>
-      <div className="mx-auto max-w-4xl space-y-6">
-        <PegawaiPageHeader
-          eyebrow={
-            <>
-              <ClipboardList size={12} />
-              <Link to="/pegawai/dokumen" className="hover:text-orange-900">Dokumen</Link>
-              <ChevronRight size={10} />
-              <span>Detail</span>
-            </>
-          }
-          title={dok.judul}
-          description={isNonMaterial
-            ? 'Dokumen Non-Material tersimpan tanpa alur PPK/PPSPM. Lampiran dan metadata tetap dapat ditinjau dari halaman ini.'
-            : 'Dokumen Material mengikuti validasi PPK, persetujuan PPSPM, lalu status selesai.'}
-          actions={<StatusBadge status={dok.status} className="text-xs font-semibold" />}
-        />
-
-        <WorkflowPanel
-          isNonMaterial={isNonMaterial}
-          status={dok.status}
-          workflowIdx={workflowIdx}
-          workflowSteps={workflowSteps}
-        />
-
-        {dok.status === 'NEED_REVISION' && dok.revision_notes && (
-          <ErrorState
-            title={`Catatan revisi dari ${dok.revision_target === 'USER' ? 'PPK' : 'PPSPM'}`}
-            description={dok.revision_notes}
-            variant="warning"
-          />
-        )}
-
-        <PegawaiPanel className="space-y-4 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-700/70">
-                Metadata Dokumen
-              </p>
-              <h2 className="mt-1 text-base font-bold text-zinc-950">Ringkasan pengajuan</h2>
-            </div>
-            <span className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-800">
-              {isNonMaterial ? 'Non-Material' : 'Material'}
-            </span>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <PegawaiFieldCard label="Fungsi" value={dok.fungsi_nama ?? '-'} />
-            <PegawaiFieldCard label="Kegiatan" value={dok.kegiatan_nama ?? '-'} />
-            {dok.jenis_permintaan_id && (
-              <PegawaiFieldCard label="Jenis Permintaan" value={dok.jenis_permintaan_nama ?? '-'} />
-            )}
-            {dok.kategori_permintaan_id && (
-              <PegawaiFieldCard label="Kategori Permintaan" value={dok.kategori_permintaan_nama ?? '-'} />
-            )}
-            {dok.detail_permintaan_id && (
-              <PegawaiFieldCard label="Detail Permintaan" value={dok.detail_permintaan_nama ?? '-'} />
-            )}
-            {isNonMaterial && dok.jenis_dokumen_nama && (
-              <PegawaiFieldCard label="Jenis Dokumen" value={dok.jenis_dokumen_nama} />
-            )}
-            <PegawaiFieldCard label="Tahun" value={dok.tahun} />
-            <PegawaiFieldCard label="Tanggal" value={dok.tanggal ? formatDate(dok.tanggal) : '-'} />
-            <PegawaiFieldCard label="Peran" value={dok.is_ketua_tim ? 'Ketua Tim' : 'Anggota'} />
-            <PegawaiFieldCard label="Diajukan" value={dok.created_at ? formatDate(dok.created_at) : '-'} />
-            {!isNonMaterial && dok.nominal_realisasi !== null && dok.nominal_realisasi !== undefined && (
-              <PegawaiFieldCard
-                label="Nominal Realisasi"
-                value={`Rp ${Number(dok.nominal_realisasi).toLocaleString('id-ID')}`}
-              />
-            )}
-            {dok.keterangan_detail && (
-              <PegawaiFieldCard
-                label="Keterangan Detail"
-                value={<span className="whitespace-pre-wrap font-medium">{dok.keterangan_detail}</span>}
-                className="sm:col-span-2"
-              />
-            )}
-          </div>
-        </PegawaiPanel>
-
-        <AttachmentViewer dokumen={dok as any} lampiranUrls={dok.lampiran_urls} />
-
-        <ActivityLog dokumenId={id} />
-
-        <div className="flex flex-col gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm sm:flex-row">
-          <Link to="/pegawai/dokumen">
-            <Button variant="outline" size="sm" className="w-full gap-1.5 sm:w-auto">
-              <ChevronRight size={14} className="rotate-180" />
-              Kembali
-            </Button>
+    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+      <div className="mx-auto max-w-[92rem] space-y-4">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/pegawai/dokumen"
+            aria-label="Kembali ke daftar dokumen"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
+          >
+            <ChevronLeft size={18} />
           </Link>
-          {dok.status === 'NEED_REVISION' && dok.revision_target === 'USER' && !isNonMaterial && (
-            <Link to="/pegawai/dokumen/$id/revisi" params={{ id }} className="sm:ml-auto">
-              <Button size="sm" className="w-full gap-1.5 sm:w-auto">
-                <FileText size={14} />
-                Revisi Dokumen
-              </Button>
-            </Link>
-          )}
-          {isNonMaterial && dok.status === 'TERSIMPAN' && (
-            <div className="flex flex-col gap-3 sm:ml-auto sm:flex-row">
-              <Link to="/pegawai/dokumen/$id/edit" params={{ id }}>
-                <Button variant="outline" size="sm" className="w-full gap-1.5 sm:w-auto">
-                  <Pencil size={14} />
-                  Edit
+          <div className="min-w-0 flex-1">
+            <h1 className="line-clamp-2 font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">
+              {dok.judul}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <ClipboardList size={13} className="text-zinc-500" />
+              <span className="font-medium text-zinc-800">Dokumen</span>
+              <ChevronRight size={12} className="text-zinc-300" />
+              <span>Detail Dokumen</span>
+            </div>
+          </div>
+          <div className="hidden shrink-0 sm:block">
+            <StatusBadge status={dok.status} className="text-xs font-semibold" />
+          </div>
+        </div>
+
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0 px-1 py-1 sm:px-2">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
+              {DETAIL_TABS.map(tab => {
+                const selected = activeTab === tab.key
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={cn(
+                      'flex min-h-8 min-w-28 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
+                      selected
+                        ? 'bg-[#FFFAF6] text-[#FF5A00] shadow-sm'
+                        : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
+                    )}
+                    aria-pressed={selected}
+                  >
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
+          <PegawaiPanel className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none">
+            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
+                  {(() => {
+                    const Icon = DETAIL_TABS.find(tab => tab.key === activeTab)?.icon ?? Info
+                    return <Icon size={17} />
+                  })()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-headline text-base font-bold tracking-tight text-white sm:text-lg">
+                    {DETAIL_TABS.find(tab => tab.key === activeTab)?.label}
+                  </h2>
+                  <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
+                    {activeTab === 'metadata'
+                      ? 'Data utama dan status dokumen.'
+                      : activeTab === 'lampiran'
+                        ? 'Pratinjau dan unduh lampiran.'
+                        : 'Riwayat aktivitas dokumen.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
+              <section className={cn(activeTab === 'metadata' ? 'block' : 'hidden')}>
+                <MetadataDetailCard dok={dok} isNonMaterial={isNonMaterial} />
+              </section>
+
+              <section className={cn(activeTab === 'lampiran' ? 'block' : 'hidden')}>
+                <AttachmentViewer dokumen={dok as any} lampiranUrls={dok.lampiran_urls} />
+              </section>
+
+              <section className={cn(activeTab === 'riwayat' ? 'block' : 'hidden')}>
+                <ActivityLog dokumenId={id} />
+              </section>
+            </div>
+          </PegawaiPanel>
+
+          <aside className="min-w-0 space-y-1.5 xl:sticky xl:top-3">
+            <WorkflowPanel
+              isNonMaterial={isNonMaterial}
+              status={dok.status}
+              revisionTarget={dok.revision_target}
+              workflowIdx={workflowIdx}
+              workflowSteps={workflowSteps}
+            />
+
+            {dok.status === 'NEED_REVISION' && dok.revision_notes && (
+              <RevisionNoteCard
+                revisionTarget={dok.revision_target}
+                revisionNotes={dok.revision_notes}
+              />
+            )}
+
+            <div className="space-y-1.5 px-0.5 pt-0.5">
+              {isNonMaterial && (
+                <Link to="/pegawai/dokumen/$id/edit" params={{ id }} className="block">
+                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]">
+                    <Pencil size={13} />
+                    Edit Dokumen
+                  </Button>
+                </Link>
+              )}
+              <Link to="/pegawai/dokumen" className="block">
+                <Button variant="outline" size="lg" className="h-9 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold">
+                  <ChevronLeft size={13} />
+                  Kembali
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-error hover:bg-error/10"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Hapus
-              </Button>
             </div>
-          )}
+          </aside>
         </div>
       </div>
     </PageLayout>
   )
 }
 
+function MetadataDetailCard({ dok, isNonMaterial }: { dok: DokumenDetail; isNonMaterial: boolean }) {
+  const jenisLabel = isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan'
+  const jenisValue = isNonMaterial ? dok.jenis_dokumen_nama : dok.jenis_permintaan_nama
+  const pengajuLabel = getDisplaySubmitter(dok)
+
+  const metadataItems = [
+    { label: 'Judul Dokumen', value: dok.judul },
+    { label: 'Fungsi / Departemen', value: dok.fungsi_nama ?? '-' },
+    { label: 'Kegiatan Kerja', value: dok.kegiatan_nama ?? '-' },
+    {
+      label: jenisLabel,
+      value: (
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <span>{jenisValue ?? '-'}</span>
+          <span className="rounded-md border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">
+            {isNonMaterial ? 'Non-Material' : 'Material'}
+          </span>
+        </span>
+      ),
+    },
+    ...(!isNonMaterial
+      ? [
+          { label: 'Kategori Permintaan', value: dok.kategori_permintaan_nama ?? '-' },
+          { label: 'Detail Bidang / Permintaan', value: dok.detail_permintaan_nama ?? '-' },
+        ]
+      : dok.keterangan_detail
+        ? [{ label: 'Keterangan Detail', value: dok.keterangan_detail }]
+        : []),
+    ...(!isNonMaterial && dok.nominal_realisasi !== null && dok.nominal_realisasi !== undefined
+      ? [{
+          label: 'Nominal Realisasi',
+          value: `Rp ${Number(dok.nominal_realisasi).toLocaleString('id-ID')}`,
+          accent: true,
+        }]
+      : []),
+    {
+      label: 'Tahun / Tanggal',
+      value: `${dok.tahun}${dok.tanggal ? ` - ${formatDate(dok.tanggal)}` : ''}`,
+    },
+    { label: 'Peran Pengaju', value: dok.is_ketua_tim ? 'Ketua Tim' : 'Anggota' },
+    {
+      label: 'Diajukan Oleh',
+      value: (
+        <span>
+          <span>{pengajuLabel}</span>
+          {dok.created_at && (
+            <span className="mt-1 block text-[11px] font-medium text-zinc-500">
+              Disubmit pada {formatDate(dok.created_at)}
+            </span>
+          )}
+        </span>
+      ),
+    },
+  ]
+
+  return (
+    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
+      <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
+        {metadataItems.map(item => (
+          <div key={item.label} className="min-w-0">
+            <p className="mb-1 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">
+              {item.label}
+            </p>
+            <div className={cn(
+              'break-words text-[13px] font-bold leading-snug text-zinc-950 sm:text-sm',
+              'accent' in item && item.accent ? 'font-mono text-[#FF5A00]' : '',
+            )}>
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function getDisplaySubmitter(dok: DokumenDetail): string {
+  if (dok.pengaju_nama) return dok.pengaju_nama
+  if (!dok.created_by || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(dok.created_by)) {
+    return 'Pegawai pengaju'
+  }
+  return dok.created_by
+}
+
+function RevisionNoteCard({
+  revisionTarget,
+  revisionNotes,
+}: {
+  revisionTarget: string | null
+  revisionNotes: string
+}) {
+  const sourceLabel = getRevisionSourceLabel(revisionTarget)
+  const targetLabel = revisionTarget === 'PPK' ? 'PPK' : 'Pegawai'
+
+  return (
+    <PegawaiPanel className="border-rose-100 bg-rose-50/55 p-2.5 shadow-none">
+      <div className="flex items-start gap-2">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#FFFAF6] text-rose-600">
+          <AlertTriangle size={11} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold text-rose-700">Catatan dari {sourceLabel}</p>
+          <p className="mt-1 text-[10px] font-medium text-rose-700">
+            Dikembalikan ke: <span className="font-bold">{targetLabel}</span>
+          </p>
+          <div className="mt-1 rounded-lg bg-[#FFFAF6] p-1.5">
+            <p className="line-clamp-2 text-[10px] font-medium italic leading-relaxed text-rose-950">
+              "{revisionNotes || 'Tidak ada catatan revisi tertulis.'}"
+            </p>
+          </div>
+        </div>
+      </div>
+    </PegawaiPanel>
+  )
+}
+
+function getRevisionSourceLabel(revisionTarget: string | null): 'PPK' | 'PPSPM' {
+  return revisionTarget === 'PPK' ? 'PPSPM' : 'PPK'
+}
+
+function getRevisionStepKey(revisionTarget: string | null): string {
+  return revisionTarget === 'PPK' ? 'IN_BENDAHARA_APPROVAL' : 'IN_PPK_VALIDATION'
+}
+
 function WorkflowPanel({
   isNonMaterial,
   status,
+  revisionTarget,
   workflowIdx,
   workflowSteps,
 }: {
   isNonMaterial: boolean
   status: string
+  revisionTarget: string | null
   workflowIdx: number
   workflowSteps: { key: string; label: string }[]
 }) {
+  const revisionStepKey = getRevisionStepKey(revisionTarget)
+  const isRevisionStatus = status === 'NEED_REVISION'
+  const revisionStepIdx = workflowSteps.findIndex(step => step.key === revisionStepKey)
+  const isTerminalSuccess = status === 'COMPLETED' || status === 'TERSIMPAN'
+  const statusTone = getStatusTone(status)
+
   return (
-    <PegawaiPanel className="p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <PegawaiPanel className="rounded-[1.25rem] border-[#F1E5DA] bg-[#FFFDF9] p-3.5 shadow-sm shadow-zinc-950/5">
+      <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">
+        Status Dokumen
+      </p>
+
+      <div className="mt-4 space-y-3">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-700/70">
-            {isNonMaterial ? 'Status Dokumen' : 'Alur Dokumen'}
-          </p>
-          <p className="mt-1 text-sm text-zinc-600">
-            {isNonMaterial
-              ? 'Non-Material langsung tersimpan setelah diajukan.'
-              : 'Material bergerak dari PPK ke PPSPM sebelum selesai.'}
+          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500">Status Saat Ini</p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className={cn('size-2.5 rounded-full', statusTone === 'success' ? 'bg-emerald-500' : 'bg-[#FF5A00]')} />
+            <StatusBadge status={status} className="border-0 bg-transparent px-0 text-sm font-bold text-zinc-950 shadow-none hover:bg-transparent" />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] p-2.5 shadow-sm shadow-zinc-950/5">
+          <p className="text-[11px] font-medium leading-relaxed text-zinc-700">
+            {getStatusDescription(status, isNonMaterial)}
           </p>
         </div>
-        <StatusBadge status={status} className="hidden text-xs font-semibold sm:inline-flex" />
-      </div>
-      <div className="flex items-center gap-0">
-        {workflowSteps.map((step, i) => {
-          const isCurrent = step.key === status
-          const isPast = workflowIdx > i || status === 'TERSIMPAN' || status === 'COMPLETED'
-          const showAsRevision = status === 'NEED_REVISION' && step.key === 'IN_PPK_VALIDATION'
-          return (
-            <div key={step.key} className="relative flex flex-1 flex-col items-center">
-              {i < workflowSteps.length - 1 && (
+
+        <div className="border-y border-dashed border-[#F1E5DA] py-3.5">
+          <div className="flex items-center gap-0">
+            {workflowSteps.map((step, i) => {
+              const isCurrent = step.key === status
+              const showAsRevision = isRevisionStatus && step.key === revisionStepKey
+              const isSuccessStep = isTerminalSuccess || (isRevisionStatus ? i < revisionStepIdx : workflowIdx > i)
+              const isAttentionStep = !isTerminalSuccess && (isRevisionStatus ? showAsRevision : isCurrent)
+              const isCompleteSegment = isTerminalSuccess || (isRevisionStatus ? i < revisionStepIdx - 1 : workflowIdx > i + 1)
+              const isActiveSegment = !isTerminalSuccess && (isRevisionStatus ? i === revisionStepIdx - 1 : workflowIdx === i + 1)
+              return (
+                <div key={step.key} className="relative flex flex-1 flex-col items-center">
+                  {i < workflowSteps.length - 1 && (
+                    <div
+                      className={cn(
+                        'absolute top-2.5 -right-1/2 z-0 h-px w-full',
+                        isCompleteSegment ? 'bg-emerald-500' : isActiveSegment ? 'bg-[#FF5A00]' : 'bg-[#F1E5DA]',
+                      )}
+                    />
+                  )}
                 <div
                   className={cn(
-                    'absolute top-4 -right-1/2 z-0 h-0.5 w-full',
-                    isPast ? 'bg-orange-500' : 'bg-orange-100',
-                  )}
-                />
-              )}
-              <div
-                className={cn(
-                  'relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold',
-                  isCurrent || showAsRevision
-                    ? 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20'
-                    : isPast
+                    'relative z-10 flex size-5 items-center justify-center rounded-full border text-[9px] font-bold',
+                    isSuccessStep
                       ? 'border-emerald-500 bg-emerald-500 text-white'
-                      : 'border-orange-100 bg-white text-zinc-400',
-                )}
-              >
-                {showAsRevision ? <AlertTriangle size={14} /> : isPast && !isCurrent ? <CheckCircle2 size={14} /> : i + 1}
+                      : isAttentionStep
+                      ? 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20'
+                        : 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-400',
+                  )}
+                >
+                  {showAsRevision && !isTerminalSuccess ? <AlertTriangle size={10} /> : isSuccessStep && !isCurrent ? <CheckCircle2 size={10} /> : i + 1}
+                </div>
+                <span
+                  className={cn(
+                    'mt-1.5 text-center text-[8px] font-black uppercase tracking-[0.08em]',
+                    isSuccessStep ? 'text-emerald-700' : isAttentionStep ? 'text-[#FF5A00]' : 'text-zinc-400',
+                  )}
+                >
+                  {step.label}
+                </span>
               </div>
-              <span
-                className={cn(
-                  'mt-2 text-center text-[10px] font-semibold',
-                  isCurrent || showAsRevision ? 'text-orange-700' : isPast ? 'text-emerald-700' : 'text-zinc-400',
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-          )
-        })}
+              )
+            })}
+          </div>
+        </div>
       </div>
     </PegawaiPanel>
   )
+}
+
+function getStatusTone(status: string): 'success' | 'attention' {
+  return status === 'COMPLETED' || status === 'TERSIMPAN' ? 'success' : 'attention'
+}
+
+function getStatusDescription(status: string, isNonMaterial: boolean): string {
+  if (isNonMaterial) {
+    return status === 'TERSIMPAN'
+      ? 'Non-material tersimpan tanpa alur PPK/PPSPM.'
+      : 'Status non-material dapat dipantau di sini.'
+  }
+
+  if (status === 'IN_PPK_VALIDATION') {
+    return 'Menunggu validasi PPK. Perubahan status tercatat di riwayat.'
+  }
+  if (status === 'IN_BENDAHARA_APPROVAL') {
+    return 'Sudah divalidasi PPK dan menunggu PPSPM.'
+  }
+  if (status === 'NEED_REVISION') {
+    return 'Dokumen dikembalikan. Periksa catatan revisi.'
+  }
+  if (status === 'COMPLETED') {
+    return 'Dokumen selesai disetujui.'
+  }
+  return 'Dokumen sedang dipantau dalam alur workflow.'
 }

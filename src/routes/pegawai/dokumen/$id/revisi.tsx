@@ -634,7 +634,7 @@ function DokumenRevisiPage() {
                   <AlertCircle size={13} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-rose-700">Catatan Revisi</p>
+                  <p className="text-xs font-bold text-rose-700">Catatan dari PPK</p>
                   <p className="mt-1.5 text-[11px] font-medium text-rose-700">
                     Dikembalikan oleh: <span className="font-bold">PPK</span>
                   </p>
