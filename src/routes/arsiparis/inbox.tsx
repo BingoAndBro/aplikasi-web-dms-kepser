@@ -1,15 +1,14 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import {
-  ARCHIVE_PAGE_CONTAINER_CLASS,
   ArchiveMobileCard,
   ArchiveMobileList,
-  ArchivePageHeader,
   ArchiveTableShell,
 } from '#/components/archive/ArchivePagePrimitives'
 import {
   WorkflowActionButton,
   WorkflowDateCell,
+  WorkflowPageHeader,
   WorkflowSearchPanel,
   WorkflowStatusSelect,
   WORKFLOW_TABLE_HEAD_CLASS,
@@ -21,8 +20,8 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import {
-  Banknote,
   ChevronRight,
+  ClipboardList,
   Clock,
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
@@ -117,15 +116,11 @@ function ArsiparisInboxPage() {
 
   return (
     <PageLayout>
-      <div className={ARCHIVE_PAGE_CONTAINER_CLASS}>
-        <ArchivePageHeader
+      <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
+        <WorkflowPageHeader
+          variant="list"
           eyebrow={
-            <>
-              <Banknote size={13} />
-              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
-              <ChevronRight size={10} />
-              Pengklasifikasian Dokumen
-            </>
+            <ClipboardList size={22} />
           }
           title="Pengklasifikasian Dokumen"
           description={`${items.length} dokumen selesai PPSPM menunggu pemilihan Jenis Pembayaran. Metadata final seperti Nomor SPM dan retensi tetap diisi saat Tutup Berkas.`}
@@ -134,7 +129,7 @@ function ArsiparisInboxPage() {
         <WorkflowSearchPanel
           search={search}
           onSearchChange={setSearch}
-          placeholder="Cari judul dokumen, kegiatan, atau fungsi..."
+          placeholder="Cari judul, fungsi, atau kegiatan..."
           resultLabel={`${displayedItems.length} dokumen ditampilkan`}
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
