@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useBlocker } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArchivePanel } from '#/components/archive/ArchivePagePrimitives'
 import { WorkflowPanel } from '#/components/workflow/PpkPpspmPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { AppDialog } from '#/components/ui/AppDialog'
 import { Badge } from '#/components/ui/badge'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
@@ -177,25 +178,75 @@ const DETAIL_TABS = [
 
 type DetailTab = typeof DETAIL_TABS[number]['key']
 
+type ClassificationDraftState = {
+  klasifikasi: string
+  catatan: string
+}
+
+const CLASSIFICATION_DRAFT_STORAGE_PREFIX = 'dms:arsiparis:pengklasifikasian-dokumen:draft:'
+
+function getClassificationDraftKey(id: string) {
+  return `${CLASSIFICATION_DRAFT_STORAGE_PREFIX}${id}`
+}
+
+function readClassificationDraft(id: string): ClassificationDraftState | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(getClassificationDraftKey(id))
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as Partial<ClassificationDraftState>
+    return {
+      klasifikasi: typeof parsed.klasifikasi === 'string' ? parsed.klasifikasi : '',
+      catatan: typeof parsed.catatan === 'string' ? parsed.catatan : '',
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeClassificationDraft(id: string, draft: ClassificationDraftState) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(getClassificationDraftKey(id), JSON.stringify(draft))
+  } catch {
+    // Ignore storage failures; the form remains usable.
+  }
+}
+
+function clearClassificationDraft(id: string) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.removeItem(getClassificationDraftKey(id))
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function ArsiparisDokumenDetailPage() {
   const { id } = Route.useParams()
+  const initialDraftRef = useRef<ClassificationDraftState | null>(readClassificationDraft(id))
   const [dokumen, setDokumen] = useState<DokumenDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   const [klasifikasiList, setKlasifikasiList] = useState<Klasifikasi[]>([])
-  const [klasifikasi, setKlasifikasi] = useState('')
+  const [klasifikasi, setKlasifikasi] = useState(() => initialDraftRef.current?.klasifikasi ?? '')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [currentNodes, setCurrentNodes] = useState<Klasifikasi[]>([])
   const [selectedNode, setSelectedNode] = useState<Klasifikasi | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPath, setCurrentPath] = useState<Klasifikasi[]>([])
-  const [catatan, setCatatan] = useState('')
+  const [catatan, setCatatan] = useState(() => initialDraftRef.current?.catatan ?? '')
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [formLoading, setFormLoading] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
   const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const skipBeforeUnloadRef = useRef(false)
   const allKlasifikasiOptions = useMemo(() => {
     const rootNode = findRootNode(klasifikasiList)
     return flattenKlasifikasiTree(rootNode?.children ?? klasifikasiList)
@@ -213,8 +264,25 @@ function ArsiparisDokumenDetailPage() {
   }, [allKlasifikasiOptions, searchQuery])
   const visibleNodes = searchQuery.trim() ? [] : currentNodes
   const breadcrumbPath = currentPath.map(node => node.nama).join(' / ')
+  const isArchived = dokumen?.is_archived === true
+  const isDirty = !isArchived && !formLoading && Boolean(klasifikasi || catatan.trim())
+  const leaveBlocker = useBlocker({
+    shouldBlockFn: ({ current, next }) => isDirty && current.pathname !== next.pathname,
+    enableBeforeUnload: false,
+    disabled: !isDirty,
+    withResolver: true,
+  })
 
   useEffect(() => { fetchData() }, [id])
+
+  useEffect(() => {
+    const draft = readClassificationDraft(id)
+    initialDraftRef.current = draft
+    setKlasifikasi(draft?.klasifikasi ?? '')
+    setCatatan(draft?.catatan ?? '')
+    setFormErrors({})
+    setFormSubmitError(null)
+  }, [id])
 
   async function fetchData() {
     setLoading(true); setFetchError(null)
@@ -255,7 +323,37 @@ function ArsiparisDokumenDetailPage() {
 
     const matchedNode = findNodeById(klasifikasiList, klasifikasi)
     setSelectedNode(matchedNode)
-  }, [klasifikasiList])
+  }, [klasifikasiList, klasifikasi])
+
+  useEffect(() => {
+    if (!isDirty) return
+
+    writeClassificationDraft(id, {
+      klasifikasi,
+      catatan,
+    })
+  }, [catatan, id, isDirty, klasifikasi])
+
+  useEffect(() => {
+    if (isDirty || formLoading) return
+
+    clearClassificationDraft(id)
+  }, [formLoading, id, isDirty])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isDirty) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (skipBeforeUnloadRef.current) return
+
+      event.preventDefault()
+      event.returnValue = 'Perubahan yang belum disimpan akan hilang.'
+      return 'Perubahan yang belum disimpan akan hilang.'
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty])
 
   useEffect(() => {
     if (!dropdownOpen) {
@@ -287,6 +385,8 @@ function ArsiparisDokumenDetailPage() {
           catatan_arsiparis: catatan.trim() || undefined,
         },
       })
+      clearClassificationDraft(id)
+      skipBeforeUnloadRef.current = true
       window.location.href = '/arsiparis/berkas'
     } catch (err) {
       if (err instanceof ApiError) {
@@ -362,8 +462,6 @@ function ArsiparisDokumenDetailPage() {
       variant="page"
     />
   )
-
-  const isArchived = dokumen.is_archived
 
   return (
     <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
@@ -663,7 +761,7 @@ function ArsiparisDokumenDetailPage() {
                   Klasifikasikan Dokumen
                 </Button>
                 <Link to="/arsiparis/inbox" className="flex h-11 w-full items-center justify-center rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] text-sm font-extrabold text-zinc-950 transition hover:bg-[#FFF8F1]">
-                  Batal & Kembali
+                  Kembali
                 </Link>
               </div>
             </div>
@@ -673,6 +771,56 @@ function ArsiparisDokumenDetailPage() {
         </div>
 
       </div>
+      <AppDialog
+        open={leaveBlocker.status === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open && leaveBlocker.status === 'blocked') {
+            leaveBlocker.reset()
+          }
+        }}
+        title={
+          <span className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
+              <AlertCircle size={22} />
+            </span>
+            <span className="font-headline text-lg font-bold tracking-tight text-zinc-950">
+              Keluar tanpa menyimpan?
+            </span>
+          </span>
+        }
+        description="Perubahan yang belum disimpan akan hilang."
+        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
+        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
+        showCloseButton
+        size="sm"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => leaveBlocker.status === 'blocked' && leaveBlocker.reset()}
+              className="border-[#F0E1D5] bg-[#FFFAF6]"
+            >
+              Tetap di halaman
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                clearClassificationDraft(id)
+                skipBeforeUnloadRef.current = true
+                if (leaveBlocker.status === 'blocked') {
+                  leaveBlocker.proceed()
+                }
+              }}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+            >
+              Keluar tanpa menyimpan
+            </Button>
+          </>
+        }
+      >
+        <div />
+      </AppDialog>
     </PageLayout>
   )
 }

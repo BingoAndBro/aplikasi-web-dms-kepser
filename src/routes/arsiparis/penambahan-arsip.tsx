@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router'
 import {
   AlertCircle,
+  ArrowRight,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -26,6 +27,7 @@ import {
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
+import { AppDialog } from '#/components/ui/AppDialog'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { DatePicker } from '#/components/ui/date-picker'
@@ -146,6 +148,8 @@ type SubmissionNotice = {
 
 type CreateManualArsipResult = {
   notice: SubmissionNotice
+  manualArsip: ManualArsipListItem
+  uploadedCount: number
 }
 
 type AttachmentRow = {
@@ -157,6 +161,21 @@ type AttachmentRow = {
 type PreviewingAttachment = {
   title: string
   url: string
+}
+
+type SubmittedManualArsip = {
+  id: string
+  nama: string
+  categoryName: string
+  klasifikasiName: string
+  attachmentCount: number
+  warning?: string
+}
+
+type ManualCreateDraftState = {
+  form: ManualArsipFormState
+  attachmentTitles: string[]
+  step: number
 }
 
 const MANUAL_ARSIP_ATTACHMENT_FIELD_NAME = 'files'
@@ -196,6 +215,7 @@ const MANUAL_CREATE_STEP_DESCRIPTIONS = [
   'Tambah atau unggah berkas pendukung sebagai berkas lampiran opsional.',
   'Tinjau kembali seluruh rincian informasi sebelum disimpan.',
 ]
+const MANUAL_CREATE_DRAFT_STORAGE_KEY = 'dms:arsiparis:penambahan-dokumen:draft'
 const emptyForm = (): ManualArsipFormState => ({
   nama: '',
   tanggal: new Date().toISOString().slice(0, 10),
@@ -205,7 +225,95 @@ const emptyForm = (): ManualArsipFormState => ({
   nominal_realisasi: '',
 })
 
+function readManualCreateDraft(): ManualCreateDraftState | null {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(MANUAL_CREATE_DRAFT_STORAGE_KEY)
+    if (!raw) return null
+
+    const parsed = JSON.parse(raw) as Partial<ManualCreateDraftState>
+    const form = parsed.form
+    if (!form || typeof form !== 'object') return null
+
+    return {
+      form: {
+        ...emptyForm(),
+        nama: typeof form.nama === 'string' ? form.nama : '',
+        tanggal: typeof form.tanggal === 'string' ? form.tanggal : emptyForm().tanggal,
+        keterangan: typeof form.keterangan === 'string' ? form.keterangan : '',
+        category_id: typeof form.category_id === 'string' ? form.category_id : '',
+        klasifikasi_id: typeof form.klasifikasi_id === 'string' ? form.klasifikasi_id : '',
+        nominal_realisasi: typeof form.nominal_realisasi === 'string' ? form.nominal_realisasi : '',
+      },
+      attachmentTitles: Array.isArray(parsed.attachmentTitles)
+        ? parsed.attachmentTitles.filter((title): title is string => typeof title === 'string')
+        : [],
+      step: clampManualCreateStep(parsed.step),
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeManualCreateDraft(draft: ManualCreateDraftState) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(MANUAL_CREATE_DRAFT_STORAGE_KEY, JSON.stringify({
+      form: draft.form,
+      attachmentTitles: draft.attachmentTitles,
+      step: clampManualCreateStep(draft.step),
+    }))
+  } catch {
+    // Ignore quota/storage failures; the form itself remains usable.
+  }
+}
+
+function clearManualCreateDraft() {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.removeItem(MANUAL_CREATE_DRAFT_STORAGE_KEY)
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function clampManualCreateStep(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 1
+  return Math.min(Math.max(Math.round(value), 1), MANUAL_CREATE_STEP_LABELS.length)
+}
+
+function isManualCreateDraftDirty(
+  form: ManualArsipFormState,
+  attachmentRows: AttachmentRow[],
+  step: number,
+  newAttachmentTitle: string,
+): boolean {
+  const baseline = emptyForm()
+
+  return Boolean(
+    form.nama.trim()
+    || form.keterangan.trim()
+    || form.category_id
+    || form.klasifikasi_id
+    || form.nominal_realisasi
+    || form.tanggal !== baseline.tanggal
+    || attachmentRows.some((row) => row.title.trim() || row.file)
+    || newAttachmentTitle.trim()
+    || step > 1
+  )
+}
+
+function revokePreviewUrl(url: string | undefined) {
+  if (url?.startsWith('blob:')) {
+    URL.revokeObjectURL(url)
+  }
+}
+
 function PenambahanArsipPage() {
+  const navigate = useNavigate()
   const [authChecked, setAuthChecked] = useState(false)
   const [accessDenied, setAccessDenied] = useState(false)
   const [items, setItems] = useState<ManualArsipListItem[]>([])
@@ -216,6 +324,7 @@ function PenambahanArsipPage() {
   const [error, setError] = useState<string | null>(null)
   const [formResetKey, setFormResetKey] = useState(0)
   const [notice, setNotice] = useState<SubmissionNotice | null>(null)
+  const [submittedManualArsip, setSubmittedManualArsip] = useState<SubmittedManualArsip | null>(null)
 
   async function fetchData() {
     setLoading(true)
@@ -273,6 +382,90 @@ function PenambahanArsipPage() {
     void checkAuth()
   }, [])
 
+  function handleCreateAnother() {
+    clearManualCreateDraft()
+    setSubmittedManualArsip(null)
+    setNotice(null)
+    setFormResetKey((prev) => prev + 1)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (submittedManualArsip) {
+    return (
+      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex min-h-[calc(100vh-9rem)] items-center justify-center">
+          <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+            <div className="flex size-20 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600">
+              <CheckCircle2 size={38} strokeWidth={2.4} />
+            </div>
+
+            <h1 className="mt-8 font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
+              Dokumen Berhasil Ditambahkan
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-sm font-medium leading-relaxed text-zinc-700 sm:text-base">
+              Dokumen <span className="font-extrabold text-zinc-950">{submittedManualArsip.nama || 'baru'}</span>
+              {' '}telah diterima sistem.
+            </p>
+
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-zinc-600">
+              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+                Manual
+              </span>
+              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+                {submittedManualArsip.categoryName || 'Kategori arsip'}
+              </span>
+              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+                {submittedManualArsip.attachmentCount} file lampiran
+              </span>
+            </div>
+
+            <p className="mt-4 max-w-xl text-xs font-medium leading-relaxed text-zinc-500 sm:text-sm">
+              Dokumen masuk ke folder Jenis Pembayaran{' '}
+              <span className="font-bold text-zinc-700">{submittedManualArsip.klasifikasiName || 'yang dipilih'}</span>.
+              Metadata arsip final tetap diisi saat berkas ditutup.
+            </p>
+
+            {submittedManualArsip.warning && (
+              <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800">
+                {submittedManualArsip.warning}
+              </div>
+            )}
+
+            <div className="mt-10 flex w-full flex-col items-stretch justify-center gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+              <Button
+                type="button"
+                size="lg"
+                onClick={() => navigate({ to: '/arsiparis/berkas' })}
+                className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto"
+              >
+                Lihat Pemberkasan Arsip <ArrowRight size={14} />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => navigate({ to: '/arsiparis' })}
+                className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+              >
+                Kembali ke Dashboard
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={handleCreateAnother}
+                className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+              >
+                Tambah Dokumen Lain
+              </Button>
+            </div>
+          </div>
+        </div>
+      </PageLayout>
+    )
+  }
+
   return (
     <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
@@ -303,7 +496,14 @@ function PenambahanArsipPage() {
               onSuccess={async (result) => {
                 await fetchData()
                 setNotice(result.notice)
-                setFormResetKey((prev) => prev + 1)
+                setSubmittedManualArsip({
+                  id: result.manualArsip.id,
+                  nama: result.manualArsip.nama,
+                  categoryName: result.manualArsip.category.nama,
+                  klasifikasiName: result.manualArsip.klasifikasi.nama ?? result.manualArsip.klasifikasi.nama_snapshot ?? '',
+                  attachmentCount: result.uploadedCount,
+                  warning: result.notice.tone === 'warning' ? result.notice.message : undefined,
+                })
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
             />
@@ -711,12 +911,15 @@ function CreateManualArsipModal({
   onClose: () => void
   onSuccess: (result: CreateManualArsipResult) => void | Promise<void>
 }) {
-  const [form, setForm] = useState<ManualArsipFormState>(emptyForm)
-  const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>([])
+  const initialDraftRef = useRef<ManualCreateDraftState | null>(readManualCreateDraft())
+  const [form, setForm] = useState<ManualArsipFormState>(() => initialDraftRef.current?.form ?? emptyForm())
+  const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>(() => (
+    initialDraftRef.current?.attachmentTitles.map((title) => createAttachmentRow(title)) ?? []
+  ))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(() => initialDraftRef.current?.step ?? 1)
   const [showAttachmentTitleForm, setShowAttachmentTitleForm] = useState(false)
   const [newAttachmentTitle, setNewAttachmentTitle] = useState('')
   const [newAttachmentTitleError, setNewAttachmentTitleError] = useState('')
@@ -725,7 +928,10 @@ function CreateManualArsipModal({
   const [selectedNode, setSelectedNode] = useState<KlasifikasiNode | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPath, setCurrentPath] = useState<KlasifikasiNode[]>([])
+  const [pendingClose, setPendingClose] = useState(false)
+  const [previewingDraftAttachment, setPreviewingDraftAttachment] = useState<PreviewingAttachment | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
+  const skipBeforeUnloadRef = useRef(false)
   const allKlasifikasiOptions = useMemo(() => {
     const rootNode = findRootKlasifikasiNode(klasifikasiList)
     return flattenKlasifikasiTree(rootNode?.children ?? klasifikasiList)
@@ -745,15 +951,20 @@ function CreateManualArsipModal({
     .map((_, index) => index + 1)
     .filter((stepNumber) => stepNumber < step)
   const progressPercentage = Math.round((step / MANUAL_CREATE_STEP_LABELS.length) * 100)
+  const hasFormDirty = isManualCreateDraftDirty(form, attachmentRows, step, newAttachmentTitle)
+  const isDirty = !submitting && hasFormDirty
+  const leaveBlocker = useBlocker({
+    shouldBlockFn: ({ current, next }) => isDirty && current.pathname !== next.pathname,
+    enableBeforeUnload: false,
+    disabled: !isDirty,
+    withResolver: true,
+  })
 
   useEffect(() => {
     if (!isOpen) return
-    setForm(emptyForm())
-    setAttachmentRows([])
     setErrors({})
     setSubmitError(null)
     setSubmitting(false)
-    setStep(1)
     setShowAttachmentTitleForm(false)
     setNewAttachmentTitle('')
     setNewAttachmentTitleError('')
@@ -763,6 +974,47 @@ function CreateManualArsipModal({
     setCurrentPath([])
     setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen || !isDirty) {
+      return
+    }
+
+    writeManualCreateDraft({
+      form,
+      step,
+      attachmentTitles: attachmentRows.map((row) => row.title).filter(Boolean),
+    })
+  }, [attachmentRows, form, isDirty, isOpen, step])
+
+  useEffect(() => {
+    if (!isOpen || isDirty || submitting) {
+      return
+    }
+
+    clearManualCreateDraft()
+  }, [isDirty, isOpen, submitting])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isDirty) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (skipBeforeUnloadRef.current) return
+
+      event.preventDefault()
+      event.returnValue = 'Perubahan yang belum disimpan akan hilang.'
+      return 'Perubahan yang belum disimpan akan hilang.'
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty])
+
+  useEffect(() => {
+    return () => {
+      revokePreviewUrl(previewingDraftAttachment?.url)
+    }
+  }, [previewingDraftAttachment?.url])
 
   useEffect(() => {
     if (!isOpen) return
@@ -983,6 +1235,52 @@ function CreateManualArsipModal({
     setStep((prev) => Math.max(prev - 1, 1))
   }
 
+  function handleRequestClose() {
+    if (isDirty) {
+      setPendingClose(true)
+      return
+    }
+
+    onClose()
+  }
+
+  function handleCancelLeave() {
+    setPendingClose(false)
+    if (leaveBlocker.status === 'blocked') {
+      leaveBlocker.reset()
+    }
+  }
+
+  function handleConfirmLeave() {
+    setPendingClose(false)
+    clearManualCreateDraft()
+    skipBeforeUnloadRef.current = true
+
+    if (leaveBlocker.status === 'blocked') {
+      leaveBlocker.proceed()
+      return
+    }
+
+    onClose()
+  }
+
+  function closeDraftPreview() {
+    setPreviewingDraftAttachment((current) => {
+      revokePreviewUrl(current?.url)
+      return null
+    })
+  }
+
+  function openDraftPreview(row: AttachmentRow) {
+    if (!row.file) return
+
+    closeDraftPreview()
+    setPreviewingDraftAttachment({
+      title: row.title || row.file.name,
+      url: URL.createObjectURL(row.file),
+    })
+  }
+
   function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
   }
@@ -1017,8 +1315,16 @@ function CreateManualArsipModal({
       })
 
       const createdId = createResponse.manual_arsip?.id
+      const createdManualArsip = createResponse.manual_arsip
       if (attachmentValidation.rows.length === 0) {
+        if (!createdManualArsip) {
+          throw new Error('Dokumen manual tidak ditemukan pada respons.')
+        }
+
+        clearManualCreateDraft()
         await onSuccess({
+          manualArsip: createdManualArsip,
+          uploadedCount: 0,
           notice: {
             tone: 'success',
             message: 'Dokumen manual berhasil dibuat.',
@@ -1027,14 +1333,8 @@ function CreateManualArsipModal({
         return
       }
 
-      if (!createdId) {
-        await onSuccess({
-          notice: {
-            tone: 'warning',
-            message: 'Dokumen berhasil dibuat, tetapi lampiran gagal diunggah.',
-          },
-        })
-        return
+      if (!createdId || !createdManualArsip) {
+        throw new Error('Dokumen manual tidak ditemukan pada respons.')
       }
 
       const formData = new FormData()
@@ -1053,14 +1353,20 @@ function CreateManualArsipModal({
         )
         const uploadedCount = uploadResponse.attachments?.length ?? attachmentValidation.rows.length
 
+        clearManualCreateDraft()
         await onSuccess({
+          manualArsip: createdManualArsip,
+          uploadedCount,
           notice: {
             tone: 'success',
             message: `Dokumen manual berhasil dibuat. ${uploadedCount} lampiran berhasil diunggah.`,
           },
         })
       } catch {
+        clearManualCreateDraft()
         await onSuccess({
+          manualArsip: createdManualArsip,
+          uploadedCount: 0,
           notice: {
             tone: 'warning',
             message: 'Dokumen berhasil dibuat, tetapi lampiran gagal diunggah.',
@@ -1080,12 +1386,20 @@ function CreateManualArsipModal({
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      {previewingDraftAttachment && (
+        <ManualArsipPreviewModal
+          preview={previewingDraftAttachment}
+          onClose={closeDraftPreview}
+        />
+      )}
+
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleRequestClose}
               aria-label="Kembali dari penambahan dokumen"
               className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
             >
@@ -1332,6 +1646,19 @@ function CreateManualArsipModal({
                             </p>
                           )}
                         </div>
+                        {row.file && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => openDraftPreview(row)}
+                            disabled={submitting}
+                            aria-label={`Pratinjau lampiran ${index + 1}`}
+                            className="flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-700 transition hover:bg-white hover:text-zinc-950"
+                          >
+                            <Eye size={13} />
+                          </Button>
+                        )}
                         <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#FF5A00] bg-white px-4 text-xs font-bold text-[#FF5A00] transition hover:bg-[#FFF1E7]">
                           <Upload size={13} />
                           {row.file ? 'Ganti' : 'Unggah'}
@@ -1426,7 +1753,7 @@ function CreateManualArsipModal({
           )}
 
           <div className="sticky bottom-0 z-10 -mx-3.5 flex flex-col-reverse gap-2 border-t border-[#F0E1D5] bg-[#FFFDF9]/95 px-3.5 py-2.5 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0">
-            <Button type="button" variant="outline" onClick={step === 1 ? onClose : handleBackStep} disabled={submitting}>
+            <Button type="button" variant="outline" onClick={step === 1 ? handleRequestClose : handleBackStep} disabled={submitting}>
               {step === 1 ? 'Kembali' : 'Kembali'}
             </Button>
             {step < MANUAL_CREATE_STEP_LABELS.length ? (
@@ -1509,17 +1836,53 @@ function CreateManualArsipModal({
               </div>
             </ArchivePanel>
 
+          </aside>
+        </form>
+      </div>
+
+      <AppDialog
+        open={pendingClose || leaveBlocker.status === 'blocked'}
+        onOpenChange={(open) => {
+          if (!open) handleCancelLeave()
+        }}
+        title={
+          <span className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
+              <AlertCircle size={22} />
+            </span>
+            <span className="font-headline text-lg font-bold tracking-tight text-zinc-950">
+              Keluar tanpa menyimpan?
+            </span>
+          </span>
+        }
+        description="Perubahan yang belum disimpan akan hilang."
+        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
+        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
+        showCloseButton
+        size="sm"
+        footer={
+          <>
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
-              className="h-9 w-full border-[#F0E1D5] bg-[#FFFDF9] text-sm font-bold text-zinc-950 hover:bg-[#FFF8F1]"
+              onClick={handleCancelLeave}
+              className="border-[#F0E1D5] bg-[#FFFAF6]"
             >
-              Kembali
+              Tetap di halaman
             </Button>
-          </aside>
-        </form>
-    </div>
+            <Button
+              type="button"
+              onClick={handleConfirmLeave}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+            >
+              Keluar tanpa menyimpan
+            </Button>
+          </>
+        }
+      >
+        <div />
+      </AppDialog>
+    </>
   )
 }
 
