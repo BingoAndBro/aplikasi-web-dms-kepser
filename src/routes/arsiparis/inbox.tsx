@@ -1,12 +1,19 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import {
+  ARCHIVE_PAGE_CONTAINER_CLASS,
   ArchiveMobileCard,
   ArchiveMobileList,
   ArchivePageHeader,
-  ArchivePanel,
   ArchiveTableShell,
 } from '#/components/archive/ArchivePagePrimitives'
+import {
+  WorkflowActionButton,
+  WorkflowDateCell,
+  WorkflowSearchPanel,
+  WorkflowStatusSelect,
+  WORKFLOW_TABLE_HEAD_CLASS,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
@@ -14,8 +21,9 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import {
-  ChevronRight, Eye,
-  Banknote, Clock,
+  Banknote,
+  ChevronRight,
+  Clock,
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
 
@@ -31,6 +39,8 @@ type InboxItem = {
   nama_pegawai: string
   tahun: number
   tanggal: string
+  nominal_realisasi: string | number | null
+  source_type: 'WORKFLOW' | 'MANUAL'
   created_at: string
   bendahara_approve_at: string | null
 }
@@ -40,48 +50,74 @@ type ArsiparisInboxResponse = {
   error?: string
 }
 
-type FungsiOption = { id: string; nama: string }
+type SourceFilter = '' | 'WORKFLOW' | 'MANUAL'
+type SortOrder = 'newest' | 'oldest' | 'nominal_desc' | 'nominal_asc'
+
+const SOURCE_FILTER_OPTIONS = [
+  { value: 'ALL', label: 'Semua Sumber' },
+  { value: 'WORKFLOW', label: 'Workflow' },
+  { value: 'MANUAL', label: 'Manual' },
+]
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Terbaru Selesai' },
+  { value: 'oldest', label: 'Terlama Selesai' },
+  { value: 'nominal_desc', label: 'Nominal Tertinggi' },
+  { value: 'nominal_asc', label: 'Nominal Terendah' },
+]
 
 function ArsiparisInboxPage() {
+  const navigate = useNavigate()
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [fungsiList, setFungsiList] = useState<{ id: string; nama: string }[]>([])
-  const [fungsiFilter, setFungsiFilter] = useState('')
-
-  useEffect(() => {
-    apiFetch<FungsiOption[]>('/master-fungsi')
-      .then(data => { setFungsiList(data) })
-      .catch(() => { setFungsiList([]) })
-  }, [])
+  const [search, setSearch] = useState('')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest')
 
   async function fetchData() {
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
-      const params = new URLSearchParams()
-      if (fungsiFilter) params.set('fungsi_id', fungsiFilter)
-      const json = await apiFetch<ArsiparisInboxResponse>('/arsiparis/inbox', { query: params })
+      const json = await apiFetch<ArsiparisInboxResponse>('/arsiparis/inbox')
       setItems(json.inbox ?? [])
     } catch (error) {
       if (error instanceof ApiError) {
         const payload = error.payload
         if (payload && typeof payload === 'object' && 'error' in payload) {
-          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
+          setError(typeof payload.error === 'string' ? payload.error : 'Gagal memuat dokumen')
         } else {
-          setError('Gagal')
+          setError('Gagal memuat dokumen')
         }
       } else {
         setError('Terjadi kesalahan')
       }
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
-  useEffect(() => { fetchData() }, [fungsiFilter])
+  useEffect(() => { fetchData() }, [])
 
+  const displayedItems = items
+    .filter((item) => {
+      const query = search.trim().toLowerCase()
+      const matchesSearch = !query
+        || item.judul.toLowerCase().includes(query)
+        || (item.kegiatan_nama ?? '').toLowerCase().includes(query)
+        || (item.fungsi_nama ?? '').toLowerCase().includes(query)
+      const matchesSource = !sourceFilter || item.source_type === sourceFilter
+      return matchesSearch && matchesSource
+    })
+    .sort((left, right) => compareInboxItems(left, right, sortOrder))
+
+  function openDocument(dokumen: InboxItem) {
+    navigate({ to: '/arsiparis/dokumen/$id', params: { id: dokumen.id } })
+  }
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className={ARCHIVE_PAGE_CONTAINER_CLASS}>
         <ArchivePageHeader
           eyebrow={
             <>
@@ -95,22 +131,41 @@ function ArsiparisInboxPage() {
           description={`${items.length} dokumen selesai PPSPM menunggu pemilihan Jenis Pembayaran. Metadata final seperti Nomor SPM dan retensi tetap diisi saat Tutup Berkas.`}
         />
 
-        <ArchivePanel className="p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <select
-            value={fungsiFilter}
-            onChange={e => setFungsiFilter(e.target.value)}
-              className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
-          >
-            <option value="">Semua Fungsi</option>
-            {fungsiList.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
-          </select>
-            <div className="flex items-center gap-2 text-xs text-zinc-600">
-              <span className="font-semibold">{items.length} dokumen ditampilkan</span>
-              {fungsiFilter && <Button variant="ghost" size="sm" onClick={() => setFungsiFilter('')}>Reset</Button>}
-            </div>
+        <WorkflowSearchPanel
+          search={search}
+          onSearchChange={setSearch}
+          placeholder="Cari judul dokumen, kegiatan, atau fungsi..."
+          resultLabel={`${displayedItems.length} dokumen ditampilkan`}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <WorkflowStatusSelect
+              value={sourceFilter}
+              onChange={(value) => setSourceFilter(value as SourceFilter)}
+              options={SOURCE_FILTER_OPTIONS}
+              ariaLabel="Filter sumber dokumen"
+            />
+            <WorkflowStatusSelect
+              value={sortOrder}
+              onChange={(value) => setSortOrder((value || 'newest') as SortOrder)}
+              options={SORT_OPTIONS}
+              ariaLabel="Urutan dokumen"
+            />
           </div>
-        </ArchivePanel>
+          {(sourceFilter || search) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch('')
+                setSourceFilter('')
+              }}
+              className="rounded-xl"
+            >
+              Reset
+            </Button>
+          )}
+        </WorkflowSearchPanel>
 
         {loading ? (
           <LoadingState variant="list" label="Memuat dokumen pengklasifikasian" />
@@ -121,7 +176,7 @@ function ArsiparisInboxPage() {
             action={<Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>}
             variant="page"
           />
-        ) : items.length === 0 ? (
+        ) : displayedItems.length === 0 ? (
           <EmptyState
             title="Tidak ada dokumen"
             description="Dokumen yang telah disetujui PPSPM dan belum diklasifikasikan akan muncul di sini."
@@ -130,33 +185,52 @@ function ArsiparisInboxPage() {
         ) : (
           <>
             <ArchiveTableShell>
-              <table className="w-full text-xs">
+              <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-orange-50/60 text-left">
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider w-10 text-center">No</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Judul</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Fungsi</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider">Kegiatan</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tahun</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center">Tanggal Approve</th>
-                    <th className="px-4 py-3 font-semibold text-outline uppercase tracking-wider text-center w-20">Proses</th>
+                  <tr className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
+                    <th className={`w-16 text-center ${WORKFLOW_TABLE_HEAD_CLASS}`}>No</th>
+                    <th className={WORKFLOW_TABLE_HEAD_CLASS}>Judul Dokumen</th>
+                    <th className={WORKFLOW_TABLE_HEAD_CLASS}>Kegiatan</th>
+                    <th className={`text-center ${WORKFLOW_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
+                    <th className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Selesai</th>
+                    <th className={`w-20 text-right ${WORKFLOW_TABLE_HEAD_CLASS}`}>Aksi</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {items.map((d, i) => (
-                    <tr key={d.id} className="border-t border-outline-variant/20 hover:bg-primary/5 transition-colors">
-                      <td className="px-4 py-3 text-center text-outline">{i + 1}</td>
-                      <td className="px-4 py-3"><p className="font-semibold text-on-surface line-clamp-1">{d.judul}</p></td>
-                      <td className="px-4 py-3 text-on-surface">{d.fungsi_nama ?? '—'}</td>
-                      <td className="px-4 py-3 text-on-surface">{d.kegiatan_nama ?? '—'}</td>
-                      <td className="px-4 py-3 text-center font-semibold text-on-surface">{d.tahun}</td>
-                      <td className="px-4 py-3 text-center text-on-surface-variant">
-                        {d.bendahara_approve_at ? formatDate(d.bendahara_approve_at) : '—'}
+                <tbody className="divide-y divide-zinc-100 text-[13px]">
+                  {displayedItems.map((dokumen, index) => (
+                    <tr
+                      key={dokumen.id}
+                      className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                      onClick={() => openDocument(dokumen)}
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          openDocument(dokumen)
+                        }
+                      }}
+                      aria-label={`Buka pengklasifikasian ${dokumen.judul}`}
+                    >
+                      <td className="px-6 py-5 text-center text-sm font-normal text-zinc-950">{index + 1}</td>
+                      <td className="max-w-[460px] px-6 py-5">
+                        <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                          {dokumen.judul}
+                        </p>
+                        <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">
+                          Workflow - {dokumen.fungsi_nama ?? '-'}
+                        </p>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <Link to="/arsiparis/dokumen/$id" params={{ id: d.id }}>
-                          <Button size="icon-xs" variant="ghost" aria-label={`Lihat detail dokumen ${d.judul}`}><Eye size={14} /></Button>
-                        </Link>
+                      <td className="max-w-[320px] px-6 py-5">
+                        <span className="block truncate text-sm font-normal text-zinc-900">{dokumen.kegiatan_nama ?? '-'}</span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        <NominalRealisasiText value={dokumen.nominal_realisasi} />
+                      </td>
+                      <td className="px-6 py-5">
+                        <WorkflowDateCell value={formatInboxFinishedDate(dokumen)} />
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <WorkflowActionButton label={`Klasifikasikan ${dokumen.judul}`} />
                       </td>
                     </tr>
                   ))}
@@ -164,21 +238,21 @@ function ArsiparisInboxPage() {
               </table>
             </ArchiveTableShell>
             <ArchiveMobileList>
-              {items.map((d) => (
+              {displayedItems.map((dokumen, index) => (
                 <ArchiveMobileCard
-                  key={d.id}
-                  title={d.judul}
-                  subtitle={`Diajukan oleh ${d.nama_pegawai}`}
+                  key={dokumen.id}
+                  title={dokumen.judul}
+                  subtitle={`Workflow - ${dokumen.fungsi_nama ?? '-'}`}
                   meta={[
-                    { label: 'Fungsi', value: d.fungsi_nama ?? '-' },
-                    { label: 'Kegiatan', value: d.kegiatan_nama ?? '-' },
-                    { label: 'Tahun', value: d.tahun },
-                    { label: 'Tanggal approve', value: d.bendahara_approve_at ? formatDate(d.bendahara_approve_at) : '-' },
+                    { label: 'No', value: index + 1 },
+                    { label: 'Kegiatan', value: dokumen.kegiatan_nama ?? '-' },
+                    { label: 'Nominal', value: <span className="font-extrabold text-orange-700">{formatInboxNominal(dokumen.nominal_realisasi)}</span> },
+                    { label: 'Tanggal selesai', value: formatInboxFinishedDate(dokumen) },
                   ]}
                   action={
-                    <Link to="/arsiparis/dokumen/$id" params={{ id: d.id }}>
+                    <Link to="/arsiparis/dokumen/$id" params={{ id: dokumen.id }}>
                       <Button size="sm" variant="outline" className="w-full gap-1.5">
-                        <Eye size={14} />
+                        <ChevronRight size={14} />
                         Klasifikasikan
                       </Button>
                     </Link>
@@ -191,4 +265,46 @@ function ArsiparisInboxPage() {
       </div>
     </PageLayout>
   )
+}
+
+function NominalRealisasiText({ value }: { value: string | number | null }) {
+  return (
+    <span className="inline-flex justify-center text-sm font-bold text-[#FF4D00]">
+      {formatInboxNominal(value)}
+    </span>
+  )
+}
+
+function formatInboxNominal(value: string | number | null): string {
+  const numeric = normalizeNominal(value)
+  if (numeric === null) return '-'
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(numeric)
+}
+
+function normalizeNominal(value: string | number | null): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value !== 'string') return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function formatInboxFinishedDate(item: InboxItem): string {
+  return item.bendahara_approve_at ? formatDate(item.bendahara_approve_at) : formatDate(item.tanggal)
+}
+
+function compareInboxItems(left: InboxItem, right: InboxItem, sortOrder: SortOrder): number {
+  if (sortOrder === 'nominal_desc' || sortOrder === 'nominal_asc') {
+    const leftNominal = normalizeNominal(left.nominal_realisasi) ?? 0
+    const rightNominal = normalizeNominal(right.nominal_realisasi) ?? 0
+    return sortOrder === 'nominal_desc' ? rightNominal - leftNominal : leftNominal - rightNominal
+  }
+
+  const leftDate = new Date(left.bendahara_approve_at ?? left.created_at ?? left.tanggal).getTime()
+  const rightDate = new Date(right.bendahara_approve_at ?? right.created_at ?? right.tanggal).getTime()
+  return sortOrder === 'oldest' ? leftDate - rightDate : rightDate - leftDate
 }

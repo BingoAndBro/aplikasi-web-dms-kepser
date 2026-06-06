@@ -408,8 +408,9 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('createBerkasDetailItemsCsv')
     expect(detailSource).toContain('Data file sudah dimusnahkan')
     expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
-    expect(detailSource).toContain('attachment?.label')
-    expect(detailSource).toContain('attachment?.previewTitle')
+    expect(detailSource).toContain('const availableAttachments = item.attachments')
+    expect(detailSource).toContain('attachment.label ||')
+    expect(detailSource).toContain('attachment.previewTitle || title')
     expect(detailSource).toContain('Tutup Berkas')
     expect(detailSource).toContain('/close')
     expect(detailSource).toContain('buildCloseBerkasRequestBody(closeForm)')
@@ -629,6 +630,31 @@ describe('folder-first berkas archive page formatting', () => {
     expect(href).not.toContain('logical_path')
     expect(href).not.toContain('storage')
     expect(href).not.toContain('token')
+  })
+
+  it('renders folder item file actions only from safe attachment DTOs', () => {
+    const detailPageSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
+
+    expect(detailPageSource).toContain('const availableAttachments = item.attachments')
+    expect(detailPageSource).toContain('availableAttachments.map((attachment, lampiranIndex)')
+    expect(detailPageSource).not.toContain('Array.from({ length: attachmentCount }')
+  })
+
+  it('keeps archive classification inbox aligned to the compact workflow table columns', () => {
+    const inboxSource = readFileSync('src/routes/arsiparis/inbox.tsx', 'utf8')
+    const inboxApiSource = readFileSync('src/routes/api/arsiparis/inbox.ts', 'utf8')
+
+    expect(inboxSource).toContain('Judul Dokumen')
+    expect(inboxSource).toContain('Kegiatan')
+    expect(inboxSource).toContain('Nominal Realisasi')
+    expect(inboxSource).toContain('Tanggal Selesai')
+    expect(inboxSource).toContain('WorkflowSearchPanel')
+    expect(inboxSource).toContain('SOURCE_FILTER_OPTIONS')
+    expect(inboxSource).toContain('SORT_OPTIONS')
+    expect(inboxSource).not.toContain('Tanggal Approve')
+    expect(inboxSource).not.toContain('Tahun</th>')
+    expect(inboxApiSource).toContain('nominal_realisasi: dokumenTransaksi.nominalRealisasi')
+    expect(inboxApiSource).toContain('source_type: ARCHIVE_SOURCE_TYPE.WORKFLOW')
   })
 })
 

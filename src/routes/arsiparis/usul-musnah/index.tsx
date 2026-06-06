@@ -9,6 +9,10 @@ import {
 import { useEffect, useState } from 'react'
 
 import {
+  ARCHIVE_INLINE_ACTION_CLASS,
+  ARCHIVE_PAGE_CONTAINER_CLASS,
+  ARCHIVE_TABLE_HEAD_CLASS,
+  ARCHIVE_TABLE_ROW_CLASS,
   ArchiveMobileCard,
   ArchiveMobileList,
   ArchiveNotice,
@@ -185,7 +189,7 @@ function UsulMusnahPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className={ARCHIVE_PAGE_CONTAINER_CLASS}>
         <ArchivePageHeader
           eyebrow={
             <>
@@ -256,7 +260,7 @@ function UsulMusnahPage() {
             if (!open && !pendingBerkasId) closeDestructionDialog()
           }}
         >
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-lg sm:rounded-3xl">
             <DialogHeader>
               <DialogTitle>Musnahkan Data</DialogTitle>
               <DialogDescription>
@@ -266,7 +270,7 @@ function UsulMusnahPage() {
 
             <div className="space-y-4">
               {destructionTarget && (
-                <div className="rounded-xl border border-outline-variant/40 bg-surface-container-low/30 px-3 py-2 text-xs text-on-surface">
+                <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-xs text-zinc-800">
                   Berkas: <span className="font-semibold">
                     {formatKlasifikasiLabel(
                       destructionTarget.klasifikasi_kode_snapshot,
@@ -276,7 +280,7 @@ function UsulMusnahPage() {
                 </div>
               )}
 
-              <div className="space-y-2 rounded-xl border border-error/30 bg-error/5 p-3 text-xs font-semibold text-error/90">
+              <div className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800">
                 <p>Status berkas akan menjadi Dimusnahkan.</p>
                 <p>File fisik terkait berkas akan dihapus.</p>
                 <p>Preview dan download file tidak akan tersedia setelah pemusnahan.</p>
@@ -290,7 +294,7 @@ function UsulMusnahPage() {
                   id="berkas-destruction-confirmation"
                   value={destructionPhrase}
                   onChange={(event) => setDestructionPhrase(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-error focus:ring-1 focus:ring-error"
+                  className="mt-2 w-full rounded-xl border border-red-200 bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                   placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
                   autoComplete="off"
                 />
@@ -368,25 +372,25 @@ function BerkasLifecycleTable({
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-orange-50/60 text-left">
-              <th className="w-10 px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">No</th>
-              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Jenis Pembayaran</th>
-              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Berkas</th>
-              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Arsip</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Jumlah Dokumen</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Workflow</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Manual</th>
-              <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-outline">Total Nominal</th>
-              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Nomor SPM</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Tanggal Ditutup</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Aksi</th>
+              <th className={`w-10 text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>No</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Jenis Pembayaran</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Berkas</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Arsip</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Dokumen Workflow</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Dokumen Manual</th>
+              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Total Nominal</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Nomor SPM</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal Ditutup</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {folders.map((folder, index) => (
-              <tr key={folder.berkas_id} className="border-t border-outline-variant/20 transition-colors hover:bg-primary/5">
-                <td className="px-4 py-3 text-center text-outline">{index + 1}</td>
-                <td className="px-4 py-3 text-on-surface">
-                  <p className="font-semibold">
+              <tr key={folder.berkas_id} className={ARCHIVE_TABLE_ROW_CLASS}>
+                <td className="px-5 py-4 text-center text-sm font-normal text-zinc-950">{index + 1}</td>
+                <td className="px-5 py-4 text-zinc-950">
+                  <p className="line-clamp-2 text-sm font-semibold tracking-tight transition-colors group-hover:text-[#FF4D00]">
                     {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
                   </p>
                 </td>
@@ -407,7 +411,7 @@ function BerkasLifecycleTable({
                     <Link
                       to="/arsiparis/berkas/$id"
                       params={{ id: folder.berkas_id }}
-                      className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
+                      className={ARCHIVE_INLINE_ACTION_CLASS}
                     >
                       Detail
                     </Link>

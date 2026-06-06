@@ -3,6 +3,7 @@ import { Archive, Clock, FolderOpen, Loader2, Plus, Tags, XCircle } from 'lucide
 import { useEffect, useState } from 'react'
 
 import {
+  ARCHIVE_PAGE_CONTAINER_CLASS,
   ArchivePageHeader,
   ArchiveSummaryCard,
 } from '#/components/archive/ArchivePagePrimitives'
@@ -127,7 +128,7 @@ function KepalaSubBagianUmumDashboard() {
 
   return (
     <DashboardShell role={ROLES.KEPALA_SUB_BAGIAN_UMUM}>
-      <div className="space-y-6">
+      <div className={ARCHIVE_PAGE_CONTAINER_CLASS}>
         <ArchivePageHeader
           eyebrow={
             <>
@@ -141,14 +142,14 @@ function KepalaSubBagianUmumDashboard() {
             <>
               <a
                 href="/arsiparis/inbox"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700"
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700"
               >
                 <Tags size={16} />
                 Pengklasifikasian
               </a>
               <a
                 href="/arsiparis/penambahan-arsip"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 text-sm font-bold text-orange-800 shadow-sm transition hover:bg-orange-50"
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-orange-200 bg-[#FFFDF9] px-4 text-sm font-bold text-orange-800 shadow-sm transition hover:bg-orange-50"
               >
                 <Plus size={16} />
                 Penambahan Dokumen
@@ -158,7 +159,7 @@ function KepalaSubBagianUmumDashboard() {
         />
 
         {loading ? (
-          <div className="flex items-center justify-center rounded-2xl border border-orange-100 bg-white py-12 shadow-sm">
+          <div className="flex items-center justify-center rounded-[1.15rem] border border-orange-100 bg-[#FFFDF9] py-12 shadow-sm">
             <Loader2 size={24} className="animate-spin text-orange-600" />
           </div>
         ) : (

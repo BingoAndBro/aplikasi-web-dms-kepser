@@ -4,6 +4,21 @@ import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
+export const ARCHIVE_PAGE_CONTAINER_CLASS =
+  'mx-auto w-full max-w-[1280px] space-y-7 px-4 pt-4 sm:px-6 lg:px-8'
+
+export const ARCHIVE_DETAIL_CONTAINER_CLASS =
+  'mx-auto w-full max-w-[92rem] space-y-4 px-4 py-4 sm:px-6 lg:px-7 lg:py-5'
+
+export const ARCHIVE_TABLE_HEAD_CLASS =
+  'px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
+
+export const ARCHIVE_TABLE_ROW_CLASS =
+  'group border-t border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70'
+
+export const ARCHIVE_INLINE_ACTION_CLASS =
+  'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700'
+
 type ArchivePageHeaderProps = {
   eyebrow: ReactNode
   title: ReactNode
@@ -22,7 +37,7 @@ export function ArchivePageHeader({
   return (
     <div
       className={cn(
-        'rounded-3xl border border-orange-100 bg-gradient-to-br from-[#FFF8F1] via-[#FFFDF9] to-orange-50/70 p-5 shadow-sm sm:p-6',
+        'rounded-[1.35rem] border border-orange-100/80 bg-gradient-to-br from-[#FFF8F1] via-[#FFFDF9] to-orange-50/60 p-5 shadow-sm shadow-zinc-950/[0.035] sm:p-6',
         className,
       )}
     >
@@ -31,7 +46,7 @@ export function ArchivePageHeader({
           <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-orange-700/70">
             {eyebrow}
           </div>
-          <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
+          <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
             {title}
           </h1>
           {description && (
@@ -55,7 +70,7 @@ export function ArchivePanel({ children, className }: ArchivePanelProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm',
+        'rounded-[1.15rem] border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]',
         className,
       )}
     >
@@ -86,7 +101,7 @@ export function ArchiveSearchPanel({
   children,
 }: ArchiveSearchPanelProps) {
   return (
-    <ArchivePanel className="p-3">
+    <ArchivePanel className="p-3.5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
           <label className="relative min-w-0 flex-1 md:max-w-md" htmlFor={id}>
@@ -141,7 +156,7 @@ export function ArchiveSummaryCard({
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100 bg-[#FFFDF9] p-4 shadow-sm',
+        'rounded-[1.15rem] border border-orange-100 bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]',
         className,
       )}
     >
@@ -169,7 +184,7 @@ export function ArchiveTableShell({ children, className }: ArchivePanelProps) {
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-2xl border border-orange-100 bg-[#FFFDF9] shadow-sm md:block',
+        'hidden overflow-hidden rounded-[1.35rem] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
         className,
       )}
     >
@@ -203,7 +218,7 @@ export function ArchiveMobileCard({
   action,
 }: ArchiveMobileCardProps) {
   return (
-    <div className="rounded-2xl border border-orange-100 bg-[#FFFDF9] p-4 shadow-sm">
+    <div className="rounded-[1.15rem] border border-zinc-200/80 bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-bold text-zinc-950">
@@ -240,7 +255,7 @@ export function ArchiveFieldCard({
   className,
 }: ArchiveFieldCardProps) {
   return (
-    <div className={cn('rounded-xl border border-orange-100 bg-[#FFFDF9] p-3', className)}>
+    <div className={cn('rounded-xl border border-orange-100 bg-[#FFFDF9] p-3 shadow-sm shadow-zinc-950/[0.025]', className)}>
       <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </p>
@@ -336,7 +351,7 @@ export function ArchiveTabs<T extends string>({
   onChange,
 }: ArchiveTabsProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-orange-100 bg-[#FFFDF9] px-2 py-2 shadow-sm">
+    <div className="overflow-x-auto rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1 shadow-sm">
       <div className="flex min-w-max gap-1">
         {tabs.map((tab) => {
           const active = tab.id === activeTab
@@ -346,10 +361,10 @@ export function ArchiveTabs<T extends string>({
               type="button"
               onClick={() => onChange(tab.id)}
               className={cn(
-                'cursor-pointer rounded-xl px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition',
+                'cursor-pointer rounded-lg px-3 py-2 text-xs font-bold transition',
                 active
-                  ? 'bg-orange-600 text-white shadow-sm'
-                  : 'text-zinc-500 hover:bg-orange-50 hover:text-orange-800',
+                  ? 'bg-[#FFFDF9] text-[#FF5A00] shadow-sm'
+                  : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
               )}
             >
               {tab.label}

@@ -10,6 +10,10 @@ import {
 import { useEffect, useState } from 'react'
 
 import {
+  ARCHIVE_INLINE_ACTION_CLASS,
+  ARCHIVE_PAGE_CONTAINER_CLASS,
+  ARCHIVE_TABLE_HEAD_CLASS,
+  ARCHIVE_TABLE_ROW_CLASS,
   ArchiveMobileCard,
   ArchiveMobileList,
   ArchiveNotice,
@@ -216,7 +220,7 @@ function BerkasArsipAktifPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className={ARCHIVE_PAGE_CONTAINER_CLASS}>
         <ArchivePageHeader
           eyebrow={
             <>
@@ -416,29 +420,29 @@ function BerkasTable({
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-orange-50/60 text-left">
-              <th className="w-10 px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">No</th>
-              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Jenis Pembayaran</th>
-              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Berkas</th>
-              <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Status Arsip</th>
+              <th className={`w-10 text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>No</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Jenis Pembayaran</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Berkas</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Arsip</th>
               {mode !== 'open' && (
-                <th className="px-4 py-3 font-semibold uppercase tracking-wider text-outline">Nomor SPM</th>
+                <th className={ARCHIVE_TABLE_HEAD_CLASS}>Nomor SPM</th>
               )}
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Jumlah Dokumen</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Workflow</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Dokumen Manual</th>
-              <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-outline">Total Nominal</th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Dokumen Workflow</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Dokumen Manual</th>
+              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Total Nominal</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>
                 {mode === 'open' ? 'Terakhir Diperbarui' : 'Tanggal Ditutup'}
               </th>
-              <th className="px-4 py-3 text-center font-semibold uppercase tracking-wider text-outline">Aksi</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {folders.map((folder, index) => (
-              <tr key={folder.berkas_id} className="border-t border-outline-variant/20 transition-colors hover:bg-primary/5">
-                <td className="px-4 py-3 text-center text-outline">{index + 1}</td>
-                <td className="px-4 py-3 text-on-surface">
-                  <p className="font-semibold">
+              <tr key={folder.berkas_id} className={ARCHIVE_TABLE_ROW_CLASS}>
+                <td className="px-5 py-4 text-center text-sm font-normal text-zinc-950">{index + 1}</td>
+                <td className="px-5 py-4 text-zinc-950">
+                  <p className="line-clamp-2 text-sm font-semibold tracking-tight transition-colors group-hover:text-[#FF4D00]">
                     {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
                   </p>
                 </td>
@@ -463,7 +467,7 @@ function BerkasTable({
                     <Link
                       to="/arsiparis/berkas/$id"
                       params={{ id: folder.berkas_id }}
-                      className="inline-flex h-7 items-center rounded-lg border border-outline-variant/40 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/5"
+                      className={ARCHIVE_INLINE_ACTION_CLASS}
                     >
                       Detail
                     </Link>

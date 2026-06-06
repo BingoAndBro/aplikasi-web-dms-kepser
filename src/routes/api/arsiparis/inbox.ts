@@ -44,6 +44,7 @@ export const Route = createFileRoute('/api/arsiparis/inbox')({
               created_by: dokumenTransaksi.createdBy,
               tahun: dokumenTransaksi.tahun,
               tanggal: dokumenTransaksi.tanggal,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
               created_at: dokumenTransaksi.createdAt,
             })
             .from(dokumenTransaksi)
@@ -89,6 +90,8 @@ export const Route = createFileRoute('/api/arsiparis/inbox')({
               nama_pegawai: '\u2014',
               tahun: d.tahun,
               tanggal: d.tanggal,
+              nominal_realisasi: d.nominal_realisasi,
+              source_type: ARCHIVE_SOURCE_TYPE.WORKFLOW,
               created_at: d.created_at,
               bendahara_approve_at: bendaharaLogMap[d.id] ?? null,
             })),
