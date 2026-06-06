@@ -34,6 +34,13 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
     for (const source of [ppkDetail, ppspmDetail]) {
       expect(source).toContain("rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C]")
       expect(source).toContain("rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA]")
+      expect(source).toContain('function MetadataDetailCard')
+      expect(source).toContain('<MetadataDetailCard dokumen={dokumen} isNonMaterial={isNonMaterial} />')
+      expect(source).toContain('function RoleStatusPanel')
+      expect(source).toContain('Status Dokumen')
+      expect(source).toContain('WORKFLOW_STEPS_NON_MATERIAL')
+      expect(source).not.toContain('<WorkflowTimeline')
+      expect(source).not.toContain('<WorkflowFieldCard')
     }
   })
 
@@ -51,6 +58,7 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
     expect(ppkDetail).toContain("apiMutation(`/api/ppk/dokumen/${id}/reject`,")
     expect(ppkDetail).toContain("body: { catatan: rejectCatatan.trim() }")
     expect(ppkDetail).toContain('window.location.href = \'/ppk/inbox\'')
+    expect(ppkDetail).toContain('window.history.back()')
     expect(ppkDetail).toContain('apiType="ppk"')
 
     expect(ppspmDetail).toContain("apiFetch<{ dokumen: DokumenDetail }>(`/bendahara/dokumen/${id}`)")
@@ -59,16 +67,38 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
     expect(ppspmDetail).toContain("body: { catatan: rejectCatatan.trim() }")
     expect(ppspmDetail).toContain("navigate({ to: '/bendahara/selesai' })")
     expect(ppspmDetail).toContain("navigate({ to: '/bendahara/ditolak' })")
+    expect(ppspmDetail).toContain('window.history.back()')
     expect(ppspmDetail).toContain('apiType="bendahara"')
   })
 
   it('keeps user-facing PPSPM terminology while preserving the internal bendahara namespace', () => {
     expect(ppspmDetail).toContain('PPSPM')
-    expect(ppspmDetail).toContain("to=\"/bendahara/inbox\"")
-    expect(ppspmDetail).toContain("to=\"/bendahara/selesai\"")
-    expect(ppspmDetail).toContain("to=\"/bendahara/ditolak\"")
+    expect(ppspmDetail).toContain("navigate({ to: '/bendahara/inbox' })")
+    expect(ppspmDetail).not.toContain('Daftar Selesai')
+    expect(ppspmDetail).not.toContain('Daftar Ditolak')
     expect(ppspmDetail).not.toContain('Tugas Bendahara')
     expect(ppspmDetail).not.toContain('Persetujuan Bendahara')
+  })
+
+  it('keeps detail rail actions ordered and uses browser history for return', () => {
+    const ppkActionRail = ppkDetail.slice(ppkDetail.indexOf('<aside className="min-w-0 space-y-1.5'))
+    const ppspmActionRail = ppspmDetail.slice(ppspmDetail.indexOf('<aside className="min-w-0 space-y-1.5'))
+
+    expect(ppkActionRail.indexOf('Validasi ke PPSPM')).toBeGreaterThan(-1)
+    expect(ppkActionRail.indexOf('Tolak')).toBeGreaterThan(ppkActionRail.indexOf('Validasi ke PPSPM'))
+    expect(ppkActionRail.indexOf('Kembali')).toBeGreaterThan(ppkActionRail.indexOf('Tolak'))
+    expect(ppkActionRail.indexOf('Kembali')).toBeGreaterThan(ppkActionRail.indexOf('Validasi ke PPSPM'))
+    expect(ppkActionRail).not.toContain('Tervalidasi')
+    expect(ppkActionRail).not.toContain('Daftar Revisi')
+
+    expect(ppspmActionRail.indexOf('Setujui Dokumen')).toBeGreaterThan(-1)
+    expect(ppspmActionRail.indexOf('Tolak')).toBeGreaterThan(ppspmActionRail.indexOf('Setujui Dokumen'))
+    expect(ppspmActionRail.indexOf('Kembali')).toBeGreaterThan(ppspmActionRail.indexOf('Tolak'))
+    expect(ppspmActionRail.indexOf('Kembali')).toBeGreaterThan(ppspmActionRail.indexOf('Setujui Dokumen'))
+    expect(ppspmActionRail).not.toContain('Daftar Selesai')
+    expect(ppspmActionRail).not.toContain('Daftar Ditolak')
+    expect(ppkActionRail).toContain('onClick={handleBack}')
+    expect(ppspmActionRail).toContain('onClick={handleBack}')
   })
 
   it('keeps attachment viewer route-safe while applying the approved soft surface tone', () => {

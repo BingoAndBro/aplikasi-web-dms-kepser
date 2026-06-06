@@ -266,6 +266,13 @@ export function AttachmentViewer({
     return extension ? String(extension).toUpperCase() : 'File'
   }
 
+  const fileActionButtonClassName = [
+    'h-8 rounded-xl border border-zinc-200/70 bg-[#FFFDF9] px-2.5',
+    'text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500 shadow-sm shadow-zinc-950/[0.025]',
+    'transition hover:border-orange-300 hover:bg-orange-50 hover:text-[#FF5A00] hover:shadow-orange-500/10',
+    'focus-visible:border-orange-300 focus-visible:ring-orange-100',
+  ].join(' ')
+
   // Helper function to render a single lampiran item
   // globalIdx is the index in the original lampiranUrls array (for callbacks)
   // labelColor: 'gray' for admin, 'blue' for user docs
@@ -314,7 +321,7 @@ export function AttachmentViewer({
               size="sm"
               variant="ghost"
               onClick={() => handlePreview(globalIdx)}
-              className="h-8 gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-950 hover:bg-orange-50 hover:text-[#FF5A00]"
+              className={cn(fileActionButtonClassName, 'gap-1.5')}
               aria-label={`Pratinjau ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
             >
               <Eye size={15} />
@@ -325,7 +332,7 @@ export function AttachmentViewer({
               size="sm"
               variant="ghost"
               onClick={() => handleDownload(globalIdx)}
-              className="h-8 gap-1.5 px-2 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-950 hover:bg-orange-50 hover:text-[#FF5A00]"
+              className={cn(fileActionButtonClassName, 'gap-1.5')}
               aria-label={`Unduh ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
             >
               <Download size={15} />

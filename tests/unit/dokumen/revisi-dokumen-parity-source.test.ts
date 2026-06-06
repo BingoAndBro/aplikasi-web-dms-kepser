@@ -48,8 +48,11 @@ describe('Phase 15L.2 Revisi Dokumen parity source guard', () => {
     expect(source).toContain('Lihat Daftar Revisi')
     expect(source).toContain('Lihat Detail Dokumen')
     expect(source).toContain('Kembali ke Daftar Dokumen')
+    expect(source).toContain('<ChevronLeft size={15} />\n                  Kembali')
+    expect(source).toContain('border-[#F0E1D5] bg-[#FFFDF9] text-sm font-bold text-zinc-950')
     expect(source).toContain('setSubmitRequestSignal(current => current + 1)')
     expect(source).toContain('setCancelRequestSignal(current => current + 1)')
+    expect(source).not.toContain('Batal')
   })
 
   it('preserves Revisi endpoint sequence and payload shape', () => {
