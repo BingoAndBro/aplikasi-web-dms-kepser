@@ -134,7 +134,7 @@ describe('folder-first berkas CSV helper', () => {
     ])
 
     expect(csv).toContain('No,Sumber,Nama Dokumen,Tanggal Dokumen,Dibuat Oleh,Nominal,Jumlah Lampiran,Keterangan / Provenance,Catatan')
-    expect(csv).toContain('Workflow,Laporan Pembayaran')
+    expect(csv).toContain('Persetujuan,Laporan Pembayaran')
     expect(csv).toContain('Status: ARCHIVED; Fungsi: Fungsi Keuangan; Kegiatan: Kegiatan Pembayaran')
     expect(csv).toContain('Manual,Dokumen Manual')
     expect(csv).toContain('Kategori: Kategori Manual; Keterangan: Keterangan manual aman')

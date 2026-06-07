@@ -28,8 +28,8 @@ describe('Phase 15E shared UI foundation mappings', () => {
     expect(ARCHIVE_STATUS_BADGE_CONFIG.INAKTIF.label).toBe('Inaktif')
     expect(ARCHIVE_STATUS_BADGE_CONFIG.USUL_MUSNAH.label).toBe('Usul Musnah')
     expect(ARCHIVE_STATUS_BADGE_CONFIG.DIMUSNAHKAN.label).toBe('Dimusnahkan')
-    expect(SOURCE_TYPE_BADGE_CONFIG.WORKFLOW.label).toBe('Pengklasifikasian Dokumen')
-    expect(SOURCE_TYPE_BADGE_CONFIG.MANUAL.label).toBe('Penambahan Dokumen')
+    expect(SOURCE_TYPE_BADGE_CONFIG.WORKFLOW.label).toBe('Persetujuan')
+    expect(SOURCE_TYPE_BADGE_CONFIG.MANUAL.label).toBe('Manual')
   })
 
   it('falls back safely for unknown status values', () => {
