@@ -4,6 +4,7 @@ import {
   getBerkasArsipDetail,
   type BerkasArsipDetailDto,
   type BerkasArsipDetailItemDto,
+  type BerkasArsipActivityEventDto,
 } from '#/lib/archive/berkas-arsip-read-model'
 import { updateActiveBerkasMetadata } from '#/lib/archive/berkas-arsip-service'
 import {
@@ -57,6 +58,7 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id')({
         try {
           const berkas = await updateActiveBerkasMetadata({
             berkasId,
+            actorUserId: sessionOrResponse.user.id,
             metadata: parsed.data,
           })
 
@@ -104,8 +106,20 @@ function safeBerkasDetail(detail: BerkasArsipDetailDto) {
     total_nominal_realisasi: detail.total_nominal_realisasi,
     created_at: detail.created_at,
     updated_at: detail.updated_at,
+    activity_events: detail.activity_events.map(safeBerkasActivityEvent),
     warnings: detail.warnings,
     items: detail.items.map(safeBerkasDetailItem),
+  }
+}
+
+function safeBerkasActivityEvent(event: BerkasArsipActivityEventDto, index: number) {
+  return {
+    activity_key: `activity-${index + 1}`,
+    event_type: event.event_type,
+    source_type: event.source_type,
+    message: event.message,
+    created_at: event.created_at,
+    actor_display_name: event.actor_display_name,
   }
 }
 

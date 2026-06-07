@@ -82,12 +82,28 @@ describe('workflow classification to berkas route', () => {
     }))
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
       berkasId: BERKAS_ID,
+      eventType: 'BERKAS_DIBUKA',
+      actorUserId: SESSION_USER_ID,
+      sourceType: null,
+      workflowDocumentId: null,
+      manualDocumentId: null,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      berkasId: BERKAS_ID,
       sourceType: 'WORKFLOW',
       dokumenId: DOCUMENT_ID,
       manualArsipId: null,
       addedBy: SESSION_USER_ID,
     }))
-    expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(4, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      eventType: 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+      actorUserId: SESSION_USER_ID,
+      sourceType: 'WORKFLOW',
+      workflowDocumentId: DOCUMENT_ID,
+      manualDocumentId: null,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenCalledTimes(4)
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ statusArsip: 'AKTIF' }))
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({ archivedBy: SESSION_USER_ID }))
     expect(mocks.txUpdate).not.toHaveBeenCalled()
@@ -181,6 +197,12 @@ describe('workflow classification to berkas route', () => {
       sourceType: 'WORKFLOW',
       dokumenId: DOCUMENT_ID,
     }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      eventType: 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+      sourceType: 'WORKFLOW',
+      workflowDocumentId: DOCUMENT_ID,
+    }))
     expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
@@ -218,7 +240,7 @@ describe('workflow classification to berkas route', () => {
     )
     queueSuccessfulTransaction({
       txInsertReturningByCall: {
-        2: Object.assign(new Error('unique conflict'), { code: '23505' }),
+        3: Object.assign(new Error('unique conflict'), { code: '23505' }),
       },
     })
 

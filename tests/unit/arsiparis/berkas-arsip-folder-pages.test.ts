@@ -218,6 +218,7 @@ describe('folder-first berkas archive read API routes', () => {
       detail: {
         ...openFolderRow(),
         items: [],
+        activity_events: [],
         warnings: ['OPEN_STATUS_ARSIP_NULL'],
       },
     })
@@ -303,6 +304,7 @@ describe('folder-first berkas archive read API routes', () => {
     expect(response.status).toBe(200)
     expect(serviceMocks.updateActiveBerkasMetadata).toHaveBeenCalledWith({
       berkasId: BERKAS_ID,
+      actorUserId: USER_ID,
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
@@ -463,6 +465,55 @@ describe('folder-first berkas archive page formatting', () => {
     expect(JSON.stringify(history)).not.toContain('Dokumen selesai persetujuan PPSPM')
     expect(JSON.stringify(history)).not.toContain('Workflow')
     expect(history.at(-1)?.label).toBe('Berkas dimusnahkan')
+  })
+
+  it('prefers authoritative berkas activity events when present', () => {
+    const history = buildBerkasHistoryItems({
+      ...detailResult(),
+      status_arsip: 'DIMUSNAHKAN',
+      updated_at: '2026-05-31T10:00:00.000Z',
+      activity_events: [
+        activityEvent('activity-1', 'BERKAS_DIBUKA', '2026-05-22T07:00:00.000Z'),
+        activityEvent('activity-2', 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN', '2026-05-22T08:30:00.000Z', 'WORKFLOW'),
+        activityEvent('activity-3', 'DOKUMEN_MANUAL_DITAMBAHKAN', '2026-05-22T09:15:00.000Z', 'MANUAL'),
+        activityEvent('activity-4', 'BERKAS_DITUTUP', '2026-05-29T10:00:00.000Z'),
+        activityEvent('activity-5', 'METADATA_ARSIP_AKTIF_DIPERBARUI', '2026-05-29T11:00:00.000Z'),
+        activityEvent('activity-6', 'BERKAS_DIPINDAHKAN_KE_INAKTIF', '2026-05-30T08:00:00.000Z'),
+        activityEvent('activity-7', 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH', '2026-05-30T09:00:00.000Z'),
+        activityEvent('activity-8', 'BERKAS_DIMUSNAHKAN', '2026-05-30T10:00:00.000Z'),
+      ],
+    } as any)
+
+    expect(history.map((item) => item.label)).toEqual([
+      'Berkas dibuka',
+      'Dokumen Persetujuan diklasifikasikan',
+      'Penambahan dokumen manual sukses',
+      'Berkas ditutup',
+      'Metadata arsip aktif diperbarui',
+      'Berkas dipindahkan ke Inaktif',
+      'Berkas dipindahkan ke Usul Musnah',
+      'Berkas dimusnahkan',
+    ])
+    expect(history[1]?.helper).toContain('Persetujuan')
+    expect(history[2]?.helper).toContain('Manual')
+    expect(JSON.stringify(history)).not.toContain('Workflow')
+    expect(history.map((item) => item.timestampLabel).join(' ')).toMatch(/\d{2}[.:]\d{2}/)
+  })
+
+  it('does not display activity after authoritative BERKAS_DIMUSNAHKAN', () => {
+    const history = buildBerkasHistoryItems({
+      ...detailResult(),
+      activity_events: [
+        activityEvent('activity-1', 'BERKAS_DIBUKA', '2026-05-22T07:00:00.000Z'),
+        activityEvent('activity-2', 'BERKAS_DIMUSNAHKAN', '2026-05-30T10:00:00.000Z'),
+        activityEvent('activity-3', 'METADATA_ARSIP_AKTIF_DIPERBARUI', '2026-05-30T11:00:00.000Z'),
+      ],
+    } as any)
+
+    expect(history.map((item) => item.label)).toEqual([
+      'Berkas dibuka',
+      'Berkas dimusnahkan',
+    ])
   })
 
   it('sorts berkas opened before manual insertion before close when close is date-only', () => {
@@ -974,6 +1025,7 @@ function listSummary(overrides: Record<string, unknown> = {}) {
 function detailResult() {
   return {
     ...folderRow(),
+    activity_events: [],
     items: [
       {
         item_id: '44444444-4444-4444-8444-444444444444',
@@ -1004,6 +1056,22 @@ function detailResult() {
       },
     ],
     warnings: [],
+  }
+}
+
+function activityEvent(
+  activityKey: string,
+  eventType: string,
+  createdAt: string,
+  sourceType: string | null = null,
+) {
+  return {
+    activity_key: activityKey,
+    event_type: eventType,
+    source_type: sourceType,
+    message: null,
+    created_at: createdAt,
+    actor_display_name: 'Kasubag Umum',
   }
 }
 

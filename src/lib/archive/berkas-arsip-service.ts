@@ -1,10 +1,14 @@
 import { and, eq, sql } from 'drizzle-orm'
 import {
   berkasArsip,
+  berkasArsipActivity,
   berkasArsipItem,
   masterKlasifikasiArsip,
   manualArsip,
 } from '#/db/schema/arsip'
+import {
+  type BerkasActivityEventType,
+} from '#/lib/archive/berkas-arsip-activity'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import {
@@ -83,6 +87,19 @@ type SourceReference = {
   klasifikasiId: string | null
 }
 
+type BerkasActivityMetadataSnapshot = Record<string, string | null>
+
+export type AppendBerkasActivityInput = {
+  berkasId: string
+  eventType: BerkasActivityEventType
+  actorUserId: string | null
+  sourceType?: ArchiveSourceType | null
+  workflowDocumentId?: string | null
+  manualDocumentId?: string | null
+  catatan?: string | null
+  metadataSnapshot?: BerkasActivityMetadataSnapshot | null
+}
+
 export type CreateOpenBerkasInput = {
   klasifikasiId: string
   actorUserId: string
@@ -109,6 +126,7 @@ export type CloseBerkasArsipInput = {
 
 export type UpdateActiveBerkasMetadataInput = {
   berkasId: string
+  actorUserId: string
   metadata: unknown
 }
 
@@ -175,6 +193,7 @@ export type BerkasArsipRepository = {
     currentStatusArsip: BerkasArchiveStatus
     nextStatusArsip: BerkasArchiveStatus
   }): Promise<BerkasRow | null>
+  appendBerkasActivity(input: AppendBerkasActivityInput): Promise<void>
 }
 
 export type BerkasArsipServiceDeps = {
@@ -233,6 +252,17 @@ export async function createOpenBerkasForKlasifikasi(
   const row = await repository.insertOpenBerkas({
     klasifikasi,
     actorUserId: input.actorUserId,
+  })
+  await repository.appendBerkasActivity({
+    berkasId: row.id,
+    eventType: 'BERKAS_DIBUKA',
+    actorUserId: input.actorUserId,
+    metadataSnapshot: {
+      status_berkas: BERKAS_STATUS.OPEN,
+      status_arsip: null,
+      klasifikasi_kode_snapshot: row.klasifikasiKodeSnapshot,
+      klasifikasi_nama_snapshot: row.klasifikasiNamaSnapshot,
+    },
   })
 
   return toBerkasDto(row)
@@ -297,6 +327,13 @@ export async function addWorkflowDocumentToOpenBerkas(
     manualArsipId: null,
     actorUserId: input.actorUserId,
   })
+  await repository.appendBerkasActivity({
+    berkasId: input.berkasId,
+    eventType: 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+    actorUserId: input.actorUserId,
+    sourceType: ARCHIVE_SOURCE_TYPE.WORKFLOW,
+    workflowDocumentId: input.dokumenId,
+  })
 
   return toBerkasItemDto(item)
 }
@@ -320,6 +357,13 @@ export async function addManualDocumentToOpenBerkas(
     dokumenId: null,
     manualArsipId: input.manualArsipId,
     actorUserId: input.actorUserId,
+  })
+  await repository.appendBerkasActivity({
+    berkasId: input.berkasId,
+    eventType: 'DOKUMEN_MANUAL_DITAMBAHKAN',
+    actorUserId: input.actorUserId,
+    sourceType: ARCHIVE_SOURCE_TYPE.MANUAL,
+    manualDocumentId: input.manualArsipId,
   })
 
   return toBerkasItemDto(item)
@@ -354,6 +398,20 @@ export async function closeBerkasArsip(
   if (!closed) {
     throw new BerkasArsipServiceError('BERKAS_NOT_OPEN', 'Berkas sudah ditutup')
   }
+  await repository.appendBerkasActivity({
+    berkasId: input.berkasId,
+    eventType: 'BERKAS_DITUTUP',
+    actorUserId: input.actorUserId,
+    metadataSnapshot: {
+      status_berkas: BERKAS_STATUS.CLOSED,
+      status_arsip: BERKAS_ARCHIVE_STATUS.AKTIF,
+      nomor_spm: closed.nomorSpm,
+      retensi_aktif: closed.retensiAktif,
+      retensi_inaktif: closed.retensiInaktif,
+      masa_aktif_berakhir: dateLikeToDateOnly(closed.masaAktifBerakhir),
+      masa_inaktif_berakhir: dateLikeToDateOnly(closed.masaInaktifBerakhir),
+    },
+  })
 
   return toBerkasDto(closed)
 }
@@ -395,6 +453,15 @@ export async function transitionBerkasArchiveStatus(
       'Status arsip berkas sudah berubah',
     )
   }
+  await repository.appendBerkasActivity({
+    berkasId: input.berkasId,
+    eventType: eventTypeForBerkasLifecycleStatus(nextStatusArsip),
+    actorUserId: input.actorUserId,
+    metadataSnapshot: {
+      status_berkas: BERKAS_STATUS.CLOSED,
+      status_arsip: nextStatusArsip,
+    },
+  })
 
   return toBerkasDto(updated)
 }
@@ -428,6 +495,20 @@ export async function updateActiveBerkasMetadata(
       'Metadata arsip aktif sudah tidak dapat diedit',
     )
   }
+  await repository.appendBerkasActivity({
+    berkasId: input.berkasId,
+    eventType: 'METADATA_ARSIP_AKTIF_DIPERBARUI',
+    actorUserId: input.actorUserId,
+    metadataSnapshot: {
+      status_berkas: BERKAS_STATUS.CLOSED,
+      status_arsip: BERKAS_ARCHIVE_STATUS.AKTIF,
+      nomor_spm: updated.nomorSpm,
+      retensi_aktif: updated.retensiAktif,
+      retensi_inaktif: updated.retensiInaktif,
+      masa_aktif_berakhir: dateLikeToDateOnly(updated.masaAktifBerakhir),
+      masa_inaktif_berakhir: dateLikeToDateOnly(updated.masaInaktifBerakhir),
+    },
+  })
 
   return toBerkasDto(updated)
 }
@@ -676,6 +757,22 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
 
     return row ?? null
   },
+
+  async appendBerkasActivity(input) {
+    const database = await getDatabase()
+    await database
+      .insert(berkasArsipActivity)
+      .values({
+        berkasId: input.berkasId,
+        eventType: input.eventType,
+        actorUserId: input.actorUserId,
+        sourceType: input.sourceType ?? null,
+        workflowDocumentId: input.workflowDocumentId ?? null,
+        manualDocumentId: input.manualDocumentId ?? null,
+        catatan: normalizeActivityText(input.catatan),
+        metadataSnapshot: input.metadataSnapshot ?? null,
+      })
+  },
 }
 
 function getRepository(deps: BerkasArsipServiceDeps): BerkasArsipRepository {
@@ -813,6 +910,21 @@ function toServerDateOnly(date: Date): string {
   ].join('-')
 }
 
+function eventTypeForBerkasLifecycleStatus(
+  status: BerkasArchiveStatus,
+): BerkasActivityEventType {
+  switch (status) {
+    case BERKAS_ARCHIVE_STATUS.INAKTIF:
+      return 'BERKAS_DIPINDAHKAN_KE_INAKTIF'
+    case BERKAS_ARCHIVE_STATUS.USUL_MUSNAH:
+      return 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH'
+    case BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN:
+      return 'BERKAS_DIMUSNAHKAN'
+    case BERKAS_ARCHIVE_STATUS.AKTIF:
+      return 'BERKAS_DITUTUP'
+  }
+}
+
 function parseCloseBerkasMetadata(
   metadata: unknown,
   defaultMessage: string,
@@ -852,6 +964,13 @@ function dateLikeToDateOnly(value: Date | string | null): string | null {
 
   const match = /^(\d{4}-\d{2}-\d{2})/.exec(value)
   return match?.[1] ?? null
+}
+
+function normalizeActivityText(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return trimmed.slice(0, 500)
 }
 
 function isUniqueConflict(error: unknown): boolean {

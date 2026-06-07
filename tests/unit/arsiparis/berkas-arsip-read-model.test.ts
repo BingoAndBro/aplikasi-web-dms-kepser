@@ -4,6 +4,7 @@ import {
   getBerkasArsipDetail,
   listBerkasArsipFolders,
   type ActorDisplayReadRow,
+  type BerkasActivityReadRow,
   type BerkasArsipReadModelRepository,
   type BerkasFolderReadRow,
   type BerkasItemSourceReadRow,
@@ -147,6 +148,39 @@ describe('berkas arsip read model', () => {
         keterangan: 'Keterangan aman',
       },
     })
+    expect(result.detail.activity_events).toEqual([])
+  })
+
+  it('includes authoritative berkas activity events ordered oldest to newest', async () => {
+    const repository = createFakeRepository({
+      activityRows: [
+        activityRow('activity-later', 'BERKAS_DIPINDAHKAN_KE_INAKTIF', '2026-05-30T08:00:00.000Z'),
+        activityRow('activity-opened', 'BERKAS_DIBUKA', '2026-05-22T07:00:00.000Z'),
+        activityRow('activity-workflow', 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN', '2026-05-22T08:30:00.000Z', {
+          source_type: 'WORKFLOW',
+          workflow_document_id: 'workflow-source-id',
+        }),
+      ],
+    })
+
+    const result = await getBerkasArsipDetail(BERKAS_CLOSED_ID, { repository })
+
+    expect(result.status).toBe('found')
+    if (result.status !== 'found') return
+
+    expect(result.detail.activity_events.map((event) => event.event_type)).toEqual([
+      'BERKAS_DIBUKA',
+      'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+      'BERKAS_DIPINDAHKAN_KE_INAKTIF',
+    ])
+    expect(result.detail.activity_events[1]).toMatchObject({
+      source_type: 'WORKFLOW',
+      created_at: '2026-05-22T08:30:00.000Z',
+      actor_display_name: 'Kasubag Umum',
+    })
+    expectNoSensitiveOutput(result.detail)
+    expect(JSON.stringify(result.detail)).not.toContain('workflow_document_id')
+    expect(JSON.stringify(result.detail)).not.toContain('activity-opened')
   })
 
   it('does not expose paths, tokens, raw SQL, raw rows, or bridge ids in detail DTOs', async () => {
@@ -279,12 +313,15 @@ describe('berkas arsip read model', () => {
 function createFakeRepository(options: {
   folderRows?: BerkasFolderReadRow[]
   itemRows?: BerkasItemSourceReadRow[]
+  activityRows?: BerkasActivityReadRow[]
   actorRows?: ActorDisplayReadRow[]
   manualAttachments?: Map<string, ManualAttachmentNameReadRow[]>
 } = {}): BerkasArsipReadModelRepository {
   const folderRows = options.folderRows ?? [openBerkas(), closedBerkas()]
   const itemRows = options.itemRows ?? [openWorkflowItem(), closedWorkflowItem(), closedManualItem()]
+  const activityRows = options.activityRows ?? []
   const actorRows = options.actorRows ?? [
+    actorRow(ACTOR_ID, 'Kasubag Umum'),
     actorRow(WORKFLOW_CREATOR_ID, 'Pegawai Workflow'),
     actorRow(MANUAL_CREATOR_ID, 'Pegawai Manual'),
   ]
@@ -317,6 +354,16 @@ function createFakeRepository(options: {
     },
     async listItemsForBerkasIds(berkasIds) {
       return itemRows.filter((row) => berkasIds.includes(row.berkas_id))
+    },
+    async listActivityEventsForBerkasIds(berkasIds) {
+      return activityRows
+        .filter((row) => berkasIds.includes(row.berkas_id))
+        .sort((left, right) => {
+          const leftTime = new Date(left.created_at).getTime()
+          const rightTime = new Date(right.created_at).getTime()
+          if (leftTime !== rightTime) return leftTime - rightTime
+          return left.id.localeCompare(right.id)
+        })
     },
     async listManualAttachmentsByManualArsipIds(manualArsipIds) {
       return new Map(
@@ -457,6 +504,26 @@ function missingWorkflowItem(overrides: Partial<BerkasItemSourceReadRow> = {}): 
     workflow_lampiran_urls: null,
     fungsi_nama: null,
     kegiatan_nama: null,
+    ...overrides,
+  }
+}
+
+function activityRow(
+  id: string,
+  eventType: string,
+  createdAt: string,
+  overrides: Partial<BerkasActivityReadRow> = {},
+): BerkasActivityReadRow {
+  return {
+    id,
+    berkas_id: BERKAS_CLOSED_ID,
+    event_type: eventType,
+    actor_user_id: ACTOR_ID,
+    source_type: null,
+    workflow_document_id: null,
+    manual_document_id: null,
+    catatan: null,
+    created_at: createdAt,
     ...overrides,
   }
 }

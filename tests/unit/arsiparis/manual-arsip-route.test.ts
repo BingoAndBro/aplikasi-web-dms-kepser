@@ -503,10 +503,26 @@ describe('manual arsip API foundation routes', () => {
     }))
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
       berkasId: BERKAS_ID,
+      eventType: 'BERKAS_DIBUKA',
+      actorUserId: USER_ID,
+      sourceType: null,
+      workflowDocumentId: null,
+      manualDocumentId: null,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(4, expect.objectContaining({
+      berkasId: BERKAS_ID,
       sourceType: 'MANUAL',
       dokumenId: null,
       manualArsipId: MANUAL_ARSIP_ID,
       addedBy: USER_ID,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(5, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      eventType: 'DOKUMEN_MANUAL_DITAMBAHKAN',
+      actorUserId: USER_ID,
+      sourceType: 'MANUAL',
+      workflowDocumentId: null,
+      manualDocumentId: MANUAL_ARSIP_ID,
     }))
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       namaArsip: expect.anything(),
@@ -533,7 +549,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.txInsertValues).toHaveBeenCalledTimes(2)
+    expect(mocks.txInsertValues).toHaveBeenCalledTimes(3)
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
     }))
@@ -541,6 +557,12 @@ describe('manual arsip API foundation routes', () => {
       berkasId: BERKAS_ID,
       sourceType: 'MANUAL',
       manualArsipId: MANUAL_ARSIP_ID,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      berkasId: BERKAS_ID,
+      eventType: 'DOKUMEN_MANUAL_DITAMBAHKAN',
+      sourceType: 'MANUAL',
+      manualDocumentId: MANUAL_ARSIP_ID,
     }))
   })
 

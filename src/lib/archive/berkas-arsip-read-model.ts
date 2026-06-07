@@ -4,11 +4,17 @@ import { z } from 'zod'
 import { users } from '#/db/schema/auth'
 import {
   berkasArsip,
+  berkasArsipActivity,
   berkasArsipItem,
   manualArsip,
   manualArsipAttachment,
   manualArsipCategory,
 } from '#/db/schema/arsip'
+import {
+  isBerkasActivityEventType,
+  isBerkasActivitySourceType,
+  type BerkasActivityEventType,
+} from '#/lib/archive/berkas-arsip-activity'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
@@ -120,8 +126,17 @@ export type BerkasArsipDetailItemDto = {
   warnings: BerkasArsipDetailItemWarning[]
 }
 
+export type BerkasArsipActivityEventDto = {
+  event_type: BerkasActivityEventType
+  source_type: ArchiveSourceType | null
+  message: string | null
+  created_at: string
+  actor_display_name: string | null
+}
+
 export type BerkasArsipDetailDto = BerkasArsipFolderListItemDto & {
   items: BerkasArsipDetailItemDto[]
+  activity_events: BerkasArsipActivityEventDto[]
   warnings: Array<'OPEN_STATUS_ARSIP_NULL' | 'CLOSED_STATUS_ARSIP_UNKNOWN'>
 }
 
@@ -189,10 +204,23 @@ export type ManualAttachmentNameReadRow = {
   original_filename: string | null
 }
 
+export type BerkasActivityReadRow = {
+  id: string
+  berkas_id: string
+  event_type: string
+  actor_user_id: string | null
+  source_type: string | null
+  workflow_document_id: string | null
+  manual_document_id: string | null
+  catatan: string | null
+  created_at: Date | string
+}
+
 export type BerkasArsipReadModelRepository = {
   listFolders(options: NormalizedListBerkasArsipFolderQuery): Promise<BerkasFolderReadRow[]>
   getFolderById(berkasId: string): Promise<BerkasFolderReadRow | null>
   listItemsForBerkasIds(berkasIds: string[]): Promise<BerkasItemSourceReadRow[]>
+  listActivityEventsForBerkasIds(berkasIds: string[]): Promise<BerkasActivityReadRow[]>
   listManualAttachmentsByManualArsipIds(manualArsipIds: string[]): Promise<Map<string, ManualAttachmentNameReadRow[]>>
   findActorDisplayNames(actorIds: string[]): Promise<Map<string, string>>
 }
@@ -241,7 +269,11 @@ export async function getBerkasArsipDetail(
       .map((row) => trimToNull(row.manual_arsip_id))
       .filter((id): id is string => Boolean(id)),
   )
-  const actorDisplayNames = await repository.findActorDisplayNames(collectSourceActorIds(itemRows))
+  const activityRows = await repository.listActivityEventsForBerkasIds([berkasId])
+  const actorDisplayNames = await repository.findActorDisplayNames([
+    ...collectSourceActorIds(itemRows),
+    ...collectActivityActorIds(activityRows),
+  ])
   const itemSummaries = summarizeItemsByBerkas(itemRows)
   const folder = mapFolderRowToListDto(folderRow, itemSummaries.get(folderRow.berkas_id))
 
@@ -250,6 +282,7 @@ export async function getBerkasArsipDetail(
     detail: {
       ...folder,
       items: itemRows.map((row) => mapItemRowToDetailDto(row, manualAttachments, actorDisplayNames)),
+      activity_events: mapActivityRowsToDto(activityRows, actorDisplayNames),
       warnings: collectFolderWarnings(folderRow),
     },
   }
@@ -329,6 +362,28 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
       .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
       .where(inArray(berkasArsipItem.berkasId, uniqueIds))
       .orderBy(berkasArsipItem.addedAt, berkasArsipItem.id) as Promise<BerkasItemSourceReadRow[]>
+  },
+
+  async listActivityEventsForBerkasIds(berkasIds) {
+    const uniqueIds = [...new Set(berkasIds.filter(Boolean))]
+    if (uniqueIds.length === 0) return []
+
+    const database = await getDatabase()
+    return database
+      .select({
+        id: berkasArsipActivity.id,
+        berkas_id: berkasArsipActivity.berkasId,
+        event_type: berkasArsipActivity.eventType,
+        actor_user_id: berkasArsipActivity.actorUserId,
+        source_type: berkasArsipActivity.sourceType,
+        workflow_document_id: berkasArsipActivity.workflowDocumentId,
+        manual_document_id: berkasArsipActivity.manualDocumentId,
+        catatan: berkasArsipActivity.catatan,
+        created_at: berkasArsipActivity.createdAt,
+      })
+      .from(berkasArsipActivity)
+      .where(inArray(berkasArsipActivity.berkasId, uniqueIds))
+      .orderBy(asc(berkasArsipActivity.createdAt), asc(berkasArsipActivity.id)) as Promise<BerkasActivityReadRow[]>
   },
 
   async listManualAttachmentsByManualArsipIds(manualArsipIds) {
@@ -588,6 +643,35 @@ function collectSourceActorIds(itemRows: BerkasItemSourceReadRow[]): string[] {
       trimToNull(row.manual_created_by),
     ]).filter((id): id is string => Boolean(id))),
   ]
+}
+
+function collectActivityActorIds(activityRows: BerkasActivityReadRow[]): string[] {
+  return [
+    ...new Set(activityRows.map((row) => trimToNull(row.actor_user_id)).filter((id): id is string => Boolean(id))),
+  ]
+}
+
+function mapActivityRowsToDto(
+  rows: BerkasActivityReadRow[],
+  actorDisplayNames: Map<string, string>,
+): BerkasArsipActivityEventDto[] {
+  return rows
+    .map((row): BerkasArsipActivityEventDto | null => {
+      if (!isBerkasActivityEventType(row.event_type)) return null
+      const sourceType = isBerkasActivitySourceType(row.source_type) ? row.source_type : null
+      const createdAt = toIsoLikeString(row.created_at)
+      if (!createdAt) return null
+      const actorUserId = trimToNull(row.actor_user_id)
+
+      return {
+        event_type: row.event_type,
+        source_type: sourceType,
+        message: trimToNull(row.catatan),
+        created_at: createdAt,
+        actor_display_name: actorUserId ? actorDisplayNames.get(actorUserId) ?? null : null,
+      }
+    })
+    .filter((row): row is BerkasArsipActivityEventDto => Boolean(row))
 }
 
 function collectFolderWarnings(

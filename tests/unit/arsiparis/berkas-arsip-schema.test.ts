@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import * as arsipSchema from '#/db/schema/arsip'
-import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip/berkas-arsip'
+import { berkasArsip, berkasArsipActivity, berkasArsipItem } from '#/db/schema/arsip/berkas-arsip'
 import { manualArsip } from '#/db/schema/arsip/manual-arsip'
+import {
+  BERKAS_ACTIVITY_EVENT_LABELS,
+  BERKAS_ACTIVITY_EVENT_TYPES,
+} from '#/lib/archive/berkas-arsip-activity'
 import {
   BERKAS_ARCHIVE_STATUS,
   BERKAS_ARCHIVE_STATUS_VALUES,
@@ -40,6 +44,31 @@ describe('berkas arsip schema foundation', () => {
   it('models folder archive lifecycle as nullable on berkas_arsip', () => {
     expect(berkasArsip.statusArsip.name).toBe('status_arsip')
     expect(berkasArsip.statusArsip.notNull).toBe(false)
+  })
+
+  it('models append-only berkas activity events separately from document workflow logs', () => {
+    expect(BERKAS_ACTIVITY_EVENT_TYPES).toEqual([
+      'BERKAS_DIBUKA',
+      'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+      'DOKUMEN_MANUAL_DITAMBAHKAN',
+      'BERKAS_DITUTUP',
+      'METADATA_ARSIP_AKTIF_DIPERBARUI',
+      'BERKAS_DIPINDAHKAN_KE_INAKTIF',
+      'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH',
+      'BERKAS_DIMUSNAHKAN',
+    ])
+    expect(BERKAS_ACTIVITY_EVENT_LABELS.DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN)
+      .toBe('Dokumen Persetujuan diklasifikasikan')
+    expect(BERKAS_ACTIVITY_EVENT_LABELS.BERKAS_DIMUSNAHKAN).toBe('Berkas dimusnahkan')
+    expect(berkasArsipActivity.berkasId.name).toBe('berkas_id')
+    expect(berkasArsipActivity.actorUserId.name).toBe('actor_user_id')
+    expect(berkasArsipActivity.actorUserId.notNull).toBe(false)
+    expect(berkasArsipActivity.workflowDocumentId.name).toBe('workflow_document_id')
+    expect(berkasArsipActivity.manualDocumentId.name).toBe('manual_document_id')
+    expect(berkasArsipActivity.createdAt.name).toBe('created_at')
+    expect(berkasArsipActivity).not.toHaveProperty('logicalPath')
+    expect(berkasArsipActivity).not.toHaveProperty('physicalPath')
+    expect(berkasArsipActivity).not.toHaveProperty('token')
   })
 
   it('does not export legacy canonical archive schema objects', () => {

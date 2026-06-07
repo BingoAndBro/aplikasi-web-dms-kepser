@@ -66,6 +66,10 @@ import {
   snippet,
 } from '#/lib/archive/berkas-arsip-page-format'
 import {
+  formatBerkasActivityEventLabel,
+  type BerkasActivityEventType,
+} from '#/lib/archive/berkas-arsip-activity'
+import {
   BERKAS_DETAIL_ITEMS_CSV_FILENAME,
   createBerkasDetailItemsCsv,
   downloadCsvFile,
@@ -114,6 +118,15 @@ type BerkasDetailItem = {
   warnings: string[]
 }
 
+type BerkasActivityEvent = {
+  activity_key: string
+  event_type: BerkasActivityEventType
+  source_type: string | null
+  message: string | null
+  created_at: string
+  actor_display_name: string | null
+}
+
 type BerkasDetail = {
   berkas_id: string
   klasifikasi_id: string
@@ -133,6 +146,7 @@ type BerkasDetail = {
   total_nominal_realisasi: number | null
   created_at: string | null
   updated_at: string | null
+  activity_events: BerkasActivityEvent[]
   warnings: string[]
   items: BerkasDetailItem[]
 }
@@ -1573,6 +1587,10 @@ type BerkasHistoryItem = {
 }
 
 export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem[] {
+  if (detail.activity_events.length > 0) {
+    return buildAuthoritativeBerkasHistoryItems(detail.activity_events)
+  }
+
   const items: BerkasHistoryItem[] = []
   let originalIndex = 0
 
@@ -1624,6 +1642,105 @@ export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem
   if (lifecycleItem) items.push(lifecycleItem)
 
   return items.sort(compareBerkasHistoryItems)
+}
+
+function buildAuthoritativeBerkasHistoryItems(events: BerkasActivityEvent[]): BerkasHistoryItem[] {
+  const sortedEvents = [...events]
+    .filter((event) => Boolean(event.created_at))
+    .sort((left, right) => {
+      const leftTime = getDateSortTimeOrNull(left.created_at) ?? 0
+      const rightTime = getDateSortTimeOrNull(right.created_at) ?? 0
+      if (leftTime !== rightTime) return leftTime - rightTime
+      return left.activity_key.localeCompare(right.activity_key)
+    })
+
+  const terminalIndex = sortedEvents.findIndex((event) => event.event_type === 'BERKAS_DIMUSNAHKAN')
+  const visibleEvents = terminalIndex >= 0 ? sortedEvents.slice(0, terminalIndex + 1) : sortedEvents
+
+  return visibleEvents.map((event, index) => historyItem({
+    label: formatBerkasActivityEventLabel(event.event_type),
+    date: event.created_at,
+    helper: buildAuthoritativeBerkasHistoryHelper(event),
+    icon: iconForBerkasActivityEvent(event.event_type),
+    iconTone: iconToneForBerkasActivityEvent(event.event_type),
+    domainOrder: index,
+    originalIndex: index,
+  }))
+}
+
+function buildAuthoritativeBerkasHistoryHelper(event: BerkasActivityEvent): string {
+  const details = [
+    event.message,
+    event.source_type ? `Sumber: ${formatSourceTypeLabel(event.source_type)}.` : null,
+    event.actor_display_name ? `Oleh ${event.actor_display_name}.` : null,
+  ].filter((value): value is string => Boolean(value))
+
+  if (details.length > 0) return details.join(' ')
+
+  switch (event.event_type) {
+    case 'BERKAS_DIBUKA':
+      return 'Folder mulai menerima dokumen untuk Jenis Pembayaran ini.'
+    case 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN':
+      return 'Dokumen Persetujuan masuk ke berkas.'
+    case 'DOKUMEN_MANUAL_DITAMBAHKAN':
+      return 'Dokumen Manual masuk ke berkas.'
+    case 'BERKAS_DITUTUP':
+      return 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.'
+    case 'METADATA_ARSIP_AKTIF_DIPERBARUI':
+      return 'Metadata Arsip Aktif diperbarui sebelum dipindahkan ke lifecycle berikutnya.'
+    case 'BERKAS_DIPINDAHKAN_KE_INAKTIF':
+      return 'Berkas keluar dari Arsip Aktif dan metadata menjadi baca saja.'
+    case 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH':
+      return 'Berkas masuk daftar usulan pemusnahan.'
+    case 'BERKAS_DIMUSNAHKAN':
+      return 'Status akhir berkas. Metadata tetap tersimpan dan preview/download diblokir.'
+    default:
+      return 'Aktivitas berkas tercatat.'
+  }
+}
+
+function iconForBerkasActivityEvent(eventType: string): ReactNode {
+  switch (eventType) {
+    case 'BERKAS_DIBUKA':
+      return <FolderOpen size={15} />
+    case 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN':
+      return <FileText size={15} />
+    case 'DOKUMEN_MANUAL_DITAMBAHKAN':
+      return <PlusCircle size={15} />
+    case 'BERKAS_DITUTUP':
+    case 'METADATA_ARSIP_AKTIF_DIPERBARUI':
+      return <Check size={15} />
+    case 'BERKAS_DIPINDAHKAN_KE_INAKTIF':
+      return <Archive size={15} />
+    case 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH':
+      return <AlertTriangle size={15} />
+    case 'BERKAS_DIMUSNAHKAN':
+      return <Trash2 size={15} />
+    default:
+      return <History size={15} />
+  }
+}
+
+function iconToneForBerkasActivityEvent(eventType: string): string {
+  switch (eventType) {
+    case 'BERKAS_DIBUKA':
+      return 'bg-[#FFF3E8] text-orange-700'
+    case 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN':
+      return 'bg-sky-50 text-sky-700'
+    case 'DOKUMEN_MANUAL_DITAMBAHKAN':
+      return 'bg-orange-50 text-orange-700'
+    case 'BERKAS_DITUTUP':
+    case 'METADATA_ARSIP_AKTIF_DIPERBARUI':
+      return 'bg-emerald-50 text-emerald-700'
+    case 'BERKAS_DIPINDAHKAN_KE_INAKTIF':
+      return 'bg-amber-50 text-amber-700'
+    case 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH':
+      return 'bg-orange-50 text-orange-700'
+    case 'BERKAS_DIMUSNAHKAN':
+      return 'bg-red-50 text-red-700'
+    default:
+      return 'bg-zinc-50 text-zinc-700'
+  }
 }
 
 function historyItem({

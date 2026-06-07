@@ -39,6 +39,15 @@ describe('berkas arsip service foundation', () => {
     expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID])
     expect(repository.calls).toContainEqual(['findActiveKlasifikasi', KLASIFIKASI_ID])
     expect(repository.calls).toContainEqual(['insertOpenBerkas', KLASIFIKASI_ID, 'BB', 'Belanja Barang'])
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      'berkas-created',
+      'BERKAS_DIBUKA',
+      ACTOR_ID,
+      null,
+      null,
+      null,
+    ])
   })
 
   it('reuses an existing OPEN berkas for the selected jenis pembayaran', async () => {
@@ -131,6 +140,40 @@ describe('berkas arsip service foundation', () => {
       dokumen_id: null,
       added_by: ACTOR_ID,
     })
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      BERKAS_ID,
+      'DOKUMEN_MANUAL_DITAMBAHKAN',
+      ACTOR_ID,
+      'MANUAL',
+      null,
+      MANUAL_ARSIP_ID,
+    ])
+  })
+
+  it('appends a Persetujuan classification event after workflow document insertion', async () => {
+    const repository = createFakeRepository()
+
+    const item = await addWorkflowDocumentToOpenBerkas({
+      berkasId: BERKAS_ID,
+      dokumenId: DOKUMEN_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })
+
+    expect(item).toMatchObject({
+      source_type: 'WORKFLOW',
+      dokumen_id: DOKUMEN_ID,
+      manual_arsip_id: null,
+    })
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      BERKAS_ID,
+      'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+      ACTOR_ID,
+      'WORKFLOW',
+      DOKUMEN_ID,
+      null,
+    ])
   })
 
   it('rejects source items whose selected jenis pembayaran does not match the target berkas', async () => {
@@ -274,6 +317,15 @@ describe('berkas arsip service foundation', () => {
       closed_by: ACTOR_ID,
     })
     expect(repository.calls).toContainEqual(['closeOpenBerkas', BERKAS_ID, ACTOR_ID])
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      BERKAS_ID,
+      'BERKAS_DITUTUP',
+      ACTOR_ID,
+      null,
+      null,
+      null,
+    ])
     expect(repository.calls.some(([name]) => name === 'insertBerkasItem')).toBe(false)
   })
 
@@ -282,6 +334,7 @@ describe('berkas arsip service foundation', () => {
 
     const updated = await updateActiveBerkasMetadata({
       berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
@@ -303,6 +356,15 @@ describe('berkas arsip service foundation', () => {
     })
     expect(repository.calls).toContainEqual(['updateActiveBerkasMetadata', CLOSED_BERKAS_ID])
     expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      CLOSED_BERKAS_ID,
+      'METADATA_ARSIP_AKTIF_DIPERBARUI',
+      ACTOR_ID,
+      null,
+      null,
+      null,
+    ])
+    expect(repository.calls).toContainEqual([
       'updateActiveBerkasMetadataPlan',
       CLOSED_BERKAS_ID,
       '2026-05-29',
@@ -314,6 +376,7 @@ describe('berkas arsip service foundation', () => {
 
     await expect(updateActiveBerkasMetadata({
       berkasId: BERKAS_ID,
+      actorUserId: ACTOR_ID,
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
@@ -335,6 +398,7 @@ describe('berkas arsip service foundation', () => {
 
     await expect(updateActiveBerkasMetadata({
       berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
@@ -371,6 +435,15 @@ describe('berkas arsip service foundation', () => {
       'AKTIF',
       'INAKTIF',
     ])
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      CLOSED_BERKAS_ID,
+      'BERKAS_DIPINDAHKAN_KE_INAKTIF',
+      ACTOR_ID,
+      null,
+      null,
+      null,
+    ])
     expect(repository.calls.some(([name]) => name === 'insertBerkasItem')).toBe(false)
     expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('delete'))).toBe(false)
     expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('storage'))).toBe(false)
@@ -394,6 +467,15 @@ describe('berkas arsip service foundation', () => {
       'INAKTIF',
       'USUL_MUSNAH',
     ])
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      CLOSED_BERKAS_ID,
+      'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH',
+      ACTOR_ID,
+      null,
+      null,
+      null,
+    ])
   })
 
   it('moves CLOSED USUL_MUSNAH berkas to DIMUSNAHKAN as status-only', async () => {
@@ -413,6 +495,15 @@ describe('berkas arsip service foundation', () => {
       CLOSED_BERKAS_ID,
       'USUL_MUSNAH',
       'DIMUSNAHKAN',
+    ])
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      CLOSED_BERKAS_ID,
+      'BERKAS_DIMUSNAHKAN',
+      ACTOR_ID,
+      null,
+      null,
+      null,
     ])
     expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('delete'))).toBe(false)
   })
@@ -626,6 +717,17 @@ function createFakeRepository(options: {
         ...closedBerkas({ statusArsip: input.nextStatusArsip }),
         updatedAt: new Date('2026-05-30T00:00:00.000Z'),
       }
+    },
+    async appendBerkasActivity(input) {
+      calls.push([
+        'appendBerkasActivity',
+        input.berkasId,
+        input.eventType,
+        input.actorUserId,
+        input.sourceType ?? null,
+        input.workflowDocumentId ?? null,
+        input.manualDocumentId ?? null,
+      ])
     },
   }
 }
