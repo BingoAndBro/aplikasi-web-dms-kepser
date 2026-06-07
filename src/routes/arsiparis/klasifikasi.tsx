@@ -1,18 +1,33 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import type { FormEvent, ReactNode } from 'react'
+import {
+  AlertCircle,
+  Archive,
+  Ban,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  CornerDownRight,
+  FileText,
+  Folder,
+  FolderOpen,
+  Info,
+  Loader2,
+  Network,
+  Pencil,
+  Plus,
+  X,
+} from 'lucide-react'
+
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
-import {
-  Network, ChevronRight, ChevronDown, AlertCircle, Loader2,
-  Plus, Pencil, Trash2, X, Folder, FolderOpen, FileText, CornerDownRight,
-} from 'lucide-react'
 import { cn } from '#/lib/utils'
 
 export const Route = createFileRoute('/arsiparis/klasifikasi')({ component: KlasifikasiPage })
 
-// Types
 type KlasifikasiNode = {
   id: string
   nama: string
@@ -21,17 +36,85 @@ type KlasifikasiNode = {
   parent_id: string | null
   created_at: string
   is_root: boolean
+  is_active?: boolean
   children: KlasifikasiNode[]
 }
-
-type FlatNode = KlasifikasiNode & { level: number; isExpanded?: boolean }
 
 type KlasifikasiResponse = {
   klasifikasi?: KlasifikasiNode[]
   error?: string
 }
 
-// Tree View Component
+function hasChildNodes(node: KlasifikasiNode): boolean {
+  return node.children.length > 0
+}
+
+function isActiveNode(node: KlasifikasiNode): boolean {
+  return node.is_active !== false
+}
+
+function getJenisPembayaranLabel(node: KlasifikasiNode): string {
+  if (!isActiveNode(node)) return 'Tidak, nonaktif'
+  if (hasChildNodes(node)) return 'Tidak, klasifikasi induk'
+  return 'Ya, pilihan akhir'
+}
+
+function classificationDisplay(node: KlasifikasiNode): string {
+  return node.kode ? `${node.kode} - ${node.nama}` : node.nama
+}
+
+function ClassificationTypeBadge({
+  node,
+  selected = false,
+  short = false,
+}: {
+  node: KlasifikasiNode
+  selected?: boolean
+  short?: boolean
+}) {
+  const isParent = hasChildNodes(node)
+
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold',
+        selected
+          ? 'border-white/20 bg-white/20 text-white'
+          : isParent
+            ? 'border-amber-200 bg-amber-50 text-amber-700'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      )}
+    >
+      {isParent ? (short ? 'Induk' : 'Klasifikasi Induk') : 'Pilihan Akhir'}
+    </span>
+  )
+}
+
+function ClassificationStatusBadge({
+  node,
+  selected = false,
+}: {
+  node: KlasifikasiNode
+  selected?: boolean
+}) {
+  const active = isActiveNode(node)
+
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold',
+        selected
+          ? 'border-white/20 bg-white/15 text-white'
+          : active
+            ? 'border-orange-200 bg-orange-50 text-orange-700'
+            : 'border-zinc-200 bg-zinc-100 text-zinc-600',
+      )}
+    >
+      {active ? 'Aktif' : 'Nonaktif'}
+    </span>
+  )
+}
+
 function KlasifikasiTree({
   nodes,
   selectedId,
@@ -46,7 +129,7 @@ function KlasifikasiTree({
   level?: number
 }) {
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1.5">
       {nodes.map(node => (
         <TreeNode
           key={node.id}
@@ -75,41 +158,44 @@ function TreeNode({
   level: number
 }) {
   const [isExpanded, setIsExpanded] = useState(true)
-  const hasChildren = node.children.length > 0
+  const hasChildren = hasChildNodes(node)
   const isSelected = selectedId === node.id
+  const isInactive = !isActiveNode(node)
 
   return (
     <div>
       <div
         className={cn(
-          'flex items-center gap-1 px-2 py-1.5 rounded-lg cursor-pointer transition-colors group',
-          isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-surface-container-low'
+          'group flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 transition-all',
+          isSelected
+            ? 'border-[#FF5A00] bg-[#FF5A00] text-white shadow-md shadow-orange-500/20'
+            : isInactive
+              ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100'
+              : 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-950 hover:border-orange-200 hover:bg-[#FFF8F1]',
         )}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        style={{ paddingLeft: `${level * 16 + 10}px` }}
         onClick={() => onSelect(node)}
       >
-        {/* Expand/Collapse button */}
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded) }}
+          onClick={(event) => {
+            event.stopPropagation()
+            setIsExpanded(!isExpanded)
+          }}
           className={cn(
-            'p-0.5 rounded hover:bg-black/10 transition-colors',
-            isSelected ? 'text-primary-foreground/70 hover:bg-primary-foreground/10' : 'text-outline'
+            'shrink-0 rounded-lg p-1 transition-colors',
+            isSelected ? 'text-white/80 hover:bg-white/15' : 'text-zinc-500 hover:bg-orange-100/60',
           )}
           aria-label={`${isExpanded ? 'Tutup' : 'Buka'} klasifikasi ${node.nama}`}
         >
           {hasChildren ? (
             isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
           ) : (
-            <span className="w-[14px]" />
+            <span className="block w-[14px]" />
           )}
         </button>
 
-        {/* Icon */}
-        <span className={cn(
-          'shrink-0',
-          isSelected ? 'text-primary-foreground' : 'text-primary'
-        )}>
+        <span className={cn('shrink-0', isSelected ? 'text-white' : isInactive ? 'text-zinc-400' : 'text-[#FF5A00]')}>
           {hasChildren ? (
             isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />
           ) : (
@@ -117,32 +203,49 @@ function TreeNode({
           )}
         </span>
 
-        {/* Label */}
-        <span className={cn(
-          'flex-1 truncate text-sm font-medium',
-          isSelected ? 'text-primary-foreground' : 'text-on-surface'
-        )}>
-          {node.kode && <span className="font-mono mr-1.5 text-xs opacity-70">{node.kode}</span>}
-          {node.nama}
+        <span className="min-w-0 flex-1">
+          <span className={cn(
+            'block truncate text-sm font-extrabold',
+            isSelected ? 'text-white' : isInactive ? 'text-zinc-500' : 'text-zinc-950',
+          )}>
+            {node.kode && (
+              <span className={cn(
+                'mr-1.5 rounded-lg px-1.5 py-0.5 font-mono text-[11px]',
+                isSelected ? 'bg-white/20 text-white' : 'bg-orange-50 text-[#FF5A00]',
+              )}>
+                {node.kode}
+              </span>
+            )}
+            {node.nama}
+          </span>
         </span>
 
-        {/* Add child button - all nodes can have children except already deleted check */}
+        <div className="hidden shrink-0 items-center gap-1.5 min-[520px]:flex">
+          <ClassificationTypeBadge node={node} selected={isSelected} short />
+          {isInactive && <ClassificationStatusBadge node={node} selected={isSelected} />}
+        </div>
+
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); onAddChild(node) }}
+          onClick={(event) => {
+            event.stopPropagation()
+            onAddChild(node)
+          }}
           className={cn(
-            'p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity',
-            isSelected ? 'text-primary-foreground/70 hover:text-primary-foreground' : 'text-outline hover:text-primary hover:bg-primary/10'
+            'shrink-0 rounded-xl p-1.5 opacity-100 transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100',
+            isSelected
+              ? 'text-white/80 hover:bg-white/15 hover:text-white'
+              : 'border border-orange-100 bg-orange-50 text-[#FF5A00] hover:bg-[#FF5A00] hover:text-white',
           )}
           aria-label={`Tambah sub-klasifikasi untuk ${node.nama}`}
+          title="Tambah anak klasifikasi"
         >
           <CornerDownRight size={12} />
         </button>
       </div>
 
-      {/* Children */}
       {hasChildren && isExpanded && (
-        <div>
+        <div className="mt-1.5 space-y-1.5 border-l border-orange-100/60 pl-2" style={{ marginLeft: `${level * 16 + 18}px` }}>
           {node.children.map(child => (
             <TreeNode
               key={child.id}
@@ -159,7 +262,6 @@ function TreeNode({
   )
 }
 
-// Detail Panel Component
 function KlasifikasiDetail({
   node,
   onEdit,
@@ -173,75 +275,131 @@ function KlasifikasiDetail({
 }) {
   if (!node) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <Folder size={48} className="text-outline mb-4" />
-        <p className="font-headline text-lg font-bold text-on-surface mb-2">Pilih Klasifikasi</p>
-        <p className="text-sm text-on-surface-variant">Pilih klasifikasi di pohon untuk melihat detail.</p>
+      <div className="flex min-h-[26rem] flex-col items-center justify-center p-8 text-center">
+        <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF5A00]">
+          <Folder size={26} />
+        </div>
+        <p className="font-headline text-lg font-bold text-zinc-950">Pilih Klasifikasi</p>
+        <p className="mt-2 max-w-sm text-sm font-medium leading-relaxed text-zinc-600">
+          Pilih node pada pohon struktur untuk melihat status Induk atau Pilihan Akhir.
+        </p>
       </div>
     )
   }
 
+  const isParent = hasChildNodes(node)
+  const active = isActiveNode(node)
+  const canBeOperationalChoice = active && !isParent
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="font-headline text-xl font-bold text-on-surface">{node.nama}</h3>
-          {node.kode && <p className="text-sm text-outline font-mono mt-1">{node.kode}</p>}
+    <div className="space-y-5 p-4 sm:p-6">
+      <div className="flex flex-col gap-4 border-b border-[#F1E5DA] pb-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <ClassificationTypeBadge node={node} />
+            <ClassificationStatusBadge node={node} />
+          </div>
+          <h3 className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">{node.nama}</h3>
+          {node.kode && <p className="mt-1 font-mono text-sm font-bold text-[#FF5A00]">{node.kode}</p>}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {!node.is_root && (
             <>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => onEdit(node)}>
+              <Button size="sm" variant="outline" className="gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9]" onClick={() => onEdit(node)}>
                 <Pencil size={14} /> Edit
               </Button>
-              <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => onDelete(node)}>
-                <Trash2 size={14} /> Hapus
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800"
+                onClick={() => onDelete(node)}
+                title={isParent ? 'Endpoint saat ini menonaktifkan node dan turunannya; safety backend diperketat pada fase berikutnya.' : 'Nonaktifkan klasifikasi'}
+              >
+                <Ban size={14} /> Nonaktifkan
               </Button>
             </>
           )}
           {node.is_root && (
-            <span className="text-xs text-outline bg-surface-container-low px-2 py-1 rounded">Root - Tidak bisa diedit</span>
+            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-semibold text-zinc-600">Root - Tidak bisa diedit</span>
           )}
         </div>
       </div>
 
-      {/* Breadcrumb */}
       {breadcrumb.length > 1 && (
-        <div className="flex items-center gap-1 text-xs text-outline flex-wrap">
-          {breadcrumb.map((item, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <ChevronRight size={10} />}
-              <span className={cn(i === breadcrumb.length - 1 && 'text-primary font-medium')}>{item}</span>
-            </span>
-          ))}
+        <div>
+          <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Jalur Struktur / Hierarchy Path</p>
+          <div className="flex flex-wrap items-center gap-1 rounded-xl bg-[#FFF8F1] px-3 py-2 text-xs font-semibold text-zinc-700">
+            {breadcrumb.map((item, index) => (
+              <span key={index} className="flex items-center gap-1">
+                {index > 0 && <ChevronRight size={10} />}
+                <span className={cn(index === breadcrumb.length - 1 && 'font-extrabold text-[#FF5A00]')}>{item}</span>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Details */}
-      <div className="bg-surface-container-low rounded-xl p-4 space-y-4">
-        <div>
-          <p className="text-xs text-outline font-semibold uppercase tracking-wider mb-1">Kode</p>
-          <p className="text-sm text-on-surface font-mono">{node.kode ?? '—'}</p>
-        </div>
-        <div>
-          <p className="text-xs text-outline font-semibold uppercase tracking-wider mb-1">Nama</p>
-          <p className="text-sm text-on-surface">{node.nama}</p>
-        </div>
-        <div>
-          <p className="text-xs text-outline font-semibold uppercase tracking-wider mb-1">Deskripsi</p>
-          <p className="text-sm text-on-surface">{node.deskripsi ?? '—'}</p>
-        </div>
-        <div>
-          <p className="text-xs text-outline font-semibold uppercase tracking-wider mb-1">Jumlah Sub-Klasifikasi</p>
-          <p className="text-sm text-on-surface">{node.children.length} item</p>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <DetailField label="Kode Klasifikasi">
+          <span className="font-mono text-sm font-bold text-[#FF5A00]">{node.kode ?? '-'}</span>
+        </DetailField>
+        <DetailField label="Tipe">
+          <ClassificationTypeBadge node={node} />
+        </DetailField>
+        <DetailField label="Nama Klasifikasi">
+          <span className="text-sm font-bold leading-relaxed text-zinc-950">{node.nama}</span>
+        </DetailField>
+        <DetailField label="Status">
+          <ClassificationStatusBadge node={node} />
+        </DetailField>
+        <DetailField label="Deskripsi / Keterangan" className="sm:col-span-2">
+          <span className="text-sm font-medium leading-relaxed text-zinc-700">{node.deskripsi ?? '-'}</span>
+        </DetailField>
+        <DetailField label="Jumlah Sub-Klasifikasi">
+          <span className="text-sm font-bold text-zinc-950">{node.children.length} sub-node</span>
+        </DetailField>
+        <DetailField label="Dipakai Jenis Pembayaran?">
+          <span className={cn(
+            'flex items-center gap-1.5 text-sm font-bold',
+            canBeOperationalChoice ? 'text-emerald-700' : 'text-zinc-600',
+          )}>
+            {canBeOperationalChoice ? <CheckCircle2 size={15} /> : <Ban size={15} />}
+            {getJenisPembayaranLabel(node)}
+          </span>
+        </DetailField>
+      </div>
+
+      <div className="rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-orange-900">
+        <p>
+          <span className="font-extrabold">Petunjuk:</span> hanya klasifikasi berstatus Aktif dan bertipe Pilihan Akhir yang dapat digunakan sebagai Jenis Pembayaran. Klasifikasi Induk bersifat struktural, sedangkan Nonaktif tidak ditampilkan pada pilihan operasional.
+        </p>
+        {isParent && (
+          <p className="mt-2 text-amber-800">
+            Status penggunaan akan diperiksa saat aturan nonaktif/hapus diperketat.
+          </p>
+        )}
       </div>
     </div>
   )
 }
 
-// Add Modal Component
+function DetailField({
+  label,
+  children,
+  className,
+}: {
+  label: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn('rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] p-3', className)}>
+      <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+      <div>{children}</div>
+    </div>
+  )
+}
+
 function AddKlasifikasiModal({
   isOpen,
   onClose,
@@ -260,11 +418,10 @@ function AddKlasifikasiModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset form when the modal opens so preserved modal state cannot keep a stale spinner.
   useEffect(() => {
     if (isOpen) {
       setNama('')
-      setKode('')
+      setKode(parentNode?.kode ? `${parentNode.kode}.` : '')
       setDeskripsi('')
       setErrors({})
       setError(null)
@@ -272,37 +429,32 @@ function AddKlasifikasiModal({
     }
   }, [isOpen, parentNode])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const errs: Record<string, string> = {}
-    if (!nama.trim()) errs.nama = 'Nama wajib diisi'
-    if (!kode.trim()) errs.kode = 'Kode wajib diisi'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    const nextErrors: Record<string, string> = {}
+    if (!nama.trim()) nextErrors.nama = 'Nama wajib diisi'
+    if (!kode.trim()) nextErrors.kode = 'Kode wajib diisi'
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors)
+      return
+    }
 
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
-      const body = {
-        nama: nama.trim(),
-        kode: kode.trim(),
-        deskripsi: deskripsi.trim() || undefined,
-        parent_id: parentNode?.id ?? null,
-      }
       await apiMutation('/api/arsiparis/klasifikasi', {
         method: 'POST',
-        body,
+        body: {
+          nama: nama.trim(),
+          kode: kode.trim(),
+          deskripsi: deskripsi.trim() || undefined,
+          parent_id: parentNode?.id ?? null,
+        },
       })
       await onSuccess()
       onClose()
     } catch (err) {
-      if (err instanceof ApiError) {
-        const payload = err.payload
-        setError(payload && typeof payload === 'object' && 'error' in payload
-          ? (payload as { error?: string }).error ?? 'Gagal'
-          : 'Gagal')
-        return
-      }
-
-      setError('Terjadi kesalahan')
+      setError(getApiErrorMessage(err, 'Terjadi kesalahan'))
     } finally {
       setLoading(false)
     }
@@ -311,68 +463,69 @@ function AddKlasifikasiModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl" role="dialog" aria-modal="true" aria-label="Tambah sub-klasifikasi">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30">
-          <p className="font-semibold text-on-surface">Tambah Sub-Klasifikasi</p>
-          <button type="button" onClick={onClose} aria-label="Tutup dialog tambah klasifikasi" className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {/* Parent info */}
-          <div className="bg-surface-container-low rounded-lg p-3 text-sm">
-            <p className="text-xs text-outline mb-1">Induk Klasifikasi</p>
-            <p className="font-medium text-on-surface">
-              {parentNode ? (
-                <><span className="font-mono text-xs mr-1">{parentNode.kode}</span>{parentNode.nama}</>
-              ) : 'Root'}
+      <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[#FFFAF6] shadow-2xl" role="dialog" aria-modal="true" aria-label="Tambah klasifikasi">
+        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-[#FFFDF9] px-5 py-4">
+          <div>
+            <p className="font-headline text-lg font-extrabold text-zinc-950">{parentNode ? 'Tambah Anak Klasifikasi' : 'Tambah Klasifikasi Induk'}</p>
+            <p className="mt-1 text-xs font-medium text-zinc-600">
+              {parentNode ? `Menambahkan sub-klasifikasi di bawah induk: ${classificationDisplay(parentNode)}` : 'Mendaftarkan klasifikasi tingkat tertinggi.'}
             </p>
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">Kode <span className="text-error">*</span></label>
-            <input
-              type="text"
+          <button type="button" onClick={onClose} aria-label="Tutup dialog tambah klasifikasi" className="rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950">
+            <X size={18} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+            {parentNode && (
+              <div className="rounded-xl border border-orange-100 bg-[#FFF8F1] p-3 text-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF5A00]">Klasifikasi Induk</p>
+                <p className="mt-1 font-bold text-zinc-950">{classificationDisplay(parentNode)}</p>
+              </div>
+            )}
+            <FormInput
+              label="Kode Klasifikasi"
+              required
               value={kode}
-              onChange={e => { setKode(e.target.value.toUpperCase()); setErrors(p => ({ ...p, kode: '' })) }}
-              placeholder="Contoh: SK, DL.001"
-              className={cn('w-full px-3 py-2 border rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-ring', errors.kode ? 'border-error' : 'border-border')}
+              error={errors.kode}
+              placeholder="Contoh: GU.100"
+              onChange={(value) => {
+                setKode(value.toUpperCase())
+                setErrors(previous => ({ ...previous, kode: '' }))
+              }}
             />
-            {errors.kode && <p className="text-[10px] text-error mt-1">{errors.kode}</p>}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">Nama Klasifikasi <span className="text-error">*</span></label>
-            <input
-              type="text"
+            <FormInput
+              label="Nama Klasifikasi"
+              required
               value={nama}
-              onChange={e => { setNama(e.target.value); setErrors(p => ({ ...p, nama: '' })) }}
-              placeholder="Contoh: Surat Keputusan"
-              className={cn('w-full px-3 py-2 border rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-ring', errors.nama ? 'border-error' : 'border-border')}
+              error={errors.nama}
+              placeholder="Contoh: Belanja Operasional"
+              onChange={(value) => {
+                setNama(value)
+                setErrors(previous => ({ ...previous, nama: '' }))
+              }}
             />
-            {errors.nama && <p className="text-[10px] text-error mt-1">{errors.nama}</p>}
+            <div>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                Deskripsi / Keterangan <span className="font-semibold text-zinc-400">(Opsional)</span>
+              </label>
+              <textarea
+                value={deskripsi}
+                onChange={event => setDeskripsi(event.target.value)}
+                rows={4}
+                placeholder="Berikan ringkasan singkat cakupan belanja dari klasifikasi ini..."
+                className="w-full resize-none rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+              />
+            </div>
+            {error && <p className="text-xs font-semibold text-error">{error}</p>}
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">Deskripsi <span className="text-outline font-normal">(opsional)</span></label>
-            <textarea
-              value={deskripsi}
-              onChange={e => setDeskripsi(e.target.value)}
-              rows={3}
-              placeholder="Deskripsi klasifikasi..."
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-ring resize-none"
-            />
-          </div>
-
-          {error && <p className="text-xs text-error">{error}</p>}
-
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={!!loading}>Batal</Button>
-            <Button type="submit" className="flex-1" disabled={!!loading}>
+          <div className="flex gap-3 border-t border-[#F1E5DA] bg-[#FFFDF9] p-4">
+            <Button type="button" variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batalkan</Button>
+            <Button type="submit" className="flex-1 gap-1.5 bg-[#FF5A00] text-white hover:bg-[#EA580C]" disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              Simpan
+              Simpan Klasifikasi
             </Button>
           </div>
         </form>
@@ -381,7 +534,6 @@ function AddKlasifikasiModal({
   )
 }
 
-// Edit Modal Component
 function EditKlasifikasiModal({
   isOpen,
   onClose,
@@ -400,7 +552,6 @@ function EditKlasifikasiModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Reset form when the modal opens so preserved modal state cannot keep a stale spinner.
   useEffect(() => {
     if (isOpen && node) {
       setNama(node.nama)
@@ -412,38 +563,33 @@ function EditKlasifikasiModal({
     }
   }, [isOpen, node])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
     if (!node) return
 
-    const errs: Record<string, string> = {}
-    if (!nama.trim()) errs.nama = 'Nama wajib diisi'
-    if (!kode.trim()) errs.kode = 'Kode wajib diisi'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    const nextErrors: Record<string, string> = {}
+    if (!nama.trim()) nextErrors.nama = 'Nama wajib diisi'
+    if (!kode.trim()) nextErrors.kode = 'Kode wajib diisi'
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors)
+      return
+    }
 
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
-      const body = {
-        nama: nama.trim(),
-        kode: kode.trim(),
-        deskripsi: deskripsi.trim() || null,
-      }
       await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
         method: 'PATCH',
-        body,
+        body: {
+          nama: nama.trim(),
+          kode: kode.trim(),
+          deskripsi: deskripsi.trim() || null,
+        },
       })
       await onSuccess()
       onClose()
     } catch (err) {
-      if (err instanceof ApiError) {
-        const payload = err.payload
-        setError(payload && typeof payload === 'object' && 'error' in payload
-          ? (payload as { error?: string }).error ?? 'Gagal'
-          : 'Gagal')
-        return
-      }
-
-      setError('Terjadi kesalahan')
+      setError(getApiErrorMessage(err, 'Terjadi kesalahan'))
     } finally {
       setLoading(false)
     }
@@ -452,58 +598,61 @@ function EditKlasifikasiModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl" role="dialog" aria-modal="true" aria-label="Edit klasifikasi">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30">
-          <p className="font-semibold text-on-surface">Edit Klasifikasi</p>
-          <button type="button" onClick={onClose} aria-label="Tutup dialog edit klasifikasi" className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-surface-container-low transition-colors">
-            <X size={16} />
+      <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[#FFFAF6] shadow-2xl" role="dialog" aria-modal="true" aria-label="Edit klasifikasi">
+        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-[#FFFDF9] px-5 py-4">
+          <div>
+            <p className="font-headline text-lg font-extrabold text-zinc-950">Edit Atribut Klasifikasi</p>
+            <p className="mt-1 text-xs font-medium text-zinc-600">Ubah kode, nama, dan deskripsi klasifikasi.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Tutup dialog edit klasifikasi" className="rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-950">
+            <X size={18} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">Kode</label>
-            <input
-              type="text"
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+            <FormInput
+              label="Kode Klasifikasi"
+              required
               value={kode}
-              onChange={e => { setKode(e.target.value.toUpperCase()); setErrors(p => ({ ...p, kode: '' })) }}
+              error={errors.kode}
               placeholder="Kode klasifikasi"
-              className={cn('w-full px-3 py-2 border rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-ring', errors.kode ? 'border-error' : 'border-border')}
+              onChange={(value) => {
+                setKode(value.toUpperCase())
+                setErrors(previous => ({ ...previous, kode: '' }))
+              }}
             />
-            {errors.kode && <p className="text-[10px] text-error mt-1">{errors.kode}</p>}
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">Nama Klasifikasi <span className="text-error">*</span></label>
-            <input
-              type="text"
+            <FormInput
+              label="Nama Klasifikasi"
+              required
               value={nama}
-              onChange={e => { setNama(e.target.value); setErrors(p => ({ ...p, nama: '' })) }}
+              error={errors.nama}
               placeholder="Nama klasifikasi"
-              className={cn('w-full px-3 py-2 border rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-ring', errors.nama ? 'border-error' : 'border-border')}
+              onChange={(value) => {
+                setNama(value)
+                setErrors(previous => ({ ...previous, nama: '' }))
+              }}
             />
-            {errors.nama && <p className="text-[10px] text-error mt-1">{errors.nama}</p>}
+            <div>
+              <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+                Deskripsi / Keterangan <span className="font-semibold text-zinc-400">(Opsional)</span>
+              </label>
+              <textarea
+                value={deskripsi}
+                onChange={event => setDeskripsi(event.target.value)}
+                rows={4}
+                placeholder="Deskripsi klasifikasi..."
+                className="w-full resize-none rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+              />
+            </div>
+            {error && <p className="text-xs font-semibold text-error">{error}</p>}
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-on-surface mb-1.5">Deskripsi <span className="text-outline font-normal">(opsional)</span></label>
-            <textarea
-              value={deskripsi}
-              onChange={e => setDeskripsi(e.target.value)}
-              rows={3}
-              placeholder="Deskripsi klasifikasi..."
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-white outline-none focus:ring-1 focus:ring-ring resize-none"
-            />
-          </div>
-
-          {error && <p className="text-xs text-error">{error}</p>}
-
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={!!loading}>Batal</Button>
-            <Button type="submit" className="flex-1" disabled={!!loading}>
+          <div className="flex gap-3 border-t border-[#F1E5DA] bg-[#FFFDF9] p-4">
+            <Button type="button" variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batalkan</Button>
+            <Button type="submit" className="flex-1 gap-1.5 bg-[#FF5A00] text-white hover:bg-[#EA580C]" disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
-              Simpan
+              Simpan Perubahan
             </Button>
           </div>
         </form>
@@ -512,8 +661,7 @@ function EditKlasifikasiModal({
   )
 }
 
-// Delete Modal Component
-function DeleteKlasifikasiModal({
+function NonaktifkanKlasifikasiModal({
   isOpen,
   onClose,
   node,
@@ -534,9 +682,10 @@ function DeleteKlasifikasiModal({
     }
   }, [isOpen, node])
 
-  async function handleDelete() {
+  async function handleDeactivate() {
     if (!node) return
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
       await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
         method: 'DELETE',
@@ -544,15 +693,7 @@ function DeleteKlasifikasiModal({
       await onSuccess()
       onClose()
     } catch (err) {
-      if (err instanceof ApiError) {
-        const payload = err.payload
-        setError(payload && typeof payload === 'object' && 'error' in payload
-          ? (payload as { error?: string }).error ?? 'Gagal'
-          : 'Gagal')
-        return
-      }
-
-      setError('Terjadi kesalahan')
+      setError(getApiErrorMessage(err, 'Terjadi kesalahan'))
     } finally {
       setLoading(false)
     }
@@ -560,25 +701,36 @@ function DeleteKlasifikasiModal({
 
   if (!isOpen) return null
 
+  const hasChildren = node ? hasChildNodes(node) : false
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-outline-variant/30">
-          <Trash2 size={18} className="text-error shrink-0" />
-          <p className="font-semibold text-on-surface">Hapus Klasifikasi?</p>
+      <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl bg-[#FFFAF6] shadow-2xl">
+        <div className="flex items-center gap-3 border-b border-[#F1E5DA] px-5 py-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-700">
+            <Ban size={18} />
+          </span>
+          <div>
+            <p className="font-headline text-lg font-extrabold text-zinc-950">Nonaktifkan Klasifikasi?</p>
+            <p className="text-xs font-medium text-zinc-600">Aksi memakai endpoint soft deactivate saat ini.</p>
+          </div>
         </div>
-        <div className="p-5 space-y-4">
-          <p className="text-sm text-on-surface-variant">
-            Klasifikasi <strong>"{node?.nama}"</strong> dan seluruh subclass-nya akan dinonaktifkan.
-            Dokumen yang sudah menggunakan klasifikasi ini tidak terpengaruh.
+        <div className="space-y-4 p-5">
+          <p className="text-sm font-medium leading-relaxed text-zinc-700">
+            Klasifikasi <strong className="text-zinc-950">"{node?.nama}"</strong> akan dinonaktifkan sehingga tidak dipakai sebagai pilihan operasional. Riwayat dan dokumen yang sudah menggunakan klasifikasi ini tetap dapat dibaca sesuai aturan akses.
           </p>
-          {error && <p className="text-xs text-error">{error}</p>}
+          {hasChildren && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-relaxed text-amber-900">
+              Klasifikasi Induk memiliki sub-klasifikasi. Backend safety akan diperketat pada fase 15L.3D.4; perilaku endpoint saat ini tetap dipertahankan.
+            </div>
+          )}
+          {error && <p className="text-xs font-semibold text-error">{error}</p>}
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={onClose} disabled={!!loading}>Batal</Button>
-            <Button variant="destructive" className="flex-1" onClick={handleDelete} disabled={!!loading}>
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-              Hapus
+            <Button variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batal</Button>
+            <Button variant="destructive" className="flex-1 gap-1.5" onClick={handleDeactivate} disabled={loading}>
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
+              Nonaktifkan
             </Button>
           </div>
         </div>
@@ -587,20 +739,66 @@ function DeleteKlasifikasiModal({
   )
 }
 
-// Helper to get breadcrumb path
+function FormInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  required,
+  error,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  required?: boolean
+  error?: string
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
+        {label} {required && <span className="text-[#FF5A00]">*</span>}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={event => onChange(event.target.value)}
+        placeholder={placeholder}
+        className={cn(
+          'h-11 w-full rounded-xl border bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+          error ? 'border-error' : 'border-[#F0E1D5]',
+        )}
+      />
+      {error && <p className="mt-1 text-[10px] font-semibold text-error">{error}</p>}
+    </div>
+  )
+}
+
+function getApiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const payload = err.payload
+    if (payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string') {
+      return payload.error
+    }
+    return err.message || fallback
+  }
+
+  return fallback
+}
+
 function getBreadcrumb(node: KlasifikasiNode | null, allNodes: KlasifikasiNode[]): string[] {
   if (!node) return []
 
   const path: string[] = []
 
   function findPath(nodes: KlasifikasiNode[], targetId: string, currentPath: string[]): boolean {
-    for (const n of nodes) {
-      const newPath = [...currentPath, n.nama]
-      if (n.id === targetId) {
+    for (const currentNode of nodes) {
+      const newPath = [...currentPath, classificationDisplay(currentNode)]
+      if (currentNode.id === targetId) {
         path.push(...newPath)
         return true
       }
-      if (n.children.length > 0 && findPath(n.children, targetId, newPath)) {
+      if (currentNode.children.length > 0 && findPath(currentNode.children, targetId, newPath)) {
         return true
       }
     }
@@ -611,50 +809,60 @@ function getBreadcrumb(node: KlasifikasiNode | null, allNodes: KlasifikasiNode[]
   return path
 }
 
+function countAllNodes(nodes: KlasifikasiNode[]): number {
+  return nodes.reduce((count, node) => count + 1 + countAllNodes(node.children), 0)
+}
+
+function findNode(nodes: KlasifikasiNode[], id: string): KlasifikasiNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    const child = findNode(node.children, id)
+    if (child) return child
+  }
+
+  return null
+}
+
 function KlasifikasiPage() {
   const [items, setItems] = useState<KlasifikasiNode[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
   const [selectedNode, setSelectedNode] = useState<KlasifikasiNode | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [addParentNode, setAddParentNode] = useState<KlasifikasiNode | null>(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deactivateModalOpen, setDeactivateModalOpen] = useState(false)
 
   const fetchData = useCallback(async (): Promise<KlasifikasiNode[] | null> => {
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
     try {
       const json = await apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi')
       const data = json.klasifikasi ?? []
 
-      // Mark root node (kode = '000') as fixed
-      const markRoot = (nodes: KlasifikasiNode[]): KlasifikasiNode[] => {
-        return nodes.map(n => ({
-          ...n,
-          is_root: n.kode === '000',
-          children: markRoot(n.children),
+      const markRoot = (nodes: KlasifikasiNode[]): KlasifikasiNode[] => (
+        nodes.map(node => ({
+          ...node,
+          is_active: node.is_active ?? true,
+          is_root: node.kode === '000',
+          children: markRoot(node.children),
         }))
-      }
+      )
+
       const markedData = markRoot(data)
       setItems(markedData)
       return markedData
-    } catch (error) {
-      if (error instanceof ApiError) {
-        const payload = error.payload
-        if (payload && typeof payload === 'object' && 'error' in payload) {
-          setError(typeof payload.error === 'string' ? payload.error : 'Gagal')
-        } else {
-          setError('Gagal')
-        }
-      } else {
-        setError('Terjadi kesalahan')
-      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Terjadi kesalahan'))
       return null
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  useEffect(() => { void fetchData() }, [fetchData])
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
 
   function openAddChild(node: KlasifikasiNode) {
     setAddParentNode(node)
@@ -666,107 +874,120 @@ function KlasifikasiPage() {
     setEditModalOpen(true)
   }
 
-  function openDelete(node: KlasifikasiNode) {
+  function openDeactivate(node: KlasifikasiNode) {
     setSelectedNode(node)
-    setDeleteModalOpen(true)
-  }
-
-  function handleSelectNode(node: KlasifikasiNode) {
-    setSelectedNode(node)
+    setDeactivateModalOpen(true)
   }
 
   async function handleModalSuccess() {
     const refreshedItems = await fetchData()
-    // Re-select the node after refresh if it still exists
     if (selectedNode && refreshedItems) {
-      const findNode = (nodes: KlasifikasiNode[], id: string): KlasifikasiNode | null => {
-        for (const n of nodes) {
-          if (n.id === id) return n
-          const found = findNode(n.children, id)
-          if (found) return found
-        }
-        return null
-      }
-      const found = findNode(refreshedItems, selectedNode.id)
-      if (found) setSelectedNode(found)
-      else setSelectedNode(null)
+      setSelectedNode(findNode(refreshedItems, selectedNode.id))
     }
   }
 
+  const totalCount = countAllNodes(items)
   const breadcrumb = getBreadcrumb(selectedNode, items)
 
-  // Flatten for counting
-  function countAllNodes(nodes: KlasifikasiNode[]): number {
-    return nodes.reduce((acc, n) => acc + 1 + countAllNodes(n.children), 0)
-  }
-
-  const totalCount = countAllNodes(items)
-
   return (
-    <PageLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-              <Link to="/arsiparis" className="hover:text-primary">Kepala Sub Bagian Umum</Link>
+    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+      <div className="mx-auto max-w-[92rem] space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
+              <Archive size={12} />
+              <Link to="/arsiparis" className="hover:text-[#FF5A00]">Kearsipan KSBU</Link>
               <ChevronRight size={10} />
-              <span className="text-primary">Master Klasifikasi</span>
+              <span className="text-[#FF5A00]">Klasifikasi Arsip</span>
             </div>
-            <h2 className="font-headline text-2xl font-extrabold text-on-surface">Master Klasifikasi Arsip</h2>
-            <p className="text-on-surface-variant text-xs mt-1">{totalCount} klasifikasi aktif.</p>
+            <h2 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
+              Master <span className="text-[#FF5A00]">Klasifikasi Arsip</span>
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
+              Kelola struktur klasifikasi yang digunakan sebagai Jenis Pembayaran pada proses pemberkasan.
+            </p>
           </div>
+          <Button
+            type="button"
+            className="w-full shrink-0 gap-1.5 rounded-xl bg-[#FF5A00] px-4 text-xs font-extrabold text-white hover:bg-[#EA580C] sm:w-auto"
+            onClick={() => {
+              setAddParentNode(null)
+              setAddModalOpen(true)
+            }}
+          >
+            <Plus size={14} />
+            Tambah Induk
+          </Button>
         </div>
 
-        {/* Split View */}
+        <div className="flex items-start gap-2.5 rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-orange-900 shadow-sm">
+          <Info size={15} className="mt-0.5 shrink-0 text-[#FF5A00]" />
+          <p>
+            <span className="font-extrabold">Petunjuk Kearsipan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-[#FF5A00]">Jenis Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
+          </p>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="animate-spin text-primary" />
+            <Loader2 size={24} className="animate-spin text-[#FF5A00]" />
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-error/20 bg-error/5 py-20">
             <AlertCircle size={32} className="text-error" />
             <p className="text-sm text-on-surface-variant">{error}</p>
             <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center py-20 gap-4 bg-white/5 rounded-2xl border border-white/10">
-            <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <Network size={24} className="text-blue-500" />
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] py-20 text-center shadow-sm">
+            <div className="flex size-14 items-center justify-center rounded-xl bg-orange-50 text-[#FF5A00]">
+              <Network size={24} />
             </div>
-            <p className="font-headline text-lg font-bold text-on-surface">Belum ada klasifikasi</p>
-            <p className="text-on-surface-variant text-xs">Tambahkan klasifikasi arsip untuk digunakan saat pemberkasan.</p>
+            <p className="font-headline text-lg font-bold text-zinc-950">Belum ada klasifikasi</p>
+            <p className="max-w-sm text-xs font-medium leading-relaxed text-zinc-600">Tambahkan klasifikasi induk terlebih dahulu, lalu buat anak klasifikasi sampai Pilihan Akhir.</p>
+            <Button
+              size="sm"
+              className="gap-1.5 rounded-xl bg-[#FF5A00] text-white hover:bg-[#EA580C]"
+              onClick={() => {
+                setAddParentNode(null)
+                setAddModalOpen(true)
+              }}
+            >
+              <Plus size={14} /> Tambah Klasifikasi Induk
+            </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[500px]">
-            {/* Tree Panel */}
-            <div className="lg:col-span-2 bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-outline-variant/30 bg-surface-container-low/30">
-                <h3 className="font-semibold text-sm text-on-surface">Pohon Klasifikasi</h3>
+          <div className="grid min-h-[500px] grid-cols-1 gap-4 lg:grid-cols-5">
+            <div className="overflow-hidden rounded-[1.35rem] border border-[#F1E5DA] bg-[#FFFDF9] shadow-sm lg:col-span-2">
+              <div className="flex items-center justify-between gap-3 border-b border-[#F1E5DA] px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FolderOpen size={16} className="shrink-0 text-[#FF5A00]" />
+                  <h3 className="truncate text-sm font-bold text-zinc-950">Pohon Struktur Klasifikasi</h3>
+                </div>
+                <span className="shrink-0 rounded-lg bg-orange-50 px-2 py-1 text-[10px] font-black text-zinc-700">
+                  Total: {totalCount} Node
+                </span>
               </div>
-              <div className="p-2 max-h-[450px] overflow-y-auto">
+              <div className="max-h-[62vh] overflow-y-auto p-2 sm:p-3">
                 <KlasifikasiTree
                   nodes={items}
                   selectedId={selectedNode?.id ?? null}
-                  onSelect={handleSelectNode}
+                  onSelect={setSelectedNode}
                   onAddChild={openAddChild}
                 />
               </div>
             </div>
 
-            {/* Detail Panel */}
-            <div className="lg:col-span-3 bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+            <div className="overflow-hidden rounded-[1.35rem] border border-[#F1E5DA] bg-[#FFFDF9] shadow-sm lg:col-span-3">
               <KlasifikasiDetail
                 node={selectedNode}
                 onEdit={openEdit}
-                onDelete={openDelete}
+                onDelete={openDeactivate}
                 breadcrumb={breadcrumb}
               />
             </div>
           </div>
         )}
 
-        {/* Modals */}
         <AddKlasifikasiModal
           isOpen={addModalOpen}
           onClose={() => setAddModalOpen(false)}
@@ -781,11 +1002,14 @@ function KlasifikasiPage() {
           onSuccess={handleModalSuccess}
         />
 
-        <DeleteKlasifikasiModal
-          isOpen={deleteModalOpen}
-          onClose={() => { setDeleteModalOpen(false); setSelectedNode(null) }}
+        <NonaktifkanKlasifikasiModal
+          isOpen={deactivateModalOpen}
+          onClose={() => setDeactivateModalOpen(false)}
           node={selectedNode}
-          onSuccess={async () => { await handleModalSuccess(); setSelectedNode(null) }}
+          onSuccess={async () => {
+            await handleModalSuccess()
+            setSelectedNode(null)
+          }}
         />
       </div>
     </PageLayout>
