@@ -1,6 +1,8 @@
-import { Loader2, Save } from 'lucide-react'
+import { Archive, Check, FileText, Loader2, Save } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '#/components/ui/button'
+import { DatePicker } from '#/components/ui/date-picker'
 import {
   Dialog,
   DialogContent,
@@ -9,10 +11,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import {
+  calculateManualArchiveRetentionDates,
   MANUAL_ARCHIVE_RETENTION_LABELS,
   type RetensiLabel,
 } from '#/lib/archive/retention'
+import { formatDate } from '#/lib/utils/format'
+
+const ARCHIVE_FORM_LABEL_CLASS = 'block space-y-1.5 text-[11px] font-bold text-zinc-700'
+const ARCHIVE_FORM_INPUT_CLASS =
+  'w-full rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-[#FFBC80] focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
+const ARCHIVE_FORM_SELECT_TRIGGER_CLASS =
+  'min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold text-zinc-950 hover:border-[#FFBC80] focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
+const ARCHIVE_FORM_SELECT_CONTENT_CLASS =
+  'rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] text-zinc-950 shadow-xl shadow-zinc-950/10'
+const ARCHIVE_FORM_SELECT_ITEM_CLASS =
+  'rounded-lg px-3 py-2 text-sm font-medium text-zinc-950 focus:bg-orange-50 focus:text-zinc-950'
 
 export type CloseBerkasFormState = {
   nomor_spm: string
@@ -26,6 +41,12 @@ export type CloseBerkasRequestBody = {
   retensi_aktif: string
   retensi_inaktif: string
   closed_at?: string
+}
+
+export type CloseBerkasSummary = {
+  klasifikasiLabel: string
+  itemCount: number
+  totalNominalRealisasi: number | null
 }
 
 export const EMPTY_CLOSE_BERKAS_FORM: CloseBerkasFormState = {
@@ -62,87 +83,146 @@ export function CloseBerkasDialog({
   onOpenChange,
   onFormChange,
   onSubmit,
+  summary,
 }: {
   open: boolean
   form: CloseBerkasFormState
   pending: boolean
   submitDisabled: boolean
+  summary: CloseBerkasSummary
   onOpenChange: (open: boolean) => void
   onFormChange: (form: CloseBerkasFormState) => void
   onSubmit: () => void
 }) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Tutup Berkas</DialogTitle>
-          <DialogDescription>
-            Isi metadata final sebelum berkas difinalisasi menjadi Arsip Aktif.
-          </DialogDescription>
-        </DialogHeader>
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const retentionPreview = useMemo(() => getRetentionPreview(form), [form])
 
-        <div className="space-y-4">
-          <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-900">
-            <p className="font-semibold">Berkas akan difinalisasi menjadi Arsip Aktif.</p>
+  useEffect(() => {
+    if (!open) setConfirmOpen(false)
+  }, [open])
+
+  function handleSubmitClick() {
+    if (submitDisabled) return
+    setConfirmOpen(true)
+  }
+
+  return (
+    <>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] p-0 shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
+        <DialogHeader>
+          <div className="px-5 pt-5 sm:px-7 sm:pt-7">
+          <DialogTitle className="font-headline text-xl font-extrabold tracking-tight text-zinc-950 sm:text-2xl">
+            Tutup berkas dan lengkapi metadata arsip
+          </DialogTitle>
+          <DialogDescription className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-zinc-700">
+            Setelah berkas ditutup, dokumen baru tidak dapat lagi dimasukkan ke jenis pembayaran ini.
+          </DialogDescription>
+          <div className="sr-only">
+            <p>Berkas akan difinalisasi menjadi Arsip Aktif.</p>
             <p>Setelah ditutup, Jenis Pembayaran ini tidak bisa menerima dokumen baru.</p>
             <p>Dokumen dan file fisik tidak dihapus.</p>
             <p>Status berkas menjadi Ditutup dan status arsip menjadi Aktif.</p>
           </div>
+          </div>
+        </DialogHeader>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-nomor-spm">
-              Nomor SPM <span className="text-error">*</span>
+        <div className="space-y-5 border-t border-[#F1E5DA] px-5 py-5 sm:px-7">
+          <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/5">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+              Jenis Pembayaran / Klasifikasi Arsip
+            </p>
+            <p className="mt-1 text-base font-extrabold tracking-tight text-zinc-950">
+              {summary.klasifikasiLabel}
+            </p>
+            <div className="mt-4 grid gap-4 border-t border-[#F1E5DA] pt-4 sm:grid-cols-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Jumlah Dokumen</p>
+                <p className="mt-1 flex items-center gap-2 text-sm font-bold text-zinc-950">
+                  <FileText size={14} className="text-[#FF5A00]" />
+                  {summary.itemCount}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Total Nominal Realisasi</p>
+                <p className="mt-1 font-mono text-sm font-bold text-zinc-950">
+                  {formatNominal(summary.totalNominalRealisasi)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className={ARCHIVE_FORM_LABEL_CLASS} htmlFor="close-berkas-nomor-spm">
+              <span>Nomor SPM <span className="text-error">*</span></span>
               <input
                 id="close-berkas-nomor-spm"
                 value={form.nomor_spm}
                 onChange={(event) => onFormChange({ ...form, nomor_spm: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className={ARCHIVE_FORM_INPUT_CLASS}
                 maxLength={120}
                 autoComplete="off"
               />
             </label>
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-closed-at">
-              Tanggal Tutup
-              <input
-                id="close-berkas-closed-at"
-                type="date"
+            <label className={ARCHIVE_FORM_LABEL_CLASS} htmlFor="close-berkas-closed-at">
+              <span>Tanggal SPM / Tanggal Arsip</span>
+              <span className="sr-only">Tanggal Tutup</span>
+              <DatePicker
                 value={form.closed_at}
-                onChange={(event) => onFormChange({ ...form, closed_at: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                disabled
+                placeholder="Tanggal arsip diisi otomatis"
               />
+              <span className="mt-1 block text-[11px] font-semibold leading-relaxed text-zinc-500">
+                Tanggal arsip diisi otomatis dari tanggal sistem saat berkas ditutup.
+              </span>
             </label>
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-retensi-aktif">
-              Retensi Aktif <span className="text-error">*</span>
-              <select
-                id="close-berkas-retensi-aktif"
-                value={form.retensi_aktif}
-                onChange={(event) => onFormChange({ ...form, retensi_aktif: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Pilih retensi aktif</option>
+            <label className={ARCHIVE_FORM_LABEL_CLASS} id="close-berkas-retensi-aktif-label">
+              <span>Retensi Aktif <span className="text-error">*</span></span>
+              <Select value={form.retensi_aktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_aktif: value ?? '' })}>
+                <SelectTrigger className={ARCHIVE_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="close-berkas-retensi-aktif-label">
+                  <SelectValue placeholder="Pilih retensi aktif">
+                    {(value) => value || 'Pilih retensi aktif'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className={ARCHIVE_FORM_SELECT_CONTENT_CLASS}>
                 {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <option key={label} value={label}>{label}</option>
+                  <SelectItem key={label} value={label} className={ARCHIVE_FORM_SELECT_ITEM_CLASS}>{label}</SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </label>
-            <label className="block text-xs font-bold text-on-surface" htmlFor="close-berkas-retensi-inaktif">
-              Retensi Inaktif <span className="text-error">*</span>
-              <select
-                id="close-berkas-retensi-inaktif"
-                value={form.retensi_inaktif}
-                onChange={(event) => onFormChange({ ...form, retensi_inaktif: event.target.value })}
-                className="mt-1 w-full rounded-lg border border-outline-variant/60 bg-white px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">Pilih retensi inaktif</option>
+            <label className={ARCHIVE_FORM_LABEL_CLASS} id="close-berkas-retensi-inaktif-label">
+              <span>Retensi Inaktif <span className="text-error">*</span></span>
+              <Select value={form.retensi_inaktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_inaktif: value ?? '' })}>
+                <SelectTrigger className={ARCHIVE_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="close-berkas-retensi-inaktif-label">
+                  <SelectValue placeholder="Pilih retensi inaktif">
+                    {(value) => value || 'Pilih retensi inaktif'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className={ARCHIVE_FORM_SELECT_CONTENT_CLASS}>
                 {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <option key={label} value={label}>{label}</option>
+                  <SelectItem key={label} value={label} className={ARCHIVE_FORM_SELECT_ITEM_CLASS}>{label}</SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </label>
           </div>
+
+          {retentionPreview && (
+            <div className="grid gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/55 px-5 py-4 sm:grid-cols-2">
+              <RetentionPreviewBadge
+                label="Masa Aktif Berakhir"
+                value={retentionPreview.masaAktifBerakhir}
+              />
+              <RetentionPreviewBadge
+                label="Masa Inaktif Berakhir"
+                value={retentionPreview.masaInaktifBerakhir}
+              />
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-3 border-[#F1E5DA] bg-[#FFFDF9] px-5 py-4 sm:px-7">
           <Button
             type="button"
             variant="outline"
@@ -153,15 +233,97 @@ export function CloseBerkasDialog({
           </Button>
           <Button
             type="button"
-            className="gap-1.5"
-            onClick={onSubmit}
+            className="gap-1.5 rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
+            onClick={handleSubmitClick}
             disabled={submitDisabled}
           >
             {pending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Finalisasi Berkas
+            Simpan Metadata & Tutup Berkas
+            <span className="sr-only">Finalisasi Berkas</span>
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog
+      open={confirmOpen}
+      onOpenChange={(nextOpen) => {
+        if (!pending) setConfirmOpen(nextOpen)
+      }}
+    >
+      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] text-center shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
+        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+          <Archive size={27} />
+        </div>
+        <DialogHeader className="items-center">
+          <DialogTitle className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950">
+            Tutup berkas?
+          </DialogTitle>
+          <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
+            Berkas akan ditutup dan menjadi arsip aktif. Dokumen baru tidak dapat lagi dimasukkan ke jenis pembayaran ini.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-left text-sm font-bold text-zinc-950">
+          <div className="flex items-center justify-between gap-3">
+            <span>Status berkas:</span>
+            <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">Ditutup</span>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span>Status arsip:</span>
+            <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">Aktif</span>
+          </div>
+        </div>
+        <DialogFooter className="border-0 bg-transparent p-0 sm:justify-center">
+          <Button type="button" variant="outline" disabled={pending} onClick={() => setConfirmOpen(false)}>
+            Batalkan
+          </Button>
+          <Button
+            type="button"
+            className="gap-1.5 rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
+            disabled={pending}
+            onClick={onSubmit}
+          >
+            {pending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            Tutup Berkas
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
+}
+
+function RetentionPreviewBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-800">{label}</p>
+      <p className="mt-2 font-mono text-xs font-black tracking-wide text-emerald-950">
+        {formatDate(value)}
+      </p>
+    </div>
+  )
+}
+
+function getRetentionPreview(form: CloseBerkasFormState): { masaAktifBerakhir: string; masaInaktifBerakhir: string } | null {
+  if (!form.closed_at || !form.retensi_aktif || !form.retensi_inaktif) return null
+
+  try {
+    return calculateManualArchiveRetentionDates({
+      tanggalDiarsipkan: form.closed_at,
+      retensiAktif: form.retensi_aktif as RetensiLabel,
+      retensiInaktif: form.retensi_inaktif as RetensiLabel,
+    })
+  } catch {
+    return null
+  }
+}
+
+function formatNominal(value: number | null): string {
+  if (value === null) return '-'
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(value)
 }

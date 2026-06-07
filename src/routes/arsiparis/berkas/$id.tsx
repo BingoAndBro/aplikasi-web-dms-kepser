@@ -38,9 +38,11 @@ import {
 } from '#/components/workflow/PpkPpspmPagePrimitives'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { DatePicker } from '#/components/ui/date-picker'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
   Dialog,
@@ -52,6 +54,7 @@ import {
 } from '#/components/ui/dialog'
 import {
   BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
+  type BerkasLifecycleActionView,
   formatAttachmentCount,
   formatBerkasArchiveStatusLabel,
   formatBerkasStatusLabel,
@@ -174,6 +177,16 @@ const DETAIL_SORT_OPTIONS = [
   { value: 'nominal_asc', label: 'Nominal Terendah' },
 ]
 
+const ARCHIVE_METADATA_FORM_LABEL_CLASS = 'block space-y-1.5 text-[11px] font-bold text-zinc-700'
+const ARCHIVE_METADATA_FORM_INPUT_CLASS =
+  'w-full rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-[#FFBC80] focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
+const ARCHIVE_METADATA_FORM_SELECT_TRIGGER_CLASS =
+  'min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold text-zinc-950 hover:border-[#FFBC80] focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
+const ARCHIVE_METADATA_FORM_SELECT_CONTENT_CLASS =
+  'rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] text-zinc-950 shadow-xl shadow-zinc-950/10'
+const ARCHIVE_METADATA_FORM_SELECT_ITEM_CLASS =
+  'rounded-lg px-3 py-2 text-sm font-medium text-zinc-950 focus:bg-orange-50 focus:text-zinc-950'
+
 function BerkasArsipDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
@@ -183,6 +196,7 @@ function BerkasArsipDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [pendingLifecycleAction, setPendingLifecycleAction] = useState(false)
+  const [lifecycleConfirmOpen, setLifecycleConfirmOpen] = useState(false)
   const [destructionDialogOpen, setDestructionDialogOpen] = useState(false)
   const [destructionPhrase, setDestructionPhrase] = useState('')
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
@@ -206,7 +220,7 @@ function BerkasArsipDetailPage() {
     }
   }
 
-  async function submitLifecycleAction(options: { confirmation?: string } = {}) {
+  async function submitLifecycleAction(options: { confirmation?: string; confirmed?: boolean } = {}) {
     if (!detail) return
 
     const lifecycleAction = resolveBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
@@ -218,7 +232,10 @@ function BerkasArsipDetailPage() {
         setActionSuccess(null)
         return
       }
-    } else if (!window.confirm(lifecycleAction.confirmation)) {
+    } else if (!options.confirmed) {
+      setLifecycleConfirmOpen(true)
+      setActionError(null)
+      setActionSuccess(null)
       return
     }
 
@@ -237,6 +254,7 @@ function BerkasArsipDetailPage() {
         }),
       })
       setActionSuccess(lifecycleAction.successMessage)
+      setLifecycleConfirmOpen(false)
       setDestructionDialogOpen(false)
       setDestructionPhrase('')
       if (lifecycleAction.action === 'mark_inactive') {
@@ -475,6 +493,10 @@ function BerkasArsipDetailPage() {
                     detail={detail}
                     pendingLifecycleAction={pendingLifecycleAction}
                     destructionDialogOpen={destructionDialogOpen}
+                    lifecycleConfirmOpen={lifecycleConfirmOpen}
+                    onLifecycleConfirmOpenChange={(open) => {
+                      if (!pendingLifecycleAction) setLifecycleConfirmOpen(open)
+                    }}
                     destructionPhrase={destructionPhrase}
                     onDestructionPhraseChange={setDestructionPhrase}
                     onCancelDestruction={() => {
@@ -494,6 +516,10 @@ function BerkasArsipDetailPage() {
                     onOpenMetadataEditDialog={openMetadataEditDialog}
                     pendingClose={pendingClose}
                     onOpenCloseDialog={() => {
+                      setCloseForm({
+                        ...EMPTY_CLOSE_BERKAS_FORM,
+                        closed_at: getTodayDateOnlyInputValue(),
+                      })
                       setCloseDialogOpen(true)
                       setActionError(null)
                       setActionSuccess(null)
@@ -509,6 +535,11 @@ function BerkasArsipDetailPage() {
             open={closeDialogOpen}
             form={closeForm}
             pending={pendingClose}
+            summary={{
+              klasifikasiLabel: formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot),
+              itemCount: detail.item_count,
+              totalNominalRealisasi: detail.total_nominal_realisasi,
+            }}
             submitDisabled={pendingClose || !detail || isBerkasEmptyForClose(detail) || isCloseBerkasFormIncomplete(closeForm)}
             onOpenChange={(open) => {
               setCloseDialogOpen(open)
@@ -570,58 +601,57 @@ function EditActiveMetadataDialog({
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-nomor-spm">
-              Nomor SPM <span className="text-error">*</span>
+            <label className={ARCHIVE_METADATA_FORM_LABEL_CLASS} htmlFor="edit-berkas-nomor-spm">
+              <span>Nomor SPM <span className="text-error">*</span></span>
               <input
                 id="edit-berkas-nomor-spm"
                 value={form.nomor_spm}
                 onChange={(event) => onFormChange({ ...form, nomor_spm: event.target.value })}
-                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                className={ARCHIVE_METADATA_FORM_INPUT_CLASS}
                 maxLength={120}
                 autoComplete="off"
               />
             </label>
-            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-closed-at">
-              Tanggal Tutup Berkas
-              <input
-                id="edit-berkas-closed-at"
-                type="date"
+            <label className={ARCHIVE_METADATA_FORM_LABEL_CLASS} htmlFor="edit-berkas-closed-at">
+              <span>Tanggal Tutup Berkas</span>
+              <DatePicker
                 value={form.closed_at}
-                readOnly
                 disabled
-                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-500 outline-none"
+                placeholder="Tanggal tutup belum tersedia"
               />
               <span className="mt-1 block text-[11px] font-semibold leading-relaxed text-zinc-500">
                 Tanggal tutup adalah waktu finalisasi berkas dan tidak diubah dari edit metadata.
               </span>
             </label>
-            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-retensi-aktif">
-              Retensi Aktif <span className="text-error">*</span>
-              <select
-                id="edit-berkas-retensi-aktif"
-                value={form.retensi_aktif}
-                onChange={(event) => onFormChange({ ...form, retensi_aktif: event.target.value })}
-                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
-              >
-                <option value="">Pilih retensi aktif</option>
+            <label className={ARCHIVE_METADATA_FORM_LABEL_CLASS} id="edit-berkas-retensi-aktif-label">
+              <span>Retensi Aktif <span className="text-error">*</span></span>
+              <Select value={form.retensi_aktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_aktif: value ?? '' })}>
+                <SelectTrigger className={ARCHIVE_METADATA_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="edit-berkas-retensi-aktif-label">
+                  <SelectValue placeholder="Pilih retensi aktif">
+                    {(value) => value || 'Pilih retensi aktif'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className={ARCHIVE_METADATA_FORM_SELECT_CONTENT_CLASS}>
                 {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <option key={label} value={label}>{label}</option>
+                  <SelectItem key={label} value={label} className={ARCHIVE_METADATA_FORM_SELECT_ITEM_CLASS}>{label}</SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </label>
-            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-retensi-inaktif">
-              Retensi Inaktif <span className="text-error">*</span>
-              <select
-                id="edit-berkas-retensi-inaktif"
-                value={form.retensi_inaktif}
-                onChange={(event) => onFormChange({ ...form, retensi_inaktif: event.target.value })}
-                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
-              >
-                <option value="">Pilih retensi inaktif</option>
+            <label className={ARCHIVE_METADATA_FORM_LABEL_CLASS} id="edit-berkas-retensi-inaktif-label">
+              <span>Retensi Inaktif <span className="text-error">*</span></span>
+              <Select value={form.retensi_inaktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_inaktif: value ?? '' })}>
+                <SelectTrigger className={ARCHIVE_METADATA_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="edit-berkas-retensi-inaktif-label">
+                  <SelectValue placeholder="Pilih retensi inaktif">
+                    {(value) => value || 'Pilih retensi inaktif'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className={ARCHIVE_METADATA_FORM_SELECT_CONTENT_CLASS}>
                 {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <option key={label} value={label}>{label}</option>
+                  <SelectItem key={label} value={label} className={ARCHIVE_METADATA_FORM_SELECT_ITEM_CLASS}>{label}</SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </label>
           </div>
         </div>
@@ -672,6 +702,8 @@ function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
 function FolderActionPanel({
   detail,
   pendingLifecycleAction,
+  lifecycleConfirmOpen,
+  onLifecycleConfirmOpenChange,
   destructionDialogOpen,
   destructionPhrase,
   onDestructionPhraseChange,
@@ -685,6 +717,8 @@ function FolderActionPanel({
 }: {
   detail: BerkasDetail
   pendingLifecycleAction: boolean
+  lifecycleConfirmOpen: boolean
+  onLifecycleConfirmOpenChange: (open: boolean) => void
   destructionDialogOpen: boolean
   destructionPhrase: string
   onDestructionPhraseChange: (phrase: string) => void
@@ -761,7 +795,14 @@ function FolderActionPanel({
                 lifecycleAction.action === 'approve_destruction' ? 'bg-error text-white hover:bg-error/90' : 'bg-[#FF5A00] text-white hover:bg-[#EA580C]'
               }`}
               disabled={pendingLifecycleAction}
-              onClick={() => onLifecycleAction()}
+              onClick={() => {
+                if (lifecycleAction.action === 'approve_destruction') {
+                  onLifecycleAction()
+                  return
+                }
+
+                onLifecycleConfirmOpenChange(true)
+              }}
             >
               {pendingLifecycleAction
                 ? <Loader2 size={14} className="animate-spin" />
@@ -815,6 +856,16 @@ function FolderActionPanel({
         )}
       </div>
 
+      {lifecycleAction && lifecycleAction.action !== 'approve_destruction' && (
+        <LifecycleConfirmationDialog
+          open={lifecycleConfirmOpen}
+          pending={pendingLifecycleAction}
+          action={lifecycleAction}
+          onOpenChange={onLifecycleConfirmOpenChange}
+          onConfirm={() => onLifecycleAction({ confirmed: true })}
+        />
+      )}
+
       {lifecycleAction?.action === 'approve_destruction' && (
         <Dialog
           open={destructionDialogOpen}
@@ -822,26 +873,26 @@ function FolderActionPanel({
             if (open || !pendingLifecycleAction) onDestructionOpenChange(open)
           }}
         >
-          <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-lg sm:rounded-3xl">
-            <DialogHeader>
+          <DialogContent className="border-rose-200 bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+              <AlertTriangle size={22} />
+            </div>
+            <DialogHeader className="items-center text-center">
               <DialogTitle>Musnahkan Data</DialogTitle>
-              <DialogDescription>
-                Konfirmasi final untuk mengubah status berkas menjadi Dimusnahkan.
+              <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
+                Arsip akan ditandai sebagai dimusnahkan. Metadata tetap tersimpan, tetapi akses file akan diblokir.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-xs text-zinc-800">
-                Berkas: <span className="font-semibold">
-                  {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}
-                </span>
-              </div>
-
-              <div className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-800">
-                <p>Status berkas akan menjadi Dimusnahkan.</p>
-                <p>File fisik terkait berkas akan dihapus.</p>
+              <p className="text-center font-headline text-2xl font-extrabold tracking-tight text-zinc-950">
+                Musnahkan arsip?
+              </p>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-xs font-extrabold leading-relaxed text-rose-700">
+                <p>Pemberitahuan: Pemusnahan data ini bersifat final.</p>
+                <p className="mt-2">File fisik terkait berkas akan dihapus.</p>
                 <p>Preview dan download file tidak akan tersedia setelah pemusnahan.</p>
-                <p>Metadata berkas dan dokumen tetap tersimpan.</p>
+                <p>Metadata berkas dan dokumen tetap tersimpan, namun lampiran berkas tidak akan dapat dilekatkan, diunduh, atau dipreview lagi.</p>
                 <p>Aksi ini tidak mudah dibalik.</p>
               </div>
 
@@ -861,10 +912,10 @@ function FolderActionPanel({
               </p>
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-3 border-0 bg-transparent p-0">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={onCancelDestruction}
                 disabled={pendingLifecycleAction}
               >
@@ -872,7 +923,7 @@ function FolderActionPanel({
               </Button>
               <Button
                 type="button"
-                className="gap-1.5 bg-error text-white hover:bg-error/90"
+                className="gap-1.5 rounded-xl bg-rose-600 px-5 font-extrabold text-white hover:bg-rose-700"
                 onClick={() => onLifecycleAction({ confirmation: destructionPhrase })}
                 disabled={!canSubmitDestruction}
               >
@@ -886,6 +937,64 @@ function FolderActionPanel({
         </Dialog>
       )}
     </aside>
+  )
+}
+
+function LifecycleConfirmationDialog({
+  open,
+  pending,
+  action,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean
+  pending: boolean
+  action: BerkasLifecycleActionView
+  onOpenChange: (open: boolean) => void
+  onConfirm: () => void
+}) {
+  const isMarkInactive = action.action === 'mark_inactive'
+  const title = isMarkInactive ? 'Pindahkan arsip ke Inaktif?' : 'Pindahkan arsip ke Usul Musnah?'
+  const description = isMarkInactive
+    ? 'Arsip aktif akan masuk ke masa inaktif. Setelah dipindahkan, metadata arsip tidak dapat diedit lagi.'
+    : 'Arsip inaktif akan masuk ke daftar usul musnah untuk proses pemusnahan.'
+  const confirmLabel = isMarkInactive ? 'Pindahkan ke Inaktif' : 'Pindahkan ke Usul Musnah'
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!pending) onOpenChange(nextOpen)
+    }}>
+      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
+        <div className="flex items-start gap-5">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#FF5A00]">
+            <AlertTriangle size={21} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <DialogHeader>
+              <DialogTitle className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">
+                {title}
+              </DialogTitle>
+              <DialogDescription className="text-sm font-medium leading-relaxed text-zinc-700">
+                {description}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-6 gap-3 border-0 bg-transparent p-0">
+              <Button type="button" variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>
+                Batalkan
+              </Button>
+              <Button
+                type="button"
+                className="rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
+                disabled={pending}
+                onClick={onConfirm}
+              >
+                {pending ? 'Memproses...' : confirmLabel}
+              </Button>
+            </DialogFooter>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1924,6 +2033,15 @@ export function isBerkasEmptyForClose(detail: Pick<BerkasDetail, 'item_count' | 
 function toDateOnlyInputValue(value: string | null | undefined): string {
   if (!value) return ''
   return value.slice(0, 10)
+}
+
+function getTodayDateOnlyInputValue(): string {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
 }
 
 function filterBerkasDetailItems(

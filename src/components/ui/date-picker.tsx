@@ -74,14 +74,14 @@ export function DatePicker({
         onClick={() => !disabled && setOpen(o => !o)}
         disabled={disabled}
         className={cn(
-          "w-full flex items-center gap-2 px-3 py-2.5",
-          "bg-surface-container/60 border border-outline-variant/50 rounded-xl",
-          "text-sm text-on-surface",
-          "outline-none transition-all hover:border-outline-variant/80",
-          "focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50",
+          "w-full flex items-center gap-2 px-4 py-2.5",
+          "bg-[#FFFAF6] border border-[#F0E1D5] rounded-xl",
+          "text-sm font-semibold text-zinc-950",
+          "outline-none transition-all hover:border-[#FFBC80]",
+          "focus-visible:ring-2 focus-visible:ring-orange-200/70 focus-visible:border-orange-300",
           "cursor-pointer",
-          disabled && "opacity-50 cursor-not-allowed",
-          !value && "text-outline"
+          disabled && "cursor-not-allowed bg-zinc-50 text-zinc-500 opacity-70",
+          !value && "text-zinc-500"
         )}
       >
         <Calendar size={16} className="shrink-0" />
@@ -101,17 +101,8 @@ export function DatePicker({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
 
-          <div
-            className="fixed z-50 animate-in fade-in-0 zoom-in-95 duration-150"
-            style={{
-              bottom: (() => {
-                const rect = ref.current?.getBoundingClientRect()
-                return rect ? window.innerHeight - rect.top + 6 : undefined
-              })(),
-              left: ref.current?.getBoundingClientRect().left,
-            }}
-          >
-            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-2xl shadow-black/10 p-3 min-w-[280px]">
+          <div className="absolute top-full left-0 z-50 mt-2 animate-in fade-in-0 zoom-in-95 duration-150">
+            <div className="min-w-[280px] rounded-2xl border border-[#F0E1D5] bg-[#FFFDF9] p-3 shadow-2xl shadow-zinc-950/10">
               <DayPicker
                 mode="single"
                 selected={selectedDate}

@@ -13,7 +13,7 @@ import {
   ChevronRight, AlertCircle,
   Loader2, CheckCircle2,
   Search, ChevronDown, ChevronLeft,
-  FileText, History, Info, Banknote,
+  FileText, History, Info, Banknote, Archive,
 } from 'lucide-react'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
@@ -244,6 +244,7 @@ function ArsiparisDokumenDetailPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [formLoading, setFormLoading] = useState(false)
   const [formSubmitError, setFormSubmitError] = useState<string | null>(null)
+  const [classificationConfirmOpen, setClassificationConfirmOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const skipBeforeUnloadRef = useRef(false)
@@ -376,6 +377,16 @@ function ArsiparisDokumenDetailPage() {
     if (!klasifikasi) errors.klasifikasi = 'Jenis pembayaran wajib dipilih'
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
 
+    setClassificationConfirmOpen(true)
+  }
+
+  async function submitArchive() {
+    if (!klasifikasi) {
+      setClassificationConfirmOpen(false)
+      setFormErrors({ klasifikasi: 'Jenis pembayaran wajib dipilih' })
+      return
+    }
+
     setFormLoading(true); setFormSubmitError(null)
     try {
       await apiMutation(`/api/arsiparis/dokumen/${id}/archive`, {
@@ -394,11 +405,14 @@ function ArsiparisDokumenDetailPage() {
         setFormSubmitError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error ?? 'Gagal'
           : 'Gagal')
+        setClassificationConfirmOpen(false)
         setFormLoading(false)
         return
       }
 
-      setFormSubmitError('Terjadi kesalahan'); setFormLoading(false)
+      setFormSubmitError('Terjadi kesalahan')
+      setClassificationConfirmOpen(false)
+      setFormLoading(false)
     }
   }
 
@@ -575,6 +589,12 @@ function ArsiparisDokumenDetailPage() {
             )}
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tahun</p><p className="text-sm font-semibold text-on-surface">{dokumen.tahun}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Tanggal</p><p className="text-sm font-semibold text-on-surface">{formatDate(dokumen.tanggal)}</p></div>
+            {dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined && (
+              <div>
+                <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi</p>
+                <p className="text-right font-mono text-sm font-bold text-zinc-950 md:text-left">Rp {dokumen.nominal_realisasi.toLocaleString('id-ID')}</p>
+              </div>
+            )}
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>
             <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Disetujui PPSPM</p><p className="text-sm font-semibold text-on-surface">{dokumen.bendahara_approve ? `${dokumen.bendahara_approve.nama} — ${formatDate(dokumen.bendahara_approve.tanggal)}` : '—'}</p></div>
           </div>
@@ -771,6 +791,66 @@ function ArsiparisDokumenDetailPage() {
         </div>
 
       </div>
+      <AppDialog
+        open={classificationConfirmOpen}
+        onOpenChange={(open) => {
+          if (!formLoading) setClassificationConfirmOpen(open)
+        }}
+        title={
+          <span className="flex items-start gap-5">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#FF5A00]">
+              <Archive size={23} />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-headline text-xl font-extrabold tracking-tight text-zinc-950">
+                Klasifikasikan dokumen?
+              </span>
+              <span className="mt-2 block text-sm font-medium leading-relaxed text-zinc-700">
+                Dokumen akan dimasukkan ke folder Jenis Pembayaran yang dipilih.
+              </span>
+            </span>
+          </span>
+        }
+        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-8"
+        showCloseButton
+        size="md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={formLoading}
+              onClick={() => setClassificationConfirmOpen(false)}
+              className="border-[#F0E1D5] bg-[#FFFAF6]"
+            >
+              Batalkan
+            </Button>
+            <Button
+              type="button"
+              disabled={formLoading}
+              onClick={submitArchive}
+              className="gap-1.5 rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
+            >
+              {formLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+              Klasifikasikan Dokumen
+            </Button>
+          </>
+        }
+      >
+        <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] p-4">
+          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+            <Banknote size={13} />
+            Jenis Pembayaran Terpilih
+          </p>
+          <div className="mt-3 rounded-xl border border-[#F1E5DA] bg-white px-3 py-2 text-sm font-extrabold text-zinc-950">
+            Jenis Pembayaran: {selectedNode ? `${selectedNode.kode ? `${selectedNode.kode} - ` : ''}${selectedNode.nama}` : '-'}
+          </div>
+          <ul className="mt-4 space-y-2 border-t border-[#F1E5DA] pt-4 text-sm font-medium leading-relaxed text-zinc-700">
+            <li>Dokumen masuk ke folder berkas yang masih terbuka.</li>
+            <li>Metadata arsip belum diisi pada tahap ini.</li>
+          </ul>
+        </div>
+      </AppDialog>
       <AppDialog
         open={leaveBlocker.status === 'blocked'}
         onOpenChange={(open) => {
