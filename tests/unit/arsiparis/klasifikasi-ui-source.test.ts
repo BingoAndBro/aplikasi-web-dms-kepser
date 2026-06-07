@@ -23,6 +23,14 @@ describe('Master Klasifikasi Arsip UI source guard', () => {
     expect(source).not.toContain('eligible_for_berkas')
   })
 
+  it('uses distinct visual tones for type and active status badges', () => {
+    expect(source).toContain("'border-emerald-200 bg-emerald-50 text-emerald-700'")
+    expect(source).toContain("'border-zinc-200 bg-zinc-100 text-zinc-600'")
+    expect(source).toContain("'border-amber-200 bg-amber-50 text-amber-700'")
+    expect(source).toContain("'border-sky-200 bg-sky-50 text-sky-700'")
+    expect(source).not.toContain("'border-orange-200 bg-orange-50 text-orange-700'")
+  })
+
   it('uses soft deactivate wording instead of hard delete wording', () => {
     expect(source).toContain('Nonaktifkan Klasifikasi?')
     expect(source).toContain('Nonaktifkan')

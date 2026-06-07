@@ -83,7 +83,7 @@ function ClassificationTypeBadge({
           ? 'border-white/20 bg-white/20 text-white'
           : isParent
             ? 'border-amber-200 bg-amber-50 text-amber-700'
-            : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            : 'border-sky-200 bg-sky-50 text-sky-700',
       )}
     >
       {isParent ? (short ? 'Induk' : 'Klasifikasi Induk') : short ? 'Pilihan Akhir' : 'Pilihan Akhir (Leaf)'}
@@ -107,7 +107,7 @@ function ClassificationStatusBadge({
         selected
           ? 'border-white/20 bg-white/15 text-white'
           : active
-            ? 'border-orange-200 bg-orange-50 text-orange-700'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
             : 'border-zinc-200 bg-zinc-100 text-zinc-600',
       )}
     >
