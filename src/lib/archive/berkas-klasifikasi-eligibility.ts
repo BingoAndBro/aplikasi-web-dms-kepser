@@ -1,5 +1,20 @@
 import { BERKAS_STATUS, type BerkasArchiveStatus, type BerkasStatus } from '#/lib/constants/archive-status'
 
+export type OperationalKlasifikasiSelection = {
+  id: string
+  kode: string | null
+  nama: string
+}
+
+export type OperationalKlasifikasiSelectionCandidate = OperationalKlasifikasiSelection & {
+  isActive: boolean
+  hasChildren: boolean
+}
+
+export type OperationalKlasifikasiSelectionRepository = {
+  findKlasifikasiForOperationalSelection(id: string): Promise<OperationalKlasifikasiSelectionCandidate | null>
+}
+
 export type KlasifikasiEligibilityNode = {
   id: string
   children?: KlasifikasiEligibilityNode[]
@@ -18,8 +33,57 @@ export type KlasifikasiBerkasEligibility = {
   anomaly: 'MULTIPLE_OPEN_BERKAS' | null
 }
 
+export type OperationalKlasifikasiSelectionErrorCode =
+  | 'KLASIFIKASI_NOT_FOUND'
+  | 'KLASIFIKASI_INACTIVE'
+  | 'KLASIFIKASI_PARENT'
+
 const CLOSED_UNAVAILABLE_REASON = 'Berkas untuk jenis pembayaran ini sudah ditutup'
 const ANOMALY_UNAVAILABLE_REASON = 'Data berkas untuk jenis pembayaran ini perlu ditinjau'
+
+export class OperationalKlasifikasiSelectionError extends Error {
+  constructor(
+    public readonly code: OperationalKlasifikasiSelectionErrorCode,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'OperationalKlasifikasiSelectionError'
+  }
+}
+
+export async function validateOperationalKlasifikasiSelection(
+  id: string,
+  repository: OperationalKlasifikasiSelectionRepository = defaultOperationalKlasifikasiSelectionRepository,
+): Promise<OperationalKlasifikasiSelection> {
+  const candidate = await repository.findKlasifikasiForOperationalSelection(id)
+
+  if (!candidate) {
+    throw new OperationalKlasifikasiSelectionError(
+      'KLASIFIKASI_NOT_FOUND',
+      'Klasifikasi tidak ditemukan.',
+    )
+  }
+
+  if (!candidate.isActive) {
+    throw new OperationalKlasifikasiSelectionError(
+      'KLASIFIKASI_INACTIVE',
+      'Klasifikasi tidak aktif.',
+    )
+  }
+
+  if (candidate.hasChildren) {
+    throw new OperationalKlasifikasiSelectionError(
+      'KLASIFIKASI_PARENT',
+      'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+    )
+  }
+
+  return {
+    id: candidate.id,
+    kode: candidate.kode,
+    nama: candidate.nama,
+  }
+}
 
 export function getKlasifikasiBerkasEligibility(
   rows: readonly KlasifikasiBerkasEligibilityRow[],
@@ -103,4 +167,41 @@ function groupBerkasRowsByKlasifikasiId(
   }
 
   return grouped
+}
+
+const defaultOperationalKlasifikasiSelectionRepository: OperationalKlasifikasiSelectionRepository = {
+  async findKlasifikasiForOperationalSelection(id) {
+    const [{ db }, { masterKlasifikasiArsip }, { eq }] = await Promise.all([
+      import('#/db/client'),
+      import('#/db/schema/arsip'),
+      import('drizzle-orm'),
+    ])
+
+    const [row] = await db
+      .select({
+        id: masterKlasifikasiArsip.id,
+        kode: masterKlasifikasiArsip.kode,
+        nama: masterKlasifikasiArsip.nama,
+        isActive: masterKlasifikasiArsip.isActive,
+      })
+      .from(masterKlasifikasiArsip)
+      .where(eq(masterKlasifikasiArsip.id, id))
+      .limit(1)
+
+    if (!row) return null
+
+    const [child] = await db
+      .select({ id: masterKlasifikasiArsip.id })
+      .from(masterKlasifikasiArsip)
+      .where(eq(masterKlasifikasiArsip.parentId, id))
+      .limit(1)
+
+    return {
+      id: row.id,
+      kode: row.kode,
+      nama: row.nama,
+      isActive: row.isActive,
+      hasChildren: Boolean(child),
+    }
+  },
 }

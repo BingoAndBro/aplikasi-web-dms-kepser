@@ -9,6 +9,11 @@ import {
 import {
   type BerkasActivityEventType,
 } from '#/lib/archive/berkas-arsip-activity'
+import {
+  OperationalKlasifikasiSelectionError,
+  validateOperationalKlasifikasiSelection,
+  type OperationalKlasifikasiSelectionRepository,
+} from '#/lib/archive/berkas-klasifikasi-eligibility'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import {
@@ -160,8 +165,7 @@ export type ActiveBerkasMetadataPlan = {
   masaInaktifBerakhir: string
 }
 
-export type BerkasArsipRepository = {
-  findActiveKlasifikasi(id: string): Promise<KlasifikasiSnapshot | null>
+export type BerkasArsipRepository = OperationalKlasifikasiSelectionRepository & {
   findBerkasByKlasifikasiId(klasifikasiId: string): Promise<BerkasRow[]>
   findOpenBerkasByKlasifikasiId(klasifikasiId: string): Promise<BerkasRow | null>
   insertOpenBerkas(input: {
@@ -202,6 +206,8 @@ export type BerkasArsipServiceDeps = {
 
 export type BerkasArsipErrorCode =
   | 'KLASIFIKASI_NOT_FOUND'
+  | 'KLASIFIKASI_INACTIVE'
+  | 'KLASIFIKASI_PARENT'
   | 'BERKAS_NOT_FOUND'
   | 'BERKAS_CLOSED'
   | 'BERKAS_KLASIFIKASI_CLOSED'
@@ -232,7 +238,10 @@ export async function findOpenBerkasForKlasifikasi(
   klasifikasiId: string,
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto | null> {
-  const row = await getRepository(deps).findOpenBerkasByKlasifikasiId(klasifikasiId)
+  const repository = getRepository(deps)
+  await validateKlasifikasiForOperationalSelection(klasifikasiId, repository)
+
+  const row = await repository.findOpenBerkasByKlasifikasiId(klasifikasiId)
   return row ? toBerkasDto(row) : null
 }
 
@@ -241,31 +250,14 @@ export async function createOpenBerkasForKlasifikasi(
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto> {
   const repository = getRepository(deps)
+  const klasifikasi = await validateKlasifikasiForOperationalSelection(input.klasifikasiId, repository)
   const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
   if (existing) return toBerkasDto(existing)
 
-  const klasifikasi = await repository.findActiveKlasifikasi(input.klasifikasiId)
-  if (!klasifikasi) {
-    throw new BerkasArsipServiceError('KLASIFIKASI_NOT_FOUND', 'Jenis pembayaran tidak ditemukan')
-  }
-
-  const row = await repository.insertOpenBerkas({
+  return toBerkasDto(await insertOpenBerkasWithActivity(repository, {
     klasifikasi,
     actorUserId: input.actorUserId,
-  })
-  await repository.appendBerkasActivity({
-    berkasId: row.id,
-    eventType: 'BERKAS_DIBUKA',
-    actorUserId: input.actorUserId,
-    metadataSnapshot: {
-      status_berkas: BERKAS_STATUS.OPEN,
-      status_arsip: null,
-      klasifikasi_kode_snapshot: row.klasifikasiKodeSnapshot,
-      klasifikasi_nama_snapshot: row.klasifikasiNamaSnapshot,
-    },
-  })
-
-  return toBerkasDto(row)
+  }))
 }
 
 export async function getOrCreateOpenBerkasForKlasifikasi(
@@ -273,11 +265,15 @@ export async function getOrCreateOpenBerkasForKlasifikasi(
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto> {
   const repository = getRepository(deps)
+  const klasifikasi = await validateKlasifikasiForOperationalSelection(input.klasifikasiId, repository)
   const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
   if (existing) return toBerkasDto(existing)
 
   try {
-    return await createOpenBerkasForKlasifikasi(input, { repository })
+    return toBerkasDto(await insertOpenBerkasWithActivity(repository, {
+      klasifikasi,
+      actorUserId: input.actorUserId,
+    }))
   } catch (error) {
     if (!isUniqueConflict(error)) throw error
 
@@ -568,22 +564,31 @@ export function buildCloseBerkasPlan(
 }
 
 const defaultBerkasArsipRepository: BerkasArsipRepository = {
-  async findActiveKlasifikasi(id) {
+  async findKlasifikasiForOperationalSelection(id) {
     const database = await getDatabase()
     const [row] = await database
       .select({
         id: masterKlasifikasiArsip.id,
         kode: masterKlasifikasiArsip.kode,
         nama: masterKlasifikasiArsip.nama,
+        isActive: masterKlasifikasiArsip.isActive,
       })
       .from(masterKlasifikasiArsip)
-      .where(and(
-        eq(masterKlasifikasiArsip.id, id),
-        eq(masterKlasifikasiArsip.isActive, true),
-      ))
+      .where(eq(masterKlasifikasiArsip.id, id))
       .limit(1)
 
-    return row ?? null
+    if (!row) return null
+
+    const [child] = await database
+      .select({ id: masterKlasifikasiArsip.id })
+      .from(masterKlasifikasiArsip)
+      .where(eq(masterKlasifikasiArsip.parentId, id))
+      .limit(1)
+
+    return {
+      ...row,
+      hasChildren: Boolean(child),
+    }
   },
 
   async findOpenBerkasByKlasifikasiId(klasifikasiId) {
@@ -779,6 +784,21 @@ function getRepository(deps: BerkasArsipServiceDeps): BerkasArsipRepository {
   return deps.repository ?? defaultBerkasArsipRepository
 }
 
+async function validateKlasifikasiForOperationalSelection(
+  klasifikasiId: string,
+  repository: BerkasArsipRepository,
+): Promise<KlasifikasiSnapshot> {
+  try {
+    return await validateOperationalKlasifikasiSelection(klasifikasiId, repository)
+  } catch (error) {
+    if (error instanceof OperationalKlasifikasiSelectionError) {
+      throw new BerkasArsipServiceError(error.code, error.message)
+    }
+
+    throw error
+  }
+}
+
 async function getDatabase() {
   const client = await import('#/db/client')
   return client.db
@@ -827,6 +847,29 @@ async function resolveExistingBerkasForKlasifikasi(
   }
 
   return null
+}
+
+async function insertOpenBerkasWithActivity(
+  repository: BerkasArsipRepository,
+  input: {
+    klasifikasi: KlasifikasiSnapshot
+    actorUserId: string
+  },
+): Promise<BerkasRow> {
+  const row = await repository.insertOpenBerkas(input)
+  await repository.appendBerkasActivity({
+    berkasId: row.id,
+    eventType: 'BERKAS_DIBUKA',
+    actorUserId: input.actorUserId,
+    metadataSnapshot: {
+      status_berkas: BERKAS_STATUS.OPEN,
+      status_arsip: null,
+      klasifikasi_kode_snapshot: row.klasifikasiKodeSnapshot,
+      klasifikasi_nama_snapshot: row.klasifikasiNamaSnapshot,
+    },
+  })
+
+  return row
 }
 
 async function insertBerkasItemSafely(

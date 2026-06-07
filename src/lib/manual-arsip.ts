@@ -27,6 +27,10 @@ import {
   getOrCreateOpenBerkasForKlasifikasi,
   type BerkasArsipRepository,
 } from '#/lib/archive/berkas-arsip-service'
+import {
+  OperationalKlasifikasiSelectionError,
+  validateOperationalKlasifikasiSelection,
+} from '#/lib/archive/berkas-klasifikasi-eligibility'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import type {
   CreateManualArsipInput,
@@ -230,10 +234,7 @@ export async function createManualArsipRecord(
     throw new ManualArsipApiError('Kategori dokumen tidak ditemukan', 400)
   }
 
-  const klasifikasi = await findActiveKlasifikasi(input.klasifikasi_id)
-  if (!klasifikasi) {
-    throw new ManualArsipApiError('Jenis pembayaran tidak ditemukan', 400)
-  }
+  const klasifikasi = await findOperationalKlasifikasi(input.klasifikasi_id)
 
   const retentionDates = getManualArchiveRetentionDates(input)
 
@@ -324,21 +325,30 @@ function createManualArchiveBerkasRepository(
   tx: ManualArsipTransaction,
 ): BerkasArsipRepository {
   return {
-    async findActiveKlasifikasi(id) {
+    async findKlasifikasiForOperationalSelection(id) {
       const [row] = await tx
         .select({
           id: masterKlasifikasiArsip.id,
           kode: masterKlasifikasiArsip.kode,
           nama: masterKlasifikasiArsip.nama,
+          isActive: masterKlasifikasiArsip.isActive,
         })
         .from(masterKlasifikasiArsip)
-        .where(and(
-          eq(masterKlasifikasiArsip.id, id),
-          eq(masterKlasifikasiArsip.isActive, true),
-        ))
+        .where(eq(masterKlasifikasiArsip.id, id))
         .limit(1)
 
-      return row ?? null
+      if (!row) return null
+
+      const [child] = await tx
+        .select({ id: masterKlasifikasiArsip.id })
+        .from(masterKlasifikasiArsip)
+        .where(eq(masterKlasifikasiArsip.parentId, id))
+        .limit(1)
+
+      return {
+        ...row,
+        hasChildren: Boolean(child),
+      }
     },
 
     async findOpenBerkasByKlasifikasiId(klasifikasiId) {
@@ -480,6 +490,8 @@ function createManualArchiveBerkasRepository(
 function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
   switch (error.code) {
     case 'KLASIFIKASI_NOT_FOUND':
+    case 'KLASIFIKASI_INACTIVE':
+    case 'KLASIFIKASI_PARENT':
     case 'SOURCE_KLASIFIKASI_MISMATCH':
     case 'INVALID_CLOSE_METADATA':
       return 400
@@ -665,10 +677,7 @@ export async function updateManualArsipRecord(
     throw new ManualArsipApiError('Kategori dokumen tidak ditemukan', 400)
   }
 
-  const klasifikasi = await findActiveKlasifikasi(input.klasifikasi_id)
-  if (!klasifikasi) {
-    throw new ManualArsipApiError('Jenis pembayaran tidak ditemukan', 400)
-  }
+  const klasifikasi = await findOperationalKlasifikasi(input.klasifikasi_id)
 
   const retentionDates = getManualArchiveRetentionDates(input)
 
@@ -948,21 +957,16 @@ async function findActiveManualArsipCategory(id: string): Promise<CategoryRow | 
   return row ?? null
 }
 
-async function findActiveKlasifikasi(id: string): Promise<KlasifikasiRow | null> {
-  const [row] = await db
-    .select({
-      id: masterKlasifikasiArsip.id,
-      nama: masterKlasifikasiArsip.nama,
-      kode: masterKlasifikasiArsip.kode,
-    })
-    .from(masterKlasifikasiArsip)
-    .where(and(
-      eq(masterKlasifikasiArsip.id, id),
-      eq(masterKlasifikasiArsip.isActive, true),
-    ))
-    .limit(1)
+async function findOperationalKlasifikasi(id: string): Promise<KlasifikasiRow> {
+  try {
+    return await validateOperationalKlasifikasiSelection(id)
+  } catch (error) {
+    if (error instanceof OperationalKlasifikasiSelectionError) {
+      throw new ManualArsipApiError(error.message, 400)
+    }
 
-  return row ?? null
+    throw error
+  }
 }
 
 function toManualArsipListItem(

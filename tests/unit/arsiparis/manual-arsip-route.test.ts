@@ -362,6 +362,32 @@ describe('manual arsip API foundation routes', () => {
     }
   })
 
+  it('rejects parent classification for manual document creation without DB writes', async () => {
+    queueSelectResults(
+      [manualCategoryRow()],
+      [klasifikasiRow()],
+      [klasifikasiChildRow()],
+    )
+
+    const response = await indexHandlers.POST({
+      request: createPostRequest(validCreateBody()),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body).toEqual({
+      error: 'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+    })
+    const bodyText = JSON.stringify(body)
+    expect(bodyText).not.toContain('select')
+    expect(bodyText).not.toContain('logical_path')
+    expect(bodyText).not.toContain('storage')
+    expect(bodyText).not.toContain('token')
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    expect(mocks.dbInsert).not.toHaveBeenCalled()
+    expect(mocks.txInsertValues).not.toHaveBeenCalled()
+  })
+
   it('rejects missing nominal_realisasi without a 500', async () => {
     const body = validCreateBody() as Record<string, unknown>
     delete body.nominal_realisasi
@@ -718,7 +744,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Jenis pembayaran tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Klasifikasi tidak ditemukan.' })
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 
@@ -1214,7 +1240,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Jenis pembayaran tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Klasifikasi tidak ditemukan.' })
     expect(mocks.dbUpdate).not.toHaveBeenCalled()
   })
 
@@ -2080,6 +2106,13 @@ function klasifikasiRow() {
     id: KLASIFIKASI_ID,
     nama: 'Klasifikasi A',
     kode: '001.02',
+    isActive: true,
+  }
+}
+
+function klasifikasiChildRow() {
+  return {
+    id: '66666666-6666-4666-8666-666666666666',
   }
 }
 
@@ -2321,8 +2354,9 @@ function queueManualArchiveCreateTransaction(options: {
     ? manualSourceRow()
     : options.manualSource
   const txSelectResults = [
+    [klasifikasiRow()],
+    [],
     options.existingOpenBerkas ? [options.existingOpenBerkas] : [],
-    ...(options.existingOpenBerkas ? [] : [[], [klasifikasiRow()]]),
     selectedOpenBerkas ? [selectedOpenBerkas] : [],
     selectedManualSource ? [selectedManualSource] : [],
   ]

@@ -177,6 +177,8 @@ describe('workflow classification to berkas route', () => {
     )
     queueSuccessfulTransaction({
       txSelectResults: [
+        [klasifikasiRow()],
+        [],
         [openBerkasRow()],
         [openBerkasRow()],
         [workflowSourceRow()],
@@ -213,6 +215,8 @@ describe('workflow classification to berkas route', () => {
     )
     queueSuccessfulTransaction({
       txSelectResults: [
+        [klasifikasiRow()],
+        [],
         [closedBerkasRow()],
       ],
     })
@@ -271,10 +275,12 @@ describe('workflow classification to berkas route', () => {
   })
 
   it('rejects inactive or missing classification without inserting berkas items', async () => {
-    queueSelectResults(
-      [dokumenRow()],
-      [],
-    )
+    queueSelectResults([dokumenRow()])
+    queueSuccessfulTransaction({
+      txSelectResults: [
+        [],
+      ],
+    })
 
     const response = await postHandler({
       request: createPostRequest(validArchiveBody()),
@@ -282,8 +288,37 @@ describe('workflow classification to berkas route', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Jenis pembayaran tidak ditemukan' })
-    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+    expect(await response.json()).toEqual({ error: 'Klasifikasi tidak ditemukan.' })
+    expect(mocks.dbTransaction).toHaveBeenCalledOnce()
+    expect(mocks.txInsertValues).not.toHaveBeenCalled()
+  })
+
+  it('rejects parent classification without creating berkas or item rows', async () => {
+    queueSelectResults([dokumenRow()])
+    queueSuccessfulTransaction({
+      txSelectResults: [
+        [klasifikasiRow()],
+        [klasifikasiChildRow()],
+      ],
+    })
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body).toEqual({
+      error: 'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+    })
+    const bodyText = JSON.stringify(body)
+    expect(bodyText).not.toContain('select')
+    expect(bodyText).not.toContain('logical_path')
+    expect(bodyText).not.toContain('storage')
+    expect(bodyText).not.toContain('token')
+    expect(mocks.txInsertValues).not.toHaveBeenCalled()
+    expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects ARCHIVED documents with already-archived copy before archive writes', async () => {
@@ -394,6 +429,13 @@ function klasifikasiRow() {
     id: KLASIFIKASI_ID,
     kode: 'KA.01',
     nama: 'Keuangan',
+    isActive: true,
+  }
+}
+
+function klasifikasiChildRow() {
+  return {
+    id: '66666666-6666-4666-8666-666666666666',
   }
 }
 
@@ -423,9 +465,9 @@ function queueSuccessfulTransaction(options: {
   mocks.dbTransaction.mockImplementation(async (operation: (tx: unknown) => Promise<unknown>) => {
     let txInsertCall = 0
     const txSelectResults = [...(options.txSelectResults ?? [
-      [],
-      [],
       [klasifikasiRow()],
+      [],
+      [],
       [openBerkasRow()],
       [workflowSourceRow()],
     ])]

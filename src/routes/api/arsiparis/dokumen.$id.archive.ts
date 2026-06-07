@@ -101,37 +101,11 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
         if (dok.status === 'ARCHIVED') return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
         if (dok.status !== 'COMPLETED') return Response.json({ error: 'Dokumen belum berada di tahap final' }, { status: 400 })
 
-        let klasifikasiRows: Array<{
-          id: string
-          kode: string | null
-          nama: string
-        }>
-        try {
-          klasifikasiRows = await db
-            .select({
-              id: masterKlasifikasiArsip.id,
-              kode: masterKlasifikasiArsip.kode,
-              nama: masterKlasifikasiArsip.nama,
-            })
-            .from(masterKlasifikasiArsip)
-            .where(and(
-              eq(masterKlasifikasiArsip.id, data.klasifikasi_id),
-              eq(masterKlasifikasiArsip.isActive, true),
-            ))
-            .limit(1)
-        } catch (err) {
-          console.error('[archive] klasifikasi lookup error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
-        }
-
-        const klasifikasi = klasifikasiRows[0]
-        if (!klasifikasi) return Response.json({ error: 'Jenis pembayaran tidak ditemukan' }, { status: 400 })
-
         try {
           await db.transaction(async (tx) => {
-            const berkasRepository = createWorkflowArchiveBerkasRepository(tx, klasifikasi.id)
+            const berkasRepository = createWorkflowArchiveBerkasRepository(tx, data.klasifikasi_id)
             const openBerkas = await getOrCreateOpenBerkasForKlasifikasi({
-              klasifikasiId: klasifikasi.id,
+              klasifikasiId: data.klasifikasi_id,
               actorUserId: session.user.id,
             }, { repository: berkasRepository })
 
@@ -166,21 +140,30 @@ function createWorkflowArchiveBerkasRepository(
   workflowKlasifikasiId: string,
 ): BerkasArsipRepository {
   return {
-    async findActiveKlasifikasi(id) {
+    async findKlasifikasiForOperationalSelection(id) {
       const [row] = await tx
         .select({
           id: masterKlasifikasiArsip.id,
           kode: masterKlasifikasiArsip.kode,
           nama: masterKlasifikasiArsip.nama,
+          isActive: masterKlasifikasiArsip.isActive,
         })
         .from(masterKlasifikasiArsip)
-        .where(and(
-          eq(masterKlasifikasiArsip.id, id),
-          eq(masterKlasifikasiArsip.isActive, true),
-        ))
+        .where(eq(masterKlasifikasiArsip.id, id))
         .limit(1)
 
-      return row ?? null
+      if (!row) return null
+
+      const [child] = await tx
+        .select({ id: masterKlasifikasiArsip.id })
+        .from(masterKlasifikasiArsip)
+        .where(eq(masterKlasifikasiArsip.parentId, id))
+        .limit(1)
+
+      return {
+        ...row,
+        hasChildren: Boolean(child),
+      }
     },
 
     async findOpenBerkasByKlasifikasiId(klasifikasiId) {
@@ -322,6 +305,8 @@ function createWorkflowArchiveBerkasRepository(
 function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
   switch (error.code) {
     case 'KLASIFIKASI_NOT_FOUND':
+    case 'KLASIFIKASI_INACTIVE':
+    case 'KLASIFIKASI_PARENT':
     case 'SOURCE_KLASIFIKASI_MISMATCH':
     case 'INVALID_CLOSE_METADATA':
       return 400

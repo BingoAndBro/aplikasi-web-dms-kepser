@@ -80,6 +80,8 @@ export function berkasArsipErrorResponse(error: unknown): Response {
 function statusForServiceError(error: BerkasArsipServiceError): number {
   switch (error.code) {
     case 'KLASIFIKASI_NOT_FOUND':
+    case 'KLASIFIKASI_INACTIVE':
+    case 'KLASIFIKASI_PARENT':
     case 'SOURCE_KLASIFIKASI_MISMATCH':
     case 'INVALID_CLOSE_METADATA':
       return 400

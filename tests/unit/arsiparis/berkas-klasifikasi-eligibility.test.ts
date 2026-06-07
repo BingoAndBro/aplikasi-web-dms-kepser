@@ -3,9 +3,88 @@ import { describe, expect, it } from 'vitest'
 import {
   filterKlasifikasiTreeForBerkasSelection,
   getKlasifikasiBerkasEligibility,
+  OperationalKlasifikasiSelectionError,
+  validateOperationalKlasifikasiSelection,
 } from '#/lib/archive/berkas-klasifikasi-eligibility'
 
 describe('berkas klasifikasi eligibility helper', () => {
+  it('accepts active leaf classification for operational selection', async () => {
+    await expect(validateOperationalKlasifikasiSelection('active-leaf', {
+      async findKlasifikasiForOperationalSelection(id) {
+        return {
+          id,
+          kode: '001.01',
+          nama: 'Leaf',
+          isActive: true,
+          hasChildren: false,
+        }
+      },
+    })).resolves.toEqual({
+      id: 'active-leaf',
+      kode: '001.01',
+      nama: 'Leaf',
+    })
+  })
+
+  it('rejects parent classifications for operational selection', async () => {
+    await expect(validateOperationalKlasifikasiSelection('active-parent', {
+      async findKlasifikasiForOperationalSelection(id) {
+        return {
+          id,
+          kode: '001',
+          nama: 'Parent',
+          isActive: true,
+          hasChildren: true,
+        }
+      },
+    })).rejects.toMatchObject({
+      code: 'KLASIFIKASI_PARENT',
+      message: 'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+    })
+  })
+
+  it('rejects inactive leaf classifications for operational selection', async () => {
+    await expect(validateOperationalKlasifikasiSelection('inactive-leaf', {
+      async findKlasifikasiForOperationalSelection(id) {
+        return {
+          id,
+          kode: '001.02',
+          nama: 'Inactive Leaf',
+          isActive: false,
+          hasChildren: false,
+        }
+      },
+    })).rejects.toMatchObject({
+      code: 'KLASIFIKASI_INACTIVE',
+      message: 'Klasifikasi tidak aktif.',
+    })
+  })
+
+  it('treats a parent with inactive child rows as non-selectable', async () => {
+    await expect(validateOperationalKlasifikasiSelection('parent-with-inactive-child', {
+      async findKlasifikasiForOperationalSelection(id) {
+        return {
+          id,
+          kode: '002',
+          nama: 'Parent With Inactive Child',
+          isActive: true,
+          hasChildren: true,
+        }
+      },
+    })).rejects.toBeInstanceOf(OperationalKlasifikasiSelectionError)
+  })
+
+  it('rejects missing classifications for operational selection', async () => {
+    await expect(validateOperationalKlasifikasiSelection('missing', {
+      async findKlasifikasiForOperationalSelection() {
+        return null
+      },
+    })).rejects.toMatchObject({
+      code: 'KLASIFIKASI_NOT_FOUND',
+      message: 'Klasifikasi tidak ditemukan.',
+    })
+  })
+
   it('includes classifications with no existing berkas', () => {
     expect(getKlasifikasiBerkasEligibility([])).toMatchObject({
       is_selectable: true,

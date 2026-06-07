@@ -36,8 +36,8 @@ describe('berkas arsip service foundation', () => {
       status_berkas: 'OPEN',
       created_by: ACTOR_ID,
     })
+    expect(repository.calls).toContainEqual(['findKlasifikasiForOperationalSelection', KLASIFIKASI_ID])
     expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID])
-    expect(repository.calls).toContainEqual(['findActiveKlasifikasi', KLASIFIKASI_ID])
     expect(repository.calls).toContainEqual(['insertOpenBerkas', KLASIFIKASI_ID, 'BB', 'Belanja Barang'])
     expect(repository.calls).toContainEqual([
       'appendBerkasActivity',
@@ -61,7 +61,27 @@ describe('berkas arsip service foundation', () => {
     }, { repository })
 
     expect(berkas.id).toBe(BERKAS_ID)
+    expect(repository.calls).toContainEqual(['findKlasifikasiForOperationalSelection', KLASIFIKASI_ID])
     expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID])
+    expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
+  })
+
+  it('rejects an existing OPEN berkas when its classification is no longer an operational leaf', async () => {
+    const repository = createFakeRepository({
+      existingBerkasRows: [openBerkas()],
+      klasifikasiHasChildren: true,
+    })
+
+    await expect(getOrCreateOpenBerkasForKlasifikasi({
+      klasifikasiId: KLASIFIKASI_ID,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      code: 'KLASIFIKASI_PARENT',
+      message: 'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+    })
+
+    expect(repository.calls).toContainEqual(['findKlasifikasiForOperationalSelection', KLASIFIKASI_ID])
+    expect(repository.calls.some(([name]) => name === 'findBerkasByKlasifikasiId')).toBe(false)
     expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
   })
 
@@ -108,7 +128,7 @@ describe('berkas arsip service foundation', () => {
     }, { repository })
 
     expect(berkas.id).toBe(BERKAS_ID)
-    expect(repository.calls.filter(([name]) => name === 'findBerkasByKlasifikasiId')).toHaveLength(3)
+    expect(repository.calls.filter(([name]) => name === 'findBerkasByKlasifikasiId')).toHaveLength(2)
   })
 
   it('rejects adding a workflow document to a CLOSED berkas', async () => {
@@ -578,6 +598,8 @@ function createFakeRepository(options: {
   itemCount?: number
   workflowKlasifikasiId?: string | null
   manualKlasifikasiId?: string | null
+  klasifikasiIsActive?: boolean
+  klasifikasiHasChildren?: boolean
   existingBerkasRows?: ReturnType<typeof baseBerkas>[]
   insertOpenBerkasError?: unknown
   insertBerkasItemError?: unknown
@@ -589,13 +611,15 @@ function createFakeRepository(options: {
 
   return {
     calls,
-    async findActiveKlasifikasi(id) {
-      calls.push(['findActiveKlasifikasi', id])
+    async findKlasifikasiForOperationalSelection(id) {
+      calls.push(['findKlasifikasiForOperationalSelection', id])
       if (id !== KLASIFIKASI_ID) return null
       return {
         id,
         kode: 'BB',
         nama: 'Belanja Barang',
+        isActive: options.klasifikasiIsActive ?? true,
+        hasChildren: options.klasifikasiHasChildren ?? false,
       }
     },
     async findOpenBerkasByKlasifikasiId(klasifikasiId) {
@@ -610,7 +634,7 @@ function createFakeRepository(options: {
       calls.push(['findBerkasByKlasifikasiId', klasifikasiId])
       openLookupCount += 1
       if (options.existingBerkasRows) return options.existingBerkasRows
-      if (options.openAfterConflict && openLookupCount > 2) return [openBerkas()]
+      if (options.openAfterConflict && openLookupCount > 1) return [openBerkas()]
       return []
     },
     async insertOpenBerkas(input) {
