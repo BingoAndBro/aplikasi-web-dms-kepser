@@ -79,7 +79,7 @@ describe('arsiparis klasifikasi update route', () => {
 
     expect(response.status).toBe(403)
     expect(await response.json()).toEqual({
-      error: 'Hanya Kepala Sub Bagian Umum yang bisa menghapus klasifikasi',
+      error: 'Hanya Kepala Sub Bagian Umum yang bisa menonaktifkan klasifikasi',
     })
     expect(mocks.dbSelect).not.toHaveBeenCalled()
     expect(mocks.dbUpdate).not.toHaveBeenCalled()
@@ -187,6 +187,101 @@ describe('arsiparis klasifikasi update route', () => {
     expect(response.status).toBe(500)
     expect(await response.json()).toEqual({ error: 'Gagal memperbarui klasifikasi' })
   })
+
+  it('reactivates an inactive classification when parent chain is active', async () => {
+    queueSelectResults([{ ...currentKlasifikasi(), is_active: false, parent_id: 'active-parent' }], [activeParent()])
+    queueUpdateResult([{ ...currentKlasifikasi(), is_active: true, parent_id: 'active-parent' }])
+
+    const response = await patchHandler({
+      request: createPatchRequest({ is_active: true }),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      id: CURRENT_ID,
+      is_active: true,
+    })
+    expect(mocks.dbUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects reactivation when parent chain is inactive', async () => {
+    queueSelectResults([{ ...currentKlasifikasi(), is_active: false, parent_id: 'inactive-parent' }], [inactiveParent()])
+
+    const response = await patchHandler({
+      request: createPatchRequest({ is_active: true }),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Klasifikasi tidak dapat diaktifkan karena induknya masih nonaktif.',
+    })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects PATCH deactivation so delete safety cannot be bypassed', async () => {
+    queueSelectResults([currentKlasifikasi()])
+
+    const response = await patchHandler({
+      request: createPatchRequest({ is_active: false }),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Gunakan Nonaktifkan Klasifikasi.' })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects nonactivation for a parent with active children', async () => {
+    queueSelectResults([currentKlasifikasi()], [{ id: 'active-child' }])
+
+    const response = await deleteHandler({
+      request: createDeleteRequest(),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({
+      error: 'Klasifikasi induk masih memiliki sub-klasifikasi aktif.',
+    })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('soft deactivates only the selected active classification when no active child exists', async () => {
+    queueSelectResults([currentKlasifikasi()], [])
+    queueUpdateResult([])
+
+    const response = await deleteHandler({
+      request: createDeleteRequest(),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      message: 'Klasifikasi berhasil dinonaktifkan.',
+    })
+    expect(mocks.dbUpdate).toHaveBeenCalledTimes(1)
+    const updateBuilder = mocks.dbUpdate.mock.results[0].value as { set: ReturnType<typeof vi.fn> }
+    expect(updateBuilder.set).toHaveBeenCalledWith({ isActive: false })
+  })
+
+  it('keeps nonactivation idempotent for already inactive classifications', async () => {
+    queueSelectResults([{ ...currentKlasifikasi(), is_active: false }])
+
+    const response = await deleteHandler({
+      request: createDeleteRequest(),
+      params: { id: CURRENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      message: 'Klasifikasi berhasil dinonaktifkan.',
+    })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
 })
 
 function createSession(roles = ['KEPALA_SUB_BAGIAN_UMUM']) {
@@ -212,6 +307,22 @@ function currentKlasifikasi() {
     is_active: true,
     created_at: '2026-05-22T00:00:00.000Z',
     parent_id: null,
+  }
+}
+
+function activeParent() {
+  return {
+    id: 'active-parent',
+    parent_id: null,
+    is_active: true,
+  }
+}
+
+function inactiveParent() {
+  return {
+    id: 'inactive-parent',
+    parent_id: null,
+    is_active: false,
   }
 }
 

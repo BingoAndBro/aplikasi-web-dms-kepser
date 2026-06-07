@@ -16,6 +16,7 @@ export type KlasifikasiNode = {
   deskripsi: string | null
   parent_id: string | null
   created_at: string
+  is_active: boolean
   is_root: boolean
   children: KlasifikasiNode[]
 }
@@ -129,7 +130,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
         try {
           const url = new URL(request.url)
           const eligibleForBerkas = url.searchParams.get('eligible_for_berkas') === 'true'
-          const data = await db
+          const baseQuery = db
             .select({
               id: masterKlasifikasiArsip.id,
               nama: masterKlasifikasiArsip.nama,
@@ -137,10 +138,15 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
               deskripsi: masterKlasifikasiArsip.deskripsi,
               parent_id: masterKlasifikasiArsip.parentId,
               created_at: masterKlasifikasiArsip.createdAt,
+              is_active: masterKlasifikasiArsip.isActive,
             })
             .from(masterKlasifikasiArsip)
-            .where(eq(masterKlasifikasiArsip.isActive, true))
-            .orderBy(asc(masterKlasifikasiArsip.nama))
+
+          const data = eligibleForBerkas
+            ? await baseQuery
+              .where(eq(masterKlasifikasiArsip.isActive, true))
+              .orderBy(asc(masterKlasifikasiArsip.nama))
+            : await baseQuery.orderBy(asc(masterKlasifikasiArsip.nama))
 
           const itemsWithRoot = data.map(item => ({
             ...item,

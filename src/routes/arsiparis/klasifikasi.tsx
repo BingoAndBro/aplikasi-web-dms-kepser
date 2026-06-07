@@ -16,6 +16,7 @@ import {
   Network,
   Pencil,
   Plus,
+  RotateCcw,
   SquarePlus,
   X,
 } from 'lucide-react'
@@ -266,12 +267,14 @@ function KlasifikasiDetail({
   node,
   onEdit,
   onDelete,
+  onActivate,
   onAddChild,
   breadcrumb,
 }: {
   node: KlasifikasiNode | null
   onEdit: (node: KlasifikasiNode) => void
   onDelete: (node: KlasifikasiNode) => void
+  onActivate: (node: KlasifikasiNode) => void
   onAddChild: (node: KlasifikasiNode) => void
   breadcrumb: string[]
 }) {
@@ -391,15 +394,27 @@ function KlasifikasiDetail({
           )}
         </div>
         {!node.is_root && (
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-10 w-full gap-1 rounded-xl border-rose-200/70 bg-rose-50 text-[10px] font-black uppercase tracking-[0.14em] text-rose-700 hover:bg-rose-100 hover:text-rose-800"
-            onClick={() => onDelete(node)}
-            title={isParent ? 'Endpoint saat ini menonaktifkan node dan turunannya; safety backend diperketat pada fase berikutnya.' : 'Nonaktifkan klasifikasi'}
-          >
-            <Ban size={13} /> Nonaktifkan Klasifikasi
-          </Button>
+          active ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-10 w-full gap-1 rounded-xl border-rose-200/70 bg-rose-50 text-[10px] font-black uppercase tracking-[0.14em] text-rose-700 hover:bg-rose-100 hover:text-rose-800"
+              onClick={() => onDelete(node)}
+              title={isParent ? 'Klasifikasi induk hanya bisa dinonaktifkan jika tidak memiliki sub-klasifikasi aktif.' : 'Nonaktifkan klasifikasi'}
+            >
+              <Ban size={13} /> Nonaktifkan Klasifikasi
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-10 w-full gap-1 rounded-xl border-emerald-200/80 bg-emerald-50 text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+              onClick={() => onActivate(node)}
+              title="Aktifkan kembali klasifikasi jika induknya aktif."
+            >
+              <RotateCcw size={13} /> Aktifkan Kembali
+            </Button>
+          )
         )}
       </div>
     </div>
@@ -719,7 +734,7 @@ function NonaktifkanKlasifikasiModal({
           </span>
           <div>
             <p className="font-headline text-lg font-extrabold text-zinc-950">Nonaktifkan Klasifikasi?</p>
-            <p className="text-xs font-medium text-zinc-600">Aksi memakai endpoint soft deactivate saat ini.</p>
+            <p className="text-xs font-medium text-zinc-600">Aksi ini tidak menghapus permanen data klasifikasi.</p>
           </div>
         </div>
         <div className="space-y-4 p-5">
@@ -728,7 +743,7 @@ function NonaktifkanKlasifikasiModal({
           </p>
           {hasChildren && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-relaxed text-amber-900">
-              Klasifikasi Induk memiliki sub-klasifikasi. Backend safety akan diperketat pada fase 15L.3D.4; perilaku endpoint saat ini tetap dipertahankan.
+              Klasifikasi Induk dengan sub-klasifikasi aktif tidak dapat dinonaktifkan tanpa menonaktifkan sub-klasifikasi tersebut terlebih dahulu.
             </div>
           )}
           {error && <p className="text-xs font-semibold text-error">{error}</p>}
@@ -737,6 +752,78 @@ function NonaktifkanKlasifikasiModal({
             <Button variant="destructive" className="flex-1 gap-1.5" onClick={handleDeactivate} disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
               Nonaktifkan
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AktifkanKlasifikasiModal({
+  isOpen,
+  onClose,
+  node,
+  onSuccess,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  node: KlasifikasiNode | null
+  onSuccess: () => void | Promise<void>
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      setError(null)
+      setLoading(false)
+    }
+  }, [isOpen, node])
+
+  async function handleActivate() {
+    if (!node) return
+    setLoading(true)
+    setError(null)
+    try {
+      await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
+        method: 'PATCH',
+        body: { is_active: true },
+      })
+      await onSuccess()
+      onClose()
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Terjadi kesalahan'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl bg-[#FFFAF6] shadow-2xl">
+        <div className="flex items-center gap-3 border-b border-[#F1E5DA] px-5 py-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700">
+            <RotateCcw size={18} />
+          </span>
+          <div>
+            <p className="font-headline text-lg font-extrabold text-zinc-950">Aktifkan Kembali?</p>
+            <p className="text-xs font-medium text-zinc-600">Klasifikasi hanya dapat aktif jika rantai induknya aktif.</p>
+          </div>
+        </div>
+        <div className="space-y-4 p-5">
+          <p className="text-sm font-medium leading-relaxed text-zinc-700">
+            Klasifikasi <strong className="text-zinc-950">"{node?.nama}"</strong> akan diaktifkan kembali. Anak klasifikasi tidak diaktifkan otomatis.
+          </p>
+          {error && <p className="text-xs font-semibold text-error">{error}</p>}
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batal</Button>
+            <Button className="flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleActivate} disabled={loading}>
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+              Aktifkan
             </Button>
           </div>
         </div>
@@ -838,6 +925,7 @@ function KlasifikasiPage() {
   const [addParentNode, setAddParentNode] = useState<KlasifikasiNode | null>(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deactivateModalOpen, setDeactivateModalOpen] = useState(false)
+  const [activateModalOpen, setActivateModalOpen] = useState(false)
 
   const fetchData = useCallback(async (): Promise<KlasifikasiNode[] | null> => {
     setLoading(true)
@@ -883,6 +971,11 @@ function KlasifikasiPage() {
   function openDeactivate(node: KlasifikasiNode) {
     setSelectedNode(node)
     setDeactivateModalOpen(true)
+  }
+
+  function openActivate(node: KlasifikasiNode) {
+    setSelectedNode(node)
+    setActivateModalOpen(true)
   }
 
   async function handleModalSuccess() {
@@ -988,6 +1081,7 @@ function KlasifikasiPage() {
                 node={selectedNode}
                 onEdit={openEdit}
                 onDelete={openDeactivate}
+                onActivate={openActivate}
                 onAddChild={openAddChild}
                 breadcrumb={breadcrumb}
               />
@@ -1013,10 +1107,14 @@ function KlasifikasiPage() {
           isOpen={deactivateModalOpen}
           onClose={() => setDeactivateModalOpen(false)}
           node={selectedNode}
-          onSuccess={async () => {
-            await handleModalSuccess()
-            setSelectedNode(null)
-          }}
+          onSuccess={handleModalSuccess}
+        />
+
+        <AktifkanKlasifikasiModal
+          isOpen={activateModalOpen}
+          onClose={() => setActivateModalOpen(false)}
+          node={selectedNode}
+          onSuccess={handleModalSuccess}
         />
       </div>
     </PageLayout>

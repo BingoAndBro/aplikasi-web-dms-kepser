@@ -26,10 +26,16 @@ describe('Master Klasifikasi Arsip UI source guard', () => {
   it('uses soft deactivate wording instead of hard delete wording', () => {
     expect(source).toContain('Nonaktifkan Klasifikasi?')
     expect(source).toContain('Nonaktifkan')
-    expect(source).toContain('soft deactivate')
+    expect(source).toContain('tidak menghapus permanen')
     expect(source).not.toContain('Hapus Klasifikasi')
     expect(source).not.toContain('Hapus Klasifikasi?')
     expect(source).not.toContain('Hapus permanen')
+  })
+
+  it('offers explicit reactivation for inactive classifications', () => {
+    expect(source).toContain('Aktifkan Kembali')
+    expect(source).toContain('body: { is_active: true }')
+    expect(source).toContain('Klasifikasi hanya dapat aktif jika rantai induknya aktif')
   })
 
   it('keeps prototype-style add-child shortcuts and single detail panel metadata', () => {

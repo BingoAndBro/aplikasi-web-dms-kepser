@@ -174,7 +174,7 @@ describe('arsiparis klasifikasi create route', () => {
     expect(await response.json()).toEqual({ error: 'Gagal membuat klasifikasi' })
   })
 
-  it('returns all active classifications by default for master-data use', async () => {
+  it('returns active and inactive classifications by default for management use', async () => {
     queueSelectResults(klasifikasiRows())
 
     const response = await getHandler({
@@ -184,15 +184,17 @@ describe('arsiparis klasifikasi create route', () => {
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body.klasifikasi[0].children.map((node: { id: string }) => node.id)).toEqual([
+      'inactive-leaf',
       'new-leaf',
       'closed-leaf',
       'open-leaf',
     ])
+    expect(body.klasifikasi[0].children[0].is_active).toBe(false)
   })
 
   it('filters Jenis Pembayaran options for berkas selection eligibility', async () => {
     queueSelectResults(
-      klasifikasiRows(),
+      activeKlasifikasiRows(),
       [
         { klasifikasi_id: 'closed-leaf', status_berkas: 'CLOSED', status_arsip: 'AKTIF' },
         { klasifikasi_id: 'open-leaf', status_berkas: 'OPEN', status_arsip: null },
@@ -248,6 +250,16 @@ function klasifikasiRows() {
       deskripsi: null,
       parent_id: null,
       created_at: '2026-05-22T00:00:00.000Z',
+      is_active: true,
+    },
+    {
+      id: 'inactive-leaf',
+      nama: 'Jenis Nonaktif',
+      kode: '000.5',
+      deskripsi: null,
+      parent_id: 'root',
+      created_at: '2026-05-22T00:00:00.000Z',
+      is_active: false,
     },
     {
       id: 'new-leaf',
@@ -256,6 +268,7 @@ function klasifikasiRows() {
       deskripsi: null,
       parent_id: 'root',
       created_at: '2026-05-22T00:00:00.000Z',
+      is_active: true,
     },
     {
       id: 'closed-leaf',
@@ -264,6 +277,7 @@ function klasifikasiRows() {
       deskripsi: null,
       parent_id: 'root',
       created_at: '2026-05-22T00:00:00.000Z',
+      is_active: true,
     },
     {
       id: 'open-leaf',
@@ -272,8 +286,13 @@ function klasifikasiRows() {
       deskripsi: null,
       parent_id: 'root',
       created_at: '2026-05-22T00:00:00.000Z',
+      is_active: true,
     },
   ]
+}
+
+function activeKlasifikasiRows() {
+  return klasifikasiRows().filter(row => row.is_active)
 }
 
 function createPostRequest(body: Record<string, unknown>) {

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { and, eq, inArray, ne } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterKlasifikasiArsip } from '#/db/schema/arsip'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
@@ -17,9 +17,10 @@ const updateKlasifikasiSchema = z.object({
   deskripsi: z.string().nullable().optional(),
   kode: z.string().min(1).max(50).optional(),
   parent_id: z.string().uuid().nullable().optional(),
+  is_active: z.boolean().optional(),
 })
 
-async function requireKepalaSubBagianUmum(request: Request, action: 'mengubah' | 'menghapus') {
+async function requireKepalaSubBagianUmum(request: Request, action: 'mengubah' | 'menonaktifkan') {
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
@@ -79,7 +80,7 @@ function toSafeErrorLog(error: unknown, conflictType?: UniqueViolationField): Re
   }
 }
 
-// Helper: get all descendant IDs of a node (for cascade soft delete)
+// Helper: get all active descendant IDs of a node for circular reference checks.
 async function getDescendantIds(nodeId: string): Promise<string[]> {
   const descendants: string[] = []
   const queue = [nodeId]
@@ -103,6 +104,41 @@ async function getDescendantIds(nodeId: string): Promise<string[]> {
   }
 
   return descendants
+}
+
+async function hasActiveChildren(nodeId: string): Promise<boolean> {
+  const [child] = await db
+    .select({ id: masterKlasifikasiArsip.id })
+    .from(masterKlasifikasiArsip)
+    .where(and(
+      eq(masterKlasifikasiArsip.parentId, nodeId),
+      eq(masterKlasifikasiArsip.isActive, true),
+    ))
+    .limit(1)
+
+  return Boolean(child)
+}
+
+async function hasInactiveParentInChain(parentId: string | null): Promise<boolean> {
+  let currentParentId = parentId
+
+  while (currentParentId) {
+    const [parent] = await db
+      .select({
+        id: masterKlasifikasiArsip.id,
+        parent_id: masterKlasifikasiArsip.parentId,
+        is_active: masterKlasifikasiArsip.isActive,
+      })
+      .from(masterKlasifikasiArsip)
+      .where(eq(masterKlasifikasiArsip.id, currentParentId))
+      .limit(1)
+
+    if (!parent) return true
+    if (!parent.is_active) return true
+    currentParentId = parent.parent_id
+  }
+
+  return false
 }
 
 // Helper: check if targetId is a descendant of ancestorId
@@ -133,21 +169,34 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
               id: masterKlasifikasiArsip.id,
               nama: masterKlasifikasiArsip.nama,
               kode: masterKlasifikasiArsip.kode,
+              parent_id: masterKlasifikasiArsip.parentId,
+              is_active: masterKlasifikasiArsip.isActive,
             })
             .from(masterKlasifikasiArsip)
-            .where(and(
-              eq(masterKlasifikasiArsip.id, params.id),
-              eq(masterKlasifikasiArsip.isActive, true),
-            ))
+            .where(eq(masterKlasifikasiArsip.id, params.id))
             .limit(1)
 
-          if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
+          if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan.' }, { status: 404 })
+
+          if (parsed.data.is_active === false) {
+            return Response.json({ error: 'Gunakan Nonaktifkan Klasifikasi.' }, { status: 400 })
+          }
 
           // Prevent modifying root "000"
           if (existing.kode === '000') {
-            // Only allow updating deskripsi for root
-            if (parsed.data.nama || parsed.data.kode || parsed.data.parent_id !== undefined) {
+            // Only allow updating deskripsi for root.
+            if (parsed.data.nama || parsed.data.kode || parsed.data.parent_id !== undefined || parsed.data.is_active !== undefined) {
               return Response.json({ error: 'Klasifikasi root tidak bisa diubah' }, { status: 403 })
+            }
+          }
+
+          if (parsed.data.is_active === true && !existing.is_active) {
+            const parentBlocked = await hasInactiveParentInChain(existing.parent_id)
+            if (parentBlocked) {
+              return Response.json(
+                { error: 'Klasifikasi tidak dapat diaktifkan karena induknya masih nonaktif.' },
+                { status: 409 },
+              )
             }
           }
 
@@ -219,6 +268,7 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
           if (parsed.data.deskripsi !== undefined) updateData.deskripsi = parsed.data.deskripsi
           if (parsed.data.kode !== undefined) updateData.kode = parsed.data.kode
           if (parsed.data.parent_id !== undefined) updateData.parentId = parsed.data.parent_id
+          if (parsed.data.is_active === true) updateData.isActive = true
 
           const [data] = await db
             .update(masterKlasifikasiArsip)
@@ -252,48 +302,55 @@ export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
       DELETE: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const sameOriginError = requireSameOrigin(request)
         if (sameOriginError) return sameOriginError
-        const authError = await requireKepalaSubBagianUmum(request, 'menghapus')
+        const authError = await requireKepalaSubBagianUmum(request, 'menonaktifkan')
         if (authError) return authError
 
         try {
           // Verify exists and check if root
           const [existing] = await db
-            .select({ id: masterKlasifikasiArsip.id, kode: masterKlasifikasiArsip.kode })
+            .select({
+              id: masterKlasifikasiArsip.id,
+              kode: masterKlasifikasiArsip.kode,
+              is_active: masterKlasifikasiArsip.isActive,
+            })
             .from(masterKlasifikasiArsip)
-            .where(and(
-              eq(masterKlasifikasiArsip.id, params.id),
-              eq(masterKlasifikasiArsip.isActive, true),
-            ))
+            .where(eq(masterKlasifikasiArsip.id, params.id))
             .limit(1)
 
-          if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan' }, { status: 404 })
+          if (!existing) return Response.json({ error: 'Klasifikasi tidak ditemukan.' }, { status: 404 })
 
           // Prevent deleting root "000"
           if (existing.kode === '000') {
-            return Response.json({ error: 'Klasifikasi root tidak bisa dihapus' }, { status: 403 })
+            return Response.json({ error: 'Klasifikasi root tidak bisa dinonaktifkan' }, { status: 403 })
           }
 
-          // Get all descendants to cascade soft delete
-          const descendantIds = await getDescendantIds(params.id)
-          const allIdsToDelete = [params.id, ...descendantIds]
+          if (!existing.is_active) {
+            return Response.json({
+              success: true,
+              message: 'Klasifikasi berhasil dinonaktifkan.',
+            })
+          }
 
-          // Soft delete all
+          if (await hasActiveChildren(params.id)) {
+            return Response.json(
+              { error: 'Klasifikasi induk masih memiliki sub-klasifikasi aktif.' },
+              { status: 409 },
+            )
+          }
+
+          // Soft deactivate only the selected classification. No cascade and no hard delete.
           await db
             .update(masterKlasifikasiArsip)
             .set({ isActive: false })
-            .where(inArray(masterKlasifikasiArsip.id, allIdsToDelete))
+            .where(eq(masterKlasifikasiArsip.id, params.id))
 
-          const deletedCount = allIdsToDelete.length
           return Response.json({
             success: true,
-            message: deletedCount > 1
-              ? `Klasifikasi dan ${deletedCount - 1} subclass berhasil dinonaktifkan`
-              : 'Klasifikasi berhasil dinonaktifkan',
-            deleted_count: deletedCount,
+            message: 'Klasifikasi berhasil dinonaktifkan.',
           })
         } catch (err) {
-          console.error('[arsiparis/klasifikasi/$id] DELETE local query error:', err)
-          return Response.json({ error: 'Gagal menghapus klasifikasi' }, { status: 500 })
+          console.error('[arsiparis/klasifikasi/$id] DELETE local query error:', toSafeErrorLog(err))
+          return Response.json({ error: 'Gagal menonaktifkan klasifikasi' }, { status: 500 })
         }
       },
     },
