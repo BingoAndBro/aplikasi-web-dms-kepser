@@ -54,7 +54,7 @@ type SortOrder = 'newest' | 'oldest' | 'nominal_desc' | 'nominal_asc'
 
 const SOURCE_FILTER_OPTIONS = [
   { value: 'ALL', label: 'Semua Sumber' },
-  { value: 'WORKFLOW', label: 'Workflow' },
+  { value: 'WORKFLOW', label: 'Persetujuan' },
   { value: 'MANUAL', label: 'Manual' },
 ]
 
@@ -212,7 +212,7 @@ function ArsiparisInboxPage() {
                           {dokumen.judul}
                         </p>
                         <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">
-                          Workflow - {dokumen.fungsi_nama ?? '-'}
+                          Persetujuan - {dokumen.fungsi_nama ?? '-'}
                         </p>
                       </td>
                       <td className="max-w-[320px] px-6 py-5">
@@ -237,7 +237,7 @@ function ArsiparisInboxPage() {
                 <ArchiveMobileCard
                   key={dokumen.id}
                   title={dokumen.judul}
-                  subtitle={`Workflow - ${dokumen.fungsi_nama ?? '-'}`}
+                  subtitle={`Persetujuan - ${dokumen.fungsi_nama ?? '-'}`}
                   meta={[
                     { label: 'No', value: index + 1 },
                     { label: 'Kegiatan', value: dokumen.kegiatan_nama ?? '-' },

@@ -2,19 +2,19 @@ import type { ReactNode } from 'react'
 
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, FolderOpen, Search } from 'lucide-react'
 
 export const ARCHIVE_PAGE_CONTAINER_CLASS =
-  'mx-auto w-full max-w-[1280px] space-y-7 px-4 pt-4 sm:px-6 lg:px-8'
+  'mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10'
 
 export const ARCHIVE_DETAIL_CONTAINER_CLASS =
   'mx-auto w-full max-w-[92rem] space-y-4 px-4 py-4 sm:px-6 lg:px-7 lg:py-5'
 
 export const ARCHIVE_TABLE_HEAD_CLASS =
-  'px-5 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-zinc-500'
+  'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
 
 export const ARCHIVE_TABLE_ROW_CLASS =
-  'group border-t border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70'
+  'group border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70'
 
 export const ARCHIVE_INLINE_ACTION_CLASS =
   'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700'
@@ -35,29 +35,32 @@ export function ArchivePageHeader({
   className,
 }: ArchivePageHeaderProps) {
   return (
-    <div
+    <section
       className={cn(
-        'rounded-[1.35rem] border border-orange-100/80 bg-gradient-to-br from-[#FFF8F1] via-[#FFFDF9] to-orange-50/60 p-5 shadow-sm shadow-zinc-950/[0.035] sm:p-6',
+        'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between',
         className,
       )}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex min-w-0 items-start gap-5">
+        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+          <FolderOpen size={22} />
+        </div>
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-orange-700/70">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
             {eyebrow}
           </div>
           <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
             {title}
           </h1>
           {description && (
-            <div className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-700">
+            <div className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
               {description}
             </div>
           )}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
       </div>
-    </div>
+      {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+    </section>
   )
 }
 
@@ -101,14 +104,14 @@ export function ArchiveSearchPanel({
   children,
 }: ArchiveSearchPanelProps) {
   return (
-    <ArchivePanel className="p-3.5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <label className="relative min-w-0 flex-1 md:max-w-md" htmlFor={id}>
+    <ArchivePanel className="rounded-[26px] border-zinc-200/80 p-4 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <label className="relative min-w-0 flex-1 lg:max-w-xl" htmlFor={id}>
             <span className="sr-only">{label}</span>
             <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-700/50"
+              size={17}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
               aria-hidden="true"
             />
             <input
@@ -116,7 +119,7 @@ export function ArchiveSearchPanel({
               type="search"
               value={value}
               onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-full rounded-xl border border-orange-100 bg-[#FFFDF9] pl-9 pr-4 text-sm font-semibold text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+              className="h-10 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
               placeholder={placeholder}
               autoComplete="off"
             />
@@ -124,7 +127,7 @@ export function ArchiveSearchPanel({
           {children}
         </div>
         {resultText && (
-          <div className="text-xs font-semibold text-zinc-500">
+          <div className="shrink-0 text-xs font-medium text-zinc-600 lg:text-right">
             {resultText}
           </div>
         )}
@@ -135,6 +138,33 @@ export function ArchiveSearchPanel({
         </div>
       )}
     </ArchivePanel>
+  )
+}
+
+type ArchiveExportButtonProps = {
+  disabled?: boolean
+  title?: string
+  onClick: () => void
+}
+
+export function ArchiveExportButton({
+  disabled,
+  title,
+  onClick,
+}: ArchiveExportButtonProps) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-10 w-fit gap-1.5 rounded-xl border-orange-200/80 bg-[#FFF8F1] px-3 text-xs font-extrabold text-[#FF4D00] shadow-sm shadow-orange-500/10 transition hover:border-orange-300 hover:bg-orange-50 hover:text-[#EA580C] disabled:opacity-50"
+      disabled={disabled}
+      title={title}
+      onClick={onClick}
+    >
+      <Download size={14} />
+      Ekspor CSV
+    </Button>
   )
 }
 
@@ -184,7 +214,7 @@ export function ArchiveTableShell({ children, className }: ArchivePanelProps) {
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-[1.35rem] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
+        'hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
         className,
       )}
     >
@@ -218,10 +248,10 @@ export function ArchiveMobileCard({
   action,
 }: ArchiveMobileCardProps) {
   return (
-    <div className="rounded-[1.15rem] border border-zinc-200/80 bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]">
+    <div className="group rounded-[22px] border border-zinc-200/80 bg-[#FFFDF9] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFF8F1]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="line-clamp-2 text-sm font-bold text-zinc-950">
+          <h3 className="line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
             {title}
           </h3>
           {subtitle && <div className="mt-1 text-xs text-zinc-600">{subtitle}</div>}
@@ -231,14 +261,14 @@ export function ArchiveMobileCard({
       {meta.length > 0 && (
         <div className="mt-4 grid gap-2 text-xs text-zinc-600">
           {meta.map((item, index) => (
-            <div key={index} className="flex items-start justify-between gap-3">
-              <span className="font-semibold text-zinc-500">{item.label}</span>
-              <span className="text-right font-medium text-zinc-800">{item.value}</span>
+            <div key={index} className="min-w-0 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
+              <p className="font-semibold text-zinc-500">{item.label}</p>
+              <div className="mt-0.5 break-words font-medium text-zinc-900">{item.value}</div>
             </div>
           ))}
         </div>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-4 border-t border-zinc-100 pt-3">{action}</div>}
     </div>
   )
 }
@@ -351,7 +381,7 @@ export function ArchiveTabs<T extends string>({
   onChange,
 }: ArchiveTabsProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1 shadow-sm">
+    <div className="w-fit max-w-full overflow-x-auto rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1 shadow-sm">
       <div className="flex min-w-max gap-1">
         {tabs.map((tab) => {
           const active = tab.id === activeTab

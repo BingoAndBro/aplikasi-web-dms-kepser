@@ -3,7 +3,7 @@ import type {
   BerkasArchiveStatus,
   BerkasStatus,
 } from '#/lib/constants/archive-status'
-import { formatDate } from '#/lib/utils/format'
+import { formatDate, formatDateTime } from '#/lib/utils/format'
 
 export type BerkasLifecycleActionView = {
   action: 'mark_inactive' | 'propose_destruction' | 'approve_destruction'
@@ -103,6 +103,10 @@ export function formatKlasifikasiLabel(kode: string | null, nama: string | null)
 
 export function formatNullableDateLabel(value: string | null | undefined): string {
   return value ? formatDate(value) : '-'
+}
+
+export function formatNullableDateTimeLabel(value: string | null | undefined): string {
+  return value ? formatDateTime(value) : '-'
 }
 
 export function formatNominalRupiah(value: number | string | null | undefined): string {

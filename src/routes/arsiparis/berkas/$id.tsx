@@ -9,24 +9,29 @@ import {
   Eye,
   FileText,
   FolderOpen,
+  History,
   Loader2,
   Pencil,
   Save,
+  Wallet,
   X,
 } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 
 import {
   ARCHIVE_DETAIL_CONTAINER_CLASS,
-  ARCHIVE_INLINE_ACTION_CLASS,
   ARCHIVE_TABLE_HEAD_CLASS,
   ARCHIVE_TABLE_ROW_CLASS,
-  ArchivePageHeader,
+  ArchiveExportButton,
   ArchivePanel,
   ArchiveTableShell,
   ArchiveTabs,
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import {
+  WorkflowSearchPanel,
+  WorkflowStatusSelect,
+} from '#/components/workflow/PpkPpspmPagePrimitives'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
@@ -51,6 +56,7 @@ import {
   formatKlasifikasiLabel,
   formatNominalRupiah,
   formatNullableDateLabel,
+  formatNullableDateTimeLabel,
   formatSourceTypeLabel,
   resolveBerkasLifecycleAction,
   snippet,
@@ -133,6 +139,21 @@ type BerkasDetailResponse = {
 
 const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
 type DetailTab = 'metadata' | 'documents' | 'history'
+type DetailSourceFilter = 'ALL' | 'WORKFLOW' | 'MANUAL'
+type DetailSortOrder = 'newest' | 'oldest' | 'nominal_desc' | 'nominal_asc'
+
+const DETAIL_SOURCE_FILTER_OPTIONS = [
+  { value: 'ALL', label: 'Semua' },
+  { value: 'WORKFLOW', label: 'Persetujuan' },
+  { value: 'MANUAL', label: 'Manual' },
+]
+
+const DETAIL_SORT_OPTIONS = [
+  { value: 'newest', label: 'Terbaru' },
+  { value: 'oldest', label: 'Terlama' },
+  { value: 'nominal_desc', label: 'Nominal Tertinggi' },
+  { value: 'nominal_asc', label: 'Nominal Terendah' },
+]
 
 function BerkasArsipDetailPage() {
   const { id } = Route.useParams()
@@ -151,7 +172,7 @@ function BerkasArsipDetailPage() {
   const [metadataDialogOpen, setMetadataDialogOpen] = useState(false)
   const [metadataForm, setMetadataForm] = useState<CloseBerkasFormState>(EMPTY_CLOSE_BERKAS_FORM)
   const [pendingMetadataEdit, setPendingMetadataEdit] = useState(false)
-  const [activeTab, setActiveTab] = useState<DetailTab>('documents')
+  const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
 
   async function fetchData() {
     setLoading(true)
@@ -291,29 +312,9 @@ function BerkasArsipDetailPage() {
     fetchData()
   }, [id])
 
-  useEffect(() => {
-    if (detail && canShowCloseBerkasForm(detail) && activeTab === 'metadata') {
-      setActiveTab('documents')
-    }
-  }, [detail?.status_berkas, detail?.status_arsip, activeTab])
-
   return (
     <PageLayout className="min-h-full bg-[#FFF9F4]">
       <div className={ARCHIVE_DETAIL_CONTAINER_CLASS}>
-        <ArchivePageHeader
-          eyebrow={
-            <>
-              <Link to="/arsiparis" className="hover:text-orange-900">Kepala Sub Bagian Umum</Link>
-              <ChevronRight size={10} />
-              <Link to="/arsiparis/berkas" className="hover:text-orange-900">Pemberkasan Arsip Aktif</Link>
-              <ChevronRight size={10} />
-              Detail Berkas
-            </>
-          }
-          title="Detail Berkas Arsip"
-          description="Detail folder-first dengan lifecycle berkas dan akses lampiran melalui endpoint server terotorisasi."
-        />
-
         {(actionError || actionSuccess) && (
           <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
             actionError
@@ -336,7 +337,7 @@ function BerkasArsipDetailPage() {
                 <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
                 <Link
                   to="/arsiparis/berkas"
-                  className={ARCHIVE_INLINE_ACTION_CLASS}
+                  className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
                 >
                   Kembali
                 </Link>
@@ -352,7 +353,7 @@ function BerkasArsipDetailPage() {
             action={
               <Link
                 to="/arsiparis/berkas"
-                className={ARCHIVE_INLINE_ACTION_CLASS}
+                className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
               >
                 Kembali ke daftar
               </Link>
@@ -363,6 +364,7 @@ function BerkasArsipDetailPage() {
             const isOpenFolder = canShowCloseBerkasForm(detail)
             const tabs = isOpenFolder
               ? [
+                { id: 'metadata' as const, label: 'Metadata Berkas' },
                 { id: 'documents' as const, label: 'Daftar Dokumen' },
                 { id: 'history' as const, label: 'Riwayat Aktivitas Berkas' },
               ]
@@ -371,17 +373,86 @@ function BerkasArsipDetailPage() {
                 { id: 'documents' as const, label: 'Daftar Dokumen' },
                 { id: 'history' as const, label: 'Riwayat Aktivitas' },
               ]
-            const resolvedActiveTab = isOpenFolder && activeTab === 'metadata' ? 'documents' : activeTab
+            const activeTabTitle = tabs.find((tab) => tab.id === activeTab)?.label ?? tabs[0].label
 
             return (
               <>
-                <ArchiveTabs
-                  tabs={tabs}
-                  activeTab={resolvedActiveTab}
-                  onChange={(tab) => setActiveTab(tab)}
-                />
-                {resolvedActiveTab === 'metadata' && (
-                  <FolderMetadataPanel
+                <div className="flex items-center gap-3">
+                  <Link
+                    to="/arsiparis/berkas"
+                    aria-label="Kembali ke daftar berkas"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
+                  >
+                    <ChevronLeft size={18} />
+                  </Link>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="line-clamp-2 font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">
+                      {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}
+                    </h1>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                      <FolderOpen size={13} className="text-zinc-500" />
+                      <Link to="/arsiparis/berkas" className="font-medium text-zinc-800 hover:text-orange-700">
+                        Pemberkasan Arsip Aktif
+                      </Link>
+                      <ChevronRight size={12} className="text-zinc-300" />
+                      <span>Detail Berkas</span>
+                    </div>
+                  </div>
+                  <div className="hidden shrink-0 gap-2 sm:flex">
+                    <StatusBerkasBadge status={detail.status_berkas} />
+                    <StatusArsipBadge statusArsip={detail.status_arsip} statusBerkas={detail.status_berkas} />
+                  </div>
+                </div>
+
+                <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
+                  <div className="min-w-0 space-y-4">
+                    <ArchiveTabs
+                      tabs={tabs}
+                      activeTab={activeTab}
+                      onChange={(tab) => setActiveTab(tab)}
+                    />
+                    <div className="min-w-0">
+                      <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
+                            {activeTab === 'metadata'
+                              ? <FolderOpen size={17} />
+                              : activeTab === 'documents'
+                                ? <FileText size={17} />
+                                : <History size={17} />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h2 className="font-headline text-base font-bold tracking-tight text-white sm:text-lg">
+                              {activeTabTitle}
+                            </h2>
+                            <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
+                              {activeTab === 'metadata'
+                                ? isOpenFolder
+                                  ? 'Metadata berkas berjalan sebelum finalisasi arsip.'
+                                  : 'Metadata final folder-first untuk lifecycle arsip.'
+                                : activeTab === 'documents'
+                                  ? 'Dokumen dalam berkas dengan metadata sumber dan akses lampiran.'
+                                  : 'Kronologi khusus berkas berdasarkan data yang tersedia.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
+                        {activeTab === 'metadata' && (
+                          <FolderMetadataPanel detail={detail} />
+                        )}
+                        {activeTab === 'documents' && (
+                          <ItemList berkasId={detail.berkas_id} statusArsip={detail.status_arsip} items={detail.items} />
+                        )}
+                        {activeTab === 'history' && (
+                          <FolderHistoryPanel detail={detail} />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <FolderActionPanel
                     detail={detail}
                     pendingLifecycleAction={pendingLifecycleAction}
                     destructionDialogOpen={destructionDialogOpen}
@@ -409,45 +480,7 @@ function BerkasArsipDetailPage() {
                       setActionSuccess(null)
                     }}
                   />
-                )}
-                {resolvedActiveTab === 'documents' && (
-                  <>
-                    {isOpenFolder && (
-                      <FolderMetadataPanel
-                        detail={detail}
-                        pendingLifecycleAction={pendingLifecycleAction}
-                        destructionDialogOpen={destructionDialogOpen}
-                        destructionPhrase={destructionPhrase}
-                        onDestructionPhraseChange={setDestructionPhrase}
-                        onCancelDestruction={() => {
-                          setDestructionDialogOpen(false)
-                          setDestructionPhrase('')
-                          setActionError(null)
-                        }}
-                        onDestructionOpenChange={(open) => {
-                          setDestructionDialogOpen(open)
-                          if (!open && !pendingLifecycleAction) {
-                            setDestructionPhrase('')
-                            setActionError(null)
-                          }
-                        }}
-                        onLifecycleAction={submitLifecycleAction}
-                        pendingMetadataEdit={pendingMetadataEdit}
-                        onOpenMetadataEditDialog={openMetadataEditDialog}
-                        pendingClose={pendingClose}
-                        onOpenCloseDialog={() => {
-                          setCloseDialogOpen(true)
-                          setActionError(null)
-                          setActionSuccess(null)
-                        }}
-                      />
-                    )}
-                    <ItemList berkasId={detail.berkas_id} statusArsip={detail.status_arsip} items={detail.items} />
-                  </>
-                )}
-                {resolvedActiveTab === 'history' && (
-                  <FolderHistoryPanel detail={detail} />
-                )}
+                </div>
               </>
             )
           })()
@@ -588,7 +621,36 @@ function EditActiveMetadataDialog({
   )
 }
 
-function FolderMetadataPanel({
+function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
+  const isOpenFolder = canShowCloseBerkasForm(detail)
+
+  return (
+    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
+      <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
+        <MetadataCell label="Klasifikasi Arsip" value={formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)} />
+        <MetadataCell label="Status Berkas" value={formatBerkasStatusLabel(detail.status_berkas)} />
+        <MetadataCell label="Status Arsip" value={formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)} />
+        <MetadataCell label="Jumlah Dokumen" value={String(detail.item_count)} />
+        <MetadataCell label="Dokumen Persetujuan" value={String(detail.workflow_item_count)} />
+        <MetadataCell label="Dokumen Manual" value={String(detail.manual_item_count)} />
+        <MetadataCell label="Dibuat" value={formatNullableDateTimeLabel(detail.created_at)} />
+        <MetadataCell label="Terakhir Diperbarui" value={formatNullableDateTimeLabel(detail.updated_at)} />
+        {!isOpenFolder && (
+          <>
+            <MetadataCell label="Nomor SPM" value={detail.nomor_spm ?? '-'} emphasis />
+            <MetadataCell label="Tanggal Ditutup" value={formatNullableDateTimeLabel(detail.closed_at)} />
+            <MetadataCell label="Retensi Aktif" value={detail.retensi_aktif ?? '-'} />
+            <MetadataCell label="Retensi Inaktif" value={detail.retensi_inaktif ?? '-'} />
+            <MetadataCell label="Masa Aktif Berakhir" value={formatNullableDateLabel(detail.masa_aktif_berakhir)} />
+            <MetadataCell label="Masa Inaktif Berakhir" value={formatNullableDateLabel(detail.masa_inaktif_berakhir)} />
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function FolderActionPanel({
   detail,
   pendingLifecycleAction,
   destructionDialogOpen,
@@ -620,32 +682,64 @@ function FolderMetadataPanel({
     && !pendingLifecycleAction
   const canShowClose = canShowCloseBerkasForm(detail)
   const closeBlockedByEmptyFolder = isBerkasEmptyForClose(detail)
-  const isOpenFolder = canShowClose
 
   return (
-    <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.04] sm:p-5">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10">
-            <FolderOpen size={22} className="text-emerald-600" />
-          </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Jenis Pembayaran</p>
-          <h3 className="mt-1 font-headline text-xl font-extrabold text-zinc-950">
-            {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}
-          </h3>
+    <aside className="min-w-0 space-y-3 xl:sticky xl:top-3">
+      <div className="rounded-[1.45rem] border border-orange-200/70 bg-[#FFF8F1] p-5 shadow-sm shadow-orange-900/10">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-orange-900/70">
+          <Wallet size={14} className="text-[#FF5A00]" />
+          Total Nominal Realisasi
         </div>
-        <div className="flex flex-col items-start gap-2 md:items-end">
-          <div className="flex flex-wrap gap-2">
-            <StatusBerkasBadge status={detail.status_berkas} />
-            <StatusArsipBadge statusArsip={detail.status_arsip} statusBerkas={detail.status_berkas} />
+        <p className="mt-3 font-mono text-2xl font-black tracking-tight text-[#FF4D00]">
+          {formatNominalRupiah(detail.total_nominal_realisasi)}
+        </p>
+      </div>
+
+      <div className="rounded-[1.45rem] border border-[#F1E1CF] bg-[#FFF8EF] p-5 shadow-sm shadow-orange-900/10">
+        <div className="flex items-center gap-2">
+          <FolderOpen size={15} className="text-orange-900" />
+          <p className="text-[13px] font-black uppercase tracking-[0.14em] text-orange-950">
+            Siklus Hidup Berkas
+          </p>
+        </div>
+        <div className="mt-4 flex items-center gap-2 text-sm text-orange-950/75">
+          <span>Status:</span>
+          <LifecycleStatusBadge detail={detail} />
+        </div>
+        <p className="mt-3 text-[13px] font-semibold leading-relaxed text-orange-950">
+          {getFolderLifecycleDescription(detail)}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <StatusBerkasBadge status={detail.status_berkas} />
+        </div>
+        {detail.status_arsip === 'DIMUSNAHKAN' && (
+          <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+            Data file sudah dimusnahkan
+          </p>
+        )}
+        {detail.warnings.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {detail.warnings.map((warning) => (
+              <Badge key={warning} className="border-amber-200 bg-amber-50 text-amber-700">
+                {formatFolderWarningLabel(warning)}
+              </Badge>
+            ))}
           </div>
+        )}
+      </div>
+
+      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-3.5 shadow-sm shadow-zinc-950/5">
+        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">
+          Aksi Kontrol Berkas
+        </p>
+        <div className="mt-3 space-y-2">
           {lifecycleAction && (
             <Button
               type="button"
-              size="sm"
+              size="lg"
               variant={lifecycleAction.action === 'approve_destruction' ? 'destructive' : 'default'}
-              className={`h-9 rounded-xl gap-1.5 ${
-                lifecycleAction.action === 'approve_destruction' ? 'bg-error text-white hover:bg-error/90' : ''
+              className={`h-10 w-full gap-1.5 rounded-xl text-xs font-bold ${
+                lifecycleAction.action === 'approve_destruction' ? 'bg-error text-white hover:bg-error/90' : 'bg-[#FF5A00] text-white hover:bg-[#EA580C]'
               }`}
               disabled={pendingLifecycleAction}
               onClick={() => onLifecycleAction()}
@@ -661,21 +755,21 @@ function FolderMetadataPanel({
           {canEditActiveMetadata(detail) && (
             <Button
               type="button"
-              size="sm"
+              size="lg"
               variant="outline"
-              className="h-9 gap-1.5 rounded-xl border-orange-200 bg-[#FFFDF9] text-orange-700 hover:bg-orange-50"
+              className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
               disabled={pendingMetadataEdit}
               onClick={onOpenMetadataEditDialog}
             >
               {pendingMetadataEdit ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
-              {pendingMetadataEdit ? 'Memproses...' : 'Edit Metadata'}
+              {pendingMetadataEdit ? 'Memproses...' : 'Edit Metadata Arsip'}
             </Button>
           )}
           {canShowClose && (
             <Button
               type="button"
-              size="sm"
-              className="h-9 gap-1.5 rounded-xl"
+              size="lg"
+              className="h-10 w-full gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white hover:bg-[#EA580C]"
               disabled={pendingClose || closeBlockedByEmptyFolder}
               onClick={onOpenCloseDialog}
             >
@@ -683,52 +777,25 @@ function FolderMetadataPanel({
               {pendingClose ? 'Memproses...' : 'Tutup Berkas'}
             </Button>
           )}
-          {detail.status_arsip === 'DIMUSNAHKAN' && (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">Data file sudah dimusnahkan</p>
-          )}
+          <Link to="/arsiparis/berkas" className="block">
+            <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold">
+              <ChevronLeft size={13} />
+              Kembali ke Daftar
+            </Button>
+          </Link>
         </div>
-      </div>
-
-      {detail.warnings.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {detail.warnings.map((warning) => (
-            <Badge key={warning} className="border-amber-200 bg-amber-50 text-amber-700">
-              {formatFolderWarningLabel(warning)}
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-5 grid gap-3 md:grid-cols-4">
-        <MetadataCell label="Status Berkas" value={formatBerkasStatusLabel(detail.status_berkas)} />
-        <MetadataCell label="Status Arsip" value={formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)} />
-        <MetadataCell label="Jumlah Dokumen" value={String(detail.item_count)} />
-        <MetadataCell label="Total Nominal" value={formatNominalRupiah(detail.total_nominal_realisasi)} />
-        <MetadataCell label="Dokumen Workflow" value={String(detail.workflow_item_count)} />
-        <MetadataCell label="Dokumen Manual" value={String(detail.manual_item_count)} />
-        <MetadataCell label="Dibuat" value={formatNullableDateLabel(detail.created_at)} />
-        <MetadataCell label="Terakhir Diperbarui" value={formatNullableDateLabel(detail.updated_at)} />
-        {!isOpenFolder && (
-          <>
-            <MetadataCell label="Nomor SPM" value={detail.nomor_spm ?? '-'} />
-            <MetadataCell label="Tanggal Ditutup" value={formatNullableDateLabel(detail.closed_at)} />
-            <MetadataCell label="Retensi Aktif" value={detail.retensi_aktif ?? '-'} />
-            <MetadataCell label="Retensi Inaktif" value={detail.retensi_inaktif ?? '-'} />
-            <MetadataCell label="Masa Aktif Berakhir" value={formatNullableDateLabel(detail.masa_aktif_berakhir)} />
-            <MetadataCell label="Masa Inaktif Berakhir" value={formatNullableDateLabel(detail.masa_inaktif_berakhir)} />
-          </>
+        {lifecycleAction && (
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-900">
+            {lifecycleAction.confirmation}
+          </p>
+        )}
+        {canShowClose && closeBlockedByEmptyFolder && (
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+            {EMPTY_BERKAS_CLOSE_MESSAGE}
+          </p>
         )}
       </div>
-      {lifecycleAction && (
-        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-900">
-          {lifecycleAction.confirmation}
-        </p>
-      )}
-      {canShowClose && closeBlockedByEmptyFolder && (
-        <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
-          {EMPTY_BERKAS_CLOSE_MESSAGE}
-        </p>
-      )}
+
       {lifecycleAction?.action === 'approve_destruction' && (
         <Dialog
           open={destructionDialogOpen}
@@ -799,8 +866,27 @@ function FolderMetadataPanel({
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </aside>
   )
+}
+
+function getFolderLifecycleDescription(detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'>): string {
+  if (detail.status_berkas === 'OPEN') {
+    return 'Berkas masih terbuka dan dapat menerima dokumen baru untuk Jenis Pembayaran ini.'
+  }
+  if (detail.status_arsip === 'AKTIF') {
+    return 'Berkas sudah ditutup sebagai Arsip Aktif. Metadata arsip masih dapat diperbarui selama status tetap Aktif.'
+  }
+  if (detail.status_arsip === 'INAKTIF') {
+    return 'Berkas berada pada Arsip Inaktif. Metadata final menjadi baca saja.'
+  }
+  if (detail.status_arsip === 'USUL_MUSNAH') {
+    return 'Berkas masuk Usul Musnah dan menunggu konfirmasi pemusnahan data.'
+  }
+  if (detail.status_arsip === 'DIMUSNAHKAN') {
+    return 'Berkas sudah Dimusnahkan. Metadata tetap tersimpan dan akses file diblokir.'
+  }
+  return 'Status berkas perlu ditinjau.'
 }
 
 function ItemList({
@@ -815,7 +901,10 @@ function ItemList({
   const [previewing, setPreviewing] = useState<{ href: string; downloadHref: string; title: string } | null>(null)
   const [selectedItem, setSelectedItem] = useState<BerkasDetailItem | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const filteredItems = filterBerkasDetailItems(items, searchQuery)
+  const [sourceFilter, setSourceFilter] = useState<DetailSourceFilter>('ALL')
+  const [sortOrder, setSortOrder] = useState<DetailSortOrder>('newest')
+  const filteredItems = filterBerkasDetailItems(items, searchQuery, sourceFilter)
+    .sort((left, right) => compareBerkasDetailItems(left, right, sortOrder))
   const hasSearchQuery = searchQuery.trim().length > 0
   const canExport = filteredItems.length > 0
 
@@ -839,11 +928,15 @@ function ItemList({
           value={searchQuery}
           resultText={`${filteredItems.length} dari ${items.length} dokumen ditampilkan`}
           onChange={setSearchQuery}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={setSourceFilter}
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
         />
         <div className="flex flex-col items-center gap-3 rounded-[1.15rem] border border-dashed border-orange-200 bg-[#FFFDF9] py-12">
           <FileText size={24} className="text-orange-500" />
           <p className="font-headline text-base font-bold text-zinc-950">Belum ada item dokumen</p>
-          <p className="text-xs text-zinc-600">Item workflow atau manual akan muncul setelah masuk ke berkas.</p>
+          <p className="text-xs text-zinc-600">Dokumen persetujuan atau manual akan muncul setelah masuk ke berkas.</p>
         </div>
       </div>
     )
@@ -875,6 +968,10 @@ function ItemList({
           value={searchQuery}
           resultText={`${filteredItems.length} dari ${items.length} dokumen ditampilkan`}
           onChange={setSearchQuery}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={setSourceFilter}
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
         />
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-[1.15rem] border border-dashed border-orange-200 bg-[#FFFDF9] py-12">
@@ -904,9 +1001,9 @@ function DocumentItemTable({
   return (
     <>
       <ArchiveTableShell className="rounded-[1.35rem]">
-        <table className="w-full text-xs">
+        <table className="w-full text-left">
           <thead>
-            <tr className="bg-orange-50/60 text-left">
+            <tr className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Judul Dokumen</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Sumber</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Tanggal Dokumen</th>
@@ -915,40 +1012,40 @@ function DocumentItemTable({
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-zinc-100 text-[13px]">
             {items.map((item) => (
               <tr
                 key={item.item_key}
                 className={`${ARCHIVE_TABLE_ROW_CLASS} cursor-pointer`}
                 onClick={() => onSelectItem(item)}
               >
-                <td className="px-5 py-4">
-                  <p className="line-clamp-2 text-sm font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                <td className="max-w-[420px] px-6 py-5">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
                     {item.source_title}
                   </p>
                   {item.has_attachments && (
-                    <p className="mt-1 text-[11px] font-semibold text-zinc-500">
+                    <p className="mt-1 text-xs font-medium text-zinc-500">
                       {formatAttachmentCount(item.attachment_count)} lampiran
                     </p>
                   )}
                 </td>
-                <td className="px-4 py-3"><SourceBadge sourceType={item.source_type} /></td>
-                <td className="px-4 py-3 font-semibold text-zinc-700">{formatNullableDateLabel(item.source_date)}</td>
-                <td className="px-4 py-3 font-semibold text-zinc-950">{item.source_created_by_display_name ?? '-'}</td>
-                <td className="px-4 py-3 text-right font-mono font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-6 py-5"><SourceBadge sourceType={item.source_type} /></td>
+                <td className="px-6 py-5 text-sm font-semibold text-zinc-500">{formatNullableDateLabel(item.source_date)}</td>
+                <td className="px-6 py-5 text-sm font-semibold text-zinc-950">{item.source_created_by_display_name ?? '-'}</td>
+                <td className="px-6 py-5 text-right font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</td>
+                <td className="px-6 py-5 text-center">
                   <Button
                     type="button"
-                    size="icon-xs"
+                    size="icon-lg"
                     variant="ghost"
-                    className="rounded-xl text-zinc-600 hover:bg-orange-50 hover:text-orange-700"
+                    className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
                     aria-label={`Buka detail ${item.source_title}`}
                     onClick={(event) => {
                       event.stopPropagation()
                       onSelectItem(item)
                     }}
                   >
-                    <ChevronRight size={16} />
+                    <ChevronRight strokeWidth={2.35} />
                   </Button>
                 </td>
               </tr>
@@ -1112,21 +1209,14 @@ function ItemListHeader({
     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div>
         <h3 className="font-headline text-lg font-extrabold text-zinc-950">Daftar Dokumen Dalam Berkas</h3>
-        <p className="text-xs text-zinc-600">Kartu item ringan dengan file access yang mengikuti status lifecycle folder.</p>
+        <p className="text-xs text-zinc-600">Daftar dokumen dengan metadata sumber dan file access yang mengikuti status lifecycle folder.</p>
       </div>
       <div className="flex flex-col gap-1 md:items-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-fit gap-1.5"
+        <ArchiveExportButton
           disabled={!canExport}
-          title={canExport ? 'Export daftar dokumen dalam berkas' : 'Tidak ada data untuk diekspor'}
+          title={canExport ? 'Ekspor CSV' : 'Tidak ada data untuk diekspor'}
           onClick={onExportCsv}
-        >
-          <Download size={14} />
-          Export Daftar Dokumen CSV
-        </Button>
+        />
         {!canExport && (
           <p className="text-xs text-on-surface-variant">Tidak ada data untuk diekspor.</p>
         )}
@@ -1139,30 +1229,43 @@ function LocalItemSearchField({
   value,
   resultText,
   onChange,
+  sourceFilter,
+  onSourceFilterChange,
+  sortOrder,
+  onSortOrderChange,
 }: {
   value: string
   resultText: string
   onChange: (value: string) => void
+  sourceFilter: DetailSourceFilter
+  onSourceFilterChange: (value: DetailSourceFilter) => void
+  sortOrder: DetailSortOrder
+  onSortOrderChange: (value: DetailSortOrder) => void
 }) {
   return (
-    <div className="rounded-[1.15rem] border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]">
-      <label className="block text-xs font-bold text-zinc-950" htmlFor="berkas-detail-local-search">
-        Pencarian lokal dokumen
-        <input
-          id="berkas-detail-local-search"
-          type="search"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="mt-2 w-full rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
-          placeholder="Cari dokumen dalam berkas..."
-          autoComplete="off"
+    <WorkflowSearchPanel
+      search={value}
+      onSearchChange={onChange}
+      placeholder="Cari dokumen dalam berkas..."
+      resultLabel={resultText}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <WorkflowStatusSelect
+          value={sourceFilter === 'ALL' ? '' : sourceFilter}
+          onChange={(nextValue) => onSourceFilterChange((nextValue || 'ALL') as DetailSourceFilter)}
+          options={DETAIL_SOURCE_FILTER_OPTIONS}
+          ariaLabel="Filter sumber dokumen berkas"
+          className="min-w-[132px]"
         />
-      </label>
-      <div className="mt-2 flex flex-col gap-1 text-xs text-zinc-600 md:flex-row md:items-center md:justify-between">
-        <p>Filter lokal berdasarkan judul, sumber, provenance, pembuat, nominal, dan label lampiran.</p>
-        <p className="font-semibold text-zinc-500">{resultText}</p>
+        <WorkflowStatusSelect
+          value={sortOrder}
+          onChange={(nextValue) => onSortOrderChange((nextValue || 'newest') as DetailSortOrder)}
+          options={DETAIL_SORT_OPTIONS}
+          ariaLabel="Urutan dokumen berkas"
+          className="min-w-[156px]"
+        />
       </div>
-    </div>
+    </WorkflowSearchPanel>
   )
 }
 
@@ -1209,7 +1312,7 @@ function ItemCard({
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {item.workflow && (
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/55 p-3">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-700">Provenance Workflow</p>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-700">Sumber Persetujuan</p>
             <MetadataLine label="Status" value={item.workflow.status ?? '-'} />
             <MetadataLine label="Fungsi" value={item.workflow.fungsi_nama ?? '-'} />
             <MetadataLine label="Kegiatan" value={item.workflow.kegiatan_nama ?? '-'} />
@@ -1217,7 +1320,7 @@ function ItemCard({
         )}
         {item.manual && (
           <div className="rounded-xl border border-sky-100 bg-sky-50/55 p-3">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-sky-700">Provenance Manual</p>
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-sky-700">Sumber Manual</p>
             <MetadataLine label="Kategori" value={item.manual.category_name ?? '-'} />
             <MetadataLine label="Keterangan" value={snippet(item.manual.keterangan)} />
           </div>
@@ -1376,11 +1479,11 @@ function PreviewModal({
   )
 }
 
-function MetadataCell({ label, value }: { label: string; value: string }) {
+function MetadataCell({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
   return (
-    <div className="rounded-xl border border-orange-100 bg-[#FFFAF6] p-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-zinc-950">{value}</p>
+    <div className="min-w-0">
+      <p className="mb-1 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <p className={`break-words text-[13px] font-bold leading-snug sm:text-sm ${emphasis ? 'font-mono text-[#FF4D00]' : 'text-zinc-950'}`}>{value}</p>
     </div>
   )
 }
@@ -1403,7 +1506,7 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
           Riwayat Aktivitas Berkas
         </h3>
         <p className="mt-1 text-xs text-zinc-600">
-          Timeline berkas berdasarkan status folder-first dan metadata sumber yang tersedia; ini bukan riwayat approval workflow mentah.
+          Timeline berkas berdasarkan status folder-first dan metadata sumber yang tersedia; ini bukan riwayat persetujuan mentah.
         </p>
       </div>
       <div className="relative space-y-3 before:absolute before:left-[15px] before:top-4 before:h-[calc(100%-2rem)] before:w-px before:bg-orange-100">
@@ -1501,7 +1604,7 @@ function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem[] {
     }))
   }
 
-  return items.sort((left, right) => right.sortTime - left.sortTime)
+  return items.sort((left, right) => left.sortTime - right.sortTime)
 }
 
 function historyItem({
@@ -1517,11 +1620,17 @@ function historyItem({
 }): BerkasHistoryItem {
   return {
     label,
-    value: formatNullableDateLabel(date),
+    value: formatHistoryDateLabel(date),
     helper,
     tone,
     sortTime: getDateSortTime(date),
   }
+}
+
+function formatHistoryDateLabel(value: string | null | undefined): string {
+  if (!value) return '-'
+  const hasExplicitTime = /T\d{2}:\d{2}/.test(value) || /\b\d{2}:\d{2}\b/.test(value)
+  return hasExplicitTime ? formatNullableDateTimeLabel(value) : formatNullableDateLabel(value)
 }
 
 function getDateSortTime(value: string | null | undefined): number {
@@ -1535,16 +1644,32 @@ function SourceBadge({ sourceType }: { sourceType: string }) {
 }
 
 function StatusBerkasBadge({ status }: { status: string }) {
-  return <StatusBadge kind="folder" status={status} fallbackLabel={formatBerkasStatusLabel(status)} />
+  const isOpen = status === 'OPEN'
+  return (
+    <span className={`inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap ${
+      isOpen
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : 'border-amber-200 bg-amber-50 text-amber-700'
+    }`}
+    >
+      {isOpen ? 'Terbuka' : 'Ditutup'}
+    </span>
+  )
 }
 
 function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string | null; statusBerkas: string }) {
   return (
-    <StatusBadge
-      kind="archive"
-      status={statusArsip}
-      fallbackLabel={formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}
-    />
+    <span className="inline-flex w-fit items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-emerald-700 text-nowrap">
+      {formatBerkasArchiveStatusLabel(statusArsip, statusBerkas)}
+    </span>
+  )
+}
+
+function LifecycleStatusBadge({ detail }: { detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'> }) {
+  return (
+    <span className="inline-flex w-fit items-center rounded-md border border-orange-200 bg-[#FFF3E8] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-orange-900 text-nowrap">
+      {formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)}
+    </span>
   )
 }
 
@@ -1581,11 +1706,34 @@ function toDateOnlyInputValue(value: string | null | undefined): string {
   return value.slice(0, 10)
 }
 
-function filterBerkasDetailItems(items: BerkasDetailItem[], query: string): BerkasDetailItem[] {
+function filterBerkasDetailItems(
+  items: BerkasDetailItem[],
+  query: string,
+  sourceFilter: DetailSourceFilter = 'ALL',
+): BerkasDetailItem[] {
   const normalizedQuery = normalizeSearchValue(query)
-  if (!normalizedQuery) return items
 
-  return items.filter((item) => buildBerkasDetailItemSearchText(item).includes(normalizedQuery))
+  return items.filter((item) => {
+    const matchesSource = sourceFilter === 'ALL' || item.source_type === sourceFilter
+    const matchesSearch = !normalizedQuery || buildBerkasDetailItemSearchText(item).includes(normalizedQuery)
+    return matchesSource && matchesSearch
+  })
+}
+
+function compareBerkasDetailItems(
+  left: BerkasDetailItem,
+  right: BerkasDetailItem,
+  sortOrder: DetailSortOrder,
+): number {
+  if (sortOrder === 'nominal_desc' || sortOrder === 'nominal_asc') {
+    const leftNominal = typeof left.source_nominal_realisasi === 'number' ? left.source_nominal_realisasi : 0
+    const rightNominal = typeof right.source_nominal_realisasi === 'number' ? right.source_nominal_realisasi : 0
+    return sortOrder === 'nominal_desc' ? rightNominal - leftNominal : leftNominal - rightNominal
+  }
+
+  const leftTime = getDateSortTime(left.source_date)
+  const rightTime = getDateSortTime(right.source_date)
+  return sortOrder === 'oldest' ? leftTime - rightTime : rightTime - leftTime
 }
 
 function buildBerkasDetailItemSearchText(item: BerkasDetailItem): string {

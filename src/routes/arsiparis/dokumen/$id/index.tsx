@@ -506,7 +506,7 @@ function ArsiparisDokumenDetailPage() {
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
                     className={cn(
-                      'flex min-h-8 min-w-28 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
+                      'flex min-h-8 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
                         ? 'bg-[#FFFDF9] text-[#FF5A00] shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
@@ -548,8 +548,8 @@ function ArsiparisDokumenDetailPage() {
 
             <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
         <section className={cn(activeTab === 'metadata' ? 'block' : 'hidden')}>
-        <ArchivePanel className="rounded-[1.15rem] border-[#F1E5DA] shadow-none">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
+          <div className="hidden">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">Informasi Dokumen</p>
               <p className="mt-1 text-xs text-zinc-600">Ringkasan dokumen yang akan dimasukkan ke berkas berdasarkan Jenis Pembayaran.</p>
@@ -561,7 +561,7 @@ function ArsiparisDokumenDetailPage() {
               </div>
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>div]:rounded-xl [&>div]:border [&>div]:border-orange-100 [&>div]:bg-[#FFFDF9] [&>div]:p-3 [&_p:first-child]:mb-1 [&_p:first-child]:text-[10px] [&_p:first-child]:font-black [&_p:first-child]:uppercase [&_p:first-child]:tracking-[0.14em] [&_p:first-child]:text-zinc-500 [&_p:last-child]:text-sm [&_p:last-child]:font-semibold [&_p:last-child]:text-zinc-950">
+          <div className="grid gap-x-10 gap-y-4 md:grid-cols-2 [&>div]:min-w-0 [&_p:first-child]:mb-1 [&_p:first-child]:text-[9px] [&_p:first-child]:font-black [&_p:first-child]:uppercase [&_p:first-child]:tracking-[0.18em] [&_p:first-child]:text-zinc-500 [&_p:last-child]:break-words [&_p:last-child]:text-[13px] [&_p:last-child]:font-bold [&_p:last-child]:leading-snug [&_p:last-child]:text-zinc-950 sm:[&_p:last-child]:text-sm">
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Fungsi</p><p className="text-sm font-semibold text-on-surface">{dokumen.fungsi.nama ?? '—'}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kegiatan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kegiatan.nama ?? '—'}</p></div>
             {dokumen.jenis_permintaan_id && (
@@ -578,7 +578,7 @@ function ArsiparisDokumenDetailPage() {
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>
             <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Disetujui PPSPM</p><p className="text-sm font-semibold text-on-surface">{dokumen.bendahara_approve ? `${dokumen.bendahara_approve.nama} — ${formatDate(dokumen.bendahara_approve.tanggal)}` : '—'}</p></div>
           </div>
-        </ArchivePanel>
+        </div>
         </section>
 
         <section className={cn(activeTab === 'lampiran' ? 'block' : 'hidden')}>
