@@ -3,6 +3,7 @@ import {
   check,
   date,
   index,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -14,6 +15,10 @@ import { dokumenTransaksi } from '../dokumen/dokumen-transaksi'
 import { masterKlasifikasiArsip } from './klasifikasi-arsip'
 import { manualArsip } from './manual-arsip'
 import type { StatusArsip } from '#/lib/constants/archive-status'
+import type {
+  ArchiveSourceType,
+} from '#/lib/constants/archive-status'
+import type { BerkasActivityEventType } from '#/lib/archive/berkas-arsip-activity'
 
 const arsipSchema = pgSchema('arsip')
 
@@ -105,9 +110,62 @@ export const berkasArsipItem = arsipSchema.table(
   ],
 )
 
+export const berkasArsipActivity = arsipSchema.table(
+  'berkas_arsip_activity',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    berkasId: uuid('berkas_id')
+      .notNull()
+      .references(() => berkasArsip.id, { onDelete: 'no action', onUpdate: 'no action' }),
+    eventType: text('event_type').$type<BerkasActivityEventType>().notNull(),
+    actorUserId: uuid('actor_user_id')
+      .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
+    sourceType: text('source_type').$type<ArchiveSourceType>(),
+    workflowDocumentId: uuid('workflow_document_id')
+      .references(() => dokumenTransaksi.id, { onDelete: 'no action', onUpdate: 'no action' }),
+    manualDocumentId: uuid('manual_document_id')
+      .references(() => manualArsip.id, { onDelete: 'no action', onUpdate: 'no action' }),
+    catatan: text('catatan'),
+    metadataSnapshot: jsonb('metadata_snapshot').$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('idx_berkas_arsip_activity_berkas_created_at').on(table.berkasId, table.createdAt),
+    index('idx_berkas_arsip_activity_event_type').on(table.eventType),
+    index('idx_berkas_arsip_activity_actor_user_id').on(table.actorUserId),
+    index('idx_berkas_arsip_activity_workflow_document_id').on(table.workflowDocumentId),
+    index('idx_berkas_arsip_activity_manual_document_id').on(table.manualDocumentId),
+    check(
+      'berkas_arsip_activity_event_type_check',
+      sql`${table.eventType} in (
+        'BERKAS_DIBUKA',
+        'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+        'DOKUMEN_MANUAL_DITAMBAHKAN',
+        'BERKAS_DITUTUP',
+        'METADATA_ARSIP_AKTIF_DIPERBARUI',
+        'BERKAS_DIPINDAHKAN_KE_INAKTIF',
+        'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH',
+        'BERKAS_DIMUSNAHKAN'
+      )`,
+    ),
+    check(
+      'berkas_arsip_activity_source_type_check',
+      sql`${table.sourceType} is null or ${table.sourceType} in ('WORKFLOW', 'MANUAL')`,
+    ),
+    check(
+      'berkas_arsip_activity_source_reference_check',
+      sql`(${table.sourceType} is null and ${table.workflowDocumentId} is null and ${table.manualDocumentId} is null)
+        or (${table.sourceType} = 'WORKFLOW' and ${table.workflowDocumentId} is not null and ${table.manualDocumentId} is null)
+        or (${table.sourceType} = 'MANUAL' and ${table.manualDocumentId} is not null and ${table.workflowDocumentId} is null)`,
+    ),
+  ],
+)
+
 // Phase 13L adds nullable folder-level status_arsip only. Runtime close
 // behavior will set AKTIF in a later phase, so CLOSED rows may remain null.
 export type BerkasArsip = typeof berkasArsip.$inferSelect
 export type NewBerkasArsip = typeof berkasArsip.$inferInsert
 export type BerkasArsipItem = typeof berkasArsipItem.$inferSelect
 export type NewBerkasArsipItem = typeof berkasArsipItem.$inferInsert
+export type BerkasArsipActivity = typeof berkasArsipActivity.$inferSelect
+export type NewBerkasArsipActivity = typeof berkasArsipActivity.$inferInsert

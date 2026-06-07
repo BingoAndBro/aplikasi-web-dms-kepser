@@ -71,6 +71,13 @@
       "when": 1780238473326,
       "tag": "0009_drop_legacy_canonical_archive_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780875600000,
+      "tag": "0010_berkas_activity_log_foundation",
+      "breakpoints": true
     }
   ]
 }

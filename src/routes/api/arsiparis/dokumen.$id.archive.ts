@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { db } from '#/db/client'
 import {
   berkasArsip,
+  berkasArsipActivity,
   berkasArsipItem,
   masterKlasifikasiArsip,
 } from '#/db/schema/arsip'
@@ -295,6 +296,25 @@ function createWorkflowArchiveBerkasRepository(
 
     async updateBerkasArchiveStatus() {
       throw new Error('BERKAS_LIFECYCLE_NOT_SUPPORTED_IN_WORKFLOW_ARCHIVE_ROUTE')
+    },
+
+    async updateActiveBerkasMetadata() {
+      throw new Error('BERKAS_METADATA_NOT_SUPPORTED_IN_WORKFLOW_ARCHIVE_ROUTE')
+    },
+
+    async appendBerkasActivity(input) {
+      await tx
+        .insert(berkasArsipActivity)
+        .values({
+          berkasId: input.berkasId,
+          eventType: input.eventType,
+          actorUserId: input.actorUserId,
+          sourceType: input.sourceType ?? null,
+          workflowDocumentId: input.workflowDocumentId ?? null,
+          manualDocumentId: input.manualDocumentId ?? null,
+          catatan: input.catatan ?? null,
+          metadataSnapshot: input.metadataSnapshot ?? null,
+        })
     },
   }
 }
