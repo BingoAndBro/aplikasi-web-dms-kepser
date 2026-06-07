@@ -45,6 +45,7 @@ vi.mock('#/lib/archive/berkas-arsip-service', async (importOriginal) => {
 import {
   buildCloseBerkasRequestBody,
   buildBerkasItemAttachmentFileUrl,
+  buildBerkasHistoryItems,
   canEditActiveMetadata,
   canShowCloseBerkasForm,
   isBerkasEmptyForClose,
@@ -421,6 +422,49 @@ describe('folder-first berkas archive page formatting', () => {
     })
   })
 
+  it('builds folder-first activity history from supported berkas timestamps', () => {
+    const history = buildBerkasHistoryItems({
+      ...detailResult(),
+      status_arsip: 'DIMUSNAHKAN',
+      created_at: '2026-05-22T07:00:00.000Z',
+      closed_at: '2026-05-29T00:00:00.000Z',
+      updated_at: '2026-05-30T10:45:00.000Z',
+      items: [
+        {
+          ...detailResult().items[0],
+          source_type: 'WORKFLOW',
+          source_title: 'Dokumen Persetujuan A',
+          source_date: '2026-05-20',
+          item_added_at: '2026-05-22T08:30:00.000Z',
+        },
+        {
+          ...detailResult().items[0],
+          source_type: 'MANUAL',
+          source_title: 'Dokumen Manual B',
+          source_date: '2026-05-21',
+          item_added_at: '2026-05-22T09:15:00.000Z',
+          workflow: null,
+          manual: {
+            nama: 'Dokumen Manual B',
+            category_name: 'Pengadaan',
+            keterangan: 'Aman',
+          },
+        },
+      ],
+    } as any)
+
+    expect(history.map((item) => item.label)).toEqual([
+      'Berkas dibuka',
+      'Dokumen Persetujuan diklasifikasikan',
+      'Penambahan dokumen manual sukses',
+      'Berkas ditutup',
+      'Berkas dimusnahkan',
+    ])
+    expect(JSON.stringify(history)).not.toContain('Dokumen selesai persetujuan PPSPM')
+    expect(JSON.stringify(history)).not.toContain('Workflow')
+    expect(history.at(-1)?.label).toBe('Berkas dimusnahkan')
+  })
+
   it('keeps the active folder page constrained to open and active sections', () => {
     const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
     const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
@@ -510,15 +554,19 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('Edit metadata hanya berlaku untuk Arsip Aktif')
     expect(detailSource).toContain('Tanggal tutup adalah waktu finalisasi berkas dan tidak diubah dari edit metadata.')
     expect(detailSource).not.toContain('Metadata arsip aktif diperbarui')
-    expect(detailSource).toContain('Dokumen selesai persetujuan PPSPM')
+    expect(detailSource).toContain('Berkas dibuka')
+    expect(detailSource).toContain('Dokumen Persetujuan diklasifikasikan')
     expect(detailSource).toContain('Penambahan dokumen manual sukses')
-    expect(detailSource).toContain('Dokumen diklasifikasikan ke berkas')
+    expect(detailSource).toContain('item_added_at')
     expect(detailSource).toContain('Berkas dipindahkan ke Inaktif')
     expect(detailSource).toContain('Berkas dipindahkan ke Usul Musnah')
-    expect(detailSource).toContain('File dimusnahkan')
+    expect(detailSource).toContain('Berkas dimusnahkan')
+    expect(detailSource).not.toContain('Dokumen selesai persetujuan PPSPM')
+    expect(detailSource).not.toContain('Dokumen diklasifikasikan ke berkas')
+    expect(detailSource).not.toContain('File dimusnahkan')
     expect(detailSource).toContain('Data file sudah dimusnahkan')
     expect(detailSource).toContain('formatHistoryDateLabel')
-    expect(detailSource).toContain('left.sortTime - right.sortTime')
+    expect(detailSource).toContain('compareBerkasHistoryItems')
     expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
     expect(detailSource).toContain('const availableAttachments = item.attachments')
     expect(detailSource).toContain('attachment.label ||')
@@ -822,6 +870,7 @@ function detailResult() {
     items: [
       {
         item_id: '44444444-4444-4444-8444-444444444444',
+        item_added_at: '2026-05-22T08:30:00.000Z',
         source_type: 'WORKFLOW',
         source_title: 'Laporan Pembayaran',
         source_date: '2026-05-20',

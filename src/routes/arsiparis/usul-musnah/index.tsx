@@ -70,11 +70,19 @@ type BerkasFolderListResponse = {
 }
 
 const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
+type FinalArchiveFilter = 'USUL_MUSNAH' | 'DIMUSNAHKAN'
+
+const FINAL_ARCHIVE_FILTER_OPTIONS: Array<{ value: FinalArchiveFilter; label: string }> = [
+  { value: 'USUL_MUSNAH', label: 'Usul Musnah' },
+  { value: 'DIMUSNAHKAN', label: 'Arsip Dimusnahkan' },
+]
 
 function UsulMusnahPage() {
   const navigate = useNavigate()
-  const [folders, setFolders] = useState<BerkasFolder[]>([])
+  const [proposedFolders, setProposedFolders] = useState<BerkasFolder[]>([])
+  const [destroyedFolders, setDestroyedFolders] = useState<BerkasFolder[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<FinalArchiveFilter>('USUL_MUSNAH')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,13 +90,22 @@ function UsulMusnahPage() {
     setLoading(true)
     setError(null)
     try {
-      const json = await apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
-        query: {
-          status_berkas: 'CLOSED',
-          status_arsip: 'USUL_MUSNAH',
-        },
-      })
-      setFolders(json.berkas ?? [])
+      const [proposedJson, destroyedJson] = await Promise.all([
+        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+          query: {
+            status_berkas: 'CLOSED',
+            status_arsip: 'USUL_MUSNAH',
+          },
+        }),
+        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+          query: {
+            status_berkas: 'CLOSED',
+            status_arsip: 'DIMUSNAHKAN',
+          },
+        }),
+      ])
+      setProposedFolders(proposedJson.berkas ?? [])
+      setDestroyedFolders(destroyedJson.berkas ?? [])
     } catch (error) {
       setError(resolveErrorMessage(error))
     } finally {
@@ -100,13 +117,14 @@ function UsulMusnahPage() {
     fetchData()
   }, [])
 
+  const folders = statusFilter === 'DIMUSNAHKAN' ? destroyedFolders : proposedFolders
   const filteredFolders = filterBerkasFolders(folders, searchQuery)
   const hasSearchQuery = searchQuery.trim().length > 0
   const canExport = filteredFolders.length > 0 && !loading && !error
 
   function exportCsv() {
     const csv = createBerkasFolderListCsv([
-      { label: 'Usul Musnah', folders: filteredFolders },
+      { label: statusFilter === 'DIMUSNAHKAN' ? 'Arsip Dimusnahkan' : 'Usul Musnah', folders: filteredFolders },
     ])
 
     downloadCsvFile(BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME, csv)
@@ -121,7 +139,7 @@ function UsulMusnahPage() {
               Usul Musnah
             </h1>
             <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
-              Berkas Inaktif yang sudah diusulkan untuk pemusnahan data.
+              Berkas yang menunggu pemusnahan dan metadata akhir untuk arsip yang sudah Dimusnahkan.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
@@ -140,10 +158,36 @@ function UsulMusnahPage() {
           id="usul-musnah-page-local-search"
           label="Pencarian lokal halaman"
           value={searchQuery}
-          placeholder="Cari berkas usul musnah di halaman ini..."
+          placeholder={statusFilter === 'DIMUSNAHKAN'
+            ? 'Cari metadata arsip dimusnahkan di halaman ini...'
+            : 'Cari berkas usul musnah di halaman ini...'}
           resultText={`${filteredFolders.length} dari ${folders.length} berkas ditampilkan`}
           onChange={setSearchQuery}
-        />
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-zinc-700">Status:</span>
+            <div className="flex flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#FFF8F1] p-1">
+              {FINAL_ARCHIVE_FILTER_OPTIONS.map((option) => {
+                const selected = statusFilter === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`h-8 rounded-lg px-3 text-xs font-bold transition ${
+                      selected
+                        ? 'border border-orange-200 bg-orange-50 text-[#FF4D00] shadow-sm'
+                        : 'border border-transparent text-zinc-600 hover:bg-[#FFFDF9] hover:text-zinc-950'
+                    }`}
+                    aria-pressed={selected}
+                    onClick={() => setStatusFilter(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </ArchiveSearchPanel>
 
         {loading ? (
           <LoadingState variant="list" label="Memuat usul musnah" />
@@ -156,10 +200,10 @@ function UsulMusnahPage() {
           />
         ) : filteredFolders.length === 0 ? (
           <EmptyState
-            title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : 'Belum ada berkas usul musnah'}
+            title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : getEmptyTitle(statusFilter)}
             description={hasSearchQuery
-              ? 'Ubah kata kunci untuk melihat berkas usul musnah lain di halaman ini.'
-              : 'Berkas Inaktif yang diusulkan musnah akan muncul di halaman ini sampai statusnya menjadi Dimusnahkan.'}
+              ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.'
+              : getEmptyDescription(statusFilter)}
             icon={<Trash2 size={22} />}
           />
         ) : (
@@ -190,7 +234,9 @@ function BerkasLifecycleTable({
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Nomor SPM</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
               <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Arsip</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal Ditutup</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Terakhir Diperbarui</th>
               <th className={`w-20 text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
             </tr>
           </thead>
@@ -209,7 +255,11 @@ function BerkasLifecycleTable({
                 <td className="px-6 py-5 text-sm font-semibold text-zinc-900">{folder.nomor_spm ?? '-'}</td>
                 <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-900">{folder.item_count}</td>
                 <td className="px-6 py-5 text-right font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
+                <td className="px-6 py-5">
+                  <StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />
+                </td>
                 <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-500">{formatNullableDateLabel(folder.closed_at)}</td>
+                <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-500">{formatNullableDateLabel(folder.updated_at)}</td>
                 <td className="px-6 py-5 text-right">
                   <Link
                     to="/arsiparis/berkas/$id"
@@ -240,6 +290,7 @@ function BerkasLifecycleTable({
               { label: 'Manual', value: folder.manual_item_count },
               { label: 'Total nominal', value: formatNominalRupiah(folder.total_nominal_realisasi) },
               { label: 'Tanggal tutup', value: formatNullableDateLabel(folder.closed_at) },
+              { label: 'Terakhir diperbarui', value: formatNullableDateLabel(folder.updated_at) },
             ]}
             action={
               <Link
@@ -309,11 +360,26 @@ function buildBerkasFolderSearchText(folder: BerkasFolder): string {
     formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot),
     folder.nomor_spm,
     formatNullableDateLabel(folder.closed_at),
+    formatNullableDateLabel(folder.updated_at),
+    folder.status_arsip,
+    formatBerkasArchiveStatusLabel(folder.status_arsip, folder.status_berkas),
     String(folder.item_count),
     String(folder.workflow_item_count),
     String(folder.manual_item_count),
     formatNominalRupiah(folder.total_nominal_realisasi),
   ].map(normalizeSearchValue).filter(Boolean).join(' ')
+}
+
+function getEmptyTitle(filter: FinalArchiveFilter): string {
+  return filter === 'DIMUSNAHKAN'
+    ? 'Belum ada arsip dimusnahkan'
+    : 'Belum ada berkas usul musnah'
+}
+
+function getEmptyDescription(filter: FinalArchiveFilter): string {
+  return filter === 'DIMUSNAHKAN'
+    ? 'Metadata arsip yang sudah Dimusnahkan akan tetap tampil di sini ketika tersedia.'
+    : 'Berkas Inaktif yang diusulkan musnah akan muncul di halaman ini sampai statusnya menjadi Dimusnahkan.'
 }
 
 function normalizeSearchValue(value: unknown): string {

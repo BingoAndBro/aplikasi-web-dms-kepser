@@ -99,6 +99,7 @@ describe('berkas arsip read model', () => {
     expect(result.detail.items.map((item) => item.source_type)).toEqual(['WORKFLOW', 'MANUAL'])
     expect(result.detail.items[0]).toMatchObject({
       item_id: 'item-workflow-closed',
+      item_added_at: '2026-05-22T08:30:00.000Z',
       source_title: 'Laporan Pembayaran',
       source_date: '2026-05-20',
       source_nominal_realisasi: 1000000,
@@ -127,6 +128,7 @@ describe('berkas arsip read model', () => {
     })
     expect(result.detail.items[1]).toMatchObject({
       item_id: 'item-manual-closed',
+      item_added_at: '2026-05-22T09:15:00.000Z',
       source_title: 'Dokumen Manual',
       source_nominal_realisasi: 250000,
       source_created_by_display_name: 'Pegawai Manual',
@@ -379,6 +381,7 @@ function openWorkflowItem(): BerkasItemSourceReadRow {
 function closedWorkflowItem(overrides: Partial<BerkasItemSourceReadRow> = {}): BerkasItemSourceReadRow {
   return {
     item_id: 'item-workflow-closed',
+    item_added_at: '2026-05-22T08:30:00.000Z',
     berkas_id: BERKAS_CLOSED_ID,
     source_type: 'WORKFLOW',
     dokumen_id: 'workflow-source-id',
@@ -414,6 +417,7 @@ function closedManualItem(): BerkasItemSourceReadRow {
   return {
     ...closedWorkflowItem(),
     item_id: 'item-manual-closed',
+    item_added_at: '2026-05-22T09:15:00.000Z',
     source_type: 'MANUAL',
     dokumen_id: null,
     manual_arsip_id: 'manual-source-id',

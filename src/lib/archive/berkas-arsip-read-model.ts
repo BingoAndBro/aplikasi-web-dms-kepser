@@ -96,6 +96,7 @@ export type BerkasArsipDetailItemWarning =
 
 export type BerkasArsipDetailItemDto = {
   item_id: string
+  item_added_at: string | null
   source_type: ArchiveSourceType
   source_title: string
   source_date: string | null
@@ -148,6 +149,7 @@ export type BerkasFolderReadRow = {
 
 export type BerkasItemSourceReadRow = {
   item_id: string
+  item_added_at: Date | string | null
   berkas_id: string
   source_type: ArchiveSourceType | string
   dokumen_id: string | null
@@ -289,6 +291,7 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
     return database
       .select({
         item_id: berkasArsipItem.id,
+        item_added_at: berkasArsipItem.addedAt,
         berkas_id: berkasArsipItem.berkasId,
         source_type: berkasArsipItem.sourceType,
         dokumen_id: berkasArsipItem.dokumenId,
@@ -502,6 +505,7 @@ function mapItemRowToDetailDto(
 
   return {
     item_id: row.item_id,
+    item_added_at: toIsoLikeString(row.item_added_at),
     source_type: sourceType,
     source_title: getSourceTitle(row, sourceType, sourceFound),
     source_date: getSourceDate(row, sourceType),

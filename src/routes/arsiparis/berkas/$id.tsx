@@ -2,9 +2,11 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   AlertTriangle,
   ArrowRightCircle,
+  Archive,
   Check,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Download,
   Eye,
   FileText,
@@ -12,7 +14,9 @@ import {
   History,
   Loader2,
   Pencil,
+  PlusCircle,
   Save,
+  Trash2,
   Wallet,
   X,
 } from 'lucide-react'
@@ -82,6 +86,7 @@ export const Route = createFileRoute('/arsiparis/berkas/$id')({ component: Berka
 type BerkasDetailItem = {
   item_key: string
   item_file_key: string
+  item_added_at: string | null
   source_type: string
   source_title: string
   source_date: string | null
@@ -1500,27 +1505,41 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
   const historyItems = buildBerkasHistoryItems(detail)
 
   return (
-    <ArchivePanel className="rounded-[1.35rem]">
+    <ArchivePanel className="rounded-[1.35rem] bg-[#FFFDF9]">
       <div className="mb-4">
-        <h3 className="font-headline text-lg font-extrabold text-zinc-950">
-          Riwayat Aktivitas Berkas
-        </h3>
-        <p className="mt-1 text-xs text-zinc-600">
-          Timeline berkas berdasarkan status folder-first dan metadata sumber yang tersedia; ini bukan riwayat persetujuan mentah.
+        <div className="flex items-center gap-2">
+          <History size={17} className="text-orange-600" />
+          <h3 className="font-headline text-lg font-extrabold text-zinc-950">
+            Riwayat Aktivitas Berkas
+          </h3>
+        </div>
+        <p className="mt-1 max-w-2xl text-xs leading-relaxed text-zinc-600">
+          Kronologi folder-first dari waktu berkas dibuka, dokumen masuk berkas, penutupan, dan status lifecycle yang tersedia.
         </p>
       </div>
-      <div className="relative space-y-3 before:absolute before:left-[15px] before:top-4 before:h-[calc(100%-2rem)] before:w-px before:bg-orange-100">
+
+      <div className="relative space-y-3 before:absolute before:left-[18px] before:top-5 before:h-[calc(100%-2.5rem)] before:w-px before:bg-[#F1D8C8]">
         {historyItems.map((item, index) => (
-          <div key={`${item.label}-${index}`} className="relative grid grid-cols-[32px_1fr] gap-3">
-            <div className={`z-10 mt-1 flex h-8 w-8 items-center justify-center rounded-full border border-white text-xs font-black shadow-sm ${item.tone}`}>
-              {index + 1}
+          <div key={`${item.label}-${item.timestampLabel}-${index}`} className="relative grid grid-cols-[38px_1fr] gap-3">
+            <div className={`z-10 mt-1 flex h-9 w-9 items-center justify-center rounded-full border-4 border-[#FFFDF9] shadow-sm ${item.iconTone}`}>
+              {item.icon}
             </div>
-            <div className="rounded-2xl border border-orange-100 bg-[#FFFDF9] p-3.5 shadow-sm shadow-zinc-950/[0.025]">
+            <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFCF8] p-3.5 shadow-sm shadow-zinc-950/[0.025]">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                <p className="text-sm font-bold text-zinc-950">{item.label}</p>
-                <p className="text-xs font-semibold text-orange-700">{item.value}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-extrabold text-zinc-950">{item.label}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-600">{item.helper}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#F1E5DA] bg-[#FFFDF9] px-2.5 py-1 text-[11px] font-bold text-zinc-700 sm:ml-3">
+                  <Clock size={12} className="text-orange-600" />
+                  <span>{item.timestampLabel}</span>
+                </div>
               </div>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-600">{item.helper}</p>
+              {item.timestampNote && (
+                <p className="mt-2 text-[11px] font-medium leading-relaxed text-zinc-500">
+                  {item.timestampNote}
+                </p>
+              )}
             </div>
           </div>
         ))}
@@ -1543,100 +1562,166 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
 
 type BerkasHistoryItem = {
   label: string
-  value: string
   helper: string
-  tone: string
-  sortTime: number
+  icon: ReactNode
+  iconTone: string
+  timestampLabel: string
+  timestampNote?: string
+  sortTime: number | null
+  sequence: number
 }
 
-function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem[] {
+export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem[] {
   const items: BerkasHistoryItem[] = []
 
-  if (detail.status_arsip === 'DIMUSNAHKAN') {
+  items.push(historyItem({
+    label: 'Berkas dibuka',
+    date: detail.created_at,
+    helper: 'Folder mulai menerima dokumen untuk Jenis Pembayaran ini.',
+    icon: <FolderOpen size={15} />,
+    iconTone: 'bg-[#FFF3E8] text-orange-700',
+    sequence: 10,
+  }))
+
+  detail.items.forEach((item, index) => {
     items.push(historyItem({
-      label: 'File dimusnahkan',
-      date: detail.updated_at,
-      helper: 'Status akhir berkas. Metadata tetap tersimpan dan preview/download diblokir.',
-      tone: 'bg-red-100 text-red-700',
+      label: item.source_type === 'MANUAL'
+        ? 'Penambahan dokumen manual sukses'
+        : 'Dokumen Persetujuan diklasifikasikan',
+      date: item.item_added_at,
+      helper: item.source_title,
+      icon: item.source_type === 'MANUAL'
+        ? <PlusCircle size={15} />
+        : <FileText size={15} />,
+      iconTone: item.source_type === 'MANUAL'
+        ? 'bg-orange-50 text-orange-700'
+        : 'bg-sky-50 text-sky-700',
+      timestampNote: item.item_added_at
+        ? undefined
+        : 'Waktu masuk berkas tidak tersedia di DTO; tidak memakai tanggal sumber dokumen sebagai pengganti.',
+      sequence: 20 + index,
     }))
-  } else if (detail.status_arsip === 'USUL_MUSNAH') {
-    items.push(historyItem({
-      label: 'Berkas dipindahkan ke Usul Musnah',
-      date: detail.updated_at,
-      helper: 'Berkas masuk daftar usulan pemusnahan. Metadata tetap baca saja.',
-      tone: 'bg-orange-100 text-orange-700',
-    }))
-  } else if (detail.status_arsip === 'INAKTIF') {
-    items.push(historyItem({
-      label: 'Berkas dipindahkan ke Inaktif',
-      date: detail.updated_at,
-      helper: 'Berkas keluar dari arsip aktif dan metadata tidak dapat diedit lagi.',
-      tone: 'bg-amber-100 text-amber-700',
-    }))
-  }
+  })
 
   if (detail.closed_at) {
     items.push(historyItem({
       label: 'Berkas ditutup',
       date: detail.closed_at,
       helper: 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.',
-      tone: 'bg-emerald-100 text-emerald-700',
+      icon: <Check size={15} />,
+      iconTone: 'bg-emerald-50 text-emerald-700',
+      dateOnly: isUtcMidnightTimestamp(detail.closed_at),
+      sequence: 40,
     }))
   }
 
-  items.push(historyItem({
-    label: 'Dokumen diklasifikasikan ke berkas',
-    date: detail.created_at,
-    helper: 'Berkas folder-first dibuat atau menerima item untuk Jenis Pembayaran ini.',
-    tone: 'bg-orange-100 text-orange-700',
-  }))
+  const lifecycleItem = buildCurrentLifecycleHistoryItem(detail)
+  if (lifecycleItem) items.push(lifecycleItem)
 
-  for (const item of detail.items) {
-    items.push(historyItem({
-      label: item.source_type === 'MANUAL'
-        ? 'Penambahan dokumen manual sukses'
-        : 'Dokumen selesai persetujuan PPSPM',
-      date: item.source_date,
-      helper: item.source_title,
-      tone: item.source_type === 'MANUAL'
-        ? 'bg-orange-100 text-orange-700'
-        : 'bg-sky-100 text-sky-700',
-    }))
-  }
-
-  return items.sort((left, right) => left.sortTime - right.sortTime)
+  return items.sort(compareBerkasHistoryItems)
 }
 
 function historyItem({
   label,
   date,
   helper,
-  tone,
+  icon,
+  iconTone,
+  timestampNote,
+  dateOnly = false,
+  sequence,
 }: {
   label: string
   date: string | null | undefined
   helper: string
-  tone: string
+  icon: ReactNode
+  iconTone: string
+  timestampNote?: string
+  dateOnly?: boolean
+  sequence: number
 }): BerkasHistoryItem {
   return {
     label,
-    value: formatHistoryDateLabel(date),
     helper,
-    tone,
-    sortTime: getDateSortTime(date),
+    icon,
+    iconTone,
+    timestampLabel: formatHistoryDateLabel(date, { dateOnly }),
+    timestampNote,
+    sortTime: getDateSortTimeOrNull(date),
+    sequence,
   }
 }
 
-function formatHistoryDateLabel(value: string | null | undefined): string {
-  if (!value) return '-'
+function buildCurrentLifecycleHistoryItem(detail: BerkasDetail): BerkasHistoryItem | null {
+  if (detail.status_arsip === 'INAKTIF') {
+    return historyItem({
+      label: 'Berkas dipindahkan ke Inaktif',
+      date: detail.updated_at,
+      helper: 'Berkas keluar dari arsip aktif dan metadata menjadi baca saja.',
+      icon: <Archive size={15} />,
+      iconTone: 'bg-amber-50 text-amber-700',
+      timestampNote: 'Tidak ada log timestamp per-transisi; waktu ini berasal dari pembaruan status berkas saat ini.',
+      sequence: 50,
+    })
+  }
+
+  if (detail.status_arsip === 'USUL_MUSNAH') {
+    return historyItem({
+      label: 'Berkas dipindahkan ke Usul Musnah',
+      date: detail.updated_at,
+      helper: 'Berkas masuk daftar usulan pemusnahan. Metadata tetap baca saja.',
+      icon: <AlertTriangle size={15} />,
+      iconTone: 'bg-orange-50 text-orange-700',
+      timestampNote: 'Tidak ada log timestamp per-transisi; waktu ini berasal dari pembaruan status berkas saat ini.',
+      sequence: 60,
+    })
+  }
+
+  if (detail.status_arsip === 'DIMUSNAHKAN') {
+    return historyItem({
+      label: 'Berkas dimusnahkan',
+      date: detail.updated_at,
+      helper: 'Status akhir berkas. Metadata tetap tersimpan dan preview/download diblokir.',
+      icon: <Trash2 size={15} />,
+      iconTone: 'bg-red-50 text-red-700',
+      timestampNote: 'Tidak ada event setelah pemusnahan; waktu ini berasal dari pembaruan status akhir berkas.',
+      sequence: 70,
+    })
+  }
+
+  return null
+}
+
+function formatHistoryDateLabel(
+  value: string | null | undefined,
+  options: { dateOnly?: boolean } = {},
+): string {
+  if (!value) return 'Tanggal belum tersedia'
+  if (options.dateOnly) return formatNullableDateLabel(value)
   const hasExplicitTime = /T\d{2}:\d{2}/.test(value) || /\b\d{2}:\d{2}\b/.test(value)
   return hasExplicitTime ? formatNullableDateTimeLabel(value) : formatNullableDateLabel(value)
 }
 
-function getDateSortTime(value: string | null | undefined): number {
-  if (!value) return 0
+function isUtcMidnightTimestamp(value: string | null | undefined): boolean {
+  return typeof value === 'string' && /T00:00:00(?:\.000)?Z$/.test(value)
+}
+
+function getDateSortTimeOrNull(value: string | null | undefined): number | null {
+  if (!value) return null
   const time = new Date(value).getTime()
-  return Number.isFinite(time) ? time : 0
+  return Number.isFinite(time) ? time : null
+}
+
+function getDateSortTime(value: string | null | undefined): number {
+  return getDateSortTimeOrNull(value) ?? 0
+}
+
+function compareBerkasHistoryItems(left: BerkasHistoryItem, right: BerkasHistoryItem): number {
+  if (left.sortTime !== null && right.sortTime !== null && left.sortTime !== right.sortTime) {
+    return left.sortTime - right.sortTime
+  }
+
+  return left.sequence - right.sequence
 }
 
 function SourceBadge({ sourceType }: { sourceType: string }) {
