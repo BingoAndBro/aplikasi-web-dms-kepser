@@ -31,4 +31,12 @@ describe('Master Klasifikasi Arsip UI source guard', () => {
     expect(source).not.toContain('Hapus Klasifikasi?')
     expect(source).not.toContain('Hapus permanen')
   })
+
+  it('keeps prototype-style add-child shortcuts and single detail panel metadata', () => {
+    expect(source).toContain('SquarePlus')
+    expect(source).toContain('Tambah Anak')
+    expect(source).toContain('onAddChild={openAddChild}')
+    expect(source).toContain('Detail Atribut Klasifikasi')
+    expect(source).not.toContain('function DetailField')
+  })
 })

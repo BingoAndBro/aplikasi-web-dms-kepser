@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { FormEvent } from 'react'
 import {
   AlertCircle,
   Archive,
@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
-  CornerDownRight,
   FileText,
   Folder,
   FolderOpen,
@@ -17,6 +16,7 @@ import {
   Network,
   Pencil,
   Plus,
+  SquarePlus,
   X,
 } from 'lucide-react'
 
@@ -77,7 +77,7 @@ function ClassificationTypeBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold',
+        'inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[9.5px] font-extrabold leading-none',
         selected
           ? 'border-white/20 bg-white/20 text-white'
           : isParent
@@ -85,7 +85,7 @@ function ClassificationTypeBadge({
             : 'border-emerald-200 bg-emerald-50 text-emerald-700',
       )}
     >
-      {isParent ? (short ? 'Induk' : 'Klasifikasi Induk') : 'Pilihan Akhir'}
+      {isParent ? (short ? 'Induk' : 'Klasifikasi Induk') : short ? 'Pilihan Akhir' : 'Pilihan Akhir (Leaf)'}
     </span>
   )
 }
@@ -102,7 +102,7 @@ function ClassificationStatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold',
+        'inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[9.5px] font-extrabold leading-none',
         selected
           ? 'border-white/20 bg-white/15 text-white'
           : active
@@ -166,7 +166,7 @@ function TreeNode({
     <div>
       <div
         className={cn(
-          'group flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2.5 transition-all',
+          'group flex cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 py-1.5 transition-all',
           isSelected
             ? 'border-[#FF5A00] bg-[#FF5A00] text-white shadow-md shadow-orange-500/20'
             : isInactive
@@ -183,39 +183,39 @@ function TreeNode({
             setIsExpanded(!isExpanded)
           }}
           className={cn(
-            'shrink-0 rounded-lg p-1 transition-colors',
+            'shrink-0 rounded-md p-0.5 transition-colors',
             isSelected ? 'text-white/80 hover:bg-white/15' : 'text-zinc-500 hover:bg-orange-100/60',
           )}
           aria-label={`${isExpanded ? 'Tutup' : 'Buka'} klasifikasi ${node.nama}`}
         >
           {hasChildren ? (
-            isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+            isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />
           ) : (
-            <span className="block w-[14px]" />
+            <span className="flex w-[13px] justify-center text-[10px] leading-none">.</span>
           )}
         </button>
 
         <span className={cn('shrink-0', isSelected ? 'text-white' : isInactive ? 'text-zinc-400' : 'text-[#FF5A00]')}>
           {hasChildren ? (
-            isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />
+            isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />
           ) : (
-            <FileText size={16} />
+            <FileText size={14} />
           )}
         </span>
 
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex flex-1 items-center gap-1.5">
+          {node.kode && (
+            <span className={cn(
+              'shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold',
+              isSelected ? 'border-white/10 bg-white/20 text-white' : 'border-orange-100/60 bg-orange-50 text-[#FF5A00]',
+            )}>
+              {node.kode}
+            </span>
+          )}
           <span className={cn(
-            'block truncate text-sm font-extrabold',
+            'truncate text-[13px] font-semibold leading-none',
             isSelected ? 'text-white' : isInactive ? 'text-zinc-500' : 'text-zinc-950',
           )}>
-            {node.kode && (
-              <span className={cn(
-                'mr-1.5 rounded-lg px-1.5 py-0.5 font-mono text-[11px]',
-                isSelected ? 'bg-white/20 text-white' : 'bg-orange-50 text-[#FF5A00]',
-              )}>
-                {node.kode}
-              </span>
-            )}
             {node.nama}
           </span>
         </span>
@@ -232,20 +232,20 @@ function TreeNode({
             onAddChild(node)
           }}
           className={cn(
-            'shrink-0 rounded-xl p-1.5 opacity-100 transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100',
+            'shrink-0 rounded-lg p-1 opacity-100 transition-colors',
             isSelected
-              ? 'text-white/80 hover:bg-white/15 hover:text-white'
+              ? 'bg-white/20 text-white hover:bg-white/30'
               : 'border border-orange-100 bg-orange-50 text-[#FF5A00] hover:bg-[#FF5A00] hover:text-white',
           )}
           aria-label={`Tambah sub-klasifikasi untuk ${node.nama}`}
           title="Tambah anak klasifikasi"
         >
-          <CornerDownRight size={12} />
+          <SquarePlus size={13} />
         </button>
       </div>
 
       {hasChildren && isExpanded && (
-        <div className="mt-1.5 space-y-1.5 border-l border-orange-100/60 pl-2" style={{ marginLeft: `${level * 16 + 18}px` }}>
+        <div className="mt-1.5 space-y-1.5 border-l border-orange-100/60 pl-1.5" style={{ marginLeft: `${level * 16 + 18}px` }}>
           {node.children.map(child => (
             <TreeNode
               key={child.id}
@@ -266,22 +266,23 @@ function KlasifikasiDetail({
   node,
   onEdit,
   onDelete,
+  onAddChild,
   breadcrumb,
 }: {
   node: KlasifikasiNode | null
   onEdit: (node: KlasifikasiNode) => void
   onDelete: (node: KlasifikasiNode) => void
+  onAddChild: (node: KlasifikasiNode) => void
   breadcrumb: string[]
 }) {
   if (!node) {
     return (
-      <div className="flex min-h-[26rem] flex-col items-center justify-center p-8 text-center">
-        <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF5A00]">
-          <Folder size={26} />
+      <div className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center">
+        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF5A00]">
+          <Network size={24} />
         </div>
-        <p className="font-headline text-lg font-bold text-zinc-950">Pilih Klasifikasi</p>
-        <p className="mt-2 max-w-sm text-sm font-medium leading-relaxed text-zinc-600">
-          Pilih node pada pohon struktur untuk melihat status Induk atau Pilihan Akhir.
+        <p className="text-sm font-semibold text-zinc-600">
+          Silakan pilih sebuah klasifikasi di panel kiri untuk melihat rincian.
         </p>
       </div>
     )
@@ -290,112 +291,117 @@ function KlasifikasiDetail({
   const isParent = hasChildNodes(node)
   const active = isActiveNode(node)
   const canBeOperationalChoice = active && !isParent
+  const pathText = breadcrumb.length > 0 ? breadcrumb.join(' > ') : classificationDisplay(node)
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <div className="flex flex-col gap-4 border-b border-[#F1E5DA] pb-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <ClassificationTypeBadge node={node} />
+      <div className="flex items-center gap-2.5 border-b border-[#F1E5DA] pb-4 text-left">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/70 bg-orange-50 text-[#FF5A00]">
+          <Info size={16} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-bold text-zinc-950">Detail Atribut Klasifikasi</h3>
             <ClassificationStatusBadge node={node} />
           </div>
-          <h3 className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">{node.nama}</h3>
-          {node.kode && <p className="mt-1 font-mono text-sm font-bold text-[#FF5A00]">{node.kode}</p>}
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {!node.is_root && (
-            <>
-              <Button size="sm" variant="outline" className="gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9]" onClick={() => onEdit(node)}>
-                <Pencil size={14} /> Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:text-rose-800"
-                onClick={() => onDelete(node)}
-                title={isParent ? 'Endpoint saat ini menonaktifkan node dan turunannya; safety backend diperketat pada fase berikutnya.' : 'Nonaktifkan klasifikasi'}
-              >
-                <Ban size={14} /> Nonaktifkan
-              </Button>
-            </>
-          )}
-          {node.is_root && (
-            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs font-semibold text-zinc-600">Root - Tidak bisa diedit</span>
-          )}
+          <p className="mt-0.5 text-[10.5px] font-medium text-zinc-500">Informasi tata aturan kearsipan node terpilih</p>
         </div>
       </div>
 
-      {breadcrumb.length > 1 && (
-        <div>
-          <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Jalur Struktur / Hierarchy Path</p>
-          <div className="flex flex-wrap items-center gap-1 rounded-xl bg-[#FFF8F1] px-3 py-2 text-xs font-semibold text-zinc-700">
-            {breadcrumb.map((item, index) => (
-              <span key={index} className="flex items-center gap-1">
-                {index > 0 && <ChevronRight size={10} />}
-                <span className={cn(index === breadcrumb.length - 1 && 'font-extrabold text-[#FF5A00]')}>{item}</span>
-              </span>
-            ))}
+      <div className="space-y-4 text-left">
+        <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2">
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Kode Klasifikasi</span>
+            <span className="mt-0.5 block font-mono text-sm font-bold text-[#FF5A00]">{node.kode ?? '-'}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Tipe Klasifikasi</span>
+            <span className="mt-0.5 block">
+              <ClassificationTypeBadge node={node} />
+            </span>
           </div>
         </div>
-      )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <DetailField label="Kode Klasifikasi">
-          <span className="font-mono text-sm font-bold text-[#FF5A00]">{node.kode ?? '-'}</span>
-        </DetailField>
-        <DetailField label="Tipe">
-          <ClassificationTypeBadge node={node} />
-        </DetailField>
-        <DetailField label="Nama Klasifikasi">
-          <span className="text-sm font-bold leading-relaxed text-zinc-950">{node.nama}</span>
-        </DetailField>
-        <DetailField label="Status">
-          <ClassificationStatusBadge node={node} />
-        </DetailField>
-        <DetailField label="Deskripsi / Keterangan" className="sm:col-span-2">
-          <span className="text-sm font-medium leading-relaxed text-zinc-700">{node.deskripsi ?? '-'}</span>
-        </DetailField>
-        <DetailField label="Jumlah Sub-Klasifikasi">
-          <span className="text-sm font-bold text-zinc-950">{node.children.length} sub-node</span>
-        </DetailField>
-        <DetailField label="Dipakai Jenis Pembayaran?">
-          <span className={cn(
-            'flex items-center gap-1.5 text-sm font-bold',
-            canBeOperationalChoice ? 'text-emerald-700' : 'text-zinc-600',
-          )}>
-            {canBeOperationalChoice ? <CheckCircle2 size={15} /> : <Ban size={15} />}
-            {getJenisPembayaranLabel(node)}
+        <div>
+          <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Nama Klasifikasi</span>
+          <span className="mt-0.5 block text-sm font-bold leading-snug text-zinc-950">{node.nama}</span>
+        </div>
+
+        <div>
+          <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Deskripsi / Keterangan</span>
+          <span className="mt-0.5 block text-xs font-medium leading-relaxed text-zinc-600">{node.deskripsi ?? '-'}</span>
+        </div>
+
+        <div>
+          <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Jalur Struktur (Hierarchy Path)</span>
+          <span className="mt-1 block rounded-xl bg-[#FFF8F1] px-3 py-2 font-mono text-xs font-semibold leading-snug text-zinc-700">
+            {pathText}
           </span>
-        </DetailField>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 pt-1 min-[520px]:grid-cols-2">
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Jumlah Sub-Klasifikasi</span>
+            <span className="mt-0.5 block text-xs font-bold text-zinc-950">{node.children.length} sub-node</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Dipakai Jenis Pembayaran?</span>
+            <span className={cn(
+              'mt-0.5 flex items-center gap-1 text-xs font-bold',
+              canBeOperationalChoice ? 'text-emerald-600' : 'text-zinc-500',
+            )}>
+              {canBeOperationalChoice ? <CheckCircle2 size={14} /> : <Ban size={14} />}
+              {getJenisPembayaranLabel(node)}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-orange-900">
-        <p>
-          <span className="font-extrabold">Petunjuk:</span> hanya klasifikasi berstatus Aktif dan bertipe Pilihan Akhir yang dapat digunakan sebagai Jenis Pembayaran. Klasifikasi Induk bersifat struktural, sedangkan Nonaktif tidak ditampilkan pada pilihan operasional.
+      <div className="border-t border-[#F1E5DA] pt-2.5 text-left">
+        <p className="text-[10.5px] font-semibold leading-relaxed text-zinc-500">
+          Catatan: <span className="font-normal">Jika sebuah berkas Jenis Pembayaran sudah ditutup, pilihan tersebut tidak ditampilkan lagi pada form Pengklasifikasian Dokumen dan Penambahan Dokumen.</span>
         </p>
         {isParent && (
-          <p className="mt-2 text-amber-800">
+          <p className="mt-1.5 text-[10.5px] font-semibold leading-relaxed text-amber-700">
             Status penggunaan akan diperiksa saat aturan nonaktif/hapus diperketat.
           </p>
         )}
       </div>
-    </div>
-  )
-}
 
-function DetailField({
-  label,
-  children,
-  className,
-}: {
-  label: string
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div className={cn('rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] p-3', className)}>
-      <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">{label}</p>
-      <div>{children}</div>
+      <div className="flex flex-col gap-2.5 border-t border-[#F1E5DA] pt-4">
+        <div className="flex flex-col gap-2 min-[520px]:flex-row">
+          <Button
+            type="button"
+            className="min-h-11 flex-1 gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-black uppercase tracking-[0.12em] text-white hover:bg-[#EA580C]"
+            onClick={() => onAddChild(node)}
+          >
+            <SquarePlus size={14} /> Tambah Anak
+          </Button>
+          {!node.is_root ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 gap-1 rounded-xl border-[#F0E1D5] bg-white px-4 text-xs font-bold text-zinc-700 hover:border-orange-200 hover:text-[#FF5A00]"
+              onClick={() => onEdit(node)}
+            >
+              <Pencil size={14} /> Edit
+            </Button>
+          ) : (
+            <span className="flex min-h-11 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-xs font-semibold text-zinc-600">Root - Tidak bisa diedit</span>
+          )}
+        </div>
+        {!node.is_root && (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-10 w-full gap-1 rounded-xl border-rose-200/70 bg-rose-50 text-[10px] font-black uppercase tracking-[0.14em] text-rose-700 hover:bg-rose-100 hover:text-rose-800"
+            onClick={() => onDelete(node)}
+            title={isParent ? 'Endpoint saat ini menonaktifkan node dan turunannya; safety backend diperketat pada fase berikutnya.' : 'Nonaktifkan klasifikasi'}
+          >
+            <Ban size={13} /> Nonaktifkan Klasifikasi
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
@@ -956,18 +962,18 @@ function KlasifikasiPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid min-h-[500px] grid-cols-1 gap-4 lg:grid-cols-5">
-            <div className="overflow-hidden rounded-[1.35rem] border border-[#F1E5DA] bg-[#FFFDF9] shadow-sm lg:col-span-2">
-              <div className="flex items-center justify-between gap-3 border-b border-[#F1E5DA] px-4 py-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <FolderOpen size={16} className="shrink-0 text-[#FF5A00]" />
-                  <h3 className="truncate text-sm font-bold text-zinc-950">Pohon Struktur Klasifikasi</h3>
+          <div className="grid min-h-[500px] grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="overflow-hidden rounded-xl border border-[#F1E5DA] bg-white shadow-sm lg:col-span-6">
+              <div className="flex items-center justify-between gap-3 border-b border-[#F1E5DA] px-3 py-2.5">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <FolderOpen size={14} className="shrink-0 text-[#FF5A00]" />
+                  <h3 className="truncate text-[13px] font-bold text-zinc-950">Pohon Struktur Klasifikasi</h3>
                 </div>
-                <span className="shrink-0 rounded-lg bg-orange-50 px-2 py-1 text-[10px] font-black text-zinc-700">
+                <span className="shrink-0 rounded-md bg-orange-50 px-2 py-0.5 text-[9.5px] font-black text-zinc-700">
                   Total: {totalCount} Node
                 </span>
               </div>
-              <div className="max-h-[62vh] overflow-y-auto p-2 sm:p-3">
+              <div className="max-h-[60vh] overflow-y-auto p-2.5 sm:p-3">
                 <KlasifikasiTree
                   nodes={items}
                   selectedId={selectedNode?.id ?? null}
@@ -977,11 +983,12 @@ function KlasifikasiPage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-[1.35rem] border border-[#F1E5DA] bg-[#FFFDF9] shadow-sm lg:col-span-3">
+            <div className="overflow-hidden rounded-2xl border border-[#F1E5DA] bg-white shadow-sm lg:col-span-6">
               <KlasifikasiDetail
                 node={selectedNode}
                 onEdit={openEdit}
                 onDelete={openDeactivate}
+                onAddChild={openAddChild}
                 breadcrumb={breadcrumb}
               />
             </div>
