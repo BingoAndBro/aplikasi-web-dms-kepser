@@ -465,6 +465,113 @@ describe('folder-first berkas archive page formatting', () => {
     expect(history.at(-1)?.label).toBe('Berkas dimusnahkan')
   })
 
+  it('sorts berkas opened before manual insertion before close when close is date-only', () => {
+    const history = buildBerkasHistoryItems({
+      ...detailResult(),
+      status_arsip: 'AKTIF',
+      created_at: '2026-05-29T07:00:00.000Z',
+      closed_at: '2026-05-29T00:00:00.000Z',
+      updated_at: '2026-05-29T00:00:00.000Z',
+      items: [
+        {
+          ...detailResult().items[0],
+          source_type: 'MANUAL',
+          source_title: 'Dokumen Manual A',
+          item_added_at: '2026-05-29T08:15:00.000Z',
+          workflow: null,
+          manual: {
+            nama: 'Dokumen Manual A',
+            category_name: 'Pengadaan',
+            keterangan: 'Aman',
+          },
+        },
+      ],
+    } as any)
+
+    expect(history.map((item) => item.label)).toEqual([
+      'Berkas dibuka',
+      'Penambahan dokumen manual sukses',
+      'Berkas ditutup',
+    ])
+    expect(history.find((item) => item.label === 'Berkas ditutup')?.timestampLabel)
+      .not.toMatch(/\b00[:.][0]{2}\b/)
+  })
+
+  it('sorts classified Persetujuan documents after berkas opened and before close', () => {
+    const history = buildBerkasHistoryItems({
+      ...detailResult(),
+      status_arsip: 'AKTIF',
+      created_at: '2026-05-29T10:00:00.000Z',
+      closed_at: '2026-05-29T00:00:00.000Z',
+      updated_at: '2026-05-29T00:00:00.000Z',
+      items: [
+        {
+          ...detailResult().items[0],
+          source_type: 'WORKFLOW',
+          source_title: 'Dokumen Persetujuan A',
+          item_added_at: '2026-05-29T11:30:00.000Z',
+        },
+      ],
+    } as any)
+
+    expect(history.map((item) => item.label)).toEqual([
+      'Berkas dibuka',
+      'Dokumen Persetujuan diklasifikasikan',
+      'Berkas ditutup',
+    ])
+    expect(formatSourceTypeLabel('WORKFLOW')).toBe('Persetujuan')
+    expect(JSON.stringify(history)).not.toContain('Workflow')
+  })
+
+  it('keeps destroyed berkas terminal even when current-status timestamp is earlier than item timestamps', () => {
+    const history = buildBerkasHistoryItems({
+      ...detailResult(),
+      status_arsip: 'DIMUSNAHKAN',
+      created_at: '2026-05-29T07:00:00.000Z',
+      closed_at: '2026-05-29T00:00:00.000Z',
+      updated_at: '2026-05-29T00:00:00.000Z',
+      items: [
+        {
+          ...detailResult().items[0],
+          source_type: 'WORKFLOW',
+          source_title: 'Dokumen Persetujuan A',
+          item_added_at: '2026-05-29T08:00:00.000Z',
+        },
+        {
+          ...detailResult().items[0],
+          source_type: 'MANUAL',
+          source_title: 'Dokumen Manual B',
+          item_added_at: '2026-05-29T09:00:00.000Z',
+          workflow: null,
+          manual: {
+            nama: 'Dokumen Manual B',
+            category_name: 'Pengadaan',
+            keterangan: 'Aman',
+          },
+        },
+      ],
+    } as any)
+
+    expect(history.map((item) => item.label)).toEqual([
+      'Berkas dibuka',
+      'Dokumen Persetujuan diklasifikasikan',
+      'Penambahan dokumen manual sukses',
+      'Berkas ditutup',
+      'Berkas dimusnahkan',
+    ])
+    expect(history.at(-1)?.label).toBe('Berkas dimusnahkan')
+    expect(JSON.stringify(history.slice(history.findIndex((item) => item.label === 'Berkas dimusnahkan') + 1)))
+      .toBe('[]')
+  })
+
+  it('keeps exact destroyed-file and destruction-confirmation phrases in folder detail surfaces', () => {
+    const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
+    const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
+
+    expect(detailSource).toContain('Data file sudah dimusnahkan')
+    expect(formatSource).toContain("BERKAS_DESTRUCTION_CONFIRMATION_PHRASE = 'MUSNAHKAN DATA FILE'")
+  })
+
   it('keeps the active folder page constrained to open and active sections', () => {
     const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
     const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')

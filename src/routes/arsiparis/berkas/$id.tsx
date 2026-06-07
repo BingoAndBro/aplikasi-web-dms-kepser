@@ -1568,11 +1568,13 @@ type BerkasHistoryItem = {
   timestampLabel: string
   timestampNote?: string
   sortTime: number | null
-  sequence: number
+  domainOrder: number
+  originalIndex: number
 }
 
 export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem[] {
   const items: BerkasHistoryItem[] = []
+  let originalIndex = 0
 
   items.push(historyItem({
     label: 'Berkas dibuka',
@@ -1580,10 +1582,11 @@ export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem
     helper: 'Folder mulai menerima dokumen untuk Jenis Pembayaran ini.',
     icon: <FolderOpen size={15} />,
     iconTone: 'bg-[#FFF3E8] text-orange-700',
-    sequence: 10,
+    domainOrder: 10,
+    originalIndex: originalIndex++,
   }))
 
-  detail.items.forEach((item, index) => {
+  detail.items.forEach((item) => {
     items.push(historyItem({
       label: item.source_type === 'MANUAL'
         ? 'Penambahan dokumen manual sukses'
@@ -1599,7 +1602,8 @@ export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem
       timestampNote: item.item_added_at
         ? undefined
         : 'Waktu masuk berkas tidak tersedia di DTO; tidak memakai tanggal sumber dokumen sebagai pengganti.',
-      sequence: 20 + index,
+      domainOrder: 20,
+      originalIndex: originalIndex++,
     }))
   })
 
@@ -1611,11 +1615,12 @@ export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem
       icon: <Check size={15} />,
       iconTone: 'bg-emerald-50 text-emerald-700',
       dateOnly: isUtcMidnightTimestamp(detail.closed_at),
-      sequence: 40,
+      domainOrder: 30,
+      originalIndex: originalIndex++,
     }))
   }
 
-  const lifecycleItem = buildCurrentLifecycleHistoryItem(detail)
+  const lifecycleItem = buildCurrentLifecycleHistoryItem(detail, originalIndex)
   if (lifecycleItem) items.push(lifecycleItem)
 
   return items.sort(compareBerkasHistoryItems)
@@ -1629,7 +1634,8 @@ function historyItem({
   iconTone,
   timestampNote,
   dateOnly = false,
-  sequence,
+  domainOrder,
+  originalIndex,
 }: {
   label: string
   date: string | null | undefined
@@ -1638,7 +1644,8 @@ function historyItem({
   iconTone: string
   timestampNote?: string
   dateOnly?: boolean
-  sequence: number
+  domainOrder: number
+  originalIndex: number
 }): BerkasHistoryItem {
   return {
     label,
@@ -1648,11 +1655,12 @@ function historyItem({
     timestampLabel: formatHistoryDateLabel(date, { dateOnly }),
     timestampNote,
     sortTime: getDateSortTimeOrNull(date),
-    sequence,
+    domainOrder,
+    originalIndex,
   }
 }
 
-function buildCurrentLifecycleHistoryItem(detail: BerkasDetail): BerkasHistoryItem | null {
+function buildCurrentLifecycleHistoryItem(detail: BerkasDetail, originalIndex: number): BerkasHistoryItem | null {
   if (detail.status_arsip === 'INAKTIF') {
     return historyItem({
       label: 'Berkas dipindahkan ke Inaktif',
@@ -1661,7 +1669,8 @@ function buildCurrentLifecycleHistoryItem(detail: BerkasDetail): BerkasHistoryIt
       icon: <Archive size={15} />,
       iconTone: 'bg-amber-50 text-amber-700',
       timestampNote: 'Tidak ada log timestamp per-transisi; waktu ini berasal dari pembaruan status berkas saat ini.',
-      sequence: 50,
+      domainOrder: 40,
+      originalIndex,
     })
   }
 
@@ -1673,7 +1682,8 @@ function buildCurrentLifecycleHistoryItem(detail: BerkasDetail): BerkasHistoryIt
       icon: <AlertTriangle size={15} />,
       iconTone: 'bg-orange-50 text-orange-700',
       timestampNote: 'Tidak ada log timestamp per-transisi; waktu ini berasal dari pembaruan status berkas saat ini.',
-      sequence: 60,
+      domainOrder: 50,
+      originalIndex,
     })
   }
 
@@ -1685,7 +1695,8 @@ function buildCurrentLifecycleHistoryItem(detail: BerkasDetail): BerkasHistoryIt
       icon: <Trash2 size={15} />,
       iconTone: 'bg-red-50 text-red-700',
       timestampNote: 'Tidak ada event setelah pemusnahan; waktu ini berasal dari pembaruan status akhir berkas.',
-      sequence: 70,
+      domainOrder: 60,
+      originalIndex,
     })
   }
 
@@ -1718,10 +1729,17 @@ function getDateSortTime(value: string | null | undefined): number {
 
 function compareBerkasHistoryItems(left: BerkasHistoryItem, right: BerkasHistoryItem): number {
   if (left.sortTime !== null && right.sortTime !== null && left.sortTime !== right.sortTime) {
-    return left.sortTime - right.sortTime
+    const timeOrder = left.sortTime - right.sortTime
+    const domainOrder = left.domainOrder - right.domainOrder
+
+    if (domainOrder === 0 || Math.sign(timeOrder) === Math.sign(domainOrder)) {
+      return timeOrder
+    }
   }
 
-  return left.sequence - right.sequence
+  if (left.domainOrder !== right.domainOrder) return left.domainOrder - right.domainOrder
+
+  return left.originalIndex - right.originalIndex
 }
 
 function SourceBadge({ sourceType }: { sourceType: string }) {
