@@ -72,8 +72,8 @@ export const ARCHIVE_STATUS_BADGE_CONFIG = {
 } as const satisfies Record<ArchiveLifecycleStatus, StatusConfig>
 
 export const SOURCE_TYPE_BADGE_CONFIG = {
-  WORKFLOW: { label: "Pengklasifikasian Dokumen", tone: "info" },
-  MANUAL: { label: "Penambahan Dokumen", tone: "orange" },
+  WORKFLOW: { label: "Persetujuan", tone: "info" },
+  MANUAL: { label: "Manual", tone: "orange" },
 } as const satisfies Record<SourceType, StatusConfig>
 
 const statusConfigByKind = {

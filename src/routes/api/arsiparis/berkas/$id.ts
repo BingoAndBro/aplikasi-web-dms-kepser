@@ -5,10 +5,14 @@ import {
   type BerkasArsipDetailDto,
   type BerkasArsipDetailItemDto,
 } from '#/lib/archive/berkas-arsip-read-model'
+import { updateActiveBerkasMetadata } from '#/lib/archive/berkas-arsip-service'
 import {
+  berkasArsipErrorResponse,
   parseBerkasIdParam,
   requireBerkasArsipApiSession,
 } from '#/lib/archive/berkas-arsip-api'
+import { closeBerkasMetadataSchema } from '#/lib/schemas/berkas-arsip'
+import { requireSameOrigin } from '#/lib/security/same-origin'
 
 export const Route = createFileRoute('/api/arsiparis/berkas/$id')({
   server: {
@@ -30,6 +34,50 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id')({
         } catch {
           console.error('[arsiparis/berkas/:id] folder-first detail query error')
           return Response.json({ error: 'Gagal mengambil detail berkas arsip' }, { status: 500 })
+        }
+      },
+      PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
+        const sameOriginError = requireSameOrigin(request)
+        if (sameOriginError) return sameOriginError
+
+        const sessionOrResponse = await requireBerkasArsipApiSession(request)
+        if (sessionOrResponse instanceof Response) return sessionOrResponse
+
+        const berkasId = parseBerkasIdParam(params.id)
+        if (berkasId instanceof Response) return berkasId
+
+        const parsed = closeBerkasMetadataSchema.safeParse(await request.json().catch(() => null))
+        if (!parsed.success) {
+          return Response.json(
+            { error: parsed.error.issues[0]?.message ?? 'Metadata arsip aktif tidak valid' },
+            { status: 400 },
+          )
+        }
+
+        try {
+          const berkas = await updateActiveBerkasMetadata({
+            berkasId,
+            metadata: parsed.data,
+          })
+
+          return Response.json({
+            berkas: {
+              id: berkas.id,
+              klasifikasi_id: berkas.klasifikasi_id,
+              klasifikasi_kode_snapshot: berkas.klasifikasi_kode_snapshot,
+              klasifikasi_nama_snapshot: berkas.klasifikasi_nama_snapshot,
+              status_berkas: berkas.status_berkas,
+              status_arsip: berkas.status_arsip,
+              nomor_spm: berkas.nomor_spm,
+              retensi_aktif: berkas.retensi_aktif,
+              retensi_inaktif: berkas.retensi_inaktif,
+              masa_aktif_berakhir: berkas.masa_aktif_berakhir,
+              masa_inaktif_berakhir: berkas.masa_inaktif_berakhir,
+              closed_at: berkas.closed_at,
+            },
+          })
+        } catch (error) {
+          return berkasArsipErrorResponse(error)
         }
       },
     },

@@ -86,14 +86,20 @@ type BerkasFolderListResponse = {
   error?: string
 }
 
-type BerkasSectionMode = 'open' | 'active'
+type BerkasStatusFilter = 'all' | 'open' | 'active'
 
 const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
+const STATUS_FILTER_OPTIONS: Array<{ value: BerkasStatusFilter; label: string }> = [
+  { value: 'all', label: 'Semua' },
+  { value: 'open', label: 'Terbuka' },
+  { value: 'active', label: 'Arsip Aktif' },
+]
 
 function BerkasArsipAktifPage() {
   const [openFolders, setOpenFolders] = useState<BerkasFolder[]>([])
   const [activeFolders, setActiveFolders] = useState<BerkasFolder[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<BerkasStatusFilter>('all')
   const [openSummary, setOpenSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [activeSummary, setActiveSummary] = useState<BerkasFolderListResponse['summary'] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -201,8 +207,7 @@ function BerkasArsipAktifPage() {
 
   function exportCsv() {
     const csv = createBerkasFolderListCsv([
-      { label: 'Berkas Terbuka', folders: filteredOpenFolders },
-      { label: 'Pemberkasan Arsip Aktif', folders: filteredActiveFolders },
+      { label: 'Pemberkasan Arsip Aktif', folders: filteredFolders },
     ])
 
     downloadCsvFile(BERKAS_FOLDER_LIST_CSV_FILENAME, csv)
@@ -212,10 +217,11 @@ function BerkasArsipAktifPage() {
     fetchData()
   }, [])
 
-  const filteredOpenFolders = filterBerkasFolders(openFolders, searchQuery)
-  const filteredActiveFolders = filterBerkasFolders(activeFolders, searchQuery)
+  const allFolders = [...openFolders, ...activeFolders]
+  const visibleFolders = allFolders.filter((folder) => matchesStatusFilter(folder, statusFilter))
+  const filteredFolders = filterBerkasFolders(visibleFolders, searchQuery)
   const hasSearchQuery = searchQuery.trim().length > 0
-  const exportRowCount = filteredOpenFolders.length + filteredActiveFolders.length
+  const exportRowCount = filteredFolders.length
   const canExport = exportRowCount > 0 && !loading && !error
 
   return (
@@ -266,11 +272,35 @@ function BerkasArsipAktifPage() {
           id="berkas-page-local-search"
           label="Pencarian lokal halaman"
           value={searchQuery}
-          placeholder="Cari berkas di halaman ini..."
-          helperText="Filter lokal untuk Berkas Terbuka dan Pemberkasan Arsip Aktif."
-          resultText={`${exportRowCount} dari ${openFolders.length + activeFolders.length} berkas ditampilkan`}
+          placeholder="Cari Jenis Pembayaran..."
+          helperText="Filter lokal untuk satu daftar terpadu Berkas Terbuka dan Arsip Aktif."
+          resultText={`Hasil: ${exportRowCount} berkas`}
           onChange={setSearchQuery}
-        />
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-zinc-700">Status:</span>
+            <div className="flex flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#FFF8F1] p-1">
+              {STATUS_FILTER_OPTIONS.map((option) => {
+                const selected = statusFilter === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`h-8 rounded-lg px-3 text-xs font-bold transition ${
+                      selected
+                        ? 'border border-orange-200 bg-orange-50 text-[#FF4D00] shadow-sm'
+                        : 'border border-transparent text-zinc-600 hover:bg-[#FFFDF9] hover:text-zinc-950'
+                    }`}
+                    aria-pressed={selected}
+                    onClick={() => setStatusFilter(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </ArchiveSearchPanel>
 
         {(actionError || actionSuccess) && (
           <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
@@ -293,34 +323,15 @@ function BerkasArsipAktifPage() {
             variant="page"
           />
         ) : (
-          <div className="space-y-6">
-            <BerkasSection
-              title="Berkas Terbuka"
-              description="Pemberkasan berjalan untuk Jenis Pembayaran yang masih dapat menerima dokumen."
-              emptyTitle="Belum ada berkas terbuka"
-              emptyDescription="Berkas terbuka akan muncul setelah dokumen workflow atau manual pertama memilih Jenis Pembayaran yang belum final."
-              folders={filteredOpenFolders}
-              hasSearchQuery={hasSearchQuery}
-              mode="open"
-              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
-              pendingCloseBerkasId={pendingCloseBerkasId}
-              onLifecycleAction={submitLifecycleAction}
-              onOpenCloseDialog={openCloseDialog}
-            />
-            <BerkasSection
-              title="Pemberkasan Arsip Aktif"
-              description="Berkas yang sudah ditutup dan memiliki status arsip Aktif."
-              emptyTitle="Belum ada berkas arsip aktif"
-              emptyDescription="Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini."
-              folders={filteredActiveFolders}
-              hasSearchQuery={hasSearchQuery}
-              mode="active"
-              pendingLifecycleBerkasId={pendingLifecycleBerkasId}
-              pendingCloseBerkasId={pendingCloseBerkasId}
-              onLifecycleAction={submitLifecycleAction}
-              onOpenCloseDialog={openCloseDialog}
-            />
-          </div>
+          <BerkasUnifiedSection
+            folders={filteredFolders}
+            hasSearchQuery={hasSearchQuery}
+            statusFilter={statusFilter}
+            pendingLifecycleBerkasId={pendingLifecycleBerkasId}
+            pendingCloseBerkasId={pendingCloseBerkasId}
+            onLifecycleAction={submitLifecycleAction}
+            onOpenCloseDialog={openCloseDialog}
+          />
         )}
         <CloseBerkasDialog
           open={Boolean(closeDialogFolder)}
@@ -347,26 +358,18 @@ function BerkasArsipAktifPage() {
   )
 }
 
-function BerkasSection({
-  title,
-  description,
-  emptyTitle,
-  emptyDescription,
+function BerkasUnifiedSection({
   folders,
   hasSearchQuery,
-  mode,
+  statusFilter,
   pendingLifecycleBerkasId,
   pendingCloseBerkasId,
   onLifecycleAction,
   onOpenCloseDialog,
 }: {
-  title: string
-  description: string
-  emptyTitle: string
-  emptyDescription: string
   folders: BerkasFolder[]
   hasSearchQuery: boolean
-  mode: BerkasSectionMode
+  statusFilter: BerkasStatusFilter
   pendingLifecycleBerkasId: string | null
   pendingCloseBerkasId: string | null
   onLifecycleAction: (folder: BerkasFolder) => void
@@ -375,20 +378,19 @@ function BerkasSection({
   return (
     <section className="space-y-3">
       <div>
-        <h3 className="font-headline text-lg font-extrabold text-on-surface">{title}</h3>
-        <p className="text-xs text-on-surface-variant">{description}</p>
+        <h3 className="font-headline text-lg font-extrabold text-on-surface">Daftar Berkas</h3>
+        <p className="text-xs text-on-surface-variant">Berkas Terbuka dan Arsip Aktif ditampilkan dalam satu daftar terpadu.</p>
       </div>
 
       {folders.length === 0 ? (
         <EmptyState
-          title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : emptyTitle}
-          description={hasSearchQuery ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.' : emptyDescription}
+          title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : getEmptyTitleForFilter(statusFilter)}
+          description={hasSearchQuery ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.' : getEmptyDescriptionForFilter(statusFilter)}
           icon={<FolderOpen size={22} />}
         />
       ) : (
         <BerkasTable
           folders={folders}
-          mode={mode}
           pendingLifecycleBerkasId={pendingLifecycleBerkasId}
           pendingCloseBerkasId={pendingCloseBerkasId}
           onLifecycleAction={onLifecycleAction}
@@ -401,14 +403,12 @@ function BerkasSection({
 
 function BerkasTable({
   folders,
-  mode,
   pendingLifecycleBerkasId,
   pendingCloseBerkasId,
   onLifecycleAction,
   onOpenCloseDialog,
 }: {
   folders: BerkasFolder[]
-  mode: BerkasSectionMode
   pendingLifecycleBerkasId: string | null
   pendingCloseBerkasId: string | null
   onLifecycleAction: (folder: BerkasFolder) => void
@@ -422,18 +422,10 @@ function BerkasTable({
             <tr className="bg-orange-50/60 text-left">
               <th className={`w-10 text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>No</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Jenis Pembayaran</th>
-              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Berkas</th>
-              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Arsip</th>
-              {mode !== 'open' && (
-                <th className={ARCHIVE_TABLE_HEAD_CLASS}>Nomor SPM</th>
-              )}
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
-              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Dokumen Workflow</th>
-              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Dokumen Manual</th>
-              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Total Nominal</th>
-              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>
-                {mode === 'open' ? 'Terakhir Diperbarui' : 'Tanggal Ditutup'}
-              </th>
+              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Total Nominal Realisasi</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Berkas</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Terakhir Diperbarui</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
             </tr>
           </thead>
@@ -445,22 +437,24 @@ function BerkasTable({
                   <p className="line-clamp-2 text-sm font-semibold tracking-tight transition-colors group-hover:text-[#FF4D00]">
                     {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
                   </p>
+                  <p className="mt-1 text-[11px] font-semibold text-zinc-500">
+                    Workflow {folder.workflow_item_count} / Manual {folder.manual_item_count}
+                  </p>
                 </td>
+                <td className="px-4 py-3 text-center font-semibold text-on-surface">{folder.item_count} dokumen</td>
+                <td className="px-4 py-3 text-right font-mono font-bold text-on-surface">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
                 <td className="px-4 py-3">
-                  <StatusBerkasBadge status={folder.status_berkas} />
+                  <div className="flex flex-col items-start gap-1">
+                    <StatusBerkasBadge status={folder.status_berkas} />
+                    {!isOpenFolder(folder) && (
+                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                        {formatBerkasArchiveStatusLabel(folder.status_arsip, folder.status_berkas)}
+                      </span>
+                    )}
+                  </div>
                 </td>
-                <td className="px-4 py-3">
-                  <StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />
-                </td>
-                {mode !== 'open' && (
-                  <td className="px-4 py-3 font-semibold text-on-surface">{folder.nomor_spm ?? '-'}</td>
-                )}
-                <td className="px-4 py-3 text-center text-on-surface">{folder.item_count}</td>
-                <td className="px-4 py-3 text-center text-on-surface">{folder.workflow_item_count}</td>
-                <td className="px-4 py-3 text-center text-on-surface">{folder.manual_item_count}</td>
-                <td className="px-4 py-3 text-right text-on-surface">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
                 <td className="px-4 py-3 text-center text-on-surface-variant">
-                  {formatNullableDateLabel(mode === 'open' ? folder.updated_at : folder.closed_at)}
+                  {formatNullableDateLabel(folder.updated_at)}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap justify-center gap-2">
@@ -476,7 +470,7 @@ function BerkasTable({
                       pending={pendingLifecycleBerkasId === folder.berkas_id}
                       onLifecycleAction={onLifecycleAction}
                     />
-                    {mode === 'open' && (
+                    {isOpenFolder(folder) && (
                       <CloseBerkasShortcutButton
                         folder={folder}
                         pending={pendingCloseBerkasId === folder.berkas_id}
@@ -495,7 +489,7 @@ function BerkasTable({
           <ArchiveMobileCard
             key={folder.berkas_id}
             title={formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
-            subtitle={mode === 'open' ? 'Berkas terbuka' : `Nomor SPM: ${folder.nomor_spm ?? '-'}`}
+            subtitle={isOpenFolder(folder) ? 'Berkas terbuka' : `Nomor SPM: ${folder.nomor_spm ?? '-'}`}
             status={<StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />}
             meta={[
               { label: 'Status berkas', value: <StatusBerkasBadge status={folder.status_berkas} /> },
@@ -503,7 +497,7 @@ function BerkasTable({
               { label: 'Workflow', value: folder.workflow_item_count },
               { label: 'Manual', value: folder.manual_item_count },
               { label: 'Total nominal', value: formatNominalRupiah(folder.total_nominal_realisasi) },
-              { label: mode === 'open' ? 'Diperbarui' : 'Tanggal tutup', value: formatNullableDateLabel(mode === 'open' ? folder.updated_at : folder.closed_at) },
+              { label: 'Diperbarui', value: formatNullableDateLabel(folder.updated_at) },
             ]}
             action={
               <div className="flex flex-wrap gap-2">
@@ -519,7 +513,7 @@ function BerkasTable({
                   pending={pendingLifecycleBerkasId === folder.berkas_id}
                   onLifecycleAction={onLifecycleAction}
                 />
-                {mode === 'open' && (
+                {isOpenFolder(folder) && (
                   <CloseBerkasShortcutButton
                     folder={folder}
                     pending={pendingCloseBerkasId === folder.berkas_id}
@@ -608,6 +602,32 @@ function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string |
 
 function isBerkasEmptyForClose(folder: Pick<BerkasFolder, 'item_count'>): boolean {
   return folder.item_count < 1
+}
+
+function isOpenFolder(folder: Pick<BerkasFolder, 'status_berkas' | 'status_arsip'>): boolean {
+  return folder.status_berkas === 'OPEN' && folder.status_arsip === null
+}
+
+function matchesStatusFilter(folder: BerkasFolder, filter: BerkasStatusFilter): boolean {
+  if (filter === 'open') return isOpenFolder(folder)
+  if (filter === 'active') return folder.status_berkas === 'CLOSED' && folder.status_arsip === 'AKTIF'
+  return true
+}
+
+function getEmptyTitleForFilter(filter: BerkasStatusFilter): string {
+  if (filter === 'open') return 'Belum ada berkas terbuka'
+  if (filter === 'active') return 'Belum ada arsip aktif'
+  return 'Belum ada berkas aktif'
+}
+
+function getEmptyDescriptionForFilter(filter: BerkasStatusFilter): string {
+  if (filter === 'open') {
+    return 'Berkas terbuka akan muncul setelah dokumen workflow atau manual pertama memilih Jenis Pembayaran yang belum final.'
+  }
+  if (filter === 'active') {
+    return 'Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini.'
+  }
+  return 'Berkas Terbuka dan Arsip Aktif akan muncul di daftar terpadu ini.'
 }
 
 function filterBerkasFolders(folders: BerkasFolder[], query: string): BerkasFolder[] {

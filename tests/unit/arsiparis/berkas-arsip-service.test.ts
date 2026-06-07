@@ -7,6 +7,7 @@ import {
   closeBerkasArsip,
   getOrCreateOpenBerkasForKlasifikasi,
   transitionBerkasArchiveStatus,
+  updateActiveBerkasMetadata,
   type BerkasArsipRepository,
 } from '#/lib/archive/berkas-arsip-service'
 import { BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
@@ -237,6 +238,22 @@ describe('berkas arsip service foundation', () => {
     expect(plan.closedAt.toISOString()).toBe('2026-05-29T00:00:00.000Z')
   })
 
+  it('treats transformed null close dates as omitted close metadata', () => {
+    const plan = buildCloseBerkasPlan({
+      nomor_spm: 'SPM-001/2026',
+      retensi_aktif: '1 Tahun',
+      retensi_inaktif: '3 Tahun',
+      closed_at: null,
+    }, new Date('2026-05-30T12:00:00.000Z'))
+
+    expect(plan).toMatchObject({
+      closedAtDateOnly: '2026-05-30',
+      masaAktifBerakhir: '2027-05-30',
+      masaInaktifBerakhir: '2030-05-30',
+    })
+    expect(plan.closedAt.toISOString()).toBe('2026-05-30T00:00:00.000Z')
+  })
+
   it('closes a non-empty OPEN berkas without source item or canonical archive mutation', async () => {
     const repository = createFakeRepository({ itemCount: 2 })
 
@@ -258,6 +275,76 @@ describe('berkas arsip service foundation', () => {
     })
     expect(repository.calls).toContainEqual(['closeOpenBerkas', BERKAS_ID, ACTOR_ID])
     expect(repository.calls.some(([name]) => name === 'insertBerkasItem')).toBe(false)
+  })
+
+  it('updates metadata only for CLOSED AKTIF berkas', async () => {
+    const repository = createFakeRepository()
+
+    const updated = await updateActiveBerkasMetadata({
+      berkasId: CLOSED_BERKAS_ID,
+      metadata: {
+        nomor_spm: 'SPM-EDIT-001',
+        retensi_aktif: '3 Tahun',
+        retensi_inaktif: '5 Tahun',
+        closed_at: '2026-06-01',
+      },
+    }, { repository })
+
+    expect(updated).toMatchObject({
+      id: CLOSED_BERKAS_ID,
+      status_berkas: 'CLOSED',
+      status_arsip: 'AKTIF',
+      nomor_spm: 'SPM-EDIT-001',
+      retensi_aktif: '3 Tahun',
+      retensi_inaktif: '5 Tahun',
+      masa_aktif_berakhir: '2029-05-29',
+      masa_inaktif_berakhir: '2034-05-29',
+      closed_at: '2026-05-29T00:00:00.000Z',
+    })
+    expect(repository.calls).toContainEqual(['updateActiveBerkasMetadata', CLOSED_BERKAS_ID])
+    expect(repository.calls).toContainEqual([
+      'updateActiveBerkasMetadataPlan',
+      CLOSED_BERKAS_ID,
+      '2026-05-29',
+    ])
+  })
+
+  it('rejects active metadata edits for OPEN berkas', async () => {
+    const repository = createFakeRepository()
+
+    await expect(updateActiveBerkasMetadata({
+      berkasId: BERKAS_ID,
+      metadata: {
+        nomor_spm: 'SPM-EDIT-001',
+        retensi_aktif: '3 Tahun',
+        retensi_inaktif: '5 Tahun',
+      },
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_METADATA_NOT_EDITABLE',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'updateActiveBerkasMetadata')).toBe(false)
+  })
+
+  it.each([
+    BERKAS_ARCHIVE_STATUS.INAKTIF,
+    BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+    BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN,
+  ] as const)('rejects active metadata edits after berkas status becomes %s', async (closedStatusArsip) => {
+    const repository = createFakeRepository({ closedStatusArsip })
+
+    await expect(updateActiveBerkasMetadata({
+      berkasId: CLOSED_BERKAS_ID,
+      metadata: {
+        nomor_spm: 'SPM-EDIT-001',
+        retensi_aktif: '3 Tahun',
+        retensi_inaktif: '5 Tahun',
+      },
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_METADATA_NOT_EDITABLE',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'updateActiveBerkasMetadata')).toBe(false)
   })
 
   it('rejects invalid close-folder metadata', () => {
@@ -508,6 +595,24 @@ function createFakeRepository(options: {
         masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
         closedAt: input.plan.closedAt,
         closedBy: input.actorUserId,
+      }
+    },
+    async updateActiveBerkasMetadata(input) {
+      calls.push(['updateActiveBerkasMetadata', input.berkasId])
+      calls.push([
+        'updateActiveBerkasMetadataPlan',
+        input.berkasId,
+        input.plan.retentionBaseDateOnly,
+      ])
+      return {
+        ...closedBerkas(),
+        nomorSpm: input.plan.nomorSpm,
+        retensiAktif: input.plan.retensiAktif,
+        retensiInaktif: input.plan.retensiInaktif,
+        masaAktifBerakhir: input.plan.masaAktifBerakhir,
+        masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
+        closedAt: closedBerkas().closedAt,
+        updatedAt: new Date('2026-06-01T00:00:00.000Z'),
       }
     },
     async updateBerkasArchiveStatus(input) {

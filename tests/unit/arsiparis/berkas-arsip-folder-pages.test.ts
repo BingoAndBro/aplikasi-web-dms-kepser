@@ -14,6 +14,10 @@ const readModelMocks = vi.hoisted(() => ({
   getBerkasArsipDetail: vi.fn(),
 }))
 
+const serviceMocks = vi.hoisted(() => ({
+  updateActiveBerkasMetadata: vi.fn(),
+}))
+
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: authMocks.getLocalServerSession,
   hasLocalRole: (session: { roles: string[] }, role: string) => session.roles.includes(role),
@@ -29,9 +33,19 @@ vi.mock('#/lib/archive/berkas-arsip-read-model', async (importOriginal) => {
   }
 })
 
+vi.mock('#/lib/archive/berkas-arsip-service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#/lib/archive/berkas-arsip-service')>()
+
+  return {
+    ...actual,
+    updateActiveBerkasMetadata: serviceMocks.updateActiveBerkasMetadata,
+  }
+})
+
 import {
   buildCloseBerkasRequestBody,
   buildBerkasItemAttachmentFileUrl,
+  canEditActiveMetadata,
   canShowCloseBerkasForm,
   isBerkasEmptyForClose,
 } from '#/routes/arsiparis/berkas/$id'
@@ -55,8 +69,11 @@ const listGetHandler = (BerkasListRoute as unknown as {
 }).options.server.handlers.GET
 
 const detailGetHandler = (BerkasDetailRoute as unknown as {
-  options: { server: { handlers: { GET: RouteGetHandler } } }
+  options: { server: { handlers: { GET: RouteGetHandler; PATCH: RouteGetHandler } } }
 }).options.server.handlers.GET
+const detailPatchHandler = (BerkasDetailRoute as unknown as {
+  options: { server: { handlers: { GET: RouteGetHandler; PATCH: RouteGetHandler } } }
+}).options.server.handlers.PATCH
 
 describe('folder-first berkas archive read API routes', () => {
   beforeEach(() => {
@@ -67,6 +84,22 @@ describe('folder-first berkas archive read API routes', () => {
     readModelMocks.getBerkasArsipDetail.mockResolvedValue({
       status: 'found',
       detail: detailResult(),
+    })
+    serviceMocks.updateActiveBerkasMetadata.mockResolvedValue({
+      id: BERKAS_ID,
+      klasifikasi_id: KLASIFIKASI_ID,
+      klasifikasi_kode_snapshot: 'BB',
+      klasifikasi_nama_snapshot: 'Belanja Barang',
+      status_berkas: 'CLOSED',
+      status_arsip: 'AKTIF',
+      nomor_spm: 'SPM-EDIT-001',
+      retensi_aktif: '3 Tahun',
+      retensi_inaktif: '5 Tahun',
+      masa_aktif_berakhir: '2029-05-29',
+      masa_inaktif_berakhir: '2034-05-29',
+      closed_at: '2026-05-29T00:00:00.000Z',
+      closed_by: USER_ID,
+      created_by: USER_ID,
     })
   })
 
@@ -246,6 +279,46 @@ describe('folder-first berkas archive read API routes', () => {
     expect(JSON.stringify(body)).not.toContain('closed_by')
   })
 
+  it('updates active archive metadata through existing detail API PATCH guard', async () => {
+    const response = await detailPatchHandler({
+      request: new Request(`http://localhost/api/arsiparis/berkas/${BERKAS_ID}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'http://localhost',
+        },
+        body: JSON.stringify({
+          nomor_spm: 'SPM-EDIT-001',
+          retensi_aktif: '3 Tahun',
+          retensi_inaktif: '5 Tahun',
+          closed_at: '2026-06-01',
+        }),
+      }),
+      params: { id: BERKAS_ID },
+    })
+
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(serviceMocks.updateActiveBerkasMetadata).toHaveBeenCalledWith({
+      berkasId: BERKAS_ID,
+      metadata: {
+        nomor_spm: 'SPM-EDIT-001',
+        retensi_aktif: '3 Tahun',
+        retensi_inaktif: '5 Tahun',
+        closed_at: '2026-06-01',
+      },
+    })
+    expect(body.berkas).toMatchObject({
+      id: BERKAS_ID,
+      status_berkas: 'CLOSED',
+      status_arsip: 'AKTIF',
+      nomor_spm: 'SPM-EDIT-001',
+      closed_at: '2026-05-29T00:00:00.000Z',
+    })
+    expectNoSensitiveOutput(body)
+  })
+
   it('returns 404 for missing folder detail', async () => {
     readModelMocks.getBerkasArsipDetail.mockResolvedValueOnce({ status: 'not_found' })
 
@@ -266,7 +339,7 @@ describe('folder-first berkas archive page formatting', () => {
     expect(formatBerkasArchiveStatusLabel(null, 'OPEN')).toBe('Belum final')
     expect(formatBerkasArchiveStatusLabel(null, 'CLOSED')).toBe('Status arsip belum tersedia')
     expect(formatBerkasArchiveStatusLabel('AKTIF', 'CLOSED')).toBe('Aktif')
-    expect(formatSourceTypeLabel('WORKFLOW')).toBe('Workflow')
+    expect(formatSourceTypeLabel('WORKFLOW')).toBe('Persetujuan')
     expect(formatSourceTypeLabel('MANUAL')).toBe('Manual')
     expect(formatItemWarningLabel('SOURCE_NOT_FOUND')).toBe('Data sumber tidak ditemukan')
   })
@@ -306,6 +379,14 @@ describe('folder-first berkas archive page formatting', () => {
     expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' })).toBe(false)
     expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: 'DIMUSNAHKAN' })).toBe(false)
     expect(canShowCloseBerkasForm({ status_berkas: 'CLOSED', status_arsip: null })).toBe(false)
+  })
+
+  it('shows edit metadata only for CLOSED AKTIF folder details', () => {
+    expect(canEditActiveMetadata({ status_berkas: 'CLOSED', status_arsip: 'AKTIF' })).toBe(true)
+    expect(canEditActiveMetadata({ status_berkas: 'OPEN', status_arsip: null })).toBe(false)
+    expect(canEditActiveMetadata({ status_berkas: 'CLOSED', status_arsip: 'INAKTIF' })).toBe(false)
+    expect(canEditActiveMetadata({ status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' })).toBe(false)
+    expect(canEditActiveMetadata({ status_berkas: 'CLOSED', status_arsip: 'DIMUSNAHKAN' })).toBe(false)
   })
 
   it('blocks close submission for empty OPEN berkas details', () => {
@@ -353,21 +434,23 @@ describe('folder-first berkas archive page formatting', () => {
     const routesSource = readFileSync('src/lib/constants/routes.ts', 'utf8')
     const routeTreeSource = readFileSync('src/routeTree.gen.ts', 'utf8')
 
-    expect(listSource).toContain('Berkas Terbuka')
+    expect(listSource).toContain("value: 'all', label: 'Semua'")
+    expect(listSource).toContain("value: 'open', label: 'Terbuka'")
+    expect(listSource).toContain("value: 'active', label: 'Arsip Aktif'")
     expect(listSource).toContain('Pemberkasan Arsip Aktif')
-    expect(listSource).toContain('Cari berkas di halaman ini...')
-    expect(listSource).toContain('Filter lokal untuk Berkas Terbuka dan Pemberkasan Arsip Aktif.')
+    expect(listSource).toContain('Cari Jenis Pembayaran...')
+    expect(listSource).toContain('Filter lokal untuk satu daftar terpadu Berkas Terbuka dan Arsip Aktif.')
+    expect(listSource).toContain('matchesStatusFilter(folder, statusFilter)')
+    expect(listSource).toContain('<BerkasUnifiedSection')
     expect(listSource).toContain('Tidak ada data yang cocok dengan pencarian.')
-    expect(listSource).toContain('filterBerkasFolders(openFolders, searchQuery)')
-    expect(listSource).toContain('filterBerkasFolders(activeFolders, searchQuery)')
-    expect(listSource).toContain('folders: filteredOpenFolders')
-    expect(listSource).toContain('folders: filteredActiveFolders')
+    expect(listSource).toContain('filterBerkasFolders(visibleFolders, searchQuery)')
+    expect(listSource).toContain('folders={filteredFolders}')
     expect(listSource).toContain('Export CSV')
     expect(listSource).toContain('createBerkasFolderListCsv')
     expect(listSource).toContain('Tidak ada data untuk diekspor.')
     expect(listSource).toContain('CloseBerkasDialog')
     expect(listSource).toContain('CloseBerkasShortcutButton')
-    expect(listSource).toContain("mode === 'open'")
+    expect(listSource).toContain('isOpenFolder(folder)')
     expect(listSource).toContain('/close')
     expect(listSource).toContain('await fetchData()')
     expect(listSource).toContain('setCloseDialogFolder(null)')
@@ -406,6 +489,28 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).not.toContain('mt-4 rounded-xl border border-error/30 bg-error/5 p-4')
     expect(detailSource).toContain('Export Daftar Dokumen CSV')
     expect(detailSource).toContain('createBerkasDetailItemsCsv')
+    expect(detailSource).toContain('DocumentMetadataDialog')
+    expect(detailSource).toContain('Detail Dokumen Berkas')
+    expect(detailSource).toContain('DocumentItemTable')
+    expect(detailSource).toContain('Judul Dokumen')
+    expect(detailSource).toContain('Sumber')
+    expect(detailSource).toContain('Tanggal Dokumen')
+    expect(detailSource).toContain('Pengaju / Pembuat')
+    expect(detailSource).toContain('Nominal Realisasi')
+    expect(detailSource).toContain('canEditActiveMetadata')
+    expect(detailSource).toContain('Edit Metadata Arsip Aktif')
+    expect(detailSource).toContain("status_berkas === 'CLOSED' && detail.status_arsip === 'AKTIF'")
+    expect(detailSource).toContain("method: 'PATCH'")
+    expect(detailSource).toContain('Metadata arsip aktif berhasil diperbarui.')
+    expect(detailSource).toContain('Edit metadata hanya berlaku untuk Arsip Aktif')
+    expect(detailSource).toContain('Tanggal tutup adalah waktu finalisasi berkas dan tidak diubah dari edit metadata.')
+    expect(detailSource).not.toContain('Metadata arsip aktif diperbarui')
+    expect(detailSource).toContain('Dokumen selesai persetujuan PPSPM')
+    expect(detailSource).toContain('Penambahan dokumen manual sukses')
+    expect(detailSource).toContain('Dokumen diklasifikasikan ke berkas')
+    expect(detailSource).toContain('Berkas dipindahkan ke Inaktif')
+    expect(detailSource).toContain('Berkas dipindahkan ke Usul Musnah')
+    expect(detailSource).toContain('File dimusnahkan')
     expect(detailSource).toContain('Data file sudah dimusnahkan')
     expect(detailSource).toContain("statusArsip === 'DIMUSNAHKAN'")
     expect(detailSource).toContain('const availableAttachments = item.attachments')

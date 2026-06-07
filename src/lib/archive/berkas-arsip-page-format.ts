@@ -75,7 +75,7 @@ export function resolveBerkasLifecycleAction(
 }
 
 export function formatSourceTypeLabel(sourceType: ArchiveSourceType | string | null | undefined): string {
-  if (sourceType === 'WORKFLOW') return 'Workflow'
+  if (sourceType === 'WORKFLOW') return 'Persetujuan'
   if (sourceType === 'MANUAL') return 'Manual'
 
   return 'Sumber tidak dikenal'

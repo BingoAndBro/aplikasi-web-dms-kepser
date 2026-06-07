@@ -107,6 +107,11 @@ export type CloseBerkasArsipInput = {
   now?: Date
 }
 
+export type UpdateActiveBerkasMetadataInput = {
+  berkasId: string
+  metadata: unknown
+}
+
 export type BerkasArchiveLifecycleAction =
   | 'mark_inactive'
   | 'propose_destruction'
@@ -124,6 +129,15 @@ export type CloseBerkasPlan = {
   retensiInaktif: CloseBerkasMetadataInput['retensi_inaktif']
   closedAtDateOnly: string
   closedAt: Date
+  masaAktifBerakhir: string
+  masaInaktifBerakhir: string
+}
+
+export type ActiveBerkasMetadataPlan = {
+  nomorSpm: string
+  retensiAktif: CloseBerkasMetadataInput['retensi_aktif']
+  retensiInaktif: CloseBerkasMetadataInput['retensi_inaktif']
+  retentionBaseDateOnly: string
   masaAktifBerakhir: string
   masaInaktifBerakhir: string
 }
@@ -152,6 +166,10 @@ export type BerkasArsipRepository = {
     actorUserId: string
     plan: CloseBerkasPlan
   }): Promise<BerkasRow | null>
+  updateActiveBerkasMetadata(input: {
+    berkasId: string
+    plan: ActiveBerkasMetadataPlan
+  }): Promise<BerkasRow | null>
   updateBerkasArchiveStatus(input: {
     berkasId: string
     currentStatusArsip: BerkasArchiveStatus
@@ -173,6 +191,7 @@ export type BerkasArsipErrorCode =
   | 'BERKAS_LIFECYCLE_NOT_FINAL'
   | 'BERKAS_LIFECYCLE_UNKNOWN'
   | 'BERKAS_LIFECYCLE_INVALID'
+  | 'BERKAS_METADATA_NOT_EDITABLE'
   | 'BERKAS_EMPTY'
   | 'SOURCE_NOT_FOUND'
   | 'SOURCE_KLASIFIKASI_UNAVAILABLE'
@@ -380,29 +399,86 @@ export async function transitionBerkasArchiveStatus(
   return toBerkasDto(updated)
 }
 
+export async function updateActiveBerkasMetadata(
+  input: UpdateActiveBerkasMetadataInput,
+  deps: BerkasArsipServiceDeps = {},
+): Promise<BerkasArsipDto> {
+  const repository = getRepository(deps)
+  const existing = await repository.findBerkasById(input.berkasId)
+  if (!existing) {
+    throw new BerkasArsipServiceError('BERKAS_NOT_FOUND', 'Berkas tidak ditemukan')
+  }
+
+  if (existing.statusBerkas !== BERKAS_STATUS.CLOSED || existing.statusArsip !== BERKAS_ARCHIVE_STATUS.AKTIF) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_METADATA_NOT_EDITABLE',
+      'Metadata hanya dapat diedit untuk Arsip Aktif',
+    )
+  }
+
+  const plan = buildActiveBerkasMetadataPlan(input.metadata, existing.closedAt)
+  const updated = await repository.updateActiveBerkasMetadata({
+    berkasId: input.berkasId,
+    plan,
+  })
+
+  if (!updated) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_METADATA_NOT_EDITABLE',
+      'Metadata arsip aktif sudah tidak dapat diedit',
+    )
+  }
+
+  return toBerkasDto(updated)
+}
+
+export function buildActiveBerkasMetadataPlan(
+  metadata: unknown,
+  existingClosedAt: Date | string | null,
+): ActiveBerkasMetadataPlan {
+  const parsed = parseCloseBerkasMetadata(metadata, 'Metadata arsip aktif tidak valid')
+
+  const retentionBaseDateOnly = dateLikeToDateOnly(existingClosedAt)
+  if (!retentionBaseDateOnly) {
+    throw new BerkasArsipServiceError(
+      'BERKAS_METADATA_NOT_EDITABLE',
+      'Metadata arsip aktif belum memiliki tanggal tutup',
+    )
+  }
+
+  const retentionDates = calculateManualArchiveRetentionDates({
+    tanggalDiarsipkan: retentionBaseDateOnly,
+    retensiAktif: parsed.retensi_aktif,
+    retensiInaktif: parsed.retensi_inaktif,
+  })
+
+  return {
+    nomorSpm: parsed.nomor_spm,
+    retensiAktif: parsed.retensi_aktif,
+    retensiInaktif: parsed.retensi_inaktif,
+    retentionBaseDateOnly,
+    masaAktifBerakhir: retentionDates.masaAktifBerakhir,
+    masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
+  }
+}
+
 export function buildCloseBerkasPlan(
   metadata: unknown,
   now = new Date(),
 ): CloseBerkasPlan {
-  const parsed = closeBerkasMetadataSchema.safeParse(metadata)
-  if (!parsed.success) {
-    throw new BerkasArsipServiceError(
-      'INVALID_CLOSE_METADATA',
-      parsed.error.issues[0]?.message ?? 'Metadata tutup berkas tidak valid',
-    )
-  }
+  const parsed = parseCloseBerkasMetadata(metadata, 'Metadata tutup berkas tidak valid')
 
-  const closedAtDateOnly = parsed.data.closed_at ?? toServerDateOnly(now)
+  const closedAtDateOnly = parsed.closed_at ?? toServerDateOnly(now)
   const retentionDates = calculateManualArchiveRetentionDates({
     tanggalDiarsipkan: closedAtDateOnly,
-    retensiAktif: parsed.data.retensi_aktif,
-    retensiInaktif: parsed.data.retensi_inaktif,
+    retensiAktif: parsed.retensi_aktif,
+    retensiInaktif: parsed.retensi_inaktif,
   })
 
   return {
-    nomorSpm: parsed.data.nomor_spm,
-    retensiAktif: parsed.data.retensi_aktif,
-    retensiInaktif: parsed.data.retensi_inaktif,
+    nomorSpm: parsed.nomor_spm,
+    retensiAktif: parsed.retensi_aktif,
+    retensiInaktif: parsed.retensi_inaktif,
     closedAtDateOnly,
     closedAt: dateOnlyToUtcMidnight(closedAtDateOnly),
     masaAktifBerakhir: retentionDates.masaAktifBerakhir,
@@ -578,6 +654,28 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
 
     return row ?? null
   },
+
+  async updateActiveBerkasMetadata(input) {
+    const database = await getDatabase()
+    const [row] = await database
+      .update(berkasArsip)
+      .set({
+        nomorSpm: input.plan.nomorSpm,
+        retensiAktif: input.plan.retensiAktif,
+        retensiInaktif: input.plan.retensiInaktif,
+        masaAktifBerakhir: input.plan.masaAktifBerakhir,
+        masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(berkasArsip.id, input.berkasId),
+        eq(berkasArsip.statusBerkas, BERKAS_STATUS.CLOSED),
+        eq(berkasArsip.statusArsip, BERKAS_ARCHIVE_STATUS.AKTIF),
+      ))
+      .returning()
+
+    return row ?? null
+  },
 }
 
 function getRepository(deps: BerkasArsipServiceDeps): BerkasArsipRepository {
@@ -715,6 +813,30 @@ function toServerDateOnly(date: Date): string {
   ].join('-')
 }
 
+function parseCloseBerkasMetadata(
+  metadata: unknown,
+  defaultMessage: string,
+): CloseBerkasMetadataInput {
+  const parsed = closeBerkasMetadataSchema.safeParse(normalizeCloseBerkasMetadata(metadata))
+  if (!parsed.success) {
+    throw new BerkasArsipServiceError(
+      'INVALID_CLOSE_METADATA',
+      parsed.error.issues[0]?.message ?? defaultMessage,
+    )
+  }
+
+  return parsed.data
+}
+
+function normalizeCloseBerkasMetadata(metadata: unknown): unknown {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return metadata
+  if (!('closed_at' in metadata) || (metadata as { closed_at?: unknown }).closed_at !== null) return metadata
+
+  const rest = { ...(metadata as Record<string, unknown>) }
+  delete rest.closed_at
+  return rest
+}
+
 function dateOnlyToUtcMidnight(dateOnly: string): Date {
   const [year, month, day] = dateOnly.split('-').map(Number)
   return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0))
@@ -722,6 +844,14 @@ function dateOnlyToUtcMidnight(dateOnly: string): Date {
 
 function dateLikeToIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value
+}
+
+function dateLikeToDateOnly(value: Date | string | null): string | null {
+  if (!value) return null
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value)
+  return match?.[1] ?? null
 }
 
 function isUniqueConflict(error: unknown): boolean {

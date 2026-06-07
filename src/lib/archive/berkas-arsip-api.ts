@@ -93,6 +93,7 @@ function statusForServiceError(error: BerkasArsipServiceError): number {
     case 'BERKAS_LIFECYCLE_NOT_FINAL':
     case 'BERKAS_LIFECYCLE_UNKNOWN':
     case 'BERKAS_LIFECYCLE_INVALID':
+    case 'BERKAS_METADATA_NOT_EDITABLE':
     case 'BERKAS_EMPTY':
     case 'SOURCE_KLASIFIKASI_UNAVAILABLE':
     case 'CONFLICT':

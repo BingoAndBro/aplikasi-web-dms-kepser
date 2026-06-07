@@ -2,22 +2,28 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   AlertTriangle,
   ArrowRightCircle,
+  Check,
+  ChevronLeft,
   ChevronRight,
   Download,
   Eye,
   FileText,
   FolderOpen,
   Loader2,
+  Pencil,
   Save,
   X,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import {
   ARCHIVE_DETAIL_CONTAINER_CLASS,
   ARCHIVE_INLINE_ACTION_CLASS,
+  ARCHIVE_TABLE_HEAD_CLASS,
+  ARCHIVE_TABLE_ROW_CLASS,
   ArchivePageHeader,
   ArchivePanel,
+  ArchiveTableShell,
   ArchiveTabs,
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
@@ -63,6 +69,7 @@ import {
   type CloseBerkasFormState,
 } from './-components/CloseBerkasDialog'
 import { ApiError, apiFetch } from '#/lib/api-client'
+import { MANUAL_ARCHIVE_RETENTION_LABELS } from '#/lib/archive/retention'
 
 export const Route = createFileRoute('/arsiparis/berkas/$id')({ component: BerkasArsipDetailPage })
 
@@ -141,6 +148,9 @@ function BerkasArsipDetailPage() {
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [pendingClose, setPendingClose] = useState(false)
   const [closeForm, setCloseForm] = useState<CloseBerkasFormState>(EMPTY_CLOSE_BERKAS_FORM)
+  const [metadataDialogOpen, setMetadataDialogOpen] = useState(false)
+  const [metadataForm, setMetadataForm] = useState<CloseBerkasFormState>(EMPTY_CLOSE_BERKAS_FORM)
+  const [pendingMetadataEdit, setPendingMetadataEdit] = useState(false)
   const [activeTab, setActiveTab] = useState<DetailTab>('documents')
 
   async function fetchData() {
@@ -232,6 +242,48 @@ function BerkasArsipDetailPage() {
       setActionError(resolveErrorMessage(error))
     } finally {
       setPendingClose(false)
+    }
+  }
+
+  function openMetadataEditDialog() {
+    if (!detail || !canEditActiveMetadata(detail)) return
+
+    setMetadataForm({
+      nomor_spm: detail.nomor_spm ?? '',
+      retensi_aktif: detail.retensi_aktif ?? '',
+      retensi_inaktif: detail.retensi_inaktif ?? '',
+      closed_at: toDateOnlyInputValue(detail.closed_at),
+    })
+    setMetadataDialogOpen(true)
+    setActionError(null)
+    setActionSuccess(null)
+  }
+
+  async function submitMetadataEdit() {
+    if (!detail || !canEditActiveMetadata(detail)) return
+
+    if (isCloseBerkasFormIncomplete(metadataForm)) {
+      setActionError('Nomor SPM, Retensi Aktif, dan Retensi Inaktif wajib diisi')
+      setActionSuccess(null)
+      return
+    }
+
+    setPendingMetadataEdit(true)
+    setActionError(null)
+    setActionSuccess(null)
+
+    try {
+      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(buildCloseBerkasRequestBody(metadataForm)),
+      })
+      setActionSuccess('Metadata arsip aktif berhasil diperbarui.')
+      setMetadataDialogOpen(false)
+      await fetchData()
+    } catch (error) {
+      setActionError(resolveErrorMessage(error))
+    } finally {
+      setPendingMetadataEdit(false)
     }
   }
 
@@ -348,6 +400,8 @@ function BerkasArsipDetailPage() {
                       }
                     }}
                     onLifecycleAction={submitLifecycleAction}
+                    pendingMetadataEdit={pendingMetadataEdit}
+                    onOpenMetadataEditDialog={openMetadataEditDialog}
                     pendingClose={pendingClose}
                     onOpenCloseDialog={() => {
                       setCloseDialogOpen(true)
@@ -378,6 +432,8 @@ function BerkasArsipDetailPage() {
                           }
                         }}
                         onLifecycleAction={submitLifecycleAction}
+                        pendingMetadataEdit={pendingMetadataEdit}
+                        onOpenMetadataEditDialog={openMetadataEditDialog}
                         pendingClose={pendingClose}
                         onOpenCloseDialog={() => {
                           setCloseDialogOpen(true)
@@ -410,8 +466,125 @@ function BerkasArsipDetailPage() {
             onSubmit={submitCloseBerkas}
           />
         )}
+        {detail && (
+          <EditActiveMetadataDialog
+            open={metadataDialogOpen}
+            form={metadataForm}
+            pending={pendingMetadataEdit}
+            submitDisabled={pendingMetadataEdit || isCloseBerkasFormIncomplete(metadataForm) || !canEditActiveMetadata(detail)}
+            onOpenChange={(open) => {
+              setMetadataDialogOpen(open)
+              if (!open && !pendingMetadataEdit) setActionError(null)
+            }}
+            onFormChange={setMetadataForm}
+            onSubmit={submitMetadataEdit}
+          />
+        )}
       </div>
     </PageLayout>
+  )
+}
+
+function EditActiveMetadataDialog({
+  open,
+  form,
+  pending,
+  submitDisabled,
+  onOpenChange,
+  onFormChange,
+  onSubmit,
+}: {
+  open: boolean
+  form: CloseBerkasFormState
+  pending: boolean
+  submitDisabled: boolean
+  onOpenChange: (open: boolean) => void
+  onFormChange: (form: CloseBerkasFormState) => void
+  onSubmit: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-2xl sm:rounded-3xl">
+        <DialogHeader>
+          <DialogTitle>Edit Metadata Arsip Aktif</DialogTitle>
+          <DialogDescription>
+            Perbarui metadata final berkas selama statusnya masih Arsip Aktif.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold leading-relaxed text-orange-900">
+            Edit metadata hanya berlaku untuk Arsip Aktif. Setelah berkas dipindahkan ke Inaktif, Usul Musnah, atau Dimusnahkan, metadata menjadi baca saja.
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-nomor-spm">
+              Nomor SPM <span className="text-error">*</span>
+              <input
+                id="edit-berkas-nomor-spm"
+                value={form.nomor_spm}
+                onChange={(event) => onFormChange({ ...form, nomor_spm: event.target.value })}
+                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                maxLength={120}
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-closed-at">
+              Tanggal Tutup Berkas
+              <input
+                id="edit-berkas-closed-at"
+                type="date"
+                value={form.closed_at}
+                readOnly
+                disabled
+                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-500 outline-none"
+              />
+              <span className="mt-1 block text-[11px] font-semibold leading-relaxed text-zinc-500">
+                Tanggal tutup adalah waktu finalisasi berkas dan tidak diubah dari edit metadata.
+              </span>
+            </label>
+            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-retensi-aktif">
+              Retensi Aktif <span className="text-error">*</span>
+              <select
+                id="edit-berkas-retensi-aktif"
+                value={form.retensi_aktif}
+                onChange={(event) => onFormChange({ ...form, retensi_aktif: event.target.value })}
+                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+              >
+                <option value="">Pilih retensi aktif</option>
+                {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
+                  <option key={label} value={label}>{label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-bold text-zinc-950" htmlFor="edit-berkas-retensi-inaktif">
+              Retensi Inaktif <span className="text-error">*</span>
+              <select
+                id="edit-berkas-retensi-inaktif"
+                value={form.retensi_inaktif}
+                onChange={(event) => onFormChange({ ...form, retensi_inaktif: event.target.value })}
+                className="mt-1 w-full rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+              >
+                <option value="">Pilih retensi inaktif</option>
+                {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
+                  <option key={label} value={label}>{label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button type="button" className="gap-1.5" disabled={submitDisabled} onClick={onSubmit}>
+            {pending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            Simpan Metadata
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -424,6 +597,8 @@ function FolderMetadataPanel({
   onCancelDestruction,
   onDestructionOpenChange,
   onLifecycleAction,
+  pendingMetadataEdit,
+  onOpenMetadataEditDialog,
   pendingClose,
   onOpenCloseDialog,
 }: {
@@ -435,6 +610,8 @@ function FolderMetadataPanel({
   onCancelDestruction: () => void
   onDestructionOpenChange: (open: boolean) => void
   onLifecycleAction: (options?: { confirmation?: string }) => void
+  pendingMetadataEdit: boolean
+  onOpenMetadataEditDialog: () => void
   pendingClose: boolean
   onOpenCloseDialog: () => void
 }) {
@@ -479,6 +656,19 @@ function FolderMetadataPanel({
                   ? <AlertTriangle size={14} />
                   : <ArrowRightCircle size={14} />}
               {pendingLifecycleAction ? 'Memproses...' : lifecycleAction.label}
+            </Button>
+          )}
+          {canEditActiveMetadata(detail) && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9 gap-1.5 rounded-xl border-orange-200 bg-[#FFFDF9] text-orange-700 hover:bg-orange-50"
+              disabled={pendingMetadataEdit}
+              onClick={onOpenMetadataEditDialog}
+            >
+              {pendingMetadataEdit ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
+              {pendingMetadataEdit ? 'Memproses...' : 'Edit Metadata'}
             </Button>
           )}
           {canShowClose && (
@@ -623,6 +813,7 @@ function ItemList({
   items: BerkasDetailItem[]
 }) {
   const [previewing, setPreviewing] = useState<{ href: string; downloadHref: string; title: string } | null>(null)
+  const [selectedItem, setSelectedItem] = useState<BerkasDetailItem | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const filteredItems = filterBerkasDetailItems(items, searchQuery)
   const hasSearchQuery = searchQuery.trim().length > 0
@@ -668,6 +859,15 @@ function ItemList({
           onClose={() => setPreviewing(null)}
         />
       )}
+      {selectedItem && (
+        <DocumentMetadataDialog
+          berkasId={berkasId}
+          item={selectedItem}
+          statusArsip={statusArsip}
+          onClose={() => setSelectedItem(null)}
+          onPreview={(href, downloadHref, title) => setPreviewing({ href, downloadHref, title })}
+        />
+      )}
 
       <div className="space-y-3">
         <ItemListHeader canExport={canExport} onExportCsv={exportCsv} />
@@ -687,21 +887,217 @@ function ItemList({
             </p>
           </div>
         ) : (
-          <div className="grid gap-3">
-            {filteredItems.map((item, index) => (
-              <ItemCard
-                key={item.item_key}
-                berkasId={berkasId}
-                statusArsip={statusArsip}
-                item={item}
-                index={index}
-                onPreview={(href, downloadHref, title) => setPreviewing({ href, downloadHref, title })}
-              />
-            ))}
-          </div>
+          <DocumentItemTable items={filteredItems} onSelectItem={setSelectedItem} />
         )}
       </div>
     </>
+  )
+}
+
+function DocumentItemTable({
+  items,
+  onSelectItem,
+}: {
+  items: BerkasDetailItem[]
+  onSelectItem: (item: BerkasDetailItem) => void
+}) {
+  return (
+    <>
+      <ArchiveTableShell className="rounded-[1.35rem]">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-orange-50/60 text-left">
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Judul Dokumen</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Sumber</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Tanggal Dokumen</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Pengaju / Pembuat</th>
+              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr
+                key={item.item_key}
+                className={`${ARCHIVE_TABLE_ROW_CLASS} cursor-pointer`}
+                onClick={() => onSelectItem(item)}
+              >
+                <td className="px-5 py-4">
+                  <p className="line-clamp-2 text-sm font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                    {item.source_title}
+                  </p>
+                  {item.has_attachments && (
+                    <p className="mt-1 text-[11px] font-semibold text-zinc-500">
+                      {formatAttachmentCount(item.attachment_count)} lampiran
+                    </p>
+                  )}
+                </td>
+                <td className="px-4 py-3"><SourceBadge sourceType={item.source_type} /></td>
+                <td className="px-4 py-3 font-semibold text-zinc-700">{formatNullableDateLabel(item.source_date)}</td>
+                <td className="px-4 py-3 font-semibold text-zinc-950">{item.source_created_by_display_name ?? '-'}</td>
+                <td className="px-4 py-3 text-right font-mono font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</td>
+                <td className="px-4 py-3 text-center">
+                  <Button
+                    type="button"
+                    size="icon-xs"
+                    variant="ghost"
+                    className="rounded-xl text-zinc-600 hover:bg-orange-50 hover:text-orange-700"
+                    aria-label={`Buka detail ${item.source_title}`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onSelectItem(item)
+                    }}
+                  >
+                    <ChevronRight size={16} />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ArchiveTableShell>
+
+      <div className="grid gap-3 md:hidden">
+        {items.map((item) => (
+          <button
+            key={item.item_key}
+            type="button"
+            className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 text-left shadow-sm shadow-zinc-950/[0.035]"
+            onClick={() => onSelectItem(item)}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-sm font-bold text-zinc-950">{item.source_title}</p>
+                <p className="mt-1 text-xs font-semibold text-zinc-600">{item.source_created_by_display_name ?? '-'}</p>
+              </div>
+              <SourceBadge sourceType={item.source_type} />
+            </div>
+            <div className="mt-3 grid gap-1 text-xs text-zinc-600">
+              <p>Tanggal: <span className="font-semibold text-zinc-950">{formatNullableDateLabel(item.source_date)}</span></p>
+              <p>Nominal: <span className="font-semibold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</span></p>
+              <p>Lampiran: <span className="font-semibold text-zinc-950">{formatAttachmentCount(item.attachment_count)}</span></p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function DocumentMetadataDialog({
+  berkasId,
+  item,
+  statusArsip,
+  onClose,
+  onPreview,
+}: {
+  berkasId: string
+  item: BerkasDetailItem
+  statusArsip: string | null
+  onClose: () => void
+  onPreview: (href: string, downloadHref: string, title: string) => void
+}) {
+  const fileBlocked = statusArsip === 'DIMUSNAHKAN'
+  const sourceLabel = formatSourceTypeLabel(item.source_type)
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="max-h-[88vh] overflow-y-auto border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
+              onClick={onClose}
+              aria-label="Kembali dari detail dokumen berkas"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="min-w-0">
+              <DialogTitle>Detail Dokumen Berkas</DialogTitle>
+              <DialogDescription className="line-clamp-1">
+                Detail Berkas / {item.source_title}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <ModalMetadataField
+                label={item.source_type === 'MANUAL' ? 'Nama/Judul Dokumen' : 'Judul Dokumen'}
+                value={item.source_title}
+                className="sm:col-span-2"
+              />
+              <ModalMetadataField label="Sumber Dokumentasi" value={<SourceBadge sourceType={item.source_type} />} />
+              {item.workflow && (
+                <>
+                  <ModalMetadataField label="Fungsi" value={item.workflow.fungsi_nama ?? '-'} />
+                  <ModalMetadataField label="Kegiatan" value={item.workflow.kegiatan_nama ?? '-'} />
+                  <ModalMetadataField label="Status Sumber" value={item.workflow.status ?? '-'} />
+                </>
+              )}
+              {item.manual && (
+                <>
+                  <ModalMetadataField label="Kategori" value={item.manual.category_name ?? '-'} />
+                  <ModalMetadataField label="Keterangan" value={snippet(item.manual.keterangan)} />
+                </>
+              )}
+              <ModalMetadataField label="Tanggal Dokumen/Sumber" value={formatNullableDateLabel(item.source_date)} />
+              <ModalMetadataField label="Pengaju / Pembuat" value={item.source_created_by_display_name ?? '-'} />
+              <ModalMetadataField label="Nominal Realisasi" value={formatNominalRupiah(item.source_nominal_realisasi)} emphasis />
+            </div>
+          </div>
+
+          {item.warnings.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {item.warnings.map((warning) => (
+                <Badge key={warning} className="border-amber-200 bg-amber-50 text-amber-700">
+                  {formatItemWarningLabel(warning)}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <section>
+            <h3 className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-zinc-950">Lampiran Pendukung</h3>
+            <ItemAttachmentActions
+              berkasId={berkasId}
+              item={item}
+              fileBlocked={fileBlocked}
+              onPreview={onPreview}
+            />
+            {!item.has_attachments && (
+              <div className="rounded-xl border border-dashed border-[#F0E1D5] bg-[#FFFDF9] px-3 py-4 text-xs font-semibold text-zinc-500">
+                Tidak ada lampiran pendukung untuk dokumen {sourceLabel}.
+              </div>
+            )}
+          </section>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ModalMetadataField({
+  label,
+  value,
+  emphasis,
+  className,
+}: {
+  label: string
+  value: ReactNode
+  emphasis?: boolean
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">{label}</p>
+      <div className={`mt-1 text-sm font-semibold leading-relaxed ${emphasis ? 'font-mono text-[#FF4D00]' : 'text-zinc-950'}`}>
+        {value}
+      </div>
+    </div>
   )
 }
 
@@ -998,28 +1394,7 @@ function MetadataLine({ label, value }: { label: string; value: string }) {
 }
 
 function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
-  const historyItems = [
-    {
-      label: 'Berkas dibuat',
-      value: formatNullableDateLabel(detail.created_at),
-      helper: 'Folder mulai tersedia untuk menerima dokumen sesuai Jenis Pembayaran.',
-      tone: 'bg-orange-100 text-orange-700',
-    },
-    ...(detail.closed_at
-      ? [{
-        label: 'Berkas ditutup',
-        value: formatNullableDateLabel(detail.closed_at),
-        helper: 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.',
-        tone: 'bg-emerald-100 text-emerald-700',
-      }]
-      : []),
-    {
-      label: 'Terakhir diperbarui',
-      value: formatNullableDateLabel(detail.updated_at),
-      helper: 'Perubahan terbaru pada metadata atau lifecycle berkas.',
-      tone: 'bg-zinc-100 text-zinc-700',
-    },
-  ]
+  const historyItems = buildBerkasHistoryItems(detail)
 
   return (
     <ArchivePanel className="rounded-[1.35rem]">
@@ -1028,7 +1403,7 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
           Riwayat Aktivitas Berkas
         </h3>
         <p className="mt-1 text-xs text-zinc-600">
-          Timeline ringkas lifecycle folder-first berdasarkan data berkas yang tersedia.
+          Timeline berkas berdasarkan status folder-first dan metadata sumber yang tersedia; ini bukan riwayat approval workflow mentah.
         </p>
       </div>
       <div className="relative space-y-3 before:absolute before:left-[15px] before:top-4 before:h-[calc(100%-2rem)] before:w-px before:bg-orange-100">
@@ -1061,6 +1436,98 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
       )}
     </ArchivePanel>
   )
+}
+
+type BerkasHistoryItem = {
+  label: string
+  value: string
+  helper: string
+  tone: string
+  sortTime: number
+}
+
+function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem[] {
+  const items: BerkasHistoryItem[] = []
+
+  if (detail.status_arsip === 'DIMUSNAHKAN') {
+    items.push(historyItem({
+      label: 'File dimusnahkan',
+      date: detail.updated_at,
+      helper: 'Status akhir berkas. Metadata tetap tersimpan dan preview/download diblokir.',
+      tone: 'bg-red-100 text-red-700',
+    }))
+  } else if (detail.status_arsip === 'USUL_MUSNAH') {
+    items.push(historyItem({
+      label: 'Berkas dipindahkan ke Usul Musnah',
+      date: detail.updated_at,
+      helper: 'Berkas masuk daftar usulan pemusnahan. Metadata tetap baca saja.',
+      tone: 'bg-orange-100 text-orange-700',
+    }))
+  } else if (detail.status_arsip === 'INAKTIF') {
+    items.push(historyItem({
+      label: 'Berkas dipindahkan ke Inaktif',
+      date: detail.updated_at,
+      helper: 'Berkas keluar dari arsip aktif dan metadata tidak dapat diedit lagi.',
+      tone: 'bg-amber-100 text-amber-700',
+    }))
+  }
+
+  if (detail.closed_at) {
+    items.push(historyItem({
+      label: 'Berkas ditutup',
+      date: detail.closed_at,
+      helper: 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.',
+      tone: 'bg-emerald-100 text-emerald-700',
+    }))
+  }
+
+  items.push(historyItem({
+    label: 'Dokumen diklasifikasikan ke berkas',
+    date: detail.created_at,
+    helper: 'Berkas folder-first dibuat atau menerima item untuk Jenis Pembayaran ini.',
+    tone: 'bg-orange-100 text-orange-700',
+  }))
+
+  for (const item of detail.items) {
+    items.push(historyItem({
+      label: item.source_type === 'MANUAL'
+        ? 'Penambahan dokumen manual sukses'
+        : 'Dokumen selesai persetujuan PPSPM',
+      date: item.source_date,
+      helper: item.source_title,
+      tone: item.source_type === 'MANUAL'
+        ? 'bg-orange-100 text-orange-700'
+        : 'bg-sky-100 text-sky-700',
+    }))
+  }
+
+  return items.sort((left, right) => right.sortTime - left.sortTime)
+}
+
+function historyItem({
+  label,
+  date,
+  helper,
+  tone,
+}: {
+  label: string
+  date: string | null | undefined
+  helper: string
+  tone: string
+}): BerkasHistoryItem {
+  return {
+    label,
+    value: formatNullableDateLabel(date),
+    helper,
+    tone,
+    sortTime: getDateSortTime(date),
+  }
+}
+
+function getDateSortTime(value: string | null | undefined): number {
+  if (!value) return 0
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : 0
 }
 
 function SourceBadge({ sourceType }: { sourceType: string }) {
@@ -1101,8 +1568,17 @@ export function canShowCloseBerkasForm(detail: Pick<BerkasDetail, 'status_berkas
   return detail.status_berkas === 'OPEN' && detail.status_arsip === null
 }
 
+export function canEditActiveMetadata(detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'>): boolean {
+  return detail.status_berkas === 'CLOSED' && detail.status_arsip === 'AKTIF'
+}
+
 export function isBerkasEmptyForClose(detail: Pick<BerkasDetail, 'item_count' | 'items'>): boolean {
   return detail.item_count < 1 || detail.items.length < 1
+}
+
+function toDateOnlyInputValue(value: string | null | undefined): string {
+  if (!value) return ''
+  return value.slice(0, 10)
 }
 
 function filterBerkasDetailItems(items: BerkasDetailItem[], query: string): BerkasDetailItem[] {
