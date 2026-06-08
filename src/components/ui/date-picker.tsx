@@ -12,7 +12,18 @@ export interface DatePickerProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  variant?: "default" | "prototype"
+  placement?: "bottom" | "top"
+  requiredLabel?: string
 }
+
+type PickerView = "day" | "month" | "year"
+
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+const DAY_LABELS = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"]
+const PROTOTYPE_CALENDAR_WIDTH = 266
+const FLOATING_GAP = 12
+const VIEWPORT_PADDING = 8
 
 export function DatePicker({
   value,
@@ -20,6 +31,9 @@ export function DatePicker({
   placeholder = "Pilih tanggal...",
   className,
   disabled,
+  variant = "prototype",
+  placement = "top",
+  requiredLabel,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [month, setMonth] = React.useState(() =>
@@ -27,32 +41,103 @@ export function DatePicker({
       ? (() => { const [y, m, d] = value.split("-").map(Number); return new Date(y, m - 1, d) })()
       : new Date()
   )
+  const [view, setView] = React.useState<PickerView>("day")
+  const [floatingStyle, setFloatingStyle] = React.useState<React.CSSProperties>({})
   const ref = React.useRef<HTMLDivElement>(null)
+  const buttonRef = React.useRef<HTMLButtonElement>(null)
+  const popupRef = React.useRef<HTMLDivElement>(null)
 
   const selectedDate = value
     ? (() => { const [y, m, d] = value.split("-").map(Number); return new Date(y, m - 1, d) })()
     : undefined
 
+  React.useEffect(() => {
+    if (!selectedDate) return
+    setMonth(selectedDate)
+  }, [value])
+
   // Close on outside click
   React.useEffect(() => {
     if (!open) return
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      if (buttonRef.current?.contains(target) || popupRef.current?.contains(target)) return
+      setOpen(false)
     }
     document.addEventListener("mousedown", handleClick)
     return () => document.removeEventListener("mousedown", handleClick)
   }, [open])
 
+  const updateFloatingPosition = React.useCallback(() => {
+    if (!ref.current || typeof window === "undefined") return
+
+    const anchorRect = ref.current.getBoundingClientRect()
+    const popupWidth = popupRef.current?.offsetWidth ?? PROTOTYPE_CALENDAR_WIDTH
+    const popupHeight = popupRef.current?.offsetHeight ?? 320
+    const spaceAbove = anchorRect.top - FLOATING_GAP - VIEWPORT_PADDING
+    const spaceBelow = window.innerHeight - anchorRect.bottom - FLOATING_GAP - VIEWPORT_PADDING
+
+    let renderAbove = placement === "top"
+    if (renderAbove && spaceAbove < popupHeight && spaceBelow > spaceAbove) {
+      renderAbove = false
+    } else if (!renderAbove && spaceBelow < popupHeight && spaceAbove > spaceBelow) {
+      renderAbove = true
+    }
+
+    const availableHeight = Math.max(
+      180,
+      renderAbove ? spaceAbove : spaceBelow
+    )
+    const maxHeight = Math.min(popupHeight, availableHeight)
+    const left = Math.min(
+      Math.max(VIEWPORT_PADDING, anchorRect.left),
+      Math.max(VIEWPORT_PADDING, window.innerWidth - popupWidth - VIEWPORT_PADDING)
+    )
+    const top = renderAbove
+      ? Math.max(VIEWPORT_PADDING, anchorRect.top - FLOATING_GAP - maxHeight)
+      : Math.min(
+          window.innerHeight - VIEWPORT_PADDING - maxHeight,
+          anchorRect.bottom + FLOATING_GAP
+        )
+
+    setFloatingStyle({
+      left,
+      top,
+      maxHeight,
+      overflowY: availableHeight < popupHeight ? "auto" : undefined,
+    })
+  }, [placement])
+
+  React.useEffect(() => {
+    if (!open || variant !== "prototype") return
+
+    updateFloatingPosition()
+    const frame = window.requestAnimationFrame(updateFloatingPosition)
+    window.addEventListener("resize", updateFloatingPosition)
+    window.addEventListener("scroll", updateFloatingPosition, true)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener("resize", updateFloatingPosition)
+      window.removeEventListener("scroll", updateFloatingPosition, true)
+    }
+  }, [open, variant, view, month, updateFloatingPosition])
+
   function handleSelect(date: Date | undefined) {
     if (!date) return
-    const yyyy = date.getFullYear()
-    const mm = String(date.getMonth() + 1).padStart(2, "0")
-    const dd = String(date.getDate()).padStart(2, "0")
-    const iso = `${yyyy}-${mm}-${dd}`
-    onChange?.(iso)
+    onChange?.(toIsoDate(date))
     setOpen(false)
+  }
+
+  function handlePrototypeSelect(date: Date) {
+    setMonth(date)
+    onChange?.(toIsoDate(date))
+    setOpen(false)
+    setView("day")
+  }
+
+  function handleToday() {
+    handlePrototypeSelect(new Date())
   }
 
   function formatDisplay(iso?: string) {
@@ -65,6 +150,88 @@ export function DatePicker({
       month: "long",
       year: "numeric",
     })
+  }
+
+  if (variant === "prototype") {
+    return (
+      <div ref={ref} className={cn("relative", className)}>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => !disabled && setOpen(o => !o)}
+          disabled={disabled}
+          className={cn(
+            "group flex min-h-10 w-full items-center gap-2 rounded-xl border px-3 py-2 text-left",
+            "border-[#F0E1D5] bg-[#FFFAF6] text-zinc-950 transition",
+            "hover:border-[#FF5A14] hover:bg-[#FFF1E8]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB27A]/70",
+            "cursor-pointer",
+            open && "border-[#FF5A14] bg-[#FFF1E8]",
+            disabled && "cursor-not-allowed bg-zinc-50 text-zinc-500 opacity-70"
+          )}
+        >
+          <span
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-lg border transition",
+              open
+                ? "border-[#FF5A14] bg-[#FF7A00] text-white"
+                : "border-[#F0E1D5] bg-white text-[#8A6B58]",
+              "group-hover:border-[#FF5A14] group-hover:bg-[#FF7A00] group-hover:text-white"
+            )}
+          >
+            <Calendar size={15} />
+          </span>
+          <span className="min-w-0 flex-1">
+            {requiredLabel ? (
+              <span
+                className={cn(
+                  "block text-[8px] font-black uppercase tracking-[0.1em] transition",
+                  open ? "text-[#FF5A14]" : "text-[#8A6B58]"
+                )}
+              >
+                {requiredLabel}
+              </span>
+            ) : null}
+            <span className={cn(
+              "block truncate text-[13px] font-semibold leading-tight text-zinc-950",
+              requiredLabel && "mt-0.5"
+            )}>
+              {value ? formatDisplay(value) : placeholder}
+            </span>
+          </span>
+          <ChevronRight
+            size={16}
+            className={cn(
+              "shrink-0 text-[#8A6B58] transition-transform duration-200",
+              open && "-rotate-90"
+            )}
+          />
+        </button>
+
+        {open && (
+          <>
+            <div
+              ref={popupRef}
+              style={floatingStyle}
+              className={cn(
+                "fixed z-50 animate-in fade-in-0 zoom-in-95 duration-150"
+              )}
+            >
+              <PrototypeCalendar
+                month={month}
+                selectedDate={selectedDate}
+                view={view}
+                onViewChange={setView}
+                onMonthChange={setMonth}
+                onSelect={handlePrototypeSelect}
+                onToday={handleToday}
+                onClose={() => setOpen(false)}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -146,4 +313,254 @@ export function DatePicker({
       )}
     </div>
   )
+}
+
+function PrototypeCalendar({
+  month,
+  selectedDate,
+  view,
+  onViewChange,
+  onMonthChange,
+  onSelect,
+  onToday,
+  onClose,
+}: {
+  month: Date
+  selectedDate?: Date
+  view: PickerView
+  onViewChange: (view: PickerView) => void
+  onMonthChange: (date: Date) => void
+  onSelect: (date: Date) => void
+  onToday: () => void
+  onClose: () => void
+}) {
+  const year = month.getFullYear()
+  const monthIndex = month.getMonth()
+  const yearStart = year - 5
+
+  return (
+    <div className="w-[266px] overflow-hidden rounded-[14px] border border-[#F3D3C0] bg-[#FFFDF9] shadow-xl shadow-zinc-950/8">
+      <div className="grid h-9 grid-cols-3 bg-[#FFF4EE] p-1">
+        <PickerTab active={view === "day"} onClick={() => onViewChange("day")}>Hari</PickerTab>
+        <PickerTab active={view === "month"} onClick={() => onViewChange("month")}>Bulan</PickerTab>
+        <PickerTab active={view === "year"} onClick={() => onViewChange("year")}>Tahun</PickerTab>
+      </div>
+
+      {view === "day" ? (
+        <DayGrid
+          month={month}
+          selectedDate={selectedDate}
+          onMonthChange={onMonthChange}
+          onSelect={onSelect}
+        />
+      ) : view === "month" ? (
+        <MonthGrid
+          monthIndex={monthIndex}
+          onSelect={(nextMonth) => {
+            onMonthChange(createClampedDate(year, nextMonth, selectedDate?.getDate() ?? 1))
+            onViewChange("day")
+          }}
+        />
+      ) : (
+        <YearGrid
+          selectedYear={year}
+          startYear={yearStart}
+          onSelect={(nextYear) => {
+            onMonthChange(createClampedDate(nextYear, monthIndex, selectedDate?.getDate() ?? 1))
+            onViewChange("month")
+          }}
+        />
+      )}
+
+      <div className="flex items-center justify-between border-t border-[#F6ECE4] bg-[#FFFCF8] px-3 py-2">
+        <button
+          type="button"
+          onClick={onToday}
+          className="rounded-lg px-1 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#FF5A14] hover:bg-[#FFF1E8]"
+        >
+          Hari Ini
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg bg-white px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-900 shadow-sm shadow-zinc-950/5 hover:bg-[#FFF7F1]"
+        >
+          Tutup
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function PickerTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "h-7 rounded-md text-[9px] font-bold uppercase tracking-[0.12em] transition",
+        active ? "bg-[#FF5A14] text-white shadow-sm" : "text-[#7B6A61] hover:bg-white/70 hover:text-zinc-900"
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+function DayGrid({
+  month,
+  selectedDate,
+  onMonthChange,
+  onSelect,
+}: {
+  month: Date
+  selectedDate?: Date
+  onMonthChange: (date: Date) => void
+  onSelect: (date: Date) => void
+}) {
+  const year = month.getFullYear()
+  const monthIndex = month.getMonth()
+  const cells = buildCalendarCells(year, monthIndex)
+
+  return (
+    <div className="px-3.5 pb-3 pt-3.5">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[13px] font-bold uppercase tracking-[0.03em] text-zinc-950">
+          {month.toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
+        </span>
+        <span className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onMonthChange(new Date(year, monthIndex - 1, 1))}
+            className="flex size-6 items-center justify-center rounded-lg text-[#8F7E75] hover:bg-[#FFF1E8] hover:text-zinc-950"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onMonthChange(new Date(year, monthIndex + 1, 1))}
+            className="flex size-6 items-center justify-center rounded-lg text-[#8F7E75] hover:bg-[#FFF1E8] hover:text-zinc-950"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </span>
+      </div>
+
+      <div className="grid grid-cols-7 gap-y-2.5">
+        {DAY_LABELS.map(day => (
+          <div key={day} className="text-center text-[8px] font-medium uppercase tracking-[0.08em] text-[#B8ADA7]">
+            {day}
+          </div>
+        ))}
+        {cells.map((cell, index) => {
+          const isSelected = selectedDate ? isSameDate(cell.date, selectedDate) : false
+          const isToday = isSameDate(cell.date, new Date())
+
+          return (
+            <button
+              key={`${cell.date.toISOString()}-${index}`}
+              type="button"
+              onClick={() => onSelect(cell.date)}
+              className={cn(
+                "relative mx-auto flex size-6 items-center justify-center rounded-md text-[11px] font-medium leading-none transition",
+                cell.currentMonth ? "text-zinc-950" : "text-[#DED8D4]",
+                (isToday || isSelected) && "text-[#FF5A14]",
+                !isSelected && "hover:bg-[#FFF1E8]"
+              )}
+            >
+              {cell.date.getDate()}
+              {(isToday || isSelected) && (
+                <span className="absolute bottom-0.5 left-1/2 size-0.5 -translate-x-1/2 rounded-full bg-[#FF5A14]" />
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function MonthGrid({ monthIndex, onSelect }: { monthIndex: number; onSelect: (month: number) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-x-3 gap-y-3 px-5 py-5">
+      {MONTH_LABELS.map((label, index) => (
+        <button
+          key={label}
+          type="button"
+          onClick={() => onSelect(index)}
+          className={cn(
+            "h-9 rounded-xl text-xs font-medium transition",
+            index === monthIndex ? "bg-[#FF5A14] text-white shadow-sm" : "text-zinc-950 hover:bg-[#FFF1E8]"
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function YearGrid({
+  selectedYear,
+  startYear,
+  onSelect,
+}: {
+  selectedYear: number
+  startYear: number
+  onSelect: (year: number) => void
+}) {
+  const years = Array.from({ length: 12 }, (_, index) => startYear + index)
+
+  return (
+    <div className="grid grid-cols-3 gap-x-3 gap-y-3 px-5 py-5">
+      {years.map(year => (
+        <button
+          key={year}
+          type="button"
+          onClick={() => onSelect(year)}
+          className={cn(
+            "h-9 rounded-xl text-xs font-medium transition",
+            year === selectedYear ? "bg-[#FF5A14] text-white shadow-sm" : "text-zinc-950 hover:bg-[#FFF1E8]"
+          )}
+        >
+          {year}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function buildCalendarCells(year: number, monthIndex: number) {
+  const firstDay = new Date(year, monthIndex, 1)
+  const start = new Date(year, monthIndex, 1 - firstDay.getDay())
+  const lastDay = new Date(year, monthIndex + 1, 0)
+  const end = new Date(year, monthIndex + 1, lastDay.getDay() === 6 ? 0 : 6 - lastDay.getDay())
+  const cellCount = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1
+
+  return Array.from({ length: cellCount }, (_, index) => {
+    const date = new Date(start)
+    date.setDate(start.getDate() + index)
+    return {
+      date,
+      currentMonth: date.getMonth() === monthIndex,
+    }
+  })
+}
+
+function toIsoDate(date: Date) {
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, "0")
+  const dd = String(date.getDate()).padStart(2, "0")
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function createClampedDate(year: number, monthIndex: number, day: number) {
+  const maxDay = new Date(year, monthIndex + 1, 0).getDate()
+  return new Date(year, monthIndex, Math.min(day, maxDay))
+}
+
+function isSameDate(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
 }

@@ -109,7 +109,10 @@ export function StepFungsiTanggal({
           <DatePicker
             value={tanggal}
             onChange={onTanggalChange}
-            placeholder="-- Pilih Tanggal Pelaksanaan --"
+            placeholder="Pilih tanggal pelaksanaan"
+            variant="prototype"
+            placement="top"
+            requiredLabel="Wajib Diisi"
           />
           {tanggalError ? (
             <p className="flex items-center gap-1 text-[10px] text-error">

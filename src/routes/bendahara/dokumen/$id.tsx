@@ -412,7 +412,7 @@ function MetadataDetailCard({ dokumen, isNonMaterial }: { dokumen: DokumenDetail
             </p>
             <div className={cn(
               'break-words text-[13px] font-bold leading-snug text-zinc-950 sm:text-sm',
-              'accent' in item && item.accent ? 'font-mono text-[#FF5A00]' : '',
+              'accent' in item && item.accent ? 'font-mono text-zinc-950' : '',
             )}>
               {item.value}
             </div>

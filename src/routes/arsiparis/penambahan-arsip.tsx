@@ -620,7 +620,7 @@ function ManualArsipTable({
                 <th className={ARCHIVE_TABLE_HEAD_CLASS}>Kategori</th>
                 <th className={ARCHIVE_TABLE_HEAD_CLASS}>Jenis Pembayaran</th>
                 <th className={`min-w-64 ${ARCHIVE_TABLE_HEAD_CLASS}`}>Keterangan</th>
-                <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal</th>
+                <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Status</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Diperbarui</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Lampiran</th>
@@ -647,7 +647,7 @@ function ManualArsipTable({
                       <td className="px-4 py-3 text-on-surface-variant">
                         <span title={item.keterangan}>{truncateText(item.keterangan, 96)}</span>
                       </td>
-                      <td className="px-4 py-3 text-right text-on-surface">{formatNullableCurrency(item.nominal_realisasi)}</td>
+                      <td className="px-4 py-3 text-center font-mono text-sm font-bold text-zinc-950">{formatNullableCurrency(item.nominal_realisasi)}</td>
                       <td className="px-4 py-3 text-center">
                         <ManualStatusBadge status={item.status_arsip} />
                       </td>
@@ -2086,7 +2086,10 @@ function ManualCreateReview({
 
       <ReviewSection title="2. Klasifikasi & Nominal">
         <ReviewItem label="Jenis Pembayaran" value={selectedNode ? formatKlasifikasiLabel(selectedNode) : '-'} emphasis />
-        <ReviewItem label="Nominal Realisasi" value={`Rp ${form.nominal_realisasi || '-'}`} emphasis />
+        <ReviewItem
+          label="Nominal Realisasi"
+          value={<span className="font-mono font-bold text-zinc-950">Rp {form.nominal_realisasi || '-'}</span>}
+        />
       </ReviewSection>
 
       <ReviewSection title="3. Lampiran Dokumen">

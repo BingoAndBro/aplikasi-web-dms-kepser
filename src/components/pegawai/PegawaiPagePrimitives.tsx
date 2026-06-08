@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
@@ -46,18 +46,18 @@ export function PegawaiPageHeader({
   )
 }
 
-type PegawaiPanelProps = {
+type PegawaiPanelProps = ComponentPropsWithoutRef<'div'> & {
   children: ReactNode
-  className?: string
 }
 
-export function PegawaiPanel({ children, className }: PegawaiPanelProps) {
+export function PegawaiPanel({ children, className, ...props }: PegawaiPanelProps) {
   return (
     <div
       className={cn(
         'rounded-2xl border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm',
         className,
       )}
+      {...props}
     >
       {children}
     </div>

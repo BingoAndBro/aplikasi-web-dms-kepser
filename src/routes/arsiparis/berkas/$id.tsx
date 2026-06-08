@@ -743,7 +743,7 @@ function FolderActionPanel({
           <Wallet size={14} className="text-[#FF5A00]" />
           Total Nominal Realisasi
         </div>
-        <p className="mt-3 font-mono text-2xl font-black tracking-tight text-[#FF4D00]">
+        <p className="mt-3 font-mono text-2xl font-black tracking-tight text-zinc-950">
           {formatNominalRupiah(detail.total_nominal_realisasi)}
         </p>
       </div>
@@ -1136,7 +1136,7 @@ function DocumentItemTable({
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Sumber</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Tanggal Dokumen</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Pengaju / Pembuat</th>
-              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
             </tr>
           </thead>
@@ -1160,7 +1160,7 @@ function DocumentItemTable({
                 <td className="px-6 py-5"><SourceBadge sourceType={item.source_type} /></td>
                 <td className="px-6 py-5 text-sm font-semibold text-zinc-500">{formatNullableDateLabel(item.source_date)}</td>
                 <td className="px-6 py-5 text-sm font-semibold text-zinc-950">{item.source_created_by_display_name ?? '-'}</td>
-                <td className="px-6 py-5 text-right font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</td>
+                <td className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</td>
                 <td className="px-6 py-5 text-center">
                   <Button
                     type="button"
@@ -1199,7 +1199,7 @@ function DocumentItemTable({
             </div>
             <div className="mt-3 grid gap-1 text-xs text-zinc-600">
               <p>Tanggal: <span className="font-semibold text-zinc-950">{formatNullableDateLabel(item.source_date)}</span></p>
-              <p>Nominal: <span className="font-semibold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</span></p>
+              <p>Nominal: <span className="font-mono font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</span></p>
               <p>Lampiran: <span className="font-semibold text-zinc-950">{formatAttachmentCount(item.attachment_count)}</span></p>
             </div>
           </button>
@@ -1319,7 +1319,7 @@ function ModalMetadataField({
   return (
     <div className={className}>
       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <div className={`mt-1 text-sm font-semibold leading-relaxed ${emphasis ? 'font-mono text-[#FF4D00]' : 'text-zinc-950'}`}>
+      <div className={`mt-1 text-sm font-semibold leading-relaxed ${emphasis ? 'font-mono font-bold text-zinc-950' : 'text-zinc-950'}`}>
         {value}
       </div>
     </div>
@@ -1432,7 +1432,7 @@ function ItemCard({
         </div>
         <div className="grid min-w-[220px] gap-1 rounded-xl border border-orange-100 bg-[#FFFAF6] p-3 text-xs text-zinc-600">
           <p>Tanggal sumber: <span className="font-semibold text-zinc-950">{formatNullableDateLabel(item.source_date)}</span></p>
-          <p>Nominal: <span className="font-semibold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</span></p>
+          <p>Nominal: <span className="font-mono font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</span></p>
           <p>Jumlah lampiran: <span className="font-semibold text-zinc-950">{formatAttachmentCount(item.attachment_count)}</span></p>
         </div>
       </div>

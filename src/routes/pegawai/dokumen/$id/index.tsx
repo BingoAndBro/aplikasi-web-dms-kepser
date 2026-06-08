@@ -113,6 +113,15 @@ function DokumenDetailPage() {
     }
   }
 
+  function handleBack() {
+    if (window.history.length > 1) {
+      window.history.back()
+      return
+    }
+
+    window.location.href = '/pegawai/dokumen'
+  }
+
   if (loading) {
     return (
       <PageLayout>
@@ -161,13 +170,14 @@ function DokumenDetailPage() {
     <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
         <div className="flex items-center gap-3">
-          <Link
-            to="/pegawai/dokumen"
+          <button
+            type="button"
+            onClick={handleBack}
             aria-label="Kembali ke daftar dokumen"
             className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
           >
             <ChevronLeft size={18} />
-          </Link>
+          </button>
           <div className="min-w-0 flex-1">
             <h1 className="line-clamp-2 font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">
               {dok.judul}
@@ -275,12 +285,16 @@ function DokumenDetailPage() {
                   </Button>
                 </Link>
               )}
-              <Link to="/pegawai/dokumen" className="block">
-                <Button variant="outline" size="lg" className="h-9 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="h-9 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+                onClick={handleBack}
+              >
                   <ChevronLeft size={13} />
                   Kembali
-                </Button>
-              </Link>
+              </Button>
             </div>
           </aside>
         </div>
@@ -354,7 +368,7 @@ function MetadataDetailCard({ dok, isNonMaterial }: { dok: DokumenDetail; isNonM
             </p>
             <div className={cn(
               'break-words text-[13px] font-bold leading-snug text-zinc-950 sm:text-sm',
-              'accent' in item && item.accent ? 'font-mono text-[#FF5A00]' : '',
+              'accent' in item && item.accent ? 'font-mono text-zinc-950' : '',
             )}>
               {item.value}
             </div>

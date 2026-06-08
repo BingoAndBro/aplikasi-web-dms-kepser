@@ -1,19 +1,39 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import {
-  PegawaiPageHeader,
-  PegawaiPanel,
-} from '#/components/pegawai/PegawaiPagePrimitives'
-import { FileText, ExternalLink, Inbox, ChevronRight, Filter } from 'lucide-react'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
+import { formatDate } from '#/lib/utils/format'
+import {
+  ChevronRight,
+  Clock3,
+  FileText,
+  Filter,
+  Inbox,
+  Search,
+  UserCheck,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/laporan/saya')({
   component: LaporanSayaPage,
@@ -24,11 +44,25 @@ type LaporanSayaResponse = {
   error?: string
 }
 
+type SortMode = 'newest' | 'oldest' | 'title_asc' | 'activity_asc'
+
+const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'newest', label: 'Tanggal terbaru' },
+  { value: 'oldest', label: 'Tanggal terlama' },
+  { value: 'title_asc', label: 'Judul A-Z' },
+  { value: 'activity_asc', label: 'Kegiatan A-Z' },
+]
+
 function LaporanSayaPage() {
+  const navigate = useNavigate()
   const [dokumen, setDokumen] = useState<DokumenLaporanRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<HierarchicalFilterValue>({})
+  const [sortBy, setSortBy] = useState<SortMode>('newest')
+  const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
     apiFetch<LaporanSayaResponse>('/laporan/saya')
@@ -50,46 +84,67 @@ function LaporanSayaPage() {
   }, [])
 
   const filtered = useMemo(() => {
-    return dokumen.filter(d => {
-      if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
-      if (filter.kegiatanId && d.kegiatan_jenis_id !== filter.kegiatanId) return false
-      if (filter.jenisId && (d as any).jenis_permintaan_id !== filter.jenisId) return false
-      if (filter.kategoriId && (d as any).kategori_permintaan_id !== filter.kategoriId) return false
-      if (filter.detailId && (d as any).detail_permintaan_id !== filter.detailId) return false
-      if (filter.tanggalMulai && d.tanggal < filter.tanggalMulai) return false
-      if (filter.tanggalAkhir && d.tanggal > filter.tanggalAkhir) return false
-      return true
-    })
-  }, [dokumen, filter])
+    const query = search.trim().toLowerCase()
+
+    return dokumen
+      .filter(d => {
+        if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
+        if (filter.kegiatanId && d.kegiatan_jenis_id !== filter.kegiatanId) return false
+        if (filter.jenisId && d.jenis_permintaan_id !== filter.jenisId) return false
+        if (filter.kategoriId && d.kategori_permintaan_id !== filter.kategoriId) return false
+        if (filter.detailId && d.detail_permintaan_id !== filter.detailId) return false
+        if (filter.tanggalMulai && d.tanggal < filter.tanggalMulai) return false
+        if (filter.tanggalAkhir && d.tanggal > filter.tanggalAkhir) return false
+        if (!query) return true
+
+        return [
+          d.judul,
+          d.fungsi_nama,
+          d.kegiatan_nama,
+          d.leaf_node_nama,
+          d.jenis_permintaan_nama,
+          d.kategori_permintaan_nama,
+          d.detail_permintaan_nama,
+        ].some(value => value?.toLowerCase().includes(query))
+      })
+      .sort((a, b) => compareDocuments(a, b, sortBy))
+  }, [dokumen, filter, search, sortBy])
+
+  const activeFilters = countActiveFilters(filter)
 
   return (
     <PageLayout>
-      <div className="space-y-6">
-        <PegawaiPageHeader
-          eyebrow={
-            <>
-              <FileText size={12} />
-              <span>Laporan</span>
-              <ChevronRight size={10} />
-              <span>Laporan Saya</span>
-            </>
-          }
-          title="Laporan Saya"
-          description="Lihat dokumen milik Anda yang sudah selesai diproses. Filter tetap lokal di halaman ini dan hanya memakai metadata dokumen yang sudah tersedia."
-        />
-
-        <PegawaiPanel className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Filter size={15} className="text-orange-700" />
-              <p className="text-sm font-bold text-zinc-950">Filter Dokumen</p>
+      <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-5">
+            <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700 shadow-[0_2px_8px_rgba(16,185,129,0.14)]">
+              <UserCheck size={22} />
             </div>
-            <p className="text-xs font-semibold text-zinc-500">
-              {filtered.length} dari {dokumen.length} dokumen
-            </p>
+            <div className="min-w-0">
+              <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
+                Laporan Saya
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
+                Dokumen final milik Anda yang sudah selesai disetujui atau tersimpan.
+              </p>
+            </div>
           </div>
-          <HierarchicalFilter value={filter} onChange={setFilter} />
-        </PegawaiPanel>
+        </section>
+
+        <ReportToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchLabel="Cari dokumen laporan saya"
+          placeholder="Cari nama dokumen atau kegiatan..."
+          filterOpen={filterOpen}
+          onFilterOpenChange={setFilterOpen}
+          activeFilters={activeFilters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          resultLabel={`${filtered.length} Dokumen Ditemukan`}
+          filter={filter}
+          onFilterChange={setFilter}
+        />
 
         {loading && <LoadingState variant="list" rows={4} label="Memuat laporan saya" />}
 
@@ -108,108 +163,310 @@ function LaporanSayaPage() {
         {!loading && !error && dokumen.length > 0 && filtered.length === 0 && (
           <EmptyState
             title="Tidak ada dokumen yang cocok"
-            description="Reset filter untuk kembali melihat seluruh dokumen selesai milik Anda."
+            description="Reset filter atau ubah kata kunci untuk melihat dokumen lain."
             icon={<Filter size={20} />}
-            action={<Button variant="outline" size="sm" onClick={() => setFilter({})}>Reset Filter</Button>}
+            action={<Button variant="outline" size="sm" onClick={() => { setFilter({}); setSearch('') }}>Reset Filter</Button>}
           />
         )}
 
         {!loading && !error && filtered.length > 0 && (
-          <>
-            <PegawaiPanel className="hidden overflow-hidden p-0 md:block">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-orange-50/70">
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground w-8">No</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Judul Dokumen</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Kegiatan</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tanggal Mulai</th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((dok, idx) => (
-                      <tr key={dok.id} className="border-b last:border-0 hover:bg-orange-50/50 transition-colors">
-                        <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium">{dok.judul}</div>
-                          {(dok as any).leaf_node_nama && (
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {(dok as any).leaf_node_nama}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {dok.kegiatan_nama ?? '-'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={dok.status} className="text-[10px] font-semibold" />
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {dok.tanggal
-                            ? new Date(dok.tanggal).toLocaleDateString('id-ID', {
-                                day: 'numeric', month: 'long', year: 'numeric',
-                              })
-                            : '-'
-                          }
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <ReportDetailButton dok={dok} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-4 py-2.5 border-t bg-orange-50/40 text-xs text-muted-foreground">
-                Menampilkan {filtered.length} dari {dokumen.length} dokumen
-              </div>
-            </PegawaiPanel>
-
-            <div className="space-y-3 md:hidden">
-              {filtered.map((dok, idx) => (
-                <PegawaiPanel key={dok.id} className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
-                        Laporan #{idx + 1}
-                      </p>
-                      <h2 className="mt-1 line-clamp-2 text-sm font-bold text-zinc-950">{dok.judul}</h2>
-                    </div>
-                    <StatusBadge status={dok.status} className="shrink-0 text-[10px] font-semibold" />
-                  </div>
-                  <div className="text-xs text-zinc-600">
-                    <p className="font-semibold text-zinc-500">Kegiatan</p>
-                    <p className="mt-0.5 text-zinc-900">{dok.kegiatan_nama ?? '-'}</p>
-                    {(dok as any).leaf_node_nama && (
-                      <p className="mt-1 text-zinc-500">{(dok as any).leaf_node_nama}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-orange-100 pt-3">
-                    <p className="text-xs text-zinc-500">
-                      {dok.tanggal ? new Date(dok.tanggal).toLocaleDateString('id-ID') : '-'}
-                    </p>
-                    <ReportDetailButton dok={dok} mobile />
-                  </div>
-                </PegawaiPanel>
-              ))}
-            </div>
-          </>
+          <ReportDocumentList
+            dokumen={filtered}
+            total={dokumen.length}
+            onOpenDocument={(id) => navigate({ to: '/pegawai/dokumen/$id', params: { id } })}
+          />
         )}
       </div>
     </PageLayout>
   )
 }
 
+function ReportToolbar({
+  search,
+  onSearchChange,
+  searchLabel,
+  placeholder,
+  filterOpen,
+  onFilterOpenChange,
+  activeFilters,
+  sortBy,
+  onSortChange,
+  resultLabel,
+  filter,
+  onFilterChange,
+}: {
+  search: string
+  onSearchChange: (value: string) => void
+  searchLabel: string
+  placeholder: string
+  filterOpen: boolean
+  onFilterOpenChange: (value: boolean) => void
+  activeFilters: number
+  sortBy: SortMode
+  onSortChange: (value: SortMode) => void
+  resultLabel: string
+  filter: HierarchicalFilterValue
+  onFilterChange: (value: HierarchicalFilterValue) => void
+}) {
+  return (
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+        <label className="relative min-w-0 flex-1 lg:max-w-xl">
+          <span className="sr-only">{searchLabel}</span>
+          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <input
+            type="search"
+            placeholder={placeholder}
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+          />
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <Button
+            type="button"
+            variant={filterOpen || activeFilters > 0 ? 'outline' : 'ghost'}
+            className={[
+              'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
+              filterOpen || activeFilters > 0
+                ? 'border-orange-200 bg-orange-50 text-[#FF4D00] hover:bg-orange-50'
+                : 'border-zinc-200 bg-[#FFFDF9] text-zinc-950 hover:bg-[#FFF8F1]',
+            ].join(' ')}
+            onClick={() => onFilterOpenChange(!filterOpen)}
+          >
+            <Filter size={16} />
+            Filter Lanjutan
+            {activeFilters > 0 && (
+              <span className="ml-1 rounded-full bg-[#FF4D00] px-1.5 py-0.5 text-[10px] leading-none text-white">
+                {activeFilters}
+              </span>
+            )}
+          </Button>
+          <div className="w-full sm:w-fit">
+            <Select
+              value={sortBy}
+              onValueChange={(value) => onSortChange(value as SortMode)}
+            >
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+                <SelectValue placeholder="Tanggal terbaru">
+                  {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {filterOpen && (
+        <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
+          <div className="[&>div]:border-zinc-200/80 [&>div]:bg-[#FFF8F1]/35 [&>div]:shadow-none [&_label]:text-[11px] [&_label]:font-black [&_label]:uppercase [&_label]:tracking-[0.14em] [&_label]:text-zinc-500 [&_input]:h-11 [&_input]:rounded-xl [&_input]:border-zinc-200 [&_input]:bg-[#FFFDF9]">
+            <HierarchicalFilter value={filter} onChange={onFilterChange} />
+          </div>
+          <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
+            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange({})}>
+              Reset
+            </Button>
+            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterOpenChange(false)}>
+              Tutup
+            </Button>
+            <Button type="button" className="font-bold shadow-sm" onClick={() => onFilterOpenChange(false)}>
+              Terapkan Filter
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
+        {resultLabel}
+      </div>
+    </div>
+  )
+}
+
+function ReportDocumentList({
+  dokumen,
+  total,
+  onOpenDocument,
+}: {
+  dokumen: DokumenLaporanRow[]
+  total: number
+  onOpenDocument: (id: string) => void
+}) {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+        <Table className="text-left">
+          <TableHeader>
+            <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
+              <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Kegiatan</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Tanggal</TableHead>
+              <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-zinc-100 text-[13px]">
+            {dokumen.map((dok) => (
+              <TableRow
+                key={dok.id}
+                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                onClick={() => onOpenDocument(dok.id)}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onOpenDocument(dok.id)
+                  }
+                }}
+                aria-label={`Detail Dokumen ${dok.judul}`}
+              >
+                <TableCell className="max-w-[460px] px-6 py-5">
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                      {dok.judul}
+                    </p>
+                    <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">{dok.fungsi_nama ?? '-'}</p>
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[280px] px-6 py-5">
+                  <span className="block truncate text-sm font-normal text-zinc-900">{dok.kegiatan_nama ?? '-'}</span>
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <ReportStatusBadge status={dok.status} />
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <DateCell value={dok.tanggal} />
+                </TableCell>
+                <TableCell className="px-6 py-5 text-right">
+                  <ReportDetailButton dok={dok} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <div className="border-t border-zinc-100 px-6 py-3 text-xs font-medium text-zinc-500">
+          Menampilkan {dokumen.length} dari {total} dokumen
+        </div>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {dokumen.map((dok, idx) => (
+          <PegawaiPanel
+            key={dok.id}
+            className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
+                  Dokumen #{idx + 1}
+                </p>
+                <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</h2>
+              </div>
+              <ReportStatusBadge status={dok.status} className="shrink-0" />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+              <InfoTile label="Fungsi" value={dok.fungsi_nama ?? '-'} />
+              <InfoTile label="Tanggal" value={<DateCell value={dok.tanggal} className="mt-1" />} />
+              <InfoTile label="Kegiatan" value={dok.kegiatan_nama ?? '-'} className="col-span-2" />
+            </div>
+            <div className="space-y-3 border-t border-zinc-100 pt-3">
+              <ReportDetailButton dok={dok} mobile />
+            </div>
+          </PegawaiPanel>
+        ))}
+      </div>
+    </>
+  )
+}
+
 function ReportDetailButton({ dok, mobile = false }: { dok: DokumenLaporanRow; mobile?: boolean }) {
   return (
-    <Link to="/pegawai/dokumen/$id" params={{ id: dok.id }}>
-      <Button variant="outline" size="sm" className="gap-1.5" aria-label={`Lihat dokumen ${dok.judul}`}>
-        <ExternalLink className="h-3.5 w-3.5" />
-        {mobile ? 'Detail' : 'Lihat'}
+    <Link
+      to="/pegawai/dokumen/$id"
+      params={{ id: dok.id }}
+      className={mobile ? 'block w-full' : undefined}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Button
+        size={mobile ? 'sm' : 'icon-lg'}
+        variant={mobile ? 'outline' : 'ghost'}
+        className={mobile
+          ? 'w-full gap-1.5'
+          : 'size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5'}
+        aria-label={`Detail Dokumen ${dok.judul}`}
+      >
+        <ChevronRight strokeWidth={2.35} />
+        {mobile ? 'Detail Dokumen' : null}
       </Button>
     </Link>
   )
+}
+
+function DateCell({ value, className }: { value: string; className?: string }) {
+  return (
+    <span className={['inline-flex items-center gap-2 text-sm font-semibold text-zinc-500', className ?? ''].join(' ')}>
+      <Clock3 size={16} strokeWidth={1.8} className="shrink-0 text-zinc-500" aria-hidden="true" />
+      {value ? formatDate(value) : '-'}
+    </span>
+  )
+}
+
+function InfoTile({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
+  return (
+    <div className={['rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5', className ?? ''].join(' ')}>
+      <p className="font-semibold text-zinc-500">{label}</p>
+      <div className="mt-0.5 text-zinc-900">{value}</div>
+    </div>
+  )
+}
+
+function ReportStatusBadge({ status, className }: { status: string; className?: string }) {
+  const statusMap: Record<string, { label: string; className: string }> = {
+    COMPLETED: { label: 'Selesai', className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
+    TERSIMPAN: { label: 'Tersimpan', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
+  }
+  const presentation = statusMap[status] ?? {
+    label: status || 'Status Tidak Diketahui',
+    className: 'border-zinc-200 bg-zinc-50 text-zinc-600',
+  }
+
+  return (
+    <span className={[
+      'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap',
+      presentation.className,
+      className ?? '',
+    ].join(' ')}>
+      {presentation.label}
+    </span>
+  )
+}
+
+function compareDocuments(a: DokumenLaporanRow, b: DokumenLaporanRow, sortBy: SortMode) {
+  if (sortBy === 'oldest') return dateValue(a.tanggal) - dateValue(b.tanggal)
+  if (sortBy === 'title_asc') return a.judul.localeCompare(b.judul, 'id-ID')
+  if (sortBy === 'activity_asc') return (a.kegiatan_nama ?? '').localeCompare(b.kegiatan_nama ?? '', 'id-ID')
+  return dateValue(b.tanggal) - dateValue(a.tanggal)
+}
+
+function dateValue(value?: string | null) {
+  if (!value) return 0
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function countActiveFilters(filter: HierarchicalFilterValue) {
+  return [
+    filter.fungsiId,
+    filter.kegiatanId,
+    filter.jenisId,
+    filter.kategoriId,
+    filter.detailId,
+    filter.tanggalMulai,
+    filter.tanggalAkhir,
+  ].filter(Boolean).length
 }

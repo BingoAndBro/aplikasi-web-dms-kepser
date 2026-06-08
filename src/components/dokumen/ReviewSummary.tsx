@@ -134,7 +134,7 @@ export function ReviewSummary({
               value={isNonMaterial
                 ? keteranganDetail || <span className="text-error">Belum diisi</span>
                 : nominalRealisasi
-                  ? `Rp ${nominalRealisasi}`
+                  ? <span className="font-mono font-bold text-stone-950">Rp {nominalRealisasi}</span>
                   : <span className="text-error">Belum diisi</span>}
               className="sm:col-span-2"
             />

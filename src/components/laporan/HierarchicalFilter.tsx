@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '#/components/ui/select'
 import { Button } from '#/components/ui/button'
+import { DatePicker } from '#/components/ui/date-picker'
 import { apiFetch } from '#/lib/api-client'
 import { X } from 'lucide-react'
 
@@ -316,21 +317,18 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs">Tanggal Mulai (Dari)</Label>
-            <input
-              type="date"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            <DatePicker
               value={value.tanggalMulai ?? ''}
-              onChange={e => onChange({ ...value, tanggalMulai: e.target.value || undefined })}
+              onChange={tanggal => onChange({ ...value, tanggalMulai: tanggal || undefined })}
+              placeholder="Pilih tanggal mulai"
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Tanggal Mulai (Sampai)</Label>
-            <input
-              type="date"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            <DatePicker
               value={value.tanggalAkhir ?? ''}
-              onChange={e => onChange({ ...value, tanggalAkhir: e.target.value || undefined })}
-              min={value.tanggalMulai}
+              onChange={tanggal => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
+              placeholder="Pilih tanggal selesai"
             />
           </div>
         </div>

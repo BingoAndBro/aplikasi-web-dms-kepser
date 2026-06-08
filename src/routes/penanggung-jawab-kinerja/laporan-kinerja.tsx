@@ -201,7 +201,7 @@ function LaporanKinerjaPage() {
               <KinerjaSummaryCard
                 icon={<Wallet size={18} />}
                 label="Total Nominal Realisasi"
-                value={formatCurrency(totalNominalRealisasi)}
+                value={<span className="font-mono">{formatCurrency(totalNominalRealisasi)}</span>}
                 helper="Dihitung dari dokumen material dengan nominal realisasi."
                 emphasis
               />
@@ -308,7 +308,7 @@ function LaporanKinerjaPage() {
                         <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">
                           Pengaju
                         </th>
-                        <th className="px-4 py-3 text-right text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">
+                        <th className="px-4 py-3 text-center text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">
                           Nominal
                         </th>
                         <th className="px-4 py-3 text-left text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">
@@ -338,7 +338,7 @@ function LaporanKinerjaPage() {
                           </td>
                           <td className="px-4 py-3 text-zinc-600">{row.tahun}</td>
                           <td className="px-4 py-3 text-zinc-600">{row.pengaju_nama}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-zinc-700">
+                          <td className="px-4 py-3 text-center font-mono text-sm font-bold text-zinc-950">
                             {row.is_non_material ? '-' : formatNullableCurrency(row.nominal_realisasi)}
                           </td>
                           <td className="px-4 py-3 text-zinc-600">{formatDate(row.updated_at)}</td>
@@ -367,7 +367,7 @@ function LaporanKinerjaPage() {
                         { label: 'Pengaju', value: row.pengaju_nama },
                         {
                           label: 'Nominal',
-                          value: row.is_non_material ? '-' : formatNullableCurrency(row.nominal_realisasi),
+                          value: <span className="font-mono font-bold text-zinc-950">{row.is_non_material ? '-' : formatNullableCurrency(row.nominal_realisasi)}</span>,
                         },
                         { label: 'Diperbarui', value: formatDate(row.updated_at) },
                       ]}

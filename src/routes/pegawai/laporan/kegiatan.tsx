@@ -1,28 +1,61 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
+import { z } from 'zod'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import {
-  PegawaiPageHeader,
-  PegawaiPanel,
-} from '#/components/pegawai/PegawaiPagePrimitives'
-import { BarChart3, ExternalLink, Users, ChevronRight, ShieldX, Filter } from 'lucide-react'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { DatePicker } from '#/components/ui/date-picker'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
+import { formatDate } from '#/lib/utils/format'
+import {
+  ArrowLeft,
+  Banknote,
+  ChevronRight,
+  Clock3,
+  ClipboardList,
+  FileText,
+  Filter,
+  FolderOpen,
+  Search,
+  ShieldX,
+  Users,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/laporan/kegiatan')({
+  validateSearch: z.object({
+    kegiatanId: z.string().optional(),
+  }),
   component: LaporanKegiatanPage,
 })
 
 type CurrentUserResponse = {
   user: {
     id: string
+    email?: string
+    metadata?: {
+      nama_lengkap?: string
+    }
   }
 }
 
@@ -36,15 +69,72 @@ type LaporanKegiatanResponse = {
   error?: string
 }
 
+type KegiatanFilterValue = {
+  fungsiId?: string
+  tanggalMulai?: string
+  tanggalAkhir?: string
+}
+
+type DetailFilterValue = {
+  pembuatId?: string
+} & HierarchicalFilterValue
+
+type FungsiOption = {
+  id: string
+  nama: string
+}
+
+type SortMode = 'newest' | 'oldest' | 'name_asc' | 'documents_desc' | 'nominal_desc'
+type DetailSortMode = 'newest' | 'oldest' | 'title_asc' | 'submitter_asc' | 'nominal_desc'
+
+type KegiatanRow = {
+  id: string
+  nama: string
+  ketuaTimName: string
+  fungsiNama: string
+  dokumen: DokumenLaporanRow[]
+  materialCount: number
+  nonMaterialCount: number
+  totalNominal: number
+  latestDate: string | null
+  pengajuCount: number
+}
+
+const TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'newest', label: 'Tanggal terbaru' },
+  { value: 'oldest', label: 'Tanggal terlama' },
+  { value: 'name_asc', label: 'Nama kegiatan A-Z' },
+  { value: 'documents_desc', label: 'Dokumen terbanyak' },
+  { value: 'nominal_desc', label: 'Nominal terbesar' },
+]
+const DETAIL_SORT_OPTIONS: { value: DetailSortMode; label: string }[] = [
+  { value: 'newest', label: 'Tanggal terbaru' },
+  { value: 'oldest', label: 'Tanggal terlama' },
+  { value: 'title_asc', label: 'Judul A-Z' },
+  { value: 'submitter_asc', label: 'Pembuat A-Z' },
+  { value: 'nominal_desc', label: 'Nominal terbesar' },
+]
+
 function LaporanKegiatanPage() {
+  const navigate = useNavigate()
+  const { kegiatanId } = Route.useSearch()
   const [dokumen, setDokumen] = useState<DokumenLaporanRow[]>([])
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [allowedKegiatan, setAllowedKegiatan] = useState<{ id: string; nama: string }[]>([])
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filter, setFilter] = useState<HierarchicalFilterValue>({})
+  const [filter, setFilter] = useState<KegiatanFilterValue>({})
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState('Ketua Tim')
+  const [search, setSearch] = useState('')
+  const [detailSearch, setDetailSearch] = useState('')
+  const [detailFilter, setDetailFilter] = useState<DetailFilterValue>({})
+  const [detailSortBy, setDetailSortBy] = useState<DetailSortMode>('newest')
+  const [detailFilterOpen, setDetailFilterOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<SortMode>('newest')
+  const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
     async function checkPermission() {
@@ -52,6 +142,7 @@ function LaporanKegiatanPage() {
       try {
         const meData = await apiFetch<CurrentUserResponse>('/users/me')
         setCurrentUserId(meData.user.id)
+        setCurrentUserName(displayCurrentUserName(meData))
 
         let data: KetuaTimKegiatanResponse
         try {
@@ -97,37 +188,69 @@ function LaporanKegiatanPage() {
     checkPermission()
   }, [])
 
-  const filtered = useMemo(() => {
-    return dokumen.filter(d => {
-      if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
-      if (filter.kegiatanId && d.kegiatan_jenis_id !== filter.kegiatanId) return false
-      if (filter.jenisId && (d as any).jenis_permintaan_id !== filter.jenisId) return false
-      if (filter.kategoriId && (d as any).kategori_permintaan_id !== filter.kategoriId) return false
-      if (filter.detailId && (d as any).detail_permintaan_id !== filter.detailId) return false
-      if (filter.tanggalMulai && d.tanggal < filter.tanggalMulai) return false
-      if (filter.tanggalAkhir && d.tanggal > filter.tanggalAkhir) return false
-      return true
-    })
+  const filteredDocuments = useMemo(() => {
+    return dokumen.filter(d => matchesKegiatanListFilter(d, filter))
   }, [dokumen, filter])
+
+  const kegiatanRows = useMemo(() => {
+    return buildKegiatanRows(allowedKegiatan, filteredDocuments, currentUserName)
+  }, [allowedKegiatan, currentUserName, filteredDocuments])
+
+  const activeFilters = countActiveFilters(filter)
+
+  const filteredKegiatanRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return kegiatanRows
+      .filter(row => {
+        if (activeFilters > 0 && row.dokumen.length === 0) return false
+        if (!query) return true
+        return [
+          row.nama,
+          row.fungsiNama,
+          ...row.dokumen.map(d => d.judul),
+          ...row.dokumen.map(d => d.pengaju_nama),
+        ].some(value => value?.toLowerCase().includes(query))
+      })
+      .sort((a, b) => compareKegiatanRows(a, b, sortBy))
+  }, [activeFilters, kegiatanRows, search, sortBy])
+
+  const selectedKegiatan = useMemo(() => {
+    return kegiatanRows.find(row => row.id === kegiatanId) ?? null
+  }, [kegiatanRows, kegiatanId])
+
+  const selectedDocuments = useMemo(() => {
+    if (!selectedKegiatan) return []
+    const query = detailSearch.trim().toLowerCase()
+    return selectedKegiatan.dokumen
+      .filter(d => {
+        if (detailFilter.pembuatId && (d.pengaju_id ?? d.created_by) !== detailFilter.pembuatId) return false
+        if (detailFilter.fungsiId && d.fungsi_id !== detailFilter.fungsiId) return false
+        if (detailFilter.kegiatanId && d.kegiatan_jenis_id !== detailFilter.kegiatanId) return false
+        if (detailFilter.jenisId && d.jenis_permintaan_id !== detailFilter.jenisId) return false
+        if (detailFilter.kategoriId && d.kategori_permintaan_id !== detailFilter.kategoriId) return false
+        if (detailFilter.detailId && d.detail_permintaan_id !== detailFilter.detailId) return false
+        if (detailFilter.tanggalMulai && d.tanggal < detailFilter.tanggalMulai) return false
+        if (detailFilter.tanggalAkhir && d.tanggal > detailFilter.tanggalAkhir) return false
+        if (!query) return true
+        return [
+          d.judul,
+          d.fungsi_nama,
+          d.kegiatan_nama,
+          d.leaf_node_nama,
+          d.jenis_permintaan_nama,
+          d.kategori_permintaan_nama,
+          d.detail_permintaan_nama,
+          d.pengaju_nama,
+        ].some(value => value?.toLowerCase().includes(query))
+      })
+      .sort((a, b) => compareDetailDocuments(a, b, detailSortBy))
+  }, [detailFilter, detailSearch, detailSortBy, selectedKegiatan])
 
   const isCurrentUser = (dok: DokumenLaporanRow) => dok.pengaju_id === currentUserId
 
   return (
     <PageLayout>
-      <div className="space-y-6">
-        <PegawaiPageHeader
-          eyebrow={
-            <>
-              <BarChart3 size={12} />
-              <span>Laporan</span>
-              <ChevronRight size={10} />
-              <span>Laporan Kegiatan</span>
-            </>
-          }
-          title="Laporan Kegiatan"
-          description="Pantau dokumen dari kegiatan yang pernah Anda pimpin sebagai Ketua Tim. Akses halaman ini tetap mengikuti otorisasi server."
-        />
-
+      <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
         {checkingAuth && (
           <LoadingState variant="page" label="Memeriksa akses laporan kegiatan" />
         )}
@@ -141,40 +264,57 @@ function LaporanKegiatanPage() {
           />
         )}
 
-        {!checkingAuth && isAuthorized && (
+        {!checkingAuth && isAuthorized && selectedKegiatan ? (
+          <KegiatanDetailView
+            kegiatan={selectedKegiatan}
+            dokumen={selectedDocuments}
+            totalDokumen={selectedKegiatan.dokumen.length}
+            search={detailSearch}
+            onSearchChange={setDetailSearch}
+            filter={detailFilter}
+            onFilterChange={setDetailFilter}
+            filterOpen={detailFilterOpen}
+            onFilterOpenChange={setDetailFilterOpen}
+            sortBy={detailSortBy}
+            onSortChange={setDetailSortBy}
+            onBack={() => selectKegiatan(null, navigate)}
+            onOpenDocument={(documentId) => navigate({ to: '/pegawai/dokumen/$id', params: { id: documentId } })}
+            isCurrentUser={isCurrentUser}
+          />
+        ) : null}
+
+        {!checkingAuth && isAuthorized && !selectedKegiatan && (
           <>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-              <PegawaiPanel className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Filter size={15} className="text-orange-700" />
-                    <p className="text-sm font-bold text-zinc-950">Filter Dokumen</p>
-                  </div>
-                  <p className="text-xs font-semibold text-zinc-500">
-                    {filtered.length} dari {dokumen.length} dokumen
+            <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-5">
+                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+                  <Users size={22} />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
+                    Laporan Kegiatan
+                  </h1>
+                  <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
+                    Pantau dokumen berdasarkan kegiatan yang Anda pimpin sebagai Ketua Tim.
                   </p>
                 </div>
-                <HierarchicalFilter value={filter} onChange={setFilter} />
-              </PegawaiPanel>
+              </div>
+            </section>
 
-              <PegawaiPanel className="space-y-3 bg-[#FFF8F1]">
-                <div className="flex items-start gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-                    <Users size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-zinc-950">Cakupan Ketua Tim</p>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-700">
-                      {allowedKegiatan.length} kegiatan terdaftar untuk akses laporan ini.
-                    </p>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-orange-100 bg-white/80 p-3 text-xs text-zinc-700">
-                  <p className="font-semibold text-zinc-950">Ringkasan hasil</p>
-                  <p className="mt-1">{new Set(filtered.map(d => d.pengaju_id)).size} pegawai dalam daftar terfilter.</p>
-                </div>
-              </PegawaiPanel>
-            </div>
+            <ReportToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchLabel="Cari laporan kegiatan"
+              placeholder="Cari nama kegiatan, fungsi, atau dokumen..."
+              filterOpen={filterOpen}
+              onFilterOpenChange={setFilterOpen}
+              activeFilters={activeFilters}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              resultLabel={`${filteredKegiatanRows.length} Kegiatan Ditemukan`}
+              filter={filter}
+              onFilterChange={setFilter}
+            />
 
             {loading && <LoadingState variant="list" rows={4} label="Memuat laporan kegiatan" />}
 
@@ -182,136 +322,25 @@ function LaporanKegiatanPage() {
               <ErrorState title="Gagal memuat laporan kegiatan" description={error} variant="page" />
             )}
 
-            {!loading && !error && filtered.length === 0 && dokumen.length > 0 && (
+            {!loading && !error && filteredKegiatanRows.length === 0 && kegiatanRows.length > 0 && (
               <EmptyState
-                title="Tidak ada dokumen yang cocok"
-                description="Reset filter untuk kembali melihat seluruh dokumen kegiatan."
+                title="Tidak ada kegiatan yang cocok"
+                description="Reset filter atau ubah kata kunci untuk melihat kegiatan lain."
                 icon={<Filter size={20} />}
-                action={<Button variant="outline" size="sm" onClick={() => setFilter({})}>Reset Filter</Button>}
+                action={<Button variant="outline" size="sm" onClick={() => { setFilter({}); setSearch('') }}>Reset Filter</Button>}
               />
             )}
 
-            {!loading && !error && filtered.length === 0 && dokumen.length === 0 && (
+            {!loading && !error && filteredKegiatanRows.length === 0 && kegiatanRows.length === 0 && (
               <EmptyState
-                title="Belum ada dokumen"
-                description="Dokumen dari kegiatan Anda akan muncul di sini setelah ada pengajuan."
+                title="Belum ada kegiatan yang Anda pimpin"
+                description="Kegiatan akan muncul di sini jika Anda terdaftar sebagai Ketua Tim."
                 icon={<Users size={20} />}
               />
             )}
 
-            {!loading && !error && filtered.length > 0 && (
-              <>
-                <PegawaiPanel className="hidden overflow-hidden p-0 md:block">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-orange-50/70">
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground w-8">No</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Judul Dokumen</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Kegiatan</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Pengaju</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tanggal Mulai</th>
-                          <th className="px-4 py-3 text-center font-medium text-muted-foreground">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filtered.map((dok, idx) => {
-                          const isMe = isCurrentUser(dok)
-                          return (
-                            <tr
-                              key={dok.id}
-                              className={`border-b last:border-0 hover:bg-orange-50/50 transition-colors ${isMe ? 'bg-orange-50/40' : ''}`}
-                            >
-                              <td className="px-4 py-3 text-muted-foreground">{idx + 1}</td>
-                              <td className="px-4 py-3">
-                                <div className="font-medium">{dok.judul}</div>
-                                {(dok as any).leaf_node_nama && (
-                                  <div className="text-xs text-muted-foreground mt-0.5">
-                                    {(dok as any).leaf_node_nama}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {dok.kegiatan_nama ?? '-'}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <span>{(dok as any).pengaju_nama ?? 'Tidak diketahui'}</span>
-                                  {isMe && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 border-orange-200"
-                                    >
-                                      Anda
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <StatusBadge status={dok.status} className="text-[10px] font-semibold" />
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {dok.tanggal
-                                  ? new Date(dok.tanggal).toLocaleDateString('id-ID', {
-                                      day: 'numeric', month: 'long', year: 'numeric',
-                                    })
-                                  : '-'
-                                }
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <ReportDetailButton dok={dok} />
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="px-4 py-2.5 border-t bg-orange-50/40 text-xs text-muted-foreground">
-                    Menampilkan {filtered.length} dari {dokumen.length} dokumen
-                  </div>
-                </PegawaiPanel>
-
-                <div className="space-y-3 md:hidden">
-                  {filtered.map((dok, idx) => {
-                    const isMe = isCurrentUser(dok)
-                    return (
-                      <PegawaiPanel key={dok.id} className="space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
-                              Kegiatan #{idx + 1}
-                            </p>
-                            <h2 className="mt-1 line-clamp-2 text-sm font-bold text-zinc-950">{dok.judul}</h2>
-                          </div>
-                          <StatusBadge status={dok.status} className="shrink-0 text-[10px] font-semibold" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
-                          <div className="col-span-2">
-                            <p className="font-semibold text-zinc-500">Kegiatan</p>
-                            <p className="mt-0.5 text-zinc-900">{dok.kegiatan_nama ?? '-'}</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-zinc-500">Pengaju</p>
-                            <p className="mt-0.5 text-zinc-900">{(dok as any).pengaju_nama ?? 'Tidak diketahui'}</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-zinc-500">Tanggal</p>
-                            <p className="mt-0.5 text-zinc-900">{dok.tanggal ? new Date(dok.tanggal).toLocaleDateString('id-ID') : '-'}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between gap-3 border-t border-orange-100 pt-3">
-                          {isMe ? (
-                            <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">Anda</Badge>
-                          ) : <span />}
-                          <ReportDetailButton dok={dok} mobile />
-                        </div>
-                      </PegawaiPanel>
-                    )
-                  })}
-                </div>
-              </>
+            {!loading && !error && filteredKegiatanRows.length > 0 && (
+              <KegiatanList rows={filteredKegiatanRows} onSelect={(id) => selectKegiatan(id, navigate)} />
             )}
           </>
         )}
@@ -320,13 +349,894 @@ function LaporanKegiatanPage() {
   )
 }
 
-function ReportDetailButton({ dok, mobile = false }: { dok: DokumenLaporanRow; mobile?: boolean }) {
+function ReportToolbar({
+  search,
+  onSearchChange,
+  searchLabel,
+  placeholder,
+  filterOpen,
+  onFilterOpenChange,
+  activeFilters,
+  sortBy,
+  onSortChange,
+  resultLabel,
+  filter,
+  onFilterChange,
+}: {
+  search: string
+  onSearchChange: (value: string) => void
+  searchLabel: string
+  placeholder: string
+  filterOpen: boolean
+  onFilterOpenChange: (value: boolean) => void
+  activeFilters: number
+  sortBy: SortMode
+  onSortChange: (value: SortMode) => void
+  resultLabel: string
+  filter: KegiatanFilterValue
+  onFilterChange: (value: KegiatanFilterValue) => void
+}) {
   return (
-    <Link to="/pegawai/dokumen/$id" params={{ id: dok.id }}>
-      <Button variant="outline" size="sm" className="gap-1.5" aria-label={`Lihat dokumen ${dok.judul}`}>
-        <ExternalLink className="h-3.5 w-3.5" />
-        {mobile ? 'Detail' : 'Lihat'}
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+        <label className="relative min-w-0 flex-1 lg:max-w-xl">
+          <span className="sr-only">{searchLabel}</span>
+          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <input
+            type="search"
+            placeholder={placeholder}
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+          />
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <Button
+            type="button"
+            variant={filterOpen || activeFilters > 0 ? 'outline' : 'ghost'}
+            className={[
+              'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
+              filterOpen || activeFilters > 0
+                ? 'border-orange-200 bg-orange-50 text-[#FF4D00] hover:bg-orange-50'
+                : 'border-zinc-200 bg-[#FFFDF9] text-zinc-950 hover:bg-[#FFF8F1]',
+            ].join(' ')}
+            onClick={() => onFilterOpenChange(!filterOpen)}
+          >
+            <Filter size={16} />
+            Filter Lanjutan
+            {activeFilters > 0 && (
+              <span className="ml-1 rounded-full bg-[#FF4D00] px-1.5 py-0.5 text-[10px] leading-none text-white">
+                {activeFilters}
+              </span>
+            )}
+          </Button>
+          <label>
+            <span className="sr-only">Urutkan laporan kegiatan</span>
+            <Select
+              value={sortBy}
+              onValueChange={(value) => onSortChange(value as SortMode)}
+            >
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+                <SelectValue placeholder="Tanggal terbaru">
+                  {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+        </div>
+      </div>
+
+      {filterOpen && (
+        <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
+          <KegiatanAdvancedFilter value={filter} onChange={onFilterChange} />
+          <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
+            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange({})}>
+              Reset
+            </Button>
+            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterOpenChange(false)}>
+              Tutup
+            </Button>
+            <Button type="button" className="font-bold shadow-sm" onClick={() => onFilterOpenChange(false)}>
+              Terapkan Filter
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
+        {resultLabel}
+      </div>
+    </div>
+  )
+}
+
+function KegiatanAdvancedFilter({
+  value,
+  onChange,
+}: {
+  value: KegiatanFilterValue
+  onChange: (value: KegiatanFilterValue) => void
+}) {
+  const [fungsis, setFungsis] = useState<FungsiOption[]>([])
+
+  useEffect(() => {
+    let active = true
+    apiFetch<FungsiOption[]>('/master-fungsi')
+      .then(data => {
+        if (active) setFungsis(data)
+      })
+      .catch(() => {
+        if (active) setFungsis([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return (
+    <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <label className="space-y-2">
+          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Fungsi</span>
+          <Select
+            value={value.fungsiId || '_all'}
+            onValueChange={(fungsiId) => onChange({ ...value, fungsiId: fungsiId === '_all' ? undefined : fungsiId })}
+          >
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+              <SelectValue placeholder="Semua Fungsi">
+                {selected => selected && selected !== '_all'
+                  ? fungsis.find(fungsi => fungsi.id === selected)?.nama ?? 'Semua Fungsi'
+                  : 'Semua Fungsi'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">Semua Fungsi</SelectItem>
+            {fungsis.map(fungsi => (
+                <SelectItem key={fungsi.id} value={fungsi.id}>{fungsi.nama}</SelectItem>
+            ))}
+            </SelectContent>
+          </Select>
+        </label>
+        <label className="space-y-2">
+          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
+          <DatePicker
+            value={value.tanggalMulai ?? ''}
+            onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
+            placeholder="Pilih tanggal mulai"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
+          <DatePicker
+            value={value.tanggalAkhir ?? ''}
+            onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
+            placeholder="Pilih tanggal selesai"
+          />
+        </label>
+      </div>
+    </div>
+  )
+}
+
+function SummaryCard({
+  label,
+  value,
+  detail,
+  icon,
+  className,
+  labelClassName,
+  valueClassName,
+  detailClassName,
+  iconClassName,
+}: {
+  label: string
+  value: string
+  detail: string
+  icon: React.ReactNode
+  className?: string
+  labelClassName?: string
+  valueClassName?: string
+  detailClassName?: string
+  iconClassName?: string
+}) {
+  return (
+    <div className={['flex min-h-[140px] flex-col justify-between rounded-[22px] border p-5 shadow-sm', className ?? ''].join(' ')}>
+      <div className="flex items-start justify-between gap-3">
+        <p className={['text-[10px] font-black uppercase tracking-[0.14em]', labelClassName ?? 'text-[#5F3B22]'].join(' ')}>{label}</p>
+        <span className={['flex size-7 items-center justify-center rounded-full border bg-white/65 shadow-sm shadow-zinc-950/5', iconClassName ?? 'border-current/15 text-zinc-700'].join(' ')}>
+          {icon}
+        </span>
+      </div>
+      <div>
+        <p className={['line-clamp-2 font-headline text-[18px] font-extrabold leading-tight tracking-tight text-zinc-950', valueClassName ?? ''].join(' ')}>{value}</p>
+        <p className={['mt-3 text-[10px] font-semibold uppercase tracking-[0.04em] text-zinc-500', detailClassName ?? ''].join(' ')}>{detail}</p>
+      </div>
+    </div>
+  )
+}
+
+function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: string) => void }) {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+        <Table className="text-left">
+          <TableHeader>
+            <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
+              <TableHead className={TABLE_HEAD_CLASS}>Kegiatan</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Fungsi</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Dokumen</TableHead>
+              <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Nominal Realisasi</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Tanggal Terakhir</TableHead>
+              <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-zinc-100 text-[13px]">
+            {rows.map(row => (
+              <TableRow
+                key={row.id}
+                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                onClick={() => onSelect(row.id)}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onSelect(row.id)
+                  }
+                }}
+              >
+                <TableCell className="max-w-[420px] px-6 py-5">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="mt-1 text-xs font-medium text-zinc-500">{row.pengajuCount} pegawai dalam daftar</p>
+                </TableCell>
+                <TableCell className="max-w-[220px] px-6 py-5">
+                  <span className="block truncate text-sm font-normal text-zinc-900">{row.fungsiNama}</span>
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <span className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-extrabold text-zinc-700">
+                    {row.dokumen.length} Dokumen
+                  </span>
+                </TableCell>
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">
+                  {row.totalNominal > 0 ? formatRupiah(row.totalNominal) : '-'}
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  {row.latestDate ? <DateCell value={row.latestDate} /> : <span className="text-sm font-semibold text-zinc-500">-</span>}
+                </TableCell>
+                <TableCell className="px-6 py-5 text-right">
+                  <Button
+                    size="icon-lg"
+                    variant="ghost"
+                    className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
+                    aria-label={`Detail kegiatan ${row.nama}`}
+                  >
+                    <ChevronRight strokeWidth={2.35} />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {rows.map(row => (
+          <PegawaiPanel key={row.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Kegiatan</p>
+                <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.nama}</h2>
+              </div>
+              <span className="rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[11px] font-extrabold text-zinc-700">
+                {row.dokumen.length}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+              <InfoTile label="Fungsi" value={row.fungsiNama} className="col-span-2" />
+              <InfoTile label="Tanggal" value={row.latestDate ? <DateCell value={row.latestDate} className="mt-1" /> : '-'} />
+              <InfoTile
+                label="Nominal"
+                value={<span className="font-mono font-bold text-zinc-950">{row.totalNominal > 0 ? formatRupiah(row.totalNominal) : '-'}</span>}
+              />
+            </div>
+            <div className="border-t border-zinc-100 pt-3">
+              <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => onSelect(row.id)}>
+                Detail Kegiatan
+                <ChevronRight size={14} />
+              </Button>
+            </div>
+          </PegawaiPanel>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function KegiatanDetailView({
+  kegiatan,
+  dokumen,
+  totalDokumen,
+  search,
+  onSearchChange,
+  filter,
+  onFilterChange,
+  filterOpen,
+  onFilterOpenChange,
+  sortBy,
+  onSortChange,
+  onBack,
+  onOpenDocument,
+  isCurrentUser,
+}: {
+  kegiatan: KegiatanRow
+  dokumen: DokumenLaporanRow[]
+  totalDokumen: number
+  search: string
+  onSearchChange: (value: string) => void
+  filter: DetailFilterValue
+  onFilterChange: (value: DetailFilterValue) => void
+  filterOpen: boolean
+  onFilterOpenChange: (value: boolean) => void
+  sortBy: DetailSortMode
+  onSortChange: (value: DetailSortMode) => void
+  onBack: () => void
+  onOpenDocument: (id: string) => void
+  isCurrentUser: (dok: DokumenLaporanRow) => boolean
+}) {
+  const activeFilters = countActiveDetailFilters(filter)
+  const pembuatOptions = useMemo(() => buildPembuatOptions(kegiatan.dokumen), [kegiatan.dokumen])
+
+  return (
+    <>
+      <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start gap-4">
+          <Button
+            type="button"
+            size="icon-lg"
+            variant="ghost"
+            className="mt-1 size-10 shrink-0 rounded-xl border border-zinc-200 bg-[#FFFDF9] text-zinc-600 shadow-sm hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+            onClick={onBack}
+            aria-label="Kembali ke daftar kegiatan"
+          >
+            <ArrowLeft size={18} />
+          </Button>
+          <div className="min-w-0">
+            <p className="mb-1 text-xs font-semibold text-zinc-600">Laporan Kegiatan</p>
+            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
+              {kegiatan.nama}
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
+              Daftar dokumen final dalam kegiatan yang Anda pimpin.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+          Halaman ini menampilkan dokumen terkait kegiatan yang Anda pimpin.
+        </div>
+      </section>
+
+      <KegiatanDetailCards kegiatan={kegiatan} />
+
+      <KegiatanDetailToolbar
+        search={search}
+        onSearchChange={onSearchChange}
+        filter={filter}
+        onFilterChange={onFilterChange}
+        filterOpen={filterOpen}
+        onFilterOpenChange={onFilterOpenChange}
+        activeFilters={activeFilters}
+        sortBy={sortBy}
+        onSortChange={onSortChange}
+        pembuatOptions={pembuatOptions}
+        resultLabel={`${dokumen.length} dari ${totalDokumen} dokumen ditampilkan`}
+      />
+
+      {dokumen.length === 0 ? (
+        <EmptyState
+          title="Tidak ada dokumen yang cocok"
+          description="Ubah kata kunci untuk melihat dokumen lain dalam kegiatan ini."
+          icon={<Search size={20} />}
+        />
+      ) : (
+        <DocumentTable dokumen={dokumen} isCurrentUser={isCurrentUser} onOpenDocument={onOpenDocument} />
+      )}
+    </>
+  )
+}
+
+function KegiatanDetailToolbar({
+  search,
+  onSearchChange,
+  filter,
+  onFilterChange,
+  filterOpen,
+  onFilterOpenChange,
+  activeFilters,
+  sortBy,
+  onSortChange,
+  pembuatOptions,
+  resultLabel,
+}: {
+  search: string
+  onSearchChange: (value: string) => void
+  filter: DetailFilterValue
+  onFilterChange: (value: DetailFilterValue) => void
+  filterOpen: boolean
+  onFilterOpenChange: (value: boolean) => void
+  activeFilters: number
+  sortBy: DetailSortMode
+  onSortChange: (value: DetailSortMode) => void
+  pembuatOptions: { id: string; nama: string }[]
+  resultLabel: string
+}) {
+  return (
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+        <label className="relative min-w-0 flex-1 lg:max-w-xl">
+          <span className="sr-only">Cari dokumen kegiatan</span>
+          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="Cari berdasarkan judul dokumen, jenis, atau kategori..."
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+          />
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <Button
+            type="button"
+            variant={filterOpen || activeFilters > 0 ? 'outline' : 'ghost'}
+            className={[
+              'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
+              filterOpen || activeFilters > 0
+                ? 'border-orange-200 bg-orange-50 text-[#FF4D00] hover:bg-orange-50'
+                : 'border-zinc-200 bg-[#FFFDF9] text-zinc-950 hover:bg-[#FFF8F1]',
+            ].join(' ')}
+            onClick={() => onFilterOpenChange(!filterOpen)}
+          >
+            <Filter size={16} />
+            Filter Lanjutan
+            {activeFilters > 0 && (
+              <span className="ml-1 rounded-full bg-[#FF4D00] px-1.5 py-0.5 text-[10px] leading-none text-white">
+                {activeFilters}
+              </span>
+            )}
+          </Button>
+          <label>
+            <span className="sr-only">Urutkan dokumen kegiatan</span>
+            <Select
+              value={sortBy}
+              onValueChange={(value) => onSortChange(value as DetailSortMode)}
+            >
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+                <SelectValue placeholder="Tanggal terbaru">
+                  {selected => DETAIL_SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {DETAIL_SORT_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+        </div>
+      </div>
+
+      {filterOpen && (
+        <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
+          <KegiatanDetailAdvancedFilter
+            value={filter}
+            onChange={onFilterChange}
+            pembuatOptions={pembuatOptions}
+          />
+          <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
+            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange({})}>
+              Reset
+            </Button>
+            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterOpenChange(false)}>
+              Tutup
+            </Button>
+            <Button type="button" className="font-bold shadow-sm" onClick={() => onFilterOpenChange(false)}>
+              Terapkan Filter
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
+        {resultLabel}
+      </div>
+    </div>
+  )
+}
+
+function KegiatanDetailAdvancedFilter({
+  value,
+  onChange,
+  pembuatOptions,
+}: {
+  value: DetailFilterValue
+  onChange: (value: DetailFilterValue) => void
+  pembuatOptions: { id: string; nama: string }[]
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
+        <label className="space-y-2">
+          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Pembuat Dokumen</span>
+          <Select
+            value={value.pembuatId || '_all'}
+            onValueChange={(pembuatId) => onChange({ ...value, pembuatId: pembuatId === '_all' ? undefined : pembuatId })}
+          >
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+              <SelectValue placeholder="Semua Pembuat Dokumen">
+                {selected => selected && selected !== '_all'
+                  ? pembuatOptions.find(option => option.id === selected)?.nama ?? 'Semua Pembuat Dokumen'
+                  : 'Semua Pembuat Dokumen'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">Semua Pembuat Dokumen</SelectItem>
+              {pembuatOptions.map(option => (
+                <SelectItem key={option.id} value={option.id}>{option.nama}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+      </div>
+      <HierarchicalFilter value={value} onChange={onChange} />
+    </div>
+  )
+}
+
+function KegiatanDetailCards({
+  kegiatan,
+}: {
+  kegiatan: KegiatanRow
+}) {
+  const materialCount = kegiatan.dokumen.filter(dok => !dok.is_non_material).length
+  const nonMaterialCount = kegiatan.dokumen.filter(dok => dok.is_non_material).length
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <SummaryCard
+        label="Nama Kegiatan"
+        value={kegiatan.nama}
+        detail={`Ketua Tim: ${kegiatan.ketuaTimName}`}
+        icon={<FolderOpen size={16} />}
+        className="border-[#E1D7CB] bg-[#FFFDF9]"
+        labelClassName="text-[#5F3B22]"
+        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+      />
+      <SummaryCard
+        label="Dokumen Material"
+        value={materialCount.toLocaleString('id-ID')}
+        detail="Total Dokumen Belanja"
+        icon={<ClipboardIcon />}
+        className="border-[#F1D38A] bg-[#FFF8E6]"
+        labelClassName="text-[#7A4A00]"
+        iconClassName="border-[#E5BD55] text-[#B77900]"
+      />
+      <SummaryCard
+        label="Dokumen Non-Material"
+        value={nonMaterialCount.toLocaleString('id-ID')}
+        detail="Total Dokumen Non-Belanja"
+        icon={<FileText size={16} />}
+        className="border-[#FDBA91] bg-[#FFF1E8]"
+        labelClassName="text-[#B83200]"
+        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+      />
+      <SummaryCard
+        label="Total Nominal Realisasi"
+        value={formatRupiah(kegiatan.totalNominal)}
+        detail="Hanya Belanja Material"
+        icon={<Banknote size={16} />}
+        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
+        labelClassName="text-[#006B35]"
+        valueClassName="font-mono text-[24px] text-[#02170B]"
+        detailClassName="text-[#006B35]"
+        iconClassName="border-[#62C995] text-[#16A35D]"
+      />
+    </div>
+  )
+}
+
+function ClipboardIcon() {
+  return <ClipboardList size={16} />
+}
+
+function DocumentTable({
+  dokumen,
+  isCurrentUser,
+  onOpenDocument,
+}: {
+  dokumen: DokumenLaporanRow[]
+  isCurrentUser: (dok: DokumenLaporanRow) => boolean
+  onOpenDocument: (id: string) => void
+}) {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+        <Table className="text-left">
+          <TableHeader>
+            <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
+              <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Jenis Scope</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Tanggal Pengajuan</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
+              <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Nominal Realisasi</TableHead>
+              <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-zinc-100 text-[13px]">
+            {dokumen.map(dok => (
+              <TableRow
+                key={dok.id}
+                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                onClick={() => onOpenDocument(dok.id)}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onOpenDocument(dok.id)
+                  }
+                }}
+                aria-label={`Detail Dokumen ${dok.judul}`}
+              >
+                <TableCell className="max-w-[460px] px-6 py-5">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</p>
+                  <p className="mt-1 text-xs font-medium text-zinc-500">
+                    Pembuat: {(dok as any).pengaju_nama ?? 'Tidak diketahui'}
+                    {isCurrentUser(dok) ? <Badge className="ml-2 border-orange-200 bg-orange-50 text-orange-700">Anda</Badge> : null}
+                  </p>
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <ScopeBadge dok={dok} />
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <DateCell value={dok.tanggal} />
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <ReportStatusBadge status={dok.status} />
+                </TableCell>
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">
+                  {dok.is_non_material ? '-' : formatRupiah(dok.nominal_realisasi ?? 0)}
+                </TableCell>
+                <TableCell className="px-6 py-5 text-right">
+                  <DocumentDetailButton dok={dok} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {dokumen.map((dok, idx) => (
+          <PegawaiPanel
+            key={dok.id}
+            className="group cursor-pointer space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]"
+            onClick={() => onOpenDocument(dok.id)}
+            tabIndex={0}
+            role="button"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onOpenDocument(dok.id)
+              }
+            }}
+            aria-label={`Detail Dokumen ${dok.judul}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Dokumen #{idx + 1}</p>
+                <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{dok.judul}</h2>
+              </div>
+              <ReportStatusBadge status={dok.status} className="shrink-0" />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+              <InfoTile label="Scope" value={dok.is_non_material ? 'Non-Material' : 'Material'} />
+              <InfoTile label="Tanggal" value={<DateCell value={dok.tanggal} className="mt-1" />} />
+              <InfoTile label="Pembuat" value={(dok as any).pengaju_nama ?? 'Tidak diketahui'} className="col-span-2" />
+            </div>
+            <div className="border-t border-zinc-100 pt-3">
+              <DocumentDetailButton dok={dok} mobile />
+            </div>
+          </PegawaiPanel>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function DocumentDetailButton({ dok, mobile = false }: { dok: DokumenLaporanRow; mobile?: boolean }) {
+  return (
+    <Link
+      to="/pegawai/dokumen/$id"
+      params={{ id: dok.id }}
+      className={mobile ? 'block w-full' : undefined}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Button
+        size={mobile ? 'sm' : 'icon-lg'}
+        variant={mobile ? 'outline' : 'ghost'}
+        className={mobile
+          ? 'w-full gap-1.5'
+          : 'size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5'}
+        aria-label={`Detail Dokumen ${dok.judul}`}
+      >
+        <ChevronRight strokeWidth={2.35} />
+        {mobile ? 'Detail Dokumen' : null}
       </Button>
     </Link>
   )
+}
+
+function DateCell({ value, className }: { value: string; className?: string }) {
+  return (
+    <span className={['inline-flex items-center gap-2 text-sm font-semibold text-zinc-500', className ?? ''].join(' ')}>
+      <Clock3 size={16} strokeWidth={1.8} className="shrink-0 text-zinc-500" aria-hidden="true" />
+      {value ? formatDate(value) : '-'}
+    </span>
+  )
+}
+
+function InfoTile({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
+  return (
+    <div className={['rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5', className ?? ''].join(' ')}>
+      <p className="font-semibold text-zinc-500">{label}</p>
+      <div className="mt-0.5 text-zinc-900">{value}</div>
+    </div>
+  )
+}
+
+function ScopeBadge({ dok }: { dok: DokumenLaporanRow }) {
+  return (
+    <span className={[
+      'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold tracking-[0.04em]',
+      dok.is_non_material
+        ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    ].join(' ')}>
+      {dok.is_non_material ? 'Non-Material' : 'Material'}
+    </span>
+  )
+}
+
+function ReportStatusBadge({ status, className }: { status: string; className?: string }) {
+  const statusMap: Record<string, { label: string; className: string }> = {
+    COMPLETED: { label: 'Selesai', className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
+    TERSIMPAN: { label: 'Tersimpan', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
+  }
+  const presentation = statusMap[status] ?? {
+    label: status || 'Status Tidak Diketahui',
+    className: 'border-zinc-200 bg-zinc-50 text-zinc-600',
+  }
+
+  return (
+    <span className={[
+      'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap',
+      presentation.className,
+      className ?? '',
+    ].join(' ')}>
+      {presentation.label}
+    </span>
+  )
+}
+
+function buildKegiatanRows(allowedKegiatan: { id: string; nama: string }[], documents: DokumenLaporanRow[], ketuaTimName: string): KegiatanRow[] {
+  return allowedKegiatan.map(kegiatan => {
+    const docs = documents.filter(d => d.kegiatan_jenis_id === kegiatan.id)
+    const latestDate = docs.reduce<string | null>((latest, dok) => {
+      if (!dok.tanggal) return latest
+      if (!latest) return dok.tanggal
+      return dateValue(dok.tanggal) > dateValue(latest) ? dok.tanggal : latest
+    }, null)
+
+    return {
+      id: kegiatan.id,
+      nama: docs[0]?.kegiatan_nama ?? kegiatan.nama,
+      ketuaTimName,
+      fungsiNama: docs[0]?.fungsi_nama ?? '-',
+      dokumen: docs,
+      materialCount: docs.filter(d => !d.is_non_material).length,
+      nonMaterialCount: docs.filter(d => d.is_non_material).length,
+      totalNominal: docs.reduce((sum, d) => sum + (d.is_non_material ? 0 : d.nominal_realisasi ?? 0), 0),
+      latestDate,
+      pengajuCount: new Set(docs.map(d => d.pengaju_id ?? d.created_by).filter(Boolean)).size,
+    }
+  })
+}
+
+function matchesKegiatanListFilter(d: DokumenLaporanRow, filter: KegiatanFilterValue) {
+  if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
+  if (filter.tanggalMulai && d.tanggal < filter.tanggalMulai) return false
+  if (filter.tanggalAkhir && d.tanggal > filter.tanggalAkhir) return false
+  return true
+}
+
+function compareKegiatanRows(a: KegiatanRow, b: KegiatanRow, sortBy: SortMode) {
+  if (sortBy === 'oldest') return dateValue(a.latestDate) - dateValue(b.latestDate)
+  if (sortBy === 'name_asc') return a.nama.localeCompare(b.nama, 'id-ID')
+  if (sortBy === 'documents_desc') return b.dokumen.length - a.dokumen.length
+  if (sortBy === 'nominal_desc') return b.totalNominal - a.totalNominal
+  return dateValue(b.latestDate) - dateValue(a.latestDate)
+}
+
+function compareDetailDocuments(a: DokumenLaporanRow, b: DokumenLaporanRow, sortBy: DetailSortMode) {
+  if (sortBy === 'oldest') return dateValue(a.tanggal) - dateValue(b.tanggal)
+  if (sortBy === 'title_asc') return a.judul.localeCompare(b.judul, 'id-ID')
+  if (sortBy === 'submitter_asc') return getSubmitterName(a).localeCompare(getSubmitterName(b), 'id-ID')
+  if (sortBy === 'nominal_desc') return (b.nominal_realisasi ?? 0) - (a.nominal_realisasi ?? 0)
+  return dateValue(b.tanggal) - dateValue(a.tanggal)
+}
+
+function buildPembuatOptions(documents: DokumenLaporanRow[]) {
+  const options = new Map<string, string>()
+  for (const dok of documents) {
+    const id = dok.pengaju_id ?? dok.created_by
+    if (!id) continue
+    options.set(id, getSubmitterName(dok))
+  }
+  return Array.from(options, ([id, nama]) => ({ id, nama }))
+    .sort((a, b) => a.nama.localeCompare(b.nama, 'id-ID'))
+}
+
+function getSubmitterName(dok: DokumenLaporanRow) {
+  return dok.pengaju_nama ?? 'Tidak diketahui'
+}
+
+function displayCurrentUserName(response: CurrentUserResponse) {
+  return response.user.metadata?.nama_lengkap
+    ?? response.user.email?.split('@')[0]
+    ?? 'Ketua Tim'
+}
+
+function selectKegiatan(id: string | null, navigate: ReturnType<typeof useNavigate>) {
+  navigate({
+    to: '/pegawai/laporan/kegiatan',
+    search: id ? { kegiatanId: id } : {},
+  })
+}
+
+function countActiveFilters(filter: KegiatanFilterValue) {
+  return [
+    filter.fungsiId,
+    filter.tanggalMulai,
+    filter.tanggalAkhir,
+  ].filter(Boolean).length
+}
+
+function countActiveDetailFilters(filter: DetailFilterValue) {
+  return [
+    filter.pembuatId,
+    filter.fungsiId,
+    filter.kegiatanId,
+    filter.jenisId,
+    filter.kategoriId,
+    filter.detailId,
+    filter.tanggalMulai,
+    filter.tanggalAkhir,
+  ].filter(Boolean).length
+}
+
+function dateValue(value?: string | null) {
+  if (!value) return 0
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function formatRupiah(value: number) {
+  if (!value) return '-'
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(value)
 }

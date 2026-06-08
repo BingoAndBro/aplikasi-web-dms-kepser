@@ -241,7 +241,7 @@ function ArsiparisInboxPage() {
                   meta={[
                     { label: 'No', value: index + 1 },
                     { label: 'Kegiatan', value: dokumen.kegiatan_nama ?? '-' },
-                    { label: 'Nominal', value: <span className="font-extrabold text-orange-700">{formatInboxNominal(dokumen.nominal_realisasi)}</span> },
+                    { label: 'Nominal', value: <span className="font-mono font-bold text-zinc-950">{formatInboxNominal(dokumen.nominal_realisasi)}</span> },
                     { label: 'Tanggal selesai', value: formatInboxFinishedDate(dokumen) },
                   ]}
                   action={
@@ -264,7 +264,7 @@ function ArsiparisInboxPage() {
 
 function NominalRealisasiText({ value }: { value: string | number | null }) {
   return (
-    <span className="inline-flex justify-center text-sm font-bold text-[#FF4D00]">
+    <span className="inline-flex justify-center font-mono text-sm font-bold text-zinc-950">
       {formatInboxNominal(value)}
     </span>
   )

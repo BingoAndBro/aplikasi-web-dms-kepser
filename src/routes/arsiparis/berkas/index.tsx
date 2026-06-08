@@ -279,7 +279,7 @@ function BerkasTable({
               <th className={`w-16 text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>No</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Klasifikasi Arsip</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
-              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Berkas</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Terakhir Diperbarui</th>
               <th className={`w-20 text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
@@ -302,7 +302,7 @@ function BerkasTable({
                   </p>
                 </td>
                 <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-900">{folder.item_count} dokumen</td>
-                <td className="px-6 py-5 text-right font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
+                <td className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
                 <td className="px-6 py-5">
                   <div className="flex flex-col items-start gap-1">
                     <StatusBerkasBadge status={folder.status_berkas} />
@@ -344,7 +344,10 @@ function BerkasTable({
               { label: 'Jumlah dokumen', value: folder.item_count },
               { label: 'Persetujuan', value: folder.workflow_item_count },
               { label: 'Manual', value: folder.manual_item_count },
-              { label: 'Total nominal', value: formatNominalRupiah(folder.total_nominal_realisasi) },
+              {
+                label: 'Total nominal',
+                value: <span className="font-mono font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</span>,
+              },
               { label: 'Diperbarui', value: formatNullableDateLabel(folder.updated_at) },
             ]}
             action={

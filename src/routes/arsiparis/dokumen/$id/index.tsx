@@ -571,7 +571,7 @@ function ArsiparisDokumenDetailPage() {
             {dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined && (
               <div className="w-fit text-left sm:text-right">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">Nominal Realisasi</p>
-                <p className="mt-1 text-base font-extrabold text-[#FF4D00]">Rp {dokumen.nominal_realisasi.toLocaleString('id-ID')}</p>
+                <p className="mt-1 font-mono text-base font-bold text-zinc-950">Rp {dokumen.nominal_realisasi.toLocaleString('id-ID')}</p>
               </div>
             )}
           </div>
@@ -592,7 +592,7 @@ function ArsiparisDokumenDetailPage() {
             {dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined && (
               <div>
                 <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nominal Realisasi</p>
-                <p className="text-right font-mono text-sm font-bold text-zinc-950 md:text-left">Rp {dokumen.nominal_realisasi.toLocaleString('id-ID')}</p>
+                <p className="font-mono text-sm font-bold text-zinc-950">Rp {dokumen.nominal_realisasi.toLocaleString('id-ID')}</p>
               </div>
             )}
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>

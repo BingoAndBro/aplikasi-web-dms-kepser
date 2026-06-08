@@ -580,11 +580,11 @@ function DokumenRevisiPage() {
                     >
                       <p className={cn(
                         'mb-1 text-[10px] font-black uppercase tracking-[0.14em]',
-                        label === 'Nominal Realisasi' ? 'text-[#EA580C]' : 'text-zinc-500',
+                        'text-zinc-500',
                       )}>{label}</p>
                       <p className={cn(
                         'text-sm font-semibold leading-relaxed',
-                        label === 'Nominal Realisasi' ? 'text-[#FF5A00]' : 'text-zinc-950',
+                        label === 'Nominal Realisasi' ? 'font-mono font-bold text-zinc-950' : 'text-zinc-950',
                       )}>{value}</p>
                     </div>
                   ))}
@@ -819,7 +819,7 @@ function DokumenRevisiPage() {
             </div>
             <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">Nominal</p>
-              <p className="mt-1 text-sm font-extrabold text-zinc-950">
+              <p className="mt-1 font-mono text-sm font-bold text-zinc-950">
                 {isNonMaterial ? '-' : formatCurrency(submitConfirmation?.nominalRealisasi)}
               </p>
             </div>

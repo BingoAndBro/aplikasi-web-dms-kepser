@@ -233,7 +233,7 @@ function BerkasLifecycleTable({
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Klasifikasi Arsip</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Nomor SPM</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
-              <th className={`text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Arsip</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal Ditutup</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Terakhir Diperbarui</th>
@@ -254,7 +254,7 @@ function BerkasLifecycleTable({
                 </td>
                 <td className="px-6 py-5 text-sm font-semibold text-zinc-900">{folder.nomor_spm ?? '-'}</td>
                 <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-900">{folder.item_count}</td>
-                <td className="px-6 py-5 text-right font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
+                <td className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</td>
                 <td className="px-6 py-5">
                   <StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />
                 </td>
@@ -288,7 +288,10 @@ function BerkasLifecycleTable({
               { label: 'Jumlah dokumen', value: folder.item_count },
               { label: 'Persetujuan', value: folder.workflow_item_count },
               { label: 'Manual', value: folder.manual_item_count },
-              { label: 'Total nominal', value: formatNominalRupiah(folder.total_nominal_realisasi) },
+              {
+                label: 'Total nominal',
+                value: <span className="font-mono font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</span>,
+              },
               { label: 'Tanggal tutup', value: formatNullableDateLabel(folder.closed_at) },
               { label: 'Terakhir diperbarui', value: formatNullableDateLabel(folder.updated_at) },
             ]}
