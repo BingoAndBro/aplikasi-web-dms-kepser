@@ -1,32 +1,51 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Archive, Clock, FolderOpen, Loader2, Plus, Tags, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import {
-  ARCHIVE_PAGE_CONTAINER_CLASS,
-  ArchivePageHeader,
-  ArchiveSummaryCard,
-} from '#/components/archive/ArchivePagePrimitives'
-import { DashboardShell } from '#/components/dashboard/DashboardShell'
+  DashboardActionRow,
+  DashboardEmptyState,
+  DashboardMetricCard,
+  DashboardQuickActions,
+  DashboardSection,
+  RoleDashboardHeader,
+  RoleDashboardPage,
+} from '#/components/dashboard/RoleDashboardPrimitives'
 import { apiFetch } from '#/lib/api-client'
 import { ROLES } from '#/lib/constants/roles'
+import { ROUTES } from '#/lib/constants/routes'
+import { formatDate } from '#/lib/utils/format'
+import { Archive, ArchiveX, ClipboardList, FilePlus, FolderOpen, Network, Tags, Trash2 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/')({
   component: KepalaSubBagianUmumDashboard,
 })
 
-type Stats = {
-  inbox: number
-  aktif: number
-  inaktif: number
-  usulMusnah: number
+type ClassificationQueueItem = {
+  id: string
+  judul: string
+  fungsi_nama?: string | null
+  kegiatan_nama?: string | null
+  tanggal?: string | null
+  created_at?: string | null
 }
 
 type InboxStatsResponse = {
-  inbox?: unknown[]
+  inbox?: ClassificationQueueItem[]
+}
+
+type BerkasListRow = {
+  berkas_id: string
+  klasifikasi_nama_snapshot?: string | null
+  status_berkas?: string | null
+  status_arsip?: string | null
+  item_count?: number
+  total_nominal_realisasi?: number | null
+  updated_at?: string | null
+  created_at?: string | null
 }
 
 type BerkasStatsResponse = {
+  berkas?: BerkasListRow[]
   summary?: {
     total_rows_returned?: number
   }
@@ -39,8 +58,11 @@ type AuthSessionResponse = {
 }
 
 function KepalaSubBagianUmumDashboard() {
-  const [stats, setStats] = useState<Stats>({ inbox: 0, aktif: 0, inaktif: 0, usulMusnah: 0 })
-  const [loading, setLoading] = useState(true)
+  const [classificationQueue, setClassificationQueue] = useState<ClassificationQueueItem[]>([])
+  const [openFolders, setOpenFolders] = useState<BerkasListRow[]>([])
+  const [activeFolders, setActiveFolders] = useState<BerkasListRow[]>([])
+  const [inactiveFolders, setInactiveFolders] = useState<BerkasListRow[]>([])
+  const [proposedDestructionCount, setProposedDestructionCount] = useState(0)
 
   useEffect(() => {
     async function checkAuth() {
@@ -56,135 +78,142 @@ function KepalaSubBagianUmumDashboard() {
   }, [])
 
   useEffect(() => {
-    async function fetchStats() {
-      setLoading(true)
-      try {
-        const [inboxJson, aktifJson, inaktifJson, musnahJson] = await Promise.all([
-          apiFetch<InboxStatsResponse>('/arsiparis/inbox').catch(() => ({ inbox: [] })),
-          apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
-            query: {
-              status_berkas: 'CLOSED',
-              status_arsip: 'AKTIF',
-            },
-          }).catch(() => ({ summary: { total_rows_returned: 0 } })),
-          apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
-            query: {
-              status_berkas: 'CLOSED',
-              status_arsip: 'INAKTIF',
-            },
-          }).catch(() => ({ summary: { total_rows_returned: 0 } })),
-          apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
-            query: {
-              status_berkas: 'CLOSED',
-              status_arsip: 'USUL_MUSNAH',
-            },
-          }).catch(() => ({ summary: { total_rows_returned: 0 } })),
-        ])
-        setStats({
-          inbox: (inboxJson.inbox ?? []).length,
-          aktif: aktifJson.summary?.total_rows_returned ?? 0,
-          inaktif: inaktifJson.summary?.total_rows_returned ?? 0,
-          usulMusnah: musnahJson.summary?.total_rows_returned ?? 0,
-        })
-      } catch {
-        // Silent: dashboard counts are non-authoritative entry summaries.
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchStats()
+    Promise.all([
+      apiFetch<InboxStatsResponse>('/arsiparis/inbox').catch(() => ({ inbox: [] })),
+      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+        query: { status_berkas: 'OPEN' },
+      }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
+      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+        query: { status_berkas: 'CLOSED', status_arsip: 'AKTIF' },
+      }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
+      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+        query: { status_berkas: 'CLOSED', status_arsip: 'INAKTIF' },
+      }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
+      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+        query: { status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' },
+      }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
+    ]).then(([inboxResponse, openResponse, activeResponse, inactiveResponse, proposedResponse]) => {
+      setClassificationQueue(inboxResponse.inbox ?? [])
+      setOpenFolders(openResponse.berkas ?? [])
+      setActiveFolders(activeResponse.berkas ?? [])
+      setInactiveFolders(inactiveResponse.berkas ?? [])
+      setProposedDestructionCount(proposedResponse.summary?.total_rows_returned ?? 0)
+    })
   }, [])
 
-  const statCards = [
-    {
-      label: 'Pengklasifikasian Dokumen',
-      value: stats.inbox,
-      icon: Clock,
-      href: '/arsiparis/inbox',
-      helper: 'Dokumen selesai PPSPM yang menunggu Jenis Pembayaran.',
-    },
-    {
-      label: 'Pemberkasan Arsip Aktif',
-      value: stats.aktif,
-      icon: FolderOpen,
-      href: '/arsiparis/berkas',
-      helper: 'Berkas terbuka dan berkas aktif yang sudah ditutup.',
-    },
-    {
-      label: 'Arsip Inaktif',
-      value: stats.inaktif,
-      icon: Archive,
-      href: '/arsiparis/inaktif',
-      helper: 'Berkas tertutup dengan status lifecycle Inaktif.',
-    },
-    {
-      label: 'Usul Musnah',
-      value: stats.usulMusnah,
-      icon: XCircle,
-      href: '/arsiparis/usul-musnah',
-      helper: 'Berkas tertutup yang menunggu konfirmasi pemusnahan.',
-    },
-  ]
+  const recentDocuments = classificationQueue.slice(0, 3)
+  const hasArchiveTask = classificationQueue.length > 0 || proposedDestructionCount > 0
 
   return (
-    <DashboardShell role={ROLES.KEPALA_SUB_BAGIAN_UMUM}>
-      <div className={ARCHIVE_PAGE_CONTAINER_CLASS}>
-        <ArchivePageHeader
-          eyebrow={
-            <>
-              <Archive size={13} />
-              Kepala Sub Bagian Umum
-            </>
-          }
-          title="Ruang Kerja Arsip Folder-First"
-          description="Pantau dokumen yang perlu diklasifikasikan, kelola Penambahan Dokumen, dan lanjutkan lifecycle berkas dari Arsip Aktif sampai Usul Musnah."
-          actions={
-            <>
-              <a
-                href="/arsiparis/inbox"
-                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700"
-              >
-                <Tags size={16} />
-                Pengklasifikasian
-              </a>
-              <a
-                href="/arsiparis/penambahan-arsip"
-                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-orange-200 bg-[#FFFDF9] px-4 text-sm font-bold text-orange-800 shadow-sm transition hover:bg-orange-50"
-              >
-                <Plus size={16} />
-                Penambahan Dokumen
-              </a>
-            </>
-          }
-        />
+    <RoleDashboardPage>
+      <RoleDashboardHeader
+        title="Dashboard Kepala Sub Bagian Umum"
+        description="Pantau pengklasifikasian dokumen, pemberkasan, dan siklus hidup arsip."
+        actionHref={ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX}
+        actionLabel="Pengklasifikasian Dokumen"
+        actionIcon={<FolderOpen size={16} />}
+      />
 
-        {loading ? (
-          <div className="flex items-center justify-center rounded-[1.15rem] border border-orange-100 bg-[#FFFDF9] py-12 shadow-sm">
-            <Loader2 size={24} className="animate-spin text-orange-600" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {statCards.map((stat) => {
-              const Icon = stat.icon
-              return (
-                <a
-                  key={stat.href}
-                  href={stat.href}
-                  className="group block transition hover:-translate-y-0.5"
-                >
-                  <ArchiveSummaryCard
-                    label={stat.label}
-                    value={stat.value}
-                    helper={stat.helper}
-                    icon={<Icon size={20} />}
-                    className="h-full transition group-hover:border-orange-200 group-hover:shadow-md"
-                  />
-                </a>
-              )
-            })}
-          </div>
-        )}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <DashboardMetricCard
+          label="Berkas Terbuka"
+          value={openFolders.length}
+          badge="Terbuka"
+          icon={<FolderOpen size={20} />}
+          tone="amber"
+        />
+        <DashboardMetricCard
+          label="Arsip Aktif"
+          value={activeFolders.length}
+          badge="Aktif"
+          icon={<Archive size={20} />}
+          tone="emerald"
+        />
+        <DashboardMetricCard
+          label="Arsip Inaktif"
+          value={inactiveFolders.length}
+          badge="Inaktif"
+          icon={<ArchiveX size={20} />}
+          tone="zinc"
+        />
+        <DashboardMetricCard
+          label="Usul Musnah"
+          value={proposedDestructionCount}
+          badge="Usul Musnah"
+          icon={<Trash2 size={20} />}
+          tone="rose"
+        />
       </div>
-    </DashboardShell>
+
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-8">
+          <DashboardSection title="Perlu Tindakan Kearsipan">
+            {hasArchiveTask ? (
+              <div>
+                {classificationQueue.length > 0 && (
+                  <DashboardActionRow
+                    icon={<Tags size={18} />}
+                    title={`${classificationQueue.length} Dokumen Selesai Belum Diklasifikasikan`}
+                    description="Membutuhkan metadata Jenis Pembayaran untuk masuk ke berkas."
+                    href={ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX}
+                    actionLabel="Klasifikasikan"
+                  />
+                )}
+                {proposedDestructionCount > 0 && (
+                  <DashboardActionRow
+                    icon={<Trash2 size={18} />}
+                    title={`${proposedDestructionCount} Berkas Menunggu Musnahkan Data`}
+                    description="Berkas berstatus Usul Musnah menunggu konfirmasi yang berwenang."
+                    href={ROUTES.KEPALA_SUB_BAGIAN_UMUM.USUL_MUSNAH}
+                    actionLabel="Tinjau"
+                  />
+                )}
+              </div>
+            ) : (
+              <DashboardEmptyState
+                title="Tidak ada tindakan kearsipan"
+                description="Antrean klasifikasi dan usul musnah yang membutuhkan tindakan akan muncul di sini."
+              />
+            )}
+          </DashboardSection>
+
+          <DashboardSection
+            title="Daftar Dokumen Terbaru"
+            description="Dokumen terbaru yang masuk konteks klasifikasi arsip dari data yang tersedia."
+          >
+            {recentDocuments.length > 0 ? (
+              <div>
+                {recentDocuments.map((document) => (
+                  <DashboardActionRow
+                    key={document.id}
+                    icon={<ClipboardList size={18} />}
+                    title={document.judul}
+                    description={document.kegiatan_nama ?? document.fungsi_nama ?? 'Dokumen selesai'}
+                    meta={document.tanggal ? `Tanggal ${formatDate(document.tanggal)}` : undefined}
+                    href={`/arsiparis/dokumen/${document.id}`}
+                    actionLabel="Detail"
+                  />
+                ))}
+              </div>
+            ) : (
+              <DashboardEmptyState
+                title="Belum ada dokumen terbaru"
+                description="Dokumen siap klasifikasi akan tampil di sini jika tersedia."
+              />
+            )}
+          </DashboardSection>
+        </div>
+
+        <DashboardQuickActions
+          actions={[
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX, label: 'Pengklasifikasian Dokumen', icon: <Tags size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.PENAMBAHAN_ARSIP, label: 'Penambahan Dokumen', icon: <FilePlus size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF, label: 'Pemberkasan Arsip Aktif', icon: <FolderOpen size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.USUL_MUSNAH, label: 'Usul Musnah', icon: <Trash2 size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI, label: 'Master Klasifikasi', icon: <Network size={16} /> },
+          ]}
+        />
+      </div>
+    </RoleDashboardPage>
   )
 }

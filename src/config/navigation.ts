@@ -140,7 +140,11 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
   ],
   PENANGGUNG_JAWAB_KINERJA: [
     {
-      title: 'LAPORAN',
+      title: 'GENERAL',
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.PENANGGUNG_JAWAB_KINERJA.ROOT }],
+    },
+    {
+      title: 'KINERJA',
       items: [
         {
           id: 'laporan_kinerja',
@@ -148,6 +152,14 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
           icon: BarChart3,
           to: ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA,
         },
+      ],
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
+        { id: 'history', label: 'Activity Log', icon: History },
+        { id: 'settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
