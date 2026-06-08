@@ -25,7 +25,6 @@ import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
-import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
 import {
@@ -77,9 +76,19 @@ type KegiatanFilterValue = {
 
 type DetailFilterValue = {
   pembuatId?: string
-} & HierarchicalFilterValue
+  jenisId?: string
+  kategoriId?: string
+  detailId?: string
+  tanggalMulai?: string
+  tanggalAkhir?: string
+}
 
 type FungsiOption = {
+  id: string
+  nama: string
+}
+
+type MasterOption = {
   id: string
   nama: string
 }
@@ -224,8 +233,6 @@ function LaporanKegiatanPage() {
     return selectedKegiatan.dokumen
       .filter(d => {
         if (detailFilter.pembuatId && (d.pengaju_id ?? d.created_by) !== detailFilter.pembuatId) return false
-        if (detailFilter.fungsiId && d.fungsi_id !== detailFilter.fungsiId) return false
-        if (detailFilter.kegiatanId && d.kegiatan_jenis_id !== detailFilter.kegiatanId) return false
         if (detailFilter.jenisId && d.jenis_permintaan_id !== detailFilter.jenisId) return false
         if (detailFilter.kategoriId && d.kategori_permintaan_id !== detailFilter.kategoriId) return false
         if (detailFilter.detailId && d.detail_permintaan_id !== detailFilter.detailId) return false
@@ -569,7 +576,7 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
               <TableHead className={TABLE_HEAD_CLASS}>Kegiatan</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Fungsi</TableHead>
-              <TableHead className={TABLE_HEAD_CLASS}>Dokumen</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Jumlah Dokumen</TableHead>
               <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Nominal Realisasi</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Tanggal Terakhir</TableHead>
               <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
@@ -865,33 +872,161 @@ function KegiatanDetailAdvancedFilter({
   onChange: (value: DetailFilterValue) => void
   pembuatOptions: { id: string; nama: string }[]
 }) {
+  const [jenisOptions, setJenisOptions] = useState<MasterOption[]>([])
+  const [kategoriOptions, setKategoriOptions] = useState<MasterOption[]>([])
+  const [detailOptions, setDetailOptions] = useState<MasterOption[]>([])
+
+  useEffect(() => {
+    let active = true
+    apiFetch<MasterOption[]>('/master-jenis')
+      .then(data => {
+        if (active) setJenisOptions(data)
+      })
+      .catch(() => {
+        if (active) setJenisOptions([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    if (!value.jenisId) {
+      setKategoriOptions([])
+      setDetailOptions([])
+      return () => {
+        active = false
+      }
+    }
+
+    apiFetch<MasterOption[]>('/master-kategori', { query: { jenis_id: value.jenisId } })
+      .then(data => {
+        if (active) setKategoriOptions(data)
+      })
+      .catch(() => {
+        if (active) setKategoriOptions([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [value.jenisId])
+
+  useEffect(() => {
+    let active = true
+    if (!value.kategoriId) {
+      setDetailOptions([])
+      return () => {
+        active = false
+      }
+    }
+
+    apiFetch<MasterOption[]>('/master-detail', { query: { kategori_id: value.kategoriId } })
+      .then(data => {
+        if (active) setDetailOptions(data)
+      })
+      .catch(() => {
+        if (active) setDetailOptions([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [value.kategoriId])
+
   return (
-    <div className="space-y-4">
-      <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
+    <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <DetailSelect
+          label="Pembuat Dokumen"
+          value={value.pembuatId}
+          allLabel="Semua Pembuat Dokumen"
+          options={pembuatOptions}
+          onChange={(pembuatId) => onChange({ ...value, pembuatId })}
+        />
+        <DetailSelect
+          label="Jenis Permintaan"
+          value={value.jenisId}
+          allLabel="Semua Jenis"
+          options={jenisOptions}
+          onChange={(jenisId) => onChange({ ...value, jenisId, kategoriId: undefined, detailId: undefined })}
+        />
+        <DetailSelect
+          label="Kategori Permintaan"
+          value={value.kategoriId}
+          allLabel="Semua Kategori"
+          options={kategoriOptions}
+          disabled={!value.jenisId}
+          onChange={(kategoriId) => onChange({ ...value, kategoriId, detailId: undefined })}
+        />
+        <DetailSelect
+          label="Detail Permintaan"
+          value={value.detailId}
+          allLabel="Semua Detail"
+          options={detailOptions}
+          disabled={!value.kategoriId}
+          onChange={(detailId) => onChange({ ...value, detailId })}
+        />
         <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Pembuat Dokumen</span>
-          <Select
-            value={value.pembuatId || '_all'}
-            onValueChange={(pembuatId) => onChange({ ...value, pembuatId: pembuatId === '_all' ? undefined : pembuatId })}
-          >
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
-              <SelectValue placeholder="Semua Pembuat Dokumen">
-                {selected => selected && selected !== '_all'
-                  ? pembuatOptions.find(option => option.id === selected)?.nama ?? 'Semua Pembuat Dokumen'
-                  : 'Semua Pembuat Dokumen'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">Semua Pembuat Dokumen</SelectItem>
-              {pembuatOptions.map(option => (
-                <SelectItem key={option.id} value={option.id}>{option.nama}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
+          <DatePicker
+            value={value.tanggalMulai ?? ''}
+            onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
+            placeholder="Pilih tanggal mulai"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
+          <DatePicker
+            value={value.tanggalAkhir ?? ''}
+            onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
+            placeholder="Pilih tanggal selesai"
+          />
         </label>
       </div>
-      <HierarchicalFilter value={value} onChange={onChange} />
     </div>
+  )
+}
+
+function DetailSelect({
+  label,
+  value,
+  allLabel,
+  options,
+  disabled = false,
+  onChange,
+}: {
+  label: string
+  value?: string
+  allLabel: string
+  options: { id: string; nama: string }[]
+  disabled?: boolean
+  onChange: (value: string | undefined) => void
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">{label}</span>
+      <Select
+        value={value || '_all'}
+        onValueChange={(selected) => onChange(selected === '_all' ? undefined : selected)}
+        disabled={disabled}
+      >
+        <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] disabled:opacity-60">
+          <SelectValue placeholder={allLabel}>
+            {selected => selected && selected !== '_all'
+              ? options.find(option => option.id === selected)?.nama ?? allLabel
+              : allLabel}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="_all">{allLabel}</SelectItem>
+          {options.map(option => (
+            <SelectItem key={option.id} value={option.id}>{option.nama}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
   )
 }
 
@@ -1216,8 +1351,6 @@ function countActiveFilters(filter: KegiatanFilterValue) {
 function countActiveDetailFilters(filter: DetailFilterValue) {
   return [
     filter.pembuatId,
-    filter.fungsiId,
-    filter.kegiatanId,
     filter.jenisId,
     filter.kategoriId,
     filter.detailId,
