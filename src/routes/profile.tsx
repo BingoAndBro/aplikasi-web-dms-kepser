@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   CreditCard,
   KeyRound,
+  LogOut,
   Mail,
   Shield,
   Trash2,
@@ -45,6 +46,10 @@ interface ProfileUser {
     departemen?: string
   }
   roles: RoleName[]
+  avatar_url?: string | null
+  avatar_mime_type?: 'image/jpeg' | 'image/png' | 'image/webp' | null
+  avatar_size_bytes?: number | null
+  avatar_updated_at?: string | null
 }
 
 type ProfileResponse = {
@@ -56,6 +61,17 @@ type KetuaTimResponse = {
   is_ketua_tim?: boolean
   kegiatan?: { id: string; nama: string }[]
 }
+
+type AvatarMutationResponse = {
+  success: true
+  avatar_url: string | null
+  avatar_mime_type: ProfileUser['avatar_mime_type']
+  avatar_size_bytes: number | null
+  avatar_updated_at: string | null
+}
+
+const PROFILE_AVATAR_MAX_BYTES = 2 * 1024 * 1024
+const PROFILE_AVATAR_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 function getInitials(name?: string, email?: string): string {
   const source = name || email || 'User'
@@ -92,8 +108,9 @@ function ProfilePage() {
   const [ketuaTimKegiatan, setKetuaTimKegiatan] = useState<{ id: string; nama: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [photoMessage, setPhotoMessage] = useState<string | null>(null)
+  const [photoLoading, setPhotoLoading] = useState(false)
+  const [logoutLoading, setLogoutLoading] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -131,28 +148,95 @@ function ProfilePage() {
     fetchProfile()
   }, [])
 
-  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      setPhotoMessage('Pilih file gambar untuk preview foto Profile.')
+    setPhotoMessage(null)
+
+    if (!PROFILE_AVATAR_ALLOWED_TYPES.has(file.type)) {
+      setPhotoMessage('Tipe foto tidak diizinkan. Gunakan JPG, PNG, atau WebP.')
       event.target.value = ''
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      setPhotoPreview(typeof reader.result === 'string' ? reader.result : null)
-      setPhotoMessage('Preview foto hanya tersimpan lokal di layar ini dan belum dikirim ke server.')
+    if (file.size > PROFILE_AVATAR_MAX_BYTES) {
+      setPhotoMessage('Ukuran foto maksimal 2MB.')
+      event.target.value = ''
+      return
     }
-    reader.readAsDataURL(file)
-    event.target.value = ''
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    setPhotoLoading(true)
+    try {
+      const result = await apiMutation<AvatarMutationResponse>('/api/users/me?avatar=1', {
+        method: 'POST',
+        body: formData,
+      })
+      setUser((current) => current ? {
+        ...current,
+        avatar_url: result.avatar_url,
+        avatar_mime_type: result.avatar_mime_type,
+        avatar_size_bytes: result.avatar_size_bytes,
+        avatar_updated_at: result.avatar_updated_at,
+      } : current)
+      setPhotoMessage('Foto profil berhasil diperbarui.')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setPhotoMessage(err.message || 'Gagal mengunggah foto profil.')
+      } else {
+        setPhotoMessage('Gagal mengunggah foto profil.')
+      }
+    } finally {
+      setPhotoLoading(false)
+      event.target.value = ''
+    }
   }
 
-  const handleRemovePhoto = () => {
-    setPhotoPreview(null)
-    setPhotoMessage('Preview foto dihapus. Avatar kembali memakai inisial.')
+  const handleRemovePhoto = async () => {
+    setPhotoMessage(null)
+    setPhotoLoading(true)
+    try {
+      const result = await apiMutation<AvatarMutationResponse>('/api/users/me?avatar=1', {
+        method: 'DELETE',
+      })
+      setUser((current) => current ? {
+        ...current,
+        avatar_url: result.avatar_url,
+        avatar_mime_type: result.avatar_mime_type,
+        avatar_size_bytes: result.avatar_size_bytes,
+        avatar_updated_at: result.avatar_updated_at,
+      } : current)
+      setPhotoMessage('Foto profil dihapus. Avatar kembali memakai inisial.')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setPhotoMessage(err.message || 'Gagal menghapus foto profil.')
+      } else {
+        setPhotoMessage('Gagal menghapus foto profil.')
+      }
+    } finally {
+      setPhotoLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    setLogoutLoading(true)
+    try {
+      await apiMutation('/auth/logout')
+      clearClientAuthState('unauthenticated', true)
+      document.cookie = `${ACTIVE_ROLE_COOKIE}=; path=/; max-age=0`
+      window.location.href = ROUTES.LOGIN
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setPhotoMessage(err.message || 'Gagal keluar dari akun.')
+      } else {
+        setPhotoMessage('Gagal keluar dari akun.')
+      }
+    } finally {
+      setLogoutLoading(false)
+    }
   }
 
   const handlePasswordChange = async (event: FormEvent) => {
@@ -232,87 +316,136 @@ function ProfilePage() {
 
   const displayName = user.metadata.nama_lengkap || 'Nama belum tersedia'
   const initials = getInitials(user.metadata.nama_lengkap, user.email)
+  const primaryRole = user.roles[0]
+  const avatarUpdatedLabel = user.avatar_updated_at
+    ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(user.avatar_updated_at))
+    : 'Belum ada foto profil'
 
   return (
     <PageLayout className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
       <div className="space-y-6">
-        <section className="overflow-hidden rounded-[2rem] border border-orange-100 bg-[#FFFDF9] shadow-xl shadow-orange-950/5">
-          <div className="grid gap-6 bg-[radial-gradient(circle_at_top_left,rgba(242,92,5,0.13),transparent_22rem),linear-gradient(135deg,#FFFDF9_0%,#FFF5EA_100%)] p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_18rem] lg:p-8">
-            <div className="min-w-0 space-y-5">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                  Profile
-                </p>
-                <h2 className="mt-2 font-headline text-3xl font-black tracking-tight text-on-surface sm:text-4xl">
-                  Kelola identitas akun Anda
-                </h2>
-                <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-on-surface-variant">
-                  Informasi akun bersifat read-only dari data sistem. Perubahan password tetap memerlukan password saat ini dan akan mengakhiri sesi aktif setelah berhasil.
-                </p>
-              </div>
+        <section>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+            Profile
+          </p>
+          <h1 className="mt-2 font-headline text-3xl font-black tracking-tight text-on-surface sm:text-4xl">
+            Profile
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-on-surface-variant">
+            Kelola informasi akun, foto profil, dan keamanan password Anda.
+          </p>
+        </section>
 
-              <div className="flex flex-wrap gap-2">
-                {user.roles.map((role) => (
-                  <RoleBadge key={role} role={role} className="rounded-full px-3 py-1 text-[11px] font-bold" />
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[1.75rem] border border-white/80 bg-white/85 p-5 text-center shadow-lg shadow-orange-950/5">
-              <div className="mx-auto flex size-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-primary text-3xl font-black tracking-wider text-white shadow-md shadow-orange-950/15 ring-1 ring-primary/20">
-                {photoPreview ? (
-                  <img src={photoPreview} alt="Preview foto Profile" className="size-full object-cover" />
+        <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <div className="space-y-6">
+            <section className="rounded-[1.75rem] border border-orange-100 bg-[#FFFDF9] p-5 text-center shadow-sm shadow-orange-950/5">
+              <div className="mx-auto flex size-28 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-primary text-4xl font-black tracking-wider text-white shadow-md shadow-orange-950/15 ring-1 ring-primary/20">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="Foto profil" className="size-full object-cover" />
                 ) : (
                   initials
                 )}
               </div>
-              <h3 className="mt-4 truncate text-lg font-black text-on-surface">{displayName}</h3>
-              <p className="truncate text-sm font-medium text-outline">{user.email}</p>
+
+              <h2 className="mt-4 truncate text-xl font-black text-on-surface">{displayName}</h2>
+              <div className="mt-2 flex justify-center">
+                {primaryRole ? (
+                  <RoleBadge role={primaryRole} className="rounded-full px-3 py-1 text-[11px] font-bold" />
+                ) : (
+                  <span className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-[11px] font-bold text-primary">
+                    Role belum tersedia
+                  </span>
+                )}
+              </div>
+              <p className="mt-3 truncate text-sm font-medium text-outline">{user.email}</p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-800">
+                <CheckCircle2 size={13} />
+                Akun Aktif
+              </div>
 
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={handlePhotoChange}
               />
 
-              <div className="mt-4 grid gap-2">
+              <div className="mt-5 grid gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   className="rounded-xl border-orange-200 bg-orange-50 text-primary hover:bg-orange-100"
+                  disabled={photoLoading}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload size={15} />
-                  {photoPreview ? 'Ganti Foto' : 'Unggah Foto'}
+                  {photoLoading ? 'Mengunggah...' : user.avatar_url ? 'Ganti Foto' : 'Unggah Foto'}
                 </Button>
-                {photoPreview && (
+                {user.avatar_url && (
                   <Button
                     type="button"
                     variant="ghost"
                     className="rounded-xl text-error hover:bg-red-50"
+                    disabled={photoLoading}
                     onClick={handleRemovePhoto}
                   >
                     <Trash2 size={15} />
                     Hapus Foto
                   </Button>
                 )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-xl text-on-surface-variant hover:bg-orange-50 hover:text-primary"
+                  disabled={logoutLoading}
+                  onClick={handleLogout}
+                >
+                  <LogOut size={15} />
+                  {logoutLoading ? 'Keluar...' : 'Keluar'}
+                </Button>
               </div>
+
               <p className="mt-3 text-xs font-medium leading-5 text-outline">
-                Foto Profile masih preview visual lokal. Belum ada upload backend pada phase ini.
+                JPG, PNG, atau WebP. Maksimal 2MB.
               </p>
               {photoMessage && (
-                <p className="mt-2 rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-900">
+                <p className="mt-3 rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-900">
                   {photoMessage}
                 </p>
               )}
-            </div>
-          </div>
-        </section>
+            </section>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <section className="space-y-6">
+            <section className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-orange-50 text-primary">
+                  <KeyRound size={18} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                    Keamanan Akun
+                  </p>
+                  <h3 className="text-lg font-black text-on-surface">Password</h3>
+                </div>
+              </div>
+              <p className="mt-4 text-sm font-medium leading-6 text-on-surface-variant">
+                Terakhir diperbarui mengikuti catatan sistem. Perubahan password akan mengakhiri sesi aktif.
+              </p>
+              <Button
+                type="button"
+                className="mt-5 w-full rounded-xl"
+                onClick={() => {
+                  setPasswordError(null)
+                  setPasswordDialogOpen(true)
+                }}
+              >
+                <KeyRound size={15} />
+                Ganti Password
+              </Button>
+            </section>
+          </div>
+
+          <div className="space-y-6">
             <div className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -325,7 +458,7 @@ function ProfilePage() {
                   </p>
                 </div>
                 <div className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
-                  Terverifikasi sesi
+                  Sesi aktif
                 </div>
               </div>
 
@@ -334,7 +467,34 @@ function ProfilePage() {
                 <ProfileInfoCard icon={<Mail size={14} />} label="Email" value={user.email} />
                 <ProfileInfoCard icon={<CreditCard size={14} />} label="NIP/NRP" value={user.metadata.nip_nrp || '-'} />
                 <ProfileInfoCard icon={<Building2 size={14} />} label="Departemen" value={user.metadata.departemen || '-'} />
+                <ProfileInfoCard icon={<Camera size={14} />} label="Foto Profil" value={avatarUpdatedLabel} />
               </dl>
+            </div>
+
+            <div className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-orange-50 text-primary">
+                  <Shield size={18} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                    Hak Akses
+                  </p>
+                  <h3 className="text-lg font-black text-on-surface">Role akun</h3>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {user.roles.length > 0 ? (
+                  user.roles.map((role) => (
+                    <RoleBadge key={role} role={role} className="rounded-full px-3 py-1 text-[11px] font-bold" />
+                  ))
+                ) : (
+                  <span className="text-sm font-semibold text-outline">-</span>
+                )}
+              </div>
+              <p className="mt-4 rounded-2xl border border-orange-100 bg-[#FFF8F1] p-3 text-xs font-medium leading-5 text-on-surface-variant">
+                Role aktif hanya mengatur pengalaman kerja di UI. Otorisasi tetap diputuskan oleh server melalui sesi.
+              </p>
             </div>
 
             <div className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5 sm:p-6">
@@ -376,63 +536,7 @@ function ProfilePage() {
                 )}
               </div>
             </div>
-          </section>
-
-          <aside className="space-y-6">
-            <div className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-orange-50 text-primary">
-                  <Shield size={18} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                    Hak Akses
-                  </p>
-                  <h3 className="text-lg font-black text-on-surface">Role akun</h3>
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {user.roles.length > 0 ? (
-                  user.roles.map((role) => (
-                    <RoleBadge key={role} role={role} className="rounded-full px-3 py-1 text-[11px] font-bold" />
-                  ))
-                ) : (
-                  <span className="text-sm font-semibold text-outline">-</span>
-                )}
-              </div>
-              <p className="mt-4 rounded-2xl border border-orange-100 bg-[#FFF8F1] p-3 text-xs font-medium leading-5 text-on-surface-variant">
-                Role aktif hanya mengatur pengalaman kerja di UI. Otorisasi tetap diputuskan oleh server melalui sesi.
-              </p>
-            </div>
-
-            <div className="rounded-[1.75rem] border border-orange-100 bg-[#1F1A17] p-5 text-white shadow-lg shadow-orange-950/10">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-white/10 text-orange-100">
-                  <KeyRound size={18} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-200">
-                    Keamanan Akun
-                  </p>
-                  <h3 className="text-lg font-black">Ganti password</h3>
-                </div>
-              </div>
-              <p className="mt-4 text-sm font-medium leading-6 text-orange-50/80">
-                Gunakan password saat ini, password baru, dan konfirmasi password baru. Setelah berhasil, Anda akan diarahkan untuk login ulang.
-              </p>
-              <Button
-                type="button"
-                className="mt-5 w-full rounded-xl bg-white text-[#1F1A17] hover:bg-orange-50"
-                onClick={() => {
-                  setPasswordError(null)
-                  setPasswordDialogOpen(true)
-                }}
-              >
-                <KeyRound size={15} />
-                Ganti Password
-              </Button>
-            </div>
-          </aside>
+          </div>
         </div>
       </div>
 

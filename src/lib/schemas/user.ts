@@ -12,6 +12,10 @@ export const userProfilePayloadSchema = z.object({
   email: z.string(),
   metadata: userMetadataSchema,
   roles: roleArraySchema,
+  avatar_url: z.string().nullable().optional(),
+  avatar_mime_type: z.enum(['image/jpeg', 'image/png', 'image/webp']).nullable().optional(),
+  avatar_size_bytes: z.number().int().positive().max(2 * 1024 * 1024).nullable().optional(),
+  avatar_updated_at: z.string().nullable().optional(),
 })
 
 export const userPayloadSchema = userProfilePayloadSchema.extend({

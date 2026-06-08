@@ -598,11 +598,11 @@ function PpkResubmitPage() {
                       >
                         <p className={cn(
                           'mb-1 text-[10px] font-black uppercase tracking-[0.14em]',
-                          'text-zinc-500',
+                          label === 'Nominal Realisasi' ? 'text-[#FF5A00]' : 'text-zinc-500',
                         )}>{label}</p>
                         <p className={cn(
                           'text-sm font-semibold leading-relaxed',
-                          label === 'Nominal Realisasi' ? 'font-mono font-bold text-zinc-950' : 'text-zinc-950',
+                          label === 'Nominal Realisasi' ? 'font-mono font-bold text-[#FF5A00]' : 'text-zinc-950',
                         )}>{value}</p>
                       </div>
                     ))}

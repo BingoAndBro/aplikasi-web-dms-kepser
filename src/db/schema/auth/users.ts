@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   boolean,
   index,
+  integer,
   jsonb,
   pgSchema,
   text,
@@ -23,6 +24,10 @@ export const users = authSchema.table(
     namaLengkap: text('nama_lengkap'),
     nipNrp: text('nip_nrp'),
     departemen: text('departemen'),
+    avatarStorageKey: text('avatar_storage_key'),
+    avatarMimeType: text('avatar_mime_type'),
+    avatarSizeBytes: integer('avatar_size_bytes'),
+    avatarUpdatedAt: timestamp('avatar_updated_at', { withTimezone: true }),
     metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     isActive: boolean('is_active').notNull().default(true),
     inactiveReason: text('inactive_reason'),

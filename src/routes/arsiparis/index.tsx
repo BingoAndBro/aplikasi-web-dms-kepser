@@ -153,7 +153,7 @@ function KepalaSubBagianUmumDashboard() {
                 {classificationQueue.length > 0 && (
                   <DashboardActionRow
                     icon={<Tags size={18} />}
-                    title={`${classificationQueue.length} Dokumen Selesai Belum Diklasifikasikan`}
+                    title={`${classificationQueue.length} Dokumen Siap Diklasifikasikan`}
                     description="Membutuhkan metadata Jenis Pembayaran untuk masuk ke berkas."
                     href={ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX}
                     actionLabel="Klasifikasikan"

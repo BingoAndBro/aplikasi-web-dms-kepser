@@ -15,25 +15,43 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     expect(ROLE_DISPLAY[ROLES.BENDAHARA]).toBe('PPSPM')
   })
 
-  it('uses Laporan Kinerja as the role default route', () => {
+  it('uses the Penanggung Jawab Kinerja dashboard as the role default route', () => {
     expect(ROLE_DEFAULT_ROUTE[ROLES.PENANGGUNG_JAWAB_KINERJA]).toBe(
-      ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA,
+      ROUTES.PENANGGUNG_JAWAB_KINERJA.ROOT,
     )
   })
 
-  it('exposes only the Laporan Kinerja navigation item for the role', () => {
-    expect(NAV_CONFIG[ROLES.PENANGGUNG_JAWAB_KINERJA]).toEqual([
-      {
-        title: 'LAPORAN',
-        items: [
-          expect.objectContaining({
-            id: 'laporan_kinerja',
-            label: 'Laporan Kinerja',
-            to: ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA,
-          }),
-        ],
-      },
-    ])
+  it('exposes dashboard, Laporan Kinerja, and deferred system navigation for the role', () => {
+    const groups = NAV_CONFIG[ROLES.PENANGGUNG_JAWAB_KINERJA]
+
+    expect(groups).toHaveLength(3)
+    expect(groups.find((group) => group.title === 'GENERAL')?.items).toContainEqual(
+      expect.objectContaining({
+        id: 'dashboard',
+        label: 'Dashboard',
+        to: ROUTES.PENANGGUNG_JAWAB_KINERJA.ROOT,
+      }),
+    )
+    expect(groups.find((group) => group.title === 'KINERJA')?.items).toContainEqual(
+      expect.objectContaining({
+        id: 'laporan_kinerja',
+        label: 'Laporan Kinerja',
+        to: ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA,
+      }),
+    )
+    expect(groups.find((group) => group.title === 'SYSTEM')?.items).toContainEqual(
+      expect.objectContaining({
+        id: 'profile',
+        label: 'Profil',
+        to: ROUTES.PROFILE,
+      }),
+    )
+    const activityLogItem = groups
+      .find((group) => group.title === 'SYSTEM')
+      ?.items.find((item) => item.id === 'history')
+
+    expect(activityLogItem).toEqual(expect.objectContaining({ label: 'Activity Log' }))
+    expect(activityLogItem).not.toHaveProperty('to')
   })
 
   it('keeps ADMIN as a separate dedicated role', () => {
