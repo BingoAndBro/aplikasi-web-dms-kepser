@@ -739,11 +739,11 @@ function FolderActionPanel({
   return (
     <aside className="min-w-0 space-y-3 xl:sticky xl:top-3">
       <div className="rounded-[1.45rem] border border-orange-200/70 bg-[#FFF8F1] p-5 shadow-sm shadow-orange-900/10">
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-orange-900/70">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#B84412]">
           <Wallet size={14} className="text-[#FF5A00]" />
           Total Nominal Realisasi
         </div>
-        <p className="mt-3 font-mono text-2xl font-black tracking-tight text-zinc-950">
+        <p className="mt-3 font-mono text-2xl font-black tracking-tight text-[#FF5A00]">
           {formatNominalRupiah(detail.total_nominal_realisasi)}
         </p>
       </div>
