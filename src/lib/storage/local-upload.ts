@@ -1,9 +1,19 @@
 // Server-only module. Do not import from client components.
-// Isolated helper foundation only: do not wire runtime upload routes or UI callers here.
-// This phase validates declared metadata only; it does not inspect deep file signatures.
 import { mkdir, open, rm } from 'node:fs/promises'
 import path from 'node:path'
 
+import {
+  DOCUMENT_UPLOAD_ALLOWED_EXTENSIONS,
+  DOCUMENT_UPLOAD_ALLOWED_MIME_TYPES,
+  DOCUMENT_UPLOAD_EXTENSIONS_BY_MIME_TYPE,
+  DOCUMENT_UPLOAD_MAX_BYTES,
+  type DocumentUploadAllowedExtension,
+  type DocumentUploadAllowedMimeType,
+  getAllowedDocumentUploadExtensionsForMimeType,
+  isAllowedDocumentUploadExtension,
+  isAllowedDocumentUploadMimeType,
+  matchesDocumentUploadSignature,
+} from '#/lib/upload/document-upload-policy'
 import {
   assertSafeLogicalStoragePath,
   getFileExtension,
@@ -12,31 +22,9 @@ import {
   sanitizeStoragePathSegment,
 } from '#/lib/storage/local-storage-paths'
 
-export const LOCAL_UPLOAD_MAX_BYTES = 2 * 1024 * 1024
-
-export const LOCAL_UPLOAD_ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-] as const
-
-export const LOCAL_UPLOAD_ALLOWED_EXTENSIONS = [
-  'pdf',
-  'doc',
-  'docx',
-  'xls',
-  'xlsx',
-] as const
-
-const EXTENSIONS_BY_MIME_TYPE: Record<LocalUploadAllowedMimeType, readonly LocalUploadAllowedExtension[]> = {
-  'application/pdf': ['pdf'],
-  'application/msword': ['doc'],
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
-  'application/vnd.ms-excel': ['xls'],
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['xlsx'],
-}
+export const LOCAL_UPLOAD_MAX_BYTES = DOCUMENT_UPLOAD_MAX_BYTES
+export const LOCAL_UPLOAD_ALLOWED_TYPES = DOCUMENT_UPLOAD_ALLOWED_MIME_TYPES
+export const LOCAL_UPLOAD_ALLOWED_EXTENSIONS = DOCUMENT_UPLOAD_ALLOWED_EXTENSIONS
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const USER_CUSTOM_KELENGKAPAN_PATTERN =
@@ -44,8 +32,8 @@ const USER_CUSTOM_KELENGKAPAN_PATTERN =
 const WINDOWS_DRIVE_PATTERN = /^[a-z]:[\\/]/i
 const URL_LIKE_PATTERN = /^[a-z][a-z0-9+.-]*:/i
 
-export type LocalUploadAllowedMimeType = typeof LOCAL_UPLOAD_ALLOWED_TYPES[number]
-export type LocalUploadAllowedExtension = typeof LOCAL_UPLOAD_ALLOWED_EXTENSIONS[number]
+export type LocalUploadAllowedMimeType = DocumentUploadAllowedMimeType
+export type LocalUploadAllowedExtension = DocumentUploadAllowedExtension
 
 export type LocalUploadFileMetadata = {
   name: string
@@ -84,6 +72,8 @@ export type WriteLocalUploadContentInput = {
   logicalPath: string
   content: ArrayBuffer | Uint8Array | Buffer
   expectedBytes?: number
+  expectedContentType?: LocalUploadAllowedMimeType
+  expectedExtension?: LocalUploadAllowedExtension
   root?: string
 }
 
@@ -98,7 +88,9 @@ export class LocalUploadError extends Error {
     public readonly code:
       | 'invalid-content-size'
       | 'invalid-file-extension'
+      | 'invalid-file-empty'
       | 'invalid-file-name'
+      | 'invalid-file-signature'
       | 'invalid-file-size'
       | 'invalid-file-type'
       | 'invalid-kelengkapan-id'
@@ -118,20 +110,20 @@ export function validateLocalUploadFileMetadata(
   const sanitizedFilename = sanitizeClientUploadFilename(file.name)
   const extension = getFileExtension(sanitizedFilename)
 
-  if (!isAllowedUploadExtension(extension)) {
+  if (!isAllowedDocumentUploadExtension(extension)) {
     throw new LocalUploadError('Upload file extension is not allowed.', 'invalid-file-extension')
   }
 
-  if (!isAllowedUploadMimeType(file.type)) {
+  if (!isAllowedDocumentUploadMimeType(file.type)) {
     throw new LocalUploadError('Upload file type is not allowed.', 'invalid-file-type')
   }
 
-  if (!EXTENSIONS_BY_MIME_TYPE[file.type].includes(extension)) {
+  if (!DOCUMENT_UPLOAD_EXTENSIONS_BY_MIME_TYPE[file.type].includes(extension)) {
     throw new LocalUploadError('Upload file extension does not match its declared type.', 'invalid-file-extension')
   }
 
-  if (!Number.isSafeInteger(file.size) || file.size < 0) {
-    throw new LocalUploadError('Upload file size is invalid.', 'invalid-file-size')
+  if (!Number.isSafeInteger(file.size) || file.size <= 0) {
+    throw new LocalUploadError('Upload file size is invalid.', 'invalid-file-empty')
   }
 
   if (file.size > LOCAL_UPLOAD_MAX_BYTES) {
@@ -227,9 +219,9 @@ export function createLocalUploadDescriptor({
 }
 
 /**
- * Writes a small upload buffer with no-overwrite semantics.
+ * Writes a bounded upload buffer with no-overwrite semantics.
  *
- * The current upload limit is 2 MB, so this foundation writes the target file
+ * The current upload limit is 5 MB, so this foundation writes the target file
  * directly with the exclusive `wx` flag and removes the target on write failure.
  * It is not a fully atomic temp-file swap primitive; future streaming work can
  * add a temp/link strategy if larger files or retry recovery are introduced.
@@ -238,6 +230,8 @@ export async function writeLocalUploadContent({
   logicalPath,
   content,
   expectedBytes,
+  expectedContentType,
+  expectedExtension,
   root,
 }: WriteLocalUploadContentInput): Promise<LocalUploadWriteResult> {
   const normalizedLogicalPath = assertSafeLogicalStoragePath(logicalPath)
@@ -249,6 +243,19 @@ export async function writeLocalUploadContent({
 
   if (expectedBytes !== undefined && expectedBytes !== contentBuffer.byteLength) {
     throw new LocalUploadError('Upload file content length does not match metadata.', 'invalid-content-size')
+  }
+
+  if (expectedContentType) {
+    if (
+      expectedExtension
+      && !getAllowedDocumentUploadExtensionsForMimeType(expectedContentType).includes(expectedExtension)
+    ) {
+      throw new LocalUploadError('Upload file extension does not match its declared type.', 'invalid-file-extension')
+    }
+
+    if (!matchesDocumentUploadSignature(contentBuffer, expectedContentType)) {
+      throw new LocalUploadError('Upload file signature does not match its declared type.', 'invalid-file-signature')
+    }
   }
 
   const physicalPath = resolvePhysicalStoragePath(root ?? getLocalStorageRoot(), normalizedLogicalPath)
@@ -286,14 +293,6 @@ export async function writeLocalUploadContent({
 
     throw new LocalUploadError('Local upload write failed.', 'write-failed')
   }
-}
-
-function isAllowedUploadMimeType(value: string): value is LocalUploadAllowedMimeType {
-  return LOCAL_UPLOAD_ALLOWED_TYPES.includes(value as LocalUploadAllowedMimeType)
-}
-
-function isAllowedUploadExtension(value: string): value is LocalUploadAllowedExtension {
-  return LOCAL_UPLOAD_ALLOWED_EXTENSIONS.includes(value as LocalUploadAllowedExtension)
 }
 
 function assertSafeServerPathSegment(

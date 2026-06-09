@@ -10,6 +10,12 @@ import {
   writeLocalUploadContent,
 } from '#/lib/storage/local-upload'
 import {
+  DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE,
+  DOCUMENT_UPLOAD_INVALID_FILE_MESSAGE,
+  DOCUMENT_UPLOAD_INVALID_FORMAT_MESSAGE,
+  DOCUMENT_UPLOAD_TOO_LARGE_MESSAGE,
+} from '#/lib/upload/document-upload-policy'
+import {
   assertSafeLogicalStoragePath,
   classifyStoragePath,
   getLocalStorageRoot,
@@ -115,15 +121,16 @@ export const Route = createFileRoute('/api/upload')({
             logicalPath: descriptor.logicalPath,
             content: fileContent,
             expectedBytes: file.size,
+            expectedContentType: descriptor.contentType,
+            expectedExtension: descriptor.extension,
           })
         } catch (error) {
-          if (error instanceof LocalUploadError && error.code === 'invalid-content-size') {
-            return Response.json({ error: 'Ukuran file maksimal 2MB' }, { status: 400 })
+          if (error instanceof LocalUploadError) {
+            return localUploadErrorResponse(error)
           }
 
-          const code = error instanceof LocalUploadError ? error.code : 'unknown'
-          console.error('[upload] Local storage write failed:', { code })
-          return Response.json({ error: 'Gagal mengunggah file. Silakan coba lagi.' }, { status: 500 })
+          console.error('[upload] Local storage write failed:', { code: 'unknown' })
+          return Response.json({ error: DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE }, { status: 500 })
         }
 
         return Response.json({
@@ -139,7 +146,7 @@ export const Route = createFileRoute('/api/upload')({
 
 function localUploadErrorResponse(error: unknown): Response {
   if (!(error instanceof LocalUploadError)) {
-    return Response.json({ error: 'Gagal mengunggah file. Silakan coba lagi.' }, { status: 500 })
+    return Response.json({ error: DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE }, { status: 500 })
   }
 
   switch (error.code) {
@@ -147,19 +154,19 @@ function localUploadErrorResponse(error: unknown): Response {
       return Response.json({ error: 'ID kelengkapan tidak valid' }, { status: 400 })
     case 'invalid-file-size':
     case 'invalid-content-size':
-      return Response.json({ error: 'Ukuran file maksimal 2MB' }, { status: 400 })
+      return Response.json({ error: DOCUMENT_UPLOAD_TOO_LARGE_MESSAGE }, { status: 400 })
     case 'invalid-file-extension':
     case 'invalid-file-type':
-      return Response.json({
-        error: 'Tipe file tidak diizinkan. Gunakan: PDF, DOC, DOCX, XLS, XLSX',
-      }, { status: 400 })
+      return Response.json({ error: DOCUMENT_UPLOAD_INVALID_FORMAT_MESSAGE }, { status: 400 })
+    case 'invalid-file-empty':
     case 'invalid-file-name':
+    case 'invalid-file-signature':
     case 'invalid-owner-id':
     case 'invalid-timestamp':
-      return Response.json({ error: 'File tidak valid' }, { status: 400 })
+      return Response.json({ error: DOCUMENT_UPLOAD_INVALID_FILE_MESSAGE }, { status: 400 })
     case 'target-exists':
     case 'write-failed':
-      return Response.json({ error: 'Gagal mengunggah file. Silakan coba lagi.' }, { status: 500 })
+      return Response.json({ error: DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE }, { status: 500 })
   }
 }
 

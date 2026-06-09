@@ -1,9 +1,20 @@
 // Server-only helper for Manual Archive attachment upload storage.
-// This validates declared file metadata; it does not perform magic-byte inspection.
 import { randomUUID } from 'node:crypto'
 import { mkdir, open, rm } from 'node:fs/promises'
 import path from 'node:path'
 
+import {
+  DOCUMENT_UPLOAD_ALLOWED_MIME_TYPES,
+  DOCUMENT_UPLOAD_EXTENSIONS_BY_MIME_TYPE,
+  DOCUMENT_UPLOAD_MAX_BYTES,
+  type DocumentUploadAllowedExtension,
+  type DocumentUploadAllowedMimeType,
+  getAllowedDocumentUploadExtensionsForMimeType,
+  getDocumentUploadExtension,
+  isAllowedDocumentUploadExtension,
+  isAllowedDocumentUploadMimeType,
+  matchesDocumentUploadSignature,
+} from '#/lib/upload/document-upload-policy'
 import {
   assertSafeLogicalStoragePath,
   getLocalStorageRoot,
@@ -14,22 +25,8 @@ import { sanitizeClientUploadFilename } from '#/lib/storage/local-upload'
 
 export const MANUAL_ARSIP_ATTACHMENT_FIELD_NAME = 'files'
 export const MANUAL_ARSIP_ATTACHMENT_MAX_FILES = 5
-export const MANUAL_ARSIP_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
-
-const PDF_CONTENT_TYPE = 'application/pdf'
-
-const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
-  [PDF_CONTENT_TYPE]: 'pdf',
-  'image/bmp': 'bmp',
-  'image/gif': 'gif',
-  'image/heic': 'heic',
-  'image/heif': 'heif',
-  'image/jpeg': 'jpg',
-  'image/jpg': 'jpg',
-  'image/png': 'png',
-  'image/tiff': 'tif',
-  'image/webp': 'webp',
-}
+export const MANUAL_ARSIP_ATTACHMENT_MAX_BYTES = DOCUMENT_UPLOAD_MAX_BYTES
+export const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = DOCUMENT_UPLOAD_ALLOWED_MIME_TYPES
 
 export type ManualArsipUploadFileMetadata = {
   name: string
@@ -39,8 +36,8 @@ export type ManualArsipUploadFileMetadata = {
 
 export type ValidatedManualArsipUploadFile = {
   originalFilename: string
-  contentType: string
-  extension: string
+  contentType: DocumentUploadAllowedMimeType
+  extension: DocumentUploadAllowedExtension
   sizeBytes: number
 }
 
@@ -52,6 +49,8 @@ export type ManualArsipUploadContentInput = {
   logicalPath: string
   content: ArrayBuffer | Uint8Array | Buffer
   expectedBytes?: number
+  expectedContentType?: DocumentUploadAllowedMimeType
+  expectedExtension?: DocumentUploadAllowedExtension
   root?: string
 }
 
@@ -66,7 +65,10 @@ export class ManualArsipUploadError extends Error {
     public readonly code:
       | 'invalid-content-size'
       | 'invalid-file-count'
+      | 'invalid-file-empty'
+      | 'invalid-file-extension'
       | 'invalid-file-name'
+      | 'invalid-file-signature'
       | 'invalid-file-size'
       | 'invalid-file-type'
       | 'invalid-manual-arsip-id'
@@ -90,7 +92,7 @@ export function validateManualArsipUploadFiles(
 }
 
 export function isAllowedManualArsipAttachmentContentType(contentType: string): boolean {
-  return Boolean(extensionFromContentType(contentType.trim().toLowerCase()))
+  return isAllowedDocumentUploadMimeType(contentType.trim().toLowerCase())
 }
 
 export function createManualArsipAttachmentStorageDescriptors({
@@ -123,6 +125,8 @@ export async function writeManualArsipAttachmentContent({
   logicalPath,
   content,
   expectedBytes,
+  expectedContentType,
+  expectedExtension,
   root,
 }: ManualArsipUploadContentInput): Promise<ManualArsipUploadWriteResult> {
   const normalizedLogicalPath = assertSafeLogicalStoragePath(logicalPath)
@@ -134,6 +138,19 @@ export async function writeManualArsipAttachmentContent({
 
   if (expectedBytes !== undefined && expectedBytes !== contentBuffer.byteLength) {
     throw new ManualArsipUploadError('Manual archive upload content length does not match metadata.', 'invalid-content-size')
+  }
+
+  if (expectedContentType) {
+    if (
+      expectedExtension
+      && !getAllowedDocumentUploadExtensionsForMimeType(expectedContentType).includes(expectedExtension)
+    ) {
+      throw new ManualArsipUploadError('Manual archive upload extension does not match its declared type.', 'invalid-file-extension')
+    }
+
+    if (!matchesDocumentUploadSignature(contentBuffer, expectedContentType)) {
+      throw new ManualArsipUploadError('Manual archive upload signature is invalid.', 'invalid-file-signature')
+    }
   }
 
   const physicalPath = resolvePhysicalStoragePath(root ?? getLocalStorageRoot(), normalizedLogicalPath)
@@ -185,14 +202,22 @@ function validateManualArsipUploadFileMetadata(
   }
 
   const contentType = file.type.trim().toLowerCase()
-  const extension = extensionFromContentType(contentType)
+  const extension = getDocumentUploadExtension(originalFilename)
 
-  if (!extension) {
+  if (!isAllowedDocumentUploadExtension(extension)) {
+    throw new ManualArsipUploadError('Manual archive upload file extension is not allowed.', 'invalid-file-extension')
+  }
+
+  if (!isAllowedDocumentUploadMimeType(contentType)) {
     throw new ManualArsipUploadError('Manual archive upload file type is not allowed.', 'invalid-file-type')
   }
 
+  if (!DOCUMENT_UPLOAD_EXTENSIONS_BY_MIME_TYPE[contentType].includes(extension)) {
+    throw new ManualArsipUploadError('Manual archive upload file extension does not match type.', 'invalid-file-extension')
+  }
+
   if (!Number.isSafeInteger(file.size) || file.size <= 0) {
-    throw new ManualArsipUploadError('Manual archive upload file size is invalid.', 'invalid-file-size')
+    throw new ManualArsipUploadError('Manual archive upload file size is invalid.', 'invalid-file-empty')
   }
 
   if (file.size > MANUAL_ARSIP_ATTACHMENT_MAX_BYTES) {
@@ -205,11 +230,6 @@ function validateManualArsipUploadFileMetadata(
     extension,
     sizeBytes: file.size,
   }
-}
-
-function extensionFromContentType(contentType: string): string | null {
-  const knownExtension = EXTENSION_BY_CONTENT_TYPE[contentType]
-  return knownExtension ?? null
 }
 
 function assertSafeServerPathSegment(
