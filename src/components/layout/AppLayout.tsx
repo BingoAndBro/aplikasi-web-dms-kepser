@@ -45,6 +45,17 @@ type AuthSessionResponse = {
   activeRole: RoleName | null
 }
 
+type CurrentUserProfileResponse = {
+  user: {
+    email: string
+    metadata: {
+      nama_lengkap?: string
+    }
+    avatar_url?: string | null
+    avatar_updated_at?: string | null
+  }
+}
+
 type RoleSwitchResponse = {
   success: true
   activeRole: RoleName
@@ -58,6 +69,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [activeRole, setActiveRole] = React.useState<RoleName>(ROLES.PEGAWAI)
   const [userName, setUserName] = React.useState<string | undefined>()
   const [email, setEmail] = React.useState<string | undefined>()
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [chairmanKegiatan, setChairmanKegiatan] = React.useState<{ id: string; nama: string }[]>([])
 
@@ -69,6 +81,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = routerState.location.pathname
   const isMeshPage = MESH_ROUTES.some((route) => route === pathname)
   const isLoginPage = pathname === ROUTES.LOGIN
+
+  const refreshCurrentUserProfile = React.useCallback(async () => {
+    try {
+      const profileData = await apiFetch<CurrentUserProfileResponse>('/users/me/')
+      setUserName(profileData.user.metadata.nama_lengkap)
+      setEmail(profileData.user.email)
+      setAvatarUrl(profileData.user.avatar_url ?? null)
+    } catch (err) {
+      setAvatarUrl(null)
+      if (!(err instanceof Error && err.name === 'ApiError')) {
+        console.error('Failed to fetch current user profile:', err)
+      }
+    }
+  }, [])
 
   const fetchSession = React.useCallback(async () => {
     let data: AuthSessionResponse
@@ -83,6 +109,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       setActiveRole(ROLES.PEGAWAI)
       setUserName(undefined)
       setEmail(undefined)
+      setAvatarUrl(null)
       setHasSession(false)
       setChairmanKegiatan([])
       setIsLoading(false)
@@ -95,6 +122,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       setActiveRole(ROLES.PEGAWAI)
       setUserName(undefined)
       setEmail(undefined)
+      setAvatarUrl(null)
       setHasSession(false)
       setChairmanKegiatan([])
       setIsLoading(false)
@@ -104,7 +132,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setHasSession(true)
     setUserName(data.session.userName)
     setEmail(data.session.email)
+    setAvatarUrl(null)
     setChairmanKegiatan([])
+
+    await refreshCurrentUserProfile()
 
     try {
       const ktData = await apiFetch<ChairmanStatusResponse>('/users/me/ketua-tim')
@@ -138,11 +169,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       }, `auth:${nextAuthState.userId}:${nextAuthState.activeRole}:${nextAuthState.isReady ? '1' : '0'}`)
     }
     setIsLoading(false)
-  }, [])
+  }, [refreshCurrentUserProfile])
 
   React.useEffect(() => {
     fetchSession()
   }, [fetchSession])
+
+  React.useEffect(() => {
+    const handleProfileAvatarChanged = () => {
+      void refreshCurrentUserProfile()
+    }
+
+    window.addEventListener('dms:profile-avatar-changed', handleProfileAvatarChanged)
+    return () => window.removeEventListener('dms:profile-avatar-changed', handleProfileAvatarChanged)
+  }, [refreshCurrentUserProfile])
 
   React.useEffect(() => {
     if (!isLoading && !hasSession && !isLoginPage) {
@@ -198,7 +238,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
-    setUserName(undefined); setEmail(undefined)
+    setUserName(undefined); setEmail(undefined); setAvatarUrl(null)
     setHasSession(false); clearAppState()
     window.location.href = ROUTES.LOGIN
   }
@@ -259,6 +299,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader
             activeRole={activeRole}
+            avatarUrl={avatarUrl}
             canSwitchRole={canSwitchRole}
             displayName={displayName}
             email={email}

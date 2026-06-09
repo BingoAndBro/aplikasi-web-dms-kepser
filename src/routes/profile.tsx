@@ -19,6 +19,7 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { Input } from '#/components/ui/input'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { getRoleBadgeLabel, RoleBadge } from '#/components/ui/RoleBadge'
+import { UserAvatar } from '#/components/ui/UserAvatar'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { clearClientAuthState } from '#/lib/auth-state'
@@ -67,6 +68,7 @@ type AvatarMutationResponse = {
 
 const PROFILE_AVATAR_MAX_BYTES = 2 * 1024 * 1024
 const PROFILE_AVATAR_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const PROFILE_AVATAR_CHANGED_EVENT = 'dms:profile-avatar-changed'
 
 function getInitials(name?: string, email?: string): string {
   const source = name || email || 'User'
@@ -87,6 +89,58 @@ function InfoField({ label, value }: { label: string; value: ReactNode }) {
       </dd>
     </div>
   )
+}
+
+function notifyProfileAvatarChanged() {
+  window.dispatchEvent(new Event(PROFILE_AVATAR_CHANGED_EVENT))
+}
+
+function getPhotoUploadErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return 'Koneksi bermasalah. Coba lagi.'
+  }
+
+  if (error.status === 401) {
+    return 'Sesi Anda berakhir. Silakan masuk kembali.'
+  }
+
+  if (error.status === 503) {
+    return 'Gagal mengunggah foto profil. Coba lagi atau hubungi Admin Sistem.'
+  }
+
+  if (error.status === 400) {
+    const message = error.message.toLowerCase()
+
+    if (message.includes('ukuran') || message.includes('2mb') || message.includes('2 mb')) {
+      return 'Ukuran foto terlalu besar. Maksimal 2 MB.'
+    }
+
+    if (message.includes('tipe') || message.includes('format') || message.includes('extension')) {
+      return 'Format foto tidak didukung. Gunakan JPG, PNG, atau WebP.'
+    }
+
+    if (message.includes('valid') || message.includes('signature')) {
+      return 'File foto tidak valid. Pilih gambar lain.'
+    }
+  }
+
+  return 'Gagal mengunggah foto profil. Coba lagi.'
+}
+
+function getPhotoRemoveErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return 'Koneksi bermasalah. Coba lagi.'
+  }
+
+  if (error.status === 401) {
+    return 'Sesi Anda berakhir. Silakan masuk kembali.'
+  }
+
+  if (error.status === 503) {
+    return 'Gagal menghapus foto profil. Coba lagi atau hubungi Admin Sistem.'
+  }
+
+  return 'Gagal menghapus foto profil. Coba lagi.'
 }
 
 function ProfilePage() {
@@ -129,7 +183,7 @@ function ProfilePage() {
           window.location.href = ROUTES.LOGIN
           return
         }
-        setError('Gagal memuat Profile')
+        setError('Gagal memuat Profil Saya')
       } finally {
         setLoading(false)
       }
@@ -165,13 +219,13 @@ function ProfilePage() {
     setPendingPhotoError(null)
 
     if (!PROFILE_AVATAR_ALLOWED_TYPES.has(file.type)) {
-      setPendingPhotoError('Tipe foto tidak diizinkan. Gunakan JPG, PNG, atau WebP.')
+      setPendingPhotoError('Format foto tidak didukung. Gunakan JPG, PNG, atau WebP.')
       event.target.value = ''
       return
     }
 
     if (file.size > PROFILE_AVATAR_MAX_BYTES) {
-      setPendingPhotoError('Ukuran foto maksimal 2MB.')
+      setPendingPhotoError('Ukuran foto terlalu besar. Maksimal 2 MB.')
       event.target.value = ''
       return
     }
@@ -204,15 +258,12 @@ function ProfilePage() {
         avatar_size_bytes: result.avatar_size_bytes,
         avatar_updated_at: result.avatar_updated_at,
       } : current)
+      notifyProfileAvatarChanged()
       setPhotoMessage('Foto profil berhasil diperbarui.')
       setPhotoDialogOpen(false)
       resetPendingPhoto()
     } catch (err) {
-      if (err instanceof ApiError) {
-        setPendingPhotoError(err.message || 'Gagal mengunggah foto profil.')
-      } else {
-        setPendingPhotoError('Gagal mengunggah foto profil.')
-      }
+      setPendingPhotoError(getPhotoUploadErrorMessage(err))
     } finally {
       setPhotoLoading(false)
     }
@@ -232,13 +283,10 @@ function ProfilePage() {
         avatar_size_bytes: result.avatar_size_bytes,
         avatar_updated_at: result.avatar_updated_at,
       } : current)
-      setPhotoMessage('Foto profil dihapus. Avatar kembali memakai inisial.')
+      notifyProfileAvatarChanged()
+      setPhotoMessage('Foto profil berhasil dihapus.')
     } catch (err) {
-      if (err instanceof ApiError) {
-        setPhotoMessage(err.message || 'Gagal menghapus foto profil.')
-      } else {
-        setPhotoMessage('Gagal menghapus foto profil.')
-      }
+      setPhotoMessage(getPhotoRemoveErrorMessage(err))
     } finally {
       setPhotoLoading(false)
     }
@@ -320,7 +368,7 @@ function ProfilePage() {
   if (loading) {
     return (
       <PageLayout className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
-        <LoadingState label="Memuat Profile" />
+        <LoadingState label="Memuat Profil Saya" />
       </PageLayout>
     )
   }
@@ -329,7 +377,7 @@ function ProfilePage() {
     return (
       <PageLayout className="mx-auto w-full max-w-4xl p-4 sm:p-6 lg:p-8">
         <ErrorState
-          title="Profile tidak dapat dimuat"
+          title="Profil Saya tidak dapat dimuat"
           description={error || 'Silakan login ulang jika sesi Anda sudah berakhir.'}
           variant="page"
         />
@@ -346,7 +394,7 @@ function ProfilePage() {
       <div className="space-y-6">
         <section className="pt-1">
           <h1 className="font-headline text-[32px] font-black leading-none tracking-tight text-[#2C2102] sm:text-[38px]">
-            Profile
+            Profil Saya
           </h1>
           <p className="mt-2.5 max-w-3xl text-base font-medium leading-6 text-[#8A5A08]">
             Kelola informasi akun, foto profil, dan keamanan password Anda.
@@ -358,13 +406,12 @@ function ProfilePage() {
             <section className="overflow-hidden rounded-[24px] border border-[#E8DDD0] bg-white text-center shadow-[0_1px_8px_rgba(71,50,22,0.14)]">
               <div className="h-[94px] bg-[#FFF0D9]" />
               <div className="-mt-16 px-8 pb-6">
-                <div className="mx-auto flex size-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-[#FF5A14] text-[36px] font-black tracking-wide text-white shadow-sm ring-1 ring-[#FF8A4D]/45">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt="Foto profil" className="size-full object-cover" />
-                  ) : (
-                    initials
-                  )}
-                </div>
+                <UserAvatar
+                  src={user.avatar_url}
+                  alt={`Foto profil ${displayName}`}
+                  initials={initials}
+                  className="mx-auto size-28 border-[5px] border-white bg-[#FF5A14] text-[36px] shadow-sm ring-1 ring-[#FF8A4D]/45"
+                />
 
                 <h2 className="mt-7 truncate text-[24px] font-black leading-tight text-[#050B22]">{displayName}</h2>
                 <p className="mt-2 truncate text-[15px] font-medium text-[#4B5563]">{user.email}</p>
@@ -413,7 +460,7 @@ function ProfilePage() {
                   onClick={handleLogout}
                 >
                   <LogOut size={15} />
-                  {logoutLoading ? 'Keluar...' : 'Logout / Keluar'}
+                  {logoutLoading ? 'Signing out...' : 'Sign Out'}
                 </Button>
 
                 {photoMessage && (
@@ -564,17 +611,12 @@ function ProfilePage() {
         }
       >
         <div className="flex flex-col items-center px-6 pb-7 pt-6 text-center">
-          <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-[#FF5A14] text-[36px] font-black tracking-wide text-white shadow-sm ring-1 ring-[#FF8A4D]/45">
-            {pendingPhotoPreviewUrl || user.avatar_url ? (
-              <img
-                src={pendingPhotoPreviewUrl ?? user.avatar_url ?? undefined}
-                alt="Preview foto profil"
-                className="size-full object-cover"
-              />
-            ) : (
-              initials
-            )}
-          </div>
+          <UserAvatar
+            src={pendingPhotoPreviewUrl ?? user.avatar_url}
+            alt="Preview foto profil"
+            initials={initials}
+            className="size-28 border-[5px] border-white bg-[#FF5A14] text-[36px] shadow-sm ring-1 ring-[#FF8A4D]/45"
+          />
 
           <Button
             type="button"
@@ -588,10 +630,10 @@ function ProfilePage() {
           </Button>
 
           <p className="mt-4 text-sm font-semibold text-[#244066]">
-            Gunakan foto yang jelas dan profesional.
+            Gunakan foto JPG, PNG, atau WebP. Maksimal 2 MB.
           </p>
           <p className="mt-1 text-xs font-medium text-[#7E92B4]">
-            Format: JPG, PNG, atau WebP. Maksimal 2 MB.
+            Foto akan digunakan di topbar dan menu akun.
           </p>
 
           {pendingPhotoFile && (
@@ -614,7 +656,7 @@ function ProfilePage() {
           setPasswordDialogOpen(open)
           if (!open) setPasswordError(null)
         }}
-        title="Ganti Password Profile"
+        title="Ganti Password Profil Saya"
         description="Masukkan password saat ini sebelum membuat password baru. Ini berbeda dari Reset Password Admin Sistem."
         size="md"
         contentClassName="border-orange-100 bg-[#FFFDF9]"

@@ -319,18 +319,18 @@ function profileAvatarErrorResponse(error: unknown): Response {
   switch (error.code) {
     case 'invalid-file-size':
     case 'invalid-content-size':
-      return Response.json({ error: 'Ukuran foto maksimal 2MB' }, { status: 400 })
+      return Response.json({ error: 'Ukuran foto terlalu besar. Maksimal 2 MB.' }, { status: 400 })
     case 'invalid-file-extension':
-    case 'invalid-file-signature':
     case 'invalid-file-type':
-      return Response.json({ error: 'Tipe foto tidak diizinkan. Gunakan JPG, PNG, atau WebP.' }, { status: 400 })
+      return Response.json({ error: 'Format foto tidak didukung. Gunakan JPG, PNG, atau WebP.' }, { status: 400 })
+    case 'invalid-file-signature':
     case 'invalid-file-name':
     case 'invalid-owner-id':
-      return Response.json({ error: 'File foto tidak valid' }, { status: 400 })
+      return Response.json({ error: 'File foto tidak valid. Pilih gambar lain.' }, { status: 400 })
     case 'read-failed':
     case 'target-exists':
     case 'write-failed':
-      return Response.json({ error: 'Gagal mengunggah foto profil' }, { status: 500 })
+      return Response.json({ error: 'Gagal mengunggah foto profil. Coba lagi.' }, { status: 500 })
   }
 }
 

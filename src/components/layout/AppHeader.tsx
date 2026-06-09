@@ -13,6 +13,7 @@ import { UserDropdown } from './UserDropdown'
 
 export function AppHeader({
   activeRole,
+  avatarUrl,
   canSwitchRole,
   displayName,
   email,
@@ -28,6 +29,7 @@ export function AppHeader({
   userRoles,
 }: {
   activeRole: RoleName
+  avatarUrl?: string | null
   canSwitchRole: boolean
   displayName: string
   email?: string
@@ -137,7 +139,7 @@ export function AppHeader({
           </div>
 
           <UserDropdown
-            activeRole={activeRole}
+            avatarUrl={avatarUrl}
             displayName={displayName}
             email={email}
             handleLogout={handleLogout}
