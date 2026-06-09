@@ -37,6 +37,15 @@ import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
 import { ROLES } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
+import {
+  DOCUMENT_PREVIEW_PDF_ONLY_BODY,
+  DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
+  DOCUMENT_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_HELPER_TEXT,
+  DOCUMENT_UPLOAD_MULTIPLE_FAILURE_MESSAGE,
+  getDocumentUploadValidationUiMessage,
+  validateDocumentUploadClientFileMetadata,
+} from '#/lib/upload/document-upload-policy'
 import { cn } from '#/lib/utils'
 import { formatDate, formatDateTime } from '#/lib/utils/format'
 
@@ -161,6 +170,8 @@ type AttachmentRow = {
 type PreviewingAttachment = {
   title: string
   url: string
+  downloadUrl?: string
+  isPdf: boolean
 }
 
 type SubmittedManualArsip = {
@@ -181,22 +192,8 @@ type ManualCreateDraftState = {
 const MANUAL_ARSIP_ATTACHMENT_FIELD_NAME = 'files'
 const MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME = 'titles'
 const MANUAL_ARSIP_ATTACHMENT_MAX_FILES = 5
-const MANUAL_ARSIP_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
 const MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH = 120
-const MANUAL_ARSIP_ALLOWED_CONTENT_TYPES = [
-  'application/pdf',
-  'image/bmp',
-  'image/gif',
-  'image/heic',
-  'image/heif',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/tiff',
-  'image/webp',
-] as const
-const MANUAL_ARSIP_ATTACHMENT_ACCEPT = MANUAL_ARSIP_ALLOWED_CONTENT_TYPES.join(',')
-const MANUAL_ARSIP_ALLOWED_CONTENT_TYPE_SET = new Set<string>(MANUAL_ARSIP_ALLOWED_CONTENT_TYPES)
+const MANUAL_ARSIP_ATTACHMENT_ACCEPT = DOCUMENT_UPLOAD_ACCEPT
 const MANUAL_CREATE_STEP_LABELS = [
   'Informasi Dokumen',
   'Jenis Pembayaran',
@@ -590,9 +587,14 @@ function ManualArsipTable({
   }
 
   function openPreview(manualArsipId: string, attachment: ManualArsipAttachmentMetadata) {
+    const previewUrl = buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'preview')
+    const downloadUrl = buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'download')
+
     setPreviewingAttachment({
       title: attachment.judul_lampiran || 'Pratinjau lampiran',
-      url: buildManualArsipAttachmentFileUrl(manualArsipId, attachment.id, 'preview'),
+      url: previewUrl,
+      downloadUrl,
+      isPdf: attachment.content_type.trim().toLowerCase() === 'application/pdf',
     })
   }
 
@@ -840,8 +842,8 @@ function ManualArsipPreviewModal({
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setLoading(true)
-  }, [preview.url])
+    setLoading(preview.isPdf)
+  }, [preview.isPdf, preview.url])
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
@@ -861,7 +863,7 @@ function ManualArsipPreviewModal({
           <Eye size={16} className="shrink-0 text-zinc-300" />
           <p className="flex-1 truncate text-sm font-semibold text-white">{preview.title}</p>
           <a
-            href={preview.url}
+            href={preview.downloadUrl ?? preview.url}
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-zinc-200 transition-colors hover:bg-white/10 hover:text-white"
             aria-label={`Unduh ${preview.title}`}
           >
@@ -878,7 +880,7 @@ function ManualArsipPreviewModal({
           </button>
         </div>
         <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-zinc-900 p-2 sm:p-4">
-          {loading && (
+          {preview.isPdf && loading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-950/70">
               <div className="flex flex-col items-center gap-2 text-xs text-zinc-300">
                 <Loader2 size={22} className="animate-spin text-white" />
@@ -886,12 +888,19 @@ function ManualArsipPreviewModal({
               </div>
             </div>
           )}
-          <iframe
-            src={preview.url}
-            className="h-full min-h-[60vh] w-full max-w-6xl border-0 bg-white shadow-2xl shadow-black/40"
-            title={preview.title}
-            onLoad={() => setLoading(false)}
-          />
+          {preview.isPdf ? (
+            <iframe
+              src={preview.url}
+              className="h-full min-h-[60vh] w-full max-w-6xl border-0 bg-white shadow-2xl shadow-black/40"
+              title={preview.title}
+              onLoad={() => setLoading(false)}
+            />
+          ) : (
+            <div className="flex h-full min-h-60 w-full flex-col items-center justify-center gap-2 rounded-xl bg-zinc-950/60 px-4 text-center">
+              <p className="text-sm font-semibold text-zinc-100">{DOCUMENT_PREVIEW_PDF_ONLY_TITLE}</p>
+              <p className="text-xs font-medium text-zinc-400">{DOCUMENT_PREVIEW_PDF_ONLY_BODY}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1278,6 +1287,7 @@ function CreateManualArsipModal({
     setPreviewingDraftAttachment({
       title: row.title || row.file.name,
       url: URL.createObjectURL(row.file),
+      isPdf: row.file.type.trim().toLowerCase() === 'application/pdf',
     })
   }
 
@@ -1369,7 +1379,7 @@ function CreateManualArsipModal({
           uploadedCount: 0,
           notice: {
             tone: 'warning',
-            message: 'Dokumen berhasil dibuat, tetapi lampiran gagal diunggah.',
+            message: DOCUMENT_UPLOAD_MULTIPLE_FAILURE_MESSAGE,
           },
         })
       }
@@ -1611,7 +1621,11 @@ function CreateManualArsipModal({
                 </>
               ) : (
                 <div className="space-y-2.5">
-                  {attachmentRows.map((row, index) => (
+                  {attachmentRows.map((row, index) => {
+                    const fileInputId = `manual-attachment-file-${row.id}`
+                    const fileError = errors[attachmentFileErrorKey(row.id)]
+
+                    return (
                     <div
                       key={row.id}
                       className={cn(
@@ -1641,8 +1655,8 @@ function CreateManualArsipModal({
                               <span className="truncate">{row.file.name} - {formatFileSize(row.file.size)}</span>
                             </p>
                           ) : (
-                            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-400">
-                              PDF atau gambar pendukung
+                            <p className="mt-1 text-[11px] font-medium text-stone-500">
+                              {DOCUMENT_UPLOAD_HELPER_TEXT}
                             </p>
                           )}
                         </div>
@@ -1663,6 +1677,7 @@ function CreateManualArsipModal({
                           <Upload size={13} />
                           {row.file ? 'Ganti' : 'Unggah'}
                           <input
+                            id={fileInputId}
                             type="file"
                             accept={MANUAL_ARSIP_ATTACHMENT_ACCEPT}
                             onChange={(event) => updateAttachmentFile(row.id, event)}
@@ -1681,11 +1696,14 @@ function CreateManualArsipModal({
                           <Trash2 size={13} />
                         </Button>
                       </div>
-                      {errors[attachmentFileErrorKey(row.id)] && (
-                        <p className="text-[10px] text-error">{errors[attachmentFileErrorKey(row.id)]}</p>
+                      {fileError && (
+                        <ManualAttachmentValidationInline
+                          message={fileError}
+                          inputId={fileInputId}
+                        />
                       )}
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
 
@@ -1732,6 +1750,9 @@ function CreateManualArsipModal({
                   <AlertCircle size={12} /> {errors.attachments}
                 </p>
               )}
+              <p className="px-1 text-[11px] font-medium text-on-surface-variant">
+                {DOCUMENT_UPLOAD_HELPER_TEXT}
+              </p>
               </div>
             </div>
           </div>
@@ -2227,6 +2248,34 @@ function LoadingState({ label }: { label: string }) {
   )
 }
 
+function ManualAttachmentValidationInline({
+  message,
+  inputId,
+}: {
+  message: string
+  inputId: string
+}) {
+  const validationUi = getDocumentUploadValidationUiMessage(message)
+
+  return (
+    <div className="flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5">
+      <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+        <AlertCircle size={13} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-semibold text-stone-900">{validationUi.title}</p>
+        <p className="mt-0.5 text-[11px] font-medium leading-4 text-stone-600">{validationUi.description}</p>
+      </div>
+      <label
+        htmlFor={inputId}
+        className="flex h-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] transition-colors hover:bg-[#FFF1D6] hover:text-[#A84800]"
+      >
+        {validationUi.actionLabel}
+      </label>
+    </div>
+  )
+}
+
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void | Promise<void> }) {
   return (
     <div className="flex flex-col items-center py-20 gap-4 bg-error/5 rounded-2xl border border-error/20 text-center">
@@ -2294,23 +2343,18 @@ function getFriendlyDocumentType(contentType: string) {
   switch (contentType.trim().toLowerCase()) {
     case 'application/pdf':
       return 'PDF'
+    case 'application/msword':
+      return 'DOC'
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      return 'DOCX'
+    case 'application/vnd.ms-excel':
+      return 'XLS'
+    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+      return 'XLSX'
     case 'image/jpeg':
-    case 'image/jpg':
       return 'Gambar JPEG'
     case 'image/png':
       return 'Gambar PNG'
-    case 'image/webp':
-      return 'Gambar WEBP'
-    case 'image/gif':
-      return 'Gambar GIF'
-    case 'image/bmp':
-      return 'Gambar BMP'
-    case 'image/tiff':
-      return 'Gambar TIFF'
-    case 'image/heic':
-      return 'Gambar HEIC'
-    case 'image/heif':
-      return 'Gambar HEIF'
     default:
       return 'File'
   }
@@ -2497,20 +2541,7 @@ function validateAttachmentRows(rows: AttachmentRow[]): {
 }
 
 function validateAttachmentFile(file: File): string | null {
-  if (file.size <= 0) {
-    return 'File lampiran tidak valid'
-  }
-
-  if (file.size > MANUAL_ARSIP_ATTACHMENT_MAX_BYTES) {
-    return 'Ukuran file maksimal 10MB per file'
-  }
-
-  const contentType = file.type.trim().toLowerCase()
-  if (!contentType || !MANUAL_ARSIP_ALLOWED_CONTENT_TYPE_SET.has(contentType)) {
-    return 'Tipe file tidak diizinkan. Gunakan PDF atau gambar yang didukung.'
-  }
-
-  return null
+  return validateDocumentUploadClientFileMetadata(file)
 }
 
 let attachmentRowCounter = 0

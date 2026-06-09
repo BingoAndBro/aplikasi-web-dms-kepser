@@ -26,8 +26,18 @@ import {
   replaceLampiranByKelengkapanId,
   resetLampiranByKelengkapanId,
 } from '#/lib/storage/pending-upload-session'
+import {
+  DOCUMENT_PREVIEW_PDF_ONLY_BODY,
+  DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
+  DOCUMENT_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE,
+  DOCUMENT_UPLOAD_HELPER_TEXT,
+  getDocumentUploadValidationUiMessage,
+  isPdfLikeFilename,
+  validateDocumentUploadClientFileMetadata,
+} from '#/lib/upload/document-upload-policy'
 
-const ACCEPTED_ATTACHMENT_FILE_TYPES = '.pdf,.doc,.docx,.xls,.xlsx'
+const ACCEPTED_ATTACHMENT_FILE_TYPES = DOCUMENT_UPLOAD_ACCEPT
 const PENDING_CLEANUP_ENDPOINT = '/api/upload?cleanup=pending'
 const PENDING_CLEANUP_TIMEOUT_MS = 10_000
 
@@ -116,6 +126,37 @@ function UploadReplaceButton({
   )
 }
 
+function UploadValidationInline({
+  message,
+  onAction,
+}: {
+  message: string
+  onAction: () => void
+}) {
+  const validationUi = getDocumentUploadValidationUiMessage(message)
+
+  return (
+    <div className="ml-0 flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5 sm:ml-4">
+      <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+        <AlertCircle size={13} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-semibold text-stone-900">{validationUi.title}</p>
+        <p className="mt-0.5 text-[11px] font-medium leading-4 text-stone-600">{validationUi.description}</p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="xs"
+        onClick={onAction}
+        className="h-7 shrink-0 border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] hover:bg-[#FFF1D6] hover:text-[#A84800]"
+      >
+        {validationUi.actionLabel}
+      </Button>
+    </div>
+  )
+}
+
 interface AttachmentEditorProps {
   dokumen: DokumenRow
   lampiranUrls: LampiranUrl[]
@@ -183,10 +224,12 @@ export function AttachmentEditor({
   const [previewingDocId, setPreviewingDocId] = useState<string | null>(null)
   const [previewFilename, setPreviewFilename] = useState<string>('')
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewPdfOnly, setPreviewPdfOnly] = useState(false)
 
   // Submit/Cancel state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [uploadErrors, setUploadErrors] = useState<Map<string, string>>(new Map())
 
   // Refs for file inputs
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
@@ -238,11 +281,11 @@ export function AttachmentEditor({
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && previewingUrl !== null) closePreview()
+      if (e.key === 'Escape' && previewingDocId !== null) closePreview()
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [previewingUrl])
+  }, [previewingDocId])
 
   // ---------------------------------------------------------------------------
   // Helper: Get lampiran by docId
@@ -348,9 +391,19 @@ export function AttachmentEditor({
 
     setPreviewingUrl(null)
     setPreviewingDocId(docId)
+    setPreviewPdfOnly(false)
     setPreviewLoading(true)
 
     try {
+      const filename = buildStorageFilename(dokumen, lamp)
+      setPreviewFilename(filename)
+
+      if (!isPdfLikeFilename(filename) && !isPdfLikeFilename(lamp.url)) {
+        setPreviewPdfOnly(true)
+        setPreviewLoading(false)
+        return
+      }
+
       const signedUrl = await getSignedUrl(lamp.url)
       if (!signedUrl) {
         alert('Gagal memuat pratinjau')
@@ -359,10 +412,7 @@ export function AttachmentEditor({
         return
       }
 
-      // Build filename dari metadata dokumen (client-side)
-      const filename = buildStorageFilename(dokumen, lamp)
       setPreviewingUrl(signedUrl)
-      setPreviewFilename(filename)
     } catch {
       alert('Gagal memuat pratinjau')
       closePreview()
@@ -378,6 +428,7 @@ export function AttachmentEditor({
     setPreviewingUrl(null)
     setPreviewingDocId(null)
     setPreviewFilename('')
+    setPreviewPdfOnly(false)
   }
 
   // ---------------------------------------------------------------------------
@@ -441,6 +492,11 @@ export function AttachmentEditor({
       next.delete(docId)
       return next
     })
+    setUploadErrors(prev => {
+      const next = new Map(prev)
+      next.delete(docId)
+      return next
+    })
 
     const pendingUrlsToCleanup = collectUnreferencedPendingUploadUrls(sessionPendingUrlsRef.current, nextLampirans)
     if (pendingUrlsToCleanup.length > 0) {
@@ -462,6 +518,18 @@ export function AttachmentEditor({
 
     logDev('[AttachmentEditor] Upload', { docId, filename: file.name })
 
+    const clientError = validateDocumentUploadClientFileMetadata(file)
+    if (clientError) {
+      setUploadErrors(prev => new Map(prev).set(docId, clientError))
+      return
+    }
+
+    setUploadErrors(prev => {
+      const next = new Map(prev)
+      next.delete(docId)
+      return next
+    })
+
     try {
       const previousPendingUrl = pendingFilesRef.current.get(docId)?.url
       const kel = kelengkapan.find(k => k.id === docId)
@@ -480,7 +548,7 @@ export function AttachmentEditor({
       const json = await response.json().catch(() => ({})) as UploadResponse
 
       if (!response.ok) {
-        throw new Error(typeof json.error === 'string' ? json.error : 'Upload failed')
+        throw new Error(typeof json.error === 'string' ? json.error : DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE)
       }
 
       if (
@@ -489,7 +557,7 @@ export function AttachmentEditor({
         || typeof json.kelengkapan_id !== 'string'
         || typeof json.uploaded_at !== 'string'
       ) {
-        throw new Error('Invalid upload response')
+        throw new Error(DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE)
       }
 
       const newLamp: LampiranUrl = {
@@ -499,7 +567,7 @@ export function AttachmentEditor({
         uploaded_at: json.uploaded_at,
       }
 
-      logDev('[AttachmentEditor] Upload success', { docId, path: json.url })
+      logDev('[AttachmentEditor] Upload success', { docId })
 
       trackSessionPendingUrl(json.url)
       updatePendingFiles(prev => new Map(prev).set(docId, { url: json.url, filename: file.name }))
@@ -507,6 +575,11 @@ export function AttachmentEditor({
       setTrackedLampiranUrls(nextLampirans)
 
       setUploadStatuses(prev => new Map(prev).set(docId, `${file.name} berhasil diupload`))
+      setUploadErrors(prev => {
+        const next = new Map(prev)
+        next.delete(docId)
+        return next
+      })
 
       if (docId.startsWith('user-custom-')) {
         const currentLamp = lampiranUrls.find(l => l.kelengkapan_id === docId)
@@ -527,7 +600,10 @@ export function AttachmentEditor({
         docId,
         message: err instanceof Error ? err.message : 'unknown',
       })
-      alert(err instanceof Error && err.message ? err.message : 'Gagal mengupload file')
+      setUploadErrors(prev => new Map(prev).set(
+        docId,
+        getFriendlyUploadErrorMessage(err),
+      ))
     }
   }
 
@@ -577,6 +653,11 @@ export function AttachmentEditor({
       return next
     })
     setUploadStatuses(prev => {
+      const next = new Map(prev)
+      next.delete(docId)
+      return next
+    })
+    setUploadErrors(prev => {
       const next = new Map(prev)
       next.delete(docId)
       return next
@@ -709,6 +790,15 @@ export function AttachmentEditor({
     }
   }
 
+  function getFriendlyUploadErrorMessage(error: unknown): string {
+    const message = error instanceof Error ? error.message : ''
+    if (!message) {
+      return DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE
+    }
+
+    return message
+  }
+
   useEffect(() => {
     if (submitRequestSignal === undefined) return
     if (lastSubmitRequestSignalRef.current === submitRequestSignal) return
@@ -807,6 +897,11 @@ export function AttachmentEditor({
                 <div className="flex h-full min-h-60 w-full items-center justify-center">
                   <Loader2 size={26} className="animate-spin text-white" />
                 </div>
+              ) : previewPdfOnly ? (
+                <div className="flex h-full min-h-60 w-full flex-col items-center justify-center gap-2 rounded-xl bg-zinc-950/60 px-4 text-center">
+                  <p className="text-sm font-semibold text-zinc-100">{DOCUMENT_PREVIEW_PDF_ONLY_TITLE}</p>
+                  <p className="text-xs font-medium text-zinc-400">{DOCUMENT_PREVIEW_PDF_ONLY_BODY}</p>
+                </div>
               ) : previewingUrl ? (
                 <iframe
                   src={previewingUrl}
@@ -878,6 +973,7 @@ export function AttachmentEditor({
                 const lamp = lampiranUrls.find(l => l.kelengkapan_id === kel.id)
                 const isPending = pendingFiles.has(kel.id)
                 const successMsg = uploadStatuses.get(kel.id)
+                const uploadError = uploadErrors.get(kel.id)
 
                 return (
                   <div key={kel.id} className="space-y-1.5">
@@ -940,6 +1036,12 @@ export function AttachmentEditor({
                         {successMsg}
                       </p>
                     )}
+                    {uploadError && (
+                      <UploadValidationInline
+                        message={uploadError}
+                        onAction={() => fileInputRefs.current.get(kel.id)?.click()}
+                      />
+                    )}
                   </div>
                 )
               })}
@@ -967,6 +1069,7 @@ export function AttachmentEditor({
               const isPending = pendingFiles.has(doc.id)
               const successMsg = uploadStatuses.get(doc.id)
               const hasFile = !!lamp
+              const uploadError = uploadErrors.get(doc.id)
 
               return (
                 <div key={doc.id} className="space-y-1.5">
@@ -1039,6 +1142,12 @@ export function AttachmentEditor({
                       {successMsg}
                     </p>
                   )}
+                  {uploadError && (
+                    <UploadValidationInline
+                      message={uploadError}
+                      onAction={() => fileInputRefs.current.get(doc.id)?.click()}
+                    />
+                  )}
                 </div>
               )
             })}
@@ -1079,6 +1188,9 @@ export function AttachmentEditor({
                 <AlertCircle size={12} /> {userDocError}
               </p>
             )}
+            <p className="text-[11px] font-medium text-on-surface-variant">
+              {DOCUMENT_UPLOAD_HELPER_TEXT}
+            </p>
           </div>
         </div>
 

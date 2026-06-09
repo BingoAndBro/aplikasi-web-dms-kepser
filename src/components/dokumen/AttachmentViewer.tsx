@@ -23,7 +23,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Eye, Download, Upload, Trash2, X, Loader2, FileText } from 'lucide-react'
+import { Eye, Download, Upload, Trash2, X, Loader2, FileText, AlertCircle } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import {
   downloadFromApi,
@@ -34,6 +34,15 @@ import {
 import { buildStorageFilename } from '#/lib/dokumen-helpers'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
 import { cn } from '#/lib/utils'
+import {
+  DOCUMENT_PREVIEW_PDF_ONLY_BODY,
+  DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
+  DOCUMENT_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_HELPER_TEXT,
+  getDocumentUploadValidationUiMessage,
+  isPdfLikeFilename,
+  validateDocumentUploadClientFileMetadata,
+} from '#/lib/upload/document-upload-policy'
 
 // ============================================================================
 // INTERFACE: Props untuk AttachmentViewer
@@ -87,6 +96,8 @@ export function AttachmentViewer({
   const [previewFilename, setPreviewFilename] = useState<string>('')
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [previewPdfOnly, setPreviewPdfOnly] = useState(false)
+  const [uploadValidationErrors, setUploadValidationErrors] = useState<Map<number, string>>(new Map())
 
   // ==========================================================================
   // EFFECT: Handle keyboard shortcut ESC untuk menutup preview
@@ -159,8 +170,18 @@ export function AttachmentViewer({
     clearPreviewUrl()
     setPreviewLoading(true)
     setPreviewError(null)
+    setPreviewPdfOnly(false)
 
     try {
+      const filename = buildStorageFilename(dokumen, lamp)
+      setPreviewFilename(filename)
+
+      if (!isPdfLikeFilename(filename) && !isPdfLikeFilename(lamp.url)) {
+        setPreviewPdfOnly(true)
+        setPreviewLoading(false)
+        return
+      }
+
       const apiPath = getPreviewApiPath(idx)
       const signedUrlResult = await getSignedUrlFromApi(apiPath)
       if (signedUrlResult.error) {
@@ -183,11 +204,7 @@ export function AttachmentViewer({
         return
       }
 
-      // Build filename dari metadata dokumen (client-side)
-      const filename = buildStorageFilename(dokumen, lamp)
-
       setPreviewUrl(URL.createObjectURL(previewFile.blob))
-      setPreviewFilename(filename)
     } catch {
       setPreviewError('Terjadi kesalahan')
     } finally {
@@ -222,6 +239,7 @@ export function AttachmentViewer({
     clearPreviewUrl()
     setPreviewFilename('')
     setPreviewError(null)
+    setPreviewPdfOnly(false)
   }
 
   function clearPreviewUrl() {
@@ -246,6 +264,19 @@ export function AttachmentViewer({
   function handleFileChange(idx: number, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    const clientError = validateDocumentUploadClientFileMetadata(file)
+    if (clientError) {
+      e.target.value = ''
+      setUploadValidationErrors(prev => new Map(prev).set(idx, clientError))
+      return
+    }
+
+    setUploadValidationErrors(prev => {
+      const next = new Map(prev)
+      next.delete(idx)
+      return next
+    })
 
     if (lampiranUrls[idx]?.url) {
       // Ada file lama - replace
@@ -280,95 +311,120 @@ export function AttachmentViewer({
   function renderLampiranItem(lamp: LampiranUrl, globalIdx: number, labelColor: 'gray' | 'blue', showBadge: boolean) {
     const hasFile = !!lamp.url
     const fileFormat = getFileFormat(lamp)
+    const uploadValidationError = uploadValidationErrors.get(globalIdx)
+    const fileInputId = `attachment-viewer-upload-${globalIdx}`
+    const validationUi = uploadValidationError
+      ? getDocumentUploadValidationUiMessage(uploadValidationError)
+      : null
 
     return (
-      <div
-        key={globalIdx}
-        className={cn(
-          'flex min-h-16 items-center gap-3 rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3',
-          labelColor === 'blue'
-            ? 'border-[#F1E5DA] bg-[#FFFDF9]'
-            : 'border-[#F1E5DA] bg-[#FFFDF9]'
-        )}
-      >
-        <span className={cn(
-          'flex size-10 shrink-0 items-center justify-center rounded-2xl border',
-          labelColor === 'blue'
-            ? 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-800'
-            : 'border-orange-100 bg-orange-50 text-[#FF5A00]',
-        )}>
-          <FileText size={18} />
-        </span>
+      <div key={globalIdx} className="space-y-1.5">
+        <div
+          className={cn(
+            'flex min-h-16 items-center gap-3 rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3',
+            labelColor === 'blue'
+              ? 'border-[#F1E5DA] bg-[#FFFDF9]'
+              : 'border-[#F1E5DA] bg-[#FFFDF9]'
+            )}
+        >
+          <span className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-2xl border',
+            labelColor === 'blue'
+              ? 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-800'
+              : 'border-orange-100 bg-orange-50 text-[#FF5A00]',
+          )}>
+            <FileText size={18} />
+          </span>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-bold text-zinc-950">
-              {lamp.nama || 'Tanpa Nama'}
+          <div className="flex-1 min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-bold text-zinc-950">
+                {lamp.nama || 'Tanpa Nama'}
+              </p>
+              {showBadge && (
+                <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">Tambahan</span>
+              )}
+            </div>
+            <p className="mt-1 text-[11px] font-medium text-zinc-500">
+              {hasFile
+                ? `${fileFormat}${labelColor === 'gray' ? ' - Wajib' : ''}${lamp.uploaded_at ? ` - ${formatDateTime(lamp.uploaded_at)}` : ''}`
+                : DOCUMENT_UPLOAD_HELPER_TEXT}
             </p>
-            {showBadge && (
-              <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">Tambahan</span>
-            )}
           </div>
-          <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">
-            {fileFormat}{labelColor === 'gray' ? ' - Wajib' : ''}
-            {hasFile && lamp.uploaded_at ? ` - ${formatDateTime(lamp.uploaded_at)}` : ''}
-          </p>
-        </div>
 
-        {hasFile && (
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => handlePreview(globalIdx)}
-              className={cn(fileActionButtonClassName, 'gap-1.5')}
-              aria-label={`Pratinjau ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
-            >
-              <Eye size={15} />
-              Preview
-            </Button>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => handleDownload(globalIdx)}
-              className={cn(fileActionButtonClassName, 'gap-1.5')}
-              aria-label={`Unduh ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
-            >
-              <Download size={15} />
-              Unduh
-            </Button>
-          </div>
-        )}
-
-        {/* Action Buttons - Editable Mode */}
-        {isEditable && (
-          <>
-            {hasFile && (
+          {hasFile && (
+            <div className="flex shrink-0 items-center gap-2">
               <Button
-                size="icon-xs"
+                size="sm"
                 variant="ghost"
-                className="text-error hover:bg-error/10"
-                onClick={() => handleDelete(globalIdx)}
-                aria-label={`Hapus ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
+                onClick={() => handlePreview(globalIdx)}
+                className={cn(fileActionButtonClassName, 'gap-1.5')}
+                aria-label={`Pratinjau ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
               >
-                <Trash2 size={14} />
+                <Eye size={15} />
+                Preview
               </Button>
-            )}
 
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                className="hidden"
-                onChange={e => handleFileChange(globalIdx, e)}
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-              />
-              <span className="inline-flex h-8 items-center gap-1 rounded-xl border border-orange-200 bg-[#FFFDF9] px-2 text-xs font-bold text-[#FF5A00] hover:bg-orange-50">
-                <Upload size={12} />
-                {hasFile ? 'Ganti' : 'Unggah'}
-              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleDownload(globalIdx)}
+                className={cn(fileActionButtonClassName, 'gap-1.5')}
+                aria-label={`Unduh ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
+              >
+                <Download size={15} />
+                Unduh
+              </Button>
+            </div>
+          )}
+
+          {/* Action Buttons - Editable Mode */}
+          {isEditable && (
+            <>
+              {hasFile && (
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  className="text-error hover:bg-error/10"
+                  onClick={() => handleDelete(globalIdx)}
+                  aria-label={`Hapus ${lamp.nama || `lampiran ${globalIdx + 1}`}`}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              )}
+
+              <label className="cursor-pointer" htmlFor={fileInputId}>
+                <input
+                  id={fileInputId}
+                  type="file"
+                  className="hidden"
+                  onChange={e => handleFileChange(globalIdx, e)}
+                  accept={DOCUMENT_UPLOAD_ACCEPT}
+                />
+                <span className="inline-flex h-8 items-center gap-1 rounded-xl border border-orange-200 bg-[#FFFDF9] px-2 text-xs font-bold text-[#FF5A00] hover:bg-orange-50">
+                  <Upload size={12} />
+                  {hasFile ? 'Ganti' : 'Unggah'}
+                </span>
+              </label>
+            </>
+          )}
+        </div>
+        {validationUi && (
+          <div className="flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5">
+            <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+              <AlertCircle size={13} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-semibold text-stone-900">{validationUi.title}</p>
+              <p className="mt-0.5 text-[11px] font-medium leading-4 text-stone-600">{validationUi.description}</p>
+            </div>
+            <label
+              htmlFor={fileInputId}
+              className="flex h-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] transition-colors hover:bg-[#FFF1D6] hover:text-[#A84800]"
+            >
+              {validationUi.actionLabel}
             </label>
-          </>
+          </div>
         )}
       </div>
     )
@@ -442,6 +498,11 @@ export function AttachmentViewer({
               {previewLoading ? (
                 <div className="flex h-full min-h-60 w-full items-center justify-center">
                   <Loader2 size={26} className="animate-spin text-white" />
+                </div>
+              ) : previewPdfOnly ? (
+                <div className="flex h-full min-h-60 w-full flex-col items-center justify-center gap-2 rounded-xl bg-zinc-950/60 px-4 text-center">
+                  <p className="text-sm font-semibold text-zinc-100">{DOCUMENT_PREVIEW_PDF_ONLY_TITLE}</p>
+                  <p className="text-xs font-medium text-zinc-400">{DOCUMENT_PREVIEW_PDF_ONLY_BODY}</p>
                 </div>
               ) : previewUrl ? (
                 <iframe

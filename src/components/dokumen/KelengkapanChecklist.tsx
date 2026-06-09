@@ -18,6 +18,7 @@ import {
   DUPLICATE_ADDITIONAL_KELENGKAPAN_ERROR,
   normalizeKelengkapanName,
 } from '#/lib/kelengkapan-validation'
+import { DOCUMENT_UPLOAD_HELPER_TEXT } from '#/lib/upload/document-upload-policy'
 
 type KelengkapanItem = {
   id: string
@@ -313,8 +314,8 @@ export function KelengkapanChecklist({
                       <span className="truncate">{getUploadedFilename(uploaded)}</span>
                     </p>
                   ) : (
-                    <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-stone-400">
-                      Format PDF
+                    <p className="mt-1.5 text-[11px] font-medium text-stone-500">
+                      {DOCUMENT_UPLOAD_HELPER_TEXT}
                     </p>
                   )}
                 </div>
@@ -385,8 +386,8 @@ export function KelengkapanChecklist({
                       <span className="truncate">{getUploadedFilename(uploaded)}</span>
                     </p>
                   ) : (
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-400">
-                      PDF, Word, atau Excel
+                    <p className="mt-1 text-[11px] font-medium text-stone-500">
+                      {DOCUMENT_UPLOAD_HELPER_TEXT}
                     </p>
                   )}
                 </div>
@@ -467,6 +468,9 @@ export function KelengkapanChecklist({
               <AlertCircle size={12} /> {userDocError}
             </p>
           )}
+          <p className="text-[11px] font-medium text-on-surface-variant">
+            {DOCUMENT_UPLOAD_HELPER_TEXT}
+          </p>
         </div>
       </div>
     </div>

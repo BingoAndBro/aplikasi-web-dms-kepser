@@ -3,23 +3,22 @@
  * States: idle → uploading → uploaded | error
  */
 import { useEffect, useRef, useState } from 'react'
-import { Upload, CheckCircle2, XCircle, Loader2, Eye, Pencil, Trash2, X } from 'lucide-react'
+import { Upload, CheckCircle2, AlertTriangle, Loader2, Eye, Pencil, Trash2, X } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import { extractFilenameFromPath } from '#/lib/utils/file'
-import { fetchFileBlobWithSignedUrl, getSignedUrlDirectResult } from '#/lib/storage-client'
-
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-]
-
-const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx']
-const MAX_SIZE = 2 * 1024 * 1024 // 2MB
+import { downloadWithSignedUrl, fetchFileBlobWithSignedUrl, getSignedUrlDirectResult } from '#/lib/storage-client'
+import {
+  DOCUMENT_PREVIEW_PDF_ONLY_BODY,
+  DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
+  DOCUMENT_UPLOAD_ACCEPT,
+  DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE,
+  DOCUMENT_UPLOAD_HELPER_TEXT,
+  getDocumentUploadValidationUiMessage,
+  isPdfLikeFilename,
+  validateDocumentUploadClientFileMetadata,
+} from '#/lib/upload/document-upload-policy'
 
 type UploadState = 'idle' | 'uploading' | 'uploaded' | 'error'
 
@@ -47,6 +46,7 @@ export function FileUploadButton({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState('')
+  const [previewPdfOnly, setPreviewPdfOnly] = useState(false)
 
   useEffect(() => {
     if (initialLampiran?.url) {
@@ -75,6 +75,7 @@ export function FileUploadButton({
   function closePreview() {
     clearPreviewUrl()
     setPreviewError('')
+    setPreviewPdfOnly(false)
     setPreviewLoading(false)
   }
 
@@ -83,6 +84,14 @@ export function FileUploadButton({
 
     clearPreviewUrl()
     setPreviewError('')
+    setPreviewPdfOnly(false)
+
+    const displayFilename = filename || extractFilenameFromPath(initialLampiran.url) || namaDokumen
+    if (!isPdfLikeFilename(displayFilename) && !isPdfLikeFilename(initialLampiran.url)) {
+      setPreviewPdfOnly(true)
+      return
+    }
+
     setPreviewLoading(true)
 
     try {
@@ -106,20 +115,33 @@ export function FileUploadButton({
     }
   }
 
+  async function handleDownload() {
+    if (!initialLampiran?.url) return
+
+    try {
+      const signedUrlResult = await getSignedUrlDirectResult(initialLampiran.url)
+      if (signedUrlResult.error || !signedUrlResult.signedUrl) {
+        setPreviewError(signedUrlResult.error ?? 'Gagal mengunduh file')
+        return
+      }
+
+      await downloadWithSignedUrl(
+        signedUrlResult.signedUrl,
+        filename || extractFilenameFromPath(initialLampiran.url) || namaDokumen,
+      )
+    } catch {
+      setPreviewError('Gagal mengunduh file')
+    }
+  }
+
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setErrorMsg(`Tipe file tidak diizinkan. Gunakan: ${ALLOWED_EXTENSIONS.join(', ')}`)
-      setState('error')
-      return
-    }
-
-    // Validate size
-    if (file.size > MAX_SIZE) {
-      setErrorMsg('Ukuran file maksimal 2MB')
+    const clientError = validateDocumentUploadClientFileMetadata(file)
+    if (clientError) {
+      e.target.value = ''
+      setErrorMsg(clientError)
       setState('error')
       return
     }
@@ -143,7 +165,7 @@ export function FileUploadButton({
       const json = await res.json()
 
       if (!res.ok) {
-        setErrorMsg(json.error ?? 'Gagal mengunggah file')
+        setErrorMsg(typeof json.error === 'string' ? json.error : DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE)
         setState('error')
         return
       }
@@ -158,7 +180,7 @@ export function FileUploadButton({
       onUploaded(lampiran)
       setState('uploaded')
     } catch {
-      setErrorMsg('Terjadi kesalahan saat mengunggah. Coba lagi.')
+      setErrorMsg(DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE)
       setState('error')
     }
 
@@ -168,7 +190,7 @@ export function FileUploadButton({
     }
   }
 
-  const previewOpen = previewLoading || !!previewUrl || !!previewError
+  const previewOpen = previewLoading || !!previewUrl || !!previewError || previewPdfOnly
 
   if (state === 'uploaded') {
     return (
@@ -188,7 +210,7 @@ export function FileUploadButton({
             <input
               ref={inputRef}
               type="file"
-              accept={ALLOWED_EXTENSIONS.join(',')}
+              accept={DOCUMENT_UPLOAD_ACCEPT}
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -230,6 +252,15 @@ export function FileUploadButton({
                 <p className="min-w-0 flex-1 truncate text-sm font-semibold text-stone-900">
                   {filename || namaDokumen}
                 </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { void handleDownload() }}
+                  className="h-8 shrink-0 gap-1.5"
+                >
+                  Unduh File
+                </Button>
                 <button
                   type="button"
                   onClick={closePreview}
@@ -243,6 +274,11 @@ export function FileUploadButton({
                 {previewLoading ? (
                   <div className="flex h-48 items-center justify-center">
                     <Loader2 size={22} className="animate-spin text-[#F97316]" />
+                  </div>
+                ) : previewPdfOnly ? (
+                  <div className="flex h-48 flex-col items-center justify-center gap-2 px-6 text-center">
+                    <p className="text-sm font-semibold text-stone-900">{DOCUMENT_PREVIEW_PDF_ONLY_TITLE}</p>
+                    <p className="text-xs font-medium text-stone-600">{DOCUMENT_PREVIEW_PDF_ONLY_BODY}</p>
                   </div>
                 ) : previewUrl ? (
                   <iframe
@@ -275,20 +311,32 @@ export function FileUploadButton({
   }
 
   if (state === 'error') {
+    const validationUi = getDocumentUploadValidationUiMessage(errorMsg)
+
     return (
-      <div className={cn('flex flex-col gap-2 rounded-lg border border-red-100 bg-red-50 p-2.5', className)}>
-        <div className="flex items-center gap-2">
-          <XCircle size={14} className="shrink-0 text-error" />
-          <p className="text-[10px] font-semibold text-error">{errorMsg}</p>
+      <div className={cn('flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5', className)}>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={DOCUMENT_UPLOAD_ACCEPT}
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+          <AlertTriangle size={13} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold text-stone-900">{validationUi.title}</p>
+          <p className="mt-0.5 text-[11px] font-medium leading-4 text-stone-600">{validationUi.description}</p>
         </div>
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          onClick={() => { setState('idle'); setErrorMsg('') }}
-          className="self-start"
+          size="xs"
+          onClick={() => inputRef.current?.click()}
+          className="h-7 shrink-0 border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] hover:bg-[#FFF1D6] hover:text-[#A84800]"
         >
-          Coba Lagi
+          {validationUi.actionLabel}
         </Button>
       </div>
     )
@@ -299,19 +347,20 @@ export function FileUploadButton({
       <input
         ref={inputRef}
         type="file"
-        accept={ALLOWED_EXTENSIONS.join(',')}
+        accept={DOCUMENT_UPLOAD_ACCEPT}
         onChange={handleFileSelect}
         className="hidden"
       />
       <Button
         type="button"
         size="sm"
-        className="h-10 w-full rounded-2xl bg-[#FFF0DD] px-5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#EA580C] hover:bg-[#FFE4BF] sm:w-auto"
+        className="h-10 w-full rounded-2xl bg-[#FFF0DD] px-5 text-[11px] font-bold text-[#EA580C] hover:bg-[#FFE4BF] sm:w-auto"
         onClick={() => inputRef.current?.click()}
       >
         <Upload size={12} />
         Unggah
       </Button>
+      <p className="sr-only">{DOCUMENT_UPLOAD_HELPER_TEXT}</p>
     </div>
   )
 }

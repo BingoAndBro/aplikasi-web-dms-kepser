@@ -630,7 +630,7 @@ function ProfilePage() {
           </Button>
 
           <p className="mt-4 text-sm font-semibold text-[#244066]">
-            Gunakan foto JPG, PNG, atau WebP. Maksimal 2 MB.
+            JPG, PNG, atau WebP • Maks. 2 MB
           </p>
           <p className="mt-1 text-xs font-medium text-[#7E92B4]">
             Foto akan digunakan di topbar dan menu akun.
