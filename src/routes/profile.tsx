@@ -3,17 +3,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import {
-  Building2,
-  Camera,
-  CheckCircle2,
-  CreditCard,
-  KeyRound,
+  Info,
   LogOut,
-  Mail,
   Shield,
   Trash2,
   Upload,
-  User,
   UsersRound,
 } from 'lucide-react'
 
@@ -24,7 +18,7 @@ import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { Input } from '#/components/ui/input'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { RoleBadge } from '#/components/ui/RoleBadge'
+import { getRoleBadgeLabel, RoleBadge } from '#/components/ui/RoleBadge'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { clearClientAuthState } from '#/lib/auth-state'
@@ -46,6 +40,7 @@ interface ProfileUser {
     departemen?: string
   }
   roles: RoleName[]
+  activeRole?: RoleName
   avatar_url?: string | null
   avatar_mime_type?: 'image/jpeg' | 'image/png' | 'image/webp' | null
   avatar_size_bytes?: number | null
@@ -81,22 +76,13 @@ function getInitials(name?: string, email?: string): string {
   return source.substring(0, 2).toUpperCase()
 }
 
-function ProfileInfoCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode
-  label: string
-  value: ReactNode
-}) {
+function InfoField({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-orange-100 bg-[#FFFDF9] p-4 shadow-sm shadow-orange-950/5">
-      <dt className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-outline">
-        {icon}
+    <div>
+      <dt className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6E87B3]">
         {label}
       </dt>
-      <dd className="mt-2 break-words text-sm font-semibold text-on-surface">
+      <dd className="mt-1.5 break-words text-sm font-bold leading-5 text-[#071733]">
         {value}
       </dd>
     </div>
@@ -109,6 +95,10 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [photoMessage, setPhotoMessage] = useState<string | null>(null)
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false)
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null)
+  const [pendingPhotoPreviewUrl, setPendingPhotoPreviewUrl] = useState<string | null>(null)
+  const [pendingPhotoError, setPendingPhotoError] = useState<string | null>(null)
   const [photoLoading, setPhotoLoading] = useState(false)
   const [logoutLoading, setLogoutLoading] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
@@ -148,28 +138,60 @@ function ProfilePage() {
     fetchProfile()
   }, [])
 
-  const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    return () => {
+      if (pendingPhotoPreviewUrl) URL.revokeObjectURL(pendingPhotoPreviewUrl)
+    }
+  }, [pendingPhotoPreviewUrl])
+
+  const resetPendingPhoto = () => {
+    if (pendingPhotoPreviewUrl) URL.revokeObjectURL(pendingPhotoPreviewUrl)
+    setPendingPhotoFile(null)
+    setPendingPhotoPreviewUrl(null)
+    setPendingPhotoError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const openPhotoDialog = () => {
+    resetPendingPhoto()
+    setPhotoMessage(null)
+    setPhotoDialogOpen(true)
+  }
+
+  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    setPhotoMessage(null)
+    setPendingPhotoError(null)
 
     if (!PROFILE_AVATAR_ALLOWED_TYPES.has(file.type)) {
-      setPhotoMessage('Tipe foto tidak diizinkan. Gunakan JPG, PNG, atau WebP.')
+      setPendingPhotoError('Tipe foto tidak diizinkan. Gunakan JPG, PNG, atau WebP.')
       event.target.value = ''
       return
     }
 
     if (file.size > PROFILE_AVATAR_MAX_BYTES) {
-      setPhotoMessage('Ukuran foto maksimal 2MB.')
+      setPendingPhotoError('Ukuran foto maksimal 2MB.')
       event.target.value = ''
       return
     }
 
+    if (pendingPhotoPreviewUrl) URL.revokeObjectURL(pendingPhotoPreviewUrl)
+    setPendingPhotoFile(file)
+    setPendingPhotoPreviewUrl(URL.createObjectURL(file))
+  }
+
+  const handleSavePhoto = async () => {
+    if (!pendingPhotoFile) {
+      setPendingPhotoError('Pilih file foto terlebih dahulu.')
+      return
+    }
+
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', pendingPhotoFile)
 
     setPhotoLoading(true)
+    setPendingPhotoError(null)
     try {
       const result = await apiMutation<AvatarMutationResponse>('/api/users/me?avatar=1', {
         method: 'POST',
@@ -183,15 +205,16 @@ function ProfilePage() {
         avatar_updated_at: result.avatar_updated_at,
       } : current)
       setPhotoMessage('Foto profil berhasil diperbarui.')
+      setPhotoDialogOpen(false)
+      resetPendingPhoto()
     } catch (err) {
       if (err instanceof ApiError) {
-        setPhotoMessage(err.message || 'Gagal mengunggah foto profil.')
+        setPendingPhotoError(err.message || 'Gagal mengunggah foto profil.')
       } else {
-        setPhotoMessage('Gagal mengunggah foto profil.')
+        setPendingPhotoError('Gagal mengunggah foto profil.')
       }
     } finally {
       setPhotoLoading(false)
-      event.target.value = ''
     }
   }
 
@@ -316,51 +339,39 @@ function ProfilePage() {
 
   const displayName = user.metadata.nama_lengkap || 'Nama belum tersedia'
   const initials = getInitials(user.metadata.nama_lengkap, user.email)
-  const primaryRole = user.roles[0]
-  const avatarUpdatedLabel = user.avatar_updated_at
-    ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(user.avatar_updated_at))
-    : 'Belum ada foto profil'
-
+  const activeRole = user.activeRole ?? user.roles[0]
+  const activeRoleLabel = activeRole ? getRoleBadgeLabel(activeRole) : '-'
   return (
-    <PageLayout className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
+    <PageLayout className="mx-auto w-full max-w-[1280px] px-4 py-4 sm:px-6 lg:px-10">
       <div className="space-y-6">
-        <section>
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-            Profile
-          </p>
-          <h1 className="mt-2 font-headline text-3xl font-black tracking-tight text-on-surface sm:text-4xl">
+        <section className="pt-1">
+          <h1 className="font-headline text-[32px] font-black leading-none tracking-tight text-[#2C2102] sm:text-[38px]">
             Profile
           </h1>
-          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-on-surface-variant">
+          <p className="mt-2.5 max-w-3xl text-base font-medium leading-6 text-[#8A5A08]">
             Kelola informasi akun, foto profil, dan keamanan password Anda.
           </p>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
-          <div className="space-y-6">
-            <section className="rounded-[1.75rem] border border-orange-100 bg-[#FFFDF9] p-5 text-center shadow-sm shadow-orange-950/5">
-              <div className="mx-auto flex size-28 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-primary text-4xl font-black tracking-wider text-white shadow-md shadow-orange-950/15 ring-1 ring-primary/20">
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt="Foto profil" className="size-full object-cover" />
-                ) : (
-                  initials
-                )}
-              </div>
+        <div className="grid gap-7 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[430px_minmax(0,1fr)]">
+          <div className="space-y-5">
+            <section className="overflow-hidden rounded-[24px] border border-[#E8DDD0] bg-white text-center shadow-[0_1px_8px_rgba(71,50,22,0.14)]">
+              <div className="h-[94px] bg-[#FFF0D9]" />
+              <div className="-mt-16 px-8 pb-6">
+                <div className="mx-auto flex size-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-[#FF5A14] text-[36px] font-black tracking-wide text-white shadow-sm ring-1 ring-[#FF8A4D]/45">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="Foto profil" className="size-full object-cover" />
+                  ) : (
+                    initials
+                  )}
+                </div>
 
-              <h2 className="mt-4 truncate text-xl font-black text-on-surface">{displayName}</h2>
-              <div className="mt-2 flex justify-center">
-                {primaryRole ? (
-                  <RoleBadge role={primaryRole} className="rounded-full px-3 py-1 text-[11px] font-bold" />
-                ) : (
-                  <span className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-[11px] font-bold text-primary">
-                    Role belum tersedia
-                  </span>
-                )}
-              </div>
-              <p className="mt-3 truncate text-sm font-medium text-outline">{user.email}</p>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-800">
-                <CheckCircle2 size={13} />
-                Akun Aktif
+                <h2 className="mt-7 truncate text-[24px] font-black leading-tight text-[#050B22]">{displayName}</h2>
+                <p className="mt-2 truncate text-[15px] font-medium text-[#4B5563]">{user.email}</p>
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  Akun Aktif
+                </div>
               </div>
 
               <input
@@ -371,22 +382,22 @@ function ProfilePage() {
                 onChange={handlePhotoChange}
               />
 
-              <div className="mt-5 grid gap-2">
+              <div className="grid gap-3 px-8 pb-6">
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-xl border-orange-200 bg-orange-50 text-primary hover:bg-orange-100"
+                  className="h-10 rounded-[16px] border-[#FFB16F] bg-[#FFF7ED] text-sm font-bold text-[#FF4A00] shadow-none hover:bg-[#FFEAD4]"
                   disabled={photoLoading}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={openPhotoDialog}
                 >
                   <Upload size={15} />
-                  {photoLoading ? 'Mengunggah...' : user.avatar_url ? 'Ganti Foto' : 'Unggah Foto'}
+                  {user.avatar_url ? 'Ganti Foto' : 'Unggah Foto'}
                 </Button>
                 {user.avatar_url && (
                   <Button
                     type="button"
                     variant="ghost"
-                    className="rounded-xl text-error hover:bg-red-50"
+                    className="h-10 rounded-[16px] border border-red-200 bg-red-50 text-sm font-bold text-[#E5003A] shadow-none hover:bg-red-100"
                     disabled={photoLoading}
                     onClick={handleRemovePhoto}
                   >
@@ -396,133 +407,104 @@ function ProfilePage() {
                 )}
                 <Button
                   type="button"
-                  variant="ghost"
-                  className="rounded-xl text-on-surface-variant hover:bg-orange-50 hover:text-primary"
+                  variant="outline"
+                  className="h-10 rounded-[16px] border-red-200 bg-red-50 text-sm font-bold text-[#E5003A] shadow-none hover:bg-red-100"
                   disabled={logoutLoading}
                   onClick={handleLogout}
                 >
                   <LogOut size={15} />
-                  {logoutLoading ? 'Keluar...' : 'Keluar'}
+                  {logoutLoading ? 'Keluar...' : 'Logout / Keluar'}
                 </Button>
-              </div>
 
-              <p className="mt-3 text-xs font-medium leading-5 text-outline">
-                JPG, PNG, atau WebP. Maksimal 2MB.
-              </p>
-              {photoMessage && (
-                <p className="mt-3 rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-900">
-                  {photoMessage}
-                </p>
-              )}
-            </section>
-
-            <section className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-orange-50 text-primary">
-                  <KeyRound size={18} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                    Keamanan Akun
+                {photoMessage && (
+                  <p className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-900">
+                    {photoMessage}
                   </p>
-                  <h3 className="text-lg font-black text-on-surface">Password</h3>
-                </div>
+                )}
               </div>
-              <p className="mt-4 text-sm font-medium leading-6 text-on-surface-variant">
-                Terakhir diperbarui mengikuti catatan sistem. Perubahan password akan mengakhiri sesi aktif.
-              </p>
-              <Button
-                type="button"
-                className="mt-5 w-full rounded-xl"
-                onClick={() => {
-                  setPasswordError(null)
-                  setPasswordDialogOpen(true)
-                }}
-              >
-                <KeyRound size={15} />
-                Ganti Password
-              </Button>
             </section>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5 sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                    Informasi Akun
-                  </p>
-                  <h3 className="mt-2 text-xl font-black text-on-surface">Data read-only</h3>
-                  <p className="mt-1 text-sm text-on-surface-variant">
-                    Data ini mengikuti catatan akun yang dikelola sistem.
-                  </p>
+          <div className="space-y-5">
+            <section className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-full bg-[#EEF5FF] text-[#102B54]">
+                    <Shield size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-[#061231]">Keamanan Akun</h3>
+                    <p className="mt-0.5 text-xs font-semibold text-[#60799F]">
+                      Ubah password akun Anda secara mandiri.
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-full border border-orange-100 bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-primary">
-                  Sesi aktif
-                </div>
+                <Button
+                  type="button"
+                  className="h-11 rounded-2xl border border-[#030817] bg-[#17233A] px-6 text-sm font-black text-white shadow-[0_2px_0_rgba(0,0,0,0.45)] hover:bg-[#0F172A]"
+                  onClick={() => {
+                    setPasswordError(null)
+                    setPasswordDialogOpen(true)
+                  }}
+                >
+                  Reset Password
+                </Button>
               </div>
+            </section>
 
-              <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-                <ProfileInfoCard icon={<User size={14} />} label="Nama Lengkap" value={displayName} />
-                <ProfileInfoCard icon={<Mail size={14} />} label="Email" value={user.email} />
-                <ProfileInfoCard icon={<CreditCard size={14} />} label="NIP/NRP" value={user.metadata.nip_nrp || '-'} />
-                <ProfileInfoCard icon={<Building2 size={14} />} label="Departemen" value={user.metadata.departemen || '-'} />
-                <ProfileInfoCard icon={<Camera size={14} />} label="Foto Profil" value={avatarUpdatedLabel} />
+            <div className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+              <h3 className="text-base font-black text-[#061231]">Informasi Akun</h3>
+              <div className="mt-2.5 border-t border-[#E8EEF5]" />
+
+              <dl className="mt-5 grid gap-x-16 gap-y-5 sm:grid-cols-2">
+                <InfoField label="Nama Lengkap" value={displayName} />
+                <InfoField label="Email" value={user.email} />
+                <InfoField label="NIP/NRP" value={user.metadata.nip_nrp || '-'} />
+                <InfoField label="Fungsi/Departemen" value={user.metadata.departemen || '-'} />
               </dl>
+              <p className="mt-7 flex items-center gap-1.5 border-t border-[#E8EEF5] pt-4 text-[11px] font-medium text-[#7E92B4]">
+                <Info size={13} />
+                Perubahan data utama akun dikelola oleh Admin Sistem.
+              </p>
             </div>
 
-            <div className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-orange-50 text-primary">
-                  <Shield size={18} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                    Hak Akses
-                  </p>
-                  <h3 className="text-lg font-black text-on-surface">Role akun</h3>
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
+            <div className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+              <h3 className="text-base font-black text-[#061231]">Hak Akses</h3>
+              <div className="mt-2.5 border-t border-[#E8EEF5]" />
+              <p className="mt-5 text-sm font-medium text-[#244066]">
+                Role aktif saat ini: <span className="font-bold text-[#071733]">{activeRoleLabel}</span>
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
                 {user.roles.length > 0 ? (
                   user.roles.map((role) => (
-                    <RoleBadge key={role} role={role} className="rounded-full px-3 py-1 text-[11px] font-bold" />
+                    <RoleBadge key={role} role={role} className="rounded-[9px] px-3 py-1 text-xs font-bold" />
                   ))
                 ) : (
                   <span className="text-sm font-semibold text-outline">-</span>
                 )}
               </div>
-              <p className="mt-4 rounded-2xl border border-orange-100 bg-[#FFF8F1] p-3 text-xs font-medium leading-5 text-on-surface-variant">
-                Role aktif hanya mengatur pengalaman kerja di UI. Otorisasi tetap diputuskan oleh server melalui sesi.
+              <p className="mt-5 text-sm font-medium leading-6 text-[#244066]">
+                Anda memiliki {user.roles.length || 0} hak akses yang dikelola oleh Admin Sistem.
+              </p>
+              <p className="mt-5 flex items-center gap-1.5 border-t border-[#E8EEF5] pt-4 text-[11px] font-medium text-[#7E92B4]">
+                <Info size={13} />
+                Hak akses ditentukan oleh Admin Sistem.
               </p>
             </div>
 
-            <div className="rounded-[1.75rem] border border-orange-100 bg-white p-5 shadow-sm shadow-orange-950/5 sm:p-6">
-              <div className="flex items-start gap-3">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-primary">
-                  <UsersRound size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-                    Penugasan Ketua Tim
-                  </p>
-                  <h3 className="mt-2 text-xl font-black text-on-surface">Kegiatan yang dipimpin</h3>
-                  <p className="mt-1 text-sm text-on-surface-variant">
-                    Ditampilkan dari data penugasan yang sudah tersedia di API akun.
-                  </p>
-                </div>
-              </div>
+            <div className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+              <h3 className="text-base font-black text-[#061231]">Penugasan</h3>
+              <div className="mt-2.5 border-t border-[#E8EEF5]" />
 
               <div className="mt-5">
                 {ketuaTimKegiatan.length > 0 ? (
-                  <div className="grid gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {ketuaTimKegiatan.map((kegiatan) => (
                       <div
                         key={kegiatan.id}
-                        className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-sm font-semibold text-emerald-950"
+                        className="rounded-[5px] border border-[#D6E0EC] bg-[#F8FBFF] px-2.5 py-1 text-xs font-black uppercase text-[#071733]"
                       >
-                        <CheckCircle2 size={16} className="shrink-0 text-emerald-700" />
-                        <span className="min-w-0 truncate">{kegiatan.nama}</span>
+                        {kegiatan.nama}
                       </div>
                     ))}
                   </div>
@@ -535,10 +517,96 @@ function ProfilePage() {
                   />
                 )}
               </div>
+              {ketuaTimKegiatan.length > 0 && (
+                <p className="mt-4 text-xs font-medium leading-5 text-[#244066]">
+                  Kegiatan yang Anda pimpin sebagai Ketua Tim.
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      <AppDialog
+        open={photoDialogOpen}
+        onOpenChange={(open) => {
+          if (photoLoading) return
+          setPhotoDialogOpen(open)
+          if (!open) resetPendingPhoto()
+        }}
+        title={user.avatar_url ? 'Ganti Foto Profil' : 'Unggah Foto Profil'}
+        size="md"
+        showCloseButton={!photoLoading}
+        contentClassName="border-[#E8DDD0] bg-white"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-2xl px-5"
+              disabled={photoLoading}
+              onClick={() => {
+                setPhotoDialogOpen(false)
+                resetPendingPhoto()
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              className="h-10 rounded-2xl bg-[#FF5A14] px-6 text-white hover:bg-[#EA4D0C]"
+              disabled={photoLoading || !pendingPhotoFile}
+              onClick={handleSavePhoto}
+            >
+              {photoLoading ? 'Menyimpan...' : 'Simpan Foto'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center px-6 pb-7 pt-6 text-center">
+          <div className="flex size-28 items-center justify-center overflow-hidden rounded-full border-[5px] border-white bg-[#FF5A14] text-[36px] font-black tracking-wide text-white shadow-sm ring-1 ring-[#FF8A4D]/45">
+            {pendingPhotoPreviewUrl || user.avatar_url ? (
+              <img
+                src={pendingPhotoPreviewUrl ?? user.avatar_url ?? undefined}
+                alt="Preview foto profil"
+                className="size-full object-cover"
+              />
+            ) : (
+              initials
+            )}
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-5 h-10 rounded-2xl border-[#FFB16F] bg-[#FFF7ED] px-5 text-sm font-bold text-[#FF4A00] shadow-none hover:bg-[#FFEAD4]"
+            disabled={photoLoading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload size={15} />
+            Pilih File
+          </Button>
+
+          <p className="mt-4 text-sm font-semibold text-[#244066]">
+            Gunakan foto yang jelas dan profesional.
+          </p>
+          <p className="mt-1 text-xs font-medium text-[#7E92B4]">
+            Format: JPG, PNG, atau WebP. Maksimal 2 MB.
+          </p>
+
+          {pendingPhotoFile && (
+            <p className="mt-3 max-w-full truncate rounded-full border border-[#D6E0EC] bg-[#F8FBFF] px-3 py-1 text-xs font-semibold text-[#244066]">
+              {pendingPhotoFile.name}
+            </p>
+          )}
+
+          {pendingPhotoError && (
+            <p className="mt-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
+              {pendingPhotoError}
+            </p>
+          )}
+        </div>
+      </AppDialog>
 
       <AppDialog
         open={passwordDialogOpen}

@@ -78,6 +78,13 @@
       "when": 1780875600000,
       "tag": "0010_berkas_activity_log_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780962000000,
+      "tag": "0011_profile_avatar_metadata",
+      "breakpoints": true
     }
   ]
 }

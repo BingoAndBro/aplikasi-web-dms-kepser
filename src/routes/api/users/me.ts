@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { eq } from 'drizzle-orm'
-import { db } from '#/db/client'
+import { db, pool } from '#/db/client'
 import { users } from '#/db/schema/auth'
 import {
   createUnauthorizedResponse,
@@ -36,10 +36,6 @@ export const Route = createFileRoute('/api/users/me')({
             namaLengkap: users.namaLengkap,
             nipNrp: users.nipNrp,
             departemen: users.departemen,
-            avatarStorageKey: users.avatarStorageKey,
-            avatarMimeType: users.avatarMimeType,
-            avatarSizeBytes: users.avatarSizeBytes,
-            avatarUpdatedAt: users.avatarUpdatedAt,
           })
           .from(users)
           .where(eq(users.id, session.user.id))
@@ -49,14 +45,25 @@ export const Route = createFileRoute('/api/users/me')({
           return createUnauthorizedResponse('Unauthorized')
         }
 
+        const avatarSchemaReady = await hasProfileAvatarColumns()
+        const avatarProfile = avatarSchemaReady
+          ? await loadCurrentUserAvatarProfile(session.user.id)
+          : null
+
         if (new URL(request.url).searchParams.get('avatar') === '1') {
-          return serveCurrentUserAvatar(profile)
+          if (!avatarSchemaReady || !avatarProfile) {
+            return Response.json({ error: 'Foto profil belum tersedia' }, { status: 404 })
+          }
+          return serveCurrentUserAvatar(avatarProfile)
         }
 
         const hasDisplayableAvatar =
-          Boolean(profile.avatarStorageKey)
-          && Boolean(profile.avatarUpdatedAt)
-          && isAllowedResponseAvatarMimeType(profile.avatarMimeType)
+          Boolean(avatarProfile?.avatarStorageKey)
+          && Boolean(avatarProfile?.avatarUpdatedAt)
+          && isAllowedResponseAvatarMimeType(avatarProfile?.avatarMimeType ?? null)
+        const avatarUrl = hasDisplayableAvatar
+          ? createProfileAvatarUrl(avatarProfile?.avatarUpdatedAt)
+          : null
 
         return Response.json(parseUserProfileResponse({
           user: {
@@ -68,10 +75,11 @@ export const Route = createFileRoute('/api/users/me')({
               departemen: profile.departemen,
             }),
             roles: session.roles,
-            avatar_url: hasDisplayableAvatar ? createProfileAvatarUrl(profile.avatarUpdatedAt) : null,
-            avatar_mime_type: hasDisplayableAvatar ? profile.avatarMimeType : null,
-            avatar_size_bytes: hasDisplayableAvatar ? profile.avatarSizeBytes : null,
-            avatar_updated_at: hasDisplayableAvatar ? profile.avatarUpdatedAt?.toISOString() ?? null : null,
+            activeRole: session.activeRole,
+            avatar_url: avatarUrl,
+            avatar_mime_type: hasDisplayableAvatar ? avatarProfile?.avatarMimeType ?? null : null,
+            avatar_size_bytes: hasDisplayableAvatar ? avatarProfile?.avatarSizeBytes ?? null : null,
+            avatar_updated_at: hasDisplayableAvatar ? avatarProfile?.avatarUpdatedAt?.toISOString() ?? null : null,
           },
         }))
       },
@@ -88,13 +96,11 @@ export const Route = createFileRoute('/api/users/me')({
           return Response.json({ error: 'Unsupported profile update' }, { status: 400 })
         }
 
-        const [current] = await db
-          .select({
-            avatarStorageKey: users.avatarStorageKey,
-          })
-          .from(users)
-          .where(eq(users.id, session.user.id))
-          .limit(1)
+        if (!(await hasProfileAvatarColumns())) {
+          return Response.json({ error: 'Fitur foto profil belum siap. Jalankan migrasi avatar profil terlebih dahulu.' }, { status: 503 })
+        }
+
+        const current = await loadCurrentUserAvatarProfile(session.user.id)
 
         if (!current) {
           return createUnauthorizedResponse('Unauthorized')
@@ -177,13 +183,11 @@ export const Route = createFileRoute('/api/users/me')({
           return Response.json({ error: 'Unsupported profile update' }, { status: 400 })
         }
 
-        const [current] = await db
-          .select({
-            avatarStorageKey: users.avatarStorageKey,
-          })
-          .from(users)
-          .where(eq(users.id, session.user.id))
-          .limit(1)
+        if (!(await hasProfileAvatarColumns())) {
+          return Response.json({ error: 'Fitur foto profil belum siap. Jalankan migrasi avatar profil terlebih dahulu.' }, { status: 503 })
+        }
+
+        const current = await loadCurrentUserAvatarProfile(session.user.id)
 
         if (!current) {
           return createUnauthorizedResponse('Unauthorized')
@@ -221,6 +225,64 @@ export const Route = createFileRoute('/api/users/me')({
     },
   },
 })
+
+type CurrentUserAvatarProfile = {
+  avatarStorageKey: string | null
+  avatarMimeType: string | null
+  avatarSizeBytes: number | null
+  avatarUpdatedAt: Date | null
+}
+
+let profileAvatarColumnsReadyCache = false
+
+async function hasProfileAvatarColumns(): Promise<boolean> {
+  if (profileAvatarColumnsReadyCache) {
+    return true
+  }
+
+  const result = await pool.query<{ column_name: string }>(
+    `
+      select column_name
+      from information_schema.columns
+      where table_schema = $1
+        and table_name = $2
+        and column_name = any($3::text[])
+    `,
+    [
+      'auth',
+      'users',
+      ['avatar_storage_key', 'avatar_mime_type', 'avatar_size_bytes', 'avatar_updated_at'],
+    ],
+  )
+
+  const columns = new Set(result.rows.map((row) => row.column_name))
+  const hasAllColumns =
+    columns.has('avatar_storage_key')
+    && columns.has('avatar_mime_type')
+    && columns.has('avatar_size_bytes')
+    && columns.has('avatar_updated_at')
+
+  if (hasAllColumns) {
+    profileAvatarColumnsReadyCache = true
+  }
+
+  return hasAllColumns
+}
+
+async function loadCurrentUserAvatarProfile(userId: string): Promise<CurrentUserAvatarProfile | null> {
+  const [profile] = await db
+    .select({
+      avatarStorageKey: users.avatarStorageKey,
+      avatarMimeType: users.avatarMimeType,
+      avatarSizeBytes: users.avatarSizeBytes,
+      avatarUpdatedAt: users.avatarUpdatedAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  return profile ?? null
+}
 
 async function serveCurrentUserAvatar(profile: {
   avatarStorageKey: string | null

@@ -13,7 +13,8 @@ describe('profile avatar source guard', () => {
     expect(profileSource).toContain('Akun Aktif')
     expect(profileSource).toContain('Informasi Akun')
     expect(profileSource).toContain('Hak Akses')
-    expect(profileSource).toContain('Penugasan Ketua Tim')
+    expect(profileSource).toContain('Penugasan')
+    expect(profileSource).toContain('Ketua Tim')
     expect(profileSource).toContain('Keluar')
   })
 
@@ -32,7 +33,11 @@ describe('profile avatar source guard', () => {
     expect(profileApiSource).toContain("new URL(request.url).searchParams.get('avatar') !== '1'")
     expect(profileApiSource).toContain('writeProfileAvatarContent')
     expect(profileApiSource).toContain('removeProfileAvatarContent')
-    expect(profileApiSource).toContain('avatar_url: createProfileAvatarUrl')
+    expect(profileApiSource).toContain('const avatarUrl = hasDisplayableAvatar')
+    expect(profileApiSource).toContain('avatar_url: avatarUrl')
+    expect(profileApiSource).toContain('hasProfileAvatarColumns')
+    expect(profileApiSource).toContain('information_schema.columns')
+    expect(profileApiSource).toContain('Fitur foto profil belum siap')
   })
 
   it('keeps avatar storage separate from document/archive attachments and rejects svg by omission', () => {

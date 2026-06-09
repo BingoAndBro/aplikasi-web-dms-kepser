@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { roleArraySchema } from './auth'
+import { roleArraySchema, roleSchema } from './auth'
 
 export const userMetadataSchema = z.object({
   nama_lengkap: z.string().min(1).optional(),
@@ -12,6 +12,7 @@ export const userProfilePayloadSchema = z.object({
   email: z.string(),
   metadata: userMetadataSchema,
   roles: roleArraySchema,
+  activeRole: roleSchema.optional(),
   avatar_url: z.string().nullable().optional(),
   avatar_mime_type: z.enum(['image/jpeg', 'image/png', 'image/webp']).nullable().optional(),
   avatar_size_bytes: z.number().int().positive().max(2 * 1024 * 1024).nullable().optional(),
