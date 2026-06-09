@@ -11,6 +11,12 @@ import {
   MANUAL_ARSIP_ATTACHMENT_FIELD_NAME,
   ManualArsipUploadError,
 } from '#/lib/storage/manual-arsip-upload'
+import {
+  DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE,
+  DOCUMENT_UPLOAD_INVALID_FILE_MESSAGE,
+  DOCUMENT_UPLOAD_INVALID_FORMAT_MESSAGE,
+  DOCUMENT_UPLOAD_TOO_LARGE_MESSAGE,
+} from '#/lib/upload/document-upload-policy'
 
 const MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME = 'titles'
 const MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH = 120
@@ -82,7 +88,7 @@ export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachment
           }
 
           console.error('[arsiparis/manual-arsip/$id/attachments] POST local upload error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengunggah lampiran dokumen manual' }, { status: 500 })
+          return Response.json({ error: DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE }, { status: 500 })
         }
       },
     },
@@ -95,15 +101,18 @@ function manualArsipUploadErrorResponse(error: ManualArsipUploadError): Response
       return Response.json({ error: 'Maksimal 5 file lampiran per unggahan' }, { status: 400 })
     case 'invalid-file-size':
     case 'invalid-content-size':
-      return Response.json({ error: 'Ukuran file maksimal 10MB' }, { status: 400 })
+      return Response.json({ error: DOCUMENT_UPLOAD_TOO_LARGE_MESSAGE }, { status: 400 })
+    case 'invalid-file-extension':
     case 'invalid-file-type':
-      return Response.json({ error: 'Tipe file tidak diizinkan. Gunakan PDF atau gambar.' }, { status: 400 })
+      return Response.json({ error: DOCUMENT_UPLOAD_INVALID_FORMAT_MESSAGE }, { status: 400 })
+    case 'invalid-file-empty':
     case 'invalid-file-name':
+    case 'invalid-file-signature':
     case 'invalid-manual-arsip-id':
     case 'invalid-owner-id':
-      return Response.json({ error: 'File lampiran tidak valid' }, { status: 400 })
+      return Response.json({ error: DOCUMENT_UPLOAD_INVALID_FILE_MESSAGE }, { status: 400 })
     case 'target-exists':
     case 'write-failed':
-      return Response.json({ error: 'Gagal mengunggah lampiran dokumen manual' }, { status: 500 })
+      return Response.json({ error: DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE }, { status: 500 })
   }
 }

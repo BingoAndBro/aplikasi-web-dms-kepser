@@ -1418,7 +1418,7 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({
-      error: 'Tipe file tidak diizinkan. Gunakan PDF atau gambar.',
+      error: 'Format file tidak didukung. Gunakan PDF, DOC, DOCX, XLS, XLSX, JPG, atau PNG.',
     })
     expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
@@ -1436,7 +1436,7 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({
-      error: 'Tipe file tidak diizinkan. Gunakan PDF atau gambar.',
+      error: 'Format file tidak didukung. Gunakan PDF, DOC, DOCX, XLS, XLSX, JPG, atau PNG.',
     })
     expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
@@ -1454,7 +1454,7 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({
-      error: 'Tipe file tidak diizinkan. Gunakan PDF atau gambar.',
+      error: 'Format file tidak didukung. Gunakan PDF, DOC, DOCX, XLS, XLSX, JPG, atau PNG.',
     })
     expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
@@ -1477,18 +1477,18 @@ describe('manual arsip API foundation routes', () => {
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
-  it('rejects attachment files larger than 10 MB before writing content', async () => {
+  it('rejects attachment files larger than 5 MB before writing content', async () => {
     queueSelectResults([manualArsipUploadParentRow('AKTIF')])
 
     const response = await attachmentsPostHandler({
       request: createAttachmentUploadRequest([
-        new File([new Uint8Array((10 * 1024 * 1024) + 1)], 'besar.pdf', { type: 'application/pdf' }),
+        new File([new Uint8Array((5 * 1024 * 1024) + 1)], 'besar.pdf', { type: 'application/pdf' }),
       ], ['Lampiran Besar']),
       params: { id: MANUAL_ARSIP_ID },
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Ukuran file maksimal 10MB' })
+    expect(await response.json()).toEqual({ error: 'Ukuran file terlalu besar. Maksimal 5 MB per file.' })
     expect(mocks.writeManualArsipAttachmentContent).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })

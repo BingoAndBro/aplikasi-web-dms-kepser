@@ -40,6 +40,18 @@ const ALLOWED_UPLOAD_CASES = [
     extension: 'xlsx',
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   },
+  {
+    extension: 'jpg',
+    type: 'image/jpeg',
+  },
+  {
+    extension: 'jpeg',
+    type: 'image/jpeg',
+  },
+  {
+    extension: 'png',
+    type: 'image/png',
+  },
 ] as const
 
 describe('local upload helper foundation', () => {
@@ -134,6 +146,27 @@ describe('local upload helper foundation', () => {
       'Upload file exceeds the maximum allowed size.',
       'invalid-file-size',
     ))
+
+    expect(() => validateLocalUploadFileMetadata({
+      name: 'empty.pdf',
+      type: 'application/pdf',
+      size: 0,
+    })).toThrowError(new LocalUploadError(
+      'Upload file size is invalid.',
+      'invalid-file-empty',
+    ))
+
+    expect(() => validateLocalUploadFileMetadata({
+      name: 'vector.svg',
+      type: 'image/svg+xml',
+      size: 10,
+    })).toThrowError(new LocalUploadError('Upload file extension is not allowed.', 'invalid-file-extension'))
+
+    expect(() => validateLocalUploadFileMetadata({
+      name: 'photo.webp',
+      type: 'image/webp',
+      size: 10,
+    })).toThrowError(new LocalUploadError('Upload file extension is not allowed.', 'invalid-file-extension'))
   })
 
   it('rejects path-like, traversal-like, empty, and meaningless client filenames', () => {
@@ -225,6 +258,8 @@ describe('local upload helper foundation', () => {
       logicalPath,
       content: Buffer.from('%PDF-1.4 test upload'),
       expectedBytes: 20,
+      expectedContentType: 'application/pdf',
+      expectedExtension: 'pdf',
     })
 
     expect(result).toEqual({
@@ -235,6 +270,28 @@ describe('local upload helper foundation', () => {
     expect(path.isAbsolute(result.logicalPath)).toBe(false)
     expect(await readFile(path.join(TEST_ROOT, OWNER_ID, `${KELENGKAPAN_ID}_${TIMESTAMP}_report.pdf`), 'utf8'))
       .toBe('%PDF-1.4 test upload')
+  })
+
+  it('validates upload content signatures when declared content type is supplied', async () => {
+    const pdfPath = `${OWNER_ID}/${KELENGKAPAN_ID}_${TIMESTAMP}_report.pdf`
+    await expect(writeLocalUploadContent({
+      root: TEST_ROOT,
+      logicalPath: pdfPath,
+      content: Buffer.from('<svg></svg>'),
+      expectedBytes: 11,
+      expectedContentType: 'application/pdf',
+      expectedExtension: 'pdf',
+    })).rejects.toMatchObject({ code: 'invalid-file-signature' })
+
+    const pngPath = `${OWNER_ID}/${KELENGKAPAN_ID}_${TIMESTAMP}_photo.png`
+    await expect(writeLocalUploadContent({
+      root: TEST_ROOT,
+      logicalPath: pngPath,
+      content: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      expectedBytes: 8,
+      expectedContentType: 'image/png',
+      expectedExtension: 'png',
+    })).resolves.toMatchObject({ bytesWritten: 8 })
   })
 
   it('preserves no-overwrite semantics and does not replace existing file content', async () => {

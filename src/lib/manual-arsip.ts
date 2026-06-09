@@ -43,6 +43,7 @@ import {
   isAllowedManualArsipAttachmentContentType,
   writeManualArsipAttachmentContent,
 } from '#/lib/storage/manual-arsip-upload'
+import { DOCUMENT_UPLOAD_EXTENSIONS_BY_MIME_TYPE } from '#/lib/upload/document-upload-policy'
 import {
   assertSafeLogicalStoragePath,
   getLocalStorageRoot,
@@ -185,18 +186,8 @@ const FALLBACK_MANUAL_ARSIP_SEGMENT = 'Arsip'
 const FALLBACK_CATEGORY_SEGMENT = 'Kategori'
 const FALLBACK_DATE_SEGMENT = 'Tanggal'
 const MAX_CONTENT_DISPOSITION_FILENAME_LENGTH = 180
-const EXTENSIONS_BY_MANUAL_ARSIP_CONTENT_TYPE: Record<string, readonly string[]> = {
-  'application/pdf': ['pdf'],
-  'image/bmp': ['bmp'],
-  'image/gif': ['gif'],
-  'image/heic': ['heic'],
-  'image/heif': ['heif'],
-  'image/jpeg': ['jpg', 'jpeg'],
-  'image/jpg': ['jpg', 'jpeg'],
-  'image/png': ['png'],
-  'image/tiff': ['tif', 'tiff'],
-  'image/webp': ['webp'],
-}
+const EXTENSIONS_BY_MANUAL_ARSIP_CONTENT_TYPE: Record<string, readonly string[]> =
+  DOCUMENT_UPLOAD_EXTENSIONS_BY_MIME_TYPE
 const WINDOWS_DRIVE_PATTERN = /^[a-z]:[\\/]/i
 const URL_LIKE_PATTERN = /^[a-z][a-z0-9+.-]*:/i
 
@@ -817,6 +808,8 @@ export async function uploadManualArsipAttachments(
       logicalPath: descriptor.logicalPath,
       content: contents[index],
       expectedBytes: descriptor.sizeBytes,
+      expectedContentType: descriptor.contentType,
+      expectedExtension: descriptor.extension,
     })
   }
 

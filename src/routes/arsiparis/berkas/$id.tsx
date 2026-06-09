@@ -87,6 +87,11 @@ import {
 } from './-components/CloseBerkasDialog'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { MANUAL_ARCHIVE_RETENTION_LABELS } from '#/lib/archive/retention'
+import {
+  DOCUMENT_PREVIEW_PDF_ONLY_BODY,
+  DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
+  isPdfLikeFilename,
+} from '#/lib/upload/document-upload-policy'
 
 export const Route = createFileRoute('/arsiparis/berkas/$id')({ component: BerkasArsipDetailPage })
 
@@ -1026,7 +1031,11 @@ function ItemList({
   statusArsip: string | null
   items: BerkasDetailItem[]
 }) {
-  const [previewing, setPreviewing] = useState<{ href: string; downloadHref: string; title: string } | null>(null)
+  const [previewing, setPreviewing] = useState<{
+    href: string
+    downloadHref: string
+    title: string
+  } | null>(null)
   const [selectedItem, setSelectedItem] = useState<BerkasDetailItem | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState<DetailSourceFilter>('ALL')
@@ -1086,7 +1095,11 @@ function ItemList({
           item={selectedItem}
           statusArsip={statusArsip}
           onClose={() => setSelectedItem(null)}
-          onPreview={(href, downloadHref, title) => setPreviewing({ href, downloadHref, title })}
+          onPreview={(href, downloadHref, title) => setPreviewing({
+            href,
+            downloadHref,
+            title,
+          })}
         />
       )}
 
@@ -1596,11 +1609,18 @@ function PreviewModal({
           </button>
         </div>
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-zinc-900 p-2 sm:p-4">
-          <iframe
-            src={href}
-            className="h-full min-h-[60vh] w-full max-w-6xl border-0 bg-white shadow-2xl shadow-black/40"
-            title={title}
-          />
+          {isPdfLikeFilename(title) || isPdfLikeFilename(downloadHref) || isPdfLikeFilename(href) ? (
+            <iframe
+              src={href}
+              className="h-full min-h-[60vh] w-full max-w-6xl border-0 bg-white shadow-2xl shadow-black/40"
+              title={title}
+            />
+          ) : (
+            <div className="flex h-full min-h-60 w-full flex-col items-center justify-center gap-2 rounded-xl bg-zinc-950/60 px-4 text-center">
+              <p className="text-sm font-semibold text-zinc-100">{DOCUMENT_PREVIEW_PDF_ONLY_TITLE}</p>
+              <p className="text-xs font-medium text-zinc-400">{DOCUMENT_PREVIEW_PDF_ONLY_BODY}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

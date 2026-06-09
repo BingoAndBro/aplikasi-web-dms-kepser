@@ -40,7 +40,7 @@ describe('profile avatar source guard', () => {
   })
 
   it('keeps Profile avatar upload messages user-facing', () => {
-    expect(profileSource).toContain('Gunakan foto JPG, PNG, atau WebP. Maksimal 2 MB.')
+    expect(profileSource).toContain('JPG, PNG, atau WebP • Maks. 2 MB')
     expect(profileSource).toContain('Foto akan digunakan di topbar dan menu akun.')
     expect(profileSource).toContain('Foto profil berhasil diperbarui.')
     expect(profileSource).toContain('Foto profil berhasil dihapus.')

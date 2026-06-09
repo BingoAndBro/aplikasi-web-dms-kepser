@@ -208,7 +208,7 @@ describe('/api/upload local route implementation', () => {
 
       expect(response.status).toBe(400)
       expect(await response.json()).toEqual({
-        error: 'Tipe file tidak diizinkan. Gunakan: PDF, DOC, DOCX, XLS, XLSX',
+        error: 'Format file tidak didukung. Gunakan PDF, DOC, DOCX, XLS, XLSX, JPG, atau PNG.',
       })
     }
   })
@@ -221,7 +221,24 @@ describe('/api/upload local route implementation', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Ukuran file maksimal 2MB' })
+    expect(await response.json()).toEqual({ error: 'Ukuran file terlalu besar. Maksimal 5 MB per file.' })
+    await expectPathMissing(OWNER_ID)
+  })
+
+  it('rejects spoofed PDF content before writing content', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(TIMESTAMP))
+
+    const response = await uploadHandler({
+      request: createUploadRequest({
+        filename: 'spoofed.pdf',
+        type: 'application/pdf',
+        content: '<svg></svg>',
+      }),
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'File tidak valid. Pilih file lain.' })
     await expectPathMissing(OWNER_ID)
   })
 
@@ -241,11 +258,9 @@ describe('/api/upload local route implementation', () => {
     const body = await response.json()
 
     expect(response.status).toBe(500)
-    expect(body).toEqual({ error: 'Gagal mengunggah file. Silakan coba lagi.' })
+    expect(body).toEqual({ error: 'Gagal mengunggah file. Coba lagi.' })
     expectNoStorageRootExposure(body)
-    expect(consoleError).toHaveBeenCalledWith('[upload] Local storage write failed:', {
-      code: 'target-exists',
-    })
+    expect(consoleError).not.toHaveBeenCalled()
     expect(await readFile(physicalTarget, 'utf8')).toBe('original')
   })
 
@@ -258,7 +273,7 @@ describe('/api/upload local route implementation', () => {
     const body = await response.json()
 
     expect(response.status).toBe(400)
-    expect(body).toEqual({ error: 'File tidak valid' })
+    expect(body).toEqual({ error: 'File tidak valid. Pilih file lain.' })
     expectNoStorageRootExposure(body)
   })
 })
