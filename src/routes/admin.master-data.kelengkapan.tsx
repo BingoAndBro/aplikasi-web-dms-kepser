@@ -1,10 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
-  AdminNotice,
+  adminContentWideClassName,
+  adminDialogBodyClassName,
+  adminDialogCancelButtonClassName,
+  adminDialogContentClassName,
+  adminDialogFooterClassName,
+  adminDialogHeaderClassName,
+  adminDialogSubmitButtonClassName,
+  adminFormFieldClassName,
+  adminFormLabelClassName,
+  AdminConfirmationDialog,
   AdminPageHeader,
-  AdminPanel,
-  AdminStepCard,
+  useAdminFormLeaveGuard,
 } from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
@@ -13,7 +21,7 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { FileCheck, Plus, Edit2, Trash2, CheckCircle2, Circle, Lock } from 'lucide-react'
+import { Check, ClipboardList, Edit2, FileCheck, FileText, Plus, ShieldCheck, Trash2, UsersRound } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { normalizeKelengkapanName } from '#/lib/kelengkapan-validation'
@@ -29,6 +37,9 @@ import type {
 export const Route = createFileRoute('/admin/master-data/kelengkapan')({
   component: KelengkapanPage,
 })
+
+const kelengkapanSelectClassName =
+  'h-9 w-full min-w-0 rounded-[14px] border border-[#E6C99A] bg-[#FFFEFB] px-3 text-sm font-semibold text-black shadow-none outline-none transition placeholder:text-[#8A8A8A] hover:border-[#FF5A00] focus:border-[#FF5A00] focus:ring-2 focus:ring-[#FF5A00]/20 disabled:cursor-not-allowed disabled:bg-[#F7F3EC] disabled:text-[#8B8B8B]'
 
 function getErrorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback
@@ -97,6 +108,8 @@ function KelengkapanPage() {
   const [formJenisId, setFormJenisId] = useState('')
   const [formKategoriId, setFormKategoriId] = useState('')
   const [formDetailId, setFormDetailId] = useState('')
+  const [formInitialSnapshot, setFormInitialSnapshot] = useState<string | null>(null)
+  const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
 
   // Chain complete (leaf node) when:
   // - Kategori selected + kategori tidak punya Detail children (leaf node), OR
@@ -187,8 +200,27 @@ function KelengkapanPage() {
   }
 
   const filteredByRole = (isKetuaTim: boolean) => items.filter(k => k.is_ketua_tim === isKetuaTim)
+  const currentFormSnapshot = JSON.stringify({
+    isKetuaTim: formIsKetuaTim,
+    namaDokumen: formNamaDokumen,
+    required: formRequired,
+    jenisId: formJenisId,
+    kategoriId: formKategoriId,
+    detailId: formDetailId,
+  })
+  const isModalDirty = modalOpen && !saving && formInitialSnapshot !== null && currentFormSnapshot !== formInitialSnapshot
+
+  useAdminFormLeaveGuard(isModalDirty)
 
   function openCreate(isKetua: boolean) {
+    const snapshot = JSON.stringify({
+      isKetuaTim: isKetua,
+      namaDokumen: '',
+      required: true,
+      jenisId: filterJenis,
+      kategoriId: filterKategori,
+      detailId: filterDetail,
+    })
     setEditing(null)
     setFormIsKetuaTim(isKetua)
     setFormNamaDokumen('')
@@ -196,11 +228,20 @@ function KelengkapanPage() {
     setFormJenisId(filterJenis)
     setFormKategoriId(filterKategori)
     setFormDetailId(filterDetail)
+    setFormInitialSnapshot(snapshot)
     setError('')
     setModalOpen(true)
   }
 
   function openEdit(item: KelengkapanRow) {
+    const snapshot = JSON.stringify({
+      isKetuaTim: item.is_ketua_tim,
+      namaDokumen: item.nama_dokumen,
+      required: item.required,
+      jenisId: item.jenis_permintaan_id ?? '',
+      kategoriId: item.kategori_permintaan_id ?? '',
+      detailId: item.detail_permintaan_id ?? '',
+    })
     setEditing(item)
     setFormIsKetuaTim(item.is_ketua_tim)
     setFormNamaDokumen(item.nama_dokumen)
@@ -208,8 +249,22 @@ function KelengkapanPage() {
     setFormJenisId(item.jenis_permintaan_id ?? '')
     setFormKategoriId(item.kategori_permintaan_id ?? '')
     setFormDetailId(item.detail_permintaan_id ?? '')
+    setFormInitialSnapshot(snapshot)
     setError('')
     setModalOpen(true)
+  }
+  function closeModal() {
+    setModalOpen(false)
+    setUnsavedConfirmOpen(false)
+    setFormInitialSnapshot(null)
+  }
+  function requestCloseModal() {
+    if (saving) return
+    if (isModalDirty) {
+      setUnsavedConfirmOpen(true)
+      return
+    }
+    closeModal()
   }
 
   async function handleSave() {
@@ -275,116 +330,161 @@ function KelengkapanPage() {
     } finally { setSaving(false) }
   }
 
+  function resetFilters() {
+    setFilterFungsi('')
+    setFilterKegiatan('')
+    setFilterJenis('')
+    setFilterKategori('')
+    setFilterDetail('')
+    setKegiatans([])
+    setKategoriList([])
+    setDetailList([])
+    setItems([])
+  }
+
+  const activeChainLabel = getChainLabel(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList)
+  const ketuaItems = filteredByRole(true)
+  const anggotaItems = filteredByRole(false)
+
   return (
-    <PageLayout>
-      <div className="space-y-6">
+    <PageLayout className="bg-[#FFF9F1] px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+      <div className="space-y-5">
         <AdminPageHeader
+          className={adminContentWideClassName + ' pt-1'}
           eyebrow={<><FileCheck size={12} /><span>Admin Sistem</span><span>/</span><span>Kelengkapan Dokumen</span></>}
           title="Kelengkapan Dokumen"
-          description="Workspace konfigurasi staged: pilih Fungsi, Kegiatan, Jenis Permintaan, Kategori, lalu Detail atau leaf sebelum mengubah Konfigurasi Aktif."
+          description="Atur dokumen wajib/opsional berdasarkan fungsi, kegiatan, dan rantai permintaan untuk halaman Ajukan Dokumen."
         />
 
-        <AdminNotice>
-          Konfigurasi ini mengatur syarat dokumen untuk Ketua Tim dan Anggota. Semantik API dan payload kelengkapan tetap sama; halaman ini hanya memperjelas konteks konfigurasi.
-        </AdminNotice>
-
         {successMsg && (
-          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className={adminContentWideClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
             {successMsg}
           </div>
         )}
 
-        {/* Langkah 1: Fungsi & Kegiatan */}
-        <AdminStepCard
-          step={1}
-          title="Pilih Fungsi dan Kegiatan"
-          description="Kelengkapan tersimpan untuk kegiatan. Satu kegiatan dapat memiliki konfigurasi berbeda per chain permintaan."
-          active={!filterKegiatan}
-          complete={Boolean(filterFungsi && filterKegiatan)}
-        >
-          <div className="flex flex-wrap gap-3">
-            <select value={filterFungsi} onChange={e => { setFilterFungsi(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih fungsi untuk kelengkapan"
-              className="h-10 min-w-[180px] rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
-              <option value="">Pilih Fungsi</option>
-              {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
-            </select>
-            {filterFungsi && (
-              <select value={filterKegiatan} onChange={e => { setFilterKegiatan(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih kegiatan untuk kelengkapan"
-                className="h-10 min-w-[220px] rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
-                <option value="">Pilih Kegiatan</option>
-                {kegiatans.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-              </select>
-            )}
+        <section className={adminContentWideClassName + ' overflow-hidden rounded-[18px] border border-[#E8C990] bg-white shadow-[0_3px_14px_rgba(120,70,20,0.05)]'}>
+          <div className="flex items-start justify-between gap-4 border-b border-[#E8C990] px-5 py-3">
+            <div>
+              <h2 className="text-sm font-extrabold text-[#2A1608]">Pilih Konteks Kelengkapan</h2>
+              <p className="mt-0.5 text-xs font-medium text-[#07346A]">
+                Tentukan fungsi, kegiatan, dan rantai permintaan sampai pilihan terakhir.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetFilters}
+              className="h-8 rounded-md border-[#DCE6F0] bg-white px-4 text-xs font-bold text-[#173A68] shadow-[0_2px_6px_rgba(15,23,42,0.06)] hover:border-[#FF5A00] hover:bg-[#FFF6EC] hover:text-[#FF5A00]"
+            >
+              Reset
+            </Button>
           </div>
-        </AdminStepCard>
 
-        {/* Langkah 2: Chain - hanya tampil kalau kegiatan dipilih */}
-        {filterKegiatan && (
-          <AdminStepCard
-            step={2}
-            title="Pilih Jenis Permintaan, Kategori, dan Detail/leaf"
-            description="Kelengkapan baru ditampilkan setelah konteks mencapai leaf. Jika kategori tidak memiliki detail, kategori menjadi leaf."
-            active={!chainComplete}
-            complete={Boolean(chainComplete)}
-          >
-            <div className="flex flex-wrap gap-3">
-              <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih jenis permintaan untuk kelengkapan"
-                className="h-10 min-w-[180px] rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
-                <option value="">Pilih Jenis Permintaan</option>
-                {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
-              </select>
-              {filterJenis && (
+          <div className="grid gap-x-8 gap-y-5 px-5 pb-4 pt-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,480px)_minmax(0,480px)] xl:gap-x-[13.5rem]">
+            <div className="space-y-5">
+              <KelengkapanGroupBadge number={1} label="Konteks Kegiatan" />
+              <KelengkapanSelectField label="Fungsi" required>
+                <select value={filterFungsi} onChange={e => { setFilterFungsi(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih fungsi untuk kelengkapan"
+                  className={kelengkapanSelectClassName}>
+                  <option value="">Pilih Fungsi</option>
+                  {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
+                </select>
+              </KelengkapanSelectField>
+
+              <KelengkapanSelectField label="Kegiatan" required>
+                <select value={filterKegiatan} onChange={e => { setFilterKegiatan(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih kegiatan untuk kelengkapan"
+                  disabled={!filterFungsi}
+                  className={kelengkapanSelectClassName}>
+                  <option value="">{filterFungsi ? 'Pilih Kegiatan' : 'Pilih Fungsi dulu'}</option>
+                  {kegiatans.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                </select>
+              </KelengkapanSelectField>
+            </div>
+
+            <div className="space-y-5">
+              <KelengkapanGroupBadge number={2} label="Rantai Permintaan" />
+              <KelengkapanSelectField label="Jenis Permintaan" required>
+                <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih jenis permintaan untuk kelengkapan"
+                  disabled={!filterKegiatan}
+                  className={kelengkapanSelectClassName}>
+                  <option value="">{filterKegiatan ? 'Pilih Jenis Permintaan' : 'Pilih Kegiatan dulu'}</option>
+                  {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
+                </select>
+              </KelengkapanSelectField>
+
+              <KelengkapanSelectField label="Kategori Permintaan" required>
                 <select value={filterKategori} onChange={e => { setFilterKategori(e.target.value); setFilterDetail('') }} aria-label="Pilih kategori untuk kelengkapan"
-                  className="h-10 min-w-[200px] rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
-                  <option value="">Pilih Kategori</option>
+                  disabled={!filterJenis}
+                  className={kelengkapanSelectClassName}>
+                  <option value="">{filterJenis ? 'Pilih Kategori Permintaan' : 'Pilih Jenis dulu'}</option>
                   {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
                 </select>
-              )}
-              {filterKategori && detailList.length > 0 && (
+              </KelengkapanSelectField>
+
+              <KelengkapanSelectField label="Detail Permintaan" required>
                 <select value={filterDetail} onChange={e => setFilterDetail(e.target.value)} aria-label="Pilih detail untuk kelengkapan"
-                  className="h-10 min-w-[200px] rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
-                  <option value="">Pilih Detail (opsional)</option>
+                  disabled={!filterKategori || detailList.length === 0}
+                  className={kelengkapanSelectClassName}>
+                  <option value="">{filterKategori && detailList.length === 0 ? 'Kategori ini menjadi leaf' : filterKategori ? 'Pilih Detail Permintaan' : 'Pilih Kategori dulu'}</option>
                   {detailList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
                 </select>
-              )}
+              </KelengkapanSelectField>
             </div>
-          </AdminStepCard>
-        )}
+          </div>
+        </section>
 
         {/* Kelengkapan section - hanya tampil kalau chain complete */}
         {filterKegiatan && chainComplete && (
           loading ? (
             <LoadingState variant="list" label="Memuat konfigurasi kelengkapan" />
           ) : (
-            <AdminPanel className="space-y-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-700/70">Konfigurasi Aktif</p>
-                <h2 className="mt-1 font-headline text-xl font-extrabold text-zinc-950">
-                  {getChainLabel(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList)}
-                </h2>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-600">
-                  Tambahkan item WAJIB atau OPSIONAL secara terpisah untuk Ketua Tim dan Anggota.
-                </p>
+            <div className={adminContentWideClassName + ' space-y-5'}>
+              <div className="flex flex-col gap-4 rounded-[18px] border border-[#EFE3D2] bg-white px-5 py-5 shadow-[0_2px_10px_rgba(80,54,20,0.04)] lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#071A3A]">
+                    <Check size={15} className="text-[#00A88F]" />
+                    Konfigurasi Aktif
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-extrabold text-black">
+                    {getChainParts(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList).map((part, index, parts) => (
+                      <span key={part + index} className="contents">
+                        <span>{part}</span>
+                        {index < parts.length - 1 && <span className="text-[#B4A89A]">{'>'}</span>}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-[#07346A]">
+                    Kelengkapan ini akan digunakan pada Ajukan Dokumen sesuai peran pengguna pada kegiatan.
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <KelengkapanMetric label="Leaf terpilih" />
+                  <KelengkapanMetric label={`Ketua Tim: ${ketuaItems.length}`} />
+                  <KelengkapanMetric label={`Anggota: ${anggotaItems.length}`} />
+                </div>
               </div>
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <KelengkapanSection
                   title="Kelengkapan Ketua Tim"
-                  items={filteredByRole(true)}
+                  description="Dokumen wajib dan opsional untuk peran Ketua Tim."
+                  items={ketuaItems}
                   onAdd={() => openCreate(true)}
                   onEdit={openEdit}
                   onDelete={setDeleteTarget}
-                  chainLabel={getChainLabel(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList)}
+                  accent="orange"
                 />
                 <KelengkapanSection
                   title="Kelengkapan Anggota"
-                  items={filteredByRole(false)}
+                  description="Dokumen wajib dan opsional untuk peran Anggota."
+                  items={anggotaItems}
                   onAdd={() => openCreate(false)}
                   onEdit={openEdit}
                   onDelete={setDeleteTarget}
-                  chainLabel={getChainLabel(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList)}
+                  accent="teal"
                 />
               </div>
-            </AdminPanel>
+            </div>
           )
         )}
 
@@ -392,11 +492,11 @@ function KelengkapanPage() {
         {filterKegiatan && !chainComplete && !loading && (
           <EmptyState
             title="Selesaikan chain untuk melihat kelengkapan"
-            icon={<Lock size={18} />}
+            icon={<FileCheck size={18} />}
             description={(
               <>
-              Pilih Jenis{filterJenis ? ' dan Kategori' : ''}{detailList.length > 0 ? ' (dan Detail jika ada)' : ''} untuk mencapai leaf node.
-              {detailList.length > 0 ? ` Kategori "${kategoriList.find(k => k.id === filterKategori)?.nama}" punya ${detailList.length} detail.` : ''}
+              Pilih Jenis Permintaan, Kategori Permintaan, dan Detail Permintaan secara berurutan.
+              {filterKategori && detailList.length === 0 ? ' Kategori yang dipilih tidak memiliki detail, sehingga sudah menjadi leaf.' : ''}
               </>
             )}
           />
@@ -411,65 +511,73 @@ function KelengkapanPage() {
         )}
       </div>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Item Kelengkapan' : 'Tambah Item Kelengkapan'}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+      <Dialog open={modalOpen} onOpenChange={open => open ? setModalOpen(true) : requestCloseModal()}>
+        <DialogContent className={adminDialogContentClassName + ' sm:max-w-[560px]'}>
+          <DialogHeader className={adminDialogHeaderClassName}>
+            <DialogTitle>{editing ? `Edit Kelengkapan ${formIsKetuaTim ? 'Ketua Tim' : 'Anggota'}` : `Tambah Kelengkapan ${formIsKetuaTim ? 'Ketua Tim' : 'Anggota'}`}</DialogTitle>
+          </DialogHeader>
+          <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
-            <div className="space-y-1.5">
-              <Label>Nama Dokumen <span className="text-error">*</span></Label>
-              <Input value={formNamaDokumen} onChange={e => setFormNamaDokumen(e.target.value)} placeholder="Contoh: Laporan Pertanggungjawaban" maxLength={255} />
+            <div className="rounded-[14px] border border-[#DDE7F2] bg-[#F8FBFF] px-4 py-4 shadow-[0_2px_8px_rgba(15,23,42,0.10)]">
+              <div className="grid gap-2 text-sm font-bold text-[#071A3A] sm:grid-cols-[64px_1fr]">
+                <span className="text-[#35527A]">Konteks:</span>
+                <span>{activeChainLabel}</span>
+                <span className="text-[#35527A]">Untuk:</span>
+                <span className="text-[#FF4F00]">{formIsKetuaTim ? 'Ketua Tim' : 'Anggota'}</span>
+              </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Jenis Permintaan</Label>
-              <select value={formJenisId} onChange={e => { setFormJenisId(e.target.value); setFormKategoriId(''); setFormDetailId('') }} aria-label="Pilih jenis permintaan untuk item kelengkapan"
-                className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
-                <option value="">Semua jenis</option>
-                {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
-              </select>
+              <Label className={adminFormLabelClassName}>Nama Dokumen <span className="text-error">*</span></Label>
+              <Input value={formNamaDokumen} onChange={e => setFormNamaDokumen(e.target.value)} placeholder="Contoh: Surat Tugas" maxLength={255} className={adminFormFieldClassName + ' h-12'} />
             </div>
-            {formJenisId && (
-              <div className="space-y-1.5">
-                <Label>Kategori</Label>
-                <select value={formKategoriId} onChange={e => { setFormKategoriId(e.target.value); setFormDetailId('') }} aria-label="Pilih kategori untuk item kelengkapan"
-                  className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
-                  <option value="">Semua kategori</option>
-                  {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-                </select>
+            <div>
+              <Label className={adminFormLabelClassName}>Status Kelengkapan <span className="text-error">*</span></Label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <RequirementCard
+                  selected={formRequired}
+                  title="Wajib"
+                  description="Harus dilampirkan"
+                  onClick={() => setFormRequired(true)}
+                />
+                <RequirementCard
+                  selected={!formRequired}
+                  title="Opsional"
+                  description="Boleh tidak dilampirkan"
+                  onClick={() => setFormRequired(false)}
+                />
               </div>
-            )}
-            {formKategoriId && detailList.length > 0 && (
-              <div className="space-y-1.5">
-                <Label>Detail (Opsional)</Label>
-                <select value={formDetailId} onChange={e => setFormDetailId(e.target.value)} aria-label="Pilih detail untuk item kelengkapan"
-                  className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
-                  <option value="">Tanpa detail</option>
-                  {detailList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
-                </select>
-              </div>
-            )}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={formRequired} onChange={e => setFormRequired(e.target.checked)} className="w-4 h-4 accent-primary" />
-              <span className="text-xs font-medium text-on-surface">Wajib (Required)</span>
-            </label>
+            </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setModalOpen(false)} variant="outline" size="sm">Batal</Button>
-            <Button onClick={handleSave} disabled={saving} size="sm">{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button onClick={requestCloseModal} variant="outline" className={adminDialogCancelButtonClassName}>Batal</Button>
+            <Button onClick={handleSave} disabled={saving} className={adminDialogSubmitButtonClassName}>{saving ? 'Menyimpan...' : 'Simpan'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Hapus Item Kelengkapan?</DialogTitle></DialogHeader>
-          <p className="text-sm text-on-surface-variant">Dokumen <strong className="text-on-surface">{deleteTarget?.nama_dokumen}</strong> akan dihapus dari kelengkapan.</p>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setDeleteTarget(null)} variant="outline" size="sm">Batal</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving} size="sm">{saving ? 'Menghapus...' : 'Hapus'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={unsavedConfirmOpen}
+        onOpenChange={setUnsavedConfirmOpen}
+        title="Keluar dari form?"
+        tone="warning"
+        cancelLabel="Lanjut Edit"
+        confirmLabel="Ya, Keluar"
+        onCancel={() => setUnsavedConfirmOpen(false)}
+        onConfirm={closeModal}
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </AdminConfirmationDialog>
+
+      <AdminConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={open => !open && setDeleteTarget(null)}
+        title="Hapus Item Kelengkapan?"
+        confirmLabel={saving ? 'Menghapus...' : 'Hapus'}
+        onConfirm={handleDelete}
+        loading={saving}
+      >
+        Dokumen <strong className="text-[#071A3A]">{deleteTarget?.nama_dokumen}</strong> akan dihapus dari kelengkapan.
+      </AdminConfirmationDialog>
     </PageLayout>
   )
 }
@@ -478,54 +586,156 @@ function getChainLabel(
   fungsiId: string, kegiatanId: string, jenisId: string, kategoriId: string, detailId: string,
   fungsis: FungsiRow[], kegiatans: KegiatanRow[], jenisList: JenisRow[], kategoriList: KategoriRow[], detailList: DetailRow[]
 ): string {
-  const parts = []
+  return getChainParts(fungsiId, kegiatanId, jenisId, kategoriId, detailId, fungsis, kegiatans, jenisList, kategoriList, detailList).join(' > ')
+}
+
+function getChainParts(
+  fungsiId: string, kegiatanId: string, jenisId: string, kategoriId: string, detailId: string,
+  fungsis: FungsiRow[], kegiatans: KegiatanRow[], jenisList: JenisRow[], kategoriList: KategoriRow[], detailList: DetailRow[]
+): string[] {
+  const parts: string[] = []
   if (fungsiId) { const f = fungsis.find(f => f.id === fungsiId); if (f) parts.push(f.nama) }
   if (kegiatanId) { const k = kegiatans.find(k => k.id === kegiatanId); if (k) parts.push(k.nama) }
   if (jenisId) { const j = jenisList.find(j => j.id === jenisId); if (j) parts.push(j.nama) }
   if (kategoriId) { const k = kategoriList.find(k => k.id === kategoriId); if (k) parts.push(k.nama) }
   if (detailId) { const d = detailList.find(d => d.id === detailId); if (d) parts.push(d.nama) }
-  return parts.join(' / ')
+  return parts
 }
 
-function KelengkapanSection({ title, items, onAdd, onEdit, onDelete, chainLabel }: {
+function KelengkapanSelectField({ label, required, children }: {
+  label: string
+  required?: boolean
+  children: ReactNode
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#173A68]">
+        {label} {required && <span className="text-[#FF1F00]">*</span>}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+function KelengkapanGroupBadge({ number, label }: { number: number; label: string }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-md border border-[#FFD8B8] bg-[#FFF7EF] px-2.5 py-1.5 text-xs font-extrabold text-[#FF4F00]">
+      <span className="flex size-5 items-center justify-center rounded-md bg-[#FF6500] text-[11px] font-black text-white">
+        {number}
+      </span>
+      {label}
+    </div>
+  )
+}
+
+function KelengkapanMetric({ label }: { label: string }) {
+  return (
+    <span className="rounded-md border border-[#E8EEF5] bg-[#F8FBFF] px-3 py-1.5 text-[11px] font-bold text-[#173A68]">
+      {label}
+    </span>
+  )
+}
+
+function RequirementCard({ selected, title, description, onClick }: {
+  selected: boolean
   title: string
+  description: string
+  onClick: () => void
+}) {
+  const selectedClassName = title === 'Opsional'
+    ? 'border-[#FF5A00] bg-[#FFF7EF] text-[#FF4F00] shadow-[0_8px_20px_rgba(255,90,0,0.10)]'
+    : 'border-[#FF4F78] bg-[#FFF0F4] text-[#E80046] shadow-[0_8px_20px_rgba(255,79,120,0.10)]'
+  const selectedDescriptionClassName = title === 'Opsional' ? 'text-[#FF4F00]' : 'text-[#E80046]'
+  const selectedDotClassName = title === 'Opsional' ? 'border-[#FF5A00]' : 'border-[#FF2F6D]'
+  const selectedInnerDotClassName = title === 'Opsional' ? 'bg-[#FF5A00]' : 'bg-[#FF2F6D]'
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex min-h-[74px] items-center justify-between rounded-[18px] border px-4 py-3 text-left transition ${
+        selected
+          ? selectedClassName
+          : 'border-[#DCE6F0] bg-white text-[#071A3A] hover:border-[#FF5A00]'
+      }`}
+    >
+      <span>
+        <span className="block text-base font-extrabold">{title}</span>
+        <span className={`mt-0.5 block text-xs font-semibold ${selected ? selectedDescriptionClassName : 'text-[#35527A]'}`}>
+          {description}
+        </span>
+      </span>
+      <span className={`flex size-5 items-center justify-center rounded-full border-2 ${selected ? selectedDotClassName : 'border-[#B9C9DC]'}`}>
+        {selected && <span className={`size-2.5 rounded-full ${selectedInnerDotClassName}`} />}
+      </span>
+    </button>
+  )
+}
+
+function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete, accent }: {
+  title: string
+  description: string
   items: KelengkapanRow[]
   onAdd: () => void
   onEdit: (item: KelengkapanRow) => void
   onDelete: (item: KelengkapanRow) => void
-  chainLabel: string
+  accent: 'orange' | 'teal'
 }) {
+  const isKetua = accent === 'orange'
+  const iconClassName = isKetua
+    ? 'border-[#FFE0C6] bg-[#FFF8F1] text-[#FF5A00]'
+    : 'border-[#C8F4ED] bg-[#F2FFFC] text-[#00A88F]'
+  const countClassName = isKetua
+    ? 'bg-[#FFF4EC] text-[#FF3D00]'
+    : 'bg-[#EFFFFB] text-[#008C78]'
+  const borderClassName = isKetua ? 'border-[#EFDCC3]' : 'border-[#CFE6DF]'
+  const topClassName = isKetua ? 'bg-[#FF7A00]' : 'bg-[#00B9A6]'
+  const ItemIcon = isKetua ? FileText : ClipboardList
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-orange-100 bg-[#FFFDF9] px-6 py-4">
-        <div>
-          <h3 className="text-sm font-bold text-zinc-950">{title}</h3>
-          <p className="mt-0.5 text-[10px] font-semibold text-zinc-500">{chainLabel}</p>
+    <div className={`overflow-hidden rounded-[20px] border bg-[#FFFEFB] shadow-[0_2px_10px_rgba(80,54,20,0.04)] ${borderClassName}`}>
+      <div className={`h-0.5 ${topClassName}`} />
+      <div className="flex items-start justify-between gap-4 px-5 py-5">
+        <div className="flex min-w-0 gap-3">
+          <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${iconClassName}`}>
+            {isKetua ? <ShieldCheck size={17} /> : <UsersRound size={17} />}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-lg font-extrabold text-[#2A1608]">{title}</h3>
+            <p className="mt-0.5 text-xs font-medium text-[#07346A]">{description}</p>
+          </div>
         </div>
-        <Button onClick={onAdd} size="xs" variant="outline" className="gap-1"><Plus size={12} />Tambah</Button>
+        <span className={`rounded-md px-3 py-1.5 text-xs font-extrabold ${countClassName}`}>{items.length}</span>
       </div>
+
+      <div className="px-5 pb-4">
+        <Button
+          onClick={onAdd}
+          variant="outline"
+          className="h-10 w-full justify-center gap-2 rounded-[13px] border border-dashed border-[#E9C894] bg-[#FFFEFB] text-sm font-semibold text-[#8A4B00] hover:border-[#FF5A00] hover:bg-[#FFF6EC] hover:text-[#FF5A00]"
+        >
+          <Plus size={15} /> Tambah Dokumen {isKetua ? 'Ketua Tim' : 'Anggota'}
+        </Button>
+      </div>
+
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 gap-2 px-6">
-          <p className="text-xs text-zinc-500 text-center">Belum ada kelengkapan.</p>
-          <Button onClick={onAdd} size="xs" variant="ghost" className="gap-1"><Plus size={12} />Tambah item pertama</Button>
+        <div className="border-t border-[#EFEAE2] px-6 py-9 text-center">
+          <p className="text-xs font-medium text-[#6E7B8C]">Belum ada kelengkapan.</p>
         </div>
       ) : (
-        <div className="divide-y divide-orange-50">
+        <div className="divide-y divide-[#EFEAE2] border-t border-[#EFEAE2]">
           {items.map(item => (
-            <div key={item.id} className="group flex items-center gap-3 px-6 py-3 transition-colors hover:bg-orange-50/50">
+            <div key={item.id} className="group flex items-center gap-4 px-5 py-5 transition-colors hover:bg-[#FFF8F1]">
+              <ItemIcon size={16} className={`shrink-0 ${isKetua ? 'text-[#FF5A00]' : 'text-[#00A88F]'}`} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                {item.required ? <CheckCircle2 size={14} className="text-primary shrink-0" /> : <Circle size={14} className="text-outline shrink-0" />}
-                  <span className="truncate text-xs font-bold text-zinc-950">{item.nama_dokumen}</span>
-                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-black uppercase ${item.required ? 'bg-orange-100 text-orange-800' : 'bg-zinc-100 text-zinc-600'}`}>
-                    {item.required ? 'WAJIB' : 'OPSIONAL'}
-                  </span>
-                </div>
-                <p className="mt-1 text-[10px] font-semibold text-zinc-500">Format: mengikuti dokumen yang diunggah</p>
+                <span className="block truncate text-sm font-extrabold text-black">{item.nama_dokumen}</span>
               </div>
+              <span className={`shrink-0 rounded-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] ${item.required ? 'bg-[#FFEFF3] text-[#FF0050]' : 'border border-[#DCE6F0] bg-[#F8FBFF] text-[#5D7190]'}`}>
+                {item.required ? 'Wajib' : 'Opsional'}
+              </span>
               <div className="flex gap-1 shrink-0 transition-opacity">
-                <Button size="icon-xs" variant="ghost" onClick={() => onEdit(item)} aria-label={`Edit kelengkapan ${item.nama_dokumen}`}><Edit2 size={12} /></Button>
-                <Button size="icon-xs" variant="ghost" onClick={() => onDelete(item)} className="hover:text-error" aria-label={`Hapus kelengkapan ${item.nama_dokumen}`}><Trash2 size={12} /></Button>
+                <Button size="icon-xs" variant="ghost" onClick={() => onEdit(item)} className="text-black hover:text-[#FF5A00]" aria-label={`Edit kelengkapan ${item.nama_dokumen}`}><Edit2 size={14} /></Button>
+                <Button size="icon-xs" variant="ghost" onClick={() => onDelete(item)} className="text-black hover:text-error" aria-label={`Hapus kelengkapan ${item.nama_dokumen}`}><Trash2 size={14} /></Button>
               </div>
             </div>
           ))}

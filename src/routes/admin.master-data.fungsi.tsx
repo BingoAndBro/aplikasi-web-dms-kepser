@@ -1,9 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import {
+  adminContentCompactClassName,
+  AdminActionButtons,
+  AdminCountPill,
+  adminDialogBodyClassName,
+  adminDialogCancelButtonClassName,
+  adminDialogContentClassName,
+  adminDialogFooterClassName,
+  adminDialogHeaderClassName,
+  adminDialogSubmitButtonClassName,
+  adminFormFieldClassName,
+  adminFormLabelClassName,
+  adminPrimaryActionClassName,
+  adminPageContainerClassName,
+  adminTextareaClassName,
+  adminTableBodyClassName,
+  adminTableToolbarClassName,
+  AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
   AdminTableShell,
+  useAdminFormLeaveGuard,
 } from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
@@ -28,8 +46,6 @@ import { EmptyState } from '#/components/ui/EmptyState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import {
   Plus,
-  Edit2,
-  Trash2,
   Building2,
 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
@@ -57,6 +73,7 @@ function FungsiPage() {
   const [successMsg, setSuccessMsg] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
+  const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -82,9 +99,28 @@ function FungsiPage() {
     f.nama.toLowerCase().includes(search.toLowerCase()) ||
     (f.deskripsi ?? '').toLowerCase().includes(search.toLowerCase())
   )
+  const isModalDirty = modalOpen && !saving && (
+    editing
+      ? formNama !== editing.nama || formDeskripsi !== (editing.deskripsi ?? '')
+      : Boolean(formNama.trim() || formDeskripsi.trim())
+  )
+
+  useAdminFormLeaveGuard(isModalDirty)
 
   function openCreate() { setEditing(null); setFormNama(''); setFormDeskripsi(''); setError(''); setModalOpen(true) }
   function openEdit(item: FungsiRow) { setEditing(item); setFormNama(item.nama); setFormDeskripsi(item.deskripsi ?? ''); setError(''); setModalOpen(true) }
+  function closeModal() {
+    setModalOpen(false)
+    setUnsavedConfirmOpen(false)
+  }
+  function requestCloseModal() {
+    if (saving) return
+    if (isModalDirty) {
+      setUnsavedConfirmOpen(true)
+      return
+    }
+    closeModal()
+  }
 
   async function handleSave() {
     if (!formNama.trim()) { setError('Nama tidak boleh kosong'); return }
@@ -124,26 +160,29 @@ function FungsiPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className={adminPageContainerClassName}>
         <AdminPageHeader
-          eyebrow={<><Building2 size={12} /><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
+          className={adminContentCompactClassName}
+          icon={<Building2 />}
+          eyebrow={<><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
           title="Departemen Fungsi"
           description="Kelola struktur fungsi/departemen sebagai fondasi kegiatan dan konfigurasi dokumen."
-          actions={<Button onClick={openCreate} size="sm" className="gap-1.5"><Plus size={14} />Tambah Fungsi</Button>}
+          actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'}><Plus />Tambah Fungsi</Button>}
         />
 
         {successMsg && (
-          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className={adminContentCompactClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
             {successMsg}
           </div>
         )}
         <AdminSearchPanel
+          className={adminContentCompactClassName + ' ' + adminTableToolbarClassName}
           id="fungsi-search"
           label="Cari fungsi"
           value={search}
           onChange={setSearch}
           placeholder="Cari fungsi..."
-          resultText={`${filtered.length} dari ${items.length} fungsi`}
+          resultText={`Total ${filtered.length} Fungsi`}
         />
 
         {loading ? (
@@ -156,10 +195,10 @@ function FungsiPage() {
             action={<Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Fungsi</Button>}
           />
         ) : (
-          <AdminTableShell>
+          <AdminTableShell className={adminContentCompactClassName + ' ' + adminTableBodyClassName}>
             <Table>
               <TableHeader>
-                <TableRow className="bg-orange-50/70">
+                <TableRow>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>Deskripsi</TableHead>
@@ -174,13 +213,15 @@ function FungsiPage() {
                     <TableCell><span className="font-semibold text-sm text-on-surface">{item.nama}</span></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <span className="text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary rounded-lg">{item.jumlah_kegiatan ?? 0}</span>
+                      <AdminCountPill count={item.jumlah_kegiatan ?? 0} label="Kegiatan" />
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit fungsi ${item.nama}`}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus fungsi ${item.nama}`}><Trash2 size={14} /></Button>
-                      </div>
+                      <AdminActionButtons
+                        onEdit={() => openEdit(item)}
+                        onDelete={() => setDeleteTarget(item)}
+                        editLabel={`Edit fungsi ${item.nama}`}
+                        deleteLabel={`Hapus fungsi ${item.nama}`}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -190,40 +231,51 @@ function FungsiPage() {
         )}
       </div>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Fungsi' : 'Tambah Fungsi Baru'}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+      <Dialog open={modalOpen} onOpenChange={open => open ? setModalOpen(true) : requestCloseModal()}>
+        <DialogContent className={adminDialogContentClassName + ' sm:max-w-md'}>
+          <DialogHeader className={adminDialogHeaderClassName}><DialogTitle>{editing ? 'Edit Fungsi' : 'Tambah Fungsi Baru'}</DialogTitle></DialogHeader>
+          <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="space-y-1.5">
-              <Label htmlFor="fn">Nama Fungsi <span className="text-error">*</span></Label>
-              <Input id="fn" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: Sosial" maxLength={255} />
+              <Label className={adminFormLabelClassName} htmlFor="fn">Nama Fungsi <span className="text-error">*</span></Label>
+              <Input id="fn" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: Sosial" maxLength={255} className={adminFormFieldClassName} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="fd">Deskripsi</Label>
+              <Label className={adminFormLabelClassName} htmlFor="fd">Deskripsi</Label>
               <textarea id="fd" value={formDeskripsi} onChange={e => setFormDeskripsi(e.target.value)} placeholder="Deskripsi singkat..." rows={3} maxLength={500}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring/40 resize-none placeholder:text-outline/40" />
+                className={adminTextareaClassName} />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setModalOpen(false)} variant="outline" size="sm">Batal</Button>
-            <Button onClick={handleSave} disabled={saving} size="sm">{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button onClick={requestCloseModal} variant="outline" className={adminDialogCancelButtonClassName}>Batal</Button>
+            <Button onClick={handleSave} disabled={saving} className={adminDialogSubmitButtonClassName}>{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Hapus Fungsi?</DialogTitle></DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            Fungsi <strong className="text-on-surface">{deleteTarget?.nama}</strong> akan dihapus dari daftar fungsi.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setDeleteTarget(null)} variant="outline" size="sm">Batal</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving} size="sm">{saving ? 'Menghapus...' : 'Hapus'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={unsavedConfirmOpen}
+        onOpenChange={setUnsavedConfirmOpen}
+        title="Keluar dari form?"
+        tone="warning"
+        cancelLabel="Lanjut Edit"
+        confirmLabel="Ya, Keluar"
+        onCancel={() => setUnsavedConfirmOpen(false)}
+        onConfirm={closeModal}
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </AdminConfirmationDialog>
+
+      <AdminConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={open => !open && setDeleteTarget(null)}
+        title="Hapus Fungsi?"
+        confirmLabel={saving ? 'Menghapus...' : 'Hapus'}
+        onConfirm={handleDelete}
+        loading={saving}
+      >
+        Fungsi <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus dari daftar fungsi.
+      </AdminConfirmationDialog>
     </PageLayout>
   )
 }

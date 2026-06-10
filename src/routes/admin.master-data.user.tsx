@@ -2,11 +2,30 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState, useCallback } from 'react'
 import {
-  AdminNotice,
+  AdminFormSelect,
+  AdminFilterSelect,
+  adminDialogBodyClassName,
+  adminDialogCancelButtonClassName,
+  adminDialogContentClassName,
+  adminDialogDestructiveButtonClassName,
+  adminDialogFooterClassName,
+  adminDialogHeaderClassName,
+  adminDialogSubmitButtonClassName,
+  adminFormFieldClassName,
+  adminFormGridClassName,
+  adminFormLabelClassName,
+  adminFormSectionClassName,
+  adminFormSectionTitleClassName,
+  adminRoleCardClassName,
+  adminContentWideClassName,
+  adminPageContainerClassName,
+  adminPrimaryActionClassName,
+  adminTableBodyClassName,
+  AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
-  AdminSummaryCard,
   AdminTableShell,
+  useAdminFormLeaveGuard,
 } from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
@@ -21,6 +40,7 @@ import { Button } from '#/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -32,10 +52,10 @@ import { LoadingState } from '#/components/ui/LoadingState'
 import { RoleBadge } from '#/components/ui/RoleBadge'
 import {
   Edit2,
-  Trash2,
   UserPlus,
   Shield,
   RefreshCw,
+  KeyRound,
   UserCheck,
   UserX,
   Loader2,
@@ -56,7 +76,7 @@ export const Route = createFileRoute('/admin/master-data/user')({
 })
 
 // ---------------------------------------------------------------------------
-// Role badge colors
+// Role card colors
 // ---------------------------------------------------------------------------
 
 const ROLE_COLORS: Record<RoleName, string> = {
@@ -77,9 +97,109 @@ const ALL_ROLES: RoleName[] = [
   'ADMIN',
 ]
 
+const ROLE_HELP_TEXT: Record<RoleName, string> = {
+  PEGAWAI: 'Mengajukan dokumen dan melihat laporan pribadi.',
+  PPK: 'Memvalidasi dokumen sebelum persetujuan.',
+  BENDAHARA: 'Menyetujui pembayaran dokumen.',
+  KEPALA_SUB_BAGIAN_UMUM: 'Mengelola klasifikasi dan lifecycle arsip.',
+  PENANGGUNG_JAWAB_KINERJA: 'Melihat dashboard dan laporan metadata.',
+  ADMIN: 'Mengelola user dan data referensi sistem.',
+}
+
 function getAdminRoleLabel(role: RoleName) {
   return role === 'ADMIN' ? 'Admin Sistem' : ROLE_DISPLAY[role]
 }
+
+function AccountStatusSwitch({
+  isActive,
+  onChange,
+}: {
+  isActive: boolean
+  onChange: (nextActive: boolean) => void
+}) {
+  return (
+    <div
+      className="inline-flex h-10 w-fit items-center rounded-[15px] border border-[#E6CDA8] bg-white p-0.5 shadow-[0_1px_2px_rgba(91,58,0,0.04)]"
+      role="group"
+      aria-label="Status akun"
+    >
+      <button
+        type="button"
+        aria-pressed={isActive}
+        onClick={() => onChange(true)}
+        className={[
+          'h-8 rounded-[11px] px-4 text-sm font-extrabold transition-colors',
+          isActive
+            ? 'bg-[#C9F8E1] text-[#006B3A]'
+            : 'bg-transparent text-[#35527A] hover:bg-[#ECF8F2]',
+        ].join(' ')}
+      >
+        Aktif
+      </button>
+      <button
+        type="button"
+        aria-pressed={!isActive}
+        onClick={() => onChange(false)}
+        className={[
+          'h-8 rounded-[11px] px-4 text-sm font-extrabold transition-colors',
+          !isActive
+            ? 'bg-[#FFE4EA] text-[#B00032]'
+            : 'bg-transparent text-[#35527A] hover:bg-[#FFF1F4]',
+        ].join(' ')}
+      >
+        Nonaktif
+      </button>
+    </div>
+  )
+}
+
+function InactiveStatusConfirmationDialog({
+  open,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={nextOpen => !nextOpen && onCancel()}>
+      <DialogContent className={adminDialogContentClassName + ' sm:max-w-[480px]'}>
+        <div className="px-7 pb-6 pt-7">
+          <span className="flex size-14 items-center justify-center rounded-[14px] border border-rose-100 bg-rose-50 text-[#F00446]">
+            <UserX size={24} strokeWidth={2.2} />
+          </span>
+          <DialogTitle className="mt-5 text-xl font-extrabold tracking-tight text-[#071A3A]">
+            Konfirmasi Nonaktifkan User
+          </DialogTitle>
+          <div className="mt-4 rounded-[14px] border border-rose-100 bg-[#FFF7F8] px-4 py-4 text-sm font-semibold leading-6 text-[#071A3A]">
+            Menonaktifkan user akan memblokir akses login mereka. User tersebut tidak akan dapat masuk ke dalam sistem atau memproses dokumen di DMS sampai diaktifkan kembali.
+          </div>
+        </div>
+        <DialogFooter className={adminDialogFooterClassName}>
+          <Button
+            variant="outline"
+            className={adminDialogCancelButtonClassName}
+            onClick={onCancel}
+          >
+            Batalkan
+          </Button>
+          <Button
+            className={adminDialogDestructiveButtonClassName}
+            onClick={onConfirm}
+          >
+            Ya, Nonaktifkan
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+const userDialogContentClassName =
+  adminDialogContentClassName + ' flex max-h-[calc(100dvh-28px)] flex-col sm:max-w-[760px]'
+const userDialogBodyClassName =
+  adminDialogBodyClassName + ' min-h-0 flex-1 overflow-y-auto overscroll-contain py-5'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,6 +212,7 @@ interface CreateUserForm {
   nama_lengkap: string
   nip_nrp: string
   departemen: string
+  isActive: boolean
   roles: RoleName[]
 }
 
@@ -99,6 +220,7 @@ interface EditUserForm {
   nama_lengkap: string
   nip_nrp: string
   departemen: string
+  isActive: boolean
   roles: RoleName[]
 }
 
@@ -109,6 +231,7 @@ const INITIAL_CREATE_FORM: CreateUserForm = {
   nama_lengkap: '',
   nip_nrp: '',
   departemen: '',
+  isActive: true,
   roles: ['PEGAWAI'],
 }
 
@@ -116,6 +239,7 @@ const INITIAL_EDIT_FORM: EditUserForm = {
   nama_lengkap: '',
   nip_nrp: '',
   departemen: '',
+  isActive: true,
   roles: [],
 }
 
@@ -175,6 +299,20 @@ function sameEditForm(a: EditUserForm, b: EditUserForm) {
     a.nama_lengkap === b.nama_lengkap &&
     a.nip_nrp === b.nip_nrp &&
     a.departemen === b.departemen &&
+    a.isActive === b.isActive &&
+    sameRoles(a.roles, b.roles)
+  )
+}
+
+function sameCreateForm(a: CreateUserForm, b: CreateUserForm) {
+  return (
+    a.email === b.email &&
+    a.password === b.password &&
+    a.confirmPassword === b.confirmPassword &&
+    a.nama_lengkap === b.nama_lengkap &&
+    a.nip_nrp === b.nip_nrp &&
+    a.departemen === b.departemen &&
+    a.isActive === b.isActive &&
     sameRoles(a.roles, b.roles)
   )
 }
@@ -204,6 +342,9 @@ function MasterUserPage() {
   const [pendingChairmanReplace, setPendingChairmanReplace] = useState<{ kegiatan_id: string; kegiatan_nama: string; old_user: string } | null>(null)
   const [initialEditSnapshot, setInitialEditSnapshot] = useState<EditSnapshot | null>(null)
   const [showEditCancelConfirm, setShowEditCancelConfirm] = useState(false)
+  const [showCreateCancelConfirm, setShowCreateCancelConfirm] = useState(false)
+  const [showResetPasswordCancelConfirm, setShowResetPasswordCancelConfirm] = useState(false)
+  const [pendingStatusChange, setPendingStatusChange] = useState<'create' | 'edit' | null>(null)
 
   // Dialog states
   const [createOpen, setCreateOpen] = useState(false)
@@ -229,11 +370,19 @@ function MasterUserPage() {
     !sameEditForm(initialEditSnapshot.form, editForm) ||
     !sameAssignments(initialEditSnapshot.assignments, dialogChairmanAssignments)
   )
+  const isCreateDirty = createOpen && !actionLoading && (
+    !sameCreateForm(INITIAL_CREATE_FORM, createForm) ||
+    dialogChairmanAssignments.length > 0
+  )
+  const isResetPasswordDirty = resetPasswordOpen && !actionLoading && Boolean(
+    resetPassword || confirmResetPassword,
+  )
   const isEditingOwnAdminAccount = Boolean(
     selectedUser
     && currentUserId === selectedUser.id
     && initialEditSnapshot?.form.roles.includes('ADMIN'),
   )
+  useAdminFormLeaveGuard((isCreateDirty || isEditDirty || isResetPasswordDirty) && !actionLoading)
 
   // ---------------------------------------------------------------------------
   // Fetch users
@@ -324,10 +473,6 @@ function MasterUserPage() {
     return matchSearch && matchStatus && matchRole && matchKetuaTim
   })
 
-  const activeUsers = users.filter(user => user.isActive).length
-  const usedRoles = new Set(users.flatMap(user => user.roles)).size
-  const ketuaTimUsers = Object.values(chairmanAssignments).filter(assignments => assignments.length > 0).length
-
   // ---------------------------------------------------------------------------
   // Dialog handlers
   // ---------------------------------------------------------------------------
@@ -416,6 +561,10 @@ function MasterUserPage() {
       const existingChairman = findExistingChairman(kegiatanId)
 
       if (existingChairman && existingChairman.userId !== userId) {
+        if (userId === 'new-user') {
+          alert('Kegiatan ini sudah memiliki ketua tim. Buat user terlebih dahulu, lalu ganti penugasan dari form edit.')
+          return
+        }
         setPendingChairmanReplace({
           kegiatan_id: kegiatanId,
           kegiatan_nama: availableKegiatan.find(k => k.id === kegiatanId)?.nama ?? '',
@@ -463,6 +612,7 @@ function MasterUserPage() {
       nama_lengkap: user.metadata.nama_lengkap || '',
       nip_nrp: user.metadata.nip_nrp || '',
       departemen: user.metadata.departemen || '',
+      isActive: user.isActive,
       roles: [...user.roles],
     }
     setSelectedUser(user)
@@ -482,6 +632,29 @@ function MasterUserPage() {
     setAvailableKegiatan([])
     setCreateOpen(true)
     loadAvailableKegiatan()
+  }
+
+  const resetCreateDraft = (closeDialog: boolean) => {
+    setCreateForm(INITIAL_CREATE_FORM)
+    setDialogChairmanAssignments([])
+    setAvailableKegiatan([])
+    setPendingChairmanReplace(null)
+    setShowChairmanConfirm(false)
+    setShowCreateCancelConfirm(false)
+
+    if (closeDialog) {
+      setCreateOpen(false)
+      setSelectedUser(null)
+    }
+  }
+
+  const requestCloseCreate = () => {
+    if (actionLoading) return
+    if (isCreateDirty) {
+      setShowCreateCancelConfirm(true)
+      return
+    }
+    resetCreateDraft(true)
   }
 
   const resetEditDraft = async (closeDialog: boolean) => {
@@ -515,6 +688,30 @@ function MasterUserPage() {
       return
     }
     resetEditDraft(true)
+  }
+
+  const requestAccountStatusChange = (form: 'create' | 'edit', nextActive: boolean) => {
+    if (nextActive) {
+      if (form === 'create') {
+        setCreateForm(p => ({ ...p, isActive: true }))
+      } else {
+        setEditForm(p => ({ ...p, isActive: true }))
+      }
+      return
+    }
+
+    const isCurrentlyActive = form === 'create' ? createForm.isActive : editForm.isActive
+    if (!isCurrentlyActive) return
+    setPendingStatusChange(form)
+  }
+
+  const confirmInactiveStatusChange = () => {
+    if (pendingStatusChange === 'create') {
+      setCreateForm(p => ({ ...p, isActive: false }))
+    } else if (pendingStatusChange === 'edit') {
+      setEditForm(p => ({ ...p, isActive: false }))
+    }
+    setPendingStatusChange(null)
   }
 
   const persistChairmanAssignmentChanges = async (userId: string) => {
@@ -574,7 +771,25 @@ function MasterUserPage() {
     setSelectedUser(user)
     setResetPassword('')
     setConfirmResetPassword('')
+    setShowResetPasswordCancelConfirm(false)
     setResetPasswordOpen(true)
+  }
+
+  const closeResetPassword = () => {
+    setResetPasswordOpen(false)
+    setShowResetPasswordCancelConfirm(false)
+    setResetPassword('')
+    setConfirmResetPassword('')
+    setSelectedUser(null)
+  }
+
+  const requestCloseResetPassword = () => {
+    if (actionLoading) return
+    if (isResetPasswordDirty) {
+      setShowResetPasswordCancelConfirm(true)
+      return
+    }
+    closeResetPassword()
   }
 
   const openDeactivate = (user: UserWithRoles) => {
@@ -607,7 +822,7 @@ function MasterUserPage() {
 
     setActionLoading(true)
     try {
-      await apiMutation('/api/users/', {
+      const created = await apiMutation<{ user?: UserWithRoles }>('/api/users/', {
         method: 'POST',
         body: {
           email: createForm.email,
@@ -618,9 +833,29 @@ function MasterUserPage() {
           roles: createForm.roles,
         },
       })
+      const createdUserId = created.user?.id
+      if (createdUserId) {
+        if (!createForm.isActive) {
+          await apiMutation(`/api/users/${createdUserId}/deactivate`, {
+            method: 'POST',
+          })
+        }
+        for (const assignment of dialogChairmanAssignments) {
+          await apiMutation('/api/ketua-tim/', {
+            method: 'POST',
+            body: {
+              user_id: createdUserId,
+              kegiatan_id: assignment.kegiatan_id,
+            },
+          })
+        }
+      }
       setCreateOpen(false)
       setCreateForm(INITIAL_CREATE_FORM)
+      setDialogChairmanAssignments([])
+      setAvailableKegiatan([])
       await fetchUsers()
+      await fetchChairmanAssignments()
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -656,6 +891,11 @@ function MasterUserPage() {
       })
 
       await persistChairmanAssignmentChanges(selectedUser.id)
+      if (editForm.isActive !== selectedUser.isActive) {
+        await apiMutation(`/api/users/${selectedUser.id}/${editForm.isActive ? 'activate' : 'deactivate'}`, {
+          method: 'POST',
+        })
+      }
 
       setEditOpen(false)
       setSelectedUser(null)
@@ -804,99 +1044,66 @@ function MasterUserPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className={adminPageContainerClassName}>
         <AdminPageHeader
+          className={adminContentWideClassName}
+          icon={<Shield />}
           eyebrow={(
             <>
-              <Shield size={12} />
               <span>Admin Sistem</span>
               <span>/</span>
               <span>Master User</span>
             </>
           )}
           title="Master User"
-          description="Kelola akun, role, status aktif, reset password admin, dan penugasan Ketua Tim tanpa mengubah batas server/API."
+          description="Kelola akun, status, dan hak akses pengguna sistem."
           actions={(
-            <Button size="sm" className="gap-1.5" onClick={openCreate}>
-              <UserPlus size={14} />
+            <Button className={adminPrimaryActionClassName + ' gap-2'} onClick={openCreate}>
+              <UserPlus size={18} strokeWidth={2.5} />
               Tambah User
             </Button>
           )}
         />
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <AdminSummaryCard
-            label="Total User"
-            value={users.length}
-            helper="Seluruh akun yang terbaca dari API user."
-            icon={<Users size={20} />}
-            emphasis
-          />
-          <AdminSummaryCard
-            label="User Aktif"
-            value={activeUsers}
-            helper="Akun yang dapat login."
-            icon={<UserCheck size={20} />}
-          />
-          <AdminSummaryCard
-            label="Role Terpakai"
-            value={usedRoles}
-            helper="Jumlah role berbeda pada akun saat ini."
-            icon={<Shield size={20} />}
-          />
-          <AdminSummaryCard
-            label="Ketua Tim"
-            value={loadingChairmen ? '...' : ketuaTimUsers}
-            helper="User yang memimpin minimal satu kegiatan."
-            icon={<ClipboardList size={20} />}
-          />
-        </div>
-
-        <AdminNotice>
-          ADMIN adalah role konfigurasi sistem. Penugasan role di halaman ini tidak memindahkan otorisasi ke client; server/API tetap menjadi batas RBAC.
-        </AdminNotice>
-
         <AdminSearchPanel
+          className={adminContentWideClassName}
           id="admin-user-search"
           label="Cari user"
           value={search}
           onChange={setSearch}
           placeholder="Cari nama, email, atau NIP..."
-          resultText={`${filteredUsers.length} dari ${users.length} user`}
-          helperText="Filter ini hanya bekerja pada daftar user yang sudah dikembalikan API."
+          resultText={`Total ${filteredUsers.length} User`}
         >
-          <select
+          <AdminFilterSelect
             value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}
-            aria-label="Filter user berdasarkan status"
-            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
-          >
-            <option value="all">Semua Status</option>
-            <option value="aktif">Aktif</option>
-            <option value="nonaktif">Nonaktif</option>
-          </select>
-          <select
+            onChange={value => setFilterStatus(value as typeof filterStatus)}
+            ariaLabel="Filter user berdasarkan status"
+            options={[
+              { value: 'all', label: 'Semua Status' },
+              { value: 'aktif', label: 'Aktif' },
+              { value: 'nonaktif', label: 'Nonaktif' },
+            ]}
+          />
+          <AdminFilterSelect
             value={filterRole}
-            onChange={e => setFilterRole(e.target.value as typeof filterRole)}
-            aria-label="Filter user berdasarkan role"
-            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
-          >
-            <option value="all">Semua Role</option>
-            {ALL_ROLES.map(role => (
-              <option key={role} value={role}>{getAdminRoleLabel(role)}</option>
-            ))}
-          </select>
-          <select
+            onChange={value => setFilterRole(value as typeof filterRole)}
+            ariaLabel="Filter user berdasarkan role"
+            options={[
+              { value: 'all', label: 'Semua Role' },
+              ...ALL_ROLES.map(role => ({ value: role, label: getAdminRoleLabel(role) })),
+            ]}
+          />
+          <AdminFilterSelect
             value={filterKetuaTim}
-            onChange={e => setFilterKetuaTim(e.target.value as typeof filterKetuaTim)}
-            aria-label="Filter user berdasarkan penugasan Ketua Tim"
-            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
-          >
-            <option value="all">Semua Ketua Tim</option>
-            <option value="ketua">Ketua Tim</option>
-            <option value="bukan-ketua">Bukan Ketua Tim</option>
-          </select>
-          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading} aria-label="Muat ulang daftar user">
+            onChange={value => setFilterKetuaTim(value as typeof filterKetuaTim)}
+            ariaLabel="Filter user berdasarkan penugasan Ketua Tim"
+            options={[
+              { value: 'all', label: 'Semua Ketua Tim' },
+              { value: 'ketua', label: 'Ketua Tim' },
+              { value: 'bukan-ketua', label: 'Bukan Ketua Tim' },
+            ]}
+          />
+          <Button variant="outline" size="lg" className="h-11 rounded-xl px-4" onClick={fetchUsers} disabled={loading} aria-label="Muat ulang daftar user">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </Button>
         </AdminSearchPanel>
@@ -915,10 +1122,10 @@ function MasterUserPage() {
             action={<Button onClick={openCreate} size="sm" variant="outline">Tambah User</Button>}
           />
         ) : (
-        <AdminTableShell>
+        <AdminTableShell className={adminContentWideClassName + ' ' + adminTableBodyClassName}>
           <Table>
             <TableHeader>
-              <TableRow className="bg-orange-50/70">
+              <TableRow>
                 <TableHead className="w-12 text-center">No</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead className="text-center">Hak Akses</TableHead>
@@ -990,19 +1197,19 @@ function MasterUserPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
-                          <Edit2 size={14} />
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-[#FF4D00]" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
+                          <Edit2 size={20} strokeWidth={2.5} />
                         </Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
-                          <RefreshCw size={14} />
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-[#FF4D00]" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
+                          <KeyRound size={20} strokeWidth={2.5} />
                         </Button>
                         {user.isActive ? (
-                          <Button size="icon-xs" variant="ghost" onClick={() => openDeactivate(user)} className="hover:text-red-600" aria-label={`Nonaktifkan user ${user.metadata.nama_lengkap || user.email}`}>
-                            <UserX size={14} />
+                          <Button size="icon-lg" variant="ghost" onClick={() => openDeactivate(user)} className="size-9 rounded-xl text-black hover:bg-red-50 hover:text-red-600" aria-label={`Nonaktifkan user ${user.metadata.nama_lengkap || user.email}`}>
+                            <UserX size={20} strokeWidth={2.5} />
                           </Button>
                         ) : (
-                          <Button size="icon-xs" variant="ghost" onClick={() => openActivate(user)} className="hover:text-green-600" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
-                            <UserCheck size={14} />
+                          <Button size="icon-lg" variant="ghost" onClick={() => openActivate(user)} className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-[#FF4D00]" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
+                            <UserCheck size={20} strokeWidth={2.5} />
                           </Button>
                         )}
                       </div>
@@ -1022,68 +1229,89 @@ function MasterUserPage() {
       </div>
 
       {/* Create User Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setCreateOpen(true)
+            return
+          }
+          requestCloseCreate()
+        }}
+      >
+        <DialogContent className={userDialogContentClassName}>
+          <DialogHeader className={adminDialogHeaderClassName}>
             <DialogTitle>Tambah User Baru</DialogTitle>
+            <DialogDescription>
+              Buat akun pengguna baru dan atur hak aksesnya di sistem.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Email *</label>
-              <Input
-                type="email"
-                value={createForm.email}
-                onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="email@bps.go.id"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-on-surface mb-1 block">Password *</label>
-                <Input
-                  type="password"
-                  value={createForm.password}
-                  onChange={e => setCreateForm(p => ({ ...p, password: e.target.value }))}
-                  placeholder="Min 8 karakter"
-                />
+          <div className={userDialogBodyClassName}>
+            <section className={adminFormSectionClassName}>
+              <h3 className={adminFormSectionTitleClassName}>Identitas User</h3>
+              <div className={adminFormGridClassName}>
+                <div className="md:col-span-2">
+                  <label className={adminFormLabelClassName}>Email *</label>
+                  <Input
+                    type="email"
+                    value={createForm.email}
+                    onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="nama@bps.go.id"
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={adminFormLabelClassName}>Nama Lengkap *</label>
+                  <Input
+                    value={createForm.nama_lengkap}
+                    onChange={e => setCreateForm(p => ({ ...p, nama_lengkap: e.target.value }))}
+                    placeholder="Nama lengkap"
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+                <div>
+                  <label className={adminFormLabelClassName}>NIP/NRP *</label>
+                  <Input
+                    value={createForm.nip_nrp}
+                    onChange={e => setCreateForm(p => ({ ...p, nip_nrp: e.target.value }))}
+                    placeholder="1980..."
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+                <div>
+                  <label className={adminFormLabelClassName}>Departemen/Fungsi</label>
+                  <Input
+                    value={createForm.departemen}
+                    onChange={e => setCreateForm(p => ({ ...p, departemen: e.target.value }))}
+                    placeholder="Opsional"
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+                <div>
+                  <label className={adminFormLabelClassName}>Password Baru *</label>
+                  <Input
+                    type="password"
+                    value={createForm.password}
+                    onChange={e => setCreateForm(p => ({ ...p, password: e.target.value }))}
+                    placeholder="Min 8 karakter"
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+                <div>
+                  <label className={adminFormLabelClassName}>Konfirmasi Password *</label>
+                  <Input
+                    type="password"
+                    value={createForm.confirmPassword}
+                    onChange={e => setCreateForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                    placeholder="Ulangi password"
+                    className={adminFormFieldClassName}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-on-surface mb-1 block">Konfirmasi *</label>
-                <Input
-                  type="password"
-                  value={createForm.confirmPassword}
-                  onChange={e => setCreateForm(p => ({ ...p, confirmPassword: e.target.value }))}
-                  placeholder="Ulangi password"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Nama Lengkap *</label>
-              <Input
-                value={createForm.nama_lengkap}
-                onChange={e => setCreateForm(p => ({ ...p, nama_lengkap: e.target.value }))}
-                placeholder="Nama lengkap"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">NIP/NRP *</label>
-              <Input
-                value={createForm.nip_nrp}
-                onChange={e => setCreateForm(p => ({ ...p, nip_nrp: e.target.value }))}
-                placeholder="Numerik 8-20 karakter"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Departemen</label>
-              <Input
-                value={createForm.departemen}
-                onChange={e => setCreateForm(p => ({ ...p, departemen: e.target.value }))}
-                placeholder="Opsional"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-2 block">Hak Akses</label>
-              <div className="flex flex-wrap gap-2">
+            </section>
+            <section className={adminFormSectionClassName}>
+              <h3 className={adminFormSectionTitleClassName}>Hak Akses *</h3>
+              <div className="grid gap-3 md:grid-cols-3">
                 {ALL_ROLES.map(role => (
                   <button
                     key={role}
@@ -1091,29 +1319,88 @@ function MasterUserPage() {
                     aria-pressed={createForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'create')}
                     disabled={isRoleButtonDisabled(role, createForm.roles, 'create')}
-                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                    className={`${adminRoleCardClassName} ${
                       createForm.roles.includes(role)
-                        ? `${ROLE_COLORS[role]} border-current`
-                        : 'bg-white border-border text-outline hover:bg-muted'
+                        ? `${ROLE_COLORS[role]} border-current shadow-sm ring-1 ring-current/10`
+                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-orange-200 hover:bg-orange-50'
                     } ${isRoleButtonDisabled(role, createForm.roles, 'create') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {getAdminRoleLabel(role)}
-                    {role === 'PEGAWAI' && !createForm.roles.includes('ADMIN') && ' (wajib)'}
-                    {role === 'ADMIN' && ' (tunggal)'}
+                    <span className="block font-extrabold text-slate-900">{getAdminRoleLabel(role)}</span>
+                    <span className="mt-1 block text-[11px] font-medium leading-snug text-slate-600">
+                      {ROLE_HELP_TEXT[role]}
+                      {role === 'PEGAWAI' && !createForm.roles.includes('ADMIN') && ' Wajib untuk user non-admin.'}
+                      {role === 'ADMIN' && ' Role tunggal.'}
+                    </span>
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
+            <section className={adminFormSectionClassName}>
+              <div className="flex items-center justify-between">
+                <h3 className={adminFormSectionTitleClassName}>Penugasan Ketua Tim</h3>
+                <span className="text-[11px] font-bold text-slate-500">{dialogChairmanAssignments.length} kegiatan</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {dialogChairmanAssignments.map((c) => (
+                  <span key={c.id} className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-[#FFF8F1] px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[#FF4D00]">
+                    {c.kegiatan_nama}
+                    <button type="button" aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`} onClick={() => handleRemoveChairman(c.id, 'new-user')} className="ml-1 rounded-full p-0.5 text-[#FF4D00] hover:bg-[#FFE7D5] hover:text-[#B93800]">
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                {dialogChairmanAssignments.length === 0 && <span className="text-xs font-medium text-slate-500">Belum ada kegiatan</span>}
+              </div>
+              {availableKegiatan.length > 0 && (
+                <div className="max-w-[460px]">
+                  <AdminFormSelect
+                    value=""
+                    onChange={value => value && handleAddChairman(value, 'new-user')}
+                    ariaLabel="Tambah penugasan ketua tim untuk user baru"
+                    placeholder="Tambah kegiatan..."
+                    options={[
+                      { value: '', label: 'Tambah kegiatan...' },
+                      ...availableKegiatan.map(k => ({ value: k.id, label: k.nama })),
+                    ]}
+                  />
+                </div>
+              )}
+            </section>
+            <section className={adminFormSectionClassName}>
+              <h3 className={adminFormSectionTitleClassName}>Status Akun</h3>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <AccountStatusSwitch
+                  isActive={createForm.isActive}
+                  onChange={nextActive => requestAccountStatusChange('create', nextActive)}
+                />
+                <p className="text-sm font-semibold text-[#35527A]">
+                  User aktif dapat login menggunakan email BPS mereka.
+                </p>
+              </div>
+            </section>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Batal</Button>
-            <Button onClick={handleCreate} disabled={actionLoading}>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button variant="outline" className={adminDialogCancelButtonClassName} onClick={requestCloseCreate}>Batal</Button>
+            <Button className={adminDialogSubmitButtonClassName} onClick={handleCreate} disabled={actionLoading}>
               {actionLoading && <Loader2 size={14} className="animate-spin mr-1" />}
               Simpan
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AdminConfirmationDialog
+        open={showCreateCancelConfirm}
+        onOpenChange={setShowCreateCancelConfirm}
+        title="Keluar dari form?"
+        tone="warning"
+        cancelLabel="Lanjut Edit"
+        confirmLabel="Ya, Keluar"
+        onCancel={() => setShowCreateCancelConfirm(false)}
+        onConfirm={() => resetCreateDraft(true)}
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </AdminConfirmationDialog>
 
       {/* Edit User Dialog */}
       <Dialog
@@ -1126,42 +1413,53 @@ function MasterUserPage() {
           requestCloseEdit()
         }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className={userDialogContentClassName}>
+          <DialogHeader className={adminDialogHeaderClassName}>
             <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Perbarui identitas, hak akses, dan penugasan Ketua Tim untuk user ini.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Email</label>
-              <Input value={selectedUser?.email || ''} disabled className="bg-muted" />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Nama Lengkap *</label>
-              <Input
-                value={editForm.nama_lengkap}
-                onChange={e => setEditForm(p => ({ ...p, nama_lengkap: e.target.value }))}
-                placeholder="Nama lengkap"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">NIP/NRP *</label>
-              <Input
-                value={editForm.nip_nrp}
-                onChange={e => setEditForm(p => ({ ...p, nip_nrp: e.target.value }))}
-                placeholder="Numerik 8-20 karakter"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Departemen</label>
-              <Input
-                value={editForm.departemen}
-                onChange={e => setEditForm(p => ({ ...p, departemen: e.target.value }))}
-                placeholder="Opsional"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-2 block">Hak Akses</label>
-              <div className="flex flex-wrap gap-2">
+          <div className={userDialogBodyClassName}>
+            <section className={adminFormSectionClassName}>
+              <h3 className={adminFormSectionTitleClassName}>Identitas User</h3>
+              <div className={adminFormGridClassName}>
+                <div className="md:col-span-2">
+                  <label className={adminFormLabelClassName}>Email</label>
+                  <Input value={selectedUser?.email || ''} disabled className={adminFormFieldClassName + ' bg-slate-50 text-slate-500'} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={adminFormLabelClassName}>Nama Lengkap *</label>
+                  <Input
+                    value={editForm.nama_lengkap}
+                    onChange={e => setEditForm(p => ({ ...p, nama_lengkap: e.target.value }))}
+                    placeholder="Nama lengkap"
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+                <div>
+                  <label className={adminFormLabelClassName}>NIP/NRP *</label>
+                  <Input
+                    value={editForm.nip_nrp}
+                    onChange={e => setEditForm(p => ({ ...p, nip_nrp: e.target.value }))}
+                    placeholder="1980..."
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+                <div>
+                  <label className={adminFormLabelClassName}>Departemen/Fungsi</label>
+                  <Input
+                    value={editForm.departemen}
+                    onChange={e => setEditForm(p => ({ ...p, departemen: e.target.value }))}
+                    placeholder="Opsional"
+                    className={adminFormFieldClassName}
+                  />
+                </div>
+              </div>
+            </section>
+            <section className={adminFormSectionClassName}>
+              <h3 className={adminFormSectionTitleClassName}>Hak Akses *</h3>
+              <div className="grid gap-3 md:grid-cols-3">
                 {ALL_ROLES.map(role => (
                   <button
                     key={role}
@@ -1169,15 +1467,18 @@ function MasterUserPage() {
                     aria-pressed={editForm.roles.includes(role)}
                     onClick={() => toggleRole(role, 'edit')}
                     disabled={isRoleButtonDisabled(role, editForm.roles, 'edit')}
-                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                    className={`${adminRoleCardClassName} ${
                       editForm.roles.includes(role)
-                        ? `${ROLE_COLORS[role]} border-current`
-                        : 'bg-white border-border text-outline hover:bg-muted'
+                        ? `${ROLE_COLORS[role]} border-current shadow-sm ring-1 ring-current/10`
+                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-orange-200 hover:bg-orange-50'
                     } ${isRoleButtonDisabled(role, editForm.roles, 'edit') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {getAdminRoleLabel(role)}
-                    {role === 'PEGAWAI' && !editForm.roles.includes('ADMIN') && ' (wajib)'}
-                    {role === 'ADMIN' && ' (tunggal)'}
+                    <span className="block font-extrabold text-slate-900">{getAdminRoleLabel(role)}</span>
+                    <span className="mt-1 block text-[11px] font-medium leading-snug text-slate-600">
+                      {ROLE_HELP_TEXT[role]}
+                      {role === 'PEGAWAI' && !editForm.roles.includes('ADMIN') && ' Wajib untuk user non-admin.'}
+                      {role === 'ADMIN' && ' Role tunggal.'}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -1186,12 +1487,12 @@ function MasterUserPage() {
                   {SELF_ADMIN_REMOVAL_ERROR}
                 </p>
               )}
-            </div>
+            </section>
 
             {/* Section: Kegiatan sebagai Ketua Tim */}
-            <div className="space-y-3 border-t border-outline-variant/20 pt-4 mt-4">
+            <section className={adminFormSectionClassName}>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-on-surface">Kegiatan sebagai Ketua Tim</p>
+                <h3 className={adminFormSectionTitleClassName}>Penugasan Ketua Tim</h3>
                 <span className="text-[10px] text-on-surface-variant">
                   {dialogChairmanAssignments.length} kegiatan
                 </span>
@@ -1202,14 +1503,14 @@ function MasterUserPage() {
                 {dialogChairmanAssignments.map((c) => (
                   <span
                     key={c.id}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200"
+                    className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-[#FFF8F1] px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[#FF4D00]"
                   >
                     {c.kegiatan_nama}
                     <button
                       type="button"
                       aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`}
                       onClick={() => selectedUser && handleRemoveChairman(c.id, selectedUser.id)}
-                      className="ml-1 text-amber-600 hover:text-amber-900 hover:bg-amber-200 rounded-full p-0.5 cursor-pointer"
+                      className="ml-1 cursor-pointer rounded-full p-0.5 text-[#FF4D00] hover:bg-[#FFE7D5] hover:text-[#B93800]"
                     >
                       <X size={12} />
                     </button>
@@ -1222,28 +1523,40 @@ function MasterUserPage() {
 
               {/* Dropdown Tambah Kegiatan */}
               {availableKegiatan.length > 0 && (
-                <div className="flex gap-2">
-                  <select
-                    className="flex-1 px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                <div className="max-w-[460px]">
+                  <AdminFormSelect
                     value=""
-                    onChange={(e) => selectedUser && e.target.value && handleAddChairman(e.target.value, selectedUser.id)}
-                  >
-                    <option value="">Tambah kegiatan...</option>
-                    {availableKegiatan.map((k) => (
-                      <option key={k.id} value={k.id}>{k.nama}</option>
-                    ))}
-                  </select>
+                    onChange={value => selectedUser && value && handleAddChairman(value, selectedUser.id)}
+                    ariaLabel="Tambah kegiatan ketua tim"
+                    placeholder="Tambah kegiatan..."
+                    options={[
+                      { value: '', label: 'Tambah kegiatan...' },
+                      ...availableKegiatan.map(k => ({ value: k.id, label: k.nama })),
+                    ]}
+                  />
                 </div>
               )}
 
               <p className="text-[10px] text-on-surface-variant">
                 Satu kegiatan hanya boleh memiliki 1 ketua tim
               </p>
-            </div>
+            </section>
+            <section className={adminFormSectionClassName}>
+              <h3 className={adminFormSectionTitleClassName}>Status Akun</h3>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <AccountStatusSwitch
+                  isActive={editForm.isActive}
+                  onChange={nextActive => requestAccountStatusChange('edit', nextActive)}
+                />
+                <p className="text-sm font-semibold text-[#35527A]">
+                  User aktif dapat login menggunakan email BPS mereka.
+                </p>
+              </div>
+            </section>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={requestCloseEdit}>Batal</Button>
-            <Button onClick={handleEdit} disabled={actionLoading}>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button variant="outline" className={adminDialogCancelButtonClassName} onClick={requestCloseEdit}>Batal</Button>
+            <Button className={adminDialogSubmitButtonClassName} onClick={handleEdit} disabled={actionLoading}>
               {actionLoading && <Loader2 size={14} className="animate-spin mr-1" />}
               Simpan
             </Button>
@@ -1252,60 +1565,69 @@ function MasterUserPage() {
       </Dialog>
 
       {/* Edit Cancel Confirmation Dialog */}
-      <Dialog open={showEditCancelConfirm} onOpenChange={setShowEditCancelConfirm}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Batalkan Perubahan?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            Perubahan belum disimpan. Yakin ingin membatalkan?
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditCancelConfirm(false)}>
-              Lanjut Edit
-            </Button>
-            <Button variant="destructive" onClick={() => resetEditDraft(true)}>
-              Ya, Batalkan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={showEditCancelConfirm}
+        onOpenChange={setShowEditCancelConfirm}
+        title="Batalkan Perubahan?"
+        tone="warning"
+        icon={<X size={20} />}
+        cancelLabel="Lanjut Edit"
+        onCancel={() => setShowEditCancelConfirm(false)}
+        confirmLabel="Ya, Batalkan"
+        onConfirm={() => resetEditDraft(true)}
+      >
+        Perubahan belum disimpan. Yakin ingin membatalkan?
+      </AdminConfirmationDialog>
 
       {/* Reset Password Dialog */}
-      <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
+      <Dialog
+        open={resetPasswordOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setResetPasswordOpen(true)
+            return
+          }
+          requestCloseResetPassword()
+        }}
+      >
+        <DialogContent className={adminDialogContentClassName + ' sm:max-w-[560px]'}>
+          <DialogHeader className={adminDialogHeaderClassName}>
             <DialogTitle>Reset Password</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-on-surface-variant">
-              Reset password untuk user <strong className="text-on-surface">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong>
+          <div className={adminDialogBodyClassName}>
+            <p className="text-sm leading-6 text-[#071A3A]">
+              Reset password untuk user <strong>{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong>.
             </p>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Password Baru *</label>
-              <Input
-                type="password"
-                value={resetPassword}
-                onChange={e => setResetPassword(e.target.value)}
-                placeholder="Min 8 karakter"
-              />
+            <div className={adminFormGridClassName}>
+              <div>
+                <label className={adminFormLabelClassName}>Password Baru *</label>
+                <Input
+                  type="password"
+                  value={resetPassword}
+                  onChange={e => setResetPassword(e.target.value)}
+                  placeholder="Min 8 karakter"
+                  className={adminFormFieldClassName}
+                />
+                <p className="mt-2 text-xs font-medium text-[#6D82A0]">Minimal 8 karakter.</p>
+              </div>
+              <div>
+                <label className={adminFormLabelClassName}>Konfirmasi Password *</label>
+                <Input
+                  type="password"
+                  value={confirmResetPassword}
+                  onChange={e => setConfirmResetPassword(e.target.value)}
+                  placeholder="Ulangi password"
+                  className={adminFormFieldClassName}
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-on-surface mb-1 block">Konfirmasi Password *</label>
-              <Input
-                type="password"
-                value={confirmResetPassword}
-                onChange={e => setConfirmResetPassword(e.target.value)}
-                placeholder="Ulangi password"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="rounded-[20px] border border-orange-200 bg-[#FFF9F2] px-4 py-4 text-sm leading-6 text-[#071A3A]">
               Password akan langsung berlaku. User harus login dengan password baru.
             </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>Batal</Button>
-            <Button onClick={handleResetPassword} disabled={actionLoading}>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button variant="outline" className={adminDialogCancelButtonClassName} onClick={requestCloseResetPassword}>Batal</Button>
+            <Button className={adminDialogSubmitButtonClassName} onClick={handleResetPassword} disabled={actionLoading}>
               {actionLoading && <Loader2 size={14} className="animate-spin mr-1" />}
               Reset Password
             </Button>
@@ -1313,70 +1635,73 @@ function MasterUserPage() {
         </DialogContent>
       </Dialog>
 
+      <AdminConfirmationDialog
+        open={showResetPasswordCancelConfirm}
+        onOpenChange={setShowResetPasswordCancelConfirm}
+        title="Keluar dari form?"
+        tone="warning"
+        cancelLabel="Lanjut Edit"
+        confirmLabel="Ya, Keluar"
+        onCancel={() => setShowResetPasswordCancelConfirm(false)}
+        onConfirm={closeResetPassword}
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </AdminConfirmationDialog>
+
+      <InactiveStatusConfirmationDialog
+        open={pendingStatusChange !== null}
+        onCancel={() => setPendingStatusChange(null)}
+        onConfirm={confirmInactiveStatusChange}
+      />
+
       {/* Chairman Replace Confirmation Dialog */}
-      <Dialog open={showChairmanConfirm} onOpenChange={setShowChairmanConfirm}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Ganti Ketua Tim?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            Apakah Anda yakin ingin menunjuk user ini sebagai chairman kegiatan{" "}
-            <span className="font-semibold text-on-surface">{pendingChairmanReplace?.kegiatan_nama}</span>?
-            Ini akan menggantikan <span className="font-semibold text-on-surface">{pendingChairmanReplace?.old_user}</span>.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowChairmanConfirm(false)
-              setPendingChairmanReplace(null)
-            }}>
-              Batal
-            </Button>
-            <Button onClick={handleConfirmReplace} disabled={actionLoading}>
-              Ya, Ganti
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={showChairmanConfirm}
+        onOpenChange={setShowChairmanConfirm}
+        title="Ganti Ketua Tim?"
+        tone="info"
+        icon={<ClipboardList size={20} />}
+        confirmLabel="Ya, Ganti"
+        onConfirm={handleConfirmReplace}
+        loading={actionLoading}
+        onCancel={() => {
+          setShowChairmanConfirm(false)
+          setPendingChairmanReplace(null)
+        }}
+      >
+        Apakah Anda yakin ingin menunjuk user ini sebagai ketua tim kegiatan{' '}
+        <strong className="text-[#071A3A]">{pendingChairmanReplace?.kegiatan_nama}</strong>?
+        Ini akan menggantikan <strong className="text-[#071A3A]">{pendingChairmanReplace?.old_user}</strong>.
+      </AdminConfirmationDialog>
 
       {/* Deactivate Dialog */}
-      <Dialog open={deactivateOpen} onOpenChange={setDeactivateOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Nonaktifkan User?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            User <strong className="text-on-surface">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan dinonaktifkan.
-            User tidak akan bisa login lagi. Role user tetap tersimpan.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeactivateOpen(false)}>Batal</Button>
-            <Button variant="destructive" onClick={handleDeactivate} disabled={actionLoading}>
-              {actionLoading && <Loader2 size={14} className="animate-spin mr-1" />}
-              Nonaktifkan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={deactivateOpen}
+        onOpenChange={setDeactivateOpen}
+        title="Nonaktifkan User?"
+        icon={<UserX size={20} />}
+        confirmLabel={actionLoading ? 'Memproses...' : 'Nonaktifkan'}
+        onConfirm={handleDeactivate}
+        loading={actionLoading}
+      >
+        User <strong className="text-[#071A3A]">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan dinonaktifkan.
+        User tidak akan bisa login lagi. Role user tetap tersimpan.
+      </AdminConfirmationDialog>
 
       {/* Activate Dialog */}
-      <Dialog open={activateOpen} onOpenChange={setActivateOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Aktifkan User?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            User <strong className="text-on-surface">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan diaktifkan kembali.
-            User bisa login lagi.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setActivateOpen(false)}>Batal</Button>
-            <Button onClick={handleActivate} disabled={actionLoading}>
-              {actionLoading && <Loader2 size={14} className="animate-spin mr-1" />}
-              Aktifkan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={activateOpen}
+        onOpenChange={setActivateOpen}
+        title="Aktifkan User?"
+        tone="success"
+        icon={<UserCheck size={20} />}
+        confirmLabel={actionLoading ? 'Memproses...' : 'Aktifkan'}
+        onConfirm={handleActivate}
+        loading={actionLoading}
+      >
+        User <strong className="text-[#071A3A]">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan diaktifkan kembali.
+        User bisa login lagi.
+      </AdminConfirmationDialog>
     </PageLayout>
   )
 }

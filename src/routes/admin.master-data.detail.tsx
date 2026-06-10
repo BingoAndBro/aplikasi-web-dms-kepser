@@ -1,5 +1,30 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import {
+  AdminActionButtons,
+  AdminFilterSelect,
+  AdminFormSelect,
+  AdminRelationPill,
+  adminDialogBodyClassName,
+  adminDialogCancelButtonClassName,
+  adminDialogContentClassName,
+  adminDialogFooterClassName,
+  adminDialogHeaderClassName,
+  adminDialogSubmitButtonClassName,
+  adminFormFieldClassName,
+  adminFormLabelClassName,
+  adminPrimaryActionClassName,
+  adminContentStandardClassName,
+  adminPageContainerClassName,
+  adminTextareaClassName,
+  adminTableBodyClassName,
+  adminTableToolbarClassName,
+  AdminConfirmationDialog,
+  AdminPageHeader,
+  AdminSearchPanel,
+  AdminTableShell,
+  useAdminFormLeaveGuard,
+} from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
   Table,
@@ -21,9 +46,6 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import {
   Plus,
-  Edit2,
-  Trash2,
-  Search,
   Tag,
   ChevronRight,
 } from 'lucide-react'
@@ -57,6 +79,7 @@ function DetailPage() {
   const [formKategoriId, setFormKategoriId] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
+  const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
 
   useEffect(() => { fetchData(); fetchJenis(); fetchKategoriList() }, [])
 
@@ -109,6 +132,19 @@ function DetailPage() {
     return kategoriList.find(k => k.jenis_permintaan_id === jenisId)?.id ?? ''
   }
 
+  const createDefaultJenisId = getDefaultJenisId()
+  const createDefaultKategoriId = getDefaultKategoriId(createDefaultJenisId)
+  const editingJenisId = editing
+    ? (kategoriList.find(k => k.id === editing.kategori_permintaan_id)?.jenis_permintaan_id ?? '')
+    : ''
+  const isModalDirty = modalOpen && !saving && (
+    editing
+      ? formJenisId !== editingJenisId || formKategoriId !== editing.kategori_permintaan_id || formNama !== editing.nama || formDeskripsi !== (editing.deskripsi ?? '')
+      : Boolean(formNama.trim() || formDeskripsi.trim() || formJenisId !== createDefaultJenisId || formKategoriId !== createDefaultKategoriId)
+  )
+
+  useAdminFormLeaveGuard(isModalDirty)
+
   function openCreate() {
     setEditing(null)
     const nextJenisId = getDefaultJenisId()
@@ -128,6 +164,18 @@ function DetailPage() {
     setFormDeskripsi(item.deskripsi ?? '')
     setError('')
     setModalOpen(true)
+  }
+  function closeModal() {
+    setModalOpen(false)
+    setUnsavedConfirmOpen(false)
+  }
+  function requestCloseModal() {
+    if (saving) return
+    if (isModalDirty) {
+      setUnsavedConfirmOpen(true)
+      return
+    }
+    closeModal()
   }
 
   async function handleSave() {
@@ -177,8 +225,21 @@ function DetailPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className={adminPageContainerClassName}>
+        <AdminPageHeader
+          className={adminContentStandardClassName}
+          icon={<Tag />}
+          eyebrow={(
+            <>
+              <span>Admin / Master Data</span><ChevronRight size={10} />
+              <span>Detail Permintaan</span>
+            </>
+          )}
+          title="Detail Permintaan"
+          description="Kelola detail permintaan opsional untuk kategori dokumen."
+          actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'} disabled={jenisList.length === 0 || kategoriList.length === 0}><Plus />Tambah Detail</Button>}
+        />
+        <div className="hidden flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
               <Tag size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
@@ -191,32 +252,40 @@ function DetailPage() {
         </div>
 
         {successMsg && (
-          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className={adminContentStandardClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
             {successMsg}
           </div>
         )}
-        <div className="flex flex-wrap gap-3">
-          <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori('') }} aria-label="Filter detail berdasarkan jenis permintaan"
-            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px]">
-            <option value="">Semua Jenis</option>
-            {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
-          </select>
-          <select value={filterKategori} onChange={e => setFilterKategori(e.target.value)} disabled={!filterJenis} aria-label="Filter detail berdasarkan kategori"
-            className="bg-white border border-border rounded-lg px-3 py-2 text-xs font-medium text-on-surface focus:ring-1 focus:ring-ring/40 outline-none min-w-[160px] disabled:opacity-50">
-            <option value="">Semua Kategori</option>
-            {kategoriList.filter(k => !filterJenis || k.jenis_permintaan_id === filterJenis).map(k => (
-              <option key={k.id} value={k.id}>{k.nama}</option>
-            ))}
-          </select>
-          <div className="relative flex-1 max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" aria-label="Cari detail permintaan" placeholder="Cari detail..." value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
-            />
-          </div>
-        </div>
-
+        <AdminSearchPanel
+          className={adminContentStandardClassName + ' ' + adminTableToolbarClassName}
+          id="detail-search"
+          label="Cari detail permintaan"
+          value={search}
+          onChange={setSearch}
+          placeholder="Cari detail..."
+          resultText={`Total ${filtered.length} Detail`}
+        >
+          <AdminFilterSelect
+            value={filterJenis}
+            ariaLabel="Filter detail berdasarkan jenis permintaan"
+            onChange={value => { setFilterJenis(value); setFilterKategori('') }}
+            options={[
+              { value: '', label: 'Semua Jenis' },
+              ...jenisList.map(j => ({ value: j.id, label: j.nama })),
+            ]}
+          />
+          <AdminFilterSelect
+            value={filterKategori}
+            disabled={!filterJenis}
+            ariaLabel="Filter detail berdasarkan kategori"
+            placeholder="Pilih jenis terlebih dahulu"
+            onChange={setFilterKategori}
+            options={[
+              { value: '', label: filterJenis ? 'Semua Kategori' : 'Pilih jenis terlebih dahulu' },
+              ...kategoriList.filter(k => !filterJenis || k.jenis_permintaan_id === filterJenis).map(k => ({ value: k.id, label: k.nama })),
+            ]}
+          />
+        </AdminSearchPanel>
         {loading ? (
           <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
         ) : filtered.length === 0 ? (
@@ -229,10 +298,10 @@ function DetailPage() {
             {jenisList.length > 0 && kategoriList.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Detail</Button>}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-outline-variant/30 overflow-hidden shadow-sm">
+          <AdminTableShell className={adminContentStandardClassName + ' ' + adminTableBodyClassName}>
             <Table>
               <TableHeader>
-                <TableRow className="bg-surface-container-low/30">
+                <TableRow>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>Kategori Induk</TableHead>
@@ -246,75 +315,99 @@ function DetailPage() {
                   <TableRow key={item.id} className="group hover:bg-primary/5 transition-colors">
                     <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                     <TableCell><span className="font-semibold text-sm text-on-surface">{item.nama}</span></TableCell>
-                    <TableCell><span className="text-xs font-medium px-2 py-0.5 bg-surface-container-low rounded">{item.kategori_nama || '—'}</span></TableCell>
-                    <TableCell><span className="text-xs text-on-surface-variant">{item.jenis_nama || '—'}</span></TableCell>
+                    <TableCell><AdminRelationPill>{item.kategori_nama || '—'}</AdminRelationPill></TableCell>
+                    <TableCell><AdminRelationPill tone="blue">{item.jenis_nama || '—'}</AdminRelationPill></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit detail permintaan ${item.nama}`}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus detail permintaan ${item.nama}`}><Trash2 size={14} /></Button>
-                      </div>
+                      <AdminActionButtons
+                        onEdit={() => openEdit(item)}
+                        onDelete={() => setDeleteTarget(item)}
+                        editLabel={`Edit detail permintaan ${item.nama}`}
+                        deleteLabel={`Hapus detail permintaan ${item.nama}`}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </AdminTableShell>
         )}
       </div>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Detail Permintaan' : 'Tambah Detail Permintaan Baru'}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+      <Dialog open={modalOpen} onOpenChange={open => open ? setModalOpen(true) : requestCloseModal()}>
+        <DialogContent className={adminDialogContentClassName + ' sm:max-w-md'}>
+          <DialogHeader className={adminDialogHeaderClassName}><DialogTitle>{editing ? 'Edit Detail Permintaan' : 'Tambah Detail Permintaan Baru'}</DialogTitle></DialogHeader>
+          <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="space-y-1.5">
-              <Label>Jenis Permintaan <span className="text-error">*</span></Label>
-              <select value={formJenisId} onChange={e => { setFormJenisId(e.target.value); setFormKategoriId('') }} aria-label="Pilih jenis permintaan untuk detail"
-                className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none">
-                <option value="">Pilih jenis...</option>
-                {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
-              </select>
+              <Label className={adminFormLabelClassName}>Jenis Permintaan <span className="text-error">*</span></Label>
+              <AdminFormSelect
+                value={formJenisId}
+                onChange={value => { setFormJenisId(value); setFormKategoriId('') }}
+                ariaLabel="Pilih jenis permintaan untuk detail"
+                placeholder="Pilih jenis..."
+                options={[
+                  { value: '', label: 'Pilih jenis...' },
+                  ...jenisList.map(j => ({ value: j.id, label: j.nama })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label>Kategori Permintaan <span className="text-error">*</span></Label>
-              <select value={formKategoriId} onChange={e => setFormKategoriId(e.target.value)} disabled={!formJenisId} aria-label="Pilih kategori untuk detail"
-                className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs text-on-surface focus:ring-1 focus:ring-ring/40 outline-none disabled:opacity-50">
-                <option value="">Pilih kategori...</option>
-                {kategoriList.filter(k => !formJenisId || k.jenis_permintaan_id === formJenisId).map(k => (
-                  <option key={k.id} value={k.id}>{k.nama}</option>
-                ))}
-              </select>
+              <Label className={adminFormLabelClassName}>Kategori Permintaan <span className="text-error">*</span></Label>
+              <AdminFormSelect
+                value={formKategoriId}
+                onChange={setFormKategoriId}
+                disabled={!formJenisId}
+                ariaLabel="Pilih kategori untuk detail"
+                placeholder="Pilih kategori..."
+                options={[
+                  { value: '', label: 'Pilih kategori...' },
+                  ...kategoriList
+                    .filter(k => !formJenisId || k.jenis_permintaan_id === formJenisId)
+                    .map(k => ({ value: k.id, label: k.nama })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="dn">Nama Detail <span className="text-error">*</span></Label>
-              <Input id="dn" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: Translok Biasa" maxLength={255} />
+              <Label className={adminFormLabelClassName} htmlFor="dn">Nama Detail <span className="text-error">*</span></Label>
+              <Input id="dn" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: Translok Biasa" maxLength={255} className={adminFormFieldClassName} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="dd">Deskripsi</Label>
+              <Label className={adminFormLabelClassName} htmlFor="dd">Deskripsi</Label>
               <textarea id="dd" value={formDeskripsi} onChange={e => setFormDeskripsi(e.target.value)} placeholder="Deskripsi singkat..." rows={3} maxLength={500}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring/40 resize-none placeholder:text-outline/40" />
+                className={adminTextareaClassName} />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setModalOpen(false)} variant="outline" size="sm">Batal</Button>
-            <Button onClick={handleSave} disabled={saving} size="sm">{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button onClick={requestCloseModal} variant="outline" className={adminDialogCancelButtonClassName}>Batal</Button>
+            <Button onClick={handleSave} disabled={saving} className={adminDialogSubmitButtonClassName}>{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Hapus Detail?</DialogTitle></DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            Detail <strong className="text-on-surface">{deleteTarget?.nama}</strong> akan dihapus.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setDeleteTarget(null)} variant="outline" size="sm">Batal</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving} size="sm">{saving ? 'Menghapus...' : 'Hapus'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={unsavedConfirmOpen}
+        onOpenChange={setUnsavedConfirmOpen}
+        title="Keluar dari form?"
+        tone="warning"
+        cancelLabel="Lanjut Edit"
+        confirmLabel="Ya, Keluar"
+        onCancel={() => setUnsavedConfirmOpen(false)}
+        onConfirm={closeModal}
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </AdminConfirmationDialog>
+
+      <AdminConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={open => !open && setDeleteTarget(null)}
+        title="Hapus Detail?"
+        confirmLabel={saving ? 'Menghapus...' : 'Hapus'}
+        onConfirm={handleDelete}
+        loading={saving}
+      >
+        Detail <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus.
+      </AdminConfirmationDialog>
     </PageLayout>
   )
 }

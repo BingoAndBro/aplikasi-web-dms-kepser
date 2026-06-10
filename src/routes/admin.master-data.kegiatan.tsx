@@ -1,9 +1,29 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import {
+  AdminActionButtons,
+  AdminFilterSelect,
+  AdminFormSelect,
+  AdminRelationPill,
+  adminDialogBodyClassName,
+  adminDialogCancelButtonClassName,
+  adminDialogContentClassName,
+  adminDialogFooterClassName,
+  adminDialogHeaderClassName,
+  adminDialogSubmitButtonClassName,
+  adminFormFieldClassName,
+  adminFormLabelClassName,
+  adminPrimaryActionClassName,
+  adminContentStandardClassName,
+  adminPageContainerClassName,
+  adminTextareaClassName,
+  adminTableBodyClassName,
+  adminTableToolbarClassName,
+  AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
   AdminTableShell,
+  useAdminFormLeaveGuard,
 } from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
@@ -13,7 +33,7 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { Plus, Edit2, Trash2, ClipboardList } from 'lucide-react'
+import { Plus, ClipboardList } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import type { FungsiRow, KegiatanRow } from '#/lib/master-data/shared'
@@ -41,6 +61,7 @@ function KegiatanPage() {
   const [formFungsiId, setFormFungsiId] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
+  const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -61,9 +82,28 @@ function KegiatanPage() {
     const matchS = !search || k.nama.toLowerCase().includes(search.toLowerCase()) || (k.deskripsi ?? '').toLowerCase().includes(search.toLowerCase())
     return matchF && matchS
   })
+  const isModalDirty = modalOpen && !saving && (
+    editing
+      ? formFungsiId !== editing.fungsi_id || formNama !== editing.nama || formDeskripsi !== (editing.deskripsi ?? '')
+      : Boolean(formNama.trim() || formDeskripsi.trim() || formFungsiId !== (filterFungsi || (fungsis[0]?.id ?? '')))
+  )
+
+  useAdminFormLeaveGuard(isModalDirty)
 
   function openCreate() { setEditing(null); setFormFungsiId(filterFungsi || (fungsis[0]?.id ?? '')); setFormNama(''); setFormDeskripsi(''); setError(''); setModalOpen(true) }
   function openEdit(item: KegiatanRow) { setEditing(item); setFormFungsiId(item.fungsi_id); setFormNama(item.nama); setFormDeskripsi(item.deskripsi ?? ''); setError(''); setModalOpen(true) }
+  function closeModal() {
+    setModalOpen(false)
+    setUnsavedConfirmOpen(false)
+  }
+  function requestCloseModal() {
+    if (saving) return
+    if (isModalDirty) {
+      setUnsavedConfirmOpen(true)
+      return
+    }
+    closeModal()
+  }
 
   async function handleSave() {
     if (!formFungsiId) { setError('Pilih fungsi'); return }
@@ -108,33 +148,40 @@ function KegiatanPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className={adminPageContainerClassName}>
         <AdminPageHeader
-          eyebrow={<><ClipboardList size={12} /><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
+          className={adminContentStandardClassName}
+          icon={<ClipboardList />}
+          eyebrow={<><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
           title="Master Kegiatan"
           description="Kelola kegiatan di bawah fungsi/departemen yang menjadi dasar Ketua Tim dan konfigurasi dokumen."
-          actions={<Button onClick={openCreate} size="sm" className="gap-1.5" disabled={fungsis.length === 0}><Plus size={14} />Tambah Kegiatan</Button>}
+          actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'} disabled={fungsis.length === 0}><Plus />Tambah Kegiatan</Button>}
         />
 
         {successMsg && (
-          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className={adminContentStandardClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
             {successMsg}
           </div>
         )}
 
         <AdminSearchPanel
+          className={adminContentStandardClassName + ' ' + adminTableToolbarClassName}
           id="kegiatan-search"
           label="Cari kegiatan"
           value={search}
           onChange={setSearch}
           placeholder="Cari kegiatan..."
-          resultText={`${filtered.length} dari ${items.length} kegiatan`}
+          resultText={`Total ${filtered.length} Kegiatan`}
         >
-          <select value={filterFungsi} onChange={e => setFilterFungsi(e.target.value)} aria-label="Filter kegiatan berdasarkan fungsi"
-            className="h-10 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-800 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70">
-            <option value="">Semua Fungsi</option>
-            {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
-          </select>
+          <AdminFilterSelect
+            value={filterFungsi}
+            onChange={setFilterFungsi}
+            ariaLabel="Filter kegiatan berdasarkan fungsi"
+            options={[
+              { value: '', label: 'Semua Fungsi' },
+              ...fungsis.map(f => ({ value: f.id, label: f.nama })),
+            ]}
+          />
         </AdminSearchPanel>
 
         {loading ? (
@@ -147,10 +194,10 @@ function KegiatanPage() {
             action={fungsis.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kegiatan</Button>}
           />
         ) : (
-          <AdminTableShell>
+          <AdminTableShell className={adminContentStandardClassName + ' ' + adminTableBodyClassName}>
             <Table>
               <TableHeader>
-                <TableRow className="bg-orange-50/70">
+                <TableRow>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama Kegiatan</TableHead>
                   <TableHead>Fungsi</TableHead>
@@ -163,13 +210,15 @@ function KegiatanPage() {
                   <TableRow key={item.id} className="group hover:bg-primary/5 transition-colors">
                     <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                     <TableCell><span className="font-semibold text-sm text-on-surface">{item.nama}</span></TableCell>
-                    <TableCell><span className="text-xs font-medium px-2 py-0.5 bg-surface rounded-lg text-on-surface-variant">{item.fungsi_nama ?? '—'}</span></TableCell>
+                    <TableCell><AdminRelationPill>{item.fungsi_nama ?? '—'}</AdminRelationPill></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit kegiatan ${item.nama}`}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus kegiatan ${item.nama}`}><Trash2 size={14} /></Button>
-                      </div>
+                      <AdminActionButtons
+                        onEdit={() => openEdit(item)}
+                        onDelete={() => setDeleteTarget(item)}
+                        editLabel={`Edit kegiatan ${item.nama}`}
+                        deleteLabel={`Hapus kegiatan ${item.nama}`}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -179,48 +228,64 @@ function KegiatanPage() {
         )}
       </div>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+      <Dialog open={modalOpen} onOpenChange={open => open ? setModalOpen(true) : requestCloseModal()}>
+        <DialogContent className={adminDialogContentClassName + ' sm:max-w-md'}>
+          <DialogHeader className={adminDialogHeaderClassName}><DialogTitle>{editing ? 'Edit Kegiatan' : 'Tambah Kegiatan Baru'}</DialogTitle></DialogHeader>
+          <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="space-y-1.5">
-              <Label>Fungsi <span className="text-error">*</span></Label>
-              <select value={formFungsiId} onChange={e => setFormFungsiId(e.target.value)} aria-label="Pilih fungsi untuk kegiatan"
-                className="w-full bg-background border border-input rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-ring/40">
-                <option value="">Pilih Fungsi</option>
-                {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
-              </select>
+              <Label className={adminFormLabelClassName}>Fungsi <span className="text-error">*</span></Label>
+              <AdminFormSelect
+                value={formFungsiId}
+                onChange={setFormFungsiId}
+                ariaLabel="Pilih fungsi untuk kegiatan"
+                placeholder="Pilih Fungsi"
+                options={[
+                  { value: '', label: 'Pilih Fungsi' },
+                  ...fungsis.map(f => ({ value: f.id, label: f.nama })),
+                ]}
+              />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="kn">Nama Kegiatan <span className="text-error">*</span></Label>
-              <Input id="kn" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: SAKERNAS" maxLength={255} />
+              <Label className={adminFormLabelClassName} htmlFor="kn">Nama Kegiatan <span className="text-error">*</span></Label>
+              <Input id="kn" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: SAKERNAS" maxLength={255} className={adminFormFieldClassName} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="kd">Deskripsi</Label>
+              <Label className={adminFormLabelClassName} htmlFor="kd">Deskripsi</Label>
               <textarea id="kd" value={formDeskripsi} onChange={e => setFormDeskripsi(e.target.value)} placeholder="Deskripsi..." rows={3} maxLength={500}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring/40 resize-none placeholder:text-outline/40" />
+                className={adminTextareaClassName} />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setModalOpen(false)} variant="outline" size="sm">Batal</Button>
-            <Button onClick={handleSave} disabled={saving} size="sm">{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button onClick={requestCloseModal} variant="outline" className={adminDialogCancelButtonClassName}>Batal</Button>
+            <Button onClick={handleSave} disabled={saving} className={adminDialogSubmitButtonClassName}>{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Hapus Kegiatan?</DialogTitle></DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            Kegiatan <strong className="text-on-surface">{deleteTarget?.nama}</strong> akan dihapus dari daftar kegiatan.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setDeleteTarget(null)} variant="outline" size="sm">Batal</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving} size="sm">{saving ? 'Menghapus...' : 'Hapus'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={unsavedConfirmOpen}
+        onOpenChange={setUnsavedConfirmOpen}
+        title="Keluar dari form?"
+        tone="warning"
+        cancelLabel="Lanjut Edit"
+        confirmLabel="Ya, Keluar"
+        onCancel={() => setUnsavedConfirmOpen(false)}
+        onConfirm={closeModal}
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </AdminConfirmationDialog>
+
+      <AdminConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={open => !open && setDeleteTarget(null)}
+        title="Hapus Kegiatan?"
+        confirmLabel={saving ? 'Menghapus...' : 'Hapus'}
+        onConfirm={handleDelete}
+        loading={saving}
+      >
+        Kegiatan <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus dari daftar kegiatan.
+      </AdminConfirmationDialog>
     </PageLayout>
   )
 }

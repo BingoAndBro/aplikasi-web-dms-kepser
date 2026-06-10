@@ -1,6 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { AdminPageHeader, AdminSearchPanel, AdminTableShell } from '#/components/admin/AdminPagePrimitives'
+import {
+  AdminActionButtons,
+  adminContentCompactClassName,
+  adminDialogBodyClassName,
+  adminDialogCancelButtonClassName,
+  adminDialogContentClassName,
+  adminDialogFooterClassName,
+  adminDialogHeaderClassName,
+  adminDialogSubmitButtonClassName,
+  adminFormFieldClassName,
+  adminFormLabelClassName,
+  adminPrimaryActionClassName,
+  adminPageContainerClassName,
+  adminTextareaClassName,
+  adminTableBodyClassName,
+  adminTableToolbarClassName,
+  AdminConfirmationDialog,
+  AdminPageHeader,
+  AdminSearchPanel,
+  AdminTableShell,
+  useAdminFormLeaveGuard,
+} from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import {
   Table,
@@ -24,8 +45,6 @@ import { EmptyState } from '#/components/ui/EmptyState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import {
   Plus,
-  Edit2,
-  Trash2,
   Tag,
 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
@@ -56,6 +75,7 @@ function JenisDokumenPage() {
   const [successMsg, setSuccessMsg] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
+  const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
 
   useEffect(() => { fetchData() }, [])
 
@@ -71,9 +91,28 @@ function JenisDokumenPage() {
     f.nama.toLowerCase().includes(search.toLowerCase()) ||
     (f.deskripsi ?? '').toLowerCase().includes(search.toLowerCase())
   )
+  const isModalDirty = modalOpen && !saving && (
+    editing
+      ? formNama !== editing.nama || formDeskripsi !== (editing.deskripsi ?? '')
+      : Boolean(formNama.trim() || formDeskripsi.trim())
+  )
+
+  useAdminFormLeaveGuard(isModalDirty)
 
   function openCreate() { setEditing(null); setFormNama(''); setFormDeskripsi(''); setError(''); setModalOpen(true) }
   function openEdit(item: JenisDokumenRow) { setEditing(item); setFormNama(item.nama); setFormDeskripsi(item.deskripsi ?? ''); setError(''); setModalOpen(true) }
+  function closeModal() {
+    setModalOpen(false)
+    setUnsavedConfirmOpen(false)
+  }
+  function requestCloseModal() {
+    if (saving) return
+    if (isModalDirty) {
+      setUnsavedConfirmOpen(true)
+      return
+    }
+    closeModal()
+  }
 
   async function handleSave() {
     if (!formNama.trim()) { setError('Nama tidak boleh kosong'); return }
@@ -117,30 +156,32 @@ function JenisDokumenPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className={adminPageContainerClassName}>
         <AdminPageHeader
-          eyebrow={<><Tag size={12} /><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
+          className={adminContentCompactClassName}
+          icon={<Tag />}
+          eyebrow={<><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
           title="Jenis Dokumen"
           description="Kelola jenis dokumen untuk dokumen Non-Material seperti Rapat, Kunjungan, dan Pelatihan."
-          actions={<Button onClick={openCreate} size="sm" className="gap-1.5"><Plus size={14} />Tambah Jenis</Button>}
+          actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'}><Plus />Tambah Jenis</Button>}
         />
 
         {successMsg && (
-          <div className="bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium">
+          <div className={adminContentCompactClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
             {successMsg}
           </div>
         )}
-        <AdminSearchPanel id="jenis-dokumen-search" label="Cari jenis dokumen" value={search} onChange={setSearch} placeholder="Cari jenis..." resultText={`${filtered.length} dari ${items.length} jenis dokumen`} />
+        <AdminSearchPanel className={adminContentCompactClassName + ' ' + adminTableToolbarClassName} id="jenis-dokumen-search" label="Cari jenis dokumen" value={search} onChange={setSearch} placeholder="Cari jenis..." resultText={`Total ${filtered.length} Jenis`} />
 
         {loading ? (
           <LoadingState variant="list" label="Memuat jenis dokumen" />
         ) : filtered.length === 0 ? (
           <EmptyState title="Belum ada jenis dokumen" description="Tambahkan jenis dokumen pertama untuk dokumen Non-Material." icon={<Tag size={18} />} action={<Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Jenis</Button>} />
         ) : (
-          <AdminTableShell>
+          <AdminTableShell className={adminContentCompactClassName + ' ' + adminTableBodyClassName}>
             <Table>
               <TableHeader>
-                <TableRow className="bg-orange-50/70">
+                <TableRow>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>Deskripsi</TableHead>
@@ -154,10 +195,12 @@ function JenisDokumenPage() {
                     <TableCell><span className="font-semibold text-sm text-on-surface">{item.nama}</span></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
                     <TableCell className="text-center">
-                      <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-xs" variant="ghost" onClick={() => openEdit(item)} aria-label={`Edit jenis dokumen ${item.nama}`}><Edit2 size={14} /></Button>
-                        <Button size="icon-xs" variant="ghost" onClick={() => setDeleteTarget(item)} className="hover:text-error" aria-label={`Hapus jenis dokumen ${item.nama}`}><Trash2 size={14} /></Button>
-                      </div>
+                      <AdminActionButtons
+                        onEdit={() => openEdit(item)}
+                        onDelete={() => setDeleteTarget(item)}
+                        editLabel={`Edit jenis dokumen ${item.nama}`}
+                        deleteLabel={`Hapus jenis dokumen ${item.nama}`}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -167,40 +210,51 @@ function JenisDokumenPage() {
         )}
       </div>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? 'Edit Jenis Dokumen' : 'Tambah Jenis Dokumen Baru'}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+      <Dialog open={modalOpen} onOpenChange={open => open ? setModalOpen(true) : requestCloseModal()}>
+        <DialogContent className={adminDialogContentClassName + ' sm:max-w-md'}>
+          <DialogHeader className={adminDialogHeaderClassName}><DialogTitle>{editing ? 'Edit Jenis Dokumen' : 'Tambah Jenis Dokumen Baru'}</DialogTitle></DialogHeader>
+          <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="space-y-1.5">
-              <Label htmlFor="jd-nama">Nama Jenis <span className="text-error">*</span></Label>
-              <Input id="jd-nama" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: Rapat" maxLength={255} />
+              <Label className={adminFormLabelClassName} htmlFor="jd-nama">Nama Jenis <span className="text-error">*</span></Label>
+              <Input id="jd-nama" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: Rapat" maxLength={255} className={adminFormFieldClassName} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="jd-deskripsi">Deskripsi</Label>
+              <Label className={adminFormLabelClassName} htmlFor="jd-deskripsi">Deskripsi</Label>
               <textarea id="jd-deskripsi" value={formDeskripsi} onChange={e => setFormDeskripsi(e.target.value)} placeholder="Deskripsi singkat..." rows={3} maxLength={500}
-                className="w-full px-3 py-2 bg-background border border-input rounded-lg text-xs outline-none focus:ring-1 focus:ring-ring/40 resize-none placeholder:text-outline/40" />
+                className={adminTextareaClassName} />
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setModalOpen(false)} variant="outline" size="sm">Batal</Button>
-            <Button onClick={handleSave} disabled={saving} size="sm">{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
+          <DialogFooter className={adminDialogFooterClassName}>
+            <Button onClick={requestCloseModal} variant="outline" className={adminDialogCancelButtonClassName}>Batal</Button>
+            <Button onClick={handleSave} disabled={saving} className={adminDialogSubmitButtonClassName}>{saving ? 'Menyimpan...' : editing ? 'Simpan' : 'Tambah'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!deleteTarget} onOpenChange={v => !v && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Hapus Jenis Dokumen?</DialogTitle></DialogHeader>
-          <p className="text-sm text-on-surface-variant">
-            Jenis dokumen <strong className="text-on-surface">{deleteTarget?.nama}</strong> akan dihapus.
-          </p>
-          <DialogFooter className="gap-2">
-            <Button onClick={() => setDeleteTarget(null)} variant="outline" size="sm">Batal</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving} size="sm">{saving ? 'Menghapus...' : 'Hapus'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AdminConfirmationDialog
+        open={unsavedConfirmOpen}
+        onOpenChange={setUnsavedConfirmOpen}
+        title="Keluar dari form?"
+        tone="warning"
+        cancelLabel="Lanjut Edit"
+        confirmLabel="Ya, Keluar"
+        onCancel={() => setUnsavedConfirmOpen(false)}
+        onConfirm={closeModal}
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </AdminConfirmationDialog>
+
+      <AdminConfirmationDialog
+        open={!!deleteTarget}
+        onOpenChange={open => !open && setDeleteTarget(null)}
+        title="Hapus Jenis Dokumen?"
+        confirmLabel={saving ? 'Menghapus...' : 'Hapus'}
+        onConfirm={handleDelete}
+        loading={saving}
+      >
+        Jenis dokumen <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus.
+      </AdminConfirmationDialog>
     </PageLayout>
   )
 }
