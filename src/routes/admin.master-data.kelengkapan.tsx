@@ -11,6 +11,7 @@ import {
   adminFormFieldClassName,
   adminFormLabelClassName,
   AdminConfirmationDialog,
+  AdminFilterSelect,
   AdminPageHeader,
   useAdminFormLeaveGuard,
 } from '#/components/admin/AdminPagePrimitives'
@@ -37,9 +38,6 @@ import type {
 export const Route = createFileRoute('/admin/master-data/kelengkapan')({
   component: KelengkapanPage,
 })
-
-const kelengkapanSelectClassName =
-  'h-9 w-full min-w-0 rounded-[14px] border border-[#E6C99A] bg-[#FFFEFB] px-3 text-sm font-semibold text-black shadow-none outline-none transition placeholder:text-[#8A8A8A] hover:border-[#FF5A00] focus:border-[#FF5A00] focus:ring-2 focus:ring-[#FF5A00]/20 disabled:cursor-not-allowed disabled:bg-[#F7F3EC] disabled:text-[#8B8B8B]'
 
 function getErrorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback
@@ -82,6 +80,9 @@ function hasLoadedDuplicateKelengkapan(
     && normalizeKelengkapanName(item.nama_dokumen) === normalizedName
   )
 }
+
+const compactKelengkapanSelectClassName =
+  'w-full min-w-0 [&>button]:h-9 [&>button]:rounded-[18px] [&>button]:py-1.5 [&>button]:pl-4 [&>button]:pr-3 [&>button]:text-[13px] [&>button]:shadow-[0_2px_6px_rgba(15,23,42,0.05)] [&>div]:top-[calc(100%+4px)] [&>div]:z-50 [&>div]:max-h-56 [&>div]:overflow-y-auto [&>div]:rounded-xl [&>div_button]:px-4 [&>div_button]:py-2 [&>div_button]:text-[13px]'
 
 function KelengkapanPage() {
   const [fungsis, setFungsis] = useState<FungsiRow[]>([])
@@ -362,8 +363,8 @@ function KelengkapanPage() {
           </div>
         )}
 
-        <section className={adminContentWideClassName + ' overflow-hidden rounded-[18px] border border-[#E8C990] bg-white shadow-[0_3px_14px_rgba(120,70,20,0.05)]'}>
-          <div className="flex items-start justify-between gap-4 border-b border-[#E8C990] px-5 py-3">
+        <section className={adminContentWideClassName + ' overflow-visible rounded-[18px] border border-[#E8C990] bg-white shadow-[0_3px_14px_rgba(120,70,20,0.05)]'}>
+          <div className="flex items-start justify-between gap-4 border-b border-[#E8C990] px-4 py-2.5">
             <div>
               <h2 className="text-sm font-extrabold text-[#2A1608]">Pilih Konteks Kelengkapan</h2>
               <p className="mt-0.5 text-xs font-medium text-[#07346A]">
@@ -380,54 +381,79 @@ function KelengkapanPage() {
             </Button>
           </div>
 
-          <div className="grid gap-x-8 gap-y-5 px-5 pb-4 pt-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,480px)_minmax(0,480px)] xl:gap-x-[13.5rem]">
-            <div className="space-y-5">
+          <div className="grid gap-x-6 gap-y-4 px-4 pb-3 pt-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,480px)_minmax(0,480px)] xl:gap-x-20">
+            <div className="space-y-3">
               <KelengkapanGroupBadge number={1} label="Konteks Kegiatan" />
               <KelengkapanSelectField label="Fungsi" required>
-                <select value={filterFungsi} onChange={e => { setFilterFungsi(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih fungsi untuk kelengkapan"
-                  className={kelengkapanSelectClassName}>
-                  <option value="">Pilih Fungsi</option>
-                  {fungsis.map(f => <option key={f.id} value={f.id}>{f.nama}</option>)}
-                </select>
+                <AdminFilterSelect
+                  value={filterFungsi}
+                  onChange={value => { setFilterFungsi(value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+                  ariaLabel="Pilih fungsi untuk kelengkapan"
+                  className={compactKelengkapanSelectClassName}
+                  options={[
+                    { value: '', label: 'Pilih Fungsi' },
+                    ...fungsis.map(f => ({ value: f.id, label: f.nama })),
+                  ]}
+                />
               </KelengkapanSelectField>
 
               <KelengkapanSelectField label="Kegiatan" required>
-                <select value={filterKegiatan} onChange={e => { setFilterKegiatan(e.target.value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih kegiatan untuk kelengkapan"
+                <AdminFilterSelect
+                  value={filterKegiatan}
+                  onChange={value => { setFilterKegiatan(value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+                  ariaLabel="Pilih kegiatan untuk kelengkapan"
                   disabled={!filterFungsi}
-                  className={kelengkapanSelectClassName}>
-                  <option value="">{filterFungsi ? 'Pilih Kegiatan' : 'Pilih Fungsi dulu'}</option>
-                  {kegiatans.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-                </select>
+                  className={compactKelengkapanSelectClassName}
+                  options={[
+                    { value: '', label: filterFungsi ? 'Pilih Kegiatan' : 'Pilih Fungsi dulu' },
+                    ...kegiatans.map(k => ({ value: k.id, label: k.nama })),
+                  ]}
+                />
               </KelengkapanSelectField>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-3">
               <KelengkapanGroupBadge number={2} label="Rantai Permintaan" />
               <KelengkapanSelectField label="Jenis Permintaan" required>
-                <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setFilterKategori(''); setFilterDetail('') }} aria-label="Pilih jenis permintaan untuk kelengkapan"
+                <AdminFilterSelect
+                  value={filterJenis}
+                  onChange={value => { setFilterJenis(value); setFilterKategori(''); setFilterDetail('') }}
+                  ariaLabel="Pilih jenis permintaan untuk kelengkapan"
                   disabled={!filterKegiatan}
-                  className={kelengkapanSelectClassName}>
-                  <option value="">{filterKegiatan ? 'Pilih Jenis Permintaan' : 'Pilih Kegiatan dulu'}</option>
-                  {jenisList.map(j => <option key={j.id} value={j.id}>{j.nama}</option>)}
-                </select>
+                  className={compactKelengkapanSelectClassName}
+                  options={[
+                    { value: '', label: filterKegiatan ? 'Pilih Jenis Permintaan' : 'Pilih Kegiatan dulu' },
+                    ...jenisList.map(j => ({ value: j.id, label: j.nama })),
+                  ]}
+                />
               </KelengkapanSelectField>
 
               <KelengkapanSelectField label="Kategori Permintaan" required>
-                <select value={filterKategori} onChange={e => { setFilterKategori(e.target.value); setFilterDetail('') }} aria-label="Pilih kategori untuk kelengkapan"
+                <AdminFilterSelect
+                  value={filterKategori}
+                  onChange={value => { setFilterKategori(value); setFilterDetail('') }}
+                  ariaLabel="Pilih kategori untuk kelengkapan"
                   disabled={!filterJenis}
-                  className={kelengkapanSelectClassName}>
-                  <option value="">{filterJenis ? 'Pilih Kategori Permintaan' : 'Pilih Jenis dulu'}</option>
-                  {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-                </select>
+                  className={compactKelengkapanSelectClassName}
+                  options={[
+                    { value: '', label: filterJenis ? 'Pilih Kategori Permintaan' : 'Pilih Jenis dulu' },
+                    ...kategoriList.map(k => ({ value: k.id, label: k.nama })),
+                  ]}
+                />
               </KelengkapanSelectField>
 
               <KelengkapanSelectField label="Detail Permintaan" required>
-                <select value={filterDetail} onChange={e => setFilterDetail(e.target.value)} aria-label="Pilih detail untuk kelengkapan"
+                <AdminFilterSelect
+                  value={filterDetail}
+                  onChange={setFilterDetail}
+                  ariaLabel="Pilih detail untuk kelengkapan"
                   disabled={!filterKategori || detailList.length === 0}
-                  className={kelengkapanSelectClassName}>
-                  <option value="">{filterKategori && detailList.length === 0 ? 'Kategori ini menjadi leaf' : filterKategori ? 'Pilih Detail Permintaan' : 'Pilih Kategori dulu'}</option>
-                  {detailList.map(d => <option key={d.id} value={d.id}>{d.nama}</option>)}
-                </select>
+                  className={compactKelengkapanSelectClassName}
+                  options={[
+                    { value: '', label: filterKategori && detailList.length === 0 ? 'Kategori ini menjadi leaf' : filterKategori ? 'Pilih Detail Permintaan' : 'Pilih Kategori dulu' },
+                    ...detailList.map(d => ({ value: d.id, label: d.nama })),
+                  ]}
+                />
               </KelengkapanSelectField>
             </div>
           </div>
@@ -608,18 +634,18 @@ function KelengkapanSelectField({ label, required, children }: {
   children: ReactNode
 }) {
   return (
-    <label className="block min-w-0">
-      <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#173A68]">
+    <div className="block min-w-0">
+      <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#173A68]">
         {label} {required && <span className="text-[#FF1F00]">*</span>}
       </span>
       {children}
-    </label>
+    </div>
   )
 }
 
 function KelengkapanGroupBadge({ number, label }: { number: number; label: string }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-md border border-[#FFD8B8] bg-[#FFF7EF] px-2.5 py-1.5 text-xs font-extrabold text-[#FF4F00]">
+    <div className="inline-flex items-center gap-2 rounded-md border border-[#FFD8B8] bg-[#FFF7EF] px-2 py-1 text-[11px] font-extrabold text-[#FF4F00]">
       <span className="flex size-5 items-center justify-center rounded-md bg-[#FF6500] text-[11px] font-black text-white">
         {number}
       </span>
