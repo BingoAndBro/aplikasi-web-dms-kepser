@@ -32,6 +32,7 @@ import {
   TableCell,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ export const Route = createFileRoute('/admin/master-data/jenis-dokumen')({
 })
 
 function JenisDokumenPage() {
+  const { showToast } = useAppToast()
   const [items, setItems] = useState<JenisDokumenRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -72,7 +74,6 @@ function JenisDokumenPage() {
   const [deleteTarget, setDeleteTarget] = useState<JenisDokumenRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
   const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
@@ -130,11 +131,16 @@ function JenisDokumenPage() {
         })
       }
       setModalOpen(false)
-      setSuccessMsg(editing ? 'Jenis dokumen berhasil diperbarui.' : 'Jenis dokumen berhasil ditambahkan.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: editing ? 'Jenis dokumen berhasil diperbarui.' : 'Jenis dokumen berhasil ditambahkan.',
+        variant: 'success',
+      })
       fetchData()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal menyimpan')
+      const message = err instanceof ApiError ? err.message : 'Gagal menyimpan'
+      setError(message)
+      showToast({ title: 'Gagal', description: message, variant: 'error' })
     } finally { setSaving(false) }
   }
 
@@ -146,11 +152,18 @@ function JenisDokumenPage() {
         method: 'DELETE',
       })
       setDeleteTarget(null)
-      setSuccessMsg('Jenis dokumen berhasil dihapus.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: 'Jenis dokumen berhasil dihapus.',
+        variant: 'success',
+      })
       fetchData()
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Gagal menghapus jenis dokumen')
+      showToast({
+        title: 'Gagal',
+        description: err instanceof ApiError ? err.message : 'Gagal menghapus jenis dokumen',
+        variant: 'error',
+      })
     } finally { setSaving(false) }
   }
 
@@ -166,11 +179,6 @@ function JenisDokumenPage() {
           actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'}><Plus />Tambah Jenis</Button>}
         />
 
-        {successMsg && (
-          <div className={adminContentCompactClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
-            {successMsg}
-          </div>
-        )}
         <AdminSearchPanel className={adminContentCompactClassName + ' ' + adminTableToolbarClassName} id="jenis-dokumen-search" label="Cari jenis dokumen" value={search} onChange={setSearch} placeholder="Cari jenis..." resultText={`Total ${filtered.length} Jenis`} />
 
         {loading ? (

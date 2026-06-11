@@ -25,6 +25,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Eye, Download, Upload, Trash2, X, Loader2, FileText, AlertCircle } from 'lucide-react'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
   downloadFromApi,
   fetchFileBlobWithSignedUrl,
@@ -90,6 +91,7 @@ export function AttachmentViewer({
   onUpload,
   onRefresh,
 }: AttachmentViewerProps) {
+  const { showToast } = useAppToast()
   // State untuk preview modal
   const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -186,6 +188,11 @@ export function AttachmentViewer({
       const signedUrlResult = await getSignedUrlFromApi(apiPath)
       if (signedUrlResult.error) {
         setPreviewError(signedUrlResult.error)
+        showToast({
+          title: 'Gagal',
+          description: 'Preview tidak dapat dibuka. Coba lagi.',
+          variant: 'error',
+        })
         setPreviewLoading(false)
         return
       }
@@ -193,6 +200,11 @@ export function AttachmentViewer({
 
       if (!signedUrl) {
         setPreviewError('Gagal memuat pratinjau')
+        showToast({
+          title: 'Gagal',
+          description: 'Preview tidak dapat dibuka. Coba lagi.',
+          variant: 'error',
+        })
         setPreviewLoading(false)
         return
       }
@@ -200,13 +212,28 @@ export function AttachmentViewer({
       const previewFile = await fetchFileBlobWithSignedUrl(signedUrl)
       if (previewFile.error || !previewFile.blob) {
         setPreviewError(previewFile.error ?? 'Gagal memuat pratinjau')
+        showToast({
+          title: 'Gagal',
+          description: 'Preview tidak dapat dibuka. Coba lagi.',
+          variant: 'error',
+        })
         setPreviewLoading(false)
         return
       }
 
       setPreviewUrl(URL.createObjectURL(previewFile.blob))
+      showToast({
+        title: 'Berhasil',
+        description: 'Preview file PDF berhasil ditampilkan.',
+        variant: 'success',
+      })
     } catch {
       setPreviewError('Terjadi kesalahan')
+      showToast({
+        title: 'Gagal',
+        description: 'Preview tidak dapat dibuka. Coba lagi.',
+        variant: 'error',
+      })
     } finally {
       setPreviewLoading(false)
     }
@@ -225,9 +252,25 @@ export function AttachmentViewer({
 
     try {
       const result = await downloadFromApi(apiPath, filename)
-      if (result.error) alert(result.error)
+      if (result.error) {
+        showToast({
+          title: 'Gagal',
+          description: 'File gagal diunduh. Coba lagi.',
+          variant: 'error',
+        })
+        return
+      }
+      showToast({
+        title: 'Berhasil',
+        description: 'Unduhan dimulai.',
+        variant: 'success',
+      })
     } catch {
-      alert('Gagal mengunduh file')
+      showToast({
+        title: 'Gagal',
+        description: 'File gagal diunduh. Coba lagi.',
+        variant: 'error',
+      })
     }
   }
 

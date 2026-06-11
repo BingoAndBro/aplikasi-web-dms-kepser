@@ -17,6 +17,7 @@ import {
 } from '#/components/admin/AdminPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -85,6 +86,7 @@ const compactKelengkapanSelectClassName =
   'w-full min-w-0 [&>button]:h-9 [&>button]:rounded-[18px] [&>button]:py-1.5 [&>button]:pl-4 [&>button]:pr-3 [&>button]:text-[13px] [&>button]:shadow-[0_2px_6px_rgba(15,23,42,0.05)] [&>div]:top-[calc(100%+4px)] [&>div]:z-50 [&>div]:max-h-56 [&>div]:overflow-y-auto [&>div]:rounded-xl [&>div_button]:px-4 [&>div_button]:py-2 [&>div_button]:text-[13px]'
 
 function KelengkapanPage() {
+  const { showToast } = useAppToast()
   const [fungsis, setFungsis] = useState<FungsiRow[]>([])
   const [kegiatans, setKegiatans] = useState<KegiatanRow[]>([])
   const [jenisList, setJenisList] = useState<JenisRow[]>([])
@@ -102,7 +104,6 @@ function KelengkapanPage() {
   const [deleteTarget, setDeleteTarget] = useState<KelengkapanRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [formIsKetuaTim, setFormIsKetuaTim] = useState(false)
   const [formNamaDokumen, setFormNamaDokumen] = useState('')
   const [formRequired, setFormRequired] = useState(true)
@@ -311,10 +312,17 @@ function KelengkapanPage() {
         })
       }
       setModalOpen(false)
-      setSuccessMsg(editing ? 'Item kelengkapan berhasil diperbarui.' : 'Item kelengkapan berhasil ditambahkan.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: editing ? 'Item kelengkapan berhasil diperbarui.' : 'Item kelengkapan berhasil ditambahkan.',
+        variant: 'success',
+      })
       fetchKelengkapan()
-    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
+    } catch (err) {
+      const message = getErrorMessage(err, 'Gagal menyimpan')
+      setError(message)
+      showToast({ title: 'Gagal', description: message, variant: 'error' })
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
@@ -323,11 +331,18 @@ function KelengkapanPage() {
     try {
       await apiMutation(`/master-kelengkapan/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
-      setSuccessMsg('Item kelengkapan berhasil dihapus.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: 'Item kelengkapan berhasil dihapus.',
+        variant: 'success',
+      })
       fetchKelengkapan()
     } catch (err) {
-      alert(getErrorMessage(err, 'Gagal menghapus kelengkapan'))
+      showToast({
+        title: 'Gagal',
+        description: getErrorMessage(err, 'Gagal menghapus kelengkapan'),
+        variant: 'error',
+      })
     } finally { setSaving(false) }
   }
 
@@ -356,12 +371,6 @@ function KelengkapanPage() {
           title="Kelengkapan Dokumen"
           description="Atur dokumen wajib/opsional berdasarkan fungsi, kegiatan, dan rantai permintaan untuk halaman Ajukan Dokumen."
         />
-
-        {successMsg && (
-          <div className={adminContentWideClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
-            {successMsg}
-          </div>
-        )}
 
         <section className={adminContentWideClassName + ' overflow-visible rounded-[18px] border border-[#E8C990] bg-white shadow-[0_3px_14px_rgba(120,70,20,0.05)]'}>
           <div className="flex items-start justify-between gap-4 border-b border-[#E8C990] px-4 py-2.5">

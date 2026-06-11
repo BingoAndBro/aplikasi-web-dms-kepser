@@ -19,6 +19,7 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { Input } from '#/components/ui/input'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { getRoleBadgeLabel, RoleBadge } from '#/components/ui/RoleBadge'
+import { useAppToast } from '#/components/ui/AppToast'
 import { UserAvatar } from '#/components/ui/UserAvatar'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
@@ -144,11 +145,11 @@ function getPhotoRemoveErrorMessage(error: unknown): string {
 }
 
 function ProfilePage() {
+  const { showToast } = useAppToast()
   const [user, setUser] = useState<ProfileUser | null>(null)
   const [ketuaTimKegiatan, setKetuaTimKegiatan] = useState<{ id: string; nama: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [photoMessage, setPhotoMessage] = useState<string | null>(null)
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false)
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null)
   const [pendingPhotoPreviewUrl, setPendingPhotoPreviewUrl] = useState<string | null>(null)
@@ -208,7 +209,6 @@ function ProfilePage() {
 
   const openPhotoDialog = () => {
     resetPendingPhoto()
-    setPhotoMessage(null)
     setPhotoDialogOpen(true)
   }
 
@@ -259,18 +259,27 @@ function ProfilePage() {
         avatar_updated_at: result.avatar_updated_at,
       } : current)
       notifyProfileAvatarChanged()
-      setPhotoMessage('Foto profil berhasil diperbarui.')
+      showToast({
+        title: 'Berhasil',
+        description: 'Foto profil berhasil diperbarui.',
+        variant: 'success',
+      })
       setPhotoDialogOpen(false)
       resetPendingPhoto()
     } catch (err) {
-      setPendingPhotoError(getPhotoUploadErrorMessage(err))
+      const message = getPhotoUploadErrorMessage(err)
+      setPendingPhotoError(message)
+      showToast({
+        title: 'Gagal',
+        description: message,
+        variant: 'error',
+      })
     } finally {
       setPhotoLoading(false)
     }
   }
 
   const handleRemovePhoto = async () => {
-    setPhotoMessage(null)
     setPhotoLoading(true)
     try {
       const result = await apiMutation<AvatarMutationResponse>('/api/users/me?avatar=1', {
@@ -284,9 +293,17 @@ function ProfilePage() {
         avatar_updated_at: result.avatar_updated_at,
       } : current)
       notifyProfileAvatarChanged()
-      setPhotoMessage('Foto profil berhasil dihapus.')
+      showToast({
+        title: 'Berhasil',
+        description: 'Foto profil berhasil dihapus.',
+        variant: 'success',
+      })
     } catch (err) {
-      setPhotoMessage(getPhotoRemoveErrorMessage(err))
+      showToast({
+        title: 'Gagal',
+        description: getPhotoRemoveErrorMessage(err),
+        variant: 'error',
+      })
     } finally {
       setPhotoLoading(false)
     }
@@ -301,9 +318,17 @@ function ProfilePage() {
       window.location.href = ROUTES.LOGIN
     } catch (err) {
       if (err instanceof ApiError) {
-        setPhotoMessage(err.message || 'Gagal keluar dari akun.')
+        showToast({
+          title: 'Gagal',
+          description: err.message || 'Gagal keluar dari akun.',
+          variant: 'error',
+        })
       } else {
-        setPhotoMessage('Gagal keluar dari akun.')
+        showToast({
+          title: 'Gagal',
+          description: 'Gagal keluar dari akun.',
+          variant: 'error',
+        })
       }
     } finally {
       setLogoutLoading(false)
@@ -462,12 +487,6 @@ function ProfilePage() {
                   <LogOut size={15} />
                   {logoutLoading ? 'Signing out...' : 'Sign Out'}
                 </Button>
-
-                {photoMessage && (
-                  <p className="rounded-xl border border-orange-100 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-900">
-                    {photoMessage}
-                  </p>
-                )}
               </div>
             </section>
           </div>

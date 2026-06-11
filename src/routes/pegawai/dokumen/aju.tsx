@@ -519,9 +519,9 @@ function AjukanDokumenPage() {
     if (validationError) {
       setSubmitError(validationError)
       showToast({
-        title: 'Dokumen belum dapat diajukan',
-        description: 'Periksa kembali data dan kelengkapan dokumen.',
-        variant: 'error',
+        title: 'Data belum lengkap',
+        description: 'Harap lengkapi semua data yang diperlukan.',
+        variant: 'warning',
       })
       return
     }
@@ -538,9 +538,9 @@ function AjukanDokumenPage() {
       setSubmitConfirmationOpen(false)
       setSubmitError(validationError)
       showToast({
-        title: 'Dokumen belum dapat diajukan',
-        description: 'Periksa kembali data dan kelengkapan dokumen.',
-        variant: 'error',
+        title: 'Data belum lengkap',
+        description: 'Harap lengkapi semua data yang diperlukan.',
+        variant: 'warning',
       })
       return
     }

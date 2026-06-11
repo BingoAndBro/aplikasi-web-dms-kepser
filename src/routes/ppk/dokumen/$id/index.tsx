@@ -6,6 +6,7 @@ import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { StatusBadge } from '#/components/ui/StatusBadge'
+import { useAppToast } from '#/components/ui/AppToast'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import { WorkflowPanel } from '#/components/workflow/PpkPpspmPagePrimitives'
@@ -90,6 +91,7 @@ function getWorkflowIndexNonMaterial(status: string): number {
 
 function PpkDokumenDetailIndexPage() {
   const { id } = Route.useParams()
+  const { showToast } = useAppToast()
   const [dokumen, setDokumen] = useState<DokumenDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -127,17 +129,30 @@ function PpkDokumenDetailIndexPage() {
     setActionLoading('approve')
     try {
       await apiMutation(`/api/ppk/dokumen/${id}/approve`, { method: 'POST' })
+      showToast({
+        title: 'Berhasil',
+        description: 'Dokumen berhasil divalidasi.',
+        variant: 'success',
+      })
       window.location.href = '/ppk/inbox'
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
-          ? (payload as { error?: string }).error ?? 'Gagal'
-          : 'Gagal')
+        showToast({
+          title: 'Gagal',
+          description: payload && typeof payload === 'object' && 'error' in payload
+            ? (payload as { error?: string }).error ?? 'Dokumen gagal divalidasi. Coba lagi.'
+            : 'Dokumen gagal divalidasi. Coba lagi.',
+          variant: 'error',
+        })
         return
       }
 
-      alert('Terjadi kesalahan')
+      showToast({
+        title: 'Gagal',
+        description: 'Dokumen gagal divalidasi. Coba lagi.',
+        variant: 'error',
+      })
     } finally { setActionLoading(null) }
   }
 
@@ -149,17 +164,33 @@ function PpkDokumenDetailIndexPage() {
         method: 'POST',
         body: { catatan: rejectCatatan.trim() },
       })
+      showToast({
+        title: 'Berhasil',
+        description: 'Dokumen berhasil dikembalikan untuk revisi.',
+        variant: 'success',
+      })
       window.location.href = '/ppk/inbox'
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
-        setRejectError(payload && typeof payload === 'object' && 'error' in payload
+        const message = payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error ?? 'Gagal'
-          : 'Gagal')
+          : 'Gagal'
+        setRejectError(message)
+        showToast({
+          title: 'Gagal',
+          description: 'Dokumen gagal dikembalikan. Coba lagi.',
+          variant: 'error',
+        })
         return
       }
 
       setRejectError('Terjadi kesalahan')
+      showToast({
+        title: 'Gagal',
+        description: 'Dokumen gagal dikembalikan. Coba lagi.',
+        variant: 'error',
+      })
     } finally { setActionLoading(null) }
   }
 

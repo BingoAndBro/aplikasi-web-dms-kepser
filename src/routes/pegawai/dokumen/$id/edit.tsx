@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { useAppToast } from '#/components/ui/AppToast'
 import { AttachmentEditor } from '#/components/dokumen/AttachmentEditor'
 import { useUnsavedChangesGuard } from '#/hooks/useUnsavedChangesGuard'
 import { useNoChangeSubmitGuard } from '#/hooks/useNoChangeSubmitGuard'
@@ -25,6 +26,7 @@ export const Route = createFileRoute('/pegawai/dokumen/$id/edit')({
 function EditDokumenPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
+  const { showToast } = useAppToast()
 
   const [dok, setDok] = useState<DokumenRow | null>(null)
   const [loading, setLoading] = useState(true)
@@ -101,18 +103,31 @@ function EditDokumenPage() {
       setOriginalKeteranganDetail(keteranganDetail)
       setAttachmentDirty(false)
       setGuardEnabled(false)
+      showToast({
+        title: 'Berhasil',
+        description: 'Perubahan berhasil disimpan.',
+        variant: 'success',
+      })
       navigate({ to: '/pegawai/dokumen/$id', params: { id } })
     } catch (err) {
       setGuardEnabled(true)
       if (err instanceof ApiError) {
         const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
+        showToast({
+          title: 'Gagal',
+          description: payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error || 'Gagal menyimpan'
-          : 'Gagal menyimpan')
+          : 'Gagal menyimpan',
+          variant: 'error',
+        })
         return
       }
 
-      alert(err instanceof Error ? err.message : 'Terjadi kesalahan')
+      showToast({
+        title: 'Gagal',
+        description: err instanceof Error ? err.message : 'Terjadi kesalahan',
+        variant: 'error',
+      })
     } finally {
       setLoading(false)
     }

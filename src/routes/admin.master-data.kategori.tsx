@@ -36,6 +36,7 @@ import {
   TableCell,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 function KategoriPage() {
+  const { showToast } = useAppToast()
   const [items, setItems] = useState<KategoriRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -74,7 +76,6 @@ function KategoriPage() {
   const [deleteTarget, setDeleteTarget] = useState<KategoriRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [formJenisId, setFormJenisId] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
@@ -175,10 +176,17 @@ function KategoriPage() {
         })
       }
       setModalOpen(false)
-      setSuccessMsg(editing ? 'Kategori berhasil diperbarui.' : 'Kategori berhasil ditambahkan.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: editing ? 'Kategori berhasil diperbarui.' : 'Kategori berhasil ditambahkan.',
+        variant: 'success',
+      })
       fetchData()
-    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
+    } catch (err) {
+      const message = getErrorMessage(err, 'Gagal menyimpan')
+      setError(message)
+      showToast({ title: 'Gagal', description: message, variant: 'error' })
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
@@ -187,11 +195,18 @@ function KategoriPage() {
     try {
       await apiMutation(`/master-kategori/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
-      setSuccessMsg('Kategori berhasil dihapus.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: 'Kategori berhasil dihapus.',
+        variant: 'success',
+      })
       fetchData()
     } catch (err) {
-      alert(getErrorMessage(err, 'Gagal menghapus kategori'))
+      showToast({
+        title: 'Gagal',
+        description: getErrorMessage(err, 'Gagal menghapus kategori'),
+        variant: 'error',
+      })
     } finally { setSaving(false) }
   }
 
@@ -207,11 +222,6 @@ function KategoriPage() {
           actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'} disabled={jenisList.length === 0}><Plus />Tambah Kategori</Button>}
         />
 
-        {successMsg && (
-          <div className={adminContentStandardClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
-            {successMsg}
-          </div>
-        )}
         <AdminSearchPanel className={adminContentStandardClassName + ' ' + adminTableToolbarClassName} id="kategori-search" label="Cari kategori permintaan" value={search} onChange={setSearch} placeholder="Cari kategori..." resultText={`Total ${filtered.length} Kategori`}>
           <AdminFilterSelect
             value={filterJenis}

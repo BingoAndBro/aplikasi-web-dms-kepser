@@ -33,6 +33,7 @@ import {
   TableCell,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 function FungsiPage() {
+  const { showToast } = useAppToast()
   const [items, setItems] = useState<FungsiRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -70,7 +72,6 @@ function FungsiPage() {
   const [deleteTarget, setDeleteTarget] = useState<FungsiRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
   const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
@@ -138,10 +139,17 @@ function FungsiPage() {
         })
       }
       setModalOpen(false)
-      setSuccessMsg(editing ? 'Fungsi berhasil diperbarui.' : 'Fungsi berhasil ditambahkan.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: editing ? 'Fungsi berhasil diperbarui.' : 'Fungsi berhasil ditambahkan.',
+        variant: 'success',
+      })
       fetchData()
-    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
+    } catch (err) {
+      const message = getErrorMessage(err, 'Gagal menyimpan')
+      setError(message)
+      showToast({ title: 'Gagal', description: message, variant: 'error' })
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
@@ -150,11 +158,18 @@ function FungsiPage() {
     try {
       await apiMutation(`/master-fungsi/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
-      setSuccessMsg('Fungsi berhasil dihapus.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: 'Fungsi berhasil dihapus.',
+        variant: 'success',
+      })
       fetchData()
     } catch (err) {
-      alert(getErrorMessage(err, 'Gagal menghapus fungsi'))
+      showToast({
+        title: 'Gagal',
+        description: getErrorMessage(err, 'Gagal menghapus fungsi'),
+        variant: 'error',
+      })
     } finally { setSaving(false) }
   }
 
@@ -170,11 +185,6 @@ function FungsiPage() {
           actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'}><Plus />Tambah Fungsi</Button>}
         />
 
-        {successMsg && (
-          <div className={adminContentCompactClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
-            {successMsg}
-          </div>
-        )}
         <AdminSearchPanel
           className={adminContentCompactClassName + ' ' + adminTableToolbarClassName}
           id="fungsi-search"

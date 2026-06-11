@@ -35,6 +35,7 @@ import {
   TableCell,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
   Dialog,
   DialogContent,
@@ -62,6 +63,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 function DetailPage() {
+  const { showToast } = useAppToast()
   const [items, setItems] = useState<DetailRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -74,7 +76,6 @@ function DetailPage() {
   const [deleteTarget, setDeleteTarget] = useState<DetailRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [formJenisId, setFormJenisId] = useState('')
   const [formKategoriId, setFormKategoriId] = useState('')
   const [formNama, setFormNama] = useState('')
@@ -203,10 +204,17 @@ function DetailPage() {
         })
       }
       setModalOpen(false)
-      setSuccessMsg(editing ? 'Detail berhasil diperbarui.' : 'Detail berhasil ditambahkan.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: editing ? 'Detail berhasil diperbarui.' : 'Detail berhasil ditambahkan.',
+        variant: 'success',
+      })
       fetchData()
-    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
+    } catch (err) {
+      const message = getErrorMessage(err, 'Gagal menyimpan')
+      setError(message)
+      showToast({ title: 'Gagal', description: message, variant: 'error' })
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
@@ -215,11 +223,18 @@ function DetailPage() {
     try {
       await apiMutation(`/master-detail/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
-      setSuccessMsg('Detail berhasil dihapus.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: 'Detail berhasil dihapus.',
+        variant: 'success',
+      })
       fetchData()
     } catch (err) {
-      alert(getErrorMessage(err, 'Gagal menghapus detail'))
+      showToast({
+        title: 'Gagal',
+        description: getErrorMessage(err, 'Gagal menghapus detail'),
+        variant: 'error',
+      })
     } finally { setSaving(false) }
   }
 
@@ -251,11 +266,6 @@ function DetailPage() {
           <Button onClick={openCreate} size="sm" className="gap-1.5" disabled={jenisList.length === 0 || kategoriList.length === 0}><Plus size={14} />Tambah Detail</Button>
         </div>
 
-        {successMsg && (
-          <div className={adminContentStandardClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
-            {successMsg}
-          </div>
-        )}
         <AdminSearchPanel
           className={adminContentStandardClassName + ' ' + adminTableToolbarClassName}
           id="detail-search"

@@ -42,6 +42,7 @@ import { DatePicker } from '#/components/ui/date-picker'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
+import { useAppToast } from '#/components/ui/AppToast'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
@@ -195,11 +196,10 @@ const ARCHIVE_METADATA_FORM_SELECT_ITEM_CLASS =
 function BerkasArsipDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
+  const { showToast } = useAppToast()
   const [detail, setDetail] = useState<BerkasDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null)
   const [pendingLifecycleAction, setPendingLifecycleAction] = useState(false)
   const [lifecycleConfirmOpen, setLifecycleConfirmOpen] = useState(false)
   const [destructionDialogOpen, setDestructionDialogOpen] = useState(false)
@@ -233,20 +233,14 @@ function BerkasArsipDetailPage() {
     if (lifecycleAction.action === 'approve_destruction') {
       if (options.confirmation !== BERKAS_DESTRUCTION_CONFIRMATION_PHRASE) {
         setDestructionDialogOpen(true)
-        setActionError(null)
-        setActionSuccess(null)
         return
       }
     } else if (!options.confirmed) {
       setLifecycleConfirmOpen(true)
-      setActionError(null)
-      setActionSuccess(null)
       return
     }
 
     setPendingLifecycleAction(true)
-    setActionError(null)
-    setActionSuccess(null)
 
     try {
       await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}/lifecycle`, {
@@ -258,7 +252,11 @@ function BerkasArsipDetailPage() {
             : {}),
         }),
       })
-      setActionSuccess(lifecycleAction.successMessage)
+      showToast({
+        title: 'Berhasil',
+        description: lifecycleAction.successMessage,
+        variant: 'success',
+      })
       setLifecycleConfirmOpen(false)
       setDestructionDialogOpen(false)
       setDestructionPhrase('')
@@ -270,7 +268,11 @@ function BerkasArsipDetailPage() {
         await fetchData()
       }
     } catch (error) {
-      setActionError(resolveErrorMessage(error))
+      showToast({
+        title: 'Gagal',
+        description: resolveErrorMessage(error),
+        variant: 'error',
+      })
     } finally {
       setPendingLifecycleAction(false)
     }
@@ -283,26 +285,35 @@ function BerkasArsipDetailPage() {
     if (!canShowCloseBerkasForm(detail) || isEmptyFolder) return
 
     if (isCloseBerkasFormIncomplete(closeForm)) {
-      setActionError('Nomor SPM, Retensi Aktif, dan Retensi Inaktif wajib diisi')
-      setActionSuccess(null)
+      showToast({
+        title: 'Data belum lengkap',
+        description: 'Harap lengkapi semua data yang diperlukan.',
+        variant: 'warning',
+      })
       return
     }
 
     setPendingClose(true)
-    setActionError(null)
-    setActionSuccess(null)
 
     try {
       await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}/close`, {
         method: 'POST',
         body: JSON.stringify(buildCloseBerkasRequestBody(closeForm)),
       })
-      setActionSuccess('Berkas berhasil ditutup dan menjadi Arsip Aktif.')
+      showToast({
+        title: 'Berhasil',
+        description: 'Berkas berhasil ditutup dan menjadi Arsip Aktif.',
+        variant: 'success',
+      })
       setCloseDialogOpen(false)
       setCloseForm(EMPTY_CLOSE_BERKAS_FORM)
       await navigate({ to: '/arsiparis/berkas' })
     } catch (error) {
-      setActionError(resolveErrorMessage(error))
+      showToast({
+        title: 'Gagal',
+        description: resolveErrorMessage(error),
+        variant: 'error',
+      })
     } finally {
       setPendingClose(false)
     }
@@ -318,33 +329,40 @@ function BerkasArsipDetailPage() {
       closed_at: toDateOnlyInputValue(detail.closed_at),
     })
     setMetadataDialogOpen(true)
-    setActionError(null)
-    setActionSuccess(null)
   }
 
   async function submitMetadataEdit() {
     if (!detail || !canEditActiveMetadata(detail)) return
 
     if (isCloseBerkasFormIncomplete(metadataForm)) {
-      setActionError('Nomor SPM, Retensi Aktif, dan Retensi Inaktif wajib diisi')
-      setActionSuccess(null)
+      showToast({
+        title: 'Data belum lengkap',
+        description: 'Harap lengkapi semua data yang diperlukan.',
+        variant: 'warning',
+      })
       return
     }
 
     setPendingMetadataEdit(true)
-    setActionError(null)
-    setActionSuccess(null)
 
     try {
       await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}`, {
         method: 'PATCH',
         body: JSON.stringify(buildCloseBerkasRequestBody(metadataForm)),
       })
-      setActionSuccess('Metadata arsip aktif berhasil diperbarui.')
+      showToast({
+        title: 'Berhasil',
+        description: 'Metadata arsip aktif berhasil diperbarui.',
+        variant: 'success',
+      })
       setMetadataDialogOpen(false)
       await fetchData()
     } catch (error) {
-      setActionError(resolveErrorMessage(error))
+      showToast({
+        title: 'Gagal',
+        description: resolveErrorMessage(error),
+        variant: 'error',
+      })
     } finally {
       setPendingMetadataEdit(false)
     }
@@ -357,17 +375,6 @@ function BerkasArsipDetailPage() {
   return (
     <PageLayout className="min-h-full bg-[#FFF9F4]">
       <div className={ARCHIVE_DETAIL_CONTAINER_CLASS}>
-        {(actionError || actionSuccess) && (
-          <div className={`rounded-xl border px-4 py-3 text-xs font-semibold ${
-            actionError
-              ? 'border-error/20 bg-error/5 text-error'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-          }`}
-          >
-            {actionError ?? actionSuccess}
-          </div>
-        )}
-
         {loading ? (
           <LoadingState label="Memuat detail berkas" />
         ) : error ? (
@@ -507,13 +514,11 @@ function BerkasArsipDetailPage() {
                     onCancelDestruction={() => {
                       setDestructionDialogOpen(false)
                       setDestructionPhrase('')
-                      setActionError(null)
                     }}
                     onDestructionOpenChange={(open) => {
                       setDestructionDialogOpen(open)
                       if (!open && !pendingLifecycleAction) {
                         setDestructionPhrase('')
-                        setActionError(null)
                       }
                     }}
                     onLifecycleAction={submitLifecycleAction}
@@ -526,8 +531,6 @@ function BerkasArsipDetailPage() {
                         closed_at: getTodayDateOnlyInputValue(),
                       })
                       setCloseDialogOpen(true)
-                      setActionError(null)
-                      setActionSuccess(null)
                     }}
                   />
                 </div>
@@ -548,7 +551,6 @@ function BerkasArsipDetailPage() {
             submitDisabled={pendingClose || !detail || isBerkasEmptyForClose(detail) || isCloseBerkasFormIncomplete(closeForm)}
             onOpenChange={(open) => {
               setCloseDialogOpen(open)
-              if (!open && !pendingClose) setActionError(null)
             }}
             onFormChange={setCloseForm}
             onSubmit={submitCloseBerkas}
@@ -562,7 +564,6 @@ function BerkasArsipDetailPage() {
             submitDisabled={pendingMetadataEdit || isCloseBerkasFormIncomplete(metadataForm) || !canEditActiveMetadata(detail)}
             onOpenChange={(open) => {
               setMetadataDialogOpen(open)
-              if (!open && !pendingMetadataEdit) setActionError(null)
             }}
             onFormChange={setMetadataForm}
             onSubmit={submitMetadataEdit}
@@ -1031,6 +1032,7 @@ function ItemList({
   statusArsip: string | null
   items: BerkasDetailItem[]
 }) {
+  const { showToast } = useAppToast()
   const [previewing, setPreviewing] = useState<{
     href: string
     downloadHref: string
@@ -1047,6 +1049,15 @@ function ItemList({
 
   function exportCsv() {
     downloadCsvFile(BERKAS_DETAIL_ITEMS_CSV_FILENAME, createBerkasDetailItemsCsv(filteredItems))
+  }
+
+  function openPreview(href: string, downloadHref: string, title: string) {
+    setPreviewing({ href, downloadHref, title })
+    showToast({
+      title: 'Berhasil',
+      description: 'Preview file PDF berhasil ditampilkan.',
+      variant: 'success',
+    })
   }
 
   useEffect(() => {
@@ -1095,11 +1106,7 @@ function ItemList({
           item={selectedItem}
           statusArsip={statusArsip}
           onClose={() => setSelectedItem(null)}
-          onPreview={(href, downloadHref, title) => setPreviewing({
-            href,
-            downloadHref,
-            title,
-          })}
+          onPreview={openPreview}
         />
       )}
 
@@ -1499,6 +1506,7 @@ function ItemAttachmentActions({
   fileBlocked: boolean
   onPreview: (href: string, downloadHref: string, title: string) => void
 }) {
+  const { showToast } = useAppToast()
   const attachmentCount = typeof item.attachment_count === 'number' && item.attachment_count > 0
     ? item.attachment_count
     : 0
@@ -1549,6 +1557,11 @@ function ItemAttachmentActions({
               </Button>
               <a
                 href={downloadHref}
+                onClick={() => showToast({
+                  title: 'Berhasil',
+                  description: 'Unduhan dimulai.',
+                  variant: 'success',
+                })}
                 className="inline-flex size-7 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-zinc-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
                 aria-label={`Unduh ${title}`}
               >
@@ -1573,6 +1586,7 @@ function PreviewModal({
   title: string
   onClose: () => void
 }) {
+  const { showToast } = useAppToast()
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
       <button
@@ -1593,6 +1607,11 @@ function PreviewModal({
           <p className="flex-1 truncate text-sm font-semibold text-white">{title}</p>
           <a
             href={downloadHref}
+            onClick={() => showToast({
+              title: 'Berhasil',
+              description: 'Unduhan dimulai.',
+              variant: 'success',
+            })}
             className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-zinc-200 transition-colors hover:bg-white/10 hover:text-white"
             aria-label={`Unduh ${title}`}
           >

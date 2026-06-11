@@ -28,6 +28,7 @@ import {
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -47,6 +48,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 function KegiatanPage() {
+  const { showToast } = useAppToast()
   const [items, setItems] = useState<KegiatanRow[]>([])
   const [fungsis, setFungsis] = useState<FungsiRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,7 +59,6 @@ function KegiatanPage() {
   const [deleteTarget, setDeleteTarget] = useState<KegiatanRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [formFungsiId, setFormFungsiId] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
@@ -126,10 +127,17 @@ function KegiatanPage() {
         })
       }
       setModalOpen(false)
-      setSuccessMsg(editing ? 'Kegiatan berhasil diperbarui.' : 'Kegiatan berhasil ditambahkan.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: editing ? 'Kegiatan berhasil diperbarui.' : 'Kegiatan berhasil ditambahkan.',
+        variant: 'success',
+      })
       fetchData()
-    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
+    } catch (err) {
+      const message = getErrorMessage(err, 'Gagal menyimpan')
+      setError(message)
+      showToast({ title: 'Gagal', description: message, variant: 'error' })
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
@@ -138,11 +146,18 @@ function KegiatanPage() {
     try {
       await apiMutation(`/master-kegiatan/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
-      setSuccessMsg('Kegiatan berhasil dihapus.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: 'Kegiatan berhasil dihapus.',
+        variant: 'success',
+      })
       fetchData()
     } catch (err) {
-      alert(getErrorMessage(err, 'Gagal menghapus kegiatan'))
+      showToast({
+        title: 'Gagal',
+        description: getErrorMessage(err, 'Gagal menghapus kegiatan'),
+        variant: 'error',
+      })
     } finally { setSaving(false) }
   }
 
@@ -157,12 +172,6 @@ function KegiatanPage() {
           description="Kelola kegiatan di bawah fungsi/departemen yang menjadi dasar Ketua Tim dan konfigurasi dokumen."
           actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'} disabled={fungsis.length === 0}><Plus />Tambah Kegiatan</Button>}
         />
-
-        {successMsg && (
-          <div className={adminContentStandardClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
-            {successMsg}
-          </div>
-        )}
 
         <AdminSearchPanel
           className={adminContentStandardClassName + ' ' + adminTableToolbarClassName}

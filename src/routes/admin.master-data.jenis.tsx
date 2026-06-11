@@ -33,6 +33,7 @@ import {
   TableCell,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 function JenisPage() {
+  const { showToast } = useAppToast()
   const [items, setItems] = useState<JenisRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -69,7 +71,6 @@ function JenisPage() {
   const [deleteTarget, setDeleteTarget] = useState<JenisRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
   const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
@@ -137,10 +138,17 @@ function JenisPage() {
         })
       }
       setModalOpen(false)
-      setSuccessMsg(editing ? 'Jenis permintaan berhasil diperbarui.' : 'Jenis permintaan berhasil ditambahkan.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: editing ? 'Jenis permintaan berhasil diperbarui.' : 'Jenis permintaan berhasil ditambahkan.',
+        variant: 'success',
+      })
       fetchData()
-    } catch (err) { setError(getErrorMessage(err, 'Gagal menyimpan')) } finally { setSaving(false) }
+    } catch (err) {
+      const message = getErrorMessage(err, 'Gagal menyimpan')
+      setError(message)
+      showToast({ title: 'Gagal', description: message, variant: 'error' })
+    } finally { setSaving(false) }
   }
 
   async function handleDelete() {
@@ -149,11 +157,18 @@ function JenisPage() {
     try {
       await apiMutation(`/master-jenis/${deleteTarget.id}`, { method: 'DELETE' })
       setDeleteTarget(null)
-      setSuccessMsg('Jenis permintaan berhasil dihapus.')
-      setTimeout(() => setSuccessMsg(''), 3000)
+      showToast({
+        title: 'Berhasil',
+        description: 'Jenis permintaan berhasil dihapus.',
+        variant: 'success',
+      })
       fetchData()
     } catch (err) {
-      alert(getErrorMessage(err, 'Gagal menghapus jenis permintaan'))
+      showToast({
+        title: 'Gagal',
+        description: getErrorMessage(err, 'Gagal menghapus jenis permintaan'),
+        variant: 'error',
+      })
     } finally { setSaving(false) }
   }
 
@@ -185,11 +200,6 @@ function JenisPage() {
           <Button onClick={openCreate} size="sm" className="gap-1.5"><Plus size={14} />Tambah Jenis</Button>
         </div>
 
-        {successMsg && (
-          <div className={adminContentCompactClassName + ' bg-green-50 border border-green-300 text-green-700 text-xs px-4 py-2.5 rounded-lg font-medium'}>
-            {successMsg}
-          </div>
-        )}
         <AdminSearchPanel
           className={adminContentCompactClassName + ' ' + adminTableToolbarClassName}
           id="jenis-search"

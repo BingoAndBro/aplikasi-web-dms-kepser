@@ -8,6 +8,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CheckCircle2, XCircle, Eye, Download, Upload, RotateCcw, X, Loader2, Plus, AlertCircle } from 'lucide-react'
 import { Button } from '#/components/ui/button'
+import { useAppToast } from '#/components/ui/AppToast'
 import { buildStorageFilename } from '#/lib/dokumen-helpers'
 import { getSignedUrl, downloadWithSignedUrl } from '#/lib/storage-client'
 import type { DokumenRow, LampiranUrl } from '#/lib/dokumen-helpers'
@@ -202,6 +203,7 @@ export function AttachmentEditor({
   onDirtyChange,
   confirmIfDirty,
 }: AttachmentEditorProps) {
+  const { showToast } = useAppToast()
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
@@ -210,7 +212,6 @@ export function AttachmentEditor({
   const [pendingFiles, setPendingFiles] = useState<Map<string, PendingFile>>(new Map())
   const [sessionPendingUrls, setSessionPendingUrls] = useState<Set<string>>(new Set())
   const [userDocs, setUserDocs] = useState<{ id: string; nama: string; lamp?: LampiranUrl }[]>([])
-  const [uploadStatuses, setUploadStatuses] = useState<Map<string, string>>(new Map()) // docId -> success message
 
   // Form state
   const [showAddForm, setShowAddForm] = useState(false)
@@ -406,15 +407,28 @@ export function AttachmentEditor({
 
       const signedUrl = await getSignedUrl(lamp.url)
       if (!signedUrl) {
-        alert('Gagal memuat pratinjau')
+        showToast({
+          title: 'Gagal',
+          description: 'Preview tidak dapat dibuka. Coba lagi.',
+          variant: 'error',
+        })
         closePreview()
         setPreviewLoading(false)
         return
       }
 
       setPreviewingUrl(signedUrl)
+      showToast({
+        title: 'Berhasil',
+        description: 'Preview file PDF berhasil ditampilkan.',
+        variant: 'success',
+      })
     } catch {
-      alert('Gagal memuat pratinjau')
+      showToast({
+        title: 'Gagal',
+        description: 'Preview tidak dapat dibuka. Coba lagi.',
+        variant: 'error',
+      })
       closePreview()
     } finally {
       setPreviewLoading(false)
@@ -443,15 +457,28 @@ export function AttachmentEditor({
     try {
       const signedUrl = await getSignedUrl(lamp.url)
       if (!signedUrl) {
-        alert('Gagal mengunduh file')
+        showToast({
+          title: 'Gagal',
+          description: 'File gagal diunduh. Coba lagi.',
+          variant: 'error',
+        })
         return
       }
 
       // Build filename dari metadata dokumen (client-side)
       const filename = buildStorageFilename(dokumen, lamp)
       await downloadWithSignedUrl(signedUrl, filename)
+      showToast({
+        title: 'Berhasil',
+        description: 'Unduhan dimulai.',
+        variant: 'success',
+      })
     } catch {
-      alert('Gagal mengunduh file')
+      showToast({
+        title: 'Gagal',
+        description: 'File gagal diunduh. Coba lagi.',
+        variant: 'error',
+      })
     }
   }
 
@@ -483,11 +510,6 @@ export function AttachmentEditor({
     }
 
     updatePendingFiles(prev => {
-      const next = new Map(prev)
-      next.delete(docId)
-      return next
-    })
-    setUploadStatuses(prev => {
       const next = new Map(prev)
       next.delete(docId)
       return next
@@ -574,11 +596,15 @@ export function AttachmentEditor({
       const nextLampirans = replaceLampiranByKelengkapanId(lampiranUrlsRef.current, newLamp)
       setTrackedLampiranUrls(nextLampirans)
 
-      setUploadStatuses(prev => new Map(prev).set(docId, `${file.name} berhasil diupload`))
       setUploadErrors(prev => {
         const next = new Map(prev)
         next.delete(docId)
         return next
+      })
+      showToast({
+        title: 'Berhasil',
+        description: 'Lampiran berhasil diunggah.',
+        variant: 'success',
       })
 
       if (docId.startsWith('user-custom-')) {
@@ -604,6 +630,11 @@ export function AttachmentEditor({
         docId,
         getFriendlyUploadErrorMessage(err),
       ))
+      showToast({
+        title: 'Gagal',
+        description: 'Lampiran gagal diunggah. Coba lagi.',
+        variant: 'error',
+      })
     }
   }
 
@@ -648,11 +679,6 @@ export function AttachmentEditor({
     setUserDocs(prev => prev.filter(d => d.id !== docId))
     setTrackedLampiranUrls(lampiranUrlsRef.current.filter(l => l.kelengkapan_id !== docId))
     updatePendingFiles(prev => {
-      const next = new Map(prev)
-      next.delete(docId)
-      return next
-    })
-    setUploadStatuses(prev => {
       const next = new Map(prev)
       next.delete(docId)
       return next
@@ -972,7 +998,6 @@ export function AttachmentEditor({
               {kelengkapan.map(kel => {
                 const lamp = lampiranUrls.find(l => l.kelengkapan_id === kel.id)
                 const isPending = pendingFiles.has(kel.id)
-                const successMsg = uploadStatuses.get(kel.id)
                 const uploadError = uploadErrors.get(kel.id)
 
                 return (
@@ -1029,13 +1054,6 @@ export function AttachmentEditor({
                       </div>
                     </div>
 
-                    {/* Success message */}
-                    {successMsg && (
-                      <p className="text-xs text-green-600 pl-4 flex items-center gap-1">
-                        <CheckCircle2 size={12} />
-                        {successMsg}
-                      </p>
-                    )}
                     {uploadError && (
                       <UploadValidationInline
                         message={uploadError}
@@ -1067,7 +1085,6 @@ export function AttachmentEditor({
             {userDocs.map(doc => {
               const lamp = lampiranUrls.find(l => l.kelengkapan_id === doc.id)
               const isPending = pendingFiles.has(doc.id)
-              const successMsg = uploadStatuses.get(doc.id)
               const hasFile = !!lamp
               const uploadError = uploadErrors.get(doc.id)
 
@@ -1135,13 +1152,6 @@ export function AttachmentEditor({
                     </div>
                   </div>
 
-                  {/* Success message */}
-                  {successMsg && (
-                    <p className="text-xs text-green-600 pl-4 flex items-center gap-1">
-                      <CheckCircle2 size={12} />
-                      {successMsg}
-                    </p>
-                  )}
                   {uploadError && (
                     <UploadValidationInline
                       message={uploadError}

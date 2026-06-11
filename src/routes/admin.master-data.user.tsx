@@ -50,6 +50,7 @@ import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { RoleBadge } from '#/components/ui/RoleBadge'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
   Edit2,
   UserPlus,
@@ -322,6 +323,10 @@ function sameCreateForm(a: CreateUserForm, b: CreateUserForm) {
 // ---------------------------------------------------------------------------
 
 function MasterUserPage() {
+  const { showToast } = useAppToast()
+  const notifySuccess = (description: string) => showToast({ title: 'Berhasil', description, variant: 'success' })
+  const notifyError = (description: string) => showToast({ title: 'Gagal', description, variant: 'error' })
+  const notifyWarning = (description: string) => showToast({ title: 'Data belum lengkap', description, variant: 'warning' })
   // State
   const [users, setUsers] = useState<UserWithRoles[]>([])
   const [loading, setLoading] = useState(true)
@@ -562,7 +567,7 @@ function MasterUserPage() {
 
       if (existingChairman && existingChairman.userId !== userId) {
         if (userId === 'new-user') {
-          alert('Kegiatan ini sudah memiliki ketua tim. Buat user terlebih dahulu, lalu ganti penugasan dari form edit.')
+          notifyWarning('Kegiatan ini sudah memiliki ketua tim. Buat user terlebih dahulu, lalu ganti penugasan dari form edit.')
           return
         }
         setPendingChairmanReplace({
@@ -577,7 +582,7 @@ function MasterUserPage() {
       await stageChairmanAssignment(kegiatanId)
     } catch (err) {
       console.error('[MasterUser] Failed to stage ketua tim assignment', { kegiatanId, userId, err })
-      alert('Gagal menambahkan kegiatan ketua tim')
+      notifyError('Gagal menambahkan kegiatan ketua tim')
     }
   }
 
@@ -603,7 +608,7 @@ function MasterUserPage() {
         kegiatanId: pendingChairmanReplace.kegiatan_id,
         err,
       })
-      alert('Gagal menyiapkan penggantian ketua tim')
+      notifyError('Gagal menyiapkan penggantian ketua tim')
     }
   }
 
@@ -808,15 +813,15 @@ function MasterUserPage() {
 
   const handleCreate = async () => {
     if (!createForm.email || !createForm.password || !createForm.nama_lengkap || !createForm.nip_nrp) {
-      alert('Mohon isi semua field yang wajib')
+      notifyWarning('Harap lengkapi semua data yang diperlukan.')
       return
     }
     if (createForm.password !== createForm.confirmPassword) {
-      alert('Konfirmasi password tidak cocok')
+      notifyWarning('Konfirmasi password tidak cocok.')
       return
     }
     if (createForm.password.length < 8) {
-      alert('Password minimal 8 karakter')
+      notifyWarning('Password minimal 8 karakter.')
       return
     }
 
@@ -856,16 +861,17 @@ function MasterUserPage() {
       setAvailableKegiatan([])
       await fetchUsers()
       await fetchChairmanAssignments()
+      notifySuccess('User berhasil dibuat.')
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
+        notifyError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error || 'Gagal membuat user'
           : 'Gagal membuat user')
         return
       }
 
-      alert(err instanceof Error ? err.message || 'Gagal membuat user' : 'Gagal membuat user')
+      notifyError(err instanceof Error ? err.message || 'Gagal membuat user' : 'Gagal membuat user')
     } finally {
       setActionLoading(false)
     }
@@ -874,7 +880,7 @@ function MasterUserPage() {
   const handleEdit = async () => {
     if (!selectedUser) return
     if (!editForm.nama_lengkap || !editForm.nip_nrp) {
-      alert('Mohon isi semua field yang wajib')
+      notifyWarning('Harap lengkapi semua data yang diperlukan.')
       return
     }
 
@@ -904,16 +910,17 @@ function MasterUserPage() {
       setAvailableKegiatan([])
       await fetchUsers()
       await fetchChairmanAssignments()
+      notifySuccess('User berhasil diperbarui.')
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
+        notifyError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error || 'Gagal mengupdate user'
           : 'Gagal mengupdate user')
         return
       }
 
-      alert(err instanceof Error ? err.message || 'Gagal mengupdate user' : 'Gagal mengupdate user')
+      notifyError(err instanceof Error ? err.message || 'Gagal mengupdate user' : 'Gagal mengupdate user')
     } finally {
       setActionLoading(false)
     }
@@ -922,15 +929,15 @@ function MasterUserPage() {
   const handleResetPassword = async () => {
     if (!selectedUser) return
     if (!resetPassword || !confirmResetPassword) {
-      alert('Mohon isi password baru dan konfirmasinya')
+      notifyWarning('Harap isi password baru dan konfirmasinya.')
       return
     }
     if (resetPassword !== confirmResetPassword) {
-      alert('Konfirmasi password tidak cocok')
+      notifyWarning('Konfirmasi password tidak cocok.')
       return
     }
     if (resetPassword.length < 8) {
-      alert('Password minimal 8 karakter')
+      notifyWarning('Password minimal 8 karakter.')
       return
     }
 
@@ -940,19 +947,19 @@ function MasterUserPage() {
         method: 'POST',
         body: { password: resetPassword },
       })
-      alert('Password berhasil direset')
+      notifySuccess('Password berhasil direset.')
       setResetPasswordOpen(false)
       setSelectedUser(null)
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
+        notifyError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error || 'Gagal mereset password'
           : 'Gagal mereset password')
         return
       }
 
-      alert(err instanceof Error ? err.message || 'Gagal mereset password' : 'Gagal mereset password')
+      notifyError(err instanceof Error ? err.message || 'Gagal mereset password' : 'Gagal mereset password')
     } finally {
       setActionLoading(false)
     }
@@ -969,16 +976,17 @@ function MasterUserPage() {
       setDeactivateOpen(false)
       setSelectedUser(null)
       await fetchUsers()
+      notifySuccess('User berhasil dinonaktifkan.')
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
+        notifyError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error || 'Gagal menonaktifkan user'
           : 'Gagal menonaktifkan user')
         return
       }
 
-      alert(err instanceof Error ? err.message || 'Gagal menonaktifkan user' : 'Gagal menonaktifkan user')
+      notifyError(err instanceof Error ? err.message || 'Gagal menonaktifkan user' : 'Gagal menonaktifkan user')
     } finally {
       setActionLoading(false)
     }
@@ -995,16 +1003,17 @@ function MasterUserPage() {
       setActivateOpen(false)
       setSelectedUser(null)
       await fetchUsers()
+      notifySuccess('User berhasil diaktifkan.')
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
-        alert(payload && typeof payload === 'object' && 'error' in payload
+        notifyError(payload && typeof payload === 'object' && 'error' in payload
           ? (payload as { error?: string }).error || 'Gagal mengaktifkan user'
           : 'Gagal mengaktifkan user')
         return
       }
 
-      alert(err instanceof Error ? err.message || 'Gagal mengaktifkan user' : 'Gagal mengaktifkan user')
+      notifyError(err instanceof Error ? err.message || 'Gagal mengaktifkan user' : 'Gagal mengaktifkan user')
     } finally {
       setActionLoading(false)
     }
@@ -1022,7 +1031,7 @@ function MasterUserPage() {
       }))
     } else {
       if (isEditingOwnAdminAccount) {
-        alert(SELF_ADMIN_REMOVAL_ERROR)
+        notifyWarning(SELF_ADMIN_REMOVAL_ERROR)
         return
       }
 
