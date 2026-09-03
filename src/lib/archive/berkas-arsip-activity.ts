@@ -19,9 +19,10 @@ export const BERKAS_ACTIVITY_EVENT_LABELS: Record<BerkasActivityEventType, strin
   DOKUMEN_MANUAL_DITAMBAHKAN: 'Penambahan dokumen manual sukses',
   BERKAS_DITUTUP: 'Berkas ditutup',
   METADATA_ARSIP_AKTIF_DIPERBARUI: 'Metadata arsip aktif diperbarui',
-  BERKAS_DIPINDAHKAN_KE_INAKTIF: 'Berkas dipindahkan ke Inaktif',
-  BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH: 'Berkas dipindahkan ke Usul Musnah',
-  BERKAS_DIMUSNAHKAN: 'Berkas dimusnahkan',
+  // RP-01: nilai enum dipertahankan (DB CHECK) tetapi event ini tak lagi ditulis runtime.
+  BERKAS_DIPINDAHKAN_KE_INAKTIF: 'Berkas dipindahkan ke Inaktif (usang)',
+  BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH: 'Berkas diusulkan untuk pembersihan',
+  BERKAS_DIMUSNAHKAN: 'File berkas dibersihkan',
 }
 
 export function isBerkasActivityEventType(value: unknown): value is BerkasActivityEventType {

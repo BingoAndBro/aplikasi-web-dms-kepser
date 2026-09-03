@@ -1,3 +1,7 @@
+// 'INAKTIF' dipertahankan untuk kompat DB CHECK constraint
+// (berkas_arsip_status_arsip_check). Sejak RP-01 nilai ini TIDAK dipakai di
+// alur lifecycle berkas: propose_destruction langsung AKTIF -> USUL_MUSNAH,
+// dan cancel_proposal mengembalikan USUL_MUSNAH -> AKTIF.
 export const ARCHIVE_STATUS_VALUES = [
   'AKTIF',
   'INAKTIF',
@@ -13,6 +17,9 @@ export const ARCHIVE_STATUS: { [K in StatusArsip]: K } = {
   USUL_MUSNAH: 'USUL_MUSNAH',
   DIMUSNAHKAN: 'DIMUSNAHKAN',
 }
+
+// Status "istirahat" berkas tertutup yang belum diusulkan pembersihan (RP-01).
+export const BERKAS_RESTING_STATUS: StatusArsip = 'AKTIF'
 
 export const ARCHIVE_SOURCE_TYPE_VALUES = [
   'WORKFLOW',
