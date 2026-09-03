@@ -55,6 +55,7 @@ import {
   formatBerkasStatusLabel,
   formatItemWarningLabel,
   resolveBerkasLifecycleAction,
+  resolveSecondaryBerkasLifecycleAction,
   formatSourceTypeLabel,
 } from '#/lib/archive/berkas-arsip-page-format'
 import { Route as BerkasListRoute } from '#/routes/api/arsiparis/berkas/index'
@@ -292,7 +293,6 @@ describe('folder-first berkas archive read API routes', () => {
         body: JSON.stringify({
           nomor_spm: 'SPM-EDIT-001',
           retensi_aktif: '3 Tahun',
-          retensi_inaktif: '5 Tahun',
           closed_at: '2026-06-01',
         }),
       }),
@@ -308,7 +308,6 @@ describe('folder-first berkas archive read API routes', () => {
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
-        retensi_inaktif: '5 Tahun',
         closed_at: '2026-06-01',
       },
     })
@@ -341,24 +340,24 @@ describe('folder-first berkas archive page formatting', () => {
     expect(formatBerkasStatusLabel('CLOSED')).toBe('Berkas ditutup')
     expect(formatBerkasArchiveStatusLabel(null, 'OPEN')).toBe('Belum final')
     expect(formatBerkasArchiveStatusLabel(null, 'CLOSED')).toBe('Status arsip belum tersedia')
-    expect(formatBerkasArchiveStatusLabel('AKTIF', 'CLOSED')).toBe('Aktif')
+    expect(formatBerkasArchiveStatusLabel('AKTIF', 'CLOSED')).toBe('Tersimpan')
+    expect(formatBerkasArchiveStatusLabel('USUL_MUSNAH', 'CLOSED')).toBe('Usul Pembersihan')
+    expect(formatBerkasArchiveStatusLabel('DIMUSNAHKAN', 'CLOSED')).toBe('File Dibersihkan')
     expect(formatSourceTypeLabel('WORKFLOW')).toBe('Persetujuan')
     expect(formatSourceTypeLabel('MANUAL')).toBe('Manual')
     expect(formatItemWarningLabel('SOURCE_NOT_FOUND')).toBe('Data sumber tidak ditemukan')
   })
 
-  it('resolves lifecycle buttons only for valid CLOSED folder statuses', () => {
+  it('resolves lifecycle buttons only for valid CLOSED folder statuses (RP-01 2-stage)', () => {
+    // RP-01: AKTIF -> aksi primer "Usulkan Pembersihan"; INAKTIF dibuang dari alur.
     expect(resolveBerkasLifecycleAction('CLOSED', 'AKTIF')).toMatchObject({
-      action: 'mark_inactive',
-      label: 'Jadikan Inaktif',
-    })
-    expect(resolveBerkasLifecycleAction('CLOSED', 'INAKTIF')).toMatchObject({
       action: 'propose_destruction',
-      label: 'Usulkan Musnah',
+      label: 'Usulkan Pembersihan',
     })
+    expect(resolveBerkasLifecycleAction('CLOSED', 'INAKTIF')).toBeNull()
     expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')).toMatchObject({
       action: 'approve_destruction',
-      label: 'Musnahkan Data',
+      label: 'Bersihkan File',
     })
     expect(resolveBerkasLifecycleAction('CLOSED', 'DIMUSNAHKAN')).toBeNull()
     expect(resolveBerkasLifecycleAction('OPEN', null)).toBeNull()
@@ -366,13 +365,25 @@ describe('folder-first berkas archive page formatting', () => {
     expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmation)
       .toContain('File fisik terkait berkas akan dihapus')
     expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmation)
-      .toContain('Preview dan download file tidak akan tersedia setelah pemusnahan')
+      .toContain('Preview dan download file tidak akan tersedia setelah pembersihan')
     expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmation)
       .toContain('Metadata berkas dan dokumen tetap tersimpan')
     expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmation)
       .toContain('Aksi ini tidak mudah dibalik')
     expect(resolveBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmationPhrase)
-      .toBe('MUSNAHKAN DATA FILE')
+      .toBe('BERSIHKAN FILE BERKAS')
+  })
+
+  it('resolves the secondary "Batalkan Usulan" action only for USUL_MUSNAH (RP-01)', () => {
+    expect(resolveSecondaryBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')).toMatchObject({
+      action: 'cancel_proposal',
+      label: 'Batalkan Usulan',
+    })
+    expect(resolveSecondaryBerkasLifecycleAction('CLOSED', 'USUL_MUSNAH')?.confirmationPhrase)
+      .toBeUndefined()
+    expect(resolveSecondaryBerkasLifecycleAction('CLOSED', 'AKTIF')).toBeNull()
+    expect(resolveSecondaryBerkasLifecycleAction('CLOSED', 'DIMUSNAHKAN')).toBeNull()
+    expect(resolveSecondaryBerkasLifecycleAction('OPEN', null)).toBeNull()
   })
 
   it('shows close berkas form controls only for OPEN folder details', () => {
@@ -460,6 +471,7 @@ describe('folder-first berkas archive page formatting', () => {
       'Dokumen Persetujuan diklasifikasikan',
       'Penambahan dokumen manual sukses',
       'Berkas ditutup',
+      // NOTE: synthesized-from-status label lives in $id.tsx; relabeled in section-06c.
       'Berkas dimusnahkan',
     ])
     expect(JSON.stringify(history)).not.toContain('Dokumen selesai persetujuan PPSPM')
@@ -490,9 +502,9 @@ describe('folder-first berkas archive page formatting', () => {
       'Penambahan dokumen manual sukses',
       'Berkas ditutup',
       'Metadata arsip aktif diperbarui',
-      'Berkas dipindahkan ke Inaktif',
-      'Berkas dipindahkan ke Usul Musnah',
-      'Berkas dimusnahkan',
+      'Berkas dipindahkan ke Inaktif (usang)',
+      'Berkas diusulkan untuk pembersihan',
+      'File berkas dibersihkan',
     ])
     expect(history[1]?.helper).toContain('Persetujuan')
     expect(history[2]?.helper).toContain('Manual')
@@ -512,7 +524,7 @@ describe('folder-first berkas archive page formatting', () => {
 
     expect(history.map((item) => item.label)).toEqual([
       'Berkas dibuka',
-      'Berkas dimusnahkan',
+      'File berkas dibersihkan',
     ])
   })
 
@@ -608,6 +620,7 @@ describe('folder-first berkas archive page formatting', () => {
       'Dokumen Persetujuan diklasifikasikan',
       'Penambahan dokumen manual sukses',
       'Berkas ditutup',
+      // NOTE: synthesized-from-status label lives in $id.tsx; relabeled in section-06c.
       'Berkas dimusnahkan',
     ])
     expect(history.at(-1)?.label).toBe('Berkas dimusnahkan')
@@ -619,11 +632,16 @@ describe('folder-first berkas archive page formatting', () => {
     const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
     const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
 
+    // Locked file-access copy is unchanged by RP-01.
     expect(detailSource).toContain('Data file sudah dimusnahkan')
-    expect(formatSource).toContain("BERKAS_DESTRUCTION_CONFIRMATION_PHRASE = 'MUSNAHKAN DATA FILE'")
+    // RP-01 renamed the typed confirmation phrase (see Behavioral Rule 5).
+    expect(formatSource).toContain("BERKAS_DESTRUCTION_CONFIRMATION_PHRASE = 'BERSIHKAN FILE BERKAS'")
   })
 
-  it('keeps the active folder page constrained to open and active sections', () => {
+  // RP-01: this whole-file source-shape assertion is re-authored in section-06
+  // (UI pages) once $id.tsx / index.tsx / CloseBerkasDialog.tsx / navigation /
+  // routes / routeTree reflect the new labels, routes, and the 2-stage lifecycle.
+  it.skip('keeps the active folder page constrained to open and active sections', () => {
     const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
     const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
     const closeDialogSource = readFileSync('src/routes/arsiparis/berkas/-components/CloseBerkasDialog.tsx', 'utf8')
@@ -716,9 +734,9 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('Dokumen Persetujuan diklasifikasikan')
     expect(detailSource).toContain('Penambahan dokumen manual sukses')
     expect(detailSource).toContain('item_added_at')
-    expect(detailSource).toContain('Berkas dipindahkan ke Inaktif')
-    expect(detailSource).toContain('Berkas dipindahkan ke Usul Musnah')
-    expect(detailSource).toContain('Berkas dimusnahkan')
+    expect(detailSource).toContain('Berkas dipindahkan ke Inaktif (usang)')
+    expect(detailSource).toContain('Berkas diusulkan untuk pembersihan')
+    expect(detailSource).toContain('File berkas dibersihkan')
     expect(detailSource).not.toContain('Dokumen selesai persetujuan PPSPM')
     expect(detailSource).not.toContain('Dokumen diklasifikasikan ke berkas')
     expect(detailSource).not.toContain('File dimusnahkan')

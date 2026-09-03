@@ -6,14 +6,14 @@ import type {
 import { formatDate, formatDateTime } from '#/lib/utils/format'
 
 export type BerkasLifecycleActionView = {
-  action: 'mark_inactive' | 'propose_destruction' | 'approve_destruction'
+  action: 'propose_destruction' | 'cancel_proposal' | 'approve_destruction'
   label: string
   confirmation: string
   successMessage: string
   confirmationPhrase?: string
 }
 
-export const BERKAS_DESTRUCTION_CONFIRMATION_PHRASE = 'MUSNAHKAN DATA FILE'
+export const BERKAS_DESTRUCTION_CONFIRMATION_PHRASE = 'BERSIHKAN FILE BERKAS'
 
 export function formatBerkasStatusLabel(status: BerkasStatus | string | null | undefined): string {
   if (status === 'OPEN') return 'Berkas terbuka'
@@ -28,15 +28,21 @@ export function formatBerkasArchiveStatusLabel(
 ): string {
   if (statusBerkas === 'OPEN' && !statusArsip) return 'Belum final'
   if (statusBerkas === 'CLOSED' && !statusArsip) return 'Status arsip belum tersedia'
-  if (statusArsip === 'AKTIF') return 'Aktif'
-  if (statusArsip === 'INAKTIF') return 'Inaktif'
-  if (statusArsip === 'USUL_MUSNAH') return 'Usul musnah'
-  if (statusArsip === 'DIMUSNAHKAN') return 'Dimusnahkan'
+  // RP-01 label: Tersimpan / Usul Pembersihan / File Dibersihkan; INAKTIF dibuang dari alur.
+  if (statusArsip === 'AKTIF') return 'Tersimpan'
+  if (statusArsip === 'USUL_MUSNAH') return 'Usul Pembersihan'
+  if (statusArsip === 'DIMUSNAHKAN') return 'File Dibersihkan'
   if (!statusArsip) return 'Belum final'
 
   return 'Status arsip tidak dikenal'
 }
 
+/**
+ * RP-01: aksi lifecycle primer per status arsip berkas tertutup.
+ * - AKTIF        -> "Usulkan Pembersihan" (propose_destruction)
+ * - USUL_MUSNAH  -> "Bersihkan File" (approve_destruction, konfirmasi ketik-persis)
+ * Aksi sekunder ("Batalkan Usulan") diambil dari `resolveSecondaryBerkasLifecycleAction`.
+ */
 export function resolveBerkasLifecycleAction(
   statusBerkas: BerkasStatus | string | null | undefined,
   statusArsip: BerkasArchiveStatus | string | null | undefined,
@@ -45,33 +51,43 @@ export function resolveBerkasLifecycleAction(
 
   if (statusArsip === 'AKTIF') {
     return {
-      action: 'mark_inactive',
-      label: 'Jadikan Inaktif',
-      confirmation: 'Berkas akan dipindahkan ke status Inaktif. Dokumen tidak dihapus.',
-      successMessage: 'Berkas berhasil dipindahkan ke status Inaktif.',
-    }
-  }
-
-  if (statusArsip === 'INAKTIF') {
-    return {
       action: 'propose_destruction',
-      label: 'Usulkan Musnah',
-      confirmation: 'Berkas akan masuk daftar Usul Musnah. Dokumen tidak dihapus.',
-      successMessage: 'Berkas berhasil masuk daftar Usul Musnah.',
+      label: 'Usulkan Pembersihan',
+      confirmation: 'Berkas akan masuk daftar Usul Pembersihan. Dokumen tidak dihapus.',
+      successMessage: 'Berkas berhasil masuk daftar Usul Pembersihan.',
     }
   }
 
   if (statusArsip === 'USUL_MUSNAH') {
     return {
       action: 'approve_destruction',
-      label: 'Musnahkan Data',
-      confirmation: 'Status berkas akan menjadi Dimusnahkan. File fisik terkait berkas akan dihapus. Preview dan download file tidak akan tersedia setelah pemusnahan. Metadata berkas dan dokumen tetap tersimpan. Aksi ini tidak mudah dibalik.',
+      label: 'Bersihkan File',
+      confirmation: 'Status berkas akan menjadi File Dibersihkan. File fisik terkait berkas akan dihapus. Preview dan download file tidak akan tersedia setelah pembersihan. Metadata berkas dan dokumen tetap tersimpan. Aksi ini tidak mudah dibalik.',
       confirmationPhrase: BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
-      successMessage: 'Berkas berhasil dimusnahkan. File fisik terkait berkas dihapus jika ditemukan dan metadata tetap tersimpan.',
+      successMessage: 'File berkas berhasil dibersihkan. File fisik terkait berkas dihapus jika ditemukan dan metadata tetap tersimpan.',
     }
   }
 
   return null
+}
+
+/**
+ * RP-01: aksi lifecycle sekunder — hanya "Batalkan Usulan" untuk berkas
+ * berstatus USUL_MUSNAH (kembali ke Tersimpan). Tanpa konfirmasi ketik-persis.
+ */
+export function resolveSecondaryBerkasLifecycleAction(
+  statusBerkas: BerkasStatus | string | null | undefined,
+  statusArsip: BerkasArchiveStatus | string | null | undefined,
+): BerkasLifecycleActionView | null {
+  if (statusBerkas !== 'CLOSED') return null
+  if (statusArsip !== 'USUL_MUSNAH') return null
+
+  return {
+    action: 'cancel_proposal',
+    label: 'Batalkan Usulan',
+    confirmation: 'Berkas kembali ke status Tersimpan. Tidak ada file yang dihapus.',
+    successMessage: 'Usulan pembersihan dibatalkan.',
+  }
 }
 
 export function formatSourceTypeLabel(sourceType: ArchiveSourceType | string | null | undefined): string {

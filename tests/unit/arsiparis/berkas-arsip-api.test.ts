@@ -84,7 +84,7 @@ describe('berkas arsip API routes', () => {
     mocks.addWorkflowDocumentToOpenBerkas.mockResolvedValue(workflowItemDto())
     mocks.addManualDocumentToOpenBerkas.mockResolvedValue(manualItemDto())
     mocks.closeBerkasArsip.mockResolvedValue(closedBerkasDto())
-    mocks.transitionBerkasArchiveStatus.mockResolvedValue(inactiveBerkasDto())
+    mocks.transitionBerkasArchiveStatus.mockResolvedValue(proposedBerkasDto())
     mocks.executeBerkasPhysicalFileDestruction.mockResolvedValue(physicalDeletionReport())
   })
 
@@ -142,7 +142,7 @@ describe('berkas arsip API routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Jenis pembayaran tidak valid' })
+    expect(await response.json()).toEqual({ error: 'Cara pembayaran tidak valid' })
     expect(mocks.getOrCreateOpenBerkasForKlasifikasi).not.toHaveBeenCalled()
   })
 
@@ -290,7 +290,6 @@ describe('berkas arsip API routes', () => {
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/close`, {
         nomor_spm: '',
         retensi_aktif: '1 Tahun',
-        retensi_inaktif: '3 Tahun',
       }),
       params: { id: BERKAS_ID },
     })
@@ -419,7 +418,7 @@ describe('berkas arsip API routes', () => {
   it('moves lifecycle through the folder service for assigned KEPALA_SUB_BAGIAN_UMUM', async () => {
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
-        action: 'mark_inactive',
+        action: 'propose_destruction',
       }),
       params: { id: BERKAS_ID },
     })
@@ -427,11 +426,11 @@ describe('berkas arsip API routes', () => {
     const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(body).toEqual({ berkas: inactiveBerkasDto() })
+    expect(body).toEqual({ berkas: proposedBerkasDto() })
     expect(mocks.transitionBerkasArchiveStatus).toHaveBeenCalledWith({
       berkasId: BERKAS_ID,
       actorUserId: USER_ID,
-      action: 'mark_inactive',
+      action: 'propose_destruction',
     })
     expect(mocks.executeBerkasPhysicalFileDestruction).not.toHaveBeenCalled()
     expectNoSensitiveOutput(body)
@@ -443,7 +442,7 @@ describe('berkas arsip API routes', () => {
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
-        confirmation: 'MUSNAHKAN DATA FILE',
+        confirmation: 'BERSIHKAN FILE BERKAS',
       }),
       params: { id: BERKAS_ID },
     })
@@ -492,7 +491,7 @@ describe('berkas arsip API routes', () => {
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
-        confirmation: 'MUSNAHKAN DATA FILE',
+        confirmation: 'BERSIHKAN FILE BERKAS',
       }),
       params: { id: BERKAS_ID },
     })
@@ -516,7 +515,7 @@ describe('berkas arsip API routes', () => {
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
-        confirmation: 'MUSNAHKAN DATA FILE',
+        confirmation: 'BERSIHKAN FILE BERKAS',
       }),
       params: { id: BERKAS_ID },
     })
@@ -554,7 +553,7 @@ describe('berkas arsip API routes', () => {
     const response = await lifecyclePostHandler({
       request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
-        confirmation: 'MUSNAHKAN DATA FILE',
+        confirmation: 'BERSIHKAN FILE BERKAS',
       }),
       params: { id: BERKAS_ID },
     })
@@ -597,7 +596,6 @@ function validCloseBody() {
   return {
     nomor_spm: 'SPM-001/2026',
     retensi_aktif: '1 Tahun',
-    retensi_inaktif: '3 Tahun',
     closed_at: '2026-05-29',
   }
 }
@@ -636,10 +634,10 @@ function closedBerkasDto() {
   }
 }
 
-function inactiveBerkasDto() {
+function proposedBerkasDto() {
   return {
     ...closedBerkasDto(),
-    status_arsip: 'INAKTIF',
+    status_arsip: 'USUL_MUSNAH',
   }
 }
 

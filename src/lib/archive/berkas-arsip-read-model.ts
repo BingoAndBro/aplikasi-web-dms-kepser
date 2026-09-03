@@ -38,6 +38,7 @@ import {
   resolveWorkflowAttachmentNames,
   type SafeBerkasAttachmentName,
 } from '#/lib/archive/berkas-arsip-attachment-names'
+import { computeBerkasAging } from '#/lib/archive/retention'
 
 export const BERKAS_ARSIP_READ_MODEL_DEFAULT_LIMIT = 100
 export const BERKAS_ARSIP_READ_MODEL_MAX_LIMIT = 500
@@ -49,6 +50,8 @@ export const listBerkasArsipFolderQuerySchema = z
     status_berkas: z.enum(BERKAS_STATUS_VALUES).optional(),
     klasifikasi_id: z.uuid().optional(),
     search: z.string().trim().max(100).optional(),
+    // RP-01: filter "hanya yang jatuh tempo" (dihitung dari closed_at + masa simpan).
+    due_only: z.boolean().optional(),
     limit: z.number().int().min(1).max(BERKAS_ARSIP_READ_MODEL_MAX_LIMIT).optional(),
     offset: z.number().int().min(0).max(BERKAS_ARSIP_READ_MODEL_MAX_OFFSET).optional(),
   })
@@ -70,6 +73,10 @@ export type BerkasArsipFolderListItemDto = {
   masa_inaktif_berakhir: string | null
   closed_at: string | null
   closed_by: string | null
+  // RP-01: dihitung saat baca (tanpa scheduler).
+  umur_berkas: number | null
+  jatuh_tempo: boolean
+  tanggal_jatuh_tempo: string | null
   item_count: number
   workflow_item_count: number
   manual_item_count: number
@@ -234,6 +241,7 @@ type NormalizedListBerkasArsipFolderQuery = {
   status_berkas: BerkasStatus | null
   klasifikasi_id: string | null
   search: string | null
+  due_only: boolean
   limit: number
   offset: number
 }
@@ -247,7 +255,8 @@ export async function listBerkasArsipFolders(
   const folderRows = await repository.listFolders(options)
   const itemRows = await repository.listItemsForBerkasIds(folderRows.map((row) => row.berkas_id))
   const itemSummaries = summarizeItemsByBerkas(itemRows)
-  const rows = folderRows.map((row) => mapFolderRowToListDto(row, itemSummaries.get(row.berkas_id)))
+  const mapped = folderRows.map((row) => mapFolderRowToListDto(row, itemSummaries.get(row.berkas_id)))
+  const rows = options.due_only ? mapped.filter((row) => row.jatuh_tempo) : mapped
 
   return {
     rows,
@@ -299,8 +308,14 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
 
     if (filters.length > 0) builder = builder.where(and(...filters))
 
+    // RP-01: daftar berkas tertutup diurutkan terlama dulu (closed_at ASC) untuk
+    // prioritas pembersihan. Daftar terbuka / tak terfilter tetap terbaru dulu.
+    const orderBy = options.status_berkas === 'CLOSED'
+      ? [asc(berkasArsip.closedAt), asc(berkasArsip.createdAt), asc(berkasArsip.id)]
+      : [desc(berkasArsip.updatedAt), desc(berkasArsip.createdAt), desc(berkasArsip.id)]
+
     return builder
-      .orderBy(desc(berkasArsip.updatedAt), desc(berkasArsip.createdAt), desc(berkasArsip.id))
+      .orderBy(...orderBy)
       .limit(options.limit)
       .offset(options.offset) as Promise<BerkasFolderReadRow[]>
   },
@@ -517,6 +532,29 @@ function summarizeItemsByBerkas(itemRows: BerkasItemSourceReadRow[]): Map<string
   return summaries
 }
 
+// RP-01: "Umur Berkas" + "Jatuh Tempo" dihitung saat baca. Tanggal jatuh tempo
+// disimpan di kolom warisan `masa_aktif_berakhir` sejak RP-01.
+function mapBerkasAging(row: BerkasFolderReadRow): {
+  umur_berkas: number | null
+  jatuh_tempo: boolean
+  tanggal_jatuh_tempo: string | null
+} {
+  if (row.status_berkas !== 'CLOSED') {
+    return { umur_berkas: null, jatuh_tempo: false, tanggal_jatuh_tempo: null }
+  }
+
+  const aging = computeBerkasAging({
+    closedAt: row.closed_at ?? null,
+    dueDate: toIsoLikeString(row.masa_aktif_berakhir),
+  })
+
+  return {
+    umur_berkas: aging.umurHari,
+    jatuh_tempo: aging.jatuhTempo,
+    tanggal_jatuh_tempo: aging.tanggalJatuhTempo,
+  }
+}
+
 function mapFolderRowToListDto(
   row: BerkasFolderReadRow,
   summary: ItemSummary | undefined,
@@ -535,6 +573,7 @@ function mapFolderRowToListDto(
     masa_inaktif_berakhir: toIsoLikeString(row.masa_inaktif_berakhir),
     closed_at: toIsoLikeString(row.closed_at),
     closed_by: trimToNull(row.closed_by),
+    ...mapBerkasAging(row),
     item_count: summary?.itemCount ?? 0,
     workflow_item_count: summary?.workflowItemCount ?? 0,
     manual_item_count: summary?.manualItemCount ?? 0,
@@ -631,6 +670,7 @@ function normalizeListQuery(query: ListBerkasArsipFolderQuery): NormalizedListBe
     status_berkas: data.status_berkas ?? null,
     klasifikasi_id: trimToNull(data.klasifikasi_id),
     search: trimToNull(data.search),
+    due_only: data.due_only ?? false,
     limit: data.limit ?? BERKAS_ARSIP_READ_MODEL_DEFAULT_LIMIT,
     offset: data.offset ?? 0,
   }

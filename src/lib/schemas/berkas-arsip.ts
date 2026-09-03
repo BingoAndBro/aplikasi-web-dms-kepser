@@ -19,7 +19,7 @@ export const berkasItemSourceTypeSchema = z.enum(ARCHIVE_SOURCE_TYPE_VALUES)
 
 export const openBerkasRequestSchema = z
   .object({
-    klasifikasi_id: z.uuid('Jenis pembayaran tidak valid'),
+    klasifikasi_id: z.uuid('Cara pembayaran tidak valid'),
   })
   .strict()
 
@@ -42,18 +42,19 @@ export const addBerkasItemRequestSchema = z.discriminatedUnion('source_type', [
   addManualBerkasItemRequestSchema,
 ])
 
+// RP-01: satu field retensi "Masa Simpan Minimal". Key `retensi_aktif`
+// dipertahankan sebagai identifier internal; `retensi_inaktif` dibuang (schema
+// `.strict()` -> payload yang masih mengirimnya ditolak).
 export const closeBerkasMetadataSchema = z
   .object({
     nomor_spm: z.string().trim().min(1, 'Nomor SPM wajib diisi').max(120, 'Nomor SPM maksimal 120 karakter'),
-    retensi_aktif: z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message: 'Retensi aktif tidak valid' }),
-    retensi_inaktif: z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message: 'Retensi inaktif tidak valid' }),
+    retensi_aktif: z.enum(MANUAL_ARCHIVE_RETENTION_LABELS, { message: 'Masa Simpan Minimal tidak valid' }),
     closed_at: z.string().refine(isDateOnlyString, 'Tanggal tutup berkas harus valid dengan format YYYY-MM-DD').optional(),
   })
   .strict()
   .transform((value) => ({
     nomor_spm: value.nomor_spm,
     retensi_aktif: value.retensi_aktif,
-    retensi_inaktif: value.retensi_inaktif,
     closed_at: value.closed_at ?? null,
   }))
 

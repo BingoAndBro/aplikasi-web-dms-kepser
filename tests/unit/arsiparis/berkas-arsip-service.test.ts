@@ -282,21 +282,20 @@ describe('berkas arsip service foundation', () => {
     })
   })
 
-  it('computes close-folder retention dates from closed_at', () => {
+  it('computes a single berkas due date from closed_at + masa simpan (RP-01)', () => {
     const plan = buildCloseBerkasPlan({
       nomor_spm: 'SPM-001/2026',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
       closed_at: '2026-05-29',
     })
 
     expect(plan).toMatchObject({
       nomorSpm: 'SPM-001/2026',
       retensiAktif: '1 Tahun',
-      retensiInaktif: '3 Tahun',
+      retensiInaktif: null,
       closedAtDateOnly: '2026-05-29',
       masaAktifBerakhir: '2027-05-29',
-      masaInaktifBerakhir: '2030-05-29',
+      masaInaktifBerakhir: null,
     })
     expect(plan.closedAt.toISOString()).toBe('2026-05-29T00:00:00.000Z')
   })
@@ -305,16 +304,25 @@ describe('berkas arsip service foundation', () => {
     const plan = buildCloseBerkasPlan({
       nomor_spm: 'SPM-001/2026',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
       closed_at: null,
     }, new Date('2026-05-30T12:00:00.000Z'))
 
     expect(plan).toMatchObject({
       closedAtDateOnly: '2026-05-30',
       masaAktifBerakhir: '2027-05-30',
-      masaInaktifBerakhir: '2030-05-30',
+      masaInaktifBerakhir: null,
     })
     expect(plan.closedAt.toISOString()).toBe('2026-05-30T00:00:00.000Z')
+  })
+
+  it('maps "Permanen" masa simpan to the sentinel due date', () => {
+    const plan = buildCloseBerkasPlan({
+      nomor_spm: 'SPM-PERMANEN',
+      retensi_aktif: 'Permanen',
+      closed_at: '2026-05-29',
+    })
+
+    expect(plan.masaAktifBerakhir).toBe('9999-12-31')
   })
 
   it('closes a non-empty OPEN berkas without source item or canonical archive mutation', async () => {
@@ -331,9 +339,9 @@ describe('berkas arsip service foundation', () => {
       status_arsip: 'AKTIF',
       nomor_spm: 'SPM-001/2026',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
+      retensi_inaktif: null,
       masa_aktif_berakhir: '2027-05-29',
-      masa_inaktif_berakhir: '2030-05-29',
+      masa_inaktif_berakhir: null,
       closed_by: ACTOR_ID,
     })
     expect(repository.calls).toContainEqual(['closeOpenBerkas', BERKAS_ID, ACTOR_ID])
@@ -358,7 +366,6 @@ describe('berkas arsip service foundation', () => {
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
-        retensi_inaktif: '5 Tahun',
         closed_at: '2026-06-01',
       },
     }, { repository })
@@ -369,9 +376,9 @@ describe('berkas arsip service foundation', () => {
       status_arsip: 'AKTIF',
       nomor_spm: 'SPM-EDIT-001',
       retensi_aktif: '3 Tahun',
-      retensi_inaktif: '5 Tahun',
+      retensi_inaktif: null,
       masa_aktif_berakhir: '2029-05-29',
-      masa_inaktif_berakhir: '2034-05-29',
+      masa_inaktif_berakhir: null,
       closed_at: '2026-05-29T00:00:00.000Z',
     })
     expect(repository.calls).toContainEqual(['updateActiveBerkasMetadata', CLOSED_BERKAS_ID])
@@ -400,7 +407,6 @@ describe('berkas arsip service foundation', () => {
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
-        retensi_inaktif: '5 Tahun',
       },
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_METADATA_NOT_EDITABLE',
@@ -422,7 +428,6 @@ describe('berkas arsip service foundation', () => {
       metadata: {
         nomor_spm: 'SPM-EDIT-001',
         retensi_aktif: '3 Tahun',
-        retensi_inaktif: '5 Tahun',
       },
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_METADATA_NOT_EDITABLE',
@@ -435,44 +440,11 @@ describe('berkas arsip service foundation', () => {
     expect(() => buildCloseBerkasPlan({
       nomor_spm: '',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
     })).toThrow(BerkasArsipServiceError)
   })
 
-  it('moves CLOSED AKTIF berkas to INAKTIF without item, source, or storage mutation', async () => {
+  it('moves CLOSED AKTIF berkas straight to USUL_MUSNAH via propose_destruction (RP-01)', async () => {
     const repository = createFakeRepository()
-
-    const updated = await transitionBerkasArchiveStatus({
-      berkasId: CLOSED_BERKAS_ID,
-      actorUserId: ACTOR_ID,
-      action: 'mark_inactive',
-    }, { repository })
-
-    expect(updated.status_arsip).toBe('INAKTIF')
-    expect(repository.calls).toContainEqual([
-      'updateBerkasArchiveStatus',
-      CLOSED_BERKAS_ID,
-      'AKTIF',
-      'INAKTIF',
-    ])
-    expect(repository.calls).toContainEqual([
-      'appendBerkasActivity',
-      CLOSED_BERKAS_ID,
-      'BERKAS_DIPINDAHKAN_KE_INAKTIF',
-      ACTOR_ID,
-      null,
-      null,
-      null,
-    ])
-    expect(repository.calls.some(([name]) => name === 'insertBerkasItem')).toBe(false)
-    expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('delete'))).toBe(false)
-    expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('storage'))).toBe(false)
-  })
-
-  it('moves CLOSED INAKTIF berkas to USUL_MUSNAH', async () => {
-    const repository = createFakeRepository({
-      closedStatusArsip: BERKAS_ARCHIVE_STATUS.INAKTIF,
-    })
 
     const updated = await transitionBerkasArchiveStatus({
       berkasId: CLOSED_BERKAS_ID,
@@ -484,13 +456,45 @@ describe('berkas arsip service foundation', () => {
     expect(repository.calls).toContainEqual([
       'updateBerkasArchiveStatus',
       CLOSED_BERKAS_ID,
-      'INAKTIF',
+      'AKTIF',
       'USUL_MUSNAH',
     ])
     expect(repository.calls).toContainEqual([
       'appendBerkasActivity',
       CLOSED_BERKAS_ID,
       'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH',
+      ACTOR_ID,
+      null,
+      null,
+      null,
+    ])
+    expect(repository.calls.some(([name]) => name === 'insertBerkasItem')).toBe(false)
+    expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('delete'))).toBe(false)
+    expect(repository.calls.some(([name]) => String(name).toLowerCase().includes('storage'))).toBe(false)
+  })
+
+  it('moves CLOSED USUL_MUSNAH berkas back to AKTIF via cancel_proposal, logging an existing event (RP-01)', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+    })
+
+    const updated = await transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'cancel_proposal',
+    }, { repository })
+
+    expect(updated.status_arsip).toBe('AKTIF')
+    expect(repository.calls).toContainEqual([
+      'updateBerkasArchiveStatus',
+      CLOSED_BERKAS_ID,
+      'USUL_MUSNAH',
+      'AKTIF',
+    ])
+    expect(repository.calls).toContainEqual([
+      'appendBerkasActivity',
+      CLOSED_BERKAS_ID,
+      'METADATA_ARSIP_AKTIF_DIPERBARUI',
       ACTOR_ID,
       null,
       null,
@@ -534,7 +538,7 @@ describe('berkas arsip service foundation', () => {
     await expect(transitionBerkasArchiveStatus({
       berkasId: BERKAS_ID,
       actorUserId: ACTOR_ID,
-      action: 'mark_inactive',
+      action: 'propose_destruction',
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_LIFECYCLE_NOT_FINAL',
     })
@@ -548,7 +552,7 @@ describe('berkas arsip service foundation', () => {
     await expect(transitionBerkasArchiveStatus({
       berkasId: CLOSED_BERKAS_ID,
       actorUserId: ACTOR_ID,
-      action: 'mark_inactive',
+      action: 'propose_destruction',
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_LIFECYCLE_UNKNOWN',
     })
@@ -556,8 +560,32 @@ describe('berkas arsip service foundation', () => {
     expect(repository.calls.some(([name]) => name === 'updateBerkasArchiveStatus')).toBe(false)
   })
 
-  it('rejects invalid lifecycle jumps', async () => {
+  it('rejects invalid lifecycle jumps (cancel_proposal from AKTIF, approve from AKTIF)', async () => {
     const repository = createFakeRepository()
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'cancel_proposal',
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_LIFECYCLE_INVALID',
+    })
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'approve_destruction',
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_LIFECYCLE_INVALID',
+    })
+
+    expect(repository.calls.some(([name]) => name === 'updateBerkasArchiveStatus')).toBe(false)
+  })
+
+  it('rejects propose_destruction when already USUL_MUSNAH', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+    })
 
     await expect(transitionBerkasArchiveStatus({
       berkasId: CLOSED_BERKAS_ID,
@@ -566,8 +594,6 @@ describe('berkas arsip service foundation', () => {
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_LIFECYCLE_INVALID',
     })
-
-    expect(repository.calls.some(([name]) => name === 'updateBerkasArchiveStatus')).toBe(false)
   })
 
   it('rejects terminal DIMUSNAHKAN lifecycle transitions', async () => {
@@ -578,7 +604,7 @@ describe('berkas arsip service foundation', () => {
     await expect(transitionBerkasArchiveStatus({
       berkasId: CLOSED_BERKAS_ID,
       actorUserId: ACTOR_ID,
-      action: 'mark_inactive',
+      action: 'cancel_proposal',
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_LIFECYCLE_INVALID',
     })
@@ -589,7 +615,6 @@ function validCloseMetadata() {
   return {
     nomor_spm: 'SPM-001/2026',
     retensi_aktif: '1 Tahun',
-    retensi_inaktif: '3 Tahun',
     closed_at: '2026-05-29',
   }
 }

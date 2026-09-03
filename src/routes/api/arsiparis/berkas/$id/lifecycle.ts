@@ -18,7 +18,8 @@ import { requireSameOrigin } from '#/lib/security/same-origin'
 
 const nonDestructiveLifecycleBodySchema = z
   .object({
-    action: z.enum(['mark_inactive', 'propose_destruction']),
+    // RP-01: mark_inactive dibuang; cancel_proposal ditambahkan.
+    action: z.enum(['propose_destruction', 'cancel_proposal']),
   })
   .strict()
 const approveDestructionLifecycleBodySchema = z

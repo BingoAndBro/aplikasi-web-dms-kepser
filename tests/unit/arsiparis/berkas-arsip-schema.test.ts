@@ -59,7 +59,7 @@ describe('berkas arsip schema foundation', () => {
     ])
     expect(BERKAS_ACTIVITY_EVENT_LABELS.DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN)
       .toBe('Dokumen Persetujuan diklasifikasikan')
-    expect(BERKAS_ACTIVITY_EVENT_LABELS.BERKAS_DIMUSNAHKAN).toBe('Berkas dimusnahkan')
+    expect(BERKAS_ACTIVITY_EVENT_LABELS.BERKAS_DIMUSNAHKAN).toBe('File berkas dibersihkan')
     expect(berkasArsipActivity.berkasId.name).toBe('berkas_id')
     expect(berkasArsipActivity.actorUserId.name).toBe('actor_user_id')
     expect(berkasArsipActivity.actorUserId.notNull).toBe(false)
@@ -87,27 +87,32 @@ describe('berkas arsip schema foundation', () => {
     expect(berkasItemSourceTypeSchema.safeParse('LEGACY').success).toBe(false)
   })
 
-  it('validates future close-folder metadata without runtime wiring', () => {
+  it('validates close-folder metadata with a single Masa Simpan Minimal field (RP-01)', () => {
     const parsed = closeBerkasMetadataSchema.parse({
       nomor_spm: '  SPM-001/2026  ',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
       closed_at: '2026-05-29',
     })
 
     expect(parsed).toEqual({
       nomor_spm: 'SPM-001/2026',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
       closed_at: '2026-05-29',
     })
+  })
+
+  it('rejects a payload that still sends retensi_inaktif (RP-01 .strict())', () => {
+    expect(closeBerkasMetadataSchema.safeParse({
+      nomor_spm: 'SPM-001/2026',
+      retensi_aktif: '1 Tahun',
+      retensi_inaktif: '3 Tahun',
+    }).success).toBe(false)
   })
 
   it('rejects incomplete close-folder metadata', () => {
     const parsed = closeBerkasMetadataSchema.safeParse({
       nomor_spm: '',
       retensi_aktif: '2 Tahun',
-      retensi_inaktif: '3 Tahun',
       closed_at: '2026-02-31',
     })
 

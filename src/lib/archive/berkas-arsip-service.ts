@@ -15,7 +15,7 @@ import {
   type OperationalKlasifikasiSelectionRepository,
 } from '#/lib/archive/berkas-klasifikasi-eligibility'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
-import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
+import { calculateBerkasDueDate } from '#/lib/archive/retention'
 import {
   ARCHIVE_SOURCE_TYPE,
   BERKAS_ARCHIVE_STATUS,
@@ -136,8 +136,8 @@ export type UpdateActiveBerkasMetadataInput = {
 }
 
 export type BerkasArchiveLifecycleAction =
-  | 'mark_inactive'
   | 'propose_destruction'
+  | 'cancel_proposal'
   | 'approve_destruction'
 
 export type TransitionBerkasArchiveStatusInput = {
@@ -149,20 +149,22 @@ export type TransitionBerkasArchiveStatusInput = {
 export type CloseBerkasPlan = {
   nomorSpm: string
   retensiAktif: CloseBerkasMetadataInput['retensi_aktif']
-  retensiInaktif: CloseBerkasMetadataInput['retensi_inaktif']
+  // RP-01: kolom warisan, selalu null (tanpa migrasi).
+  retensiInaktif: null
   closedAtDateOnly: string
   closedAt: Date
   masaAktifBerakhir: string
-  masaInaktifBerakhir: string
+  masaInaktifBerakhir: null
 }
 
 export type ActiveBerkasMetadataPlan = {
   nomorSpm: string
   retensiAktif: CloseBerkasMetadataInput['retensi_aktif']
-  retensiInaktif: CloseBerkasMetadataInput['retensi_inaktif']
+  // RP-01: kolom warisan, selalu null (tanpa migrasi).
+  retensiInaktif: null
   retentionBaseDateOnly: string
   masaAktifBerakhir: string
-  masaInaktifBerakhir: string
+  masaInaktifBerakhir: null
 }
 
 export type BerkasArsipRepository = OperationalKlasifikasiSelectionRepository & {
@@ -451,7 +453,7 @@ export async function transitionBerkasArchiveStatus(
   }
   await repository.appendBerkasActivity({
     berkasId: input.berkasId,
-    eventType: eventTypeForBerkasLifecycleStatus(nextStatusArsip),
+    eventType: eventTypeForBerkasLifecycleAction(input.action),
     actorUserId: input.actorUserId,
     metadataSnapshot: {
       status_berkas: BERKAS_STATUS.CLOSED,
@@ -523,19 +525,16 @@ export function buildActiveBerkasMetadataPlan(
     )
   }
 
-  const retentionDates = calculateManualArchiveRetentionDates({
-    tanggalDiarsipkan: retentionBaseDateOnly,
-    retensiAktif: parsed.retensi_aktif,
-    retensiInaktif: parsed.retensi_inaktif,
-  })
-
   return {
     nomorSpm: parsed.nomor_spm,
     retensiAktif: parsed.retensi_aktif,
-    retensiInaktif: parsed.retensi_inaktif,
+    retensiInaktif: null,
     retentionBaseDateOnly,
-    masaAktifBerakhir: retentionDates.masaAktifBerakhir,
-    masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
+    masaAktifBerakhir: calculateBerkasDueDate({
+      closedAt: retentionBaseDateOnly,
+      masaSimpan: parsed.retensi_aktif,
+    }),
+    masaInaktifBerakhir: null,
   }
 }
 
@@ -546,20 +545,18 @@ export function buildCloseBerkasPlan(
   const parsed = parseCloseBerkasMetadata(metadata, 'Metadata tutup berkas tidak valid')
 
   const closedAtDateOnly = parsed.closed_at ?? toServerDateOnly(now)
-  const retentionDates = calculateManualArchiveRetentionDates({
-    tanggalDiarsipkan: closedAtDateOnly,
-    retensiAktif: parsed.retensi_aktif,
-    retensiInaktif: parsed.retensi_inaktif,
-  })
 
   return {
     nomorSpm: parsed.nomor_spm,
     retensiAktif: parsed.retensi_aktif,
-    retensiInaktif: parsed.retensi_inaktif,
+    retensiInaktif: null,
     closedAtDateOnly,
     closedAt: dateOnlyToUtcMidnight(closedAtDateOnly),
-    masaAktifBerakhir: retentionDates.masaAktifBerakhir,
-    masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
+    masaAktifBerakhir: calculateBerkasDueDate({
+      closedAt: closedAtDateOnly,
+      masaSimpan: parsed.retensi_aktif,
+    }),
+    masaInaktifBerakhir: null,
   }
 }
 
@@ -892,19 +889,20 @@ function nextStatusForBerkasLifecycleAction(
   action: BerkasArchiveLifecycleAction,
   currentStatus: BerkasArchiveStatus,
 ): BerkasArchiveStatus {
+  // RP-01: lifecycle 2 tahap sesudah tutup. `INAKTIF` dibuang dari alur.
   const allowed: Record<BerkasArchiveLifecycleAction, Partial<Record<BerkasArchiveStatus, BerkasArchiveStatus>>> = {
-    mark_inactive: {
-      [BERKAS_ARCHIVE_STATUS.AKTIF]: BERKAS_ARCHIVE_STATUS.INAKTIF,
-    },
     propose_destruction: {
-      [BERKAS_ARCHIVE_STATUS.INAKTIF]: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+      [BERKAS_ARCHIVE_STATUS.AKTIF]: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+    },
+    cancel_proposal: {
+      [BERKAS_ARCHIVE_STATUS.USUL_MUSNAH]: BERKAS_ARCHIVE_STATUS.AKTIF,
     },
     approve_destruction: {
       [BERKAS_ARCHIVE_STATUS.USUL_MUSNAH]: BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN,
     },
   }
 
-  const nextStatus = allowed[action][currentStatus]
+  const nextStatus = allowed[action]?.[currentStatus]
   if (!nextStatus) {
     throw new BerkasArsipServiceError(
       'BERKAS_LIFECYCLE_INVALID',
@@ -953,18 +951,19 @@ function toServerDateOnly(date: Date): string {
   ].join('-')
 }
 
-function eventTypeForBerkasLifecycleStatus(
-  status: BerkasArchiveStatus,
+// RP-01: pemetaan event dibuat action-aware. `cancel_proposal` menuju AKTIF tetapi
+// TIDAK boleh memakai event 'BERKAS_DITUTUP'; ia memakai event yang sudah ada di
+// CHECK constraint (`METADATA_ARSIP_AKTIF_DIPERBARUI`) sehingga tanpa migrasi.
+function eventTypeForBerkasLifecycleAction(
+  action: BerkasArchiveLifecycleAction,
 ): BerkasActivityEventType {
-  switch (status) {
-    case BERKAS_ARCHIVE_STATUS.INAKTIF:
-      return 'BERKAS_DIPINDAHKAN_KE_INAKTIF'
-    case BERKAS_ARCHIVE_STATUS.USUL_MUSNAH:
+  switch (action) {
+    case 'propose_destruction':
       return 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH'
-    case BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN:
+    case 'cancel_proposal':
+      return 'METADATA_ARSIP_AKTIF_DIPERBARUI'
+    case 'approve_destruction':
       return 'BERKAS_DIMUSNAHKAN'
-    case BERKAS_ARCHIVE_STATUS.AKTIF:
-      return 'BERKAS_DITUTUP'
   }
 }
 
