@@ -370,7 +370,7 @@ describe('Ekspor Semua File (ZIP) buttons + dialog (/pegawai/laporan/saya, /pega
     const source = readFileSync('src/routes/pegawai/laporan/saya.tsx', 'utf8')
 
     expect(source).toContain('Ekspor Semua File (ZIP)')
-    expect(source).toContain("fetch('/api/laporan/saya.export-zip'")
+    expect(source).toContain("fetch('/api/laporan/saya/export-zip'")
     expect(source).toContain('body: JSON.stringify({ dokumen_ids: filtered.map((dok) => dok.id) })')
     expect(source).toContain('downloadZipBlob(blob, filename)')
     expect(source).toContain('disabled={exportCount === 0}')
@@ -382,7 +382,7 @@ describe('Ekspor Semua File (ZIP) buttons + dialog (/pegawai/laporan/saya, /pega
     const source = readFileSync('src/routes/pegawai/laporan/kegiatan.tsx', 'utf8')
 
     expect(source).toContain('Ekspor Semua File (ZIP)')
-    expect(source).toContain("fetch('/api/laporan/kegiatan.export-zip'")
+    expect(source).toContain("fetch('/api/laporan/kegiatan/export-zip'")
     expect(source).toContain('body: JSON.stringify({ dokumen_ids: selectedDocuments.map((dok) => dok.id) })')
     expect(source).toContain('downloadZipBlob(blob, filename)')
     expect(source).toContain('exportCount={dokumen.length}')

@@ -125,7 +125,7 @@ function LaporanSayaPage() {
     setExportError('')
 
     try {
-      const response = await fetch('/api/laporan/saya.export-zip', {
+      const response = await fetch('/api/laporan/saya/export-zip', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
