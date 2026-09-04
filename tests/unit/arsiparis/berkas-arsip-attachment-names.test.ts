@@ -116,14 +116,60 @@ describe('berkas attachment name resolver', () => {
     expect(JSON.stringify(names)).not.toContain('owner-user')
   })
 
-  it('keeps manual labels delegated to safe manual attachment metadata', () => {
-    expect(resolveManualAttachmentNames({
-      judul_lampiran: 'Bukti Manual',
-      original_filename: 'manual.pdf',
-    })).toEqual({
+  it('builds the same formal filename for manual attachments as the download endpoint (RP-06)', () => {
+    expect(resolveManualAttachmentNames(
+      {
+        judul_lampiran: 'Bukti Manual',
+        original_filename: 'manual.pdf',
+        content_type: 'application/pdf',
+      },
+      {
+        nama: 'Pengadaan ATK',
+        tanggal: '2026-05-22',
+        category_nama: 'Pengadaan',
+      },
+    )).toEqual({
       label: 'Bukti Manual',
-      previewTitle: 'Bukti Manual',
-      downloadFilename: 'Bukti Manual',
+      previewTitle: 'Bukti_Manual_Pengadaan_ATK_Pengadaan_2026-05-22.pdf',
+      downloadFilename: 'Bukti_Manual_Pengadaan_ATK_Pengadaan_2026-05-22.pdf',
+    })
+  })
+
+  it('falls back to generic segments when manual document metadata is missing', () => {
+    expect(resolveManualAttachmentNames(
+      {
+        judul_lampiran: 'Bukti Manual',
+        original_filename: 'manual.pdf',
+        content_type: 'application/pdf',
+      },
+      {
+        nama: null,
+        tanggal: null,
+        category_nama: null,
+      },
+    )).toEqual({
+      label: 'Bukti Manual',
+      previewTitle: 'Bukti_Manual_Arsip_Kategori_Tanggal.pdf',
+      downloadFilename: 'Bukti_Manual_Arsip_Kategori_Tanggal.pdf',
+    })
+  })
+
+  it('omits the extension rather than guessing when content type and filename are both unknown', () => {
+    expect(resolveManualAttachmentNames(
+      {
+        judul_lampiran: 'Bukti Manual',
+        original_filename: null,
+        content_type: null,
+      },
+      {
+        nama: 'Pengadaan ATK',
+        tanggal: '2026-05-22',
+        category_nama: 'Pengadaan',
+      },
+    )).toEqual({
+      label: 'Bukti Manual',
+      previewTitle: 'Bukti_Manual_Pengadaan_ATK_Pengadaan_2026-05-22',
+      downloadFilename: 'Bukti_Manual_Pengadaan_ATK_Pengadaan_2026-05-22',
     })
   })
 })

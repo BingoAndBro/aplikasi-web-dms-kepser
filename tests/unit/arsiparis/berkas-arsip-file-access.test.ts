@@ -353,7 +353,15 @@ type RepositoryOptions = {
   itemBerkasId?: string
   workflowSourceMissing?: boolean
   workflowLampiranUrls?: unknown
-  manualAttachments?: Array<{ logicalPath: string; judulLampiran: string }>
+  manualAttachments?: Array<{
+    logicalPath: string
+    judulLampiran: string
+    originalFilename?: string | null
+    contentType?: string | null
+    manualNama?: string | null
+    manualTanggal?: string | null
+    categoryNama?: string | null
+  }>
   workflowDocumentOverrides?: Partial<{
     tanggal: string | null
     is_non_material: boolean | null
@@ -427,9 +435,16 @@ function createRepository(options: RepositoryOptions = {}): BerkasArsipFileAcces
     async getManualAttachmentsForItem(manualArsipId) {
       if (manualArsipId !== MANUAL_ARSIP_ID) return []
 
-      return options.manualAttachments ?? [
+      return (options.manualAttachments ?? [
         { logicalPath: 'owner-user/manual/lampiran.pdf', judulLampiran: 'Lampiran Manual' },
-      ]
+      ]).map(row => ({
+        originalFilename: null,
+        contentType: null,
+        manualNama: null,
+        manualTanggal: null,
+        categoryNama: null,
+        ...row,
+      }))
     },
   }
 }

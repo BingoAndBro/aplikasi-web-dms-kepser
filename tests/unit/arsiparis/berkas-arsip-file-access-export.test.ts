@@ -33,12 +33,28 @@ describe('resolveBerkasArsipItemAttachments (non-HTTP resolver for RP-02 ZIP exp
     })
   })
 
-  it('returns all attachments for a MANUAL item, ordered as the repository returns them', async () => {
+  it('returns all attachments for a MANUAL item, namaAman matching the existing download filename (RP-06 follow-up)', async () => {
     const result = await resolveBerkasArsipItemAttachments(BERKAS_ID, MANUAL_ITEM_ID, {
       repository: createRepository({
         manualAttachments: [
-          { logicalPath: 'owner/manual/1.pdf', judulLampiran: 'Lampiran Satu' },
-          { logicalPath: 'owner/manual/2.pdf', judulLampiran: 'Lampiran Dua' },
+          {
+            logicalPath: 'owner/manual/1.pdf',
+            judulLampiran: 'Lampiran Satu',
+            originalFilename: 'satu.pdf',
+            contentType: 'application/pdf',
+            manualNama: 'Dokumen Manual',
+            manualTanggal: '2026-05-30',
+            categoryNama: 'Pengadaan',
+          },
+          {
+            logicalPath: 'owner/manual/2.pdf',
+            judulLampiran: 'Lampiran Dua',
+            originalFilename: 'dua.pdf',
+            contentType: 'application/pdf',
+            manualNama: 'Dokumen Manual',
+            manualTanggal: '2026-05-30',
+            categoryNama: 'Pengadaan',
+          },
         ],
       }),
     })
@@ -46,8 +62,8 @@ describe('resolveBerkasArsipItemAttachments (non-HTTP resolver for RP-02 ZIP exp
     expect(result).toEqual({
       ok: true,
       attachments: [
-        { logicalPath: 'owner/manual/1.pdf', namaAman: 'Lampiran Satu' },
-        { logicalPath: 'owner/manual/2.pdf', namaAman: 'Lampiran Dua' },
+        { logicalPath: 'owner/manual/1.pdf', namaAman: 'Lampiran_Satu_Dokumen_Manual_Pengadaan_2026-05-30.pdf' },
+        { logicalPath: 'owner/manual/2.pdf', namaAman: 'Lampiran_Dua_Dokumen_Manual_Pengadaan_2026-05-30.pdf' },
       ],
     })
   })
@@ -97,7 +113,15 @@ type RepositoryOptions = {
   folderStatus?: 'AKTIF' | 'DIMUSNAHKAN'
   itemSourceType?: string
   workflowLampiranUrls?: unknown[]
-  manualAttachments?: Array<{ logicalPath: string; judulLampiran: string }>
+  manualAttachments?: Array<{
+    logicalPath: string
+    judulLampiran: string
+    originalFilename?: string | null
+    contentType?: string | null
+    manualNama?: string | null
+    manualTanggal?: string | null
+    categoryNama?: string | null
+  }>
 }
 
 function createRepository(options: RepositoryOptions = {}): BerkasArsipFileAccessRepository {
@@ -161,9 +185,16 @@ function createRepository(options: RepositoryOptions = {}): BerkasArsipFileAcces
     async getManualAttachmentsForItem(manualArsipId) {
       if (manualArsipId !== MANUAL_ARSIP_ID) return []
 
-      return options.manualAttachments ?? [
+      return (options.manualAttachments ?? [
         { logicalPath: 'owner/manual/1.pdf', judulLampiran: 'Lampiran Manual' },
-      ]
+      ]).map(row => ({
+        originalFilename: null,
+        contentType: null,
+        manualNama: null,
+        manualTanggal: null,
+        categoryNama: null,
+        ...row,
+      }))
     },
   }
 }

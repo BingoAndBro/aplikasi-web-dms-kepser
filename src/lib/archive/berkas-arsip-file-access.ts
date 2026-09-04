@@ -5,7 +5,9 @@ import { and, asc, eq } from 'drizzle-orm'
 import {
   berkasArsip,
   berkasArsipItem,
+  manualArsip,
   manualArsipAttachment,
+  manualArsipCategory,
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
@@ -30,7 +32,9 @@ import {
   buildBerkasContentDisposition,
   parseWorkflowAttachmentEntries,
   resolveWorkflowAttachmentReference,
+  sanitizeBerkasAttachmentFilename,
 } from '#/lib/archive/berkas-arsip-attachment-names'
+import { buildManualArsipAttachmentFilename } from '#/lib/archive/manual-arsip-attachment-filename'
 
 export type BerkasArsipFileAccessPurpose = 'preview' | 'download'
 
@@ -67,6 +71,11 @@ export type BerkasArsipManualAttachmentRow = {
 export type BerkasArsipManualAttachmentExportRow = {
   logicalPath: string
   judulLampiran: string
+  originalFilename: string | null
+  contentType: string | null
+  manualNama: string | null
+  manualTanggal: Date | string | null
+  categoryNama: string | null
 }
 
 export type BerkasArsipFileAccessRepository = {
@@ -233,7 +242,23 @@ async function resolveManualItemAttachmentsForExport({
 
   return {
     ok: true,
-    attachments: rows.map(row => ({ logicalPath: row.logicalPath, namaAman: row.judulLampiran })),
+    attachments: rows.map(row => ({
+      logicalPath: row.logicalPath,
+      namaAman: sanitizeBerkasAttachmentFilename(
+        buildManualArsipAttachmentFilename(
+          {
+            judul_lampiran: row.judulLampiran,
+            original_filename: row.originalFilename,
+            content_type: row.contentType,
+          },
+          {
+            nama: row.manualNama,
+            tanggal: row.manualTanggal,
+            category_nama: row.categoryNama,
+          },
+        ),
+      ) ?? row.judulLampiran,
+    })),
   }
 }
 
@@ -413,8 +438,15 @@ const defaultBerkasArsipFileAccessRepository: BerkasArsipFileAccessRepository = 
       .select({
         logicalPath: manualArsipAttachment.logicalPath,
         judulLampiran: manualArsipAttachment.judulLampiran,
+        originalFilename: manualArsipAttachment.originalFilename,
+        contentType: manualArsipAttachment.contentType,
+        manualNama: manualArsip.nama,
+        manualTanggal: manualArsip.tanggal,
+        categoryNama: manualArsipCategory.nama,
       })
       .from(manualArsipAttachment)
+      .innerJoin(manualArsip, eq(manualArsipAttachment.manualArsipId, manualArsip.id))
+      .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
       .where(eq(manualArsipAttachment.manualArsipId, manualArsipId))
       .orderBy(asc(manualArsipAttachment.createdAt), asc(manualArsipAttachment.id)) as BerkasArsipManualAttachmentExportRow[]
 

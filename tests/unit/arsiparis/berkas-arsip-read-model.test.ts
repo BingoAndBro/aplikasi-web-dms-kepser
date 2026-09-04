@@ -137,8 +137,8 @@ describe('berkas arsip read model', () => {
       attachments: [
         {
           label: 'Bukti Manual',
-          previewTitle: 'Bukti Manual',
-          downloadFilename: 'Bukti Manual',
+          previewTitle: 'Bukti_Manual_Dokumen_Manual_Pengadaan_2026-05-21.pdf',
+          downloadFilename: 'Bukti_Manual_Dokumen_Manual_Pengadaan_2026-05-21.pdf',
         },
       ],
       has_attachments: true,
@@ -330,6 +330,7 @@ function createFakeRepository(options: {
       manual_arsip_id: 'manual-source-id',
       judul_lampiran: 'Bukti Manual',
       original_filename: 'bukti-manual.pdf',
+      content_type: 'application/pdf',
     }]],
   ])
 

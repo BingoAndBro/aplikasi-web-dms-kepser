@@ -209,6 +209,7 @@ export type ManualAttachmentNameReadRow = {
   manual_arsip_id: string
   judul_lampiran: string | null
   original_filename: string | null
+  content_type: string | null
 }
 
 export type BerkasActivityReadRow = {
@@ -411,6 +412,7 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
         manual_arsip_id: manualArsipAttachment.manualArsipId,
         judul_lampiran: manualArsipAttachment.judulLampiran,
         original_filename: manualArsipAttachment.originalFilename,
+        content_type: manualArsipAttachment.contentType,
       })
       .from(manualArsipAttachment)
       .where(inArray(manualArsipAttachment.manualArsipId, uniqueIds))
@@ -821,7 +823,14 @@ function getAttachmentNames(
     const manualArsipId = trimToNull(row.manual_arsip_id)
     if (!manualArsipId) return []
 
-    return (manualAttachments.get(manualArsipId) ?? []).map(resolveManualAttachmentNames)
+    const document = {
+      nama: row.manual_nama,
+      tanggal: row.manual_date,
+      category_nama: row.manual_category_name,
+    }
+
+    return (manualAttachments.get(manualArsipId) ?? [])
+      .map(attachment => resolveManualAttachmentNames(attachment, document))
   }
 
   return []

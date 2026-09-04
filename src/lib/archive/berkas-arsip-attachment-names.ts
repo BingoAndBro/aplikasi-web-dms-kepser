@@ -5,6 +5,7 @@ import {
   type DokumenRow,
   type LampiranUrl,
 } from '#/lib/dokumen'
+import { buildManualArsipAttachmentFilename } from '#/lib/archive/manual-arsip-attachment-filename'
 import {
   assertSafeLogicalStoragePath,
   getFileExtension,
@@ -35,7 +36,14 @@ export type WorkflowAttachmentReference = SafeBerkasAttachmentName & {
 
 export type ManualAttachmentNamingRow = {
   judul_lampiran: string | null
-  original_filename?: string | null
+  original_filename: string | null
+  content_type: string | null
+}
+
+export type ManualAttachmentNamingDocument = {
+  nama: string | null
+  tanggal: Date | string | null
+  category_nama: string | null
 }
 
 const SAFE_MIME_PATTERN = /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/
@@ -80,16 +88,19 @@ export function resolveWorkflowAttachmentNames(
 
 export function resolveManualAttachmentNames(
   row: ManualAttachmentNamingRow,
+  document: ManualAttachmentNamingDocument,
 ): SafeBerkasAttachmentName {
   const label = firstSafeAttachmentText(row.judul_lampiran)
     ?? firstSafeFilenameText(row.original_filename)
     ?? 'Lampiran'
-  const previewTitle = label
+  const filename = sanitizeBerkasAttachmentFilename(
+    buildManualArsipAttachmentFilename(row, document),
+  ) ?? label
 
   return {
     label,
-    previewTitle,
-    downloadFilename: label,
+    previewTitle: filename,
+    downloadFilename: filename,
   }
 }
 
@@ -269,11 +280,13 @@ function fallbackWorkflowAttachmentNames(index: number): SafeBerkasAttachmentNam
 }
 
 function withSafeExtension(filename: string, entry: Record<string, unknown>): string | null {
+  return appendExtensionFromLogicalPath(filename, resolveWorkflowAttachmentLogicalPath(entry))
+}
+
+function appendExtensionFromLogicalPath(filename: string, logicalPath: string | null): string | null {
   const safeFilename = sanitizeBerkasAttachmentFilename(filename)
   if (!safeFilename) return null
   if (path.extname(safeFilename)) return safeFilename
-
-  const logicalPath = resolveWorkflowAttachmentLogicalPath(entry)
   if (!logicalPath) return safeFilename
 
   const extension = getFileExtension(logicalPath)
