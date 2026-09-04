@@ -28,6 +28,7 @@ import {
 } from '#/lib/storage/local-storage-paths'
 import {
   buildBerkasContentDisposition,
+  parseWorkflowAttachmentEntries,
   resolveWorkflowAttachmentReference,
 } from '#/lib/archive/berkas-arsip-attachment-names'
 
@@ -63,12 +64,27 @@ export type BerkasArsipManualAttachmentRow = {
   id: string
 }
 
+export type BerkasArsipManualAttachmentExportRow = {
+  logicalPath: string
+  judulLampiran: string
+}
+
 export type BerkasArsipFileAccessRepository = {
   getFolderById(berkasId: string): Promise<BerkasArsipFileAccessFolderRow | null>
   getItemById(berkasId: string, itemId: string): Promise<BerkasArsipFileAccessItemRow | null>
   getWorkflowSourceById(dokumenId: string): Promise<BerkasArsipWorkflowFileSourceRow | null>
   getManualAttachmentByIndex(manualArsipId: string, lampiranIndex: number): Promise<BerkasArsipManualAttachmentRow | null>
+  getManualAttachmentsForItem(manualArsipId: string): Promise<BerkasArsipManualAttachmentExportRow[]>
 }
+
+export type BerkasArsipItemAttachmentExportRef = {
+  logicalPath: string
+  namaAman: string
+}
+
+export type BerkasArsipItemAttachmentsResult =
+  | { ok: true; attachments: BerkasArsipItemAttachmentExportRef[] }
+  | { ok: false; status: number; message: string }
 
 export type BerkasArsipFileAccessDeps = {
   repository?: BerkasArsipFileAccessRepository
@@ -142,6 +158,83 @@ export async function createBerkasArsipItemAttachmentFileResponse({
   }
 
   return secureJsonError('Sumber item tidak ditemukan', 404)
+}
+
+/**
+ * Non-HTTP resolver for server-side ZIP export (RP-02/RP-07): returns every
+ * attachment of one berkas item as `{ logicalPath, namaAman }`, without
+ * reading file contents (streaming/append happens in document-zip.ts).
+ */
+export async function resolveBerkasArsipItemAttachments(
+  berkasId: string,
+  itemId: string,
+  deps: BerkasArsipFileAccessDeps = {},
+): Promise<BerkasArsipItemAttachmentsResult> {
+  const repository = deps.repository ?? defaultBerkasArsipFileAccessRepository
+
+  const folder = await repository.getFolderById(berkasId)
+  if (!folder) return { ok: false, status: 404, message: 'Berkas tidak ditemukan' }
+
+  if (folder.status_arsip === BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN) {
+    return { ok: false, status: 410, message: 'Data file sudah dimusnahkan' }
+  }
+
+  const item = await repository.getItemById(berkasId, itemId)
+  if (!item || item.berkas_id !== berkasId) {
+    return { ok: false, status: 404, message: 'Lampiran berkas tidak ditemukan' }
+  }
+
+  if (item.source_type === ARCHIVE_SOURCE_TYPE.WORKFLOW) {
+    return resolveWorkflowItemAttachmentsForExport({ repository, item })
+  }
+
+  if (item.source_type === ARCHIVE_SOURCE_TYPE.MANUAL) {
+    return resolveManualItemAttachmentsForExport({ repository, item })
+  }
+
+  return { ok: false, status: 404, message: 'Sumber item tidak ditemukan' }
+}
+
+async function resolveWorkflowItemAttachmentsForExport({
+  repository,
+  item,
+}: {
+  repository: BerkasArsipFileAccessRepository
+  item: BerkasArsipFileAccessItemRow
+}): Promise<BerkasArsipItemAttachmentsResult> {
+  if (!item.dokumen_id) return { ok: false, status: 404, message: 'Sumber item tidak ditemukan' }
+
+  const source = await repository.getWorkflowSourceById(item.dokumen_id)
+  if (!source) return { ok: false, status: 404, message: 'Sumber item tidak ditemukan' }
+
+  const entryCount = parseWorkflowAttachmentEntries(source.lampiran_urls).length
+  const attachments: BerkasArsipItemAttachmentExportRef[] = []
+
+  for (let lampiranIndex = 0; lampiranIndex < entryCount; lampiranIndex++) {
+    const reference = resolveWorkflowAttachmentReference(source.lampiran_urls, source, lampiranIndex)
+    if (reference) {
+      attachments.push({ logicalPath: reference.logicalPath, namaAman: reference.downloadFilename })
+    }
+  }
+
+  return { ok: true, attachments }
+}
+
+async function resolveManualItemAttachmentsForExport({
+  repository,
+  item,
+}: {
+  repository: BerkasArsipFileAccessRepository
+  item: BerkasArsipFileAccessItemRow
+}): Promise<BerkasArsipItemAttachmentsResult> {
+  if (!item.manual_arsip_id) return { ok: false, status: 404, message: 'Sumber item tidak ditemukan' }
+
+  const rows = await repository.getManualAttachmentsForItem(item.manual_arsip_id)
+
+  return {
+    ok: true,
+    attachments: rows.map(row => ({ logicalPath: row.logicalPath, namaAman: row.judulLampiran })),
+  }
 }
 
 async function createWorkflowItemAttachmentFileResponse({
@@ -312,6 +405,20 @@ const defaultBerkasArsipFileAccessRepository: BerkasArsipFileAccessRepository = 
       .offset(lampiranIndex) as BerkasArsipManualAttachmentRow[]
 
     return rows[0] ?? null
+  },
+
+  async getManualAttachmentsForItem(manualArsipId) {
+    const database = await getDatabase()
+    const rows = await database
+      .select({
+        logicalPath: manualArsipAttachment.logicalPath,
+        judulLampiran: manualArsipAttachment.judulLampiran,
+      })
+      .from(manualArsipAttachment)
+      .where(eq(manualArsipAttachment.manualArsipId, manualArsipId))
+      .orderBy(asc(manualArsipAttachment.createdAt), asc(manualArsipAttachment.id)) as BerkasArsipManualAttachmentExportRow[]
+
+    return rows
   },
 }
 

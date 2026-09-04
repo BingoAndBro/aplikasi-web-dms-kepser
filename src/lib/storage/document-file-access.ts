@@ -39,7 +39,7 @@ type DocumentAccessContext = {
   isInDestroyedBerkas: boolean
 }
 
-type FileReferenceResult =
+export type FileReferenceResult =
   | { ok: true; logicalPath: string }
   | { ok: false; status: number; message: string }
 
@@ -163,6 +163,38 @@ export async function resolveDocumentLampiranAccessForToken({
   }
 
   return resolveDocumentLampiranReference(context, payload.lampiranIndex)
+}
+
+/**
+ * Non-HTTP resolver for server-side ZIP export (RP-07/RP-05): returns a
+ * document attachment's logical path without issuing a signed token. Callers
+ * (export endpoints) are responsible for their own ownership/kegiatan
+ * re-authorization before invoking this — it only re-checks berkas/DIMUSNAHKAN
+ * status and path safety, mirroring the token path's file-level checks.
+ */
+export async function resolveDocumentLampiranLogicalPathForExport({
+  documentId,
+  lampiranIndex,
+}: {
+  documentId: string
+  lampiranIndex: number
+}): Promise<FileReferenceResult> {
+  if (!isUuid(documentId)) {
+    return { ok: false, status: 404, message: 'Dokumen tidak ditemukan' }
+  }
+
+  let context: DocumentAccessContext | null
+  try {
+    context = await loadDocumentAccessContext(documentId)
+  } catch {
+    return { ok: false, status: 500, message: 'Gagal memuat referensi file' }
+  }
+
+  if (!context) {
+    return { ok: false, status: 404, message: 'Dokumen tidak ditemukan' }
+  }
+
+  return resolveDocumentLampiranReference(context, lampiranIndex)
 }
 
 async function loadDocumentAccessContext(documentId: string): Promise<DocumentAccessContext | null> {
