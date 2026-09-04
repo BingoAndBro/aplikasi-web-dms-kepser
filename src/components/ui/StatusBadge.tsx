@@ -12,9 +12,11 @@ export type DocumentStatus =
 
 export type FolderStatus = "OPEN" | "CLOSED"
 
+// RP-01 de-arsip: `INAKTIF` dibuang dari alur lifecycle berkas. Nilai enum masih
+// ada di DB CHECK (`ARCHIVE_STATUS_VALUES`), tapi tak lagi punya badge — baris
+// lama otomatis jatuh ke fallback "Status tidak dikenal".
 export type ArchiveLifecycleStatus =
   | "AKTIF"
-  | "INAKTIF"
   | "USUL_MUSNAH"
   | "DIMUSNAHKAN"
 
@@ -65,10 +67,9 @@ export const FOLDER_STATUS_BADGE_CONFIG = {
 } as const satisfies Record<FolderStatus, StatusConfig>
 
 export const ARCHIVE_STATUS_BADGE_CONFIG = {
-  AKTIF: { label: "Aktif", tone: "success" },
-  INAKTIF: { label: "Inaktif", tone: "warning" },
-  USUL_MUSNAH: { label: "Usul Musnah", tone: "orange" },
-  DIMUSNAHKAN: { label: "Dimusnahkan", tone: "destructive" },
+  AKTIF: { label: "Tersimpan", tone: "success" },
+  USUL_MUSNAH: { label: "Usul Pembersihan", tone: "orange" },
+  DIMUSNAHKAN: { label: "File Dibersihkan", tone: "destructive" },
 } as const satisfies Record<ArchiveLifecycleStatus, StatusConfig>
 
 export const SOURCE_TYPE_BADGE_CONFIG = {

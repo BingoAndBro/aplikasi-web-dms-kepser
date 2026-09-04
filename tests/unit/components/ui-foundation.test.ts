@@ -24,10 +24,12 @@ describe('Phase 15E shared UI foundation mappings', () => {
   it('uses canonical folder, lifecycle, and source labels', () => {
     expect(FOLDER_STATUS_BADGE_CONFIG.OPEN.label).toBe('Berkas Terbuka')
     expect(FOLDER_STATUS_BADGE_CONFIG.CLOSED.label).toBe('Berkas Ditutup')
-    expect(ARCHIVE_STATUS_BADGE_CONFIG.AKTIF.label).toBe('Aktif')
-    expect(ARCHIVE_STATUS_BADGE_CONFIG.INAKTIF.label).toBe('Inaktif')
-    expect(ARCHIVE_STATUS_BADGE_CONFIG.USUL_MUSNAH.label).toBe('Usul Musnah')
-    expect(ARCHIVE_STATUS_BADGE_CONFIG.DIMUSNAHKAN.label).toBe('Dimusnahkan')
+    // RP-01 de-arsip: label lifecycle disederhanakan; entri INAKTIF dibuang.
+    expect(ARCHIVE_STATUS_BADGE_CONFIG.AKTIF.label).toBe('Tersimpan')
+    expect(ARCHIVE_STATUS_BADGE_CONFIG).not.toHaveProperty('INAKTIF')
+    expect(ARCHIVE_STATUS_BADGE_CONFIG.USUL_MUSNAH.label).toBe('Usul Pembersihan')
+    expect(ARCHIVE_STATUS_BADGE_CONFIG.DIMUSNAHKAN.label).toBe('File Dibersihkan')
+    expect(getStatusBadgeConfig('INAKTIF', 'archive').label).toBe('Status tidak dikenal')
     expect(SOURCE_TYPE_BADGE_CONFIG.WORKFLOW.label).toBe('Persetujuan')
     expect(SOURCE_TYPE_BADGE_CONFIG.MANUAL.label).toBe('Manual')
   })

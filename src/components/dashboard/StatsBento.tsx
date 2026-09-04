@@ -62,10 +62,9 @@ const BENTO_CONFIGS: Record<RoleName, BentoConfig> = {
   },
   KEPALA_SUB_BAGIAN_UMUM: {
     stats: [
-      { label: 'Menunggu Arsip', value: '—', icon: Clock, color: 'text-primary' },
-      { label: 'Arsip Aktif', value: '—', icon: FolderOpen, color: 'text-green-500' },
-      { label: 'Arsip Inaktif', value: '—', icon: Archive, color: 'text-amber-500' },
-      { label: 'Usul Musnah', value: '—', icon: XCircle, color: 'text-error' },
+      { label: 'Menunggu Pemberkasan', value: '—', icon: Clock, color: 'text-primary' },
+      { label: 'Berkas Terbuka', value: '—', icon: FolderOpen, color: 'text-green-500' },
+      { label: 'Usul Pembersihan', value: '—', icon: XCircle, color: 'text-error' },
     ],
     chart: false,
   },
