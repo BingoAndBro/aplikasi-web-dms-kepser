@@ -301,16 +301,11 @@ function BerkasTertutupTable({
                   </div>
                 </td>
                 <td className="px-6 py-5 text-right" onClick={(event) => event.stopPropagation()}>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-9 gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white hover:bg-[#EA580C]"
-                    disabled={pendingBerkasId === folder.berkas_id}
-                    onClick={() => onProposeDestruction(folder)}
-                  >
-                    {pendingBerkasId === folder.berkas_id ? <Loader2 size={13} className="animate-spin" /> : <ChevronRight size={13} />}
-                    Usulkan Pembersihan
-                  </Button>
+                  <UsulkanPembersihanButton
+                    folder={folder}
+                    pending={pendingBerkasId === folder.berkas_id}
+                    onConfirm={() => onProposeDestruction(folder)}
+                  />
                 </td>
               </tr>
             ))}
@@ -335,20 +330,69 @@ function BerkasTertutupTable({
               { label: 'Tanggal tutup', value: formatNullableDateLabel(folder.closed_at) },
             ]}
             action={
-              <Button
-                type="button"
-                size="sm"
-                className="h-9 w-full gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white hover:bg-[#EA580C]"
-                disabled={pendingBerkasId === folder.berkas_id}
-                onClick={() => onProposeDestruction(folder)}
-              >
-                {pendingBerkasId === folder.berkas_id ? <Loader2 size={13} className="animate-spin" /> : <ChevronRight size={13} />}
-                Usulkan Pembersihan
-              </Button>
+              <UsulkanPembersihanButton
+                folder={folder}
+                pending={pendingBerkasId === folder.berkas_id}
+                onConfirm={() => onProposeDestruction(folder)}
+                fullWidth
+              />
             }
           />
         ))}
       </ArchiveMobileList>
+    </>
+  )
+}
+
+function UsulkanPembersihanButton({
+  folder,
+  pending,
+  onConfirm,
+  fullWidth = false,
+}: {
+  folder: BerkasFolder
+  pending: boolean
+  onConfirm: () => void
+  fullWidth?: boolean
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  return (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        className={`h-9 gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white hover:bg-[#EA580C] ${fullWidth ? 'w-full' : ''}`}
+        disabled={pending}
+        onClick={() => setConfirmOpen(true)}
+      >
+        {pending ? <Loader2 size={13} className="animate-spin" /> : <ChevronRight size={13} />}
+        Usulkan Pembersihan
+      </Button>
+
+      <Dialog open={confirmOpen} onOpenChange={(open) => { if (!pending) setConfirmOpen(open) }}>
+        <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
+          <DialogHeader>
+            <DialogTitle>Usulkan Pembersihan?</DialogTitle>
+            <DialogDescription>
+              Berkas <span className="font-semibold text-zinc-950">{formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}</span>
+              {folder.nomor_spm ? ` (Nomor SPM: ${folder.nomor_spm})` : ''} akan masuk daftar Usul Pembersihan.
+              Tidak ada file yang dihapus pada tahap ini; usulan masih dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 border-0 bg-transparent p-0">
+            <Button type="button" variant="ghost" disabled={pending} onClick={() => setConfirmOpen(false)}>Batal</Button>
+            <Button
+              type="button"
+              className="rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
+              disabled={pending}
+              onClick={() => { setConfirmOpen(false); onConfirm() }}
+            >
+              {pending ? 'Memproses...' : 'Usulkan Pembersihan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

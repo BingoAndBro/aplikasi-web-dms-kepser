@@ -105,7 +105,9 @@ describe('folder-first berkas physical file destruction helper', () => {
 
     const report = await executeBerkasPhysicalFileDestruction({
       berkasId: BERKAS_ID,
-      confirmation: 'MUSNAHKAN DATA FILE',
+      // RP-01: frasa user-facing "BERSIHKAN FILE BERKAS" bukan frasa internal
+      // server ("HAPUS FILE FISIK ARSIP") -> tetap ditolak di sini.
+      confirmation: 'BERSIHKAN FILE BERKAS',
       repository: createRepository(),
       storage: createLocalBerkasPhysicalDestructionStorage(TEST_ROOT),
     })
