@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-describe('Master Klasifikasi Arsip UI source guard', () => {
+describe('Master Klasifikasi Dokumen UI source guard', () => {
   const source = readFileSync('src/routes/arsiparis/klasifikasi.tsx', 'utf8')
 
   it('derives parent and leaf visual status from children', () => {
@@ -14,7 +14,7 @@ describe('Master Klasifikasi Arsip UI source guard', () => {
   })
 
   it('shows operational selection and active state copy without backend changes', () => {
-    expect(source).toContain('Jenis Pembayaran')
+    expect(source).toContain('Cara Pembayaran')
     expect(source).toContain('Ya, pilihan akhir')
     expect(source).toContain('Tidak, klasifikasi induk')
     expect(source).toContain('Tidak, nonaktif')

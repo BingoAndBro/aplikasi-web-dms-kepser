@@ -1,6 +1,9 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
+  AlertTriangle,
   ChevronRight,
+  Loader2,
+  RotateCcw,
   Trash2,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -17,24 +20,34 @@ import {
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { StatusBadge } from '#/components/ui/StatusBadge'
+import { useAppToast } from '#/components/ui/AppToast'
 import {
+  BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
   formatBerkasArchiveStatusLabel,
   formatKlasifikasiLabel,
   formatNominalRupiah,
   formatNullableDateLabel,
 } from '#/lib/archive/berkas-arsip-page-format'
 import {
-  BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME,
+  BERKAS_PEMBERSIHAN_LIST_CSV_FILENAME,
   createBerkasFolderListCsv,
   downloadCsvFile,
 } from '#/lib/archive/berkas-arsip-csv'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
-export const Route = createFileRoute('/arsiparis/usul-musnah/')({ component: UsulMusnahPage })
+export const Route = createFileRoute('/arsiparis/pembersihan/')({ component: UsulMusnahPage })
 
 type BerkasFolder = {
   berkas_id: string
@@ -45,9 +58,10 @@ type BerkasFolder = {
   status_arsip: string | null
   nomor_spm: string | null
   retensi_aktif: string | null
-  retensi_inaktif: string | null
   masa_aktif_berakhir: string | null
-  masa_inaktif_berakhir: string | null
+  umur_berkas: number | null
+  jatuh_tempo: boolean
+  tanggal_jatuh_tempo: string | null
   closed_at: string | null
   item_count: number
   workflow_item_count: number
@@ -73,18 +87,20 @@ const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
 type FinalArchiveFilter = 'USUL_MUSNAH' | 'DIMUSNAHKAN'
 
 const FINAL_ARCHIVE_FILTER_OPTIONS: Array<{ value: FinalArchiveFilter; label: string }> = [
-  { value: 'USUL_MUSNAH', label: 'Usul Musnah' },
-  { value: 'DIMUSNAHKAN', label: 'Arsip Dimusnahkan' },
+  { value: 'USUL_MUSNAH', label: 'Usulan Pembersihan' },
+  { value: 'DIMUSNAHKAN', label: 'Sudah Dibersihkan' },
 ]
 
 function UsulMusnahPage() {
   const navigate = useNavigate()
+  const { showToast } = useAppToast()
   const [proposedFolders, setProposedFolders] = useState<BerkasFolder[]>([])
   const [destroyedFolders, setDestroyedFolders] = useState<BerkasFolder[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<FinalArchiveFilter>('USUL_MUSNAH')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [pendingBerkasId, setPendingBerkasId] = useState<string | null>(null)
 
   async function fetchData() {
     setLoading(true)
@@ -124,10 +140,34 @@ function UsulMusnahPage() {
 
   function exportCsv() {
     const csv = createBerkasFolderListCsv([
-      { label: statusFilter === 'DIMUSNAHKAN' ? 'Arsip Dimusnahkan' : 'Usul Musnah', folders: filteredFolders },
+      { label: statusFilter === 'DIMUSNAHKAN' ? 'Sudah Dibersihkan' : 'Usulan Pembersihan', folders: filteredFolders },
     ])
 
-    downloadCsvFile(BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME, csv)
+    downloadCsvFile(BERKAS_PEMBERSIHAN_LIST_CSV_FILENAME, csv)
+  }
+
+  async function runLifecycleAction(
+    folder: BerkasFolder,
+    action: 'approve_destruction' | 'cancel_proposal',
+    successMessage: string,
+  ) {
+    setPendingBerkasId(folder.berkas_id)
+    try {
+      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(folder.berkas_id)}/lifecycle`, {
+        method: 'POST',
+        body: JSON.stringify(
+          action === 'approve_destruction'
+            ? { action, confirmation: BERKAS_DESTRUCTION_CONFIRMATION_PHRASE }
+            : { action },
+        ),
+      })
+      showToast({ title: 'Berhasil', description: successMessage, variant: 'success' })
+      await fetchData()
+    } catch (error) {
+      showToast({ title: 'Gagal', description: resolveErrorMessage(error), variant: 'error' })
+    } finally {
+      setPendingBerkasId(null)
+    }
   }
 
   return (
@@ -136,10 +176,10 @@ function UsulMusnahPage() {
         <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
-              Usul Musnah
+              Pembersihan Berkas
             </h1>
             <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
-              Berkas yang menunggu pemusnahan dan metadata akhir untuk arsip yang sudah Dimusnahkan.
+              Berkas yang diusulkan untuk pembersihan file, dan metadata akhir untuk berkas yang filenya sudah dibersihkan.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
@@ -155,12 +195,12 @@ function UsulMusnahPage() {
         </section>
 
         <ArchiveSearchPanel
-          id="usul-musnah-page-local-search"
+          id="pembersihan-page-local-search"
           label="Pencarian lokal halaman"
           value={searchQuery}
           placeholder={statusFilter === 'DIMUSNAHKAN'
-            ? 'Cari metadata arsip dimusnahkan di halaman ini...'
-            : 'Cari berkas usul musnah di halaman ini...'}
+            ? 'Cari berkas yang sudah dibersihkan di halaman ini...'
+            : 'Cari berkas usulan pembersihan di halaman ini...'}
           resultText={`${filteredFolders.length} dari ${folders.length} berkas ditampilkan`}
           onChange={setSearchQuery}
         >
@@ -190,10 +230,10 @@ function UsulMusnahPage() {
         </ArchiveSearchPanel>
 
         {loading ? (
-          <LoadingState variant="list" label="Memuat usul musnah" />
+          <LoadingState variant="list" label="Memuat pembersihan berkas" />
         ) : error ? (
           <ErrorState
-            title="Gagal memuat usul musnah"
+            title="Gagal memuat pembersihan berkas"
             description={error}
             action={<Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>}
             variant="page"
@@ -209,7 +249,19 @@ function UsulMusnahPage() {
         ) : (
           <BerkasLifecycleTable
             folders={filteredFolders}
+            isProposalList={statusFilter === 'USUL_MUSNAH'}
+            pendingBerkasId={pendingBerkasId}
             onOpen={(folder) => navigate({ to: '/arsiparis/berkas/$id', params: { id: folder.berkas_id } })}
+            onApproveDestruction={(folder) => runLifecycleAction(
+              folder,
+              'approve_destruction',
+              'File berkas berhasil dibersihkan.',
+            )}
+            onCancelProposal={(folder) => runLifecycleAction(
+              folder,
+              'cancel_proposal',
+              'Usulan pembersihan dibatalkan.',
+            )}
           />
         )}
       </div>
@@ -217,12 +269,24 @@ function UsulMusnahPage() {
   )
 }
 
+function formatUmurBerkas(value: number | null): string {
+  return value === null ? '-' : `${value} hari`
+}
+
 function BerkasLifecycleTable({
   folders,
+  isProposalList,
+  pendingBerkasId,
   onOpen,
+  onApproveDestruction,
+  onCancelProposal,
 }: {
   folders: BerkasFolder[]
+  isProposalList: boolean
+  pendingBerkasId: string | null
   onOpen: (folder: BerkasFolder) => void
+  onApproveDestruction: (folder: BerkasFolder) => void
+  onCancelProposal: (folder: BerkasFolder) => void
 }) {
   return (
     <>
@@ -235,13 +299,13 @@ function BerkasLifecycleTable({
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Arsip</th>
+              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Umur Berkas</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal Ditutup</th>
-              <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Terakhir Diperbarui</th>
-              <th className={`w-20 text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
+              <th className={`w-64 text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100 text-[13px]">
-            {folders.map((folder, index) => (
+            {folders.map((folder) => (
               <tr
                 key={folder.berkas_id}
                 className={`${ARCHIVE_TABLE_ROW_CLASS} cursor-pointer`}
@@ -258,18 +322,25 @@ function BerkasLifecycleTable({
                 <td className="px-6 py-5">
                   <StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />
                 </td>
+                <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-700">{formatUmurBerkas(folder.umur_berkas)}</td>
                 <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-500">{formatNullableDateLabel(folder.closed_at)}</td>
-                <td className="px-6 py-5 text-center text-sm font-semibold text-zinc-500">{formatNullableDateLabel(folder.updated_at)}</td>
-                <td className="px-6 py-5 text-right">
-                  <Link
-                    to="/arsiparis/berkas/$id"
-                    params={{ id: folder.berkas_id }}
-                    aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
-                    onClick={(event) => event.stopPropagation()}
-                    className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)]"
-                  >
-                    <ChevronRight size={20} strokeWidth={2.35} />
-                  </Link>
+                <td className="px-6 py-5 text-right" onClick={(event) => event.stopPropagation()}>
+                  {isProposalList ? (
+                    <PembersihanRowActions
+                      pending={pendingBerkasId === folder.berkas_id}
+                      onApproveDestruction={() => onApproveDestruction(folder)}
+                      onCancelProposal={() => onCancelProposal(folder)}
+                    />
+                  ) : (
+                    <Link
+                      to="/arsiparis/berkas/$id"
+                      params={{ id: folder.berkas_id }}
+                      aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
+                      className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                    >
+                      <ChevronRight size={20} strokeWidth={2.35} />
+                    </Link>
+                  )}
                 </td>
               </tr>
             ))}
@@ -286,29 +357,141 @@ function BerkasLifecycleTable({
             meta={[
               { label: 'Status berkas', value: <StatusBerkasBadge status={folder.status_berkas} /> },
               { label: 'Jumlah dokumen', value: folder.item_count },
-              { label: 'Persetujuan', value: folder.workflow_item_count },
-              { label: 'Manual', value: folder.manual_item_count },
+              { label: 'Umur berkas', value: formatUmurBerkas(folder.umur_berkas) },
               {
                 label: 'Total nominal',
                 value: <span className="font-mono font-bold text-zinc-950">{formatNominalRupiah(folder.total_nominal_realisasi)}</span>,
               },
               { label: 'Tanggal tutup', value: formatNullableDateLabel(folder.closed_at) },
-              { label: 'Terakhir diperbarui', value: formatNullableDateLabel(folder.updated_at) },
             ]}
             action={
-              <Link
-                to="/arsiparis/berkas/$id"
-                params={{ id: folder.berkas_id }}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
-              >
-                <ChevronRight size={14} />
-                Buka Detail
-              </Link>
+              isProposalList ? (
+                <PembersihanRowActions
+                  pending={pendingBerkasId === folder.berkas_id}
+                  onApproveDestruction={() => onApproveDestruction(folder)}
+                  onCancelProposal={() => onCancelProposal(folder)}
+                />
+              ) : (
+                <Link
+                  to="/arsiparis/berkas/$id"
+                  params={{ id: folder.berkas_id }}
+                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                >
+                  <ChevronRight size={14} />
+                  Buka Detail
+                </Link>
+              )
             }
           />
         ))}
       </ArchiveMobileList>
     </>
+  )
+}
+
+function PembersihanRowActions({
+  pending,
+  onApproveDestruction,
+  onCancelProposal,
+}: {
+  pending: boolean
+  onApproveDestruction: () => void
+  onCancelProposal: () => void
+}) {
+  const [destructionOpen, setDestructionOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [phrase, setPhrase] = useState('')
+  const canDestroy = phrase === BERKAS_DESTRUCTION_CONFIRMATION_PHRASE && !pending
+
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-9 gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+        disabled={pending}
+        onClick={() => setCancelOpen(true)}
+      >
+        {pending ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+        Batalkan Usulan
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        className="h-9 gap-1.5 rounded-xl bg-error text-xs font-bold text-white hover:bg-error/90"
+        disabled={pending}
+        onClick={() => {
+          setPhrase('')
+          setDestructionOpen(true)
+        }}
+      >
+        {pending ? <Loader2 size={13} className="animate-spin" /> : <AlertTriangle size={13} />}
+        Bersihkan File
+      </Button>
+
+      <Dialog open={cancelOpen} onOpenChange={(open) => { if (!pending) setCancelOpen(open) }}>
+        <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
+          <DialogHeader>
+            <DialogTitle>Batalkan Usulan?</DialogTitle>
+            <DialogDescription>
+              Berkas kembali ke status Tersimpan. Tidak ada file yang dihapus.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 border-0 bg-transparent p-0">
+            <Button type="button" variant="ghost" disabled={pending} onClick={() => setCancelOpen(false)}>Batal</Button>
+            <Button
+              type="button"
+              className="rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
+              disabled={pending}
+              onClick={() => { setCancelOpen(false); onCancelProposal() }}
+            >
+              {pending ? 'Memproses...' : 'Batalkan Usulan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={destructionOpen} onOpenChange={(open) => { if (!pending) setDestructionOpen(open) }}>
+        <DialogContent className="border-rose-200 bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+            <AlertTriangle size={22} />
+          </div>
+          <DialogHeader className="items-center text-center">
+            <DialogTitle>Bersihkan File Berkas</DialogTitle>
+            <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
+              Status berkas akan menjadi File Dibersihkan. File fisik terkait berkas akan dihapus. Metadata tetap tersimpan. Aksi ini tidak mudah dibalik.
+            </DialogDescription>
+          </DialogHeader>
+          {/* RP-02: aktifkan peringatan "belum pernah diekspor" di sini */}
+          <div data-testid="export-warning-slot">{null}</div>
+          <label className="block text-xs font-bold text-on-surface" htmlFor="pembersihan-destruction-confirmation">
+            Ketik frasa konfirmasi <span className="text-error">*</span>
+            <input
+              id="pembersihan-destruction-confirmation"
+              value={phrase}
+              onChange={(event) => setPhrase(event.target.value)}
+              className="mt-2 w-full rounded-xl border border-red-200 bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+              autoComplete="off"
+            />
+          </label>
+          <p className="text-[10px] font-semibold text-outline">Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}</p>
+          <DialogFooter className="gap-3 border-0 bg-transparent p-0">
+            <Button type="button" variant="ghost" disabled={pending} onClick={() => setDestructionOpen(false)}>Batal</Button>
+            <Button
+              type="button"
+              className="gap-1.5 rounded-xl bg-rose-600 px-5 font-extrabold text-white hover:bg-rose-700"
+              disabled={!canDestroy}
+              onClick={() => { setDestructionOpen(false); onApproveDestruction() }}
+            >
+              {pending ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+              Konfirmasi Bersihkan File
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
 
@@ -343,7 +526,7 @@ function resolveErrorMessage(error: unknown): string {
       const message = payload.error
       if (typeof message === 'string') return message
     }
-    return 'Gagal mengambil daftar berkas usul musnah'
+    return 'Gagal mengambil daftar berkas pembersihan'
   }
 
   return 'Terjadi kesalahan'
@@ -375,14 +558,14 @@ function buildBerkasFolderSearchText(folder: BerkasFolder): string {
 
 function getEmptyTitle(filter: FinalArchiveFilter): string {
   return filter === 'DIMUSNAHKAN'
-    ? 'Belum ada arsip dimusnahkan'
-    : 'Belum ada berkas usul musnah'
+    ? 'Belum ada berkas yang dibersihkan'
+    : 'Belum ada usulan pembersihan'
 }
 
 function getEmptyDescription(filter: FinalArchiveFilter): string {
   return filter === 'DIMUSNAHKAN'
-    ? 'Metadata arsip yang sudah Dimusnahkan akan tetap tampil di sini ketika tersedia.'
-    : 'Berkas Inaktif yang diusulkan musnah akan muncul di halaman ini sampai statusnya menjadi Dimusnahkan.'
+    ? 'Metadata berkas yang filenya sudah dibersihkan akan tetap tampil di sini ketika tersedia.'
+    : 'Berkas Tersimpan yang diusulkan untuk pembersihan akan muncul di sini sampai filenya dibersihkan.'
 }
 
 function normalizeSearchValue(value: unknown): string {

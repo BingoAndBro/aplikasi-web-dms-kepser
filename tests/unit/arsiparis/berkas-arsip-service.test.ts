@@ -77,7 +77,7 @@ describe('berkas arsip service foundation', () => {
       actorUserId: ACTOR_ID,
     }, { repository })).rejects.toMatchObject({
       code: 'KLASIFIKASI_PARENT',
-      message: 'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+      message: 'Klasifikasi induk tidak dapat dipilih sebagai Cara Pembayaran. Pilih Pilihan Akhir.',
     })
 
     expect(repository.calls).toContainEqual(['findKlasifikasiForOperationalSelection', KLASIFIKASI_ID])
@@ -95,7 +95,7 @@ describe('berkas arsip service foundation', () => {
       actorUserId: ACTOR_ID,
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_KLASIFIKASI_CLOSED',
-      message: 'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+      message: 'Berkas untuk Cara Pembayaran ini sudah ditutup',
     })
 
     expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)

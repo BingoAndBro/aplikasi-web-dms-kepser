@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import * as berkasArsipCsv from '#/lib/archive/berkas-arsip-csv'
 import {
-  BERKAS_INAKTIF_LIST_CSV_FILENAME,
-  BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME,
+  BERKAS_PEMBERSIHAN_LIST_CSV_FILENAME,
+  BERKAS_TERTUTUP_LIST_CSV_FILENAME,
   buildSafeCsv,
   createBerkasDetailItemsCsv,
   createBerkasFolderListCsv,
@@ -61,7 +62,7 @@ describe('folder-first berkas CSV helper', () => {
         } as any],
       },
       {
-        label: 'Pemberkasan Arsip Aktif',
+        label: 'Berkas Tertutup',
         folders: [{
           berkas_id: '77777777-7777-4777-8777-777777777777',
           klasifikasi_id: '88888888-8888-4888-8888-888888888888',
@@ -75,21 +76,27 @@ describe('folder-first berkas CSV helper', () => {
           workflow_item_count: 1,
           manual_item_count: 1,
           total_nominal_realisasi: 1250000,
+          umur_berkas: 42,
           updated_at: '2026-05-30T00:00:00.000Z',
         }],
       },
     ])
 
-    expect(csv).toContain('No,Kategori / Section,Jenis Pembayaran,Status Berkas,Status Arsip,Jumlah Dokumen,Dokumen Workflow,Dokumen Manual,Total Nominal,Nomor SPM,Tanggal Ditutup,Terakhir Diperbarui')
+    // RP-01: header "Jenis Pembayaran" -> "Cara Pembayaran"; kolom "Umur Berkas" ditambahkan.
+    expect(csv).toContain('No,Kategori / Section,Cara Pembayaran,Status Berkas,Status Arsip,Umur Berkas,Jumlah Dokumen,Dokumen Workflow,Dokumen Manual,Total Nominal,Nomor SPM,Tanggal Ditutup,Terakhir Diperbarui')
     expect(csv).toContain('Berkas Terbuka')
-    expect(csv).toContain('Pemberkasan Arsip Aktif')
+    expect(csv).toContain('Berkas Tertutup')
+    expect(csv).toContain('42 hari')
     expect(csv).toContain('BB - Belanja Barang')
     expectNoSensitiveOutput(csv)
   })
 
-  it('provides clear lifecycle list CSV filenames', () => {
-    expect(BERKAS_INAKTIF_LIST_CSV_FILENAME).toBe('daftar-arsip-inaktif.csv')
-    expect(BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME).toBe('daftar-usul-musnah.csv')
+  it('provides clear lifecycle list CSV filenames (RP-01 de-arsip)', () => {
+    expect(BERKAS_TERTUTUP_LIST_CSV_FILENAME).toBe('daftar-berkas-tertutup.csv')
+    expect(BERKAS_PEMBERSIHAN_LIST_CSV_FILENAME).toBe('daftar-pembersihan-berkas.csv')
+    // Konstanta lama dibuang bersama halaman /arsiparis/inaktif & /arsiparis/usul-musnah.
+    expect(berkasArsipCsv).not.toHaveProperty('BERKAS_INAKTIF_LIST_CSV_FILENAME')
+    expect(berkasArsipCsv).not.toHaveProperty('BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME')
   })
 
   it('exports workflow and manual detail item rows with user-friendly provenance only', () => {

@@ -196,7 +196,7 @@ const MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH = 120
 const MANUAL_ARSIP_ATTACHMENT_ACCEPT = DOCUMENT_UPLOAD_ACCEPT
 const MANUAL_CREATE_STEP_LABELS = [
   'Informasi Dokumen',
-  'Jenis Pembayaran',
+  'Cara Pembayaran',
   'Lampiran',
   'Review',
 ]
@@ -418,7 +418,7 @@ function PenambahanArsipPage() {
             </div>
 
             <p className="mt-4 max-w-xl text-xs font-medium leading-relaxed text-zinc-500 sm:text-sm">
-              Dokumen masuk ke folder Jenis Pembayaran{' '}
+              Dokumen masuk ke folder Cara Pembayaran{' '}
               <span className="font-bold text-zinc-700">{submittedManualArsip.klasifikasiName || 'yang dipilih'}</span>.
               Metadata arsip final tetap diisi saat berkas ditutup.
             </p>
@@ -620,7 +620,7 @@ function ManualArsipTable({
                 <th className={`min-w-52 ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nama Dokumen</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal</th>
                 <th className={ARCHIVE_TABLE_HEAD_CLASS}>Kategori</th>
-                <th className={ARCHIVE_TABLE_HEAD_CLASS}>Jenis Pembayaran</th>
+                <th className={ARCHIVE_TABLE_HEAD_CLASS}>Cara Pembayaran</th>
                 <th className={`min-w-64 ${ARCHIVE_TABLE_HEAD_CLASS}`}>Keterangan</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Status</th>
@@ -1464,7 +1464,7 @@ function CreateManualArsipModal({
 
             <div className="space-y-3 rounded-b-[1.25rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-3.5 sm:p-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-snug text-amber-800">
-            Dokumen manual ini belum menjadi arsip final. Dokumen akan menjadi bagian arsip ketika berkas Jenis Pembayaran ditutup.
+            Dokumen manual ini belum menjadi arsip final. Dokumen akan menjadi bagian arsip ketika berkas Cara Pembayaran ditutup.
           </div>
 
           {step === 1 && (
@@ -1569,7 +1569,7 @@ function CreateManualArsipModal({
           </div>
 
           <div className="rounded-lg border border-outline-variant/30 bg-surface-container-low/20 px-3 py-1.5 text-[10px] text-on-surface-variant">
-            <p>Catatan: Dokumen akan masuk ke folder Jenis Pembayaran yang dipilih. Metadata arsip baru diisi ketika berkas ditutup.</p>
+            <p>Catatan: Dokumen akan masuk ke folder Cara Pembayaran yang dipilih. Metadata arsip baru diisi ketika berkas ditutup.</p>
           </div>
             </>
           )}
@@ -1938,7 +1938,7 @@ function KlasifikasiFormField({
 }) {
   return (
     <FormField
-      label="Jenis Pembayaran"
+      label="Cara Pembayaran"
       required
       hint="pilih kode dan nama"
       error={error}
@@ -2106,7 +2106,7 @@ function ManualCreateReview({
       </ReviewSection>
 
       <ReviewSection title="2. Klasifikasi & Nominal">
-        <ReviewItem label="Jenis Pembayaran" value={selectedNode ? formatKlasifikasiLabel(selectedNode) : '-'} emphasis />
+        <ReviewItem label="Cara Pembayaran" value={selectedNode ? formatKlasifikasiLabel(selectedNode) : '-'} emphasis />
         <ReviewItem
           label="Nominal Realisasi"
           value={<span className="font-mono font-bold text-zinc-950">Rp {form.nominal_realisasi || '-'}</span>}
@@ -2136,7 +2136,7 @@ function ManualCreateReview({
           <div>
             <p className="text-xs font-extrabold uppercase tracking-wide text-zinc-950">Pemberitahuan Konsekuensi</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-orange-800">
-              Dokumen akan masuk ke folder Jenis Pembayaran yang dipilih. Metadata arsip baru diisi ketika berkas ditutup.
+              Dokumen akan masuk ke folder Cara Pembayaran yang dipilih. Metadata arsip baru diisi ketika berkas ditutup.
             </p>
           </div>
         </div>

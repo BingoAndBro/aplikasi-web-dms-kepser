@@ -348,7 +348,7 @@ function KlasifikasiDetail({
             <span className="mt-0.5 block text-xs font-bold text-zinc-950">{node.children.length} sub-node</span>
           </div>
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Dipakai Jenis Pembayaran?</span>
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Dipakai Cara Pembayaran?</span>
             <span className={cn(
               'mt-0.5 flex items-center gap-1 text-xs font-bold',
               canBeOperationalChoice ? 'text-emerald-600' : 'text-zinc-500',
@@ -362,7 +362,7 @@ function KlasifikasiDetail({
 
       <div className="border-t border-[#F1E5DA] pt-2.5 text-left">
         <p className="text-[10.5px] font-semibold leading-relaxed text-zinc-500">
-          Catatan: <span className="font-normal">Jika sebuah berkas Jenis Pembayaran sudah ditutup, pilihan tersebut tidak ditampilkan lagi pada form Pengklasifikasian Dokumen dan Penambahan Dokumen.</span>
+          Catatan: <span className="font-normal">Jika sebuah berkas Cara Pembayaran sudah ditutup, pilihan tersebut tidak ditampilkan lagi pada form Pengklasifikasian Dokumen dan Penambahan Dokumen.</span>
         </p>
         {isParent && (
           <p className="mt-1.5 text-[10.5px] font-semibold leading-relaxed text-amber-700">
@@ -997,13 +997,13 @@ function KlasifikasiPage() {
               <Archive size={12} />
               <Link to="/arsiparis" className="hover:text-[#FF5A00]">Kearsipan KSBU</Link>
               <ChevronRight size={10} />
-              <span className="text-[#FF5A00]">Klasifikasi Arsip</span>
+              <span className="text-[#FF5A00]">Klasifikasi Dokumen</span>
             </div>
             <h2 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
-              Master <span className="text-[#FF5A00]">Klasifikasi Arsip</span>
+              Master <span className="text-[#FF5A00]">Klasifikasi Dokumen</span>
             </h2>
             <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
-              Kelola struktur klasifikasi yang digunakan sebagai Jenis Pembayaran pada proses pemberkasan.
+              Kelola struktur klasifikasi yang digunakan sebagai Cara Pembayaran pada proses pemberkasan.
             </p>
           </div>
           <Button
@@ -1022,7 +1022,7 @@ function KlasifikasiPage() {
         <div className="flex items-start gap-2.5 rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-orange-900 shadow-sm">
           <Info size={15} className="mt-0.5 shrink-0 text-[#FF5A00]" />
           <p>
-            <span className="font-extrabold">Petunjuk Kearsipan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-[#FF5A00]">Jenis Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
+            <span className="font-extrabold">Petunjuk Kearsipan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-[#FF5A00]">Cara Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
           </p>
         </div>
 

@@ -551,7 +551,7 @@ function ArsiparisDokumenDetailPage() {
                   </h2>
                   <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
                     {activeTab === 'metadata'
-                      ? 'Tinjau dokumen selesai sebelum dimasukkan ke berkas Jenis Pembayaran.'
+                      ? 'Tinjau dokumen selesai sebelum dimasukkan ke berkas Cara Pembayaran.'
                       : activeTab === 'lampiran'
                         ? 'Kelengkapan dokumen dengan aksi pratinjau dan unduh.'
                         : 'Riwayat aktivitas dokumen.'}
@@ -566,7 +566,7 @@ function ArsiparisDokumenDetailPage() {
           <div className="hidden">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">Informasi Dokumen</p>
-              <p className="mt-1 text-xs text-zinc-600">Ringkasan dokumen yang akan dimasukkan ke berkas berdasarkan Jenis Pembayaran.</p>
+              <p className="mt-1 text-xs text-zinc-600">Ringkasan dokumen yang akan dimasukkan ke berkas berdasarkan Cara Pembayaran.</p>
             </div>
             {dokumen.nominal_realisasi !== null && dokumen.nominal_realisasi !== undefined && (
               <div className="w-fit text-left sm:text-right">
@@ -631,7 +631,7 @@ function ArsiparisDokumenDetailPage() {
             <div className="my-4 h-px bg-[#F0E1D5]" />
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">1. Jenis Pembayaran <span className="text-error">*</span></label>
+                <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">1. Cara Pembayaran <span className="text-error">*</span></label>
                 <div ref={dropdownRef} className="relative">
                   <button
                     type="button"
@@ -660,7 +660,7 @@ function ArsiparisDokumenDetailPage() {
                           </p>
                         </>
                       ) : (
-                        <p className="font-semibold text-zinc-950">Pilih Jenis Pembayaran / Klasifikasi</p>
+                        <p className="font-semibold text-zinc-950">Pilih Cara Pembayaran / Klasifikasi</p>
                       )}
                     </div>
                     <ChevronDown
@@ -806,7 +806,7 @@ function ArsiparisDokumenDetailPage() {
                 Klasifikasikan dokumen?
               </span>
               <span className="mt-2 block text-sm font-medium leading-relaxed text-zinc-700">
-                Dokumen akan dimasukkan ke folder Jenis Pembayaran yang dipilih.
+                Dokumen akan dimasukkan ke folder Cara Pembayaran yang dipilih.
               </span>
             </span>
           </span>
@@ -840,10 +840,10 @@ function ArsiparisDokumenDetailPage() {
         <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] p-4">
           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
             <Banknote size={13} />
-            Jenis Pembayaran Terpilih
+            Cara Pembayaran Terpilih
           </p>
           <div className="mt-3 rounded-xl border border-[#F1E5DA] bg-white px-3 py-2 text-sm font-extrabold text-zinc-950">
-            Jenis Pembayaran: {selectedNode ? `${selectedNode.kode ? `${selectedNode.kode} - ` : ''}${selectedNode.nama}` : '-'}
+            Cara Pembayaran: {selectedNode ? `${selectedNode.kode ? `${selectedNode.kode} - ` : ''}${selectedNode.nama}` : '-'}
           </div>
           <ul className="mt-4 space-y-2 border-t border-[#F1E5DA] pt-4 text-sm font-medium leading-relaxed text-zinc-700">
             <li>Dokumen masuk ke folder berkas yang masih terbuka.</li>

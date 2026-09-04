@@ -168,7 +168,7 @@ describe('berkas arsip API routes', () => {
     mocks.getOrCreateOpenBerkasForKlasifikasi.mockRejectedValueOnce(
       new mocks.BerkasArsipServiceError(
         'BERKAS_KLASIFIKASI_CLOSED',
-        'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+        'Berkas untuk Cara Pembayaran ini sudah ditutup',
       ),
     )
 
@@ -180,7 +180,7 @@ describe('berkas arsip API routes', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({
-      error: 'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+      error: 'Berkas untuk Cara Pembayaran ini sudah ditutup',
     })
   })
 

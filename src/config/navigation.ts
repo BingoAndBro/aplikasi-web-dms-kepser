@@ -1,6 +1,5 @@
 import {
   Archive,
-  ArchiveX,
   BadgeCheck,
   Banknote,
   BarChart3,
@@ -13,6 +12,7 @@ import {
   FilePlus,
   FileText,
   FileX,
+  FolderCheck,
   FolderOpen,
   History,
   LayoutDashboard,
@@ -122,11 +122,11 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'PEMBERKASAN',
       items: [
         { id: 'pemberkasan', label: 'Pengklasifikasian Dokumen', icon: Archive, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX },
-        { id: 'arsip_aktif', label: 'Pemberkasan Arsip Aktif', icon: FolderOpen, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF },
-        { id: 'arsip_inaktif', label: 'Daftar Arsip Inaktif', icon: ArchiveX, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.INAKTIF },
-        { id: 'usul_musnah', label: 'Usul Musnah', icon: Trash2, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.USUL_MUSNAH },
         { id: 'penambahan_arsip', label: 'Penambahan Dokumen', icon: FilePlus, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.PENAMBAHAN_ARSIP },
-        { id: 'klasifikasi', label: 'Master Klasifikasi', icon: Network, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI },
+        { id: 'arsip_aktif', label: 'Berkas Terbuka', icon: FolderOpen, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF },
+        { id: 'berkas_tertutup', label: 'Berkas Tertutup', icon: FolderCheck, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_TERTUTUP },
+        { id: 'pembersihan', label: 'Pembersihan Berkas', icon: Trash2, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN },
+        { id: 'klasifikasi', label: 'Master Klasifikasi Dokumen', icon: Network, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI },
       ],
     },
     {

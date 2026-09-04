@@ -66,7 +66,7 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     expect(pemberkasanGroup?.items).toContainEqual(
       expect.objectContaining({
         id: 'arsip_aktif',
-        label: 'Pemberkasan Arsip Aktif',
+        label: 'Berkas Terbuka',
         to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF,
       }),
     )
@@ -78,6 +78,37 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     )
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/arsiparis/berkas')
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('AKTIF')
+  })
+
+  it('applies RP-01 de-arsip labels and route add/remove/rename to KSBU navigation', () => {
+    const pemberkasanGroup = NAV_CONFIG[ROLES.KEPALA_SUB_BAGIAN_UMUM].find((group) => group.title === 'PEMBERKASAN')
+    const items = pemberkasanGroup?.items ?? []
+
+    expect(items).toContainEqual(
+      expect.objectContaining({ id: 'berkas_tertutup', label: 'Berkas Tertutup', to: '/arsiparis/berkas/tertutup' }),
+    )
+    expect(items).toContainEqual(
+      expect.objectContaining({ id: 'pembersihan', label: 'Pembersihan Berkas', to: '/arsiparis/pembersihan' }),
+    )
+
+    // Removed / renamed surfaces must be gone.
+    expect(items.some((item) => item.to === '/arsiparis/inaktif')).toBe(false)
+    expect(items.some((item) => item.to === '/arsiparis/usul-musnah')).toBe(false)
+    expect(items.some((item) => item.id === 'arsip_inaktif')).toBe(false)
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('INAKTIF')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('USUL_MUSNAH')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_TERTUTUP).toBe('/arsiparis/berkas/tertutup')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN).toBe('/arsiparis/pembersihan')
+
+    // Order per PB-6.
+    expect(items.map((item) => item.id)).toEqual([
+      'pemberkasan',
+      'penambahan_arsip',
+      'arsip_aktif',
+      'berkas_tertutup',
+      'pembersihan',
+      'klasifikasi',
+    ])
   })
 
   it('does not expose the legacy global archive search route in role navigation', () => {

@@ -13,7 +13,7 @@ import {
 } from '#/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import {
-  calculateManualArchiveRetentionDates,
+  calculateBerkasDueDate,
   MANUAL_ARCHIVE_RETENTION_LABELS,
   type RetensiLabel,
 } from '#/lib/archive/retention'
@@ -31,15 +31,15 @@ const ARCHIVE_FORM_SELECT_ITEM_CLASS =
 
 export type CloseBerkasFormState = {
   nomor_spm: string
+  // RP-01: satu field "Masa Simpan Minimal"; key `retensi_aktif` dipertahankan
+  // sebagai identifier internal API. `retensi_inaktif` dibuang.
   retensi_aktif: string
-  retensi_inaktif: string
   closed_at: string
 }
 
 export type CloseBerkasRequestBody = {
   nomor_spm: string
   retensi_aktif: string
-  retensi_inaktif: string
   closed_at?: string
 }
 
@@ -52,7 +52,6 @@ export type CloseBerkasSummary = {
 export const EMPTY_CLOSE_BERKAS_FORM: CloseBerkasFormState = {
   nomor_spm: '',
   retensi_aktif: '',
-  retensi_inaktif: '',
   closed_at: '',
 }
 
@@ -63,7 +62,6 @@ export function buildCloseBerkasRequestBody(form: CloseBerkasFormState): CloseBe
   const body: CloseBerkasRequestBody = {
     nomor_spm: form.nomor_spm.trim(),
     retensi_aktif: form.retensi_aktif as RetensiLabel,
-    retensi_inaktif: form.retensi_inaktif as RetensiLabel,
   }
 
   if (form.closed_at) body.closed_at = form.closed_at
@@ -72,7 +70,7 @@ export function buildCloseBerkasRequestBody(form: CloseBerkasFormState): CloseBe
 }
 
 export function isCloseBerkasFormIncomplete(form: CloseBerkasFormState): boolean {
-  return !form.nomor_spm.trim() || !form.retensi_aktif || !form.retensi_inaktif
+  return !form.nomor_spm.trim() || !form.retensi_aktif
 }
 
 export function CloseBerkasDialog({
@@ -116,13 +114,13 @@ export function CloseBerkasDialog({
             Tutup berkas dan lengkapi metadata arsip
           </DialogTitle>
           <DialogDescription className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-zinc-700">
-            Setelah berkas ditutup, dokumen baru tidak dapat lagi dimasukkan ke jenis pembayaran ini.
+            Setelah berkas ditutup, dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini.
           </DialogDescription>
           <div className="sr-only">
-            <p>Berkas akan difinalisasi menjadi Arsip Aktif.</p>
-            <p>Setelah ditutup, Jenis Pembayaran ini tidak bisa menerima dokumen baru.</p>
+            <p>Berkas akan difinalisasi menjadi arsip Tersimpan.</p>
+            <p>Setelah ditutup, Cara Pembayaran ini tidak bisa menerima dokumen baru.</p>
             <p>Dokumen dan file fisik tidak dihapus.</p>
-            <p>Status berkas menjadi Ditutup dan status arsip menjadi Aktif.</p>
+            <p>Status berkas menjadi Ditutup dan status arsip menjadi Tersimpan.</p>
           </div>
           </div>
         </DialogHeader>
@@ -130,7 +128,7 @@ export function CloseBerkasDialog({
         <div className="space-y-5 border-t border-[#F1E5DA] px-5 py-5 sm:px-7">
           <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/5">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
-              Jenis Pembayaran / Klasifikasi Arsip
+              Cara Pembayaran / Klasifikasi Arsip
             </p>
             <p className="mt-1 text-base font-extrabold tracking-tight text-zinc-950">
               {summary.klasifikasiLabel}
@@ -177,11 +175,11 @@ export function CloseBerkasDialog({
               </span>
             </label>
             <label className={ARCHIVE_FORM_LABEL_CLASS} id="close-berkas-retensi-aktif-label">
-              <span>Retensi Aktif <span className="text-error">*</span></span>
+              <span>Masa Simpan Minimal <span className="text-error">*</span></span>
               <Select value={form.retensi_aktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_aktif: value ?? '' })}>
                 <SelectTrigger className={ARCHIVE_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="close-berkas-retensi-aktif-label">
-                  <SelectValue placeholder="Pilih retensi aktif">
-                    {(value) => value || 'Pilih retensi aktif'}
+                  <SelectValue placeholder="Pilih masa simpan">
+                    {(value) => value || 'Pilih masa simpan'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className={ARCHIVE_FORM_SELECT_CONTENT_CLASS}>
@@ -190,33 +188,17 @@ export function CloseBerkasDialog({
                 ))}
                 </SelectContent>
               </Select>
-            </label>
-            <label className={ARCHIVE_FORM_LABEL_CLASS} id="close-berkas-retensi-inaktif-label">
-              <span>Retensi Inaktif <span className="text-error">*</span></span>
-              <Select value={form.retensi_inaktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_inaktif: value ?? '' })}>
-                <SelectTrigger className={ARCHIVE_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="close-berkas-retensi-inaktif-label">
-                  <SelectValue placeholder="Pilih retensi inaktif">
-                    {(value) => value || 'Pilih retensi inaktif'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className={ARCHIVE_FORM_SELECT_CONTENT_CLASS}>
-                {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <SelectItem key={label} value={label} className={ARCHIVE_FORM_SELECT_ITEM_CLASS}>{label}</SelectItem>
-                ))}
-                </SelectContent>
-              </Select>
+              <span className="mt-1 block text-[11px] font-semibold leading-relaxed text-zinc-500">
+                Lama berkas wajib disimpan sebelum boleh diusulkan untuk pembersihan. "Permanen" berarti tidak pernah jatuh tempo.
+              </span>
             </label>
           </div>
 
           {retentionPreview && (
-            <div className="grid gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/55 px-5 py-4 sm:grid-cols-2">
+            <div className="grid gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/55 px-5 py-4">
               <RetentionPreviewBadge
-                label="Masa Aktif Berakhir"
-                value={retentionPreview.masaAktifBerakhir}
-              />
-              <RetentionPreviewBadge
-                label="Masa Inaktif Berakhir"
-                value={retentionPreview.masaInaktifBerakhir}
+                label="Tanggal Jatuh Tempo"
+                value={retentionPreview.tanggalJatuhTempo}
               />
             </div>
           )}
@@ -260,7 +242,7 @@ export function CloseBerkasDialog({
             Tutup berkas?
           </DialogTitle>
           <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
-            Berkas akan ditutup dan menjadi arsip aktif. Dokumen baru tidak dapat lagi dimasukkan ke jenis pembayaran ini.
+            Berkas akan ditutup dan tersimpan sebagai arsip. Dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini.
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-left text-sm font-bold text-zinc-950">
@@ -270,7 +252,7 @@ export function CloseBerkasDialog({
           </div>
           <div className="mt-2 flex items-center justify-between gap-3">
             <span>Status arsip:</span>
-            <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">Aktif</span>
+            <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">Tersimpan</span>
           </div>
         </div>
         <DialogFooter className="border-0 bg-transparent p-0 sm:justify-center">
@@ -304,15 +286,16 @@ function RetentionPreviewBadge({ label, value }: { label: string; value: string 
   )
 }
 
-function getRetentionPreview(form: CloseBerkasFormState): { masaAktifBerakhir: string; masaInaktifBerakhir: string } | null {
-  if (!form.closed_at || !form.retensi_aktif || !form.retensi_inaktif) return null
+function getRetentionPreview(form: CloseBerkasFormState): { tanggalJatuhTempo: string } | null {
+  if (!form.closed_at || !form.retensi_aktif) return null
 
   try {
-    return calculateManualArchiveRetentionDates({
-      tanggalDiarsipkan: form.closed_at,
-      retensiAktif: form.retensi_aktif as RetensiLabel,
-      retensiInaktif: form.retensi_inaktif as RetensiLabel,
-    })
+    return {
+      tanggalJatuhTempo: calculateBerkasDueDate({
+        closedAt: form.closed_at,
+        masaSimpan: form.retensi_aktif as RetensiLabel,
+      }),
+    }
   } catch {
     return null
   }

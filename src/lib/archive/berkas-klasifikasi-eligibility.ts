@@ -38,8 +38,8 @@ export type OperationalKlasifikasiSelectionErrorCode =
   | 'KLASIFIKASI_INACTIVE'
   | 'KLASIFIKASI_PARENT'
 
-const CLOSED_UNAVAILABLE_REASON = 'Berkas untuk jenis pembayaran ini sudah ditutup'
-const ANOMALY_UNAVAILABLE_REASON = 'Data berkas untuk jenis pembayaran ini perlu ditinjau'
+const CLOSED_UNAVAILABLE_REASON = 'Berkas untuk cara pembayaran ini sudah ditutup'
+const ANOMALY_UNAVAILABLE_REASON = 'Data berkas untuk cara pembayaran ini perlu ditinjau'
 
 export class OperationalKlasifikasiSelectionError extends Error {
   constructor(
@@ -74,7 +74,7 @@ export async function validateOperationalKlasifikasiSelection(
   if (candidate.hasChildren) {
     throw new OperationalKlasifikasiSelectionError(
       'KLASIFIKASI_PARENT',
-      'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+      'Klasifikasi induk tidak dapat dipilih sebagai Cara Pembayaran. Pilih Pilihan Akhir.',
     )
   }
 

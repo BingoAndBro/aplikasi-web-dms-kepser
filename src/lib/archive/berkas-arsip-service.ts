@@ -477,7 +477,7 @@ export async function updateActiveBerkasMetadata(
   if (existing.statusBerkas !== BERKAS_STATUS.CLOSED || existing.statusArsip !== BERKAS_ARCHIVE_STATUS.AKTIF) {
     throw new BerkasArsipServiceError(
       'BERKAS_METADATA_NOT_EDITABLE',
-      'Metadata hanya dapat diedit untuk Arsip Aktif',
+      'Metadata hanya dapat diedit untuk berkas berstatus Tersimpan',
     )
   }
 
@@ -832,14 +832,14 @@ async function resolveExistingBerkasForKlasifikasi(
   if (openRows.length > 1) {
     throw new BerkasArsipServiceError(
       'BERKAS_KLASIFIKASI_CONFLICT',
-      'Data berkas untuk Jenis Pembayaran ini perlu ditinjau',
+      'Data berkas untuk Cara Pembayaran ini perlu ditinjau',
     )
   }
 
   if (rows.length > 0) {
     throw new BerkasArsipServiceError(
       'BERKAS_KLASIFIKASI_CLOSED',
-      'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+      'Berkas untuk Cara Pembayaran ini sudah ditutup',
     )
   }
 

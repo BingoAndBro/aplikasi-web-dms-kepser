@@ -39,7 +39,7 @@ describe('berkas klasifikasi eligibility helper', () => {
       },
     })).rejects.toMatchObject({
       code: 'KLASIFIKASI_PARENT',
-      message: 'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+      message: 'Klasifikasi induk tidak dapat dipilih sebagai Cara Pembayaran. Pilih Pilihan Akhir.',
     })
   })
 
@@ -115,7 +115,7 @@ describe('berkas klasifikasi eligibility helper', () => {
     ])).toMatchObject({
       is_selectable: false,
       has_open_berkas: false,
-      unavailable_reason: 'Berkas untuk jenis pembayaran ini sudah ditutup',
+      unavailable_reason: 'Berkas untuk cara pembayaran ini sudah ditutup',
     })
   })
 

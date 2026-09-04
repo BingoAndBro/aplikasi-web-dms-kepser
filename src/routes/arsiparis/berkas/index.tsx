@@ -47,9 +47,7 @@ type BerkasFolder = {
   status_arsip: string | null
   nomor_spm: string | null
   retensi_aktif: string | null
-  retensi_inaktif: string | null
   masa_aktif_berakhir: string | null
-  masa_inaktif_berakhir: string | null
   closed_at: string | null
   item_count: number
   workflow_item_count: number
@@ -71,28 +69,19 @@ type BerkasFolderListResponse = {
   error?: string
 }
 
-type BerkasStatusFilter = 'all' | 'open' | 'active'
-type BerkasSortOrder = 'updated_desc' | 'updated_asc' | 'closed_desc' | 'nominal_desc'
+type BerkasSortOrder = 'updated_desc' | 'updated_asc' | 'nominal_desc'
 
 const LOCAL_NO_MATCH_MESSAGE = 'Tidak ada data yang cocok dengan pencarian.'
-const STATUS_FILTER_OPTIONS: Array<{ value: BerkasStatusFilter; label: string }> = [
-  { value: 'all', label: 'Semua' },
-  { value: 'open', label: 'Terbuka' },
-  { value: 'active', label: 'Arsip Aktif' },
-]
 const SORT_OPTIONS: Array<{ value: BerkasSortOrder; label: string }> = [
   { value: 'updated_desc', label: 'Terbaru' },
   { value: 'updated_asc', label: 'Terlama' },
-  { value: 'closed_desc', label: 'Tanggal Tutup' },
   { value: 'nominal_desc', label: 'Nominal Tertinggi' },
 ]
 
 function BerkasArsipAktifPage() {
   const navigate = useNavigate()
   const [openFolders, setOpenFolders] = useState<BerkasFolder[]>([])
-  const [activeFolders, setActiveFolders] = useState<BerkasFolder[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<BerkasStatusFilter>('all')
   const [sortOrder, setSortOrder] = useState<BerkasSortOrder>('updated_desc')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -101,22 +90,15 @@ function BerkasArsipAktifPage() {
     setLoading(true)
     setError(null)
     try {
-      const [openJson, activeJson] = await Promise.all([
-        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
-          query: {
-            status_berkas: 'OPEN',
-            status_arsip: 'null',
-          },
-        }),
-        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
-          query: {
-            status_berkas: 'CLOSED',
-            status_arsip: 'AKTIF',
-          },
-        }),
-      ])
+      // RP-01: halaman ini hanya menampilkan berkas OPEN. Daftar berkas tertutup
+      // (status_arsip=AKTIF) pindah ke /arsiparis/berkas/tertutup.
+      const openJson = await apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+        query: {
+          status_berkas: 'OPEN',
+          status_arsip: 'null',
+        },
+      })
       setOpenFolders(openJson.berkas ?? [])
-      setActiveFolders(activeJson.berkas ?? [])
     } catch (error) {
       setError(resolveErrorMessage(error))
     } finally {
@@ -126,7 +108,7 @@ function BerkasArsipAktifPage() {
 
   function exportCsv() {
     const csv = createBerkasFolderListCsv([
-      { label: 'Pemberkasan Arsip Aktif', folders: filteredFolders },
+      { label: 'Berkas Terbuka', folders: filteredFolders },
     ])
 
     downloadCsvFile(BERKAS_FOLDER_LIST_CSV_FILENAME, csv)
@@ -136,9 +118,7 @@ function BerkasArsipAktifPage() {
     fetchData()
   }, [])
 
-  const allFolders = [...openFolders, ...activeFolders]
-  const visibleFolders = allFolders.filter((folder) => matchesStatusFilter(folder, statusFilter))
-  const filteredFolders = sortBerkasFolders(filterBerkasFolders(visibleFolders, searchQuery), sortOrder)
+  const filteredFolders = sortBerkasFolders(filterBerkasFolders(openFolders, searchQuery), sortOrder)
   const hasSearchQuery = searchQuery.trim().length > 0
   const exportRowCount = filteredFolders.length
   const canExport = exportRowCount > 0 && !loading && !error
@@ -149,10 +129,10 @@ function BerkasArsipAktifPage() {
         <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
-              Pemberkasan Arsip Aktif
+              Berkas Terbuka
             </h1>
             <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
-              Daftar berkas terbuka dan arsip aktif dalam satu tampilan folder-first.
+              Daftar berkas yang masih menerima dokumen. Berkas tertutup ada di halaman Berkas Tertutup.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:items-end">
@@ -171,32 +151,11 @@ function BerkasArsipAktifPage() {
           id="berkas-page-local-search"
           label="Pencarian lokal halaman"
           value={searchQuery}
-          placeholder="Cari Jenis Pembayaran..."
+          placeholder="Cari Cara Pembayaran..."
           resultText={`Hasil: ${exportRowCount} berkas`}
           onChange={setSearchQuery}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-zinc-700">Status:</span>
-            <div className="flex flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#FFF8F1] p-1">
-              {STATUS_FILTER_OPTIONS.map((option) => {
-                const selected = statusFilter === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`h-8 rounded-lg px-3 text-xs font-bold transition ${
-                      selected
-                        ? 'border border-orange-200 bg-orange-50 text-[#FF4D00] shadow-sm'
-                        : 'border border-transparent text-zinc-600 hover:bg-[#FFFDF9] hover:text-zinc-950'
-                    }`}
-                    aria-pressed={selected}
-                    onClick={() => setStatusFilter(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                )
-              })}
-            </div>
             <WorkflowStatusSelect
               value={sortOrder}
               onChange={(nextValue) => setSortOrder((nextValue || 'updated_desc') as BerkasSortOrder)}
@@ -220,7 +179,6 @@ function BerkasArsipAktifPage() {
           <BerkasUnifiedSection
             folders={filteredFolders}
             hasSearchQuery={hasSearchQuery}
-            statusFilter={statusFilter}
             onOpen={(folder) => navigate({ to: '/arsiparis/berkas/$id', params: { id: folder.berkas_id } })}
           />
         )}
@@ -232,25 +190,25 @@ function BerkasArsipAktifPage() {
 function BerkasUnifiedSection({
   folders,
   hasSearchQuery,
-  statusFilter,
   onOpen,
 }: {
   folders: BerkasFolder[]
   hasSearchQuery: boolean
-  statusFilter: BerkasStatusFilter
   onOpen: (folder: BerkasFolder) => void
 }) {
   return (
     <section className="space-y-3">
       <div>
-        <h3 className="font-headline text-lg font-extrabold text-on-surface">Daftar Berkas</h3>
-        <p className="text-xs text-on-surface-variant">Berkas Terbuka dan Arsip Aktif ditampilkan dalam satu daftar terpadu.</p>
+        <h3 className="font-headline text-lg font-extrabold text-on-surface">Daftar Berkas Terbuka</h3>
+        <p className="text-xs text-on-surface-variant">Berkas yang masih menerima dokumen untuk cara pembayaran terkait.</p>
       </div>
 
       {folders.length === 0 ? (
         <EmptyState
-          title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : getEmptyTitleForFilter(statusFilter)}
-          description={hasSearchQuery ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.' : getEmptyDescriptionForFilter(statusFilter)}
+          title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : 'Belum ada berkas terbuka'}
+          description={hasSearchQuery
+            ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.'
+            : 'Berkas terbuka muncul setelah dokumen persetujuan atau manual pertama memilih cara pembayaran yang belum final.'}
           icon={<FolderOpen size={22} />}
         />
       ) : (
@@ -395,28 +353,6 @@ function isOpenFolder(folder: Pick<BerkasFolder, 'status_berkas' | 'status_arsip
   return folder.status_berkas === 'OPEN' && folder.status_arsip === null
 }
 
-function matchesStatusFilter(folder: BerkasFolder, filter: BerkasStatusFilter): boolean {
-  if (filter === 'open') return isOpenFolder(folder)
-  if (filter === 'active') return folder.status_berkas === 'CLOSED' && folder.status_arsip === 'AKTIF'
-  return true
-}
-
-function getEmptyTitleForFilter(filter: BerkasStatusFilter): string {
-  if (filter === 'open') return 'Belum ada berkas terbuka'
-  if (filter === 'active') return 'Belum ada arsip aktif'
-  return 'Belum ada berkas aktif'
-}
-
-function getEmptyDescriptionForFilter(filter: BerkasStatusFilter): string {
-  if (filter === 'open') {
-    return 'Berkas terbuka akan muncul setelah dokumen persetujuan atau manual pertama memilih Jenis Pembayaran yang belum final.'
-  }
-  if (filter === 'active') {
-    return 'Berkas yang sudah ditutup dengan status arsip Aktif akan muncul di sini.'
-  }
-  return 'Berkas Terbuka dan Arsip Aktif akan muncul di daftar terpadu ini.'
-}
-
 function filterBerkasFolders(folders: BerkasFolder[], query: string): BerkasFolder[] {
   const normalizedQuery = normalizeSearchValue(query)
   if (!normalizedQuery) return folders
@@ -428,10 +364,6 @@ function sortBerkasFolders(folders: BerkasFolder[], sortOrder: BerkasSortOrder):
   return [...folders].sort((left, right) => {
     if (sortOrder === 'nominal_desc') {
       return (right.total_nominal_realisasi ?? 0) - (left.total_nominal_realisasi ?? 0)
-    }
-
-    if (sortOrder === 'closed_desc') {
-      return getDateSortTime(right.closed_at) - getDateSortTime(left.closed_at)
     }
 
     const leftTime = getDateSortTime(left.updated_at)

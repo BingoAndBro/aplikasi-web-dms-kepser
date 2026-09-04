@@ -123,7 +123,7 @@ function ArsiparisInboxPage() {
             <ClipboardList size={22} />
           }
           title="Pengklasifikasian Dokumen"
-          description={`${items.length} dokumen selesai PPSPM menunggu pemilihan Jenis Pembayaran. Metadata final seperti Nomor SPM dan retensi tetap diisi saat Tutup Berkas.`}
+          description={`${items.length} dokumen selesai PPSPM menunggu pemilihan Cara Pembayaran. Metadata final seperti Nomor SPM dan retensi tetap diisi saat Tutup Berkas.`}
         />
 
         <WorkflowSearchPanel

@@ -14,7 +14,7 @@ import { apiFetch } from '#/lib/api-client'
 import { ROLES } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
 import { formatDate } from '#/lib/utils/format'
-import { Archive, ArchiveX, ClipboardList, FilePlus, FolderOpen, Network, Tags, Trash2 } from 'lucide-react'
+import { ClipboardList, FilePlus, FolderCheck, FolderOpen, Network, Tags, Trash2 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/')({
   component: KepalaSubBagianUmumDashboard,
@@ -60,8 +60,7 @@ type AuthSessionResponse = {
 function KepalaSubBagianUmumDashboard() {
   const [classificationQueue, setClassificationQueue] = useState<ClassificationQueueItem[]>([])
   const [openFolders, setOpenFolders] = useState<BerkasListRow[]>([])
-  const [activeFolders, setActiveFolders] = useState<BerkasListRow[]>([])
-  const [inactiveFolders, setInactiveFolders] = useState<BerkasListRow[]>([])
+  const [closedFolders, setClosedFolders] = useState<BerkasListRow[]>([])
   const [proposedDestructionCount, setProposedDestructionCount] = useState(0)
 
   useEffect(() => {
@@ -87,16 +86,12 @@ function KepalaSubBagianUmumDashboard() {
         query: { status_berkas: 'CLOSED', status_arsip: 'AKTIF' },
       }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
       apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
-        query: { status_berkas: 'CLOSED', status_arsip: 'INAKTIF' },
-      }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
-      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
         query: { status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' },
       }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
-    ]).then(([inboxResponse, openResponse, activeResponse, inactiveResponse, proposedResponse]) => {
+    ]).then(([inboxResponse, openResponse, closedResponse, proposedResponse]) => {
       setClassificationQueue(inboxResponse.inbox ?? [])
       setOpenFolders(openResponse.berkas ?? [])
-      setActiveFolders(activeResponse.berkas ?? [])
-      setInactiveFolders(inactiveResponse.berkas ?? [])
+      setClosedFolders(closedResponse.berkas ?? [])
       setProposedDestructionCount(proposedResponse.summary?.total_rows_returned ?? 0)
     })
   }, [])
@@ -114,7 +109,7 @@ function KepalaSubBagianUmumDashboard() {
         actionIcon={<FolderOpen size={16} />}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <DashboardMetricCard
           label="Berkas Terbuka"
           value={openFolders.length}
@@ -123,23 +118,16 @@ function KepalaSubBagianUmumDashboard() {
           tone="amber"
         />
         <DashboardMetricCard
-          label="Arsip Aktif"
-          value={activeFolders.length}
-          badge="Aktif"
-          icon={<Archive size={20} />}
+          label="Berkas Tertutup"
+          value={closedFolders.length}
+          badge="Tersimpan"
+          icon={<FolderCheck size={20} />}
           tone="emerald"
         />
         <DashboardMetricCard
-          label="Arsip Inaktif"
-          value={inactiveFolders.length}
-          badge="Inaktif"
-          icon={<ArchiveX size={20} />}
-          tone="zinc"
-        />
-        <DashboardMetricCard
-          label="Usul Musnah"
+          label="Usul Pembersihan"
           value={proposedDestructionCount}
-          badge="Usul Musnah"
+          badge="Usul Pembersihan"
           icon={<Trash2 size={20} />}
           tone="rose"
         />
@@ -154,7 +142,7 @@ function KepalaSubBagianUmumDashboard() {
                   <DashboardActionRow
                     icon={<Tags size={18} />}
                     title={`${classificationQueue.length} Dokumen Siap Diklasifikasikan`}
-                    description="Membutuhkan metadata Jenis Pembayaran untuk masuk ke berkas."
+                    description="Membutuhkan metadata Cara Pembayaran untuk masuk ke berkas."
                     href={ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX}
                     actionLabel="Klasifikasikan"
                   />
@@ -162,9 +150,9 @@ function KepalaSubBagianUmumDashboard() {
                 {proposedDestructionCount > 0 && (
                   <DashboardActionRow
                     icon={<Trash2 size={18} />}
-                    title={`${proposedDestructionCount} Berkas Menunggu Musnahkan Data`}
-                    description="Berkas berstatus Usul Musnah menunggu konfirmasi yang berwenang."
-                    href={ROUTES.KEPALA_SUB_BAGIAN_UMUM.USUL_MUSNAH}
+                    title={`${proposedDestructionCount} Berkas Menunggu Pembersihan File`}
+                    description="Berkas berstatus Usul Pembersihan menunggu konfirmasi yang berwenang."
+                    href={ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN}
                     actionLabel="Tinjau"
                   />
                 )}
@@ -172,7 +160,7 @@ function KepalaSubBagianUmumDashboard() {
             ) : (
               <DashboardEmptyState
                 title="Tidak ada tindakan kearsipan"
-                description="Antrean klasifikasi dan usul musnah yang membutuhkan tindakan akan muncul di sini."
+                description="Antrean klasifikasi dan usul pembersihan yang membutuhkan tindakan akan muncul di sini."
               />
             )}
           </DashboardSection>
@@ -208,9 +196,10 @@ function KepalaSubBagianUmumDashboard() {
           actions={[
             { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX, label: 'Pengklasifikasian Dokumen', icon: <Tags size={16} /> },
             { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.PENAMBAHAN_ARSIP, label: 'Penambahan Dokumen', icon: <FilePlus size={16} /> },
-            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF, label: 'Pemberkasan Arsip Aktif', icon: <FolderOpen size={16} /> },
-            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.USUL_MUSNAH, label: 'Usul Musnah', icon: <Trash2 size={16} /> },
-            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI, label: 'Master Klasifikasi', icon: <Network size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF, label: 'Berkas Terbuka', icon: <FolderOpen size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_TERTUTUP, label: 'Berkas Tertutup', icon: <FolderCheck size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN, label: 'Pembersihan Berkas', icon: <Trash2 size={16} /> },
+            { href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.KLASIFIKASI, label: 'Master Klasifikasi Dokumen', icon: <Network size={16} /> },
           ]}
         />
       </div>

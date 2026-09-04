@@ -10,9 +10,11 @@ import {
   snippet,
 } from '#/lib/archive/berkas-arsip-page-format'
 
-export const BERKAS_FOLDER_LIST_CSV_FILENAME = 'pemberkasan-arsip-aktif.csv'
-export const BERKAS_INAKTIF_LIST_CSV_FILENAME = 'daftar-arsip-inaktif.csv'
-export const BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME = 'daftar-usul-musnah.csv'
+export const BERKAS_FOLDER_LIST_CSV_FILENAME = 'daftar-berkas-terbuka.csv'
+// RP-01: `/arsiparis/inaktif` dihapus & `/arsiparis/usul-musnah` -> `/arsiparis/pembersihan`.
+// Nama file lama dibuang; halaman Berkas Tertutup + Pembersihan Berkas memakai ini.
+export const BERKAS_TERTUTUP_LIST_CSV_FILENAME = 'daftar-berkas-tertutup.csv'
+export const BERKAS_PEMBERSIHAN_LIST_CSV_FILENAME = 'daftar-pembersihan-berkas.csv'
 export const BERKAS_DETAIL_ITEMS_CSV_FILENAME = 'daftar-dokumen-berkas.csv'
 
 type CsvCell = string | number | boolean | null | undefined
@@ -28,11 +30,12 @@ export type BerkasFolderCsvRow = {
   workflow_item_count: number
   manual_item_count: number
   total_nominal_realisasi: number | null
+  umur_berkas?: number | null
   updated_at: string | null
 }
 
 export type BerkasFolderCsvSection = {
-  label: 'Berkas Terbuka' | 'Pemberkasan Arsip Aktif' | string
+  label: 'Berkas Terbuka' | 'Berkas Tertutup' | 'Usulan Pembersihan' | 'Sudah Dibersihkan' | string
   folders: readonly BerkasFolderCsvRow[]
 }
 
@@ -58,9 +61,10 @@ export type BerkasDetailItemCsvRow = {
 const FOLDER_LIST_HEADERS = [
   'No',
   'Kategori / Section',
-  'Jenis Pembayaran',
+  'Cara Pembayaran',
   'Status Berkas',
   'Status Arsip',
+  'Umur Berkas',
   'Jumlah Dokumen',
   'Dokumen Workflow',
   'Dokumen Manual',
@@ -93,6 +97,7 @@ export function createBerkasFolderListCsv(sections: readonly BerkasFolderCsvSect
       safeCsvText(formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)),
       safeCsvText(formatBerkasStatusLabel(folder.status_berkas)),
       safeCsvText(formatBerkasArchiveStatusLabel(folder.status_arsip, folder.status_berkas)),
+      folder.umur_berkas === null || folder.umur_berkas === undefined ? '-' : `${folder.umur_berkas} hari`,
       folder.item_count,
       folder.workflow_item_count,
       folder.manual_item_count,

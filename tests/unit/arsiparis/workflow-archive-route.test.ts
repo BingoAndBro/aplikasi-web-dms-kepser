@@ -228,7 +228,7 @@ describe('workflow classification to berkas route', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({
-      error: 'Berkas untuk Jenis Pembayaran ini sudah ditutup',
+      error: 'Berkas untuk Cara Pembayaran ini sudah ditutup',
     })
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
@@ -310,7 +310,7 @@ describe('workflow classification to berkas route', () => {
     expect(response.status).toBe(400)
     const body = await response.json()
     expect(body).toEqual({
-      error: 'Klasifikasi induk tidak dapat dipilih sebagai Jenis Pembayaran. Pilih Pilihan Akhir.',
+      error: 'Klasifikasi induk tidak dapat dipilih sebagai Cara Pembayaran. Pilih Pilihan Akhir.',
     })
     const bodyText = JSON.stringify(body)
     expect(bodyText).not.toContain('select')

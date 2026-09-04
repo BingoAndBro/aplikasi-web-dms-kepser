@@ -15,6 +15,7 @@ import {
   Loader2,
   Pencil,
   PlusCircle,
+  RotateCcw,
   Save,
   Trash2,
   Wallet,
@@ -67,6 +68,7 @@ import {
   formatNullableDateTimeLabel,
   formatSourceTypeLabel,
   resolveBerkasLifecycleAction,
+  resolveSecondaryBerkasLifecycleAction,
   snippet,
 } from '#/lib/archive/berkas-arsip-page-format'
 import {
@@ -148,6 +150,9 @@ type BerkasDetail = {
   retensi_inaktif: string | null
   masa_aktif_berakhir: string | null
   masa_inaktif_berakhir: string | null
+  umur_berkas: number | null
+  jatuh_tempo: boolean
+  tanggal_jatuh_tempo: string | null
   closed_at: string | null
   item_count: number
   workflow_item_count: number
@@ -202,6 +207,7 @@ function BerkasArsipDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [pendingLifecycleAction, setPendingLifecycleAction] = useState(false)
   const [lifecycleConfirmOpen, setLifecycleConfirmOpen] = useState(false)
+  const [secondaryLifecycleConfirmOpen, setSecondaryLifecycleConfirmOpen] = useState(false)
   const [destructionDialogOpen, setDestructionDialogOpen] = useState(false)
   const [destructionPhrase, setDestructionPhrase] = useState('')
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
@@ -260,13 +266,47 @@ function BerkasArsipDetailPage() {
       setLifecycleConfirmOpen(false)
       setDestructionDialogOpen(false)
       setDestructionPhrase('')
-      if (lifecycleAction.action === 'mark_inactive') {
-        await navigate({ to: '/arsiparis/inaktif' })
-      } else if (lifecycleAction.action === 'propose_destruction') {
-        await navigate({ to: '/arsiparis/usul-musnah' })
+      if (lifecycleAction.action === 'propose_destruction') {
+        await navigate({ to: '/arsiparis/pembersihan' })
       } else {
         await fetchData()
       }
+    } catch (error) {
+      showToast({
+        title: 'Gagal',
+        description: resolveErrorMessage(error),
+        variant: 'error',
+      })
+    } finally {
+      setPendingLifecycleAction(false)
+    }
+  }
+
+  async function submitSecondaryLifecycleAction(options: { confirmed?: boolean } = {}) {
+    if (!detail) return
+
+    const secondaryAction = resolveSecondaryBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
+    if (!secondaryAction) return
+
+    if (!options.confirmed) {
+      setSecondaryLifecycleConfirmOpen(true)
+      return
+    }
+
+    setPendingLifecycleAction(true)
+
+    try {
+      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}/lifecycle`, {
+        method: 'POST',
+        body: JSON.stringify({ action: secondaryAction.action }),
+      })
+      showToast({
+        title: 'Berhasil',
+        description: secondaryAction.successMessage,
+        variant: 'success',
+      })
+      setSecondaryLifecycleConfirmOpen(false)
+      await fetchData()
     } catch (error) {
       showToast({
         title: 'Gagal',
@@ -302,7 +342,7 @@ function BerkasArsipDetailPage() {
       })
       showToast({
         title: 'Berhasil',
-        description: 'Berkas berhasil ditutup dan menjadi Arsip Aktif.',
+        description: 'Berkas berhasil ditutup dan tersimpan.',
         variant: 'success',
       })
       setCloseDialogOpen(false)
@@ -325,7 +365,6 @@ function BerkasArsipDetailPage() {
     setMetadataForm({
       nomor_spm: detail.nomor_spm ?? '',
       retensi_aktif: detail.retensi_aktif ?? '',
-      retensi_inaktif: detail.retensi_inaktif ?? '',
       closed_at: toDateOnlyInputValue(detail.closed_at),
     })
     setMetadataDialogOpen(true)
@@ -441,7 +480,7 @@ function BerkasArsipDetailPage() {
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                       <FolderOpen size={13} className="text-zinc-500" />
                       <Link to="/arsiparis/berkas" className="font-medium text-zinc-800 hover:text-orange-700">
-                        Pemberkasan Arsip Aktif
+                        Berkas Terbuka
                       </Link>
                       <ChevronRight size={12} className="text-zinc-300" />
                       <span>Detail Berkas</span>
@@ -522,6 +561,11 @@ function BerkasArsipDetailPage() {
                       }
                     }}
                     onLifecycleAction={submitLifecycleAction}
+                    secondaryLifecycleConfirmOpen={secondaryLifecycleConfirmOpen}
+                    onSecondaryLifecycleConfirmOpenChange={(open) => {
+                      if (!pendingLifecycleAction) setSecondaryLifecycleConfirmOpen(open)
+                    }}
+                    onSecondaryLifecycleAction={submitSecondaryLifecycleAction}
                     pendingMetadataEdit={pendingMetadataEdit}
                     onOpenMetadataEditDialog={openMetadataEditDialog}
                     pendingClose={pendingClose}
@@ -595,15 +639,15 @@ function EditActiveMetadataDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-2xl sm:rounded-3xl">
         <DialogHeader>
-          <DialogTitle>Edit Metadata Arsip Aktif</DialogTitle>
+          <DialogTitle>Edit Metadata Arsip Tersimpan</DialogTitle>
           <DialogDescription>
-            Perbarui metadata final berkas selama statusnya masih Arsip Aktif.
+            Perbarui metadata final berkas selama statusnya masih Tersimpan.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold leading-relaxed text-orange-900">
-            Edit metadata hanya berlaku untuk Arsip Aktif. Setelah berkas dipindahkan ke Inaktif, Usul Musnah, atau Dimusnahkan, metadata menjadi baca saja.
+            Edit metadata hanya berlaku untuk berkas berstatus Tersimpan. Setelah berkas masuk Usul Pembersihan atau File Dibersihkan, metadata menjadi baca saja.
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -630,26 +674,11 @@ function EditActiveMetadataDialog({
               </span>
             </label>
             <label className={ARCHIVE_METADATA_FORM_LABEL_CLASS} id="edit-berkas-retensi-aktif-label">
-              <span>Retensi Aktif <span className="text-error">*</span></span>
+              <span>Masa Simpan Minimal <span className="text-error">*</span></span>
               <Select value={form.retensi_aktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_aktif: value ?? '' })}>
                 <SelectTrigger className={ARCHIVE_METADATA_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="edit-berkas-retensi-aktif-label">
-                  <SelectValue placeholder="Pilih retensi aktif">
-                    {(value) => value || 'Pilih retensi aktif'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className={ARCHIVE_METADATA_FORM_SELECT_CONTENT_CLASS}>
-                {MANUAL_ARCHIVE_RETENTION_LABELS.map((label) => (
-                  <SelectItem key={label} value={label} className={ARCHIVE_METADATA_FORM_SELECT_ITEM_CLASS}>{label}</SelectItem>
-                ))}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className={ARCHIVE_METADATA_FORM_LABEL_CLASS} id="edit-berkas-retensi-inaktif-label">
-              <span>Retensi Inaktif <span className="text-error">*</span></span>
-              <Select value={form.retensi_inaktif || null} onValueChange={(value) => onFormChange({ ...form, retensi_inaktif: value ?? '' })}>
-                <SelectTrigger className={ARCHIVE_METADATA_FORM_SELECT_TRIGGER_CLASS} aria-labelledby="edit-berkas-retensi-inaktif-label">
-                  <SelectValue placeholder="Pilih retensi inaktif">
-                    {(value) => value || 'Pilih retensi inaktif'}
+                  <SelectValue placeholder="Pilih masa simpan">
+                    {(value) => value || 'Pilih masa simpan'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className={ARCHIVE_METADATA_FORM_SELECT_CONTENT_CLASS}>
@@ -694,10 +723,9 @@ function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
           <>
             <MetadataCell label="Nomor SPM" value={detail.nomor_spm ?? '-'} emphasis />
             <MetadataCell label="Tanggal Ditutup" value={formatNullableDateTimeLabel(detail.closed_at)} />
-            <MetadataCell label="Retensi Aktif" value={detail.retensi_aktif ?? '-'} />
-            <MetadataCell label="Retensi Inaktif" value={detail.retensi_inaktif ?? '-'} />
-            <MetadataCell label="Masa Aktif Berakhir" value={formatNullableDateLabel(detail.masa_aktif_berakhir)} />
-            <MetadataCell label="Masa Inaktif Berakhir" value={formatNullableDateLabel(detail.masa_inaktif_berakhir)} />
+            <MetadataCell label="Masa Simpan Minimal" value={detail.retensi_aktif ?? '-'} />
+            <MetadataCell label="Umur Berkas" value={detail.umur_berkas === null ? '-' : `${detail.umur_berkas} hari`} />
+            <MetadataCell label="Tanggal Jatuh Tempo" value={formatNullableDateLabel(detail.tanggal_jatuh_tempo)} />
           </>
         )}
       </div>
@@ -716,6 +744,9 @@ function FolderActionPanel({
   onCancelDestruction,
   onDestructionOpenChange,
   onLifecycleAction,
+  secondaryLifecycleConfirmOpen,
+  onSecondaryLifecycleConfirmOpenChange,
+  onSecondaryLifecycleAction,
   pendingMetadataEdit,
   onOpenMetadataEditDialog,
   pendingClose,
@@ -730,13 +761,17 @@ function FolderActionPanel({
   onDestructionPhraseChange: (phrase: string) => void
   onCancelDestruction: () => void
   onDestructionOpenChange: (open: boolean) => void
-  onLifecycleAction: (options?: { confirmation?: string }) => void
+  onLifecycleAction: (options?: { confirmation?: string; confirmed?: boolean }) => void
+  secondaryLifecycleConfirmOpen: boolean
+  onSecondaryLifecycleConfirmOpenChange: (open: boolean) => void
+  onSecondaryLifecycleAction: (options?: { confirmed?: boolean }) => void
   pendingMetadataEdit: boolean
   onOpenMetadataEditDialog: () => void
   pendingClose: boolean
   onOpenCloseDialog: () => void
 }) {
   const lifecycleAction = resolveBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
+  const secondaryAction = resolveSecondaryBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
   const canSubmitDestruction = destructionPhrase === BERKAS_DESTRUCTION_CONFIRMATION_PHRASE
     && !pendingLifecycleAction
   const canShowClose = canShowCloseBerkasForm(detail)
@@ -792,6 +827,12 @@ function FolderActionPanel({
           Aksi Kontrol Berkas
         </p>
         <div className="mt-3 space-y-2">
+          {lifecycleAction?.action === 'approve_destruction' && (
+            <div data-testid="export-warning-slot">
+              {/* RP-02: aktifkan peringatan "belum pernah diekspor" di sini */}
+              {null}
+            </div>
+          )}
           {lifecycleAction && (
             <Button
               type="button"
@@ -816,6 +857,19 @@ function FolderActionPanel({
                   ? <AlertTriangle size={14} />
                   : <ArrowRightCircle size={14} />}
               {pendingLifecycleAction ? 'Memproses...' : lifecycleAction.label}
+            </Button>
+          )}
+          {secondaryAction && (
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+              disabled={pendingLifecycleAction}
+              onClick={() => onSecondaryLifecycleConfirmOpenChange(true)}
+            >
+              {pendingLifecycleAction ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+              {pendingLifecycleAction ? 'Memproses...' : secondaryAction.label}
             </Button>
           )}
           {canEditActiveMetadata(detail) && (
@@ -872,6 +926,16 @@ function FolderActionPanel({
         />
       )}
 
+      {secondaryAction && (
+        <LifecycleConfirmationDialog
+          open={secondaryLifecycleConfirmOpen}
+          pending={pendingLifecycleAction}
+          action={secondaryAction}
+          onOpenChange={onSecondaryLifecycleConfirmOpenChange}
+          onConfirm={() => onSecondaryLifecycleAction({ confirmed: true })}
+        />
+      )}
+
       {lifecycleAction?.action === 'approve_destruction' && (
         <Dialog
           open={destructionDialogOpen}
@@ -884,20 +948,20 @@ function FolderActionPanel({
               <AlertTriangle size={22} />
             </div>
             <DialogHeader className="items-center text-center">
-              <DialogTitle>Musnahkan Data</DialogTitle>
+              <DialogTitle>Bersihkan File Berkas</DialogTitle>
               <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
-                Arsip akan ditandai sebagai dimusnahkan. Metadata tetap tersimpan, tetapi akses file akan diblokir.
+                Status berkas akan menjadi File Dibersihkan. Metadata tetap tersimpan, tetapi akses file akan diblokir.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
               <p className="text-center font-headline text-2xl font-extrabold tracking-tight text-zinc-950">
-                Musnahkan arsip?
+                Bersihkan file berkas?
               </p>
               <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-xs font-extrabold leading-relaxed text-rose-700">
-                <p>Pemberitahuan: Pemusnahan data ini bersifat final.</p>
+                <p>Pemberitahuan: Pembersihan file ini bersifat final.</p>
                 <p className="mt-2">File fisik terkait berkas akan dihapus.</p>
-                <p>Preview dan download file tidak akan tersedia setelah pemusnahan.</p>
+                <p>Preview dan download file tidak akan tersedia setelah pembersihan.</p>
                 <p>Metadata berkas dan dokumen tetap tersimpan, namun lampiran berkas tidak akan dapat dilekatkan, diunduh, atau dipreview lagi.</p>
                 <p>Aksi ini tidak mudah dibalik.</p>
               </div>
@@ -936,7 +1000,7 @@ function FolderActionPanel({
                 {pendingLifecycleAction
                   ? <Loader2 size={14} className="animate-spin" />
                   : <AlertTriangle size={14} />}
-                Konfirmasi Musnahkan Data
+                Konfirmasi Bersihkan File
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -959,12 +1023,9 @@ function LifecycleConfirmationDialog({
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
-  const isMarkInactive = action.action === 'mark_inactive'
-  const title = isMarkInactive ? 'Pindahkan arsip ke Inaktif?' : 'Pindahkan arsip ke Usul Musnah?'
-  const description = isMarkInactive
-    ? 'Arsip aktif akan masuk ke masa inaktif. Setelah dipindahkan, metadata arsip tidak dapat diedit lagi.'
-    : 'Arsip inaktif akan masuk ke daftar usul musnah untuk proses pemusnahan.'
-  const confirmLabel = isMarkInactive ? 'Pindahkan ke Inaktif' : 'Pindahkan ke Usul Musnah'
+  const title = `${action.label}?`
+  const description = action.confirmation
+  const confirmLabel = action.label
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => {
@@ -1006,19 +1067,16 @@ function LifecycleConfirmationDialog({
 
 function getFolderLifecycleDescription(detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'>): string {
   if (detail.status_berkas === 'OPEN') {
-    return 'Berkas masih terbuka dan dapat menerima dokumen baru untuk Jenis Pembayaran ini.'
+    return 'Berkas masih terbuka dan dapat menerima dokumen baru untuk Cara Pembayaran ini.'
   }
   if (detail.status_arsip === 'AKTIF') {
-    return 'Berkas sudah ditutup sebagai Arsip Aktif. Metadata arsip masih dapat diperbarui selama status tetap Aktif.'
-  }
-  if (detail.status_arsip === 'INAKTIF') {
-    return 'Berkas berada pada Arsip Inaktif. Metadata final menjadi baca saja.'
+    return 'Berkas sudah ditutup dan Tersimpan. Metadata arsip masih dapat diperbarui selama status tetap Tersimpan.'
   }
   if (detail.status_arsip === 'USUL_MUSNAH') {
-    return 'Berkas masuk Usul Musnah dan menunggu konfirmasi pemusnahan data.'
+    return 'Berkas masuk daftar Usul Pembersihan dan menunggu konfirmasi pembersihan file. Usulan masih dapat dibatalkan.'
   }
   if (detail.status_arsip === 'DIMUSNAHKAN') {
-    return 'Berkas sudah Dimusnahkan. Metadata tetap tersimpan dan akses file diblokir.'
+    return 'File berkas sudah dibersihkan. Metadata tetap tersimpan dan akses file diblokir.'
   }
   return 'Status berkas perlu ditinjau.'
 }
@@ -1745,7 +1803,7 @@ export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem
   items.push(historyItem({
     label: 'Berkas dibuka',
     date: detail.created_at,
-    helper: 'Folder mulai menerima dokumen untuk Jenis Pembayaran ini.',
+    helper: 'Folder mulai menerima dokumen untuk Cara Pembayaran ini.',
     icon: <FolderOpen size={15} />,
     iconTone: 'bg-[#FFF3E8] text-orange-700',
     domainOrder: 10,
@@ -1827,7 +1885,7 @@ function buildAuthoritativeBerkasHistoryHelper(event: BerkasActivityEvent): stri
 
   switch (event.event_type) {
     case 'BERKAS_DIBUKA':
-      return 'Folder mulai menerima dokumen untuk Jenis Pembayaran ini.'
+      return 'Folder mulai menerima dokumen untuk Cara Pembayaran ini.'
     case 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN':
       return 'Dokumen Persetujuan masuk ke berkas.'
     case 'DOKUMEN_MANUAL_DITAMBAHKAN':
@@ -1835,11 +1893,11 @@ function buildAuthoritativeBerkasHistoryHelper(event: BerkasActivityEvent): stri
     case 'BERKAS_DITUTUP':
       return 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.'
     case 'METADATA_ARSIP_AKTIF_DIPERBARUI':
-      return 'Metadata Arsip Aktif diperbarui sebelum dipindahkan ke lifecycle berikutnya.'
+      return 'Metadata arsip diperbarui.'
     case 'BERKAS_DIPINDAHKAN_KE_INAKTIF':
-      return 'Berkas keluar dari Arsip Aktif dan metadata menjadi baca saja.'
+      return 'Status warisan pra-RP-01. Berkas keluar dari arsip aktif dan metadata menjadi baca saja.'
     case 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH':
-      return 'Berkas masuk daftar usulan pemusnahan.'
+      return 'Berkas masuk daftar Usul Pembersihan.'
     case 'BERKAS_DIMUSNAHKAN':
       return 'Status akhir berkas. Metadata tetap tersimpan dan preview/download diblokir.'
     default:
@@ -1928,9 +1986,9 @@ function historyItem({
 function buildCurrentLifecycleHistoryItem(detail: BerkasDetail, originalIndex: number): BerkasHistoryItem | null {
   if (detail.status_arsip === 'INAKTIF') {
     return historyItem({
-      label: 'Berkas dipindahkan ke Inaktif',
+      label: 'Berkas dipindahkan ke Inaktif (usang)',
       date: detail.updated_at,
-      helper: 'Berkas keluar dari arsip aktif dan metadata menjadi baca saja.',
+      helper: 'Status warisan pra-RP-01. Berkas keluar dari arsip aktif dan metadata menjadi baca saja.',
       icon: <Archive size={15} />,
       iconTone: 'bg-amber-50 text-amber-700',
       timestampNote: 'Tidak ada log timestamp per-transisi; waktu ini berasal dari pembaruan status berkas saat ini.',
@@ -1941,9 +1999,9 @@ function buildCurrentLifecycleHistoryItem(detail: BerkasDetail, originalIndex: n
 
   if (detail.status_arsip === 'USUL_MUSNAH') {
     return historyItem({
-      label: 'Berkas dipindahkan ke Usul Musnah',
+      label: 'Berkas diusulkan untuk pembersihan',
       date: detail.updated_at,
-      helper: 'Berkas masuk daftar usulan pemusnahan. Metadata tetap baca saja.',
+      helper: 'Berkas masuk daftar Usul Pembersihan. Usulan masih dapat dibatalkan.',
       icon: <AlertTriangle size={15} />,
       iconTone: 'bg-orange-50 text-orange-700',
       timestampNote: 'Tidak ada log timestamp per-transisi; waktu ini berasal dari pembaruan status berkas saat ini.',
@@ -1954,7 +2012,7 @@ function buildCurrentLifecycleHistoryItem(detail: BerkasDetail, originalIndex: n
 
   if (detail.status_arsip === 'DIMUSNAHKAN') {
     return historyItem({
-      label: 'Berkas dimusnahkan',
+      label: 'File berkas dibersihkan',
       date: detail.updated_at,
       helper: 'Status akhir berkas. Metadata tetap tersimpan dan preview/download diblokir.',
       icon: <Trash2 size={15} />,

@@ -410,28 +410,25 @@ describe('folder-first berkas archive page formatting', () => {
     expect(isBerkasEmptyForClose({ item_count: 1, items: [{} as any] })).toBe(false)
   })
 
-  it('builds close request bodies with existing close API field names', () => {
+  it('builds close request bodies with the single RP-01 retention field', () => {
+    // RP-01: schema `.strict()` menolak `retensi_inaktif`; builder tak lagi mengirimnya.
     expect(buildCloseBerkasRequestBody({
       nomor_spm: '  SPM-001/2026  ',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
       closed_at: '2026-05-30',
     })).toEqual({
       nomor_spm: 'SPM-001/2026',
       retensi_aktif: '1 Tahun',
-      retensi_inaktif: '3 Tahun',
       closed_at: '2026-05-30',
     })
 
     expect(buildCloseBerkasRequestBody({
       nomor_spm: 'SPM-002/2026',
       retensi_aktif: '5 Tahun',
-      retensi_inaktif: '10 Tahun',
       closed_at: '',
     })).toEqual({
       nomor_spm: 'SPM-002/2026',
       retensi_aktif: '5 Tahun',
-      retensi_inaktif: '10 Tahun',
     })
   })
 
@@ -471,12 +468,12 @@ describe('folder-first berkas archive page formatting', () => {
       'Dokumen Persetujuan diklasifikasikan',
       'Penambahan dokumen manual sukses',
       'Berkas ditutup',
-      // NOTE: synthesized-from-status label lives in $id.tsx; relabeled in section-06c.
-      'Berkas dimusnahkan',
+      // RP-01 section-06c: synthesized-from-status label in $id.tsx.
+      'File berkas dibersihkan',
     ])
     expect(JSON.stringify(history)).not.toContain('Dokumen selesai persetujuan PPSPM')
     expect(JSON.stringify(history)).not.toContain('Workflow')
-    expect(history.at(-1)?.label).toBe('Berkas dimusnahkan')
+    expect(history.at(-1)?.label).toBe('File berkas dibersihkan')
   })
 
   it('prefers authoritative berkas activity events when present', () => {
@@ -620,11 +617,11 @@ describe('folder-first berkas archive page formatting', () => {
       'Dokumen Persetujuan diklasifikasikan',
       'Penambahan dokumen manual sukses',
       'Berkas ditutup',
-      // NOTE: synthesized-from-status label lives in $id.tsx; relabeled in section-06c.
-      'Berkas dimusnahkan',
+      // RP-01 section-06c: synthesized-from-status label in $id.tsx.
+      'File berkas dibersihkan',
     ])
-    expect(history.at(-1)?.label).toBe('Berkas dimusnahkan')
-    expect(JSON.stringify(history.slice(history.findIndex((item) => item.label === 'Berkas dimusnahkan') + 1)))
+    expect(history.at(-1)?.label).toBe('File berkas dibersihkan')
+    expect(JSON.stringify(history.slice(history.findIndex((item) => item.label === 'File berkas dibersihkan') + 1)))
       .toBe('[]')
   })
 
