@@ -776,6 +776,9 @@ function FolderActionPanel({
     && !pendingLifecycleAction
   const canShowClose = canShowCloseBerkasForm(detail)
   const closeBlockedByEmptyFolder = isBerkasEmptyForClose(detail)
+  const [exportZipDialogOpen, setExportZipDialogOpen] = useState(false)
+  const canExportZip = canExportBerkasZip(detail)
+  const exportZipDisabledReason = exportBerkasZipDisabledReason(detail)
 
   return (
     <aside className="min-w-0 space-y-3 xl:sticky xl:top-3">
@@ -897,6 +900,18 @@ function FolderActionPanel({
               {pendingClose ? 'Memproses...' : 'Tutup Berkas'}
             </Button>
           )}
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+            disabled={!canExportZip}
+            title={exportZipDisabledReason ?? undefined}
+            onClick={() => setExportZipDialogOpen(true)}
+          >
+            <Download size={14} />
+            Ekspor ZIP
+          </Button>
           <Link to="/arsiparis/berkas" className="block">
             <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold">
               <ChevronLeft size={13} />
@@ -935,6 +950,12 @@ function FolderActionPanel({
           onConfirm={() => onSecondaryLifecycleAction({ confirmed: true })}
         />
       )}
+
+      <ExportBerkasZipDialog
+        open={exportZipDialogOpen}
+        detail={detail}
+        onOpenChange={setExportZipDialogOpen}
+      />
 
       {lifecycleAction?.action === 'approve_destruction' && (
         <Dialog
@@ -1063,6 +1084,72 @@ function LifecycleConfirmationDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function ExportBerkasZipDialog({
+  open,
+  detail,
+  onOpenChange,
+}: {
+  open: boolean
+  detail: BerkasDetail
+  onOpenChange: (open: boolean) => void
+}) {
+  const [preparing, setPreparing] = useState(false)
+
+  function handleExport() {
+    setPreparing(true)
+    window.location.href = buildBerkasExportZipUrl(detail.berkas_id)
+    window.setTimeout(() => {
+      setPreparing(false)
+      onOpenChange(false)
+    }, 800)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!preparing) onOpenChange(nextOpen)
+    }}>
+      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl">
+        <DialogHeader>
+          <DialogTitle>Ekspor ZIP Berkas</DialogTitle>
+          <DialogDescription>
+            Unduh seluruh lampiran dokumen dalam berkas ini sebagai satu berkas ZIP.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-1.5 rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-sm">
+          <p><span className="font-bold text-zinc-700">Nomor SPM:</span> {detail.nomor_spm ?? '-'}</p>
+          <p><span className="font-bold text-zinc-700">Klasifikasi:</span> {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}</p>
+          <p><span className="font-bold text-zinc-700">Jumlah Dokumen:</span> {detail.item_count}</p>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button type="button" variant="outline" disabled={preparing} onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button type="button" className="gap-1.5" disabled={preparing} onClick={handleExport}>
+            {preparing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {preparing ? 'Menyiapkan unduhan...' : 'Ekspor Sekarang'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function canExportBerkasZip(detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'>): boolean {
+  return detail.status_berkas === 'CLOSED' && detail.status_arsip !== 'DIMUSNAHKAN'
+}
+
+export function exportBerkasZipDisabledReason(detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'>): string | null {
+  if (detail.status_berkas !== 'CLOSED') return 'Berkas belum ditutup, tidak bisa diekspor'
+  if (detail.status_arsip === 'DIMUSNAHKAN') return 'Data file sudah dimusnahkan'
+  return null
+}
+
+export function buildBerkasExportZipUrl(berkasId: string): string {
+  return `/api/arsiparis/berkas/${encodeURIComponent(berkasId)}/export-zip`
 }
 
 function getFolderLifecycleDescription(detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'>): string {

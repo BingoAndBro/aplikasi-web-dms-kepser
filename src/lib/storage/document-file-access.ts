@@ -34,7 +34,7 @@ type LampiranFileReference = {
   url: string
 }
 
-type DocumentAccessContext = {
+export type DocumentAccessContext = {
   document: DocumentRow
   isInDestroyedBerkas: boolean
 }
@@ -194,6 +194,23 @@ export async function resolveDocumentLampiranLogicalPathForExport({
     return { ok: false, status: 404, message: 'Dokumen tidak ditemukan' }
   }
 
+  return resolveDocumentLampiranReference(context, lampiranIndex)
+}
+
+/**
+ * Exported for RP-05 export endpoints to memoize per documentId across a
+ * document's multiple lampiran indexes within one request (avoids the N
+ * queries-per-attachment cost of calling resolveDocumentLampiranLogicalPathForExport
+ * once per index) — see RP-07 Step 2/Step 8.
+ */
+export async function loadDocumentAccessContextForExport(documentId: string): Promise<DocumentAccessContext | null> {
+  return loadDocumentAccessContext(documentId)
+}
+
+export function resolveDocumentLampiranReferenceFromContext(
+  context: DocumentAccessContext,
+  lampiranIndex: number,
+): FileReferenceResult {
   return resolveDocumentLampiranReference(context, lampiranIndex)
 }
 

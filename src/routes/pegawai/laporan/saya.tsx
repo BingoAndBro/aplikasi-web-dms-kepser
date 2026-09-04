@@ -23,11 +23,14 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
+import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
+import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
 import {
   ChevronRight,
   Clock3,
+  Download,
   FileText,
   Filter,
   Inbox,
@@ -63,6 +66,9 @@ function LaporanSayaPage() {
   const [filter, setFilter] = useState<HierarchicalFilterValue>({})
   const [sortBy, setSortBy] = useState<SortMode>('newest')
   const [filterOpen, setFilterOpen] = useState(false)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportPending, setExportPending] = useState(false)
+  const [exportError, setExportError] = useState('')
 
   useEffect(() => {
     apiFetch<LaporanSayaResponse>('/laporan/saya')
@@ -112,6 +118,39 @@ function LaporanSayaPage() {
 
   const activeFilters = countActiveFilters(filter)
 
+  async function handleExportZip() {
+    if (filtered.length === 0 || filtered.length > 500) return
+
+    setExportPending(true)
+    setExportError('')
+
+    try {
+      const response = await fetch('/api/laporan/saya.export-zip', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dokumen_ids: filtered.map((dok) => dok.id) }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Gagal membuat ekspor ZIP')
+      }
+
+      const blob = await response.blob()
+      const filename = extractContentDispositionFilename(
+        response.headers.get('Content-Disposition'),
+        'Laporan_Saya.zip',
+      )
+      downloadZipBlob(blob, filename)
+      setExportDialogOpen(false)
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Gagal membuat ekspor ZIP')
+    } finally {
+      setExportPending(false)
+    }
+  }
+
   return (
     <PageLayout>
       <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
@@ -144,6 +183,18 @@ function LaporanSayaPage() {
           resultLabel={`${filtered.length} Dokumen Ditemukan`}
           filter={filter}
           onFilterChange={setFilter}
+          exportCount={filtered.length}
+          onExportClick={() => setExportDialogOpen(true)}
+        />
+
+        <ExportZipDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          documentCount={filtered.length}
+          description="Mengikuti filter aktif saat ini."
+          pending={exportPending}
+          error={exportError}
+          onConfirm={handleExportZip}
         />
 
         {loading && <LoadingState variant="list" rows={4} label="Memuat laporan saya" />}
@@ -194,6 +245,8 @@ function ReportToolbar({
   resultLabel,
   filter,
   onFilterChange,
+  exportCount,
+  onExportClick,
 }: {
   search: string
   onSearchChange: (value: string) => void
@@ -207,6 +260,8 @@ function ReportToolbar({
   resultLabel: string
   filter: HierarchicalFilterValue
   onFilterChange: (value: HierarchicalFilterValue) => void
+  exportCount: number
+  onExportClick: () => void
 }) {
   return (
     <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
@@ -281,8 +336,19 @@ function ReportToolbar({
         </div>
       )}
 
-      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
-        {resultLabel}
+      <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-sm font-bold text-zinc-950">{resultLabel}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5 border-[#F0E1D5] bg-[#FFFDF9] font-bold"
+          disabled={exportCount === 0}
+          onClick={onExportClick}
+        >
+          <Download size={14} />
+          Ekspor Semua File (ZIP)
+        </Button>
       </div>
     </div>
   )

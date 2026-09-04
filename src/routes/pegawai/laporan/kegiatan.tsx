@@ -25,7 +25,9 @@ import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
+import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
+import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
 import {
   ArrowLeft,
@@ -33,6 +35,7 @@ import {
   ChevronRight,
   Clock3,
   ClipboardList,
+  Download,
   FileText,
   Filter,
   FolderOpen,
@@ -144,6 +147,9 @@ function LaporanKegiatanPage() {
   const [detailFilterOpen, setDetailFilterOpen] = useState(false)
   const [sortBy, setSortBy] = useState<SortMode>('newest')
   const [filterOpen, setFilterOpen] = useState(false)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportPending, setExportPending] = useState(false)
+  const [exportError, setExportError] = useState('')
 
   useEffect(() => {
     async function checkPermission() {
@@ -255,6 +261,39 @@ function LaporanKegiatanPage() {
 
   const isCurrentUser = (dok: DokumenLaporanRow) => dok.pengaju_id === currentUserId
 
+  async function handleExportZip() {
+    if (selectedDocuments.length === 0 || selectedDocuments.length > 500) return
+
+    setExportPending(true)
+    setExportError('')
+
+    try {
+      const response = await fetch('/api/laporan/kegiatan.export-zip', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dokumen_ids: selectedDocuments.map((dok) => dok.id) }),
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Gagal membuat ekspor ZIP')
+      }
+
+      const blob = await response.blob()
+      const filename = extractContentDispositionFilename(
+        response.headers.get('Content-Disposition'),
+        'Laporan_Kegiatan.zip',
+      )
+      downloadZipBlob(blob, filename)
+      setExportDialogOpen(false)
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Gagal membuat ekspor ZIP')
+    } finally {
+      setExportPending(false)
+    }
+  }
+
   return (
     <PageLayout>
       <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
@@ -287,6 +326,11 @@ function LaporanKegiatanPage() {
             onBack={() => selectKegiatan(null, navigate)}
             onOpenDocument={(documentId) => navigate({ to: '/pegawai/dokumen/$id', params: { id: documentId } })}
             isCurrentUser={isCurrentUser}
+            exportDialogOpen={exportDialogOpen}
+            onExportDialogOpenChange={setExportDialogOpen}
+            exportPending={exportPending}
+            exportError={exportError}
+            onExportConfirm={handleExportZip}
           />
         ) : null}
 
@@ -678,6 +722,11 @@ function KegiatanDetailView({
   onBack,
   onOpenDocument,
   isCurrentUser,
+  exportDialogOpen,
+  onExportDialogOpenChange,
+  exportPending,
+  exportError,
+  onExportConfirm,
 }: {
   kegiatan: KegiatanRow
   dokumen: DokumenLaporanRow[]
@@ -693,6 +742,11 @@ function KegiatanDetailView({
   onBack: () => void
   onOpenDocument: (id: string) => void
   isCurrentUser: (dok: DokumenLaporanRow) => boolean
+  exportDialogOpen: boolean
+  onExportDialogOpenChange: (open: boolean) => void
+  exportPending: boolean
+  exportError: string
+  onExportConfirm: () => void
 }) {
   const activeFilters = countActiveDetailFilters(filter)
   const pembuatOptions = useMemo(() => buildPembuatOptions(kegiatan.dokumen), [kegiatan.dokumen])
@@ -740,6 +794,18 @@ function KegiatanDetailView({
         onSortChange={onSortChange}
         pembuatOptions={pembuatOptions}
         resultLabel={`${dokumen.length} dari ${totalDokumen} dokumen ditampilkan`}
+        exportCount={dokumen.length}
+        onExportClick={() => onExportDialogOpenChange(true)}
+      />
+
+      <ExportZipDialog
+        open={exportDialogOpen}
+        onOpenChange={onExportDialogOpenChange}
+        documentCount={dokumen.length}
+        description={`Mengikuti dokumen yang sedang ditampilkan pada kegiatan "${kegiatan.nama}".`}
+        pending={exportPending}
+        error={exportError}
+        onConfirm={onExportConfirm}
       />
 
       {dokumen.length === 0 ? (
@@ -767,6 +833,8 @@ function KegiatanDetailToolbar({
   onSortChange,
   pembuatOptions,
   resultLabel,
+  exportCount,
+  onExportClick,
 }: {
   search: string
   onSearchChange: (value: string) => void
@@ -779,6 +847,8 @@ function KegiatanDetailToolbar({
   onSortChange: (value: DetailSortMode) => void
   pembuatOptions: { id: string; nama: string }[]
   resultLabel: string
+  exportCount: number
+  onExportClick: () => void
 }) {
   return (
     <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
@@ -856,8 +926,19 @@ function KegiatanDetailToolbar({
         </div>
       )}
 
-      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
-        {resultLabel}
+      <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-sm font-bold text-zinc-950">{resultLabel}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5 border-[#F0E1D5] bg-[#FFFDF9] font-bold"
+          disabled={exportCount === 0}
+          onClick={onExportClick}
+        >
+          <Download size={14} />
+          Ekspor Semua File (ZIP)
+        </Button>
       </div>
     </div>
   )

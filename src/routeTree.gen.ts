@@ -126,6 +126,8 @@ import { Route as ApiUsersIdActivateRouteImport } from './routes/api/users/$id/a
 import { Route as ApiPpkResubmitIdRouteImport } from './routes/api/ppk/resubmit/$id'
 import { Route as ApiPpkKembalikanIdRouteImport } from './routes/api/ppk/kembalikan/$id'
 import { Route as ApiPpkDokumenIdRouteImport } from './routes/api/ppk/dokumen/$id'
+import { Route as ApiLaporanSayaExportZipRouteImport } from './routes/api/laporan/saya.export-zip'
+import { Route as ApiLaporanKegiatanExportZipRouteImport } from './routes/api/laporan/kegiatan.export-zip'
 import { Route as ApiKetuaTimUserUserIdRouteImport } from './routes/api/ketua-tim/user/$userId'
 import { Route as ApiKetuaTimKegiatanKegiatanIdRouteImport } from './routes/api/ketua-tim/kegiatan/$kegiatanId'
 import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id.submit'
@@ -149,6 +151,7 @@ import { Route as ApiArsiparisManualArsipIdAttachmentsRouteImport } from './rout
 import { Route as ApiArsiparisDokumenIdArchiveRouteImport } from './routes/api/arsiparis/dokumen.$id.archive'
 import { Route as ApiArsiparisBerkasIdLifecycleRouteImport } from './routes/api/arsiparis/berkas/$id/lifecycle'
 import { Route as ApiArsiparisBerkasIdItemsRouteImport } from './routes/api/arsiparis/berkas/$id/items'
+import { Route as ApiArsiparisBerkasIdExportZipRouteImport } from './routes/api/arsiparis/berkas/$id/export-zip'
 import { Route as ApiArsiparisBerkasIdCloseRouteImport } from './routes/api/arsiparis/berkas/$id/close'
 import { Route as ApiPpkDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/preview/$lampiranIndex'
 import { Route as ApiPpkDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/download/$lampiranIndex'
@@ -754,6 +757,17 @@ const ApiPpkDokumenIdRoute = ApiPpkDokumenIdRouteImport.update({
   path: '/api/ppk/dokumen/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLaporanSayaExportZipRoute = ApiLaporanSayaExportZipRouteImport.update({
+  id: '/export-zip',
+  path: '/export-zip',
+  getParentRoute: () => ApiLaporanSayaRoute,
+} as any)
+const ApiLaporanKegiatanExportZipRoute =
+  ApiLaporanKegiatanExportZipRouteImport.update({
+    id: '/export-zip',
+    path: '/export-zip',
+    getParentRoute: () => ApiLaporanKegiatanRoute,
+  } as any)
 const ApiKetuaTimUserUserIdRoute = ApiKetuaTimUserUserIdRouteImport.update({
   id: '/api/ketua-tim/user/$userId',
   path: '/api/ketua-tim/user/$userId',
@@ -882,6 +896,12 @@ const ApiArsiparisBerkasIdItemsRoute =
     path: '/items',
     getParentRoute: () => ApiArsiparisBerkasIdRoute,
   } as any)
+const ApiArsiparisBerkasIdExportZipRoute =
+  ApiArsiparisBerkasIdExportZipRouteImport.update({
+    id: '/export-zip',
+    path: '/export-zip',
+    getParentRoute: () => ApiArsiparisBerkasIdRoute,
+  } as any)
 const ApiArsiparisBerkasIdCloseRoute =
   ApiArsiparisBerkasIdCloseRouteImport.update({
     id: '/close',
@@ -1004,9 +1024,9 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
-  '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
+  '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRouteWithChildren
   '/api/laporan/kinerja': typeof ApiLaporanKinerjaRoute
-  '/api/laporan/saya': typeof ApiLaporanSayaRoute
+  '/api/laporan/saya': typeof ApiLaporanSayaRouteWithChildren
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
   '/api/master-jenis-dokumen/$id': typeof ApiMasterJenisDokumenIdRoute
@@ -1050,6 +1070,8 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
   '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
+  '/api/laporan/kegiatan/export-zip': typeof ApiLaporanKegiatanExportZipRoute
+  '/api/laporan/saya/export-zip': typeof ApiLaporanSayaExportZipRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
@@ -1068,6 +1090,7 @@ export interface FileRoutesByFullPath {
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
+  '/api/arsiparis/berkas/$id/export-zip': typeof ApiArsiparisBerkasIdExportZipRoute
   '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
   '/api/arsiparis/berkas/$id/lifecycle': typeof ApiArsiparisBerkasIdLifecycleRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
@@ -1148,9 +1171,9 @@ export interface FileRoutesByTo {
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
-  '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
+  '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRouteWithChildren
   '/api/laporan/kinerja': typeof ApiLaporanKinerjaRoute
-  '/api/laporan/saya': typeof ApiLaporanSayaRoute
+  '/api/laporan/saya': typeof ApiLaporanSayaRouteWithChildren
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
   '/api/master-jenis-dokumen/$id': typeof ApiMasterJenisDokumenIdRoute
@@ -1192,6 +1215,8 @@ export interface FileRoutesByTo {
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
   '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
+  '/api/laporan/kegiatan/export-zip': typeof ApiLaporanKegiatanExportZipRoute
+  '/api/laporan/saya/export-zip': typeof ApiLaporanSayaExportZipRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
@@ -1210,6 +1235,7 @@ export interface FileRoutesByTo {
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
+  '/api/arsiparis/berkas/$id/export-zip': typeof ApiArsiparisBerkasIdExportZipRoute
   '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
   '/api/arsiparis/berkas/$id/lifecycle': typeof ApiArsiparisBerkasIdLifecycleRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
@@ -1298,9 +1324,9 @@ export interface FileRoutesById {
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
-  '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRoute
+  '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRouteWithChildren
   '/api/laporan/kinerja': typeof ApiLaporanKinerjaRoute
-  '/api/laporan/saya': typeof ApiLaporanSayaRoute
+  '/api/laporan/saya': typeof ApiLaporanSayaRouteWithChildren
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
   '/api/master-jenis-dokumen/$id': typeof ApiMasterJenisDokumenIdRoute
@@ -1344,6 +1370,8 @@ export interface FileRoutesById {
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
   '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
+  '/api/laporan/kegiatan/export-zip': typeof ApiLaporanKegiatanExportZipRoute
+  '/api/laporan/saya/export-zip': typeof ApiLaporanSayaExportZipRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
@@ -1362,6 +1390,7 @@ export interface FileRoutesById {
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
   '/api/arsiparis/berkas/$id/close': typeof ApiArsiparisBerkasIdCloseRoute
+  '/api/arsiparis/berkas/$id/export-zip': typeof ApiArsiparisBerkasIdExportZipRoute
   '/api/arsiparis/berkas/$id/items': typeof ApiArsiparisBerkasIdItemsRouteWithChildren
   '/api/arsiparis/berkas/$id/lifecycle': typeof ApiArsiparisBerkasIdLifecycleRoute
   '/api/arsiparis/dokumen/$id/archive': typeof ApiArsiparisDokumenIdArchiveRoute
@@ -1497,6 +1526,8 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id/submit'
     | '/api/ketua-tim/kegiatan/$kegiatanId'
     | '/api/ketua-tim/user/$userId'
+    | '/api/laporan/kegiatan/export-zip'
+    | '/api/laporan/saya/export-zip'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
@@ -1515,6 +1546,7 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
     | '/api/arsiparis/berkas/$id/close'
+    | '/api/arsiparis/berkas/$id/export-zip'
     | '/api/arsiparis/berkas/$id/items'
     | '/api/arsiparis/berkas/$id/lifecycle'
     | '/api/arsiparis/dokumen/$id/archive'
@@ -1639,6 +1671,8 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id/submit'
     | '/api/ketua-tim/kegiatan/$kegiatanId'
     | '/api/ketua-tim/user/$userId'
+    | '/api/laporan/kegiatan/export-zip'
+    | '/api/laporan/saya/export-zip'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
@@ -1657,6 +1691,7 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id'
     | '/ppk/dokumen/$id'
     | '/api/arsiparis/berkas/$id/close'
+    | '/api/arsiparis/berkas/$id/export-zip'
     | '/api/arsiparis/berkas/$id/items'
     | '/api/arsiparis/berkas/$id/lifecycle'
     | '/api/arsiparis/dokumen/$id/archive'
@@ -1790,6 +1825,8 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id/submit'
     | '/api/ketua-tim/kegiatan/$kegiatanId'
     | '/api/ketua-tim/user/$userId'
+    | '/api/laporan/kegiatan/export-zip'
+    | '/api/laporan/saya/export-zip'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
@@ -1808,6 +1845,7 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
     | '/api/arsiparis/berkas/$id/close'
+    | '/api/arsiparis/berkas/$id/export-zip'
     | '/api/arsiparis/berkas/$id/items'
     | '/api/arsiparis/berkas/$id/lifecycle'
     | '/api/arsiparis/dokumen/$id/archive'
@@ -1866,9 +1904,9 @@ export interface RootRouteChildren {
   ApiDokumenSubmitRoute: typeof ApiDokumenSubmitRoute
   ApiFilesAccessRoute: typeof ApiFilesAccessRoute
   ApiKetuaTimIdRoute: typeof ApiKetuaTimIdRoute
-  ApiLaporanKegiatanRoute: typeof ApiLaporanKegiatanRoute
+  ApiLaporanKegiatanRoute: typeof ApiLaporanKegiatanRouteWithChildren
   ApiLaporanKinerjaRoute: typeof ApiLaporanKinerjaRoute
-  ApiLaporanSayaRoute: typeof ApiLaporanSayaRoute
+  ApiLaporanSayaRoute: typeof ApiLaporanSayaRouteWithChildren
   ApiPegawaiRevisiRoute: typeof ApiPegawaiRevisiRoute
   ApiPpkDitolakRoute: typeof ApiPpkDitolakRoute
   ApiPpkInboxRoute: typeof ApiPpkInboxRoute
@@ -2717,6 +2755,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPpkDokumenIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/laporan/saya/export-zip': {
+      id: '/api/laporan/saya/export-zip'
+      path: '/export-zip'
+      fullPath: '/api/laporan/saya/export-zip'
+      preLoaderRoute: typeof ApiLaporanSayaExportZipRouteImport
+      parentRoute: typeof ApiLaporanSayaRoute
+    }
+    '/api/laporan/kegiatan/export-zip': {
+      id: '/api/laporan/kegiatan/export-zip'
+      path: '/export-zip'
+      fullPath: '/api/laporan/kegiatan/export-zip'
+      preLoaderRoute: typeof ApiLaporanKegiatanExportZipRouteImport
+      parentRoute: typeof ApiLaporanKegiatanRoute
+    }
     '/api/ketua-tim/user/$userId': {
       id: '/api/ketua-tim/user/$userId'
       path: '/api/ketua-tim/user/$userId'
@@ -2876,6 +2928,13 @@ declare module '@tanstack/react-router' {
       path: '/items'
       fullPath: '/api/arsiparis/berkas/$id/items'
       preLoaderRoute: typeof ApiArsiparisBerkasIdItemsRouteImport
+      parentRoute: typeof ApiArsiparisBerkasIdRoute
+    }
+    '/api/arsiparis/berkas/$id/export-zip': {
+      id: '/api/arsiparis/berkas/$id/export-zip'
+      path: '/export-zip'
+      fullPath: '/api/arsiparis/berkas/$id/export-zip'
+      preLoaderRoute: typeof ApiArsiparisBerkasIdExportZipRouteImport
       parentRoute: typeof ApiArsiparisBerkasIdRoute
     }
     '/api/arsiparis/berkas/$id/close': {
@@ -3253,6 +3312,29 @@ const ApiDokumenIdRouteWithChildren = ApiDokumenIdRoute._addFileChildren(
   ApiDokumenIdRouteChildren,
 )
 
+interface ApiLaporanKegiatanRouteChildren {
+  ApiLaporanKegiatanExportZipRoute: typeof ApiLaporanKegiatanExportZipRoute
+}
+
+const ApiLaporanKegiatanRouteChildren: ApiLaporanKegiatanRouteChildren = {
+  ApiLaporanKegiatanExportZipRoute: ApiLaporanKegiatanExportZipRoute,
+}
+
+const ApiLaporanKegiatanRouteWithChildren =
+  ApiLaporanKegiatanRoute._addFileChildren(ApiLaporanKegiatanRouteChildren)
+
+interface ApiLaporanSayaRouteChildren {
+  ApiLaporanSayaExportZipRoute: typeof ApiLaporanSayaExportZipRoute
+}
+
+const ApiLaporanSayaRouteChildren: ApiLaporanSayaRouteChildren = {
+  ApiLaporanSayaExportZipRoute: ApiLaporanSayaExportZipRoute,
+}
+
+const ApiLaporanSayaRouteWithChildren = ApiLaporanSayaRoute._addFileChildren(
+  ApiLaporanSayaRouteChildren,
+)
+
 interface ApiUsersIdRouteChildren {
   ApiUsersIdActivateRoute: typeof ApiUsersIdActivateRoute
   ApiUsersIdDeactivateRoute: typeof ApiUsersIdDeactivateRoute
@@ -3305,12 +3387,14 @@ const ApiArsiparisBerkasIdItemsRouteWithChildren =
 
 interface ApiArsiparisBerkasIdRouteChildren {
   ApiArsiparisBerkasIdCloseRoute: typeof ApiArsiparisBerkasIdCloseRoute
+  ApiArsiparisBerkasIdExportZipRoute: typeof ApiArsiparisBerkasIdExportZipRoute
   ApiArsiparisBerkasIdItemsRoute: typeof ApiArsiparisBerkasIdItemsRouteWithChildren
   ApiArsiparisBerkasIdLifecycleRoute: typeof ApiArsiparisBerkasIdLifecycleRoute
 }
 
 const ApiArsiparisBerkasIdRouteChildren: ApiArsiparisBerkasIdRouteChildren = {
   ApiArsiparisBerkasIdCloseRoute: ApiArsiparisBerkasIdCloseRoute,
+  ApiArsiparisBerkasIdExportZipRoute: ApiArsiparisBerkasIdExportZipRoute,
   ApiArsiparisBerkasIdItemsRoute: ApiArsiparisBerkasIdItemsRouteWithChildren,
   ApiArsiparisBerkasIdLifecycleRoute: ApiArsiparisBerkasIdLifecycleRoute,
 }
@@ -3442,9 +3526,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenSubmitRoute: ApiDokumenSubmitRoute,
   ApiFilesAccessRoute: ApiFilesAccessRoute,
   ApiKetuaTimIdRoute: ApiKetuaTimIdRoute,
-  ApiLaporanKegiatanRoute: ApiLaporanKegiatanRoute,
+  ApiLaporanKegiatanRoute: ApiLaporanKegiatanRouteWithChildren,
   ApiLaporanKinerjaRoute: ApiLaporanKinerjaRoute,
-  ApiLaporanSayaRoute: ApiLaporanSayaRoute,
+  ApiLaporanSayaRoute: ApiLaporanSayaRouteWithChildren,
   ApiPegawaiRevisiRoute: ApiPegawaiRevisiRoute,
   ApiPpkDitolakRoute: ApiPpkDitolakRoute,
   ApiPpkInboxRoute: ApiPpkInboxRoute,

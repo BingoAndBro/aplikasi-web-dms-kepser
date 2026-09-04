@@ -96,6 +96,23 @@ export async function getPreviewRoleData(
   }
 }
 
+export function downloadZipBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+export function extractContentDispositionFilename(header: string | null, fallback: string): string {
+  if (!header) return fallback
+  const match = header.match(/filename="?([^";]+)"?/i)
+  return match?.[1] ?? fallback
+}
+
 // Legacy aliases for backward compatibility
 export async function downloadFile(dokId: string, lampIndex: number, dok: DokumenRow): Promise<void> {
   const result = await downloadRoleFile('pegawai', dokId, lampIndex, dok)
