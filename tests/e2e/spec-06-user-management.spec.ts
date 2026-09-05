@@ -87,7 +87,7 @@ function randomEmail() {
 
 // Helper: wait for dialog to be visible
 async function waitForDialog(page: Page) {
-  await expect(page.locator('[role="dialog"]')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('[role="dialog"], [role="alertdialog"]').first()).toBeVisible({ timeout: 5000 })
 }
 
 // Helper: wait for toast/alert
@@ -303,7 +303,7 @@ test('TC-05: Admin can reset user password', async ({ page }) => {
   await resetPwdInputs.nth(1).fill('NewPass123')
 
   // Submit
-  await page.locator('[role="dialog"] button', { hasText: 'Reset Password' }).click()
+  await page.locator('[role="dialog"] button, [role="alertdialog"] button', { hasText: 'Reset Password' }).click()
   await page.waitForTimeout(2000)
 
   // Check dialog closed (password reset triggered)
@@ -344,7 +344,7 @@ test('TC-06 & TC-07: Admin can deactivate and activate users', async ({ page }) 
 
   await waitForDialog(page)
   // Find the deactivate button in the dialog (has variant destructive)
-  await page.locator('[role="dialog"] button', { hasText: 'Nonaktifkan' }).click()
+  await page.locator('[role="dialog"] button, [role="alertdialog"] button', { hasText: 'Nonaktifkan' }).click()
   await page.waitForTimeout(2000)
 
   // Verify status changed to Nonaktif
@@ -357,7 +357,7 @@ test('TC-06 & TC-07: Admin can deactivate and activate users', async ({ page }) 
   await activateBtn.click()
 
   await waitForDialog(page)
-  await page.locator('[role="dialog"] button', { hasText: 'Aktifkan' }).click()
+  await page.locator('[role="dialog"] button, [role="alertdialog"] button', { hasText: 'Aktifkan' }).click()
   await page.waitForTimeout(2000)
 
   // Verify status changed back to Aktif
@@ -589,7 +589,7 @@ test('TC-14: Admin cannot deactivate themselves', async ({ page }) => {
     await waitForDialog(page)
 
     // Try to deactivate
-    await page.locator('[role="dialog"] button', { hasText: 'Nonaktifkan' }).click()
+    await page.locator('[role="dialog"] button, [role="alertdialog"] button', { hasText: 'Nonaktifkan' }).click()
     await page.waitForTimeout(2000)
 
     // Should show error or prevent deactivation

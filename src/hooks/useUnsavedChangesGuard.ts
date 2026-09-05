@@ -1,7 +1,9 @@
 import { useBlocker } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef } from 'react'
 
-const DEFAULT_MESSAGE = 'Perubahan belum disimpan. Yakin ingin keluar?'
+import { useConfirm } from '#/hooks/useConfirm'
+
+const DEFAULT_MESSAGE = 'Perubahan yang belum Anda simpan akan hilang jika meninggalkan halaman ini.'
 
 interface UseUnsavedChangesGuardOptions {
   isDirty: boolean
@@ -10,38 +12,58 @@ interface UseUnsavedChangesGuardOptions {
 
 type GuardedCallback = () => void | Promise<void>
 
+/**
+ * Blocks in-app navigation and browser close while a form is dirty.
+ *
+ * In-app navigation shows the shared {@link useConfirm} dialog; the browser-close
+ * path stays on the native `beforeunload` prompt (browsers forbid custom UI there).
+ */
 export function useUnsavedChangesGuard({
   isDirty,
   message = DEFAULT_MESSAGE,
 }: UseUnsavedChangesGuardOptions) {
+  const confirm = useConfirm()
   const skipNextBlockRef = useRef(false)
+  const inFlightRef = useRef(false)
+
+  const askLeave = useCallback(
+    () =>
+      confirm({
+        tone: 'warning',
+        title: 'Keluar tanpa menyimpan?',
+        description: message,
+        confirmLabel: 'Keluar tanpa menyimpan',
+        cancelLabel: 'Tetap di halaman',
+      }),
+    [confirm, message],
+  )
 
   const confirmIfDirty = useCallback(
-    (callback: GuardedCallback) => {
+    async (callback: GuardedCallback) => {
       if (!isDirty) {
         return callback()
       }
 
-      if (typeof window !== 'undefined' && !window.confirm(message)) {
-        return
+      if (inFlightRef.current) return
+
+      inFlightRef.current = true
+      let proceed = false
+      try {
+        proceed = await askLeave()
+      } finally {
+        inFlightRef.current = false
       }
+
+      if (!proceed) return
 
       skipNextBlockRef.current = true
-      const result = callback()
-
-      if (result instanceof Promise) {
-        return result.finally(() => {
-          skipNextBlockRef.current = false
-        })
-      }
-
-      setTimeout(() => {
+      try {
+        return await callback()
+      } finally {
         skipNextBlockRef.current = false
-      }, 0)
-
-      return result
+      }
     },
-    [isDirty, message]
+    [isDirty, askLeave],
   )
 
   useEffect(() => {
@@ -64,16 +86,23 @@ export function useUnsavedChangesGuard({
   }, [isDirty, message])
 
   useBlocker({
-    shouldBlockFn: () => {
+    shouldBlockFn: async () => {
       if (!isDirty || skipNextBlockRef.current) {
         return false
       }
 
-      if (typeof window === 'undefined') {
-        return false
+      // A confirm is already open for a concurrent navigation attempt — keep blocking.
+      if (inFlightRef.current) {
+        return true
       }
 
-      return !window.confirm(message)
+      inFlightRef.current = true
+      try {
+        const proceed = await askLeave()
+        return !proceed
+      } finally {
+        inFlightRef.current = false
+      }
     },
     enableBeforeUnload: false,
     disabled: !isDirty,

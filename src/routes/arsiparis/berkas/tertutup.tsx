@@ -14,14 +14,7 @@ import {
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
@@ -227,27 +220,16 @@ function BerkasTertutupPage() {
         )}
       </div>
 
-      <Dialog open={batchOpen} onOpenChange={(open) => { if (!batchRunning) setBatchOpen(open) }}>
-        <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
-          <DialogHeader>
-            <DialogTitle>Usulkan Semua yang Jatuh Tempo?</DialogTitle>
-            <DialogDescription>
-              {dueFolders.length} berkas jatuh tempo akan diusulkan untuk pembersihan. Kegagalan sebagian tidak membatalkan yang berhasil.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-3 border-0 bg-transparent p-0">
-            <Button type="button" variant="ghost" disabled={batchRunning} onClick={() => setBatchOpen(false)}>Batal</Button>
-            <Button
-              type="button"
-              className="rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
-              disabled={batchRunning}
-              onClick={runBatchPropose}
-            >
-              {batchRunning ? 'Memproses...' : 'Usulkan Semua'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={batchOpen}
+        onOpenChange={(open) => { if (!batchRunning) setBatchOpen(open) }}
+        tone="warning"
+        title="Usulkan Semua yang Jatuh Tempo?"
+        description={`${dueFolders.length} berkas jatuh tempo akan diusulkan untuk pembersihan. Kegagalan sebagian tidak membatalkan yang berhasil.`}
+        confirmLabel="Usulkan Semua"
+        pending={batchRunning}
+        onConfirm={runBatchPropose}
+      />
     </PageLayout>
   )
 }
@@ -370,29 +352,21 @@ function UsulkanPembersihanButton({
         Usulkan Pembersihan
       </Button>
 
-      <Dialog open={confirmOpen} onOpenChange={(open) => { if (!pending) setConfirmOpen(open) }}>
-        <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
-          <DialogHeader>
-            <DialogTitle>Usulkan Pembersihan?</DialogTitle>
-            <DialogDescription>
-              Berkas <span className="font-semibold text-zinc-950">{formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}</span>
-              {folder.nomor_spm ? ` (Nomor SPM: ${folder.nomor_spm})` : ''} akan masuk daftar Usul Pembersihan.
-              Tidak ada file yang dihapus pada tahap ini; usulan masih dapat dibatalkan.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-3 border-0 bg-transparent p-0">
-            <Button type="button" variant="ghost" disabled={pending} onClick={() => setConfirmOpen(false)}>Batal</Button>
-            <Button
-              type="button"
-              className="rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
-              disabled={pending}
-              onClick={() => { setConfirmOpen(false); onConfirm() }}
-            >
-              {pending ? 'Memproses...' : 'Usulkan Pembersihan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(open) => { if (!pending) setConfirmOpen(open) }}
+        tone="warning"
+        title="Usulkan Pembersihan?"
+        description={
+          <>
+            Berkas <span className="font-semibold text-zinc-950">{formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}</span>
+            {folder.nomor_spm ? ` (Nomor SPM: ${folder.nomor_spm})` : ''} akan masuk daftar Usul Pembersihan. Tidak ada file yang dihapus pada tahap ini; usulan masih dapat dibatalkan.
+          </>
+        }
+        confirmLabel="Usulkan Pembersihan"
+        pending={pending}
+        onConfirm={() => { setConfirmOpen(false); onConfirm() }}
+      />
     </>
   )
 }

@@ -1,15 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-import { AlertTriangle, Check, ChevronDown, Edit2, Search, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, Edit2, Search, Trash2 } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { cn } from '#/lib/utils'
 
 export const adminNativeSelectClassName =
@@ -348,13 +342,18 @@ type AdminConfirmationDialogProps = {
   icon?: ReactNode
 }
 
-const confirmationToneClassName = {
-  destructive: 'border-rose-100 bg-rose-50 text-rose-600',
-  warning: 'border-amber-100 bg-amber-50 text-amber-600',
-  info: 'border-orange-100 bg-orange-50 text-orange-600',
-  success: 'border-emerald-100 bg-emerald-50 text-emerald-600',
-}
+const ADMIN_TONE_TO_CONFIRM_TONE = {
+  destructive: 'destructive',
+  warning: 'warning',
+  success: 'success',
+  info: 'primary',
+} as const
 
+/**
+ * Admin master-data confirmations. Thin adapter over the app-wide {@link ConfirmDialog}
+ * so every admin "Hapus …?" / "Keluar dari form?" prompt matches the rest of the app —
+ * the prop shape is preserved, so no admin call site changes.
+ */
 export function AdminConfirmationDialog({
   open,
   onOpenChange,
@@ -368,39 +367,22 @@ export function AdminConfirmationDialog({
   tone = 'destructive',
   icon,
 }: AdminConfirmationDialogProps) {
-  const confirmClassName = tone === 'destructive'
-    ? adminDialogDestructiveButtonClassName
-    : adminDialogSubmitButtonClassName
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(adminDialogContentClassName, 'sm:max-w-[460px]')}>
-        <DialogHeader className="border-0 px-7 pb-0 pt-7 pr-14">
-          <div className="flex items-start gap-4">
-            <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-[14px] border', confirmationToneClassName[tone])}>
-              {icon ?? <AlertTriangle size={22} />}
-            </span>
-            <DialogTitle className="pt-1 text-xl">{title}</DialogTitle>
-          </div>
-        </DialogHeader>
-        <div className="px-7 py-5 text-sm font-medium leading-6 text-[#35527A]">
-          {children}
-        </div>
-        <DialogFooter className={adminDialogFooterClassName}>
-          <Button
-            variant="outline"
-            className={adminDialogCancelButtonClassName}
-            onClick={onCancel ?? (() => onOpenChange(false))}
-            disabled={loading}
-          >
-            {cancelLabel}
-          </Button>
-          <Button className={confirmClassName} onClick={onConfirm} disabled={loading}>
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={next => {
+        if (!next) onCancel?.()
+        onOpenChange(next)
+      }}
+      tone={ADMIN_TONE_TO_CONFIRM_TONE[tone]}
+      icon={icon}
+      title={title}
+      description={children}
+      confirmLabel={confirmLabel}
+      cancelLabel={cancelLabel}
+      pending={loading}
+      onConfirm={onConfirm}
+    />
   )
 }
 

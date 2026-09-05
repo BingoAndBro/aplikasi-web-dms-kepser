@@ -39,8 +39,8 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(source).not.toContain('Semua tahap selesai')
     expect(source).not.toContain('Dokumen diproses')
     expect(source).not.toContain('Pengajuan selesai')
-    expect(source).toContain('<AppDialog')
-    expect(source).not.toContain('<ConfirmDialog')
+    expect(source).toContain('<ConfirmDialog')
+    expect(source).not.toContain('<AppDialog')
     expect(source).not.toContain('#/routes/api')
   })
 

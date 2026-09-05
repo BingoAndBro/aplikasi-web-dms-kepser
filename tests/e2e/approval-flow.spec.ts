@@ -432,15 +432,18 @@ test.describe('TC-07: PPK Reject — Catatan Required', () => {
     await page.locator('button', { hasText: 'Tolak' }).click()
     await page.waitForTimeout(500)
 
-    // Short catatan
+    // Short catatan — confirm button stays disabled and a hint appears on blur
     await page.locator('textarea').fill('salah')
-    await page.locator('button', { hasText: 'Tolak Dokumen' }).click()
-    await page.waitForTimeout(1000)
+    await page.locator('textarea').blur()
+    await page.waitForTimeout(500)
 
     // Error should appear
     await expect(page.locator('text=minimal 10 karakter')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('button', { hasText: 'Tolak Dokumen' })).toBeDisabled()
 
-    // Status should not change — back button should work
+    // Cancel out — status must not have changed
+    await page.locator('button', { hasText: 'Batal' }).click()
+    await page.waitForTimeout(500)
     await expect(page.locator('button', { hasText: 'Setujui' })).toBeVisible()
   })
 })

@@ -4,7 +4,7 @@ import { ArchivePanel } from '#/components/archive/ArchivePagePrimitives'
 import { WorkflowPanel } from '#/components/workflow/PpkPpspmPagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
-import { AppDialog } from '#/components/ui/AppDialog'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { Badge } from '#/components/ui/badge'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
@@ -791,51 +791,20 @@ function ArsiparisDokumenDetailPage() {
         </div>
 
       </div>
-      <AppDialog
+      <ConfirmDialog
         open={classificationConfirmOpen}
         onOpenChange={(open) => {
           if (!formLoading) setClassificationConfirmOpen(open)
         }}
-        title={
-          <span className="flex items-start gap-5">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#FF5A00]">
-              <Archive size={23} />
-            </span>
-            <span className="min-w-0">
-              <span className="block font-headline text-xl font-extrabold tracking-tight text-zinc-950">
-                Klasifikasikan dokumen?
-              </span>
-              <span className="mt-2 block text-sm font-medium leading-relaxed text-zinc-700">
-                Dokumen akan dimasukkan ke folder Cara Pembayaran yang dipilih.
-              </span>
-            </span>
-          </span>
-        }
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-8"
-        showCloseButton
+        tone="primary"
+        icon={<Archive className="size-6" />}
+        title="Klasifikasikan dokumen?"
+        description="Dokumen akan dimasukkan ke folder Cara Pembayaran yang dipilih."
+        confirmLabel="Klasifikasikan Dokumen"
+        cancelLabel="Batalkan"
         size="md"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={formLoading}
-              onClick={() => setClassificationConfirmOpen(false)}
-              className="border-[#F0E1D5] bg-[#FFFAF6]"
-            >
-              Batalkan
-            </Button>
-            <Button
-              type="button"
-              disabled={formLoading}
-              onClick={submitArchive}
-              className="gap-1.5 rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
-            >
-              {formLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-              Klasifikasikan Dokumen
-            </Button>
-          </>
-        }
+        pending={formLoading}
+        onConfirm={submitArchive}
       >
         <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] p-4">
           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
@@ -850,57 +819,27 @@ function ArsiparisDokumenDetailPage() {
             <li>Metadata arsip belum diisi pada tahap ini.</li>
           </ul>
         </div>
-      </AppDialog>
-      <AppDialog
+      </ConfirmDialog>
+      <ConfirmDialog
         open={leaveBlocker.status === 'blocked'}
         onOpenChange={(open) => {
           if (!open && leaveBlocker.status === 'blocked') {
             leaveBlocker.reset()
           }
         }}
-        title={
-          <span className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
-              <AlertCircle size={22} />
-            </span>
-            <span className="font-headline text-lg font-bold tracking-tight text-zinc-950">
-              Keluar tanpa menyimpan?
-            </span>
-          </span>
-        }
+        tone="warning"
+        title="Keluar tanpa menyimpan?"
         description="Perubahan yang belum disimpan akan hilang."
-        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
-        showCloseButton
-        size="sm"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => leaveBlocker.status === 'blocked' && leaveBlocker.reset()}
-              className="border-[#F0E1D5] bg-[#FFFAF6]"
-            >
-              Tetap di halaman
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                clearClassificationDraft(id)
-                skipBeforeUnloadRef.current = true
-                if (leaveBlocker.status === 'blocked') {
-                  leaveBlocker.proceed()
-                }
-              }}
-              className="bg-rose-600 text-white hover:bg-rose-700"
-            >
-              Keluar tanpa menyimpan
-            </Button>
-          </>
-        }
-      >
-        <div />
-      </AppDialog>
+        confirmLabel="Keluar tanpa menyimpan"
+        cancelLabel="Tetap di halaman"
+        onConfirm={() => {
+          clearClassificationDraft(id)
+          skipBeforeUnloadRef.current = true
+          if (leaveBlocker.status === 'blocked') {
+            leaveBlocker.proceed()
+          }
+        }}
+      />
     </PageLayout>
   )
 }

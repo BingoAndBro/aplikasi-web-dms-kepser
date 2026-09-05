@@ -39,6 +39,7 @@ import {
 } from '#/components/workflow/PpkPpspmPagePrimitives'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { DatePicker } from '#/components/ui/date-picker'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
@@ -209,7 +210,6 @@ function BerkasArsipDetailPage() {
   const [lifecycleConfirmOpen, setLifecycleConfirmOpen] = useState(false)
   const [secondaryLifecycleConfirmOpen, setSecondaryLifecycleConfirmOpen] = useState(false)
   const [destructionDialogOpen, setDestructionDialogOpen] = useState(false)
-  const [destructionPhrase, setDestructionPhrase] = useState('')
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
   const [pendingClose, setPendingClose] = useState(false)
   const [closeForm, setCloseForm] = useState<CloseBerkasFormState>(EMPTY_CLOSE_BERKAS_FORM)
@@ -265,7 +265,6 @@ function BerkasArsipDetailPage() {
       })
       setLifecycleConfirmOpen(false)
       setDestructionDialogOpen(false)
-      setDestructionPhrase('')
       if (lifecycleAction.action === 'propose_destruction') {
         await navigate({ to: '/arsiparis/pembersihan' })
       } else {
@@ -548,17 +547,9 @@ function BerkasArsipDetailPage() {
                     onLifecycleConfirmOpenChange={(open) => {
                       if (!pendingLifecycleAction) setLifecycleConfirmOpen(open)
                     }}
-                    destructionPhrase={destructionPhrase}
-                    onDestructionPhraseChange={setDestructionPhrase}
-                    onCancelDestruction={() => {
-                      setDestructionDialogOpen(false)
-                      setDestructionPhrase('')
-                    }}
+                    onCancelDestruction={() => setDestructionDialogOpen(false)}
                     onDestructionOpenChange={(open) => {
                       setDestructionDialogOpen(open)
-                      if (!open && !pendingLifecycleAction) {
-                        setDestructionPhrase('')
-                      }
                     }}
                     onLifecycleAction={submitLifecycleAction}
                     secondaryLifecycleConfirmOpen={secondaryLifecycleConfirmOpen}
@@ -739,8 +730,6 @@ function FolderActionPanel({
   lifecycleConfirmOpen,
   onLifecycleConfirmOpenChange,
   destructionDialogOpen,
-  destructionPhrase,
-  onDestructionPhraseChange,
   onCancelDestruction,
   onDestructionOpenChange,
   onLifecycleAction,
@@ -757,8 +746,6 @@ function FolderActionPanel({
   lifecycleConfirmOpen: boolean
   onLifecycleConfirmOpenChange: (open: boolean) => void
   destructionDialogOpen: boolean
-  destructionPhrase: string
-  onDestructionPhraseChange: (phrase: string) => void
   onCancelDestruction: () => void
   onDestructionOpenChange: (open: boolean) => void
   onLifecycleAction: (options?: { confirmation?: string; confirmed?: boolean }) => void
@@ -772,8 +759,6 @@ function FolderActionPanel({
 }) {
   const lifecycleAction = resolveBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
   const secondaryAction = resolveSecondaryBerkasLifecycleAction(detail.status_berkas, detail.status_arsip)
-  const canSubmitDestruction = destructionPhrase === BERKAS_DESTRUCTION_CONFIRMATION_PHRASE
-    && !pendingLifecycleAction
   const canShowClose = canShowCloseBerkasForm(detail)
   const closeBlockedByEmptyFolder = isBerkasEmptyForClose(detail)
   const [exportZipDialogOpen, setExportZipDialogOpen] = useState(false)
@@ -958,74 +943,32 @@ function FolderActionPanel({
       />
 
       {lifecycleAction?.action === 'approve_destruction' && (
-        <Dialog
+        <ConfirmDialog
           open={destructionDialogOpen}
           onOpenChange={(open) => {
-            if (open || !pendingLifecycleAction) onDestructionOpenChange(open)
+            if (open || !pendingLifecycleAction) {
+              onDestructionOpenChange(open)
+              if (!open) onCancelDestruction()
+            }
           }}
+          tone="destructive"
+          title="Bersihkan File Berkas"
+          description="Status berkas akan menjadi File Dibersihkan. Metadata tetap tersimpan, tetapi akses file akan diblokir."
+          confirmLabel="Konfirmasi Bersihkan File"
+          pending={pendingLifecycleAction}
+          requireTyped={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+          onConfirm={(result) =>
+            onLifecycleAction({ confirmation: result?.typedValue ?? BERKAS_DESTRUCTION_CONFIRMATION_PHRASE })
+          }
         >
-          <DialogContent className="border-rose-200 bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
-              <AlertTriangle size={22} />
-            </div>
-            <DialogHeader className="items-center text-center">
-              <DialogTitle>Bersihkan File Berkas</DialogTitle>
-              <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
-                Status berkas akan menjadi File Dibersihkan. Metadata tetap tersimpan, tetapi akses file akan diblokir.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <p className="text-center font-headline text-2xl font-extrabold tracking-tight text-zinc-950">
-                Bersihkan file berkas?
-              </p>
-              <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-xs font-extrabold leading-relaxed text-rose-700">
-                <p>Pemberitahuan: Pembersihan file ini bersifat final.</p>
-                <p className="mt-2">File fisik terkait berkas akan dihapus.</p>
-                <p>Preview dan download file tidak akan tersedia setelah pembersihan.</p>
-                <p>Metadata berkas dan dokumen tetap tersimpan, namun lampiran berkas tidak akan dapat dilekatkan, diunduh, atau dipreview lagi.</p>
-                <p>Aksi ini tidak mudah dibalik.</p>
-              </div>
-
-              <label className="block text-xs font-bold text-on-surface" htmlFor="berkas-detail-destruction-confirmation">
-                Ketik frasa konfirmasi <span className="text-error">*</span>
-                <input
-                  id="berkas-detail-destruction-confirmation"
-                  value={destructionPhrase}
-                  onChange={(event) => onDestructionPhraseChange(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-red-200 bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                  placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
-                  autoComplete="off"
-                />
-              </label>
-              <p className="text-[10px] font-semibold text-outline">
-                Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
-              </p>
-            </div>
-
-            <DialogFooter className="gap-3 border-0 bg-transparent p-0">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onCancelDestruction}
-                disabled={pendingLifecycleAction}
-              >
-                Batal
-              </Button>
-              <Button
-                type="button"
-                className="gap-1.5 rounded-xl bg-rose-600 px-5 font-extrabold text-white hover:bg-rose-700"
-                onClick={() => onLifecycleAction({ confirmation: destructionPhrase })}
-                disabled={!canSubmitDestruction}
-              >
-                {pendingLifecycleAction
-                  ? <Loader2 size={14} className="animate-spin" />
-                  : <AlertTriangle size={14} />}
-                Konfirmasi Bersihkan File
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-xs font-extrabold leading-relaxed text-rose-700">
+            <p>Pemberitahuan: Pembersihan file ini bersifat final.</p>
+            <p className="mt-2">File fisik terkait berkas akan dihapus.</p>
+            <p>Preview dan download file tidak akan tersedia setelah pembersihan.</p>
+            <p>Metadata berkas dan dokumen tetap tersimpan, namun lampiran berkas tidak akan dapat dilekatkan, diunduh, atau dipreview lagi.</p>
+            <p>Aksi ini tidak mudah dibalik.</p>
+          </div>
+        </ConfirmDialog>
       )}
     </aside>
   )
@@ -1044,45 +987,18 @@ function LifecycleConfirmationDialog({
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
 }) {
-  const title = `${action.label}?`
-  const description = action.confirmation
-  const confirmLabel = action.label
-
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (!pending) onOpenChange(nextOpen)
-    }}>
-      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
-        <div className="flex items-start gap-5">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#FF5A00]">
-            <AlertTriangle size={21} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">
-                {title}
-              </DialogTitle>
-              <DialogDescription className="text-sm font-medium leading-relaxed text-zinc-700">
-                {description}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="mt-6 gap-3 border-0 bg-transparent p-0">
-              <Button type="button" variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>
-                Batalkan
-              </Button>
-              <Button
-                type="button"
-                className="rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
-                disabled={pending}
-                onClick={onConfirm}
-              >
-                {pending ? 'Memproses...' : confirmLabel}
-              </Button>
-            </DialogFooter>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={(nextOpen) => { if (!pending) onOpenChange(nextOpen) }}
+      tone="warning"
+      title={`${action.label}?`}
+      description={action.confirmation}
+      confirmLabel={action.label}
+      cancelLabel="Batalkan"
+      pending={pending}
+      onConfirm={onConfirm}
+    />
   )
 }
 
@@ -1107,34 +1023,22 @@ function ExportBerkasZipDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (!preparing) onOpenChange(nextOpen)
-    }}>
-      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl">
-        <DialogHeader>
-          <DialogTitle>Ekspor ZIP Berkas</DialogTitle>
-          <DialogDescription>
-            Unduh seluruh lampiran dokumen dalam berkas ini sebagai satu berkas ZIP.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-1.5 rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-sm">
-          <p><span className="font-bold text-zinc-700">Nomor SPM:</span> {detail.nomor_spm ?? '-'}</p>
-          <p><span className="font-bold text-zinc-700">Klasifikasi:</span> {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}</p>
-          <p><span className="font-bold text-zinc-700">Jumlah Dokumen:</span> {detail.item_count}</p>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button type="button" variant="outline" disabled={preparing} onClick={() => onOpenChange(false)}>
-            Batal
-          </Button>
-          <Button type="button" className="gap-1.5" disabled={preparing} onClick={handleExport}>
-            {preparing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-            {preparing ? 'Menyiapkan unduhan...' : 'Ekspor Sekarang'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={(nextOpen) => { if (!preparing) onOpenChange(nextOpen) }}
+      tone="primary"
+      title="Ekspor ZIP Berkas"
+      description="Unduh seluruh lampiran dokumen dalam berkas ini sebagai satu berkas ZIP."
+      confirmLabel={preparing ? 'Menyiapkan unduhan...' : 'Ekspor Sekarang'}
+      pending={preparing}
+      onConfirm={handleExport}
+    >
+      <div className="space-y-1.5 rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-sm">
+        <p><span className="font-bold text-zinc-700">Nomor SPM:</span> {detail.nomor_spm ?? '-'}</p>
+        <p><span className="font-bold text-zinc-700">Klasifikasi:</span> {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}</p>
+        <p><span className="font-bold text-zinc-700">Jumlah Dokumen:</span> {detail.item_count}</p>
+      </div>
+    </ConfirmDialog>
   )
 }
 

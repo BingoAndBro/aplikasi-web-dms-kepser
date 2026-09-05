@@ -2,7 +2,7 @@ import { createFileRoute, Link, useBlocker, useNavigate } from '@tanstack/react-
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
-import { AppDialog } from '#/components/ui/AppDialog'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { useAppToast } from '#/components/ui/AppToast'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
@@ -748,95 +748,36 @@ function PpkResubmitPage() {
         </div>
       </div>
 
-      <AppDialog
+      <ConfirmDialog
         open={leaveBlocker.status === 'blocked' || manualLeaveConfirmationOpen}
         onOpenChange={(open) => {
           if (!open) keepEditing()
         }}
-        title={
-          <span className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
-              <Info size={22} />
-            </span>
-            <span className="font-headline text-lg font-bold tracking-tight text-zinc-950">
-              Keluar tanpa menyimpan?
-            </span>
-          </span>
-        }
+        tone="warning"
+        title="Keluar tanpa menyimpan?"
         description="Perubahan yang belum disimpan akan hilang."
-        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
-        showCloseButton
-        size="sm"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={keepEditing}
-              className="border-[#F0E1D5] bg-[#FFFAF6]"
-            >
-              Tetap di halaman
-            </Button>
-            <Button
-              type="button"
-              onClick={() => { void leaveWithoutSaving() }}
-              className="bg-rose-600 text-white hover:bg-rose-700"
-            >
-              Keluar tanpa menyimpan
-            </Button>
-          </>
-        }
-      >
-        <div />
-      </AppDialog>
+        confirmLabel="Keluar tanpa menyimpan"
+        cancelLabel="Tetap di halaman"
+        onConfirm={() => { void leaveWithoutSaving() }}
+      />
 
-      <AppDialog
+      <ConfirmDialog
         open={submitConfirmation !== null}
         onOpenChange={(open) => {
           if (!open && submitConfirmation) resolveSubmitConfirmation(false)
         }}
-        title={
-          <span className="flex items-center gap-3 pr-4">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#FFF3D6] text-[#D97706]">
-              <Send size={20} />
-            </span>
-            <span className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">
-              {submitConfirmation?.hasUnsavedChanges ? 'Ajukan ulang dokumen?' : 'Ajukan ulang tanpa perubahan?'}
-            </span>
-          </span>
-        }
+        tone="primary"
+        title={submitConfirmation?.hasUnsavedChanges ? 'Ajukan ulang dokumen?' : 'Ajukan ulang tanpa perubahan?'}
         description={
           submitConfirmation?.hasUnsavedChanges
             ? 'Dokumen akan disimpan lalu dikirim kembali ke PPSPM.'
             : 'Tidak ada perubahan baru yang terdeteksi. Jika dokumen sudah sesuai, dokumen tetap dapat dikirim kembali ke PPSPM.'
         }
-        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-lg shadow-zinc-950/5 sm:rounded-2xl sm:p-6"
-        showCloseButton
+        confirmLabel="Ajukan Ulang"
+        cancelLabel="Periksa Kembali"
         size="md"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => resolveSubmitConfirmation(false)}
-              className="border-[#F0E1D5] bg-white"
-            >
-              Periksa Kembali
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => resolveSubmitConfirmation(true)}
-              className="bg-[#F97316] text-white hover:bg-[#EA580C]"
-            >
-              <Send size={14} />
-              Ajukan Ulang
-            </Button>
-          </>
-        }
+        pending={submitInFlightRef.current}
+        onConfirm={() => resolveSubmitConfirmation(true)}
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -867,52 +808,23 @@ function PpkResubmitPage() {
             </div>
           </div>
         </div>
-      </AppDialog>
+      </ConfirmDialog>
 
-      <AppDialog
+      <ConfirmDialog
         open={returnConfirmationOpen}
         onOpenChange={setReturnConfirmationOpen}
-        title={
-          <span className="flex items-center gap-3 pr-4">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-[#EA580C]">
-              <ArrowLeft size={20} />
-            </span>
-            <span className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">
-              Kembalikan ke Pegawai?
-            </span>
-          </span>
-        }
+        tone="warning"
+        icon={<ArrowLeft className="size-6" />}
+        title="Kembalikan ke Pegawai?"
         description="Dokumen akan dikembalikan ke Pegawai melalui alur PPK yang sudah berjalan."
-        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-lg shadow-zinc-950/5 sm:rounded-2xl sm:p-6"
-        showCloseButton
+        confirmLabel="Kembalikan"
+        cancelLabel="Periksa Kembali"
         size="md"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => setReturnConfirmationOpen(false)}
-              className="border-[#F0E1D5] bg-white"
-            >
-              Periksa Kembali
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => {
-                setGuardEnabled(false)
-                void handleKembalikan()
-              }}
-              disabled={kembalikanLoading}
-              className="bg-[#F97316] text-white hover:bg-[#EA580C]"
-            >
-              {kembalikanLoading ? <Loader2 size={14} className="animate-spin" /> : <ArrowLeft size={14} />}
-              Kembalikan
-            </Button>
-          </>
-        }
+        pending={kembalikanLoading}
+        onConfirm={() => {
+          setGuardEnabled(false)
+          void handleKembalikan()
+        }}
       >
         <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] p-4">
           <p className="text-xs font-bold text-zinc-950">Perubahan editor yang belum diajukan tidak ikut disimpan.</p>
@@ -920,7 +832,7 @@ function PpkResubmitPage() {
             Gunakan aksi ini hanya jika dokumen memang perlu dikembalikan kepada Pegawai.
           </p>
         </div>
-      </AppDialog>
+      </ConfirmDialog>
     </PageLayout>
   )
 }

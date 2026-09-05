@@ -33,7 +33,8 @@ describe('Phase 15L.2C PPK resubmit visual parity source guard', () => {
   })
 
   it('adds approved confirmation, success, toast, and unsaved guard patterns', () => {
-    expect(source).toContain('<AppDialog')
+    expect(source).toContain('<ConfirmDialog')
+    expect(source).not.toContain('<AppDialog')
     expect(source).toContain('useAppToast()')
     expect(source).toContain('useBlocker')
     expect(source).toContain('beforeunload')

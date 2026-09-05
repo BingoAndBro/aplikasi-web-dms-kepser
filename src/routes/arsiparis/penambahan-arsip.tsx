@@ -27,7 +27,7 @@ import {
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
-import { AppDialog } from '#/components/ui/AppDialog'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { DatePicker } from '#/components/ui/date-picker'
@@ -1861,48 +1861,18 @@ function CreateManualArsipModal({
         </form>
       </div>
 
-      <AppDialog
+      <ConfirmDialog
         open={pendingClose || leaveBlocker.status === 'blocked'}
         onOpenChange={(open) => {
           if (!open) handleCancelLeave()
         }}
-        title={
-          <span className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
-              <AlertCircle size={22} />
-            </span>
-            <span className="font-headline text-lg font-bold tracking-tight text-zinc-950">
-              Keluar tanpa menyimpan?
-            </span>
-          </span>
-        }
+        tone="warning"
+        title="Keluar tanpa menyimpan?"
         description="Perubahan yang belum disimpan akan hilang."
-        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
-        showCloseButton
-        size="sm"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancelLeave}
-              className="border-[#F0E1D5] bg-[#FFFAF6]"
-            >
-              Tetap di halaman
-            </Button>
-            <Button
-              type="button"
-              onClick={handleConfirmLeave}
-              className="bg-rose-600 text-white hover:bg-rose-700"
-            >
-              Keluar tanpa menyimpan
-            </Button>
-          </>
-        }
-      >
-        <div />
-      </AppDialog>
+        confirmLabel="Keluar tanpa menyimpan"
+        cancelLabel="Tetap di halaman"
+        onConfirm={handleConfirmLeave}
+      />
     </>
   )
 }

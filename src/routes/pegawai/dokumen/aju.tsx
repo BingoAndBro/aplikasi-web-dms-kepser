@@ -14,9 +14,8 @@ import { StepDetailPermintaan } from '#/components/dokumen/form/StepDetailPermin
 import { StepUploadLampiran } from '#/components/dokumen/form/StepUploadLampiran'
 import { StepReview } from '#/components/dokumen/form/StepReview'
 import { Button } from '#/components/ui/button'
-import { AppDialog } from '#/components/ui/AppDialog'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { useAppToast } from '#/components/ui/AppToast'
-import { DialogClose } from '#/components/ui/dialog'
 import type {
   LampiranUrl,
   FungsiRow,
@@ -37,8 +36,6 @@ import {
   FileCheck2,
   FileText,
   Info,
-  Loader2,
-  Send,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai/dokumen/aju')({
@@ -1063,99 +1060,38 @@ function AjukanDokumenPage() {
         </div>
       </div>
 
-      <AppDialog
+      <ConfirmDialog
         open={leaveBlocker.status === 'blocked'}
         onOpenChange={(open) => {
           if (!open && leaveBlocker.status === 'blocked') leaveBlocker.reset()
         }}
-        title={
-          <span className="flex items-center gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-[#D97706]">
-              <Info size={22} />
-            </span>
-            <span className="font-headline text-lg font-bold tracking-tight text-zinc-950">
-              Keluar tanpa menyimpan?
-            </span>
-          </span>
-        }
+        tone="warning"
+        title="Keluar tanpa menyimpan?"
         description="Perubahan yang belum disimpan akan hilang."
-        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:rounded-3xl sm:p-6"
-        showCloseButton
-        size="sm"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => leaveBlocker.status === 'blocked' && leaveBlocker.reset()}
-              className="border-[#F0E1D5] bg-[#FFFAF6]"
-            >
-              Tetap di halaman
-            </Button>
-            <Button
-              type="button"
-              onClick={() => leaveBlocker.status === 'blocked' && leaveBlocker.proceed()}
-              className="bg-rose-600 text-white hover:bg-rose-700"
-            >
-              Keluar tanpa menyimpan
-            </Button>
-          </>
-        }
-      >
-        <div />
-      </AppDialog>
+        confirmLabel="Keluar tanpa menyimpan"
+        cancelLabel="Tetap di halaman"
+        onConfirm={() => {
+          if (leaveBlocker.status === 'blocked') leaveBlocker.proceed()
+        }}
+      />
 
-      <AppDialog
+      <ConfirmDialog
         open={submitConfirmationOpen}
         onOpenChange={(open) => {
           if (!submitting) setSubmitConfirmationOpen(open)
         }}
-        title={
-          <span className="flex items-center gap-3 pr-4">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#FFF3D6] text-[#D97706]">
-              <Send size={20} />
-            </span>
-            <span className="font-headline text-xl font-extrabold tracking-tight text-zinc-950">
-              Ajukan dokumen ini?
-            </span>
-          </span>
-        }
+        tone="primary"
+        title="Ajukan dokumen ini?"
         description={
           isNonMaterial
             ? 'Pastikan jenis dokumen, kegiatan, keterangan detail, dan kelengkapan sudah benar. Dokumen Non-Material akan disimpan sebagai Tersimpan.'
             : 'Pastikan jenis permintaan, kegiatan, nominal realisasi, dan kelengkapan sudah benar. Dokumen Material akan mengikuti alur validasi dan persetujuan yang berlaku.'
         }
-        descriptionClassName="text-sm font-medium leading-relaxed text-zinc-600"
-        contentClassName="border-[#F0E1D5] bg-[#FFFAF6] shadow-lg shadow-zinc-950/5 sm:rounded-2xl sm:p-6"
-        showCloseButton={!submitting}
+        confirmLabel={isNonMaterial ? 'Simpan Dokumen' : 'Ajukan Dokumen'}
+        cancelLabel="Periksa Kembali"
         size="md"
-        footer={
-          <>
-            <DialogClose render={<Button variant="outline" size="lg" disabled={submitting} className="border-[#F0E1D5] bg-white" />}>
-              Periksa Kembali
-            </DialogClose>
-            <Button
-              type="button"
-              size="lg"
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="bg-[#F97316] text-white hover:bg-[#EA580C]"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                <>
-                  {isNonMaterial ? 'Simpan Dokumen' : 'Ajukan Dokumen'}
-                  <Send size={14} />
-                </>
-              )}
-            </Button>
-          </>
-        }
+        pending={submitting}
+        onConfirm={handleSubmit}
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1189,7 +1125,7 @@ function AjukanDokumenPage() {
             </div>
           </div>
         </div>
-      </AppDialog>
+      </ConfirmDialog>
     </PageLayout>
   )
 }

@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import { AppLayout } from '../components/layout/AppLayout'
+import { ConfirmProvider } from '../components/ui/confirm/ConfirmProvider'
 import { PUBLIC_PATHS } from '../lib/constants/routes'
 import appCss from '../styles.css?url'
 
@@ -44,9 +45,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="font-sans antialiased text-foreground bg-background">
-        <AppLayout>
-          {children}
-        </AppLayout>
+        <ConfirmProvider>
+          <AppLayout>
+            {children}
+          </AppLayout>
+        </ConfirmProvider>
         <TanStackDevtools
           config={{ position: 'bottom-right' }}
           plugins={[{ name: 'TanStack Router', render: <TanStackRouterDevtoolsPanel /> }]}

@@ -23,6 +23,7 @@ import {
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
 import { cn } from '#/lib/utils'
@@ -720,43 +721,34 @@ function NonaktifkanKlasifikasiModal({
     }
   }
 
-  if (!isOpen) return null
-
   const hasChildren = node ? hasChildNodes(node) : false
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl bg-[#FFFAF6] shadow-2xl">
-        <div className="flex items-center gap-3 border-b border-[#F1E5DA] px-5 py-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-700">
-            <Ban size={18} />
-          </span>
-          <div>
-            <p className="font-headline text-lg font-extrabold text-zinc-950">Nonaktifkan Klasifikasi?</p>
-            <p className="text-xs font-medium text-zinc-600">Aksi ini tidak menghapus permanen data klasifikasi.</p>
-          </div>
+    <ConfirmDialog
+      open={isOpen}
+      onOpenChange={next => { if (!next && !loading) onClose() }}
+      tone="destructive"
+      icon={<Ban className="size-6" />}
+      title="Nonaktifkan Klasifikasi?"
+      description={
+        <>
+          Klasifikasi <strong className="text-zinc-950">"{node?.nama}"</strong> akan
+          dinonaktifkan sehingga tidak dipakai sebagai pilihan operasional. Aksi ini
+          tidak menghapus permanen data klasifikasi — riwayat dan dokumen yang sudah
+          menggunakannya tetap dapat dibaca.
+        </>
+      }
+      confirmLabel="Nonaktifkan"
+      pending={loading}
+      onConfirm={handleDeactivate}
+    >
+      {hasChildren && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-relaxed text-amber-900">
+          Klasifikasi Induk dengan sub-klasifikasi aktif tidak dapat dinonaktifkan tanpa menonaktifkan sub-klasifikasi tersebut terlebih dahulu.
         </div>
-        <div className="space-y-4 p-5">
-          <p className="text-sm font-medium leading-relaxed text-zinc-700">
-            Klasifikasi <strong className="text-zinc-950">"{node?.nama}"</strong> akan dinonaktifkan sehingga tidak dipakai sebagai pilihan operasional. Riwayat dan dokumen yang sudah menggunakan klasifikasi ini tetap dapat dibaca sesuai aturan akses.
-          </p>
-          {hasChildren && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-relaxed text-amber-900">
-              Klasifikasi Induk dengan sub-klasifikasi aktif tidak dapat dinonaktifkan tanpa menonaktifkan sub-klasifikasi tersebut terlebih dahulu.
-            </div>
-          )}
-          {error && <p className="text-xs font-semibold text-error">{error}</p>}
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batal</Button>
-            <Button variant="destructive" className="flex-1 gap-1.5" onClick={handleDeactivate} disabled={loading}>
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
-              Nonaktifkan
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+      )}
+      {error && <p className="text-xs font-semibold text-error">{error}</p>}
+    </ConfirmDialog>
   )
 }
 
@@ -799,36 +791,25 @@ function AktifkanKlasifikasiModal({
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 mx-4 w-full max-w-md rounded-2xl bg-[#FFFAF6] shadow-2xl">
-        <div className="flex items-center gap-3 border-b border-[#F1E5DA] px-5 py-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700">
-            <RotateCcw size={18} />
-          </span>
-          <div>
-            <p className="font-headline text-lg font-extrabold text-zinc-950">Aktifkan Kembali?</p>
-            <p className="text-xs font-medium text-zinc-600">Klasifikasi hanya dapat aktif jika rantai induknya aktif.</p>
-          </div>
-        </div>
-        <div className="space-y-4 p-5">
-          <p className="text-sm font-medium leading-relaxed text-zinc-700">
-            Klasifikasi <strong className="text-zinc-950">"{node?.nama}"</strong> akan diaktifkan kembali. Anak klasifikasi tidak diaktifkan otomatis.
-          </p>
-          {error && <p className="text-xs font-semibold text-error">{error}</p>}
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batal</Button>
-            <Button className="flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleActivate} disabled={loading}>
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
-              Aktifkan
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      open={isOpen}
+      onOpenChange={next => { if (!next && !loading) onClose() }}
+      tone="success"
+      icon={<RotateCcw className="size-6" />}
+      title="Aktifkan Kembali?"
+      description={
+        <>
+          Klasifikasi <strong className="text-zinc-950">"{node?.nama}"</strong> akan diaktifkan kembali. Anak klasifikasi tidak diaktifkan otomatis.{' '}
+          {`Klasifikasi hanya dapat aktif jika rantai induknya aktif`}.
+        </>
+      }
+      confirmLabel="Aktifkan"
+      pending={loading}
+      onConfirm={handleActivate}
+    >
+      {error && <p className="text-xs font-semibold text-error">{error}</p>}
+    </ConfirmDialog>
   )
 }
 

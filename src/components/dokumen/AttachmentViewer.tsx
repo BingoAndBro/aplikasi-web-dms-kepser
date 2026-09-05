@@ -26,6 +26,7 @@ import { createPortal } from 'react-dom'
 import { Eye, Download, Upload, Trash2, X, Loader2, FileText, AlertCircle } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { useAppToast } from '#/components/ui/AppToast'
+import { useConfirm } from '#/hooks/useConfirm'
 import {
   downloadFromApi,
   fetchFileBlobWithSignedUrl,
@@ -92,6 +93,7 @@ export function AttachmentViewer({
   onRefresh,
 }: AttachmentViewerProps) {
   const { showToast } = useAppToast()
+  const confirm = useConfirm()
   // State untuk preview modal
   const [previewingIdx, setPreviewingIdx] = useState<number | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -295,10 +297,14 @@ export function AttachmentViewer({
   // ==========================================================================
   // FUNGSI: handleDelete - Menghapus lampiran
   // ==========================================================================
-  function handleDelete(idx: number) {
-    if (confirm('Yakin ingin menghapus lampiran ini?')) {
-      onDelete?.(idx)
-    }
+  async function handleDelete(idx: number) {
+    const confirmed = await confirm({
+      tone: 'destructive',
+      title: 'Hapus lampiran ini?',
+      description: 'Lampiran akan dihapus dari daftar. Tindakan ini tidak dapat dibatalkan.',
+      confirmLabel: 'Hapus',
+    })
+    if (confirmed) onDelete?.(idx)
   }
 
   // ==========================================================================

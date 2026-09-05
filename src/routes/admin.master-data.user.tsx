@@ -37,6 +37,7 @@ import {
   TableCell,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import {
   Dialog,
   DialogContent,
@@ -164,36 +165,19 @@ function InactiveStatusConfirmationDialog({
   onConfirm: () => void
 }) {
   return (
-    <Dialog open={open} onOpenChange={nextOpen => !nextOpen && onCancel()}>
-      <DialogContent className={adminDialogContentClassName + ' sm:max-w-[480px]'}>
-        <div className="px-7 pb-6 pt-7">
-          <span className="flex size-14 items-center justify-center rounded-[14px] border border-rose-100 bg-rose-50 text-[#F00446]">
-            <UserX size={24} strokeWidth={2.2} />
-          </span>
-          <DialogTitle className="mt-5 text-xl font-extrabold tracking-tight text-[#071A3A]">
-            Konfirmasi Nonaktifkan User
-          </DialogTitle>
-          <div className="mt-4 rounded-[14px] border border-rose-100 bg-[#FFF7F8] px-4 py-4 text-sm font-semibold leading-6 text-[#071A3A]">
-            Menonaktifkan user akan memblokir akses login mereka. User tersebut tidak akan dapat masuk ke dalam sistem atau memproses dokumen di DMS sampai diaktifkan kembali.
-          </div>
-        </div>
-        <DialogFooter className={adminDialogFooterClassName}>
-          <Button
-            variant="outline"
-            className={adminDialogCancelButtonClassName}
-            onClick={onCancel}
-          >
-            Batalkan
-          </Button>
-          <Button
-            className={adminDialogDestructiveButtonClassName}
-            onClick={onConfirm}
-          >
-            Ya, Nonaktifkan
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={nextOpen => {
+        if (!nextOpen) onCancel()
+      }}
+      tone="destructive"
+      icon={<UserX className="size-6" strokeWidth={2.2} />}
+      title="Konfirmasi Nonaktifkan User"
+      description="Menonaktifkan user akan memblokir akses login mereka. User tersebut tidak akan dapat masuk ke dalam sistem atau memproses dokumen di DMS sampai diaktifkan kembali."
+      cancelLabel="Batalkan"
+      confirmLabel="Ya, Nonaktifkan"
+      onConfirm={onConfirm}
+    />
   )
 }
 

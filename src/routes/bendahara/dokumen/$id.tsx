@@ -71,8 +71,6 @@ function BendaharaDokumenDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
-  const [rejectCatatan, setRejectCatatan] = useState('')
-  const [rejectError, setRejectError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
 
   useEffect(() => { fetchData() }, [id])
@@ -126,13 +124,14 @@ function BendaharaDokumenDetailPage() {
     } finally { setActionLoading(null) }
   }
 
-  async function handleReject() {
-    if (rejectCatatan.trim().length < 10) { setRejectError('Catatan minimal 10 karakter'); return }
+  async function handleReject(catatan: string) {
+    const trimmed = catatan.trim()
+    if (trimmed.length < 10) return
     setActionLoading('reject')
     try {
       await apiMutation(`/api/bendahara/dokumen/${id}/reject`, {
         method: 'POST',
-        body: { catatan: rejectCatatan.trim() },
+        body: { catatan: trimmed },
       })
       showToast({
         title: 'Berhasil',
@@ -141,26 +140,12 @@ function BendaharaDokumenDetailPage() {
       })
       navigate({ to: '/bendahara/ditolak' })
     } catch (err) {
-      if (err instanceof ApiError) {
-        const payload = err.payload
-        const message = payload && typeof payload === 'object' && 'error' in payload
-          ? (payload as { error?: string }).error ?? 'Gagal'
-          : 'Gagal'
-        setRejectError(message)
-        showToast({
-          title: 'Gagal',
-          description: 'Dokumen gagal dikembalikan. Coba lagi.',
-          variant: 'error',
-        })
-        return
-      }
-
-      setRejectError('Terjadi kesalahan')
-      showToast({
-        title: 'Gagal',
-        description: 'Dokumen gagal dikembalikan. Coba lagi.',
-        variant: 'error',
-      })
+      const description =
+        err instanceof ApiError &&
+        err.payload && typeof err.payload === 'object' && 'error' in err.payload
+          ? (err.payload as { error?: string }).error ?? 'Dokumen gagal dikembalikan. Coba lagi.'
+          : 'Dokumen gagal dikembalikan. Coba lagi.'
+      showToast({ title: 'Gagal', description, variant: 'error' })
     } finally { setActionLoading(null) }
   }
 
@@ -222,33 +207,22 @@ function BendaharaDokumenDetailPage() {
           onConfirm={handleApprove}
         />
 
-        {rejectOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) { setRejectOpen(false); setRejectCatatan(''); setRejectError(null) } }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 mx-4 w-full max-w-md rounded-3xl border border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10">
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-orange-100">
-                <AlertTriangle size={18} className="text-error shrink-0" />
-                <p className="font-semibold text-on-surface">Tolak Dokumen</p>
-              </div>
-              <div className="p-5 space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5">Catatan Penolakan <span className="text-error">*</span></label>
-                  <textarea value={rejectCatatan} onChange={e => { setRejectCatatan(e.target.value); setRejectError(null) }} rows={4}
-                    placeholder="Jelaskan mengapa dokumen ditolak dan perlu dikembalikan ke PPK..."
-                    className={cn('w-full rounded-xl border bg-[#FFFDF9] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-100 resize-none', rejectError ? 'border-error' : 'border-[#F0E1D5]')} />
-                  <p className="text-[10px] text-outline mt-1">{rejectCatatan.length}/2000 karakter (min. 10)</p>
-                  {rejectError && <p className="text-[10px] text-error mt-1">{rejectError}</p>}
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => { setRejectOpen(false); setRejectCatatan(''); setRejectError(null) }} disabled={!!actionLoading}>Batal</Button>
-                  <Button variant="destructive" className="flex-1" onClick={handleReject} disabled={!!actionLoading}>
-                    {actionLoading === 'reject' ? <Loader2 size={14} className="animate-spin" /> : 'Tolak Dokumen'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmDialog
+          open={rejectOpen}
+          onOpenChange={next => { if (!next) setRejectOpen(false) }}
+          tone="destructive"
+          title="Tolak Dokumen"
+          description="Dokumen akan dikembalikan ke PPK untuk diperbaiki. Jelaskan alasan penolakan pada catatan di bawah."
+          confirmLabel="Tolak Dokumen"
+          pending={actionLoading === 'reject'}
+          withReason={{
+            label: 'Catatan Penolakan',
+            placeholder: 'Jelaskan mengapa dokumen ditolak dan perlu dikembalikan ke PPK...',
+            minLength: 10,
+            maxLength: 2000,
+          }}
+          onConfirm={result => handleReject(result?.reason ?? '')}
+        />
 
         <div className="flex items-center gap-3">
           <button
@@ -363,7 +337,7 @@ function BendaharaDokumenDetailPage() {
                     {actionLoading === 'approve' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
                     Setujui Dokumen
                   </Button>
-                  <Button variant="destructive" size="lg" className="h-9 w-full gap-1.5 rounded-xl text-xs font-bold" onClick={() => { setRejectCatatan(''); setRejectError(null); setRejectOpen(true) }} disabled={!!actionLoading}>
+                  <Button variant="destructive" size="lg" className="h-9 w-full gap-1.5 rounded-xl text-xs font-bold" onClick={() => setRejectOpen(true)} disabled={!!actionLoading}>
                     {actionLoading === 'reject' ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
                     Tolak
                   </Button>

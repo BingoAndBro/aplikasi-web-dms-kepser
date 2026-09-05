@@ -119,6 +119,15 @@ input[type="date"]::-webkit-datetime-edit-placeholder {
   50% { opacity: 0.8; transform: translate(-30%, -40%) scale(1.3); }
 }
 
+/* === Confirmation dialog: respect reduced-motion (scoped so other animations stay) === */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="confirm-dialog"],
+  [data-slot="confirm-overlay"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

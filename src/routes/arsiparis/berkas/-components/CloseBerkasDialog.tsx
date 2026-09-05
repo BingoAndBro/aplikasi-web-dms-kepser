@@ -1,7 +1,8 @@
-import { Archive, Check, FileText, Loader2, Save } from 'lucide-react'
+import { Archive, FileText, Loader2, Save } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '#/components/ui/button'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { DatePicker } from '#/components/ui/date-picker'
 import {
   Dialog,
@@ -227,50 +228,29 @@ export function CloseBerkasDialog({
       </DialogContent>
     </Dialog>
 
-    <Dialog
+    <ConfirmDialog
       open={confirmOpen}
-      onOpenChange={(nextOpen) => {
-        if (!pending) setConfirmOpen(nextOpen)
-      }}
+      onOpenChange={(nextOpen) => { if (!pending) setConfirmOpen(nextOpen) }}
+      tone="success"
+      icon={<Archive className="size-6" />}
+      title="Tutup berkas?"
+      description="Berkas akan ditutup dan tersimpan sebagai arsip. Dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini."
+      confirmLabel="Tutup Berkas"
+      cancelLabel="Batalkan"
+      pending={pending}
+      onConfirm={onSubmit}
     >
-      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] text-center shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
-        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-          <Archive size={27} />
+      <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-sm font-bold text-zinc-950">
+        <div className="flex items-center justify-between gap-3">
+          <span>Status berkas:</span>
+          <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">Ditutup</span>
         </div>
-        <DialogHeader className="items-center">
-          <DialogTitle className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950">
-            Tutup berkas?
-          </DialogTitle>
-          <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
-            Berkas akan ditutup dan tersimpan sebagai arsip. Dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-left text-sm font-bold text-zinc-950">
-          <div className="flex items-center justify-between gap-3">
-            <span>Status berkas:</span>
-            <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">Ditutup</span>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <span>Status arsip:</span>
-            <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">Tersimpan</span>
-          </div>
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <span>Status arsip:</span>
+          <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">Tersimpan</span>
         </div>
-        <DialogFooter className="border-0 bg-transparent p-0 sm:justify-center">
-          <Button type="button" variant="outline" disabled={pending} onClick={() => setConfirmOpen(false)}>
-            Batalkan
-          </Button>
-          <Button
-            type="button"
-            className="gap-1.5 rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
-            disabled={pending}
-            onClick={onSubmit}
-          >
-            {pending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Tutup Berkas
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ConfirmDialog>
     </>
   )
 }

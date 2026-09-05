@@ -20,14 +20,7 @@ import {
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
+import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
@@ -400,8 +393,6 @@ function PembersihanRowActions({
 }) {
   const [destructionOpen, setDestructionOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
-  const [phrase, setPhrase] = useState('')
-  const canDestroy = phrase === BERKAS_DESTRUCTION_CONFIRMATION_PHRASE && !pending
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -421,76 +412,37 @@ function PembersihanRowActions({
         size="sm"
         className="h-9 gap-1.5 rounded-xl bg-error text-xs font-bold text-white hover:bg-error/90"
         disabled={pending}
-        onClick={() => {
-          setPhrase('')
-          setDestructionOpen(true)
-        }}
+        onClick={() => setDestructionOpen(true)}
       >
         {pending ? <Loader2 size={13} className="animate-spin" /> : <AlertTriangle size={13} />}
         Bersihkan File
       </Button>
 
-      <Dialog open={cancelOpen} onOpenChange={(open) => { if (!pending) setCancelOpen(open) }}>
-        <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
-          <DialogHeader>
-            <DialogTitle>Batalkan Usulan?</DialogTitle>
-            <DialogDescription>
-              Berkas kembali ke status Tersimpan. Tidak ada file yang dihapus.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-3 border-0 bg-transparent p-0">
-            <Button type="button" variant="ghost" disabled={pending} onClick={() => setCancelOpen(false)}>Batal</Button>
-            <Button
-              type="button"
-              className="rounded-xl bg-[#FF5A00] px-5 font-extrabold text-white hover:bg-[#EA580C]"
-              disabled={pending}
-              onClick={() => { setCancelOpen(false); onCancelProposal() }}
-            >
-              {pending ? 'Memproses...' : 'Batalkan Usulan'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={cancelOpen}
+        onOpenChange={(open) => { if (!pending) setCancelOpen(open) }}
+        tone="primary"
+        title="Batalkan Usulan?"
+        description="Berkas kembali ke status Tersimpan. Tidak ada file yang dihapus."
+        confirmLabel="Batalkan Usulan"
+        pending={pending}
+        onConfirm={() => { setCancelOpen(false); onCancelProposal() }}
+      />
 
-      <Dialog open={destructionOpen} onOpenChange={(open) => { if (!pending) setDestructionOpen(open) }}>
-        <DialogContent className="border-rose-200 bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl sm:p-8">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
-            <AlertTriangle size={22} />
-          </div>
-          <DialogHeader className="items-center text-center">
-            <DialogTitle>Bersihkan File Berkas</DialogTitle>
-            <DialogDescription className="max-w-sm text-center text-sm font-medium leading-relaxed text-zinc-700">
-              Status berkas akan menjadi File Dibersihkan. File fisik terkait berkas akan dihapus. Metadata tetap tersimpan. Aksi ini tidak mudah dibalik.
-            </DialogDescription>
-          </DialogHeader>
-          {/* RP-02: aktifkan peringatan "belum pernah diekspor" di sini */}
-          <div data-testid="export-warning-slot">{null}</div>
-          <label className="block text-xs font-bold text-on-surface" htmlFor="pembersihan-destruction-confirmation">
-            Ketik frasa konfirmasi <span className="text-error">*</span>
-            <input
-              id="pembersihan-destruction-confirmation"
-              value={phrase}
-              onChange={(event) => setPhrase(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-red-200 bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-              placeholder={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
-              autoComplete="off"
-            />
-          </label>
-          <p className="text-[10px] font-semibold text-outline">Frasa wajib: {BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}</p>
-          <DialogFooter className="gap-3 border-0 bg-transparent p-0">
-            <Button type="button" variant="ghost" disabled={pending} onClick={() => setDestructionOpen(false)}>Batal</Button>
-            <Button
-              type="button"
-              className="gap-1.5 rounded-xl bg-rose-600 px-5 font-extrabold text-white hover:bg-rose-700"
-              disabled={!canDestroy}
-              onClick={() => { setDestructionOpen(false); onApproveDestruction() }}
-            >
-              {pending ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
-              Konfirmasi Bersihkan File
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={destructionOpen}
+        onOpenChange={(open) => { if (!pending) setDestructionOpen(open) }}
+        tone="destructive"
+        title="Bersihkan File Berkas"
+        description="Status berkas akan menjadi File Dibersihkan. File fisik terkait berkas akan dihapus. Metadata tetap tersimpan. Aksi ini tidak mudah dibalik."
+        confirmLabel="Konfirmasi Bersihkan File"
+        pending={pending}
+        requireTyped={BERKAS_DESTRUCTION_CONFIRMATION_PHRASE}
+        onConfirm={() => { setDestructionOpen(false); onApproveDestruction() }}
+      >
+        {/* RP-02: aktifkan peringatan "belum pernah diekspor" di sini */}
+        <div data-testid="export-warning-slot">{null}</div>
+      </ConfirmDialog>
     </div>
   )
 }
