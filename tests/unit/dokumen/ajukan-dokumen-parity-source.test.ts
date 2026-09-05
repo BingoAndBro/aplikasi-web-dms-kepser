@@ -80,6 +80,14 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(kategoriPermintaanSource).toContain(": '-- Pilih Kategori Permintaan --'")
   })
 
+  it('RP-04: keeps both Jenis Permintaan/Jenis Dokumen Selects mounted (hidden, not unmounted) on toggle', () => {
+    // Regression guard: swapping these via `isNonMaterial ? <A/> : <B/>` unmounted whichever Select
+    // was open mid-interaction and left Base UI's popup/scroll-lock guard stuck (RP-04 bug repro).
+    expect(jenisPermintaanSource).toContain('hidden={isNonMaterial}')
+    expect(jenisPermintaanSource).toContain('hidden={!isNonMaterial}')
+    expect(jenisPermintaanSource).not.toMatch(/isNonMaterial\s*\?\s*\(?\s*<div className="space-y-2">/)
+  })
+
   it('keeps Step 2 compact and restores a compact grouped Step 3 with a page-local warm palette', () => {
     expect(uploadSource).toContain('const contextParts = [')
     expect(uploadSource).toContain('Status kegiatan Anda:')

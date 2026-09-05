@@ -211,29 +211,29 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
           </Select>
         </div>
 
-        {value.fungsiId && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">Kegiatan</Label>
-            <Select
-              value={value.kegiatanId ?? ''}
-              onValueChange={v => handleKegiatan((v ?? '') === '_all' ? '' : (v ?? ''))}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Semua Kegiatan">
-                  {value.kegiatanId && kegiatans.length > 0
-                    ? kegiatans.find(k => k.id === value.kegiatanId)?.nama ?? value.kegiatanId
-                    : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Semua Kegiatan</SelectItem>
-                {kegiatans.map(k => (
-                  <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        {/* Stays mounted (hidden, not removed) so an open popup here never gets force-unmounted by an
+            unrelated state change (e.g. clearing Fungsi) — see RP-04. */}
+        <div className="space-y-1.5" hidden={!value.fungsiId}>
+          <Label className="text-xs">Kegiatan</Label>
+          <Select
+            value={value.kegiatanId ?? ''}
+            onValueChange={v => handleKegiatan((v ?? '') === '_all' ? '' : (v ?? ''))}
+          >
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Semua Kegiatan">
+                {value.kegiatanId && kegiatans.length > 0
+                  ? kegiatans.find(k => k.id === value.kegiatanId)?.nama ?? value.kegiatanId
+                  : undefined}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">Semua Kegiatan</SelectItem>
+              {kegiatans.map(k => (
+                <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Row 2: Jenis + Kategori */}
@@ -260,57 +260,53 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
           </Select>
         </div>
 
-        {value.jenisId && (
-          <div className="space-y-1.5">
-            <Label className="text-xs">Kategori Permintaan</Label>
-            <Select
-              value={value.kategoriId ?? ''}
-              onValueChange={v => handleKategori((v ?? '') === '_all' ? '' : (v ?? ''))}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Semua Kategori">
-                  {value.kategoriId && kategoriList.length > 0
-                    ? kategoriList.find(k => k.id === value.kategoriId)?.nama ?? value.kategoriId
-                    : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Semua Kategori</SelectItem>
-                {kategoriList.map(k => (
-                  <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="space-y-1.5" hidden={!value.jenisId}>
+          <Label className="text-xs">Kategori Permintaan</Label>
+          <Select
+            value={value.kategoriId ?? ''}
+            onValueChange={v => handleKategori((v ?? '') === '_all' ? '' : (v ?? ''))}
+          >
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Semua Kategori">
+                {value.kategoriId && kategoriList.length > 0
+                  ? kategoriList.find(k => k.id === value.kategoriId)?.nama ?? value.kategoriId
+                  : undefined}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">Semua Kategori</SelectItem>
+              {kategoriList.map(k => (
+                <SelectItem key={k.id} value={k.id}>{k.nama}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Row 3: Detail (jika ada) */}
-      {value.kategoriId && detailList.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Detail Permintaan</Label>
-            <Select
-              value={value.detailId ?? ''}
-              onValueChange={v => handleDetail((v ?? '') === '_all' ? '' : (v ?? ''))}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Semua Detail">
-                  {value.detailId && detailList.length > 0
-                    ? detailList.find(d => d.id === value.detailId)?.nama ?? value.detailId
-                    : undefined}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">Semua Detail</SelectItem>
-                {detailList.map(d => (
-                  <SelectItem key={d.id} value={d.id}>{d.nama}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" hidden={!value.kategoriId || detailList.length === 0}>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Detail Permintaan</Label>
+          <Select
+            value={value.detailId ?? ''}
+            onValueChange={v => handleDetail((v ?? '') === '_all' ? '' : (v ?? ''))}
+          >
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Semua Detail">
+                {value.detailId && detailList.length > 0
+                  ? detailList.find(d => d.id === value.detailId)?.nama ?? value.detailId
+                  : undefined}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">Semua Detail</SelectItem>
+              {detailList.map(d => (
+                <SelectItem key={d.id} value={d.id}>{d.nama}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      )}
+      </div>
 
       {/* Row 4: Date Range */}
       {showDateRange && (

@@ -96,69 +96,72 @@ export function StepJenisPermintaan({
         </div>
       </div>
 
-      {isNonMaterial ? (
-        <div className="space-y-2">
-          <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Jenis Dokumen <span className="text-[#D97706]">*</span>
-          </label>
-          {jenisDokumenList.length === 0 ? (
-            <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
-              <Loader2 size={14} className="animate-spin" />Memuat jenis dokumen...
-            </div>
-          ) : (
-            <Select value={jenisDokumenId || null} onValueChange={v => onJenisDokumenChange(v ?? '')}>
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
-                <SelectValue placeholder="-- Pilih Jenis Dokumen --">
-                  {v => v ? (jenisDokumenList.find(j => j.id === v)?.nama ?? '') : '-- Pilih Jenis Dokumen --'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {jenisDokumenList.map(j => (
-                  <SelectItem key={j.id} value={j.id} label={j.nama}>
-                    <div>
-                      <p className="font-medium">{j.nama}</p>
-                      {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Jenis Permintaan <span className="text-[#D97706]">*</span>
-          </label>
-          {loadingJenis ? (
-            <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
-              <Loader2 size={14} className="animate-spin" />Memuat...
-            </div>
-          ) : jenisList.length === 0 ? (
-            <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
-              Tidak ada jenis permintaan tersedia.
-            </p>
-          ) : (
-            <Select value={jenisPermintaanId || null} onValueChange={v => onJenisChange(v ?? '')}>
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
-                <SelectValue placeholder="-- Pilih Jenis Permintaan --">
-                  {v => v ? (jenisList.find(j => j.id === v)?.nama ?? '') : '-- Pilih Jenis Permintaan --'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {jenisList.map(j => (
-                  <SelectItem key={j.id} value={j.id} label={j.nama}>
-                    <div>
-                      <p className="font-medium">{j.nama}</p>
-                      {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      )}
+      {/*
+        Both blocks stay mounted; only visibility toggles (RP-04). Flipping isNonMaterial
+        used to swap these via a ternary, which unmounted whichever Select was open mid-interaction
+        and left Base UI's popup/scroll-lock guard stuck — the next trigger click would then do nothing.
+      */}
+      <div className="space-y-2" hidden={isNonMaterial}>
+        <label className="text-[11px] font-bold text-zinc-700">
+          Pilih Jenis Permintaan <span className="text-[#D97706]">*</span>
+        </label>
+        {loadingJenis ? (
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
+            <Loader2 size={14} className="animate-spin" />Memuat...
+          </div>
+        ) : jenisList.length === 0 ? (
+          <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
+            Tidak ada jenis permintaan tersedia.
+          </p>
+        ) : (
+          <Select value={jenisPermintaanId || null} onValueChange={v => onJenisChange(v ?? '')}>
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+              <SelectValue placeholder="-- Pilih Jenis Permintaan --">
+                {v => v ? (jenisList.find(j => j.id === v)?.nama ?? '') : '-- Pilih Jenis Permintaan --'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {jenisList.map(j => (
+                <SelectItem key={j.id} value={j.id} label={j.nama}>
+                  <div>
+                    <p className="font-medium">{j.nama}</p>
+                    {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <div className="space-y-2" hidden={!isNonMaterial}>
+        <label className="text-[11px] font-bold text-zinc-700">
+          Pilih Jenis Dokumen <span className="text-[#D97706]">*</span>
+        </label>
+        {jenisDokumenList.length === 0 ? (
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
+            <Loader2 size={14} className="animate-spin" />Memuat jenis dokumen...
+          </div>
+        ) : (
+          <Select value={jenisDokumenId || null} onValueChange={v => onJenisDokumenChange(v ?? '')}>
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+              <SelectValue placeholder="-- Pilih Jenis Dokumen --">
+                {v => v ? (jenisDokumenList.find(j => j.id === v)?.nama ?? '') : '-- Pilih Jenis Dokumen --'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {jenisDokumenList.map(j => (
+                <SelectItem key={j.id} value={j.id} label={j.nama}>
+                  <div>
+                    <p className="font-medium">{j.nama}</p>
+                    {j.deskripsi && <p className="text-[10px] text-on-surface-variant">{j.deskripsi}</p>}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
       {!grouped && (
         <div className="flex gap-3">
