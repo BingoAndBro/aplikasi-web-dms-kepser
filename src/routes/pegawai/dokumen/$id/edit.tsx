@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useCanGoBack, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
@@ -26,7 +26,22 @@ export const Route = createFileRoute('/pegawai/dokumen/$id/edit')({
 function EditDokumenPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
+  const router = useRouter()
+  const canGoBack = useCanGoBack()
   const { showToast } = useAppToast()
+
+  // Return to the detail page by popping this Edit entry off the history stack
+  // instead of pushing a new one — otherwise the detail page's "Kembali" button
+  // (window.history.back) would land back on Edit. Falls back to a replace
+  // navigation when Edit was opened directly (no history to go back to).
+  function returnToDetail() {
+    if (canGoBack) {
+      router.history.back()
+      return
+    }
+
+    navigate({ to: '/pegawai/dokumen/$id', params: { id }, replace: true })
+  }
 
   const [dok, setDok] = useState<DokumenRow | null>(null)
   const [loading, setLoading] = useState(true)
@@ -108,7 +123,7 @@ function EditDokumenPage() {
         description: 'Perubahan berhasil disimpan.',
         variant: 'success',
       })
-      navigate({ to: '/pegawai/dokumen/$id', params: { id } })
+      returnToDetail()
     } catch (err) {
       setGuardEnabled(true)
       if (err instanceof ApiError) {
@@ -142,7 +157,7 @@ function EditDokumenPage() {
   }
 
   function handleCancel() {
-    navigate({ to: '/pegawai/dokumen/$id', params: { id } })
+    returnToDetail()
   }
 
   if (loading && !dok) {
