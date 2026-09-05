@@ -13,7 +13,7 @@ import {
 import { apiFetch } from '#/lib/api-client'
 import { ROLES } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
-import { formatDate } from '#/lib/utils/format'
+import { byOldest, formatDate, formatRelativeAge } from '#/lib/utils/format'
 import { ClipboardList, FilePlus, FolderCheck, FolderOpen, Network, Tags, Trash2 } from 'lucide-react'
 
 export const Route = createFileRoute('/arsiparis/')({
@@ -96,7 +96,7 @@ function KepalaSubBagianUmumDashboard() {
     })
   }, [])
 
-  const recentDocuments = classificationQueue.slice(0, 3)
+  const recentDocuments = [...classificationQueue].sort(byOldest).slice(0, 3)
   const hasArchiveTask = classificationQueue.length > 0 || proposedDestructionCount > 0
 
   return (
@@ -166,8 +166,8 @@ function KepalaSubBagianUmumDashboard() {
           </DashboardSection>
 
           <DashboardSection
-            title="Daftar Dokumen Terbaru"
-            description="Dokumen terbaru yang masuk konteks klasifikasi arsip dari data yang tersedia."
+            title="Perlu Diklasifikasikan (Terlama)"
+            description="Dokumen yang paling lama menunggu klasifikasi, dari data yang tersedia."
           >
             {recentDocuments.length > 0 ? (
               <div>
@@ -177,7 +177,10 @@ function KepalaSubBagianUmumDashboard() {
                     icon={<ClipboardList size={18} />}
                     title={document.judul}
                     description={document.kegiatan_nama ?? document.fungsi_nama ?? 'Dokumen selesai'}
-                    meta={document.tanggal ? `Tanggal ${formatDate(document.tanggal)}` : undefined}
+                    meta={
+                      formatRelativeAge(document.created_at ?? document.tanggal ?? '') ??
+                      (document.tanggal ? `Tanggal ${formatDate(document.tanggal)}` : undefined)
+                    }
                     href={`/arsiparis/dokumen/${document.id}`}
                     actionLabel="Detail"
                   />
@@ -185,7 +188,7 @@ function KepalaSubBagianUmumDashboard() {
               </div>
             ) : (
               <DashboardEmptyState
-                title="Belum ada dokumen terbaru"
+                title="Belum ada dokumen untuk diklasifikasikan"
                 description="Dokumen siap klasifikasi akan tampil di sini jika tersedia."
               />
             )}

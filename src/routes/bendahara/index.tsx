@@ -12,7 +12,7 @@ import {
 } from '#/components/dashboard/RoleDashboardPrimitives'
 import { apiFetch } from '#/lib/api-client'
 import { ROUTES } from '#/lib/constants/routes'
-import { formatDate } from '#/lib/utils/format'
+import { byOldest, formatDate, formatRelativeAge } from '#/lib/utils/format'
 import { Banknote, CheckCircle2, ClipboardCheck, FileCheck2, FileText, FileX, History } from 'lucide-react'
 
 export const Route = createFileRoute('/bendahara/')({
@@ -106,17 +106,20 @@ function BendaharaDashboardPage() {
         >
           {waiting.length > 0 ? (
             <div>
-              {waiting.slice(0, 3).map((document) => (
+              {[...waiting].sort(byOldest).slice(0, 3).map((document) => (
                 <DashboardActionRow
                   key={document.id}
                   icon={<Banknote size={18} />}
                   title={document.judul}
                   description={document.kegiatan_nama ?? document.fungsi_nama ?? 'Dokumen Material'}
-                  meta={document.ppk_validated_at
-                    ? `Divalidasi PPK ${formatDate(document.ppk_validated_at)}`
-                    : document.tanggal
-                      ? `Tanggal ${formatDate(document.tanggal)}`
-                      : undefined}
+                  meta={
+                    formatRelativeAge(document.created_at ?? document.tanggal ?? '') ??
+                    (document.ppk_validated_at
+                      ? `Divalidasi PPK ${formatDate(document.ppk_validated_at)}`
+                      : document.tanggal
+                        ? `Tanggal ${formatDate(document.tanggal)}`
+                        : undefined)
+                  }
                   href={`/bendahara/dokumen/${document.id}`}
                   actionLabel="Tinjau"
                 />

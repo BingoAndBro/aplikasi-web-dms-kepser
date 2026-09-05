@@ -12,7 +12,7 @@ import {
 } from '#/components/dashboard/RoleDashboardPrimitives'
 import { apiFetch } from '#/lib/api-client'
 import { ROUTES } from '#/lib/constants/routes'
-import { formatDate } from '#/lib/utils/format'
+import { byOldest, formatDate, formatRelativeAge } from '#/lib/utils/format'
 import { CheckCircle2, ClipboardCheck, FileCheck2, FileText, FileX, History, ShieldCheck } from 'lucide-react'
 
 export const Route = createFileRoute('/ppk/')({
@@ -59,7 +59,7 @@ function PpkDashboardPage() {
     })
   }, [])
 
-  const actionItems = [...waiting, ...revision].slice(0, 3)
+  const actionItems = [...waiting, ...revision].sort(byOldest).slice(0, 3)
   const pendingNominal = formatPendingNominal(waiting)
 
   return (
@@ -119,7 +119,10 @@ function PpkDashboardPage() {
                     icon={isRevision ? <History size={18} /> : <ClipboardCheck size={18} />}
                     title={document.judul}
                     description={document.kegiatan_nama ?? document.fungsi_nama ?? 'Dokumen Material'}
-                    meta={document.tanggal ? `Tanggal ${formatDate(document.tanggal)}` : undefined}
+                    meta={
+                      formatRelativeAge(document.created_at ?? document.tanggal ?? '') ??
+                      (document.tanggal ? `Tanggal ${formatDate(document.tanggal)}` : undefined)
+                    }
                     href={isRevision ? `/ppk/dokumen/${document.id}/resubmit` : `/ppk/dokumen/${document.id}`}
                     actionLabel={isRevision ? 'Ajukan Ulang' : 'Validasi'}
                   />

@@ -97,7 +97,7 @@ describe('role dashboard visual parity source guard', () => {
     expect(source).not.toContain('Arsip Inaktif')
     expect(source).not.toContain('Usul Musnah')
     expect(source).toContain('Perlu Tindakan Kearsipan')
-    expect(source).toContain('Daftar Dokumen Terbaru')
+    expect(source).toContain('Perlu Diklasifikasikan (Terlama)')
     expect(source).toContain("query: { status_berkas: 'OPEN' }")
     expect(source).toContain("query: { status_berkas: 'CLOSED', status_arsip: 'AKTIF' }")
     expect(source).toContain("query: { status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' }")
