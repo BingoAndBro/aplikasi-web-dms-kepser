@@ -27,6 +27,7 @@ import { Route as ArsiparisIndexRouteImport } from './routes/arsiparis/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as PpkTervalidasiRouteImport } from './routes/ppk/tervalidasi'
 import { Route as PpkRevisiRouteImport } from './routes/ppk/revisi'
+import { Route as PpkMonitoringRealisasiRouteImport } from './routes/ppk/monitoring-realisasi'
 import { Route as PpkInboxRouteImport } from './routes/ppk/inbox'
 import { Route as PpkDitolakRouteImport } from './routes/ppk/ditolak'
 import { Route as PenanggungJawabKinerjaLaporanKinerjaRouteImport } from './routes/penanggung-jawab-kinerja/laporan-kinerja'
@@ -37,6 +38,7 @@ import { Route as DokumenAjuRouteImport } from './routes/dokumen/aju'
 import { Route as DokumenAjiRouteImport } from './routes/dokumen/aji'
 import { Route as DokumenIdRouteImport } from './routes/dokumen/$id'
 import { Route as BendaharaSelesaiRouteImport } from './routes/bendahara/selesai'
+import { Route as BendaharaMonitoringRealisasiRouteImport } from './routes/bendahara/monitoring-realisasi'
 import { Route as BendaharaInboxRouteImport } from './routes/bendahara/inbox'
 import { Route as BendaharaDitolakRouteImport } from './routes/bendahara/ditolak'
 import { Route as ArsiparisPenambahanArsipRouteImport } from './routes/arsiparis/penambahan-arsip'
@@ -253,6 +255,11 @@ const PpkRevisiRoute = PpkRevisiRouteImport.update({
   path: '/revisi',
   getParentRoute: () => PpkRoute,
 } as any)
+const PpkMonitoringRealisasiRoute = PpkMonitoringRealisasiRouteImport.update({
+  id: '/monitoring-realisasi',
+  path: '/monitoring-realisasi',
+  getParentRoute: () => PpkRoute,
+} as any)
 const PpkInboxRoute = PpkInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -304,6 +311,12 @@ const BendaharaSelesaiRoute = BendaharaSelesaiRouteImport.update({
   path: '/selesai',
   getParentRoute: () => BendaharaRoute,
 } as any)
+const BendaharaMonitoringRealisasiRoute =
+  BendaharaMonitoringRealisasiRouteImport.update({
+    id: '/monitoring-realisasi',
+    path: '/monitoring-realisasi',
+    getParentRoute: () => BendaharaRoute,
+  } as any)
 const BendaharaInboxRoute = BendaharaInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -982,6 +995,7 @@ export interface FileRoutesByFullPath {
   '/arsiparis/penambahan-arsip': typeof ArsiparisPenambahanArsipRoute
   '/bendahara/ditolak': typeof BendaharaDitolakRoute
   '/bendahara/inbox': typeof BendaharaInboxRoute
+  '/bendahara/monitoring-realisasi': typeof BendaharaMonitoringRealisasiRoute
   '/bendahara/selesai': typeof BendaharaSelesaiRoute
   '/dokumen/$id': typeof DokumenIdRouteWithChildren
   '/dokumen/aji': typeof DokumenAjiRoute
@@ -992,6 +1006,7 @@ export interface FileRoutesByFullPath {
   '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
+  '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
   '/admin/': typeof AdminIndexRoute
@@ -1131,6 +1146,7 @@ export interface FileRoutesByTo {
   '/arsiparis/penambahan-arsip': typeof ArsiparisPenambahanArsipRoute
   '/bendahara/ditolak': typeof BendaharaDitolakRoute
   '/bendahara/inbox': typeof BendaharaInboxRoute
+  '/bendahara/monitoring-realisasi': typeof BendaharaMonitoringRealisasiRoute
   '/bendahara/selesai': typeof BendaharaSelesaiRoute
   '/dokumen/aji': typeof DokumenAjiRoute
   '/dokumen/aju': typeof DokumenAjuRoute
@@ -1139,6 +1155,7 @@ export interface FileRoutesByTo {
   '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
+  '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
   '/admin': typeof AdminIndexRoute
@@ -1282,6 +1299,7 @@ export interface FileRoutesById {
   '/arsiparis/penambahan-arsip': typeof ArsiparisPenambahanArsipRoute
   '/bendahara/ditolak': typeof BendaharaDitolakRoute
   '/bendahara/inbox': typeof BendaharaInboxRoute
+  '/bendahara/monitoring-realisasi': typeof BendaharaMonitoringRealisasiRoute
   '/bendahara/selesai': typeof BendaharaSelesaiRoute
   '/dokumen/$id': typeof DokumenIdRouteWithChildren
   '/dokumen/aji': typeof DokumenAjiRoute
@@ -1292,6 +1310,7 @@ export interface FileRoutesById {
   '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
+  '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
   '/admin/': typeof AdminIndexRoute
@@ -1438,6 +1457,7 @@ export interface FileRouteTypes {
     | '/arsiparis/penambahan-arsip'
     | '/bendahara/ditolak'
     | '/bendahara/inbox'
+    | '/bendahara/monitoring-realisasi'
     | '/bendahara/selesai'
     | '/dokumen/$id'
     | '/dokumen/aji'
@@ -1448,6 +1468,7 @@ export interface FileRouteTypes {
     | '/penanggung-jawab-kinerja/laporan-kinerja'
     | '/ppk/ditolak'
     | '/ppk/inbox'
+    | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
     | '/admin/'
@@ -1587,6 +1608,7 @@ export interface FileRouteTypes {
     | '/arsiparis/penambahan-arsip'
     | '/bendahara/ditolak'
     | '/bendahara/inbox'
+    | '/bendahara/monitoring-realisasi'
     | '/bendahara/selesai'
     | '/dokumen/aji'
     | '/dokumen/aju'
@@ -1595,6 +1617,7 @@ export interface FileRouteTypes {
     | '/penanggung-jawab-kinerja/laporan-kinerja'
     | '/ppk/ditolak'
     | '/ppk/inbox'
+    | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
     | '/admin'
@@ -1737,6 +1760,7 @@ export interface FileRouteTypes {
     | '/arsiparis/penambahan-arsip'
     | '/bendahara/ditolak'
     | '/bendahara/inbox'
+    | '/bendahara/monitoring-realisasi'
     | '/bendahara/selesai'
     | '/dokumen/$id'
     | '/dokumen/aji'
@@ -1747,6 +1771,7 @@ export interface FileRouteTypes {
     | '/penanggung-jawab-kinerja/laporan-kinerja'
     | '/ppk/ditolak'
     | '/ppk/inbox'
+    | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
     | '/admin/'
@@ -2062,6 +2087,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PpkRevisiRouteImport
       parentRoute: typeof PpkRoute
     }
+    '/ppk/monitoring-realisasi': {
+      id: '/ppk/monitoring-realisasi'
+      path: '/monitoring-realisasi'
+      fullPath: '/ppk/monitoring-realisasi'
+      preLoaderRoute: typeof PpkMonitoringRealisasiRouteImport
+      parentRoute: typeof PpkRoute
+    }
     '/ppk/inbox': {
       id: '/ppk/inbox'
       path: '/inbox'
@@ -2130,6 +2162,13 @@ declare module '@tanstack/react-router' {
       path: '/selesai'
       fullPath: '/bendahara/selesai'
       preLoaderRoute: typeof BendaharaSelesaiRouteImport
+      parentRoute: typeof BendaharaRoute
+    }
+    '/bendahara/monitoring-realisasi': {
+      id: '/bendahara/monitoring-realisasi'
+      path: '/monitoring-realisasi'
+      fullPath: '/bendahara/monitoring-realisasi'
+      preLoaderRoute: typeof BendaharaMonitoringRealisasiRouteImport
       parentRoute: typeof BendaharaRoute
     }
     '/bendahara/inbox': {
@@ -3062,6 +3101,7 @@ const ArsiparisRouteWithChildren = ArsiparisRoute._addFileChildren(
 interface BendaharaRouteChildren {
   BendaharaDitolakRoute: typeof BendaharaDitolakRoute
   BendaharaInboxRoute: typeof BendaharaInboxRoute
+  BendaharaMonitoringRealisasiRoute: typeof BendaharaMonitoringRealisasiRoute
   BendaharaSelesaiRoute: typeof BendaharaSelesaiRoute
   BendaharaIndexRoute: typeof BendaharaIndexRoute
   BendaharaDokumenIdRoute: typeof BendaharaDokumenIdRoute
@@ -3070,6 +3110,7 @@ interface BendaharaRouteChildren {
 const BendaharaRouteChildren: BendaharaRouteChildren = {
   BendaharaDitolakRoute: BendaharaDitolakRoute,
   BendaharaInboxRoute: BendaharaInboxRoute,
+  BendaharaMonitoringRealisasiRoute: BendaharaMonitoringRealisasiRoute,
   BendaharaSelesaiRoute: BendaharaSelesaiRoute,
   BendaharaIndexRoute: BendaharaIndexRoute,
   BendaharaDokumenIdRoute: BendaharaDokumenIdRoute,
@@ -3192,6 +3233,7 @@ const PpkDokumenIdRouteWithChildren = PpkDokumenIdRoute._addFileChildren(
 interface PpkRouteChildren {
   PpkDitolakRoute: typeof PpkDitolakRoute
   PpkInboxRoute: typeof PpkInboxRoute
+  PpkMonitoringRealisasiRoute: typeof PpkMonitoringRealisasiRoute
   PpkRevisiRoute: typeof PpkRevisiRoute
   PpkTervalidasiRoute: typeof PpkTervalidasiRoute
   PpkIndexRoute: typeof PpkIndexRoute
@@ -3201,6 +3243,7 @@ interface PpkRouteChildren {
 const PpkRouteChildren: PpkRouteChildren = {
   PpkDitolakRoute: PpkDitolakRoute,
   PpkInboxRoute: PpkInboxRoute,
+  PpkMonitoringRealisasiRoute: PpkMonitoringRealisasiRoute,
   PpkRevisiRoute: PpkRevisiRoute,
   PpkTervalidasiRoute: PpkTervalidasiRoute,
   PpkIndexRoute: PpkIndexRoute,

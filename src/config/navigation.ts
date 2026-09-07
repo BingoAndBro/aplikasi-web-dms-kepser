@@ -83,6 +83,17 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       ],
     },
     {
+      title: 'MONITORING',
+      items: [
+        {
+          id: 'monitoring_realisasi',
+          label: 'Monitoring Nominal Realisasi',
+          icon: BarChart3,
+          to: ROUTES.PPK.MONITORING_REALISASI,
+        },
+      ],
+    },
+    {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
@@ -102,6 +113,17 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: ROUTES.BENDAHARA.INBOX },
         { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: ROUTES.BENDAHARA.DITOLAK },
         { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: ROUTES.BENDAHARA.SELESAI },
+      ],
+    },
+    {
+      title: 'MONITORING',
+      items: [
+        {
+          id: 'monitoring_realisasi',
+          label: 'Monitoring Nominal Realisasi',
+          icon: BarChart3,
+          to: ROUTES.BENDAHARA.MONITORING_REALISASI,
+        },
       ],
     },
     {

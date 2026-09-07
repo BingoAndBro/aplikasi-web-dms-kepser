@@ -21,6 +21,8 @@ vi.mock('drizzle-orm', async (importActual) => {
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
   hasLocalRole: (session: { roles: string[] }, role: string) => session.roles.includes(role),
+  hasAnyLocalRole: (session: { roles: string[] }, roles: string[]) =>
+    roles.some((role) => session.roles.includes(role)),
 }))
 
 vi.mock('#/db/client', () => ({
@@ -61,7 +63,7 @@ describe('Laporan Kinerja API route', () => {
     expect(mocks.dbSelect).not.toHaveBeenCalled()
   })
 
-  it('rejects users without PENANGGUNG_JAWAB_KINERJA assigned role', async () => {
+  it('rejects users without an allowed monitoring role', async () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(['PEGAWAI'], 'PEGAWAI'))
 
     const response = await getHandler({
@@ -71,6 +73,21 @@ describe('Laporan Kinerja API route', () => {
     expect(response.status).toBe(403)
     expect(await response.json()).toEqual({ error: 'Forbidden' })
     expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it.each(['PPK', 'BENDAHARA'])('allows %s to read realisasi monitoring metadata', async (role) => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession([role], role))
+    mocks.dbSelect.mockReturnValue(createQueryBuilder([
+      createRow({ status: 'COMPLETED', is_non_material: false, nominal_realisasi: '5000.00' }),
+    ]))
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja'),
+    })
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.dokumen).toHaveLength(1)
   })
 
   it('allows PENANGGUNG_JAWAB_KINERJA and returns metadata-only final documents', async () => {

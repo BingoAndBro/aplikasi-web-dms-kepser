@@ -11,7 +11,7 @@ import {
 } from '#/db/schema/master'
 import {
   getLocalServerSession,
-  hasLocalRole,
+  hasAnyLocalRole,
 } from '#/lib/auth/local-server-auth'
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { ROLES } from '#/lib/constants/roles'
@@ -85,7 +85,13 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        if (!hasLocalRole(session, ROLES.PENANGGUNG_JAWAB_KINERJA)) {
+        if (
+          !hasAnyLocalRole(session, [
+            ROLES.PENANGGUNG_JAWAB_KINERJA,
+            ROLES.PPK,
+            ROLES.BENDAHARA,
+          ])
+        ) {
           return Response.json({ error: 'Forbidden' }, { status: 403 })
         }
 

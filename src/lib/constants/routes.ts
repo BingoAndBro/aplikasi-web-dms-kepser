@@ -20,12 +20,14 @@ export const ROUTES = {
     TERVALIDASI: '/ppk/tervalidasi',
     DITOLAK: '/ppk/ditolak',
     REVISI: '/ppk/revisi',
+    MONITORING_REALISASI: '/ppk/monitoring-realisasi',
   },
   BENDAHARA: {
     ROOT: '/bendahara',
     INBOX: '/bendahara/inbox',
     DITOLAK: '/bendahara/ditolak',
     SELESAI: '/bendahara/selesai',
+    MONITORING_REALISASI: '/bendahara/monitoring-realisasi',
   },
   KEPALA_SUB_BAGIAN_UMUM: {
     ROOT: '/arsiparis',

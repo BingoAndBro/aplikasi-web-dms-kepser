@@ -8,27 +8,39 @@ function readSource(relativePath: string) {
   return readFileSync(join(repoRoot, relativePath), 'utf8')
 }
 
+const SHARED_VIEW = 'src/components/kinerja/MonitoringRealisasiView.tsx'
+const KINERJA_ROUTE = 'src/routes/penanggung-jawab-kinerja/laporan-kinerja.tsx'
+const MONITORING_ROUTES = [
+  'src/routes/ppk/monitoring-realisasi.tsx',
+  'src/routes/bendahara/monitoring-realisasi.tsx',
+]
+
 describe('laporan kinerja visual parity source guard', () => {
   it('keeps laporan kinerja function-first with same-route drilldown', () => {
-    const source = readSource('src/routes/penanggung-jawab-kinerja/laporan-kinerja.tsx')
+    const route = readSource(KINERJA_ROUTE)
+    const view = readSource(SHARED_VIEW)
 
-    expect(source).toContain("apiFetch<LaporanKinerjaResponse>('/laporan/kinerja')")
-    expect(source).toContain('validateSearch')
-    expect(source).toContain('fungsiId: z.string().optional()')
-    expect(source).toContain('kegiatanId: z.string().optional()')
-    expect(source).toContain('buildFungsiRows')
-    expect(source).toContain('buildKegiatanRows')
-    expect(source).toContain('FungsiList')
-    expect(source).toContain('KegiatanList')
-    expect(source).toContain('KegiatanDocumentView')
-    expect(source).toContain('Route.useSearch()')
-    expect(source).toContain('selectFungsi')
-    expect(source).toContain('selectKegiatan')
-    expect(source).not.toContain('window.history')
+    // The thin route wrapper still owns the route contract.
+    expect(route).toContain('validateSearch')
+    expect(route).toContain('fungsiId: z.string().optional()')
+    expect(route).toContain('kegiatanId: z.string().optional()')
+    expect(route).toContain('Route.useSearch()')
+    expect(route).toContain('MonitoringRealisasiView')
+
+    // The shared view owns the function-first drilldown implementation.
+    expect(view).toContain("apiFetch<LaporanKinerjaResponse>('/laporan/kinerja')")
+    expect(view).toContain('buildFungsiRows')
+    expect(view).toContain('buildKegiatanRows')
+    expect(view).toContain('FungsiList')
+    expect(view).toContain('KegiatanList')
+    expect(view).toContain('KegiatanDocumentView')
+    expect(view).toContain('onSelectFungsi')
+    expect(view).toContain('onSelectKegiatan')
+    expect(view).not.toContain('window.history')
   })
 
   it('keeps required report controls and approved chevron-style actions', () => {
-    const source = readSource('src/routes/penanggung-jawab-kinerja/laporan-kinerja.tsx')
+    const source = readSource(SHARED_VIEW)
 
     expect(source).toContain('Terakhir diperbarui')
     expect(source).toContain('Nominal terbesar')
@@ -47,24 +59,37 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(source).toContain('KinerjaDocumentMetadataDialog')
   })
 
-  it('keeps laporan kinerja metadata-only without document route or file actions', () => {
-    const source = readSource('src/routes/penanggung-jawab-kinerja/laporan-kinerja.tsx')
+  it('keeps realisasi monitoring metadata-only without document route or file actions', () => {
+    for (const relativePath of [SHARED_VIEW, KINERJA_ROUTE, ...MONITORING_ROUTES]) {
+      const source = readSource(relativePath)
 
-    expect(source).not.toContain('to="/pegawai/dokumen/$id"')
-    expect(source).not.toContain('/pegawai/dokumen/$id')
-    expect(source).not.toContain('AttachmentViewer')
-    expect(source).not.toContain('buildBerkasItemAttachmentFileUrl')
-    expect(source).not.toContain('href={')
-    expect(source).not.toContain('download')
-    expect(source).not.toContain('preview')
-    expect(source).not.toContain('lampiran')
-    expect(source).not.toContain('signed')
-    expect(source).not.toContain('token')
-    expect(source).not.toContain('approve_destruction')
-    expect(source).not.toContain('Semua Tahun')
-    expect(source).not.toContain('detailFilter.tahun')
-    expect(source).not.toContain('value.tahun')
-    expect(source).not.toContain('yearOptions')
+      expect(source).not.toContain('to="/pegawai/dokumen/$id"')
+      expect(source).not.toContain('/pegawai/dokumen/$id')
+      expect(source).not.toContain('AttachmentViewer')
+      expect(source).not.toContain('buildBerkasItemAttachmentFileUrl')
+      expect(source).not.toContain('href={')
+      expect(source).not.toContain('download')
+      expect(source).not.toContain('preview')
+      expect(source).not.toContain('lampiran')
+      expect(source).not.toContain('signed')
+      expect(source).not.toContain('token')
+      expect(source).not.toContain('approve_destruction')
+      expect(source).not.toContain('Semua Tahun')
+      expect(source).not.toContain('detailFilter.tahun')
+      expect(source).not.toContain('value.tahun')
+      expect(source).not.toContain('yearOptions')
+    }
+  })
+
+  it('wires the PPK and PPSPM monitoring pages to the shared realisasi view', () => {
+    for (const relativePath of MONITORING_ROUTES) {
+      const source = readSource(relativePath)
+
+      expect(source).toContain('MonitoringRealisasiView')
+      expect(source).toContain('validateSearch')
+      expect(source).toContain('Route.useSearch()')
+      expect(source).toContain('Monitoring Nominal Realisasi')
+    }
   })
 
   it('keeps laporan kegiatan column label cleanup', () => {
