@@ -87,7 +87,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [
         {
           id: 'monitoring_realisasi',
-          label: 'Monitoring Nominal Realisasi',
+          label: 'Nominal Realisasi',
           icon: BarChart3,
           to: ROUTES.PPK.MONITORING_REALISASI,
         },
@@ -120,7 +120,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [
         {
           id: 'monitoring_realisasi',
-          label: 'Monitoring Nominal Realisasi',
+          label: 'Nominal Realisasi',
           icon: BarChart3,
           to: ROUTES.BENDAHARA.MONITORING_REALISASI,
         },

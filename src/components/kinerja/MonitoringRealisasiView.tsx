@@ -12,6 +12,7 @@ import {
   FolderOpen,
   Inbox,
   Search,
+  Users,
 } from 'lucide-react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
@@ -45,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
+import type { MonitoringRealisasiGroupBy } from '#/components/kinerja/monitoringRealisasiNavigation'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
 type LaporanKinerjaRow = {
@@ -56,6 +58,7 @@ type LaporanKinerjaRow = {
   kegiatan_nama: string | null
   tahun: number
   tanggal: string
+  pengaju_id: string | null
   pengaju_nama: string
   created_at: string
   updated_at: string
@@ -85,6 +88,15 @@ type FungsiRow = {
   latestDate: string | null
 }
 
+type PegawaiRow = {
+  id: string
+  nama: string
+  dokumen: LaporanKinerjaRow[]
+  fungsi: FungsiRow[]
+  totalNominal: number
+  latestDate: string | null
+}
+
 type KegiatanRow = {
   id: string
   fungsiId: string
@@ -105,8 +117,12 @@ type DetailFilterValue = {
 export type MonitoringRealisasiViewProps = {
   fungsiId?: string
   kegiatanId?: string
+  pegawaiId?: string
+  groupBy?: MonitoringRealisasiGroupBy
   onSelectFungsi: (fungsiId: string | null) => void
   onSelectKegiatan: (fungsiId: string, kegiatanId: string | null) => void
+  onSelectPegawai?: (pegawaiId: string | null) => void
+  onSelectGroupBy?: (mode: MonitoringRealisasiGroupBy) => void
   title?: string
   description?: string
   forbiddenTitle?: string
@@ -115,7 +131,7 @@ export type MonitoringRealisasiViewProps = {
 }
 
 const DEFAULT_TITLE = 'Laporan Kinerja'
-const DEFAULT_DESCRIPTION = 'Pantau dokumen final berdasarkan fungsi dan kegiatan.'
+const DEFAULT_DESCRIPTION = 'Pantau dokumen final berdasarkan kegiatan atau berdasarkan pegawai.'
 const DEFAULT_FORBIDDEN_TITLE = 'Akses Ditolak'
 const DEFAULT_FORBIDDEN_DESCRIPTION =
   'Laporan Kinerja hanya dapat diakses oleh Penanggung Jawab Kinerja yang ditetapkan melalui otorisasi server.'
@@ -143,17 +159,28 @@ const EMPTY_DETAIL_FILTER: DetailFilterValue = {
   jenis: 'ALL',
 }
 
+const GROUP_BY_OPTIONS: { value: MonitoringRealisasiGroupBy; label: string }[] = [
+  { value: 'kegiatan', label: 'Fungsi' },
+  { value: 'pegawai', label: 'Pegawai' },
+]
+
 export function MonitoringRealisasiView({
   fungsiId,
   kegiatanId,
+  pegawaiId,
+  groupBy = 'kegiatan',
   onSelectFungsi,
   onSelectKegiatan,
+  onSelectPegawai,
+  onSelectGroupBy,
   title = DEFAULT_TITLE,
   description = DEFAULT_DESCRIPTION,
   forbiddenTitle = DEFAULT_FORBIDDEN_TITLE,
   forbiddenDescription = DEFAULT_FORBIDDEN_DESCRIPTION,
   loadingLabel = DEFAULT_LOADING_LABEL,
 }: MonitoringRealisasiViewProps) {
+  const pegawaiModeEnabled = typeof onSelectPegawai === 'function' && typeof onSelectGroupBy === 'function'
+  const activeGroupBy: MonitoringRealisasiGroupBy = pegawaiModeEnabled ? groupBy : 'kegiatan'
   const [dokumen, setDokumen] = useState<LaporanKinerjaRow[]>([])
   const [limit, setLimit] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -198,19 +225,55 @@ export function MonitoringRealisasiView({
   }, [])
 
   const fungsiRows = useMemo(() => buildFungsiRows(dokumen), [dokumen])
+  const pegawaiRows = useMemo(() => buildPegawaiRows(dokumen), [dokumen])
+
+  const satkerSummary = useMemo(
+    () => ({
+      totalRealisasi: totalNominal(dokumen),
+      dokumenCount: dokumen.length,
+      fungsiCount: fungsiRows.length,
+      pegawaiCount: pegawaiRows.length,
+      periode: satkerPeriodeLabel(dokumen),
+    }),
+    [dokumen, fungsiRows, pegawaiRows],
+  )
+
+  const selectedPegawai = useMemo(() => {
+    if (activeGroupBy !== 'pegawai' || !pegawaiId) return null
+    return pegawaiRows.find(row => row.id === pegawaiId) ?? null
+  }, [activeGroupBy, pegawaiId, pegawaiRows])
+
+  const activeFungsiRows = useMemo(() => {
+    return activeGroupBy === 'pegawai' ? selectedPegawai?.fungsi ?? [] : fungsiRows
+  }, [activeGroupBy, fungsiRows, selectedPegawai])
 
   const selectedFungsi = useMemo(() => {
-    return fungsiRows.find(row => row.id === fungsiId) ?? null
-  }, [fungsiId, fungsiRows])
+    return activeFungsiRows.find(row => row.id === fungsiId) ?? null
+  }, [activeFungsiRows, fungsiId])
 
   const selectedKegiatan = useMemo(() => {
     if (!selectedFungsi) return null
     return selectedFungsi.kegiatan.find(row => row.id === kegiatanId) ?? null
   }, [kegiatanId, selectedFungsi])
 
+  const filteredPegawaiRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return pegawaiRows
+      .filter(row => {
+        if (!query) return true
+        return [
+          row.nama,
+          ...row.fungsi.map(fungsi => fungsi.nama),
+          ...row.dokumen.map(item => item.judul),
+          ...row.dokumen.map(item => item.kegiatan_nama ?? ''),
+        ].some(value => value.toLowerCase().includes(query))
+      })
+      .sort((a, b) => compareNamedRows(a, b, sortBy))
+  }, [pegawaiRows, search, sortBy])
+
   const filteredFungsiRows = useMemo(() => {
     const query = search.trim().toLowerCase()
-    return fungsiRows
+    return activeFungsiRows
       .filter(row => {
         if (!query) return true
         return [
@@ -221,7 +284,7 @@ export function MonitoringRealisasiView({
         ].some(value => value.toLowerCase().includes(query))
       })
       .sort((a, b) => compareNamedRows(a, b, sortBy))
-  }, [fungsiRows, search, sortBy])
+  }, [activeFungsiRows, search, sortBy])
 
   const filteredKegiatanRows = useMemo(() => {
     if (!selectedFungsi) return []
@@ -301,30 +364,88 @@ export function MonitoringRealisasiView({
           </>
         )}
 
-        {!loading && !forbidden && !error && dokumen.length > 0 && !selectedFungsi && (
+        {!loading && !forbidden && !error && dokumen.length > 0 && !selectedFungsi && !selectedPegawai && (
           <>
-            <KinerjaHeader title={title} description={description} />
-            <SimpleReportToolbar
-              search={search}
-              onSearchChange={setSearch}
-              searchLabel={`Cari fungsi ${title}`}
-              placeholder="Cari fungsi, kegiatan, atau dokumen..."
-              sortBy={sortBy}
-              onSortChange={setSortBy}
-              resultLabel={`${filteredFungsiRows.length} fungsi ditampilkan`}
-            />
+            <div className="space-y-4">
+              <KinerjaHeader title={title} description={description} />
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                {pegawaiModeEnabled && onSelectGroupBy ? (
+                  <GroupByToggle value={activeGroupBy} onChange={onSelectGroupBy} />
+                ) : (
+                  <span />
+                )}
+                <SatkerSummaryBand
+                  totalRealisasi={satkerSummary.totalRealisasi}
+                  dokumenCount={satkerSummary.dokumenCount}
+                  primaryCountLabel={activeGroupBy === 'pegawai' ? 'Pegawai' : 'Fungsi'}
+                  primaryCountValue={activeGroupBy === 'pegawai' ? satkerSummary.pegawaiCount : satkerSummary.fungsiCount}
+                  periode={satkerSummary.periode}
+                />
+              </div>
+            </div>
 
-            {filteredFungsiRows.length === 0 ? (
-              <EmptyState
-                icon={<Search className="h-5 w-5" />}
-                title="Tidak ada fungsi yang cocok"
-                description="Ubah kata kunci atau urutan untuk melihat fungsi lain."
-                compact
-              />
+            {activeGroupBy === 'pegawai' ? (
+              <>
+                <SimpleReportToolbar
+                  search={search}
+                  onSearchChange={setSearch}
+                  searchLabel={`Cari pegawai ${title}`}
+                  placeholder="Cari pegawai, fungsi, atau kegiatan..."
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  resultLabel={`${filteredPegawaiRows.length} pegawai ditampilkan`}
+                />
+
+                {filteredPegawaiRows.length === 0 ? (
+                  <EmptyState
+                    icon={<Search className="h-5 w-5" />}
+                    title="Tidak ada pegawai yang cocok"
+                    description="Ubah kata kunci atau urutan untuk melihat pegawai lain."
+                    compact
+                  />
+                ) : (
+                  <PegawaiList rows={filteredPegawaiRows} onSelect={(id) => onSelectPegawai?.(id)} />
+                )}
+              </>
             ) : (
-              <FungsiList rows={filteredFungsiRows} onSelect={onSelectFungsi} />
+              <>
+                <SimpleReportToolbar
+                  search={search}
+                  onSearchChange={setSearch}
+                  searchLabel={`Cari fungsi ${title}`}
+                  placeholder="Cari fungsi, kegiatan, atau dokumen..."
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  resultLabel={`${filteredFungsiRows.length} fungsi ditampilkan`}
+                />
+
+                {filteredFungsiRows.length === 0 ? (
+                  <EmptyState
+                    icon={<Search className="h-5 w-5" />}
+                    title="Tidak ada fungsi yang cocok"
+                    description="Ubah kata kunci atau urutan untuk melihat fungsi lain."
+                    compact
+                  />
+                ) : (
+                  <FungsiList rows={filteredFungsiRows} onSelect={onSelectFungsi} />
+                )}
+              </>
             )}
           </>
+        )}
+
+        {!loading && !forbidden && !error && activeGroupBy === 'pegawai' && selectedPegawai && !selectedFungsi && (
+          <PegawaiDetailView
+            pegawai={selectedPegawai}
+            rows={filteredFungsiRows}
+            title={title}
+            search={search}
+            onSearchChange={setSearch}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onBack={() => onSelectPegawai?.(null)}
+            onSelectFungsi={onSelectFungsi}
+          />
         )}
 
         {!loading && !forbidden && !error && selectedFungsi && !selectedKegiatan && (
@@ -396,6 +517,93 @@ function KinerjaHeader({ title, description }: { title: string; description: str
   )
 }
 
+function GroupByToggle({
+  value,
+  onChange,
+}: {
+  value: MonitoringRealisasiGroupBy
+  onChange: (value: MonitoringRealisasiGroupBy) => void
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400 sm:inline">
+        Berdasarkan
+      </span>
+      <div
+        role="group"
+        aria-label="Tampilkan monitoring berdasarkan"
+        className="inline-flex rounded-[10px] border border-zinc-200/80 bg-zinc-50 p-0.5"
+      >
+        {GROUP_BY_OPTIONS.map(option => {
+          const active = option.value === value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(option.value)}
+              className={[
+                'rounded-[7px] px-3 py-1 text-[13px] font-semibold transition',
+                active
+                  ? 'bg-white text-[#FF4D00] shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-800',
+              ].join(' ')}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function SatkerSummaryBand({
+  totalRealisasi,
+  dokumenCount,
+  primaryCountLabel,
+  primaryCountValue,
+  periode,
+}: {
+  totalRealisasi: number
+  dokumenCount: number
+  primaryCountLabel: 'Fungsi' | 'Pegawai'
+  primaryCountValue: number
+  periode: string | null
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-[#7DD7A9] bg-[#EAFBF2] px-3.5 py-2.5 shadow-[0_2px_0_rgba(16,185,129,0.18)]">
+      <div className="flex items-center gap-2.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#62C995] bg-white/70 text-[#16A35D] shadow-sm shadow-emerald-900/5">
+          <Banknote size={17} />
+        </span>
+        <div className="flex flex-col">
+          <span className="text-[9px] font-black uppercase tracking-[0.13em] text-[#00713A]">
+            Total Realisasi Satker{periode ? ` · ${periode}` : ''}
+          </span>
+          <span className="font-mono text-[19px] font-extrabold leading-tight tracking-tight text-[#02170B] sm:text-[21px]">
+            {formatCurrency(totalRealisasi)}
+          </span>
+        </div>
+      </div>
+      <span className="hidden h-9 w-px shrink-0 bg-[#7DD7A9]/70 sm:block" />
+      <div className="flex items-center gap-5">
+        <MiniStat label="Dokumen Final" value={dokumenCount.toLocaleString('id-ID')} />
+        <MiniStat label={primaryCountLabel} value={primaryCountValue.toLocaleString('id-ID')} />
+      </div>
+    </div>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0B6B3D]/75">{label}</span>
+      <span className="font-headline text-[15px] font-bold tracking-tight text-[#02170B]">{value}</span>
+    </div>
+  )
+}
+
 function SimpleReportToolbar({
   search,
   onSearchChange,
@@ -446,6 +654,195 @@ function SimpleReportToolbar({
       <div className="px-5 py-4 text-sm font-bold text-zinc-950">
         {resultLabel}
       </div>
+    </div>
+  )
+}
+
+function PegawaiList({ rows, onSelect }: { rows: PegawaiRow[]; onSelect: (id: string) => void }) {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+        <Table className="text-left">
+          <TableHeader>
+            <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
+              <TableHead className={TABLE_HEAD_CLASS}>Pegawai</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Jumlah Fungsi</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Jumlah Kegiatan</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Jumlah Dokumen</TableHead>
+              <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Total Nominal Realisasi</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Terakhir Diperbarui</TableHead>
+              <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-zinc-100 text-[13px]">
+            {rows.map(row => (
+              <TableRow
+                key={row.id}
+                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                onClick={() => onSelect(row.id)}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onSelect(row.id)
+                  }
+                }}
+              >
+                <TableCell className="max-w-[420px] px-6 py-5">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="mt-1 text-xs font-medium text-zinc-500">Pengaju Dokumen</p>
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <CountPill>{row.fungsi.length} fungsi</CountPill>
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <CountPill>{countKegiatan(row.fungsi)} kegiatan</CountPill>
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <CountPill>{row.dokumen.length} dokumen</CountPill>
+                </TableCell>
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-[#FF4D00]">
+                  {formatCurrency(row.totalNominal)}
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  {row.latestDate ? <DateCell value={row.latestDate} /> : <span className="text-sm font-semibold text-zinc-500">-</span>}
+                </TableCell>
+                <TableCell className="px-6 py-5 text-right">
+                  <ChevronActionButton label={`Detail pegawai ${row.nama}`} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {rows.map(row => (
+          <PegawaiPanel key={row.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Pegawai</p>
+                <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.nama}</h2>
+              </div>
+              <CountPill>{row.dokumen.length}</CountPill>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+              <InfoTile label="Fungsi" value={`${row.fungsi.length} fungsi`} />
+              <InfoTile label="Kegiatan" value={`${countKegiatan(row.fungsi)} kegiatan`} />
+              <InfoTile label="Diperbarui" value={row.latestDate ? <DateCell value={row.latestDate} className="mt-1" /> : '-'} />
+              <InfoTile
+                label="Nominal"
+                value={<span className="font-mono font-bold text-zinc-950">{formatCurrency(row.totalNominal)}</span>}
+              />
+            </div>
+            <div className="border-t border-zinc-100 pt-3">
+              <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => onSelect(row.id)}>
+                Detail Pegawai
+                <ChevronRight size={14} />
+              </Button>
+            </div>
+          </PegawaiPanel>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function PegawaiDetailView({
+  pegawai,
+  rows,
+  title,
+  search,
+  onSearchChange,
+  sortBy,
+  onSortChange,
+  onBack,
+  onSelectFungsi,
+}: {
+  pegawai: PegawaiRow
+  rows: FungsiRow[]
+  title: string
+  search: string
+  onSearchChange: (value: string) => void
+  sortBy: SortMode
+  onSortChange: (value: SortMode) => void
+  onBack: () => void
+  onSelectFungsi: (id: string) => void
+}) {
+  return (
+    <>
+      <ReportBackHeader
+        title={pegawai.nama}
+        subtitle={`${title} / Pegawai`}
+        description="Daftar fungsi dan kegiatan dari dokumen final yang diajukan pegawai ini."
+        onBack={onBack}
+        backLabel="Kembali ke daftar pegawai"
+      />
+      <PegawaiDetailCards pegawai={pegawai} />
+      <SimpleReportToolbar
+        search={search}
+        onSearchChange={onSearchChange}
+        searchLabel={`Cari fungsi pegawai ${title}`}
+        placeholder="Cari fungsi, kegiatan, atau dokumen..."
+        sortBy={sortBy}
+        onSortChange={onSortChange}
+        resultLabel={`${rows.length} dari ${pegawai.fungsi.length} fungsi ditampilkan`}
+      />
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={<Search className="h-5 w-5" />}
+          title="Tidak ada fungsi yang cocok"
+          description="Ubah kata kunci atau urutan untuk melihat fungsi lain."
+          compact
+        />
+      ) : (
+        <FungsiList rows={rows} onSelect={onSelectFungsi} />
+      )}
+    </>
+  )
+}
+
+function PegawaiDetailCards({ pegawai }: { pegawai: PegawaiRow }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <SummaryCard
+        label="Nama Pegawai"
+        value={pegawai.nama}
+        detail="Pengaju Dokumen Final"
+        icon={<Users size={16} />}
+        className="border-[#E1D7CB] bg-[#FFFDF9]"
+        labelClassName="text-[#5F3B22]"
+        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+      />
+      <SummaryCard
+        label="Jumlah Fungsi"
+        value={pegawai.fungsi.length.toLocaleString('id-ID')}
+        detail={`${countKegiatan(pegawai.fungsi).toLocaleString('id-ID')} Kegiatan Terkait`}
+        icon={<FolderOpen size={16} />}
+        className="border-[#F1D38A] bg-[#FFF8E6]"
+        labelClassName="text-[#7A4A00]"
+        iconClassName="border-[#E5BD55] text-[#B77900]"
+      />
+      <SummaryCard
+        label="Total Dokumen Final"
+        value={pegawai.dokumen.length.toLocaleString('id-ID')}
+        detail="Dokumen Terverifikasi"
+        icon={<FileText size={16} />}
+        className="border-[#FDBA91] bg-[#FFF1E8]"
+        labelClassName="text-[#B83200]"
+        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+      />
+      <SummaryCard
+        label="Total Nominal Realisasi"
+        value={formatCurrency(pegawai.totalNominal)}
+        detail="Hanya Belanja Material"
+        icon={<Banknote size={16} />}
+        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
+        labelClassName="text-[#006B35]"
+        valueClassName="font-mono text-[24px] text-[#02170B]"
+        detailClassName="text-[#006B35]"
+        iconClassName="border-[#62C995] text-[#16A35D]"
+      />
     </div>
   )
 }
@@ -1367,12 +1764,12 @@ function InfoTile({ label, value, className }: { label: string; value: ReactNode
   )
 }
 
-function buildFungsiRows(documents: LaporanKinerjaRow[]): FungsiRow[] {
+function buildFungsiRows(documents: LaporanKinerjaRow[], keyPrefix = 'fungsi'): FungsiRow[] {
   const groups = new Map<string, LaporanKinerjaRow[]>()
 
   for (const row of documents) {
     const fungsiName = displayName(row.fungsi_nama, 'Tanpa Fungsi')
-    const key = stableKey('fungsi', fungsiName)
+    const key = stableKey(keyPrefix, fungsiName)
     groups.set(key, [...(groups.get(key) ?? []), row])
   }
 
@@ -1389,6 +1786,42 @@ function buildFungsiRows(documents: LaporanKinerjaRow[]): FungsiRow[] {
       latestDate: latestDate(rows),
     }
   })
+}
+
+function buildPegawaiRows(documents: LaporanKinerjaRow[]): PegawaiRow[] {
+  const groups = new Map<string, LaporanKinerjaRow[]>()
+
+  for (const row of documents) {
+    const key = stableKey('pegawai', pegawaiIdentity(row))
+    groups.set(key, [...(groups.get(key) ?? []), row])
+  }
+
+  return Array.from(groups, ([id, rows]) => ({
+    id,
+    nama: displayName(rows[0]?.pengaju_nama, 'Tanpa Pengaju'),
+    dokumen: rows,
+    fungsi: buildFungsiRows(rows, `${id}-fungsi`),
+    totalNominal: totalNominal(rows),
+    latestDate: latestDate(rows),
+  }))
+}
+
+function pegawaiIdentity(row: LaporanKinerjaRow) {
+  return row.pengaju_id?.trim() || row.pengaju_nama.trim() || 'unknown'
+}
+
+function countKegiatan(fungsi: FungsiRow[]) {
+  return fungsi.reduce((total, row) => total + row.kegiatan.length, 0)
+}
+
+function satkerPeriodeLabel(rows: LaporanKinerjaRow[]): string | null {
+  const years = rows
+    .map(row => row.tahun)
+    .filter((year): year is number => Number.isFinite(year))
+  if (years.length === 0) return null
+  const min = Math.min(...years)
+  const max = Math.max(...years)
+  return min === max ? `TA ${min}` : `TA ${min}–${max}`
 }
 
 function buildKegiatanRows(fungsiId: string, fungsiNama: string, documents: LaporanKinerjaRow[]): KegiatanRow[] {

@@ -33,6 +33,7 @@ const laporanKinerjaRowSchema = z.object({
   kegiatan_nama: z.string().nullable(),
   tahun: z.number(),
   tanggal: z.string(),
+  pengaju_id: z.string().nullable(),
   pengaju_nama: z.string(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -106,6 +107,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
               kegiatan_nama: masterKegiatan.nama,
               tahun: dokumenTransaksi.tahun,
               tanggal: dokumenTransaksi.tanggal,
+              pengaju_id: dokumenTransaksi.createdBy,
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
@@ -134,6 +136,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
                 kegiatan_nama: row.kegiatan_nama,
                 tahun: row.tahun,
                 tanggal: row.tanggal,
+                pengaju_id: row.pengaju_id ?? null,
                 pengaju_nama: displayUserName({
                   displayName: row.pengaju_display_name,
                   namaLengkap: row.pengaju_nama_lengkap,
