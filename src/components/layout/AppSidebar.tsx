@@ -12,15 +12,37 @@ import { cn } from '#/lib/utils'
 
 import type { RoleName } from '#/lib/types/auth'
 
-function isNavItemActive(itemTo: string | undefined, pathname: string, searchStr: string | undefined) {
-  const itemPath = itemTo?.split('?')[0] ?? ''
-  const itemQuery = itemTo?.split('?')[1] ?? ''
+function normalizePath(path: string) {
+  return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path
+}
+
+/**
+ * Whether a nav item's route is exactly the page we're on.
+ *
+ * Only an exact path match counts — drilling into a detail/sub page
+ * (e.g. /ppk/dokumen/$id) is deliberately NOT a match, so the highlight
+ * stays on whichever menu the user last opened instead of jumping to a
+ * parent route that happens to be a path prefix (like the role Dashboard).
+ *
+ * The query string is ignored unless the nav item's `to` explicitly carries
+ * one, so in-page toggles/filters that only change `?search=` (e.g. the
+ * "pegawai" toggle on Nominal Realisasi) keep the menu highlighted.
+ */
+function matchesNavItem(
+  itemTo: string | undefined,
+  pathname: string,
+  searchStr: string | undefined,
+) {
+  if (!itemTo) return false
+
+  const [rawItemPath, itemQuery = ''] = itemTo.split('?')
+  const itemPath = normalizePath(rawItemPath || '/')
+  const currentPath = normalizePath(pathname)
   const currentQuery = searchStr?.replace(/^\?/, '') ?? ''
 
-  if (!itemTo) return false
-  if (itemTo === '/') return pathname === '/'
-  if (itemQuery) return pathname === itemPath && currentQuery.includes(itemQuery)
-  return pathname === itemPath && currentQuery === ''
+  if (currentPath !== itemPath) return false
+  if (itemQuery) return currentQuery.includes(itemQuery)
+  return true
 }
 
 export function AppSidebar({
@@ -59,6 +81,41 @@ export function AppSidebar({
       }))
       .filter((group) => group.items.length > 0)
   }, [activeRole, hasKetuaTimAssignment])
+  const directActiveId = React.useMemo(() => {
+    for (const group of navGroups) {
+      for (const item of group.items) {
+        if (matchesNavItem(item.to, pathname, searchStr)) return item.id
+      }
+    }
+    return null
+  }, [navGroups, pathname, searchStr])
+
+  // The highlight only moves when the user lands exactly on another menu's
+  // route. On any other page — a detail/sub page (e.g. /ppk/dokumen/$id opened
+  // from "Dokumen Tervalidasi"), a nested route, a route-swapping toggle — the
+  // last matched menu stays lit. Scoped per role and per browser tab.
+  const stickyStorageKey = `dms:activeNav:${activeRole}`
+  const [stickyActiveId, setStickyActiveId] = React.useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      return window.sessionStorage.getItem(`dms:activeNav:${activeRole}`)
+    } catch {
+      return null
+    }
+  })
+
+  React.useEffect(() => {
+    if (!directActiveId) return
+    setStickyActiveId(directActiveId)
+    try {
+      window.sessionStorage.setItem(stickyStorageKey, directActiveId)
+    } catch {
+      /* sessionStorage unavailable — keep the in-memory value only */
+    }
+  }, [directActiveId, stickyStorageKey])
+
+  const activeItemId = directActiveId ?? stickyActiveId
+
   const isAdmin = activeRole === ROLES.ADMIN
   const workspaceLabel = isAdmin ? 'Manajemen Sistem' : `${ROLE_DISPLAY[activeRole]} Workspace`
   const useCompactDesktopWidth = pathname === '/pegawai/dokumen/aju'
@@ -118,7 +175,7 @@ export function AppSidebar({
                 <nav className="space-y-1">
                   {group.items.map((item) => {
                     const Icon = item.icon
-                    const isActive = isNavItemActive(item.to, pathname, searchStr)
+                    const isActive = item.id === activeItemId
                     const isBuilt = !!item.to
 
                     if (!isBuilt) {
