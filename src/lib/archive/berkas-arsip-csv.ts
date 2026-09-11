@@ -52,7 +52,7 @@ export type BerkasDetailItemCsvRow = {
     kegiatan_nama: string | null
   } | null
   manual: {
-    category_name: string | null
+    komponen_name: string | null
     keterangan: string | null
   } | null
   warnings: string[]
@@ -172,7 +172,7 @@ function formatItemProvenance(item: BerkasDetailItemCsvRow): string {
 
   if (item.manual) {
     return [
-      item.manual.category_name ? `Kategori: ${item.manual.category_name}` : null,
+      item.manual.komponen_name ? `Komponen: ${item.manual.komponen_name}` : null,
       item.manual.keterangan ? `Keterangan: ${snippet(item.manual.keterangan)}` : null,
     ].filter((part): part is string => Boolean(part)).join('; ')
   }

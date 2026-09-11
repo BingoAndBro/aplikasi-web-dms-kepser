@@ -20,6 +20,7 @@ export const SEED_USER_IDS = {
 export const SEED_MASTER_IDS = {
   fungsi: '10101010-1010-4010-8010-101010101010',
   kegiatan: '20202020-2020-4020-8020-202020202020',
+  komponen: 'b0b0b0b0-b0b0-40b0-80b0-b0b0b0b0b0b0',
   jenisPermintaan: '30303030-3030-4030-8030-303030303030',
   kategoriPermintaan: '40404040-4040-4040-8040-404040404040',
   detailPermintaan: '50505050-5050-4050-8050-505050505050',
@@ -74,36 +75,21 @@ export const DEV_SEED_USERS = [
     roles: [ROLES.ADMIN],
   },
   {
-    key: 'pegawai',
-    id: SEED_USER_IDS.pegawai,
-    email: 'dev.pegawai@local.test',
-    displayName: 'Dev Pegawai',
-    namaLengkap: 'Development Pegawai',
-    roles: [ROLES.PEGAWAI],
-  },
-  {
+    // Workflow branch: single all-hats account to walk a document through the
+    // full PEGAWAI -> PPK -> BENDAHARA flow. Keeps the 'ppk' key so the seed
+    // helpers (requireSeededUserId, seedKetuaTimFixture) still resolve.
     key: 'ppk',
     id: SEED_USER_IDS.ppk,
-    email: 'dev.ppk@local.test',
-    displayName: 'Dev PPK',
-    namaLengkap: 'Development PPK',
-    roles: [ROLES.PEGAWAI, ROLES.PPK],
-  },
-  {
-    key: 'bendahara',
-    id: SEED_USER_IDS.bendahara,
-    email: 'dev.bendahara@local.test',
-    displayName: 'Dev Bendahara',
-    namaLengkap: 'Development Bendahara',
-    roles: [ROLES.PEGAWAI, ROLES.BENDAHARA],
-  },
-  {
-    key: 'kepalaSubBagianUmum',
-    id: SEED_USER_IDS.kepalaSubBagianUmum,
-    email: 'dev.kepala-sub-bagian-umum@local.test',
-    displayName: 'Dev Kepala Sub Bagian Umum',
-    namaLengkap: 'Development Kepala Sub Bagian Umum',
-    roles: [ROLES.PEGAWAI, ROLES.KEPALA_SUB_BAGIAN_UMUM],
+    email: 'dev.multirole@local.test',
+    displayName: 'Dev Multirole',
+    namaLengkap: 'Development Multirole',
+    roles: [
+      ROLES.PEGAWAI,
+      ROLES.PPK,
+      ROLES.BENDAHARA,
+      ROLES.KEPALA_SUB_BAGIAN_UMUM,
+      ROLES.PENANGGUNG_JAWAB_KINERJA,
+    ],
   },
 ] as const
 

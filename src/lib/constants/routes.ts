@@ -47,6 +47,7 @@ export const ROUTES = {
     MASTER_USER: '/admin/master-data/user',
     MASTER_FUNGSI: '/admin/master-data/fungsi',
     MASTER_KEGIATAN: '/admin/master-data/kegiatan',
+    MASTER_KOMPONEN: '/admin/master-data/komponen',
     MASTER_JENIS: '/admin/master-data/jenis',
     MASTER_JENIS_DOKUMEN: '/admin/master-data/jenis-dokumen',
     MASTER_KATEGORI: '/admin/master-data/kategori',

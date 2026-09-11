@@ -72,11 +72,13 @@ export const updateDokumenSchema = z.object({
   fungsiId: z.string().uuid('ID fungsi tidak valid').optional(),
   kegiatanId: z.string().uuid('ID kegiatan tidak valid').optional(),
   tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal tidak valid').optional(),
+  komponenId: z.string().uuid().optional().nullable(),
   jenisPermintaanId: z.string().uuid().optional().nullable(),
   kategoriPermintaanId: z.string().uuid().optional().nullable(),
   detailPermintaanId: z.string().uuid().optional().nullable(),
   nominalRealisasi: z.number().min(0).max(999999999999).nullable().optional(),
   keteranganDetail: z.string().max(5000).optional().nullable(),
+  namaDokumen: z.string().trim().min(1, 'Nama dokumen tidak boleh kosong').max(255, 'Nama dokumen maksimal 255 karakter').optional().nullable(),
 })
 
 // ---------------------------------------------------------------------------
@@ -128,8 +130,10 @@ export const createAndSubmitDokumenSchema = z.object({
   is_non_material: z.boolean().default(false),
   // For Non-Material documents
   jenisDokumenId: z.string().uuid().optional(),
+  namaDokumen: z.string().trim().min(1, 'Nama dokumen tidak boleh kosong').max(255, 'Nama dokumen maksimal 255 karakter').optional(),
   keteranganDetail: z.string().max(500, 'Keterangan maksimal 500 karakter').optional(),
   // For Material documents
+  komponenId: z.string().uuid().optional(),
   jenisPermintaanId: z.string().uuid().optional(),
   kategoriPermintaanId: z.string().uuid().optional(),
   detailPermintaanId: z.string().uuid().optional(),
@@ -187,6 +191,35 @@ export function validateNominalForMaterial(
     return {
       valid: false,
       error: 'Nominal_realisasi wajib untuk dokumen Material',
+    }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Validates the workflow chain field required per document characteristic:
+ * Material requires komponenId (Komponen selection); Non-Material requires
+ * a free-text namaDokumen ("Nama Dokumen").
+ */
+export function validateWorkflowChainForCharacteristic(
+  isNonMaterial: boolean | undefined | null,
+  input: { komponenId?: string | null; namaDokumen?: string | null }
+): { valid: boolean; error?: string } {
+  if (isNonMaterial) {
+    if (!input.namaDokumen || !input.namaDokumen.trim()) {
+      return {
+        valid: false,
+        error: 'Nama Dokumen wajib diisi untuk dokumen Non-Material',
+      }
+    }
+    return { valid: true }
+  }
+
+  if (!input.komponenId) {
+    return {
+      valid: false,
+      error: 'Komponen wajib dipilih untuk dokumen Material',
     }
   }
 

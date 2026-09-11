@@ -45,6 +45,7 @@ import { Route as ArsiparisPenambahanArsipRouteImport } from './routes/arsiparis
 import { Route as ArsiparisKlasifikasiRouteImport } from './routes/arsiparis/klasifikasi'
 import { Route as ArsiparisInboxRouteImport } from './routes/arsiparis/inbox'
 import { Route as ApiUploadRouteImport } from './routes/api/upload'
+import { Route as ApiMasterKomponenRouteImport } from './routes/api/master-komponen'
 import { Route as ApiMasterKelengkapanRouteImport } from './routes/api/master-kelengkapan'
 import { Route as ApiMasterKegiatanRouteImport } from './routes/api/master-kegiatan'
 import { Route as ApiMasterKategoriRouteImport } from './routes/api/master-kategori'
@@ -76,6 +77,7 @@ import { Route as ApiPpkRevisiRouteImport } from './routes/api/ppk/revisi'
 import { Route as ApiPpkInboxRouteImport } from './routes/api/ppk/inbox'
 import { Route as ApiPpkDitolakRouteImport } from './routes/api/ppk/ditolak'
 import { Route as ApiPegawaiRevisiRouteImport } from './routes/api/pegawai/revisi'
+import { Route as ApiMasterKomponenIdRouteImport } from './routes/api/master-komponen.$id'
 import { Route as ApiMasterKelengkapanIdRouteImport } from './routes/api/master-kelengkapan.$id'
 import { Route as ApiMasterKegiatanIdRouteImport } from './routes/api/master-kegiatan.$id'
 import { Route as ApiMasterKategoriIdRouteImport } from './routes/api/master-kategori.$id'
@@ -104,6 +106,7 @@ import { Route as ApiArsiparisInboxRouteImport } from './routes/api/arsiparis/in
 import { Route as ApiAdminCleanupOrphanFilesRouteImport } from './routes/api/admin/cleanup-orphan-files'
 import { Route as ApiAdminAnalyzeStorageRouteImport } from './routes/api/admin/analyze-storage'
 import { Route as AdminMasterDataUserRouteImport } from './routes/admin.master-data.user'
+import { Route as AdminMasterDataKomponenRouteImport } from './routes/admin.master-data.komponen'
 import { Route as AdminMasterDataKelengkapanRouteImport } from './routes/admin.master-data.kelengkapan'
 import { Route as AdminMasterDataKegiatanRouteImport } from './routes/admin.master-data.kegiatan'
 import { Route as AdminMasterDataKategoriRouteImport } from './routes/admin.master-data.kategori'
@@ -136,7 +139,6 @@ import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id
 import { Route as ApiDokumenIdNominalRouteImport } from './routes/api/dokumen/$id.nominal'
 import { Route as ApiDokumenIdLogRouteImport } from './routes/api/dokumen.$id.log'
 import { Route as ApiBendaharaDokumenIdRouteImport } from './routes/api/bendahara/dokumen/$id'
-import { Route as ApiArsiparisManualArsipCategoriesRouteImport } from './routes/api/arsiparis/manual-arsip/categories'
 import { Route as ApiArsiparisManualArsipIdRouteImport } from './routes/api/arsiparis/manual-arsip/$id'
 import { Route as ApiArsiparisKlasifikasiIdRouteImport } from './routes/api/arsiparis/klasifikasi/$id'
 import { Route as ApiArsiparisDokumenIdRouteImport } from './routes/api/arsiparis/dokumen.$id'
@@ -348,6 +350,11 @@ const ApiUploadRoute = ApiUploadRouteImport.update({
   path: '/api/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMasterKomponenRoute = ApiMasterKomponenRouteImport.update({
+  id: '/api/master-komponen',
+  path: '/api/master-komponen',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMasterKelengkapanRoute = ApiMasterKelengkapanRouteImport.update({
   id: '/api/master-kelengkapan',
   path: '/api/master-kelengkapan',
@@ -504,6 +511,11 @@ const ApiPegawaiRevisiRoute = ApiPegawaiRevisiRouteImport.update({
   path: '/api/pegawai/revisi',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMasterKomponenIdRoute = ApiMasterKomponenIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiMasterKomponenRoute,
+} as any)
 const ApiMasterKelengkapanIdRoute = ApiMasterKelengkapanIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -643,6 +655,11 @@ const ApiAdminAnalyzeStorageRoute = ApiAdminAnalyzeStorageRouteImport.update({
 const AdminMasterDataUserRoute = AdminMasterDataUserRouteImport.update({
   id: '/master-data/user',
   path: '/master-data/user',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMasterDataKomponenRoute = AdminMasterDataKomponenRouteImport.update({
+  id: '/master-data/komponen',
+  path: '/master-data/komponen',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMasterDataKelengkapanRoute =
@@ -812,12 +829,6 @@ const ApiBendaharaDokumenIdRoute = ApiBendaharaDokumenIdRouteImport.update({
   path: '/api/bendahara/dokumen/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiArsiparisManualArsipCategoriesRoute =
-  ApiArsiparisManualArsipCategoriesRouteImport.update({
-    id: '/api/arsiparis/manual-arsip/categories',
-    path: '/api/arsiparis/manual-arsip/categories',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiArsiparisManualArsipIdRoute =
   ApiArsiparisManualArsipIdRouteImport.update({
     id: '/api/arsiparis/manual-arsip/$id',
@@ -989,6 +1000,7 @@ export interface FileRoutesByFullPath {
   '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
+  '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
   '/arsiparis/inbox': typeof ArsiparisInboxRoute
   '/arsiparis/klasifikasi': typeof ArsiparisKlasifikasiRoute
@@ -1021,6 +1033,7 @@ export interface FileRoutesByFullPath {
   '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
+  '/admin/master-data/komponen': typeof AdminMasterDataKomponenRoute
   '/admin/master-data/user': typeof AdminMasterDataUserRoute
   '/api/admin/analyze-storage': typeof ApiAdminAnalyzeStorageRoute
   '/api/admin/cleanup-orphan-files': typeof ApiAdminCleanupOrphanFilesRoute
@@ -1049,6 +1062,7 @@ export interface FileRoutesByFullPath {
   '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/api/master-komponen/$id': typeof ApiMasterKomponenIdRoute
   '/api/pegawai/revisi': typeof ApiPegawaiRevisiRoute
   '/api/ppk/ditolak': typeof ApiPpkDitolakRoute
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
@@ -1078,7 +1092,6 @@ export interface FileRoutesByFullPath {
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
-  '/api/arsiparis/manual-arsip/categories': typeof ApiArsiparisManualArsipCategoriesRoute
   '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
@@ -1140,6 +1153,7 @@ export interface FileRoutesByTo {
   '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
+  '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
   '/arsiparis/inbox': typeof ArsiparisInboxRoute
   '/arsiparis/klasifikasi': typeof ArsiparisKlasifikasiRoute
@@ -1170,6 +1184,7 @@ export interface FileRoutesByTo {
   '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
+  '/admin/master-data/komponen': typeof AdminMasterDataKomponenRoute
   '/admin/master-data/user': typeof AdminMasterDataUserRoute
   '/api/admin/analyze-storage': typeof ApiAdminAnalyzeStorageRoute
   '/api/admin/cleanup-orphan-files': typeof ApiAdminCleanupOrphanFilesRoute
@@ -1198,6 +1213,7 @@ export interface FileRoutesByTo {
   '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/api/master-komponen/$id': typeof ApiMasterKomponenIdRoute
   '/api/pegawai/revisi': typeof ApiPegawaiRevisiRoute
   '/api/ppk/ditolak': typeof ApiPpkDitolakRoute
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
@@ -1225,7 +1241,6 @@ export interface FileRoutesByTo {
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
-  '/api/arsiparis/manual-arsip/categories': typeof ApiArsiparisManualArsipCategoriesRoute
   '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
@@ -1293,6 +1308,7 @@ export interface FileRoutesById {
   '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
+  '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
   '/arsiparis/inbox': typeof ArsiparisInboxRoute
   '/arsiparis/klasifikasi': typeof ArsiparisKlasifikasiRoute
@@ -1325,6 +1341,7 @@ export interface FileRoutesById {
   '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
+  '/admin/master-data/komponen': typeof AdminMasterDataKomponenRoute
   '/admin/master-data/user': typeof AdminMasterDataUserRoute
   '/api/admin/analyze-storage': typeof ApiAdminAnalyzeStorageRoute
   '/api/admin/cleanup-orphan-files': typeof ApiAdminCleanupOrphanFilesRoute
@@ -1353,6 +1370,7 @@ export interface FileRoutesById {
   '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
   '/api/master-kelengkapan/$id': typeof ApiMasterKelengkapanIdRoute
+  '/api/master-komponen/$id': typeof ApiMasterKomponenIdRoute
   '/api/pegawai/revisi': typeof ApiPegawaiRevisiRoute
   '/api/ppk/ditolak': typeof ApiPpkDitolakRoute
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
@@ -1382,7 +1400,6 @@ export interface FileRoutesById {
   '/api/arsiparis/dokumen/$id': typeof ApiArsiparisDokumenIdRouteWithChildren
   '/api/arsiparis/klasifikasi/$id': typeof ApiArsiparisKlasifikasiIdRoute
   '/api/arsiparis/manual-arsip/$id': typeof ApiArsiparisManualArsipIdRouteWithChildren
-  '/api/arsiparis/manual-arsip/categories': typeof ApiArsiparisManualArsipCategoriesRoute
   '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
@@ -1451,6 +1468,7 @@ export interface FileRouteTypes {
     | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
+    | '/api/master-komponen'
     | '/api/upload'
     | '/arsiparis/inbox'
     | '/arsiparis/klasifikasi'
@@ -1483,6 +1501,7 @@ export interface FileRouteTypes {
     | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
+    | '/admin/master-data/komponen'
     | '/admin/master-data/user'
     | '/api/admin/analyze-storage'
     | '/api/admin/cleanup-orphan-files'
@@ -1511,6 +1530,7 @@ export interface FileRouteTypes {
     | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
+    | '/api/master-komponen/$id'
     | '/api/pegawai/revisi'
     | '/api/ppk/ditolak'
     | '/api/ppk/inbox'
@@ -1540,7 +1560,6 @@ export interface FileRouteTypes {
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
-    | '/api/arsiparis/manual-arsip/categories'
     | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
@@ -1602,6 +1621,7 @@ export interface FileRouteTypes {
     | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
+    | '/api/master-komponen'
     | '/api/upload'
     | '/arsiparis/inbox'
     | '/arsiparis/klasifikasi'
@@ -1632,6 +1652,7 @@ export interface FileRouteTypes {
     | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
+    | '/admin/master-data/komponen'
     | '/admin/master-data/user'
     | '/api/admin/analyze-storage'
     | '/api/admin/cleanup-orphan-files'
@@ -1660,6 +1681,7 @@ export interface FileRouteTypes {
     | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
+    | '/api/master-komponen/$id'
     | '/api/pegawai/revisi'
     | '/api/ppk/ditolak'
     | '/api/ppk/inbox'
@@ -1687,7 +1709,6 @@ export interface FileRouteTypes {
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
-    | '/api/arsiparis/manual-arsip/categories'
     | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
@@ -1754,6 +1775,7 @@ export interface FileRouteTypes {
     | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
+    | '/api/master-komponen'
     | '/api/upload'
     | '/arsiparis/inbox'
     | '/arsiparis/klasifikasi'
@@ -1786,6 +1808,7 @@ export interface FileRouteTypes {
     | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
+    | '/admin/master-data/komponen'
     | '/admin/master-data/user'
     | '/api/admin/analyze-storage'
     | '/api/admin/cleanup-orphan-files'
@@ -1814,6 +1837,7 @@ export interface FileRouteTypes {
     | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
     | '/api/master-kelengkapan/$id'
+    | '/api/master-komponen/$id'
     | '/api/pegawai/revisi'
     | '/api/ppk/ditolak'
     | '/api/ppk/inbox'
@@ -1843,7 +1867,6 @@ export interface FileRouteTypes {
     | '/api/arsiparis/dokumen/$id'
     | '/api/arsiparis/klasifikasi/$id'
     | '/api/arsiparis/manual-arsip/$id'
-    | '/api/arsiparis/manual-arsip/categories'
     | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
@@ -1911,6 +1934,7 @@ export interface RootRouteChildren {
   ApiMasterKategoriRoute: typeof ApiMasterKategoriRouteWithChildren
   ApiMasterKegiatanRoute: typeof ApiMasterKegiatanRouteWithChildren
   ApiMasterKelengkapanRoute: typeof ApiMasterKelengkapanRouteWithChildren
+  ApiMasterKomponenRoute: typeof ApiMasterKomponenRouteWithChildren
   ApiUploadRoute: typeof ApiUploadRoute
   ApiAdminAnalyzeStorageRoute: typeof ApiAdminAnalyzeStorageRoute
   ApiAdminCleanupOrphanFilesRoute: typeof ApiAdminCleanupOrphanFilesRoute
@@ -1947,7 +1971,6 @@ export interface RootRouteChildren {
   ApiArsiparisDokumenIdRoute: typeof ApiArsiparisDokumenIdRouteWithChildren
   ApiArsiparisKlasifikasiIdRoute: typeof ApiArsiparisKlasifikasiIdRoute
   ApiArsiparisManualArsipIdRoute: typeof ApiArsiparisManualArsipIdRouteWithChildren
-  ApiArsiparisManualArsipCategoriesRoute: typeof ApiArsiparisManualArsipCategoriesRoute
   ApiBendaharaDokumenIdRoute: typeof ApiBendaharaDokumenIdRouteWithChildren
   ApiKetuaTimKegiatanKegiatanIdRoute: typeof ApiKetuaTimKegiatanKegiatanIdRoute
   ApiKetuaTimUserUserIdRoute: typeof ApiKetuaTimUserUserIdRoute
@@ -2213,6 +2236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/master-komponen': {
+      id: '/api/master-komponen'
+      path: '/api/master-komponen'
+      fullPath: '/api/master-komponen'
+      preLoaderRoute: typeof ApiMasterKomponenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/master-kelengkapan': {
       id: '/api/master-kelengkapan'
       path: '/api/master-kelengkapan'
@@ -2430,6 +2460,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPegawaiRevisiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/master-komponen/$id': {
+      id: '/api/master-komponen/$id'
+      path: '/$id'
+      fullPath: '/api/master-komponen/$id'
+      preLoaderRoute: typeof ApiMasterKomponenIdRouteImport
+      parentRoute: typeof ApiMasterKomponenRoute
+    }
     '/api/master-kelengkapan/$id': {
       id: '/api/master-kelengkapan/$id'
       path: '/$id'
@@ -2624,6 +2661,13 @@ declare module '@tanstack/react-router' {
       path: '/master-data/user'
       fullPath: '/admin/master-data/user'
       preLoaderRoute: typeof AdminMasterDataUserRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/master-data/komponen': {
+      id: '/admin/master-data/komponen'
+      path: '/master-data/komponen'
+      fullPath: '/admin/master-data/komponen'
+      preLoaderRoute: typeof AdminMasterDataKomponenRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/master-data/kelengkapan': {
@@ -2850,13 +2894,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBendaharaDokumenIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/arsiparis/manual-arsip/categories': {
-      id: '/api/arsiparis/manual-arsip/categories'
-      path: '/api/arsiparis/manual-arsip/categories'
-      fullPath: '/api/arsiparis/manual-arsip/categories'
-      preLoaderRoute: typeof ApiArsiparisManualArsipCategoriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/arsiparis/manual-arsip/$id': {
       id: '/api/arsiparis/manual-arsip/$id'
       path: '/api/arsiparis/manual-arsip/$id'
@@ -3051,6 +3088,7 @@ interface AdminRouteChildren {
   AdminMasterDataKategoriRoute: typeof AdminMasterDataKategoriRoute
   AdminMasterDataKegiatanRoute: typeof AdminMasterDataKegiatanRoute
   AdminMasterDataKelengkapanRoute: typeof AdminMasterDataKelengkapanRoute
+  AdminMasterDataKomponenRoute: typeof AdminMasterDataKomponenRoute
   AdminMasterDataUserRoute: typeof AdminMasterDataUserRoute
   AdminMasterDataIndexRoute: typeof AdminMasterDataIndexRoute
 }
@@ -3064,6 +3102,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMasterDataKategoriRoute: AdminMasterDataKategoriRoute,
   AdminMasterDataKegiatanRoute: AdminMasterDataKegiatanRoute,
   AdminMasterDataKelengkapanRoute: AdminMasterDataKelengkapanRoute,
+  AdminMasterDataKomponenRoute: AdminMasterDataKomponenRoute,
   AdminMasterDataUserRoute: AdminMasterDataUserRoute,
   AdminMasterDataIndexRoute: AdminMasterDataIndexRoute,
 }
@@ -3334,6 +3373,17 @@ const ApiMasterKelengkapanRouteChildren: ApiMasterKelengkapanRouteChildren = {
 const ApiMasterKelengkapanRouteWithChildren =
   ApiMasterKelengkapanRoute._addFileChildren(ApiMasterKelengkapanRouteChildren)
 
+interface ApiMasterKomponenRouteChildren {
+  ApiMasterKomponenIdRoute: typeof ApiMasterKomponenIdRoute
+}
+
+const ApiMasterKomponenRouteChildren: ApiMasterKomponenRouteChildren = {
+  ApiMasterKomponenIdRoute: ApiMasterKomponenIdRoute,
+}
+
+const ApiMasterKomponenRouteWithChildren =
+  ApiMasterKomponenRoute._addFileChildren(ApiMasterKomponenRouteChildren)
+
 interface ApiDokumenIdRouteChildren {
   ApiDokumenIdLogRoute: typeof ApiDokumenIdLogRoute
   ApiDokumenIdNominalRoute: typeof ApiDokumenIdNominalRoute
@@ -3551,6 +3601,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMasterKategoriRoute: ApiMasterKategoriRouteWithChildren,
   ApiMasterKegiatanRoute: ApiMasterKegiatanRouteWithChildren,
   ApiMasterKelengkapanRoute: ApiMasterKelengkapanRouteWithChildren,
+  ApiMasterKomponenRoute: ApiMasterKomponenRouteWithChildren,
   ApiUploadRoute: ApiUploadRoute,
   ApiAdminAnalyzeStorageRoute: ApiAdminAnalyzeStorageRoute,
   ApiAdminCleanupOrphanFilesRoute: ApiAdminCleanupOrphanFilesRoute,
@@ -3587,8 +3638,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArsiparisDokumenIdRoute: ApiArsiparisDokumenIdRouteWithChildren,
   ApiArsiparisKlasifikasiIdRoute: ApiArsiparisKlasifikasiIdRoute,
   ApiArsiparisManualArsipIdRoute: ApiArsiparisManualArsipIdRouteWithChildren,
-  ApiArsiparisManualArsipCategoriesRoute:
-    ApiArsiparisManualArsipCategoriesRoute,
   ApiBendaharaDokumenIdRoute: ApiBendaharaDokumenIdRouteWithChildren,
   ApiKetuaTimKegiatanKegiatanIdRoute: ApiKetuaTimKegiatanKegiatanIdRoute,
   ApiKetuaTimUserUserIdRoute: ApiKetuaTimUserUserIdRoute,

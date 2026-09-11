@@ -30,6 +30,7 @@ const JENIS_ID = '55555555-5555-4555-8555-555555555555'
 const KATEGORI_ID = '66666666-6666-4666-8666-666666666666'
 const DETAIL_ID = '77777777-7777-4777-8777-777777777777'
 const LAMPIRAN_ID = '88888888-8888-4888-8888-888888888888'
+const KOMPONEN_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const CREATED_AT = new Date('2026-05-16T01:00:00.000Z')
 const UPDATED_AT = new Date('2026-05-16T02:00:00.000Z')
 
@@ -37,6 +38,7 @@ describe('local submit repository foundation', () => {
   it('documents the narrow submit schema responsibility surface', () => {
     expect(LOCAL_SUBMIT_SCHEMA_TABLES).toEqual({
       kegiatan: 'master.master_kegiatan',
+      komponen: 'master.master_komponen',
       kelengkapan: 'master.master_kelengkapan_dokumen',
       jenisDokumen: 'master.master_jenis_dokumen',
       jenisPermintaan: 'master.master_jenis_permintaan',
@@ -65,7 +67,9 @@ describe('local submit repository foundation', () => {
       nominalRealisasi: '125000.5',
       isNonMaterial: false,
       jenisDokumenId: null,
+      namaDokumen: null,
       keteranganDetail: null,
+      komponenId: KOMPONEN_ID,
       jenisPermintaanId: JENIS_ID,
       kategoriPermintaanId: KATEGORI_ID,
       detailPermintaanId: DETAIL_ID,
@@ -245,6 +249,10 @@ function createAdapter(): LocalSubmitRepositoryAdapter & { calls: unknown[] } {
       calls.push(['selectJenisDokumenById', id])
       return { id, nama: 'Dev Non-Material' }
     },
+    async selectKomponenById(id) {
+      calls.push(['selectKomponenById', id])
+      return { id, nama: 'Dev Komponen' }
+    },
     async selectJenisPermintaanById(id) {
       calls.push(['selectJenisPermintaanById', id])
       return { id, nama: 'Dev Material' }
@@ -333,7 +341,9 @@ function documentCreatePayload(): LocalSubmitDocumentCreatePayload {
     nominalRealisasi: 125000.5,
     isNonMaterial: false,
     jenisDokumenId: null,
+    namaDokumen: null,
     keteranganDetail: null,
+    komponenId: KOMPONEN_ID,
     jenisPermintaanId: JENIS_ID,
     kategoriPermintaanId: KATEGORI_ID,
     detailPermintaanId: DETAIL_ID,
@@ -358,7 +368,9 @@ function dokumenRow(overrides: Partial<LocalSubmitDokumenRow> = {}): LocalSubmit
     nominalRealisasi: '125000.5',
     isNonMaterial: false,
     jenisDokumenId: null,
+    namaDokumen: null,
     keteranganDetail: null,
+    komponenId: KOMPONEN_ID,
     jenisPermintaanId: JENIS_ID,
     kategoriPermintaanId: KATEGORI_ID,
     detailPermintaanId: DETAIL_ID,

@@ -8,7 +8,10 @@ import {
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
 import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
 import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
+import { StepKarakteristik } from '#/components/dokumen/form/StepKarakteristik'
+import { StepKomponen } from '#/components/dokumen/form/StepKomponen'
 import { StepJenisPermintaan } from '#/components/dokumen/form/StepJenisPermintaan'
+import { StepNamaDokumen } from '#/components/dokumen/form/StepNamaDokumen'
 import { StepKategoriPermintaan } from '#/components/dokumen/form/StepKategoriPermintaan'
 import { StepDetailPermintaan } from '#/components/dokumen/form/StepDetailPermintaan'
 import { StepUploadLampiran } from '#/components/dokumen/form/StepUploadLampiran'
@@ -20,10 +23,10 @@ import type {
   LampiranUrl,
   FungsiRow,
   KegiatanRow,
+  KomponenRow,
   JenisRow,
   KategoriRow,
   DetailRow,
-  JenisDokumenRow,
 } from '#/components/dokumen/form/dokumen-form-types'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { apiFetch } from '#/lib/api-client'
@@ -108,12 +111,19 @@ function AjukanDokumenPage() {
   const [kegiatanId, setKegiatanId] = useState('')
   const [kegiatanNama, setKegiatanNama] = useState('')
 
-  // Step 3: Jenis Permintaan (Material) / Jenis Dokumen (Non-Material)
+  // Step 2b: Komponen (Material only)
+  const [komponenId, setKomponenId] = useState('')
+  const [komponenNama, setKomponenNama] = useState('')
+
+  // Step 3: Jenis Permintaan (Material) / Nama Dokumen bebas (Non-Material)
+  // Material is the default characteristic (pre-selected the moment the toggle
+  // renders), so its downstream field (Komponen) shows immediately once Kegiatan
+  // is picked — no redundant click needed on an option that already looks chosen.
+  // Non-Material only reveals its field (Nama Dokumen) once explicitly picked.
   const [isNonMaterial, setIsNonMaterial] = useState(false)
   const [jenisPermintaanId, setJenisPermintaanId] = useState('')
   const [jenisPermintaanNama, setJenisPermintaanNama] = useState('')
-  const [jenisDokumenId, setJenisDokumenId] = useState('')
-  const [jenisDokumenNama, setJenisDokumenNama] = useState('')
+  const [namaDokumen, setNamaDokumen] = useState('')
 
   // Step 4: Kategori Permintaan (Material only)
   const [kategoriPermintaanId, setKategoriPermintaanId] = useState('')
@@ -139,13 +149,14 @@ function AjukanDokumenPage() {
   // Data lists
   const [fungsiList, setFungsiList] = useState<FungsiRow[]>([])
   const [kegiatanList, setKegiatanList] = useState<KegiatanRow[]>([])
+  const [komponenList, setKomponenList] = useState<KomponenRow[]>([])
   const [jenisList, setJenisList] = useState<JenisRow[]>([])
-  const [jenisDokumenList, setJenisDokumenList] = useState<JenisDokumenRow[]>([])
   const [kategoriList, setKategoriList] = useState<KategoriRow[]>([])
   const [detailList, setDetailList] = useState<DetailRow[]>([])
 
   const [loadingFungsi, setLoadingFungsi] = useState(true)
   const [loadingKegiatan, setLoadingKegiatan] = useState(false)
+  const [loadingKomponen, setLoadingKomponen] = useState(false)
   const [loadingJenis, setLoadingJenis] = useState(false)
   const [loadingKategori, setLoadingKategori] = useState(false)
 
@@ -153,8 +164,9 @@ function AjukanDokumenPage() {
     fungsiId
     || kegiatanId
     || isNonMaterial
+    || komponenId
     || jenisPermintaanId
-    || jenisDokumenId
+    || namaDokumen.trim()
     || kategoriPermintaanId
     || detailPermintaanId
     || nominalRealisasi
@@ -227,13 +239,35 @@ function AjukanDokumenPage() {
     load()
   }, [fungsiId])
 
-  // Load jenis permintaan when kegiatan is selected
+  // Load komponen when kegiatan is selected (Material only)
   useEffect(() => {
-    if (!kegiatanId) { setJenisList([]); return }
+    if (!kegiatanId || isNonMaterial) { setKomponenList([]); return }
+    async function load() {
+      setLoadingKomponen(true)
+      try {
+        const data = await apiFetch<KomponenRow[]>('/master-komponen', {
+          query: { kegiatan_id: kegiatanId },
+        })
+        setKomponenList(data)
+      } catch (err) {
+        console.error('Failed to load komponen:', err)
+        setKomponenList([])
+      } finally {
+        setLoadingKomponen(false)
+      }
+    }
+    load()
+  }, [kegiatanId, isNonMaterial])
+
+  // Load jenis permintaan when komponen is selected
+  useEffect(() => {
+    if (!komponenId || isNonMaterial) { setJenisList([]); return }
     async function load() {
       setLoadingJenis(true)
       try {
-        const data = await apiFetch<JenisRow[]>('/master-jenis')
+        const data = await apiFetch<JenisRow[]>('/master-jenis', {
+          query: { komponen_id: komponenId },
+        })
         setJenisList(data)
       } catch (err) {
         console.error('Failed to load jenis permintaan:', err)
@@ -243,22 +277,7 @@ function AjukanDokumenPage() {
       }
     }
     load()
-  }, [kegiatanId])
-
-  // Load jenis dokumen (for Non-Material)
-  useEffect(() => {
-    if (!isNonMaterial) { setJenisDokumenList([]); return }
-    async function load() {
-      try {
-        const data = await apiFetch<JenisDokumenRow[]>('/master-jenis-dokumen')
-        setJenisDokumenList(data)
-      } catch (err) {
-        console.error('Failed to load jenis dokumen:', err)
-        setJenisDokumenList([])
-      }
-    }
-    load()
-  }, [isNonMaterial])
+  }, [komponenId, isNonMaterial])
 
   // Load kategori when jenis changes (Material only)
   useEffect(() => {
@@ -305,6 +324,7 @@ function AjukanDokumenPage() {
     const fn = fungsiList.find(f => f.id === id)
     setFungsiNama(fn?.nama ?? '')
     setKegiatanId(''); setKegiatanNama('')
+    setKomponenId(''); setKomponenNama('')
     setJenisPermintaanId(''); setJenisPermintaanNama('')
     setKategoriPermintaanId(''); setKategoriPermintaanNama('')
     setDetailPermintaanId(''); setDetailPermintaanNama('')
@@ -322,11 +342,22 @@ function AjukanDokumenPage() {
     setKegiatanId(id)
     const kn = kegiatanList.find(k => k.id === id)
     setKegiatanNama(kn?.nama ?? '')
+    setKomponenId(''); setKomponenNama('')
     setJenisPermintaanId(''); setJenisPermintaanNama('')
     setKategoriPermintaanId(''); setKategoriPermintaanNama('')
     setDetailPermintaanId(''); setDetailPermintaanNama('')
     setKategoriHasDetail(false)
     checkChairmanStatus(id)
+  }
+
+  function handleKomponenChange(id: string) {
+    setKomponenId(id)
+    const kn = komponenList.find(k => k.id === id)
+    setKomponenNama(kn?.nama ?? '')
+    setJenisPermintaanId(''); setJenisPermintaanNama('')
+    setKategoriPermintaanId(''); setKategoriPermintaanNama('')
+    setDetailPermintaanId(''); setDetailPermintaanNama('')
+    setKategoriHasDetail(false)
   }
 
   function handleJenisChange(id: string) {
@@ -338,10 +369,8 @@ function AjukanDokumenPage() {
     setKategoriHasDetail(false)
   }
 
-  function handleJenisDokumenChange(id: string) {
-    setJenisDokumenId(id)
-    const jd = jenisDokumenList.find(j => j.id === id)
-    setJenisDokumenNama(jd?.nama ?? '')
+  function handleNamaDokumenChange(value: string) {
+    setNamaDokumen(value)
   }
 
   function handleKategoriChange(id: string) {
@@ -357,19 +386,17 @@ function AjukanDokumenPage() {
     setDetailPermintaanNama(dn?.nama ?? '')
   }
 
-  // Toggle Non-Material - changes flow
-  function handleToggleNonMaterial(checked: boolean) {
+  // Pick Material/Non-Material — always fires (even re-clicking the current
+  // option) so switching characteristic always resets its downstream chain.
+  function handleSelectCharacteristic(checked: boolean) {
     setIsNonMaterial(checked)
     // Reset related fields
+    setKomponenId(''); setKomponenNama('')
     setJenisPermintaanId(''); setJenisPermintaanNama('')
     setKategoriPermintaanId(''); setKategoriPermintaanNama('')
     setDetailPermintaanId(''); setDetailPermintaanNama('')
     setKategoriHasDetail(false)
-    if (checked) {
-      setJenisDokumenId(''); setJenisDokumenNama('')
-    } else {
-      setJenisDokumenId(''); setJenisDokumenNama('')
-    }
+    setNamaDokumen('')
   }
 
   const stepLabels = MAJOR_STEP_LABELS
@@ -380,7 +407,8 @@ function AjukanDokumenPage() {
 
   const canAdvanceFromStep1 = !!fungsiId && !!tahun && !!tanggal && !tanggalError
   const canAdvanceFromStep2 = !!kegiatanId
-  const canAdvanceFromStep3 = isNonMaterial ? !!jenisDokumenId : !!jenisPermintaanId
+  const canAdvanceFromKomponen = isNonMaterial ? true : !!komponenId
+  const canAdvanceFromStep3 = isNonMaterial ? !!namaDokumen.trim() : !!jenisPermintaanId
   const canAdvanceFromStep4 = isNonMaterial ? true : !!kategoriPermintaanId
   const canAdvanceFromStep5 = isNonMaterial ? true : (!kategoriHasDetail || !!detailPermintaanId)
 
@@ -388,7 +416,7 @@ function AjukanDokumenPage() {
   const canAdvanceFromStep6 = () => {
     if (missingRequired.length > 0) return false
     if (isNonMaterial) {
-      return !!keteranganDetail.trim()
+      return true
     } else {
       // Material: must have nominal > 0
       const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
@@ -401,6 +429,7 @@ function AjukanDokumenPage() {
   const canAdvanceFromInformation =
     canAdvanceFromStep1
     && canAdvanceFromStep2
+    && canAdvanceFromKomponen
     && canAdvanceFromStep3
     && canAdvanceFromStep4
     && canAdvanceFromStep5
@@ -492,8 +521,11 @@ function AjukanDokumenPage() {
         setNominalError('Nominal Realisasi wajib diisi dan harus lebih dari 0 untuk dokumen Material')
         return 'Nominal Realisasi wajib diisi dan harus lebih dari 0 untuk dokumen Material'
       }
-    } else if (!keteranganDetail.trim()) {
-      return 'Keterangan detail dokumen wajib diisi untuk dokumen Non-Material'
+      if (!komponenId) {
+        return 'Komponen wajib dipilih untuk dokumen Material'
+      }
+    } else if (!namaDokumen.trim()) {
+      return 'Nama Dokumen wajib diisi untuk dokumen Non-Material'
     }
 
     if (missingRequired.length > 0) {
@@ -550,6 +582,7 @@ function AjukanDokumenPage() {
     try {
       const rawNominal = nominalRealisasi.replace(/[^\d]/g, '')
       const nominalValue = isNonMaterial ? null : (parseInt(rawNominal, 10) || null)
+      const selectedKomponenId = komponenId || undefined
       const selectedJenisPermintaanId = jenisPermintaanId || undefined
       const selectedKategoriPermintaanId = kategoriPermintaanId || undefined
       const selectedDetailPermintaanId = detailPermintaanId || undefined
@@ -565,8 +598,9 @@ function AjukanDokumenPage() {
           lampiranUrls,
           nominal_realisasi: nominalValue,
           is_non_material: isNonMaterial,
-          jenisDokumenId: isNonMaterial ? jenisDokumenId : undefined,
+          namaDokumen: isNonMaterial ? namaDokumen.trim() : undefined,
           keteranganDetail: isNonMaterial ? keteranganDetail : undefined,
+          komponenId: !isNonMaterial ? selectedKomponenId : undefined,
           jenisPermintaanId: !isNonMaterial ? selectedJenisPermintaanId : undefined,
           kategoriPermintaanId: !isNonMaterial ? selectedKategoriPermintaanId : undefined,
           detailPermintaanId: !isNonMaterial ? selectedDetailPermintaanId : undefined,
@@ -628,10 +662,11 @@ function AjukanDokumenPage() {
     setKegiatanId('')
     setKegiatanNama('')
     setIsNonMaterial(false)
+    setKomponenId('')
+    setKomponenNama('')
     setJenisPermintaanId('')
     setJenisPermintaanNama('')
-    setJenisDokumenId('')
-    setJenisDokumenNama('')
+    setNamaDokumen('')
     setKategoriPermintaanId('')
     setKategoriPermintaanNama('')
     setDetailPermintaanId('')
@@ -826,19 +861,62 @@ function AjukanDokumenPage() {
               )}
 
               {kegiatanId && (
+                <StepKarakteristik
+                  grouped
+                  isNonMaterial={isNonMaterial}
+                  canAdvance
+                  onSelectCharacteristic={handleSelectCharacteristic}
+                  onBack={handleBack}
+                  onNext={handleNextFromInformation}
+                />
+              )}
+
+              {/*
+                Everything below stays mounted once its own gate is first satisfied and is only
+                CSS-hidden thereafter (never conditionally unmounted) — flipping the characteristic
+                toggle must not unmount a Select mid-interaction (RP-04: doing that left Base UI's
+                popup/scroll-lock guard stuck and broke the next trigger click). Material is the
+                toggle's default value, so its field (Komponen) is visible as soon as Kegiatan is
+                picked — no extra click needed on an option that's already shown as selected.
+              */}
+              {kegiatanId && (
+                <div hidden={isNonMaterial}>
+                  <StepKomponen
+                    grouped
+                    kegiatanNama={kegiatanNama}
+                    komponenId={komponenId}
+                    komponenList={komponenList}
+                    loadingKomponen={loadingKomponen}
+                    canAdvanceFromKomponen={canAdvanceFromKomponen}
+                    onKomponenChange={handleKomponenChange}
+                    onBack={handleBack}
+                    onNext={handleNextFromInformation}
+                  />
+                </div>
+              )}
+
+              {kegiatanId && (
+                <div hidden={!isNonMaterial}>
+                  <StepNamaDokumen
+                    grouped
+                    namaDokumen={namaDokumen}
+                    canAdvanceFromStep3={canAdvanceFromStep3}
+                    onNamaDokumenChange={handleNamaDokumenChange}
+                    onBack={handleBack}
+                    onNext={handleNextFromInformation}
+                  />
+                </div>
+              )}
+
+              {kegiatanId && !isNonMaterial && komponenId && (
                 <StepJenisPermintaan
                   grouped
                   kegiatanId={kegiatanId}
-                  isNonMaterial={isNonMaterial}
                   jenisPermintaanId={jenisPermintaanId}
                   jenisList={jenisList}
                   loadingJenis={loadingJenis}
-                  jenisDokumenId={jenisDokumenId}
-                  jenisDokumenList={jenisDokumenList}
                   canAdvanceFromStep3={canAdvanceFromStep3}
-                  onToggleNonMaterial={handleToggleNonMaterial}
                   onJenisChange={handleJenisChange}
-                  onJenisDokumenChange={handleJenisDokumenChange}
                   onBack={handleBack}
                   onNext={handleNextFromInformation}
                 />
@@ -913,7 +991,9 @@ function AjukanDokumenPage() {
                 kegiatanId={kegiatanId}
                 fungsiNama={fungsiNama}
                 kegiatanNama={kegiatanNama}
-                jenisDokumenNama={jenisDokumenNama}
+                komponenId={komponenId}
+                komponenNama={komponenNama}
+                namaDokumen={namaDokumen}
                 jenisPermintaanId={jenisPermintaanId}
                 jenisPermintaanNama={jenisPermintaanNama}
                 kategoriPermintaanId={kategoriPermintaanId}
@@ -969,7 +1049,8 @@ function AjukanDokumenPage() {
               lampiranUrls={lampiranUrls}
               nominalRealisasi={isNonMaterial ? null : nominalRealisasi || null}
               isNonMaterial={isNonMaterial}
-              jenisPermintaanNama={isNonMaterial ? jenisDokumenNama : jenisPermintaanNama}
+              komponenNama={isNonMaterial ? undefined : komponenNama}
+              jenisPermintaanNama={isNonMaterial ? namaDokumen : jenisPermintaanNama}
               kategoriPermintaanNama={isNonMaterial ? undefined : kategoriPermintaanNama}
               detailPermintaanNama={isNonMaterial ? undefined : detailPermintaanNama}
               keteranganDetail={isNonMaterial ? keteranganDetail : undefined}

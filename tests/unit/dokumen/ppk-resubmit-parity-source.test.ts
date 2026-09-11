@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const source = readFileSync('src/routes/ppk/dokumen/$id/resubmit.tsx', 'utf8')
+const source = readFileSync('src/routes/ppk/dokumen/$id/resubmit.tsx', 'utf8').replace(/\r\n/g, '\n')
 
 describe('Phase 15L.2C PPK resubmit visual parity source guard', () => {
   it('uses approved Revisi/Ajukan visual patterns on the PPK resubmit page', () => {

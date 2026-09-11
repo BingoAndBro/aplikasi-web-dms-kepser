@@ -34,6 +34,7 @@ import type {
   KategoriRow,
   KegiatanRow,
   KelengkapanRow,
+  KomponenRow,
 } from '#/lib/master-data/shared'
 
 export const Route = createFileRoute('/admin/master-data/kelengkapan')({
@@ -46,12 +47,14 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 function matchesSelectedChain(
   row: KelengkapanRow,
+  komponenId?: string,
   jenisId?: string,
   kategoriId?: string,
   detailId?: string,
 ): boolean {
-  const isLegacy = !row.jenis_permintaan_id && !row.kategori_permintaan_id && !row.detail_permintaan_id
+  const isLegacy = !row.komponen_permintaan_id && !row.jenis_permintaan_id && !row.kategori_permintaan_id && !row.detail_permintaan_id
   if (isLegacy) return true
+  if (komponenId && row.komponen_permintaan_id && row.komponen_permintaan_id !== komponenId) return false
   if (jenisId && row.jenis_permintaan_id && row.jenis_permintaan_id !== jenisId) return false
   if (kategoriId && row.kategori_permintaan_id && row.kategori_permintaan_id !== kategoriId) return false
   if (detailId && row.detail_permintaan_id && row.detail_permintaan_id !== detailId) return false
@@ -64,6 +67,7 @@ function hasLoadedDuplicateKelengkapan(
     editingId?: string
     isKetuaTim: boolean
     namaDokumen: string
+    komponenPermintaanId: string | null
     jenisPermintaanId: string | null
     kategoriPermintaanId: string | null
     detailPermintaanId: string | null
@@ -75,6 +79,7 @@ function hasLoadedDuplicateKelengkapan(
   return items.some(item =>
     item.id !== input.editingId
     && item.is_ketua_tim === input.isKetuaTim
+    && (item.komponen_permintaan_id ?? null) === input.komponenPermintaanId
     && (item.jenis_permintaan_id ?? null) === input.jenisPermintaanId
     && (item.kategori_permintaan_id ?? null) === input.kategoriPermintaanId
     && (item.detail_permintaan_id ?? null) === input.detailPermintaanId
@@ -89,6 +94,7 @@ function KelengkapanPage() {
   const { showToast } = useAppToast()
   const [fungsis, setFungsis] = useState<FungsiRow[]>([])
   const [kegiatans, setKegiatans] = useState<KegiatanRow[]>([])
+  const [komponenList, setKomponenList] = useState<KomponenRow[]>([])
   const [jenisList, setJenisList] = useState<JenisRow[]>([])
   const [kategoriList, setKategoriList] = useState<KategoriRow[]>([])
   const [detailList, setDetailList] = useState<DetailRow[]>([])
@@ -96,6 +102,7 @@ function KelengkapanPage() {
   const [loading, setLoading] = useState(true)
   const [filterFungsi, setFilterFungsi] = useState('')
   const [filterKegiatan, setFilterKegiatan] = useState('')
+  const [filterKomponen, setFilterKomponen] = useState('')
   const [filterJenis, setFilterJenis] = useState('')
   const [filterKategori, setFilterKategori] = useState('')
   const [filterDetail, setFilterDetail] = useState('')
@@ -107,6 +114,7 @@ function KelengkapanPage() {
   const [formIsKetuaTim, setFormIsKetuaTim] = useState(false)
   const [formNamaDokumen, setFormNamaDokumen] = useState('')
   const [formRequired, setFormRequired] = useState(true)
+  const [formKomponenId, setFormKomponenId] = useState('')
   const [formJenisId, setFormJenisId] = useState('')
   const [formKategoriId, setFormKategoriId] = useState('')
   const [formDetailId, setFormDetailId] = useState('')
@@ -118,14 +126,22 @@ function KelengkapanPage() {
   // - Detail selected (leaf node)
   // Jangan tampilkan kelengkapan jika belum sampai leaf node.
   const chainComplete =
-    (filterJenis && filterKategori && detailList.length === 0) ||
-    (filterJenis && filterKategori && filterDetail)
+    (filterKomponen && filterJenis && filterKategori && detailList.length === 0) ||
+    (filterKomponen && filterJenis && filterKategori && filterDetail)
 
-  useEffect(() => { fetchFungsis(); fetchJenis() }, [])
+  useEffect(() => { fetchFungsis() }, [])
 
   useEffect(() => {
     if (filterFungsi) { fetchKegiatans(filterFungsi) } else { setKegiatans([]); setFilterKegiatan(''); setItems([]) }
   }, [filterFungsi])
+
+  useEffect(() => {
+    if (filterKegiatan) { fetchKomponen(filterKegiatan) } else { setKomponenList([]); setFilterKomponen('') }
+  }, [filterKegiatan])
+
+  useEffect(() => {
+    if (filterKomponen) { fetchJenis(filterKomponen) } else { setJenisList([]); setFilterJenis('') }
+  }, [filterKomponen])
 
   useEffect(() => {
     if (filterJenis) { fetchKategori(filterJenis) } else { setKategoriList([]); setFilterKategori(''); setFilterDetail(''); setDetailList([]) }
@@ -138,7 +154,7 @@ function KelengkapanPage() {
   useEffect(() => {
     if (chainComplete && filterFungsi && filterKegiatan) fetchKelengkapan()
     else if (!filterFungsi || !filterKegiatan) setItems([])
-  }, [filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, chainComplete])
+  }, [filterFungsi, filterKegiatan, filterKomponen, filterJenis, filterKategori, filterDetail, chainComplete])
 
   async function fetchFungsis() {
     try {
@@ -147,10 +163,25 @@ function KelengkapanPage() {
     } catch { /* silent */ } finally { setLoading(false) }
   }
 
-  async function fetchJenis() {
+  async function fetchKomponen(kegiatanId: string) {
     try {
-      const data = await apiFetch<JenisRow[]>('/master-jenis')
+      const data = await apiFetch<KomponenRow[]>('/master-komponen', {
+        query: { kegiatan_id: kegiatanId },
+      })
+      setKomponenList(data)
+      setFilterKomponen('')
+      // reset chain
+      setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
+    } catch { /* silent */ }
+  }
+
+  async function fetchJenis(komponenId: string) {
+    try {
+      const data = await apiFetch<JenisRow[]>('/master-jenis', {
+        query: { komponen_id: komponenId },
+      })
       setJenisList(data)
+      setFilterJenis(''); setFilterKategori(''); setFilterDetail(''); setDetailList([])
     } catch { /* silent */ }
   }
 
@@ -162,7 +193,7 @@ function KelengkapanPage() {
       setKegiatans(data)
       setFilterKegiatan(''); setItems([])
       // reset chain
-      setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
+      setFilterKomponen(''); setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
     } catch { /* silent */ }
   }
 
@@ -194,6 +225,7 @@ function KelengkapanPage() {
       })
       setItems(data.filter(row => matchesSelectedChain(
         row,
+        filterKomponen || undefined,
         filterJenis || undefined,
         filterKategori || undefined,
         filterDetail || undefined,
@@ -206,6 +238,7 @@ function KelengkapanPage() {
     isKetuaTim: formIsKetuaTim,
     namaDokumen: formNamaDokumen,
     required: formRequired,
+    komponenId: formKomponenId,
     jenisId: formJenisId,
     kategoriId: formKategoriId,
     detailId: formDetailId,
@@ -219,6 +252,7 @@ function KelengkapanPage() {
       isKetuaTim: isKetua,
       namaDokumen: '',
       required: true,
+      komponenId: filterKomponen,
       jenisId: filterJenis,
       kategoriId: filterKategori,
       detailId: filterDetail,
@@ -227,6 +261,7 @@ function KelengkapanPage() {
     setFormIsKetuaTim(isKetua)
     setFormNamaDokumen('')
     setFormRequired(true)
+    setFormKomponenId(filterKomponen)
     setFormJenisId(filterJenis)
     setFormKategoriId(filterKategori)
     setFormDetailId(filterDetail)
@@ -240,6 +275,7 @@ function KelengkapanPage() {
       isKetuaTim: item.is_ketua_tim,
       namaDokumen: item.nama_dokumen,
       required: item.required,
+      komponenId: item.komponen_permintaan_id ?? '',
       jenisId: item.jenis_permintaan_id ?? '',
       kategoriId: item.kategori_permintaan_id ?? '',
       detailId: item.detail_permintaan_id ?? '',
@@ -248,6 +284,7 @@ function KelengkapanPage() {
     setFormIsKetuaTim(item.is_ketua_tim)
     setFormNamaDokumen(item.nama_dokumen)
     setFormRequired(item.required)
+    setFormKomponenId(item.komponen_permintaan_id ?? '')
     setFormJenisId(item.jenis_permintaan_id ?? '')
     setFormKategoriId(item.kategori_permintaan_id ?? '')
     setFormDetailId(item.detail_permintaan_id ?? '')
@@ -275,6 +312,7 @@ function KelengkapanPage() {
       editingId: editing?.id,
       isKetuaTim: formIsKetuaTim,
       namaDokumen: formNamaDokumen.trim(),
+      komponenPermintaanId: formKomponenId || null,
       jenisPermintaanId: formJenisId || null,
       kategoriPermintaanId: formKategoriId || null,
       detailPermintaanId: formDetailId || null,
@@ -292,6 +330,7 @@ function KelengkapanPage() {
           body: {
             namaDokumen: formNamaDokumen.trim(),
             required: formRequired,
+            komponenId: formKomponenId || null,
             jenisPermintaanId: formJenisId || null,
             kategoriPermintaanId: formKategoriId || null,
             detailPermintaanId: formDetailId || null,
@@ -305,6 +344,7 @@ function KelengkapanPage() {
             isKetuaTim: formIsKetuaTim,
             namaDokumen: formNamaDokumen.trim(),
             required: formRequired,
+            komponenId: formKomponenId || undefined,
             jenisPermintaanId: formJenisId || undefined,
             kategoriPermintaanId: formKategoriId || undefined,
             detailPermintaanId: formDetailId || undefined,
@@ -349,16 +389,19 @@ function KelengkapanPage() {
   function resetFilters() {
     setFilterFungsi('')
     setFilterKegiatan('')
+    setFilterKomponen('')
     setFilterJenis('')
     setFilterKategori('')
     setFilterDetail('')
     setKegiatans([])
+    setKomponenList([])
+    setJenisList([])
     setKategoriList([])
     setDetailList([])
     setItems([])
   }
 
-  const activeChainLabel = getChainLabel(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList)
+  const activeChainLabel = getChainLabel(filterFungsi, filterKegiatan, filterKomponen, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, komponenList, jenisList, kategoriList, detailList)
   const ketuaItems = filteredByRole(true)
   const anggotaItems = filteredByRole(false)
 
@@ -409,13 +452,27 @@ function KelengkapanPage() {
               <KelengkapanSelectField label="Kegiatan" required>
                 <AdminFilterSelect
                   value={filterKegiatan}
-                  onChange={value => { setFilterKegiatan(value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+                  onChange={value => { setFilterKegiatan(value); setFilterKomponen(''); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
                   ariaLabel="Pilih kegiatan untuk kelengkapan"
                   disabled={!filterFungsi}
                   className={compactKelengkapanSelectClassName}
                   options={[
                     { value: '', label: filterFungsi ? 'Pilih Kegiatan' : 'Pilih Fungsi dulu' },
                     ...kegiatans.map(k => ({ value: k.id, label: k.nama })),
+                  ]}
+                />
+              </KelengkapanSelectField>
+
+              <KelengkapanSelectField label="Komponen" required>
+                <AdminFilterSelect
+                  value={filterKomponen}
+                  onChange={value => { setFilterKomponen(value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+                  ariaLabel="Pilih komponen untuk kelengkapan"
+                  disabled={!filterKegiatan}
+                  className={compactKelengkapanSelectClassName}
+                  options={[
+                    { value: '', label: filterKegiatan ? 'Pilih Komponen' : 'Pilih Kegiatan dulu' },
+                    ...komponenList.map(c => ({ value: c.id, label: c.nama })),
                   ]}
                 />
               </KelengkapanSelectField>
@@ -428,10 +485,10 @@ function KelengkapanPage() {
                   value={filterJenis}
                   onChange={value => { setFilterJenis(value); setFilterKategori(''); setFilterDetail('') }}
                   ariaLabel="Pilih jenis permintaan untuk kelengkapan"
-                  disabled={!filterKegiatan}
+                  disabled={!filterKomponen}
                   className={compactKelengkapanSelectClassName}
                   options={[
-                    { value: '', label: filterKegiatan ? 'Pilih Jenis Permintaan' : 'Pilih Kegiatan dulu' },
+                    { value: '', label: filterKomponen ? 'Pilih Jenis Permintaan' : 'Pilih Komponen dulu' },
                     ...jenisList.map(j => ({ value: j.id, label: j.nama })),
                   ]}
                 />
@@ -481,7 +538,7 @@ function KelengkapanPage() {
                     Konfigurasi Aktif
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-extrabold text-black">
-                    {getChainParts(filterFungsi, filterKegiatan, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, jenisList, kategoriList, detailList).map((part, index, parts) => (
+                    {getChainParts(filterFungsi, filterKegiatan, filterKomponen, filterJenis, filterKategori, filterDetail, fungsis, kegiatans, komponenList, jenisList, kategoriList, detailList).map((part, index, parts) => (
                       <span key={part + index} className="contents">
                         <span>{part}</span>
                         {index < parts.length - 1 && <span className="text-[#B4A89A]">{'>'}</span>}
@@ -618,19 +675,20 @@ function KelengkapanPage() {
 }
 
 function getChainLabel(
-  fungsiId: string, kegiatanId: string, jenisId: string, kategoriId: string, detailId: string,
-  fungsis: FungsiRow[], kegiatans: KegiatanRow[], jenisList: JenisRow[], kategoriList: KategoriRow[], detailList: DetailRow[]
+  fungsiId: string, kegiatanId: string, komponenId: string, jenisId: string, kategoriId: string, detailId: string,
+  fungsis: FungsiRow[], kegiatans: KegiatanRow[], komponenList: KomponenRow[], jenisList: JenisRow[], kategoriList: KategoriRow[], detailList: DetailRow[]
 ): string {
-  return getChainParts(fungsiId, kegiatanId, jenisId, kategoriId, detailId, fungsis, kegiatans, jenisList, kategoriList, detailList).join(' > ')
+  return getChainParts(fungsiId, kegiatanId, komponenId, jenisId, kategoriId, detailId, fungsis, kegiatans, komponenList, jenisList, kategoriList, detailList).join(' > ')
 }
 
 function getChainParts(
-  fungsiId: string, kegiatanId: string, jenisId: string, kategoriId: string, detailId: string,
-  fungsis: FungsiRow[], kegiatans: KegiatanRow[], jenisList: JenisRow[], kategoriList: KategoriRow[], detailList: DetailRow[]
+  fungsiId: string, kegiatanId: string, komponenId: string, jenisId: string, kategoriId: string, detailId: string,
+  fungsis: FungsiRow[], kegiatans: KegiatanRow[], komponenList: KomponenRow[], jenisList: JenisRow[], kategoriList: KategoriRow[], detailList: DetailRow[]
 ): string[] {
   const parts: string[] = []
   if (fungsiId) { const f = fungsis.find(f => f.id === fungsiId); if (f) parts.push(f.nama) }
   if (kegiatanId) { const k = kegiatans.find(k => k.id === kegiatanId); if (k) parts.push(k.nama) }
+  if (komponenId) { const c = komponenList.find(c => c.id === komponenId); if (c) parts.push(c.nama) }
   if (jenisId) { const j = jenisList.find(j => j.id === jenisId); if (j) parts.push(j.nama) }
   if (kategoriId) { const k = kategoriList.find(k => k.id === kategoriId); if (k) parts.push(k.nama) }
   if (detailId) { const d = detailList.find(d => d.id === detailId); if (d) parts.push(d.nama) }

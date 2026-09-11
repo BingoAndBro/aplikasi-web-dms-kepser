@@ -4,6 +4,7 @@ export const TABLES = {
   USER_STATUS: 'user_status',
   MASTER_FUNGSI: 'master_fungsi',
   MASTER_KEGIATAN: 'master_kegiatan',
+  MASTER_KOMPONEN: 'master_komponen',
   MASTER_KELENGKAPAN_DOKUMEN: 'master_kelengkapan_dokumen',
   MASTER_JENIS_PERMINTAAN: 'master_jenis_permintaan',
   MASTER_KATEGORI_PERMINTAAN: 'master_kategori_permintaan',
@@ -18,7 +19,6 @@ export const TABLES = {
   BERKAS_ARSIP_ITEM: 'berkas_arsip_item',
   MANUAL_ARSIP: 'manual_arsip',
   MANUAL_ARSIP_ATTACHMENT: 'manual_arsip_attachment',
-  MANUAL_ARSIP_CATEGORY: 'manual_arsip_category',
 } as const
 
 export const STORAGE_BUCKETS = {

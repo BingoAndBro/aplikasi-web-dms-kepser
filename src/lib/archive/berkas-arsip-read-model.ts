@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { z } from 'zod'
 
 import { users } from '#/db/schema/auth'
@@ -8,7 +9,6 @@ import {
   berkasArsipItem,
   manualArsip,
   manualArsipAttachment,
-  manualArsipCategory,
 } from '#/db/schema/arsip'
 import {
   isBerkasActivityEventType,
@@ -19,10 +19,10 @@ import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
   masterFungsi,
-  masterJenisDokumen,
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
+  masterKomponen,
 } from '#/db/schema/master'
 import {
   ARCHIVE_SOURCE_TYPE,
@@ -39,6 +39,11 @@ import {
   type SafeBerkasAttachmentName,
 } from '#/lib/archive/berkas-arsip-attachment-names'
 import { computeBerkasAging } from '#/lib/archive/retention'
+
+// Manual arsip and workflow dokumen both reference master_komponen, so the
+// combined item-source query needs two independent aliases for the same table.
+const workflowKomponen = alias(masterKomponen, 'workflow_komponen')
+const manualKomponen = alias(masterKomponen, 'manual_komponen')
 
 export const BERKAS_ARSIP_READ_MODEL_DEFAULT_LIMIT = 100
 export const BERKAS_ARSIP_READ_MODEL_MAX_LIMIT = 500
@@ -127,7 +132,7 @@ export type BerkasArsipDetailItemDto = {
   } | null
   manual: {
     nama: string | null
-    category_name: string | null
+    komponen_name: string | null
     keterangan: string | null
   } | null
   warnings: BerkasArsipDetailItemWarning[]
@@ -186,7 +191,8 @@ export type BerkasItemSourceReadRow = {
   workflow_lampiran_urls: unknown
   fungsi_nama: string | null
   kegiatan_nama: string | null
-  jenis_dokumen_nama: string | null
+  komponen_nama: string | null
+  nama_dokumen: string | null
   jenis_permintaan_nama: string | null
   kategori_permintaan_nama: string | null
   detail_permintaan_nama: string | null
@@ -194,7 +200,7 @@ export type BerkasItemSourceReadRow = {
   manual_date: Date | string | null
   manual_nominal_realisasi: string | number | null
   manual_created_by: string | null
-  manual_category_name: string | null
+  manual_komponen_name: string | null
   manual_keterangan: string | null
 }
 
@@ -355,7 +361,8 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
         workflow_lampiran_urls: dokumenTransaksi.lampiranUrls,
         fungsi_nama: masterFungsi.nama,
         kegiatan_nama: masterKegiatan.nama,
-        jenis_dokumen_nama: masterJenisDokumen.nama,
+        komponen_nama: workflowKomponen.nama,
+        nama_dokumen: dokumenTransaksi.namaDokumen,
         jenis_permintaan_nama: masterJenisPermintaan.nama,
         kategori_permintaan_nama: masterKategoriPermintaan.nama,
         detail_permintaan_nama: masterDetailPermintaan.nama,
@@ -363,19 +370,19 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
         manual_date: manualArsip.tanggal,
         manual_nominal_realisasi: manualArsip.nominalRealisasi,
         manual_created_by: manualArsip.createdBy,
-        manual_category_name: manualArsipCategory.nama,
+        manual_komponen_name: manualKomponen.nama,
         manual_keterangan: manualArsip.keterangan,
       })
       .from(berkasArsipItem)
       .leftJoin(dokumenTransaksi, eq(berkasArsipItem.dokumenId, dokumenTransaksi.id))
       .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
       .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
-      .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
+      .leftJoin(workflowKomponen, eq(dokumenTransaksi.komponenId, workflowKomponen.id))
       .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
       .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
       .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
       .leftJoin(manualArsip, eq(berkasArsipItem.manualArsipId, manualArsip.id))
-      .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
+      .leftJoin(manualKomponen, eq(manualArsip.komponenId, manualKomponen.id))
       .where(inArray(berkasArsipItem.berkasId, uniqueIds))
       .orderBy(berkasArsipItem.addedAt, berkasArsipItem.id) as Promise<BerkasItemSourceReadRow[]>
   },
@@ -622,7 +629,7 @@ function mapItemRowToDetailDto(
     manual: sourceType === ARCHIVE_SOURCE_TYPE.MANUAL
       ? {
         nama: trimToNull(row.manual_nama),
-        category_name: trimToNull(row.manual_category_name),
+        komponen_name: trimToNull(row.manual_komponen_name),
         keterangan: trimToNull(row.manual_keterangan),
       }
       : null,
@@ -813,7 +820,8 @@ function getAttachmentNames(
       tanggal: row.workflow_date,
       is_non_material: row.workflow_is_non_material,
       kegiatan_nama: row.kegiatan_nama,
-      jenis_dokumen_nama: row.jenis_dokumen_nama,
+      nama_dokumen: row.nama_dokumen,
+      komponen_nama: row.komponen_nama,
       jenis_permintaan_nama: row.jenis_permintaan_nama,
       kategori_permintaan_nama: row.kategori_permintaan_nama,
       detail_permintaan_nama: row.detail_permintaan_nama,
@@ -826,7 +834,7 @@ function getAttachmentNames(
     const document = {
       nama: row.manual_nama,
       tanggal: row.manual_date,
-      category_nama: row.manual_category_name,
+      komponen_nama: row.manual_komponen_name,
     }
 
     return (manualAttachments.get(manualArsipId) ?? [])

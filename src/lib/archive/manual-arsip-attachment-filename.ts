@@ -12,7 +12,7 @@ import { DOCUMENT_UPLOAD_EXTENSIONS_BY_MIME_TYPE } from '#/lib/upload/document-u
 
 const FALLBACK_ATTACHMENT_TITLE_SEGMENT = 'Lampiran'
 const FALLBACK_MANUAL_ARSIP_SEGMENT = 'Arsip'
-const FALLBACK_CATEGORY_SEGMENT = 'Kategori'
+const FALLBACK_KOMPONEN_SEGMENT = 'Komponen'
 const FALLBACK_DATE_SEGMENT = 'Tanggal'
 const MAX_FILENAME_LENGTH = 180
 const EXTENSIONS_BY_MANUAL_ARSIP_CONTENT_TYPE: Record<string, readonly string[]> =
@@ -35,7 +35,7 @@ export type ManualArsipAttachmentFilenameAttachment = {
 export type ManualArsipAttachmentFilenameDocument = {
   nama: string | null
   tanggal: string | Date | null
-  category_nama: string | null
+  komponen_nama: string | null
 }
 
 export function buildManualArsipAttachmentFilename(
@@ -45,7 +45,7 @@ export function buildManualArsipAttachmentFilename(
   const baseName = [
     sanitizeFilenameSegment(attachment.judul_lampiran, FALLBACK_ATTACHMENT_TITLE_SEGMENT),
     sanitizeFilenameSegment(document.nama, FALLBACK_MANUAL_ARSIP_SEGMENT),
-    sanitizeFilenameSegment(document.category_nama, FALLBACK_CATEGORY_SEGMENT),
+    sanitizeFilenameSegment(document.komponen_nama, FALLBACK_KOMPONEN_SEGMENT),
     sanitizeFilenameSegment(formatManualArsipDateSegment(document.tanggal), FALLBACK_DATE_SEGMENT),
   ].join('_')
   const extension = resolveManualArsipAttachmentExtension(attachment)

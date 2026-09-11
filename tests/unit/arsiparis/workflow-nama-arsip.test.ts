@@ -4,7 +4,7 @@ import { deriveWorkflowNamaArsip } from '#/lib/archive/workflow-nama-arsip'
 describe('deriveWorkflowNamaArsip', () => {
   it('combines document type and title when both are available', () => {
     expect(deriveWorkflowNamaArsip({
-      jenisDokumenNama: 'Laporan Kinerja',
+      namaDokumen: 'Laporan Kinerja',
       judul: '  Realisasi   Triwulan I  ',
       kegiatanNama: 'Kegiatan fallback',
     })).toBe('Laporan Kinerja - Realisasi Triwulan I')
@@ -24,7 +24,7 @@ describe('deriveWorkflowNamaArsip', () => {
 
     expect(deriveWorkflowNamaArsip({
       judul: '   ',
-      jenisDokumenNama: null,
+      namaDokumen: null,
       kegiatanNama: '',
     })).toBe('Arsip Dokumen')
   })

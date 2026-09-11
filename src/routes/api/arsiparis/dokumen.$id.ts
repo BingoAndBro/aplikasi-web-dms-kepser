@@ -9,10 +9,19 @@ import {
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
+  masterKomponen,
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 import { parseLampiranUrls } from '#/lib/dokumen'
+
+function normalizeNumericValue(value: string | number | null): number | null {
+  if (value === null) return null
+  if (typeof value === 'number') return value
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -61,6 +70,11 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
               tahun: dokumenTransaksi.tahun,
               tanggal: dokumenTransaksi.tanggal,
               created_by: dokumenTransaksi.createdBy,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              nama_dokumen: dokumenTransaksi.namaDokumen,
+              komponen_id: dokumenTransaksi.komponenId,
+              komponen_nama: masterKomponen.nama,
               jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
               kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
@@ -71,6 +85,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterKomponen, eq(dokumenTransaksi.komponenId, masterKomponen.id))
             .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
             .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
             .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
@@ -123,6 +138,11 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
               judul: dok.judul,
               fungsi: { id: dok.fungsi_id ?? '', nama: dok.fungsi_nama ?? '\u2014' },
               kegiatan: { id: dok.kegiatan_jenis_id ?? '', nama: dok.kegiatan_nama ?? '\u2014' },
+              is_non_material: dok.is_non_material ?? false,
+              nominal_realisasi: normalizeNumericValue(dok.nominal_realisasi),
+              nama_dokumen: dok.nama_dokumen,
+              komponen_id: dok.komponen_id,
+              komponen_nama: dok.komponen_nama ?? undefined,
               jenis_permintaan_id: dok.jenis_permintaan_id,
               jenis_permintaan_nama: dok.jenis_permintaan_nama ?? undefined,
               kategori_permintaan_id: dok.kategori_permintaan_id,

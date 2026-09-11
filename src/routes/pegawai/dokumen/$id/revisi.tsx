@@ -88,6 +88,7 @@ function getSafeErrorMessage(error: unknown, fallback: string): string {
 type KelengkapanApiItem = KelengkapanItem & {
   kegiatan_id?: string | null
   is_ketua_tim?: boolean
+  komponen_permintaan_id?: string | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -105,6 +106,13 @@ function matchesCurrentChain(item: KelengkapanApiItem, dokumen: DokumenRow): boo
 
   if (dokumen.jenis_permintaan_id) {
     return item.jenis_permintaan_id === dokumen.jenis_permintaan_id
+      && item.kategori_permintaan_id == null
+      && item.detail_permintaan_id == null
+  }
+
+  if (dokumen.komponen_id) {
+    return item.komponen_permintaan_id === dokumen.komponen_id
+      && item.jenis_permintaan_id == null
       && item.kategori_permintaan_id == null
       && item.detail_permintaan_id == null
   }
@@ -443,6 +451,7 @@ function DokumenRevisiPage() {
   const metadataItems = [
     ['Fungsi', dok.fungsi_nama ?? '-'],
     ['Kegiatan', dok.kegiatan_nama ?? '-'],
+    ...(dok.komponen_id ? [['Komponen', dok.komponen_nama ?? '-']] : []),
     ...(dok.jenis_permintaan_id ? [['Jenis Permintaan', dok.jenis_permintaan_nama ?? '-']] : []),
     ...(dok.kategori_permintaan_id ? [['Kategori Permintaan', dok.kategori_permintaan_nama ?? '-']] : []),
     ...(dok.detail_permintaan_id ? [['Detail Permintaan', dok.detail_permintaan_nama ?? '-']] : []),

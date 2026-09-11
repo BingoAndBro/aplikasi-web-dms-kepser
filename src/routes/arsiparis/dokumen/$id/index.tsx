@@ -168,6 +168,9 @@ type DokumenDetail = {
   detail_permintaan_nama?: string
   jenis_dokumen_nama?: string
   jenis_dokumen_id?: string | null
+  komponen_id?: string | null
+  komponen_nama?: string
+  nama_dokumen?: string | null
 }
 
 const DETAIL_TABS = [
@@ -578,6 +581,12 @@ function ArsiparisDokumenDetailPage() {
           <div className="grid gap-x-10 gap-y-4 md:grid-cols-2 [&>div]:min-w-0 [&_p:first-child]:mb-1 [&_p:first-child]:text-[9px] [&_p:first-child]:font-black [&_p:first-child]:uppercase [&_p:first-child]:tracking-[0.18em] [&_p:first-child]:text-zinc-500 [&_p:last-child]:break-words [&_p:last-child]:text-[13px] [&_p:last-child]:font-bold [&_p:last-child]:leading-snug [&_p:last-child]:text-zinc-950 sm:[&_p:last-child]:text-sm">
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Fungsi</p><p className="text-sm font-semibold text-on-surface">{dokumen.fungsi.nama ?? '—'}</p></div>
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Kegiatan</p><p className="text-sm font-semibold text-on-surface">{dokumen.kegiatan.nama ?? '—'}</p></div>
+            {dokumen.komponen_id && (
+              <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Komponen</p><p className="text-sm font-semibold text-on-surface">{dokumen.komponen_nama ?? '—'}</p></div>
+            )}
+            {dokumen.is_non_material && (
+              <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Nama Dokumen</p><p className="text-sm font-semibold text-on-surface">{dokumen.nama_dokumen ?? '—'}</p></div>
+            )}
             {dokumen.jenis_permintaan_id && (
               <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Jenis Permintaan</p><p className="text-sm font-semibold text-on-surface">{dokumen.jenis_permintaan_nama ?? '—'}</p></div>
             )}

@@ -12,6 +12,7 @@ interface StepReviewProps {
   lampiranUrls: LampiranUrl[]
   nominalRealisasi: string | null
   isNonMaterial: boolean
+  komponenNama?: string
   jenisPermintaanNama: string
   kategoriPermintaanNama?: string
   detailPermintaanNama?: string
@@ -32,6 +33,7 @@ export function StepReview({
   lampiranUrls,
   nominalRealisasi,
   isNonMaterial,
+  komponenNama,
   jenisPermintaanNama,
   kategoriPermintaanNama,
   detailPermintaanNama,
@@ -53,6 +55,7 @@ export function StepReview({
         lampiranUrls={lampiranUrls}
         nominalRealisasi={nominalRealisasi}
         isNonMaterial={isNonMaterial}
+        komponenNama={komponenNama}
         jenisPermintaanNama={jenisPermintaanNama}
         kategoriPermintaanNama={kategoriPermintaanNama}
         detailPermintaanNama={detailPermintaanNama}

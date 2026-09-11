@@ -96,6 +96,7 @@ function LaporanSayaPage() {
       .filter(d => {
         if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
         if (filter.kegiatanId && d.kegiatan_jenis_id !== filter.kegiatanId) return false
+        if (filter.komponenId && d.komponen_id !== filter.komponenId) return false
         if (filter.jenisId && d.jenis_permintaan_id !== filter.jenisId) return false
         if (filter.kategoriId && d.kategori_permintaan_id !== filter.kategoriId) return false
         if (filter.detailId && d.detail_permintaan_id !== filter.detailId) return false
@@ -107,6 +108,8 @@ function LaporanSayaPage() {
           d.judul,
           d.fungsi_nama,
           d.kegiatan_nama,
+          d.komponen_nama,
+          d.nama_dokumen,
           d.leaf_node_nama,
           d.jenis_permintaan_nama,
           d.kategori_permintaan_nama,
@@ -529,6 +532,7 @@ function countActiveFilters(filter: HierarchicalFilterValue) {
   return [
     filter.fungsiId,
     filter.kegiatanId,
+    filter.komponenId,
     filter.jenisId,
     filter.kategoriId,
     filter.detailId,

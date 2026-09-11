@@ -10,11 +10,12 @@ export function buildFormalFilename(dok: DokumenRow, lamp: LampiranUrl): string 
 
   let leafNode: string
   if (dok.is_non_material) {
-    leafNode = (dok as any).jenis_dokumen_nama || 'Dokumen'
+    leafNode = (dok as any).nama_dokumen || 'Dokumen'
   } else {
     leafNode = (dok as any).detail_permintaan_nama
       || (dok as any).kategori_permintaan_nama
       || (dok as any).jenis_permintaan_nama
+      || (dok as any).komponen_nama
       || kegiatanNama
   }
 

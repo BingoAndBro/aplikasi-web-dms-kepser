@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const source = readFileSync('src/routes/pegawai/dokumen/$id/revisi.tsx', 'utf8')
-const editorSource = readFileSync('src/components/dokumen/AttachmentEditor.tsx', 'utf8')
+const source = readFileSync('src/routes/pegawai/dokumen/$id/revisi.tsx', 'utf8').replace(/\r\n/g, '\n')
+const editorSource = readFileSync('src/components/dokumen/AttachmentEditor.tsx', 'utf8').replace(/\r\n/g, '\n')
 
 describe('Phase 15L.2 Revisi Dokumen parity source guard', () => {
   it('uses sectioned Revisi presentation with review and history tabs', () => {

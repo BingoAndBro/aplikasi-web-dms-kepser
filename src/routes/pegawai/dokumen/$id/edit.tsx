@@ -46,12 +46,15 @@ function EditDokumenPage() {
   const [dok, setDok] = useState<DokumenRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [namaDokumen, setNamaDokumen] = useState('')
+  const [originalNamaDokumen, setOriginalNamaDokumen] = useState('')
   const [keteranganDetail, setKeteranganDetail] = useState('')
   const [originalKeteranganDetail, setOriginalKeteranganDetail] = useState('')
   const [attachmentDirty, setAttachmentDirty] = useState(false)
   const [guardEnabled, setGuardEnabled] = useState(true)
 
   const isDirty = guardEnabled && (
+    namaDokumen !== originalNamaDokumen ||
     keteranganDetail !== originalKeteranganDetail ||
     attachmentDirty
   )
@@ -82,7 +85,10 @@ function EditDokumenPage() {
 
       setDok(dokumen)
 
-      // Initialize keterangan detail
+      // Initialize nama dokumen + keterangan detail
+      const nama = dokumen.nama_dokumen ?? ''
+      setNamaDokumen(nama)
+      setOriginalNamaDokumen(nama)
       const ketDetail = dokumen.keterangan_detail ?? ''
       setKeteranganDetail(ketDetail)
       setOriginalKeteranganDetail(ketDetail)
@@ -104,6 +110,15 @@ function EditDokumenPage() {
   }
 
   async function handleSubmit(data: { lampiranUrls: LampiranUrl[]; nominalRealisasi: number | null }) {
+    if (!namaDokumen.trim()) {
+      showToast({
+        title: 'Data belum lengkap',
+        description: 'Nama Dokumen wajib diisi.',
+        variant: 'warning',
+      })
+      return
+    }
+
     setLoading(true)
     setGuardEnabled(false)
     try {
@@ -111,10 +126,12 @@ function EditDokumenPage() {
         method: 'PATCH',
         body: {
           lampiranUrls: data.lampiranUrls,
+          namaDokumen: namaDokumen.trim(),
           keteranganDetail: keteranganDetail || null,
         },
       })
 
+      setOriginalNamaDokumen(namaDokumen.trim())
       setOriginalKeteranganDetail(keteranganDetail)
       setAttachmentDirty(false)
       setGuardEnabled(false)
@@ -221,8 +238,23 @@ function EditDokumenPage() {
               <p className="font-semibold">{dok.tanggal ? formatDate(dok.tanggal) : '—'}</p>
             </div>
           </div>
+          <div className="mb-4">
+            <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">
+              Nama Dokumen <span className="text-error">*</span>
+            </p>
+            <input
+              type="text"
+              value={namaDokumen}
+              onChange={e => setNamaDokumen(e.target.value)}
+              placeholder="Contoh: Laporan Kegiatan Bulanan"
+              maxLength={255}
+              className="w-full px-3 py-2 border border-outline rounded-lg text-sm bg-surface text-on-surface
+                focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+                placeholder:text-outline"
+            />
+          </div>
           <div>
-            <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Keterangan Detail</p>
+            <p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Keterangan Detail (opsional)</p>
             <textarea
               value={keteranganDetail}
               onChange={e => setKeteranganDetail(e.target.value)}

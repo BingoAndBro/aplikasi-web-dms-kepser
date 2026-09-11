@@ -10,6 +10,7 @@ import {
   masterKategoriPermintaan,
   masterKegiatan,
   masterKelengkapanDokumen,
+  masterKomponen,
 } from '../schema/master'
 import { SEED_MASTER_IDS, SEED_USER_IDS } from './constants'
 
@@ -43,9 +44,22 @@ export async function seedMasterData(database: SeedDb) {
   const kegiatanId = await findIdByName(database, masterKegiatan, masterKegiatan.nama, 'Dev Kegiatan')
 
   await database
+    .insert(masterKomponen)
+    .values({
+      id: SEED_MASTER_IDS.komponen,
+      kegiatanId,
+      nama: 'Dev Komponen',
+      deskripsi: 'Minimal component for local workflow testing',
+      isActive: true,
+    })
+    .onConflictDoNothing()
+  const komponenId = await findIdByName(database, masterKomponen, masterKomponen.nama, 'Dev Komponen')
+
+  await database
     .insert(masterJenisPermintaan)
     .values({
       id: SEED_MASTER_IDS.jenisPermintaan,
+      komponenId,
       nama: 'Dev Material',
       deskripsi: 'Minimal material request type for development',
       isActive: true,
@@ -111,6 +125,7 @@ export async function seedMasterData(database: SeedDb) {
         isKetuaTim: false,
         namaDokumen: 'Surat Tugas',
         required: true,
+        komponenId,
         jenisPermintaanId,
         kategoriPermintaanId,
         detailPermintaanId,
@@ -121,6 +136,7 @@ export async function seedMasterData(database: SeedDb) {
         isKetuaTim: false,
         namaDokumen: 'Form Permintaan',
         required: true,
+        komponenId,
         jenisPermintaanId,
         kategoriPermintaanId,
         detailPermintaanId,
@@ -131,6 +147,7 @@ export async function seedMasterData(database: SeedDb) {
         isKetuaTim: true,
         namaDokumen: 'Surat Tugas',
         required: true,
+        komponenId,
         jenisPermintaanId,
         kategoriPermintaanId,
         detailPermintaanId,
@@ -156,7 +173,7 @@ export async function seedMasterData(database: SeedDb) {
       },
     })
 
-  return { kegiatanId }
+  return { kegiatanId, komponenId }
 }
 
 export async function seedKetuaTimFixture(

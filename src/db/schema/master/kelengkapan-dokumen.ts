@@ -12,6 +12,7 @@ import { masterDetailPermintaan } from './detail-permintaan'
 import { masterJenisPermintaan } from './jenis-permintaan'
 import { masterKategoriPermintaan } from './kategori-permintaan'
 import { masterKegiatan } from './kegiatan'
+import { masterKomponen } from './komponen'
 
 const masterSchema = pgSchema('master')
 
@@ -25,6 +26,8 @@ export const masterKelengkapanDokumen = masterSchema.table(
     isKetuaTim: boolean('is_ketua_tim').notNull(),
     namaDokumen: text('nama_dokumen').notNull(),
     required: boolean('required').notNull().default(true),
+    komponenId: uuid('komponen_id')
+      .references(() => masterKomponen.id, { onDelete: 'restrict' }),
     jenisPermintaanId: uuid('jenis_permintaan_id')
       .references(() => masterJenisPermintaan.id, { onDelete: 'restrict' }),
     kategoriPermintaanId: uuid('kategori_permintaan_id')
@@ -40,9 +43,14 @@ export const masterKelengkapanDokumen = masterSchema.table(
     index('idx_master_kelengkapan_chain').on(
       table.kegiatanId,
       table.isKetuaTim,
+      table.komponenId,
       table.jenisPermintaanId,
       table.kategoriPermintaanId,
       table.detailPermintaanId,
+    ),
+    check(
+      'master_kelengkapan_jenis_requires_komponen_check',
+      sql`${table.jenisPermintaanId} is null or ${table.komponenId} is not null`,
     ),
     check(
       'master_kelengkapan_kategori_requires_jenis_check',

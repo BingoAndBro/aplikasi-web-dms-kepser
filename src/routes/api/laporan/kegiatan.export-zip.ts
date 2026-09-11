@@ -10,6 +10,7 @@ import {
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
+  masterKomponen,
 } from '#/db/schema/master'
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import { parseLampiranUrls } from '#/lib/dokumen'
@@ -92,9 +93,12 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
               is_non_material: dokumenTransaksi.isNonMaterial,
               jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
+              nama_dokumen: dokumenTransaksi.namaDokumen,
               keterangan_detail: dokumenTransaksi.keteranganDetail,
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,
+              komponen_id: dokumenTransaksi.komponenId,
+              komponen_nama: masterKomponen.nama,
               jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
               kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
@@ -106,6 +110,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             })
             .from(dokumenTransaksi)
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterKomponen, eq(dokumenTransaksi.komponenId, masterKomponen.id))
             .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
             .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
             .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
@@ -122,8 +127,11 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
             is_non_material: row.is_non_material ?? false,
             jenis_dokumen_id: row.jenis_dokumen_id ?? null,
+            nama_dokumen: row.nama_dokumen ?? null,
             keterangan_detail: row.keterangan_detail ?? null,
             kegiatan_nama: row.kegiatan_nama ?? undefined,
+            komponen_id: row.komponen_id ?? null,
+            komponen_nama: row.komponen_nama ?? undefined,
             jenis_permintaan_nama: row.jenis_permintaan_nama ?? undefined,
             kategori_permintaan_nama: row.kategori_permintaan_nama ?? undefined,
             detail_permintaan_nama: row.detail_permintaan_nama ?? undefined,

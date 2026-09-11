@@ -12,8 +12,8 @@ export function storagePathBelongsToUser(path: string, userId: string): boolean 
  * Membangun nama file formal berdasarkan metadata dokumen.
  *
  * FORMAT:
- * - Material: [Kelengkapan]_[Detail/Kategori/Jenis_Permintaan]_[Kegiatan]_[YYYY-MM-DD].ext
- * - Non-Material: [Kelengkapan]_[Jenis_Dokumen_Nama]_[Kegiatan]_[YYYY-MM-DD].ext
+ * - Material: [Kelengkapan]_[Detail/Kategori/Jenis_Permintaan/Komponen]_[Kegiatan]_[YYYY-MM-DD].ext
+ * - Non-Material: [Kelengkapan]_[Nama_Dokumen]_[Kegiatan]_[YYYY-MM-DD].ext
  *
  * Contoh Material: "Daftar_Nilai_Translok>8_Jam_SAKERNAS_2026-05-05.pdf"
  * Contoh Non-Material: "Notulen_Rapat_Service_2026-05-05.pdf"
@@ -26,13 +26,14 @@ export function buildDokumenFilename(dok: DokumenRow, lamp: LampiranUrl): string
   // Tentukan leaf node berdasarkan tipe dokumen
   let leafNode: string
   if (dok.is_non_material) {
-    // Non-Material: gunakan jenis_dokumen_nama dari master_jenis_dokumen
-    leafNode = dok.jenis_dokumen_nama || 'Dokumen'
+    // Non-Material: gunakan nama_dokumen bebas yang diketik pegawai
+    leafNode = dok.nama_dokumen || 'Dokumen'
   } else {
     // Material: leaf node dari permintaan chain
     leafNode = dok.detail_permintaan_nama
       || dok.kategori_permintaan_nama
       || dok.jenis_permintaan_nama
+      || dok.komponen_nama
       || kegiatanNama
   }
 

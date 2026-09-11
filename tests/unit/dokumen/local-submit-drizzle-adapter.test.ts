@@ -11,6 +11,7 @@ import {
   masterKategoriPermintaan,
   masterKegiatan,
   masterKelengkapanDokumen,
+  masterKomponen,
 } from '#/db/schema'
 import {
   createLiveLocalSubmitDrizzleAdapter,
@@ -38,6 +39,7 @@ const JENIS_ID = '55555555-5555-4555-8555-555555555555'
 const KATEGORI_ID = '66666666-6666-4666-8666-666666666666'
 const DETAIL_ID = '77777777-7777-4777-8777-777777777777'
 const LAMPIRAN_ID = '88888888-8888-4888-8888-888888888888'
+const KOMPONEN_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const CREATED_AT = new Date('2026-05-16T01:00:00.000Z')
 const UPDATED_AT = new Date('2026-05-16T02:00:00.000Z')
 
@@ -69,6 +71,10 @@ describe('local submit Drizzle adapter foundation', () => {
       id: JENIS_ID,
       nama: 'Dev Jenis Dokumen',
     })
+    await expect(adapter.selectKomponenById(KOMPONEN_ID)).resolves.toEqual({
+      id: KOMPONEN_ID,
+      nama: 'Dev Komponen',
+    })
     await expect(adapter.selectJenisPermintaanById(JENIS_ID)).resolves.toEqual({
       id: JENIS_ID,
       nama: 'Dev Jenis Permintaan',
@@ -90,6 +96,7 @@ describe('local submit Drizzle adapter foundation', () => {
       ['select', 'masterKegiatan', ['fungsiId', 'id', 'nama'], 1],
       ['select', 'masterKelengkapanDokumen', ['id', 'namaDokumen', 'required'], 1000],
       ['select', 'masterJenisDokumen', ['id', 'nama'], 1],
+      ['select', 'masterKomponen', ['id', 'nama'], 1],
       ['select', 'masterJenisPermintaan', ['id', 'nama'], 1],
       ['select', 'masterKategoriPermintaan', ['id', 'nama'], 1],
       ['select', 'masterDetailPermintaan', ['id', 'nama'], 1],
@@ -119,6 +126,7 @@ describe('local submit Drizzle adapter foundation', () => {
       ['insert', 'dokumenTransaksi', mapLocalSubmitDocumentCreateToInsert(documentCreatePayload())],
       ['select', 'masterFungsi', ['nama'], 1],
       ['select', 'masterKegiatan', ['nama'], 1],
+      ['select', 'masterKomponen', ['nama'], 1],
       ['update', 'dokumenTransaksi', {
         status: 'IN_PPK_VALIDATION',
         currentStep: 'PPK',
@@ -174,6 +182,7 @@ describe('local submit Drizzle adapter foundation', () => {
       ['insert', 'dokumenTransaksi', mapLocalSubmitDocumentCreateToInsert(documentCreatePayload())],
       ['select', 'masterFungsi', ['nama'], 1],
       ['select', 'masterKegiatan', ['nama'], 1],
+      ['select', 'masterKomponen', ['nama'], 1],
       ['update', 'dokumenTransaksi', {
         status: 'IN_PPK_VALIDATION',
         currentStep: 'PPK',
@@ -296,6 +305,7 @@ function selectRowsFor(table: unknown, projection: Record<string, unknown>): unk
     return [{ id: LAMPIRAN_ID, namaDokumen: 'Surat Tugas', required: true }]
   }
   if (table === masterJenisDokumen) return [{ id: JENIS_ID, nama: 'Dev Jenis Dokumen' }]
+  if (table === masterKomponen) return [{ id: KOMPONEN_ID, nama: 'Dev Komponen' }]
   if (table === masterJenisPermintaan) return [{ id: JENIS_ID, nama: 'Dev Jenis Permintaan' }]
   if (table === masterKategoriPermintaan) return [{ id: KATEGORI_ID, nama: 'Dev Kategori' }]
   if (table === masterDetailPermintaan) return [{ id: DETAIL_ID, nama: 'Dev Detail' }]
@@ -310,6 +320,7 @@ function tableName(table: unknown): string {
   if (table === masterKegiatan) return 'masterKegiatan'
   if (table === masterKelengkapanDokumen) return 'masterKelengkapanDokumen'
   if (table === masterJenisDokumen) return 'masterJenisDokumen'
+  if (table === masterKomponen) return 'masterKomponen'
   if (table === masterJenisPermintaan) return 'masterJenisPermintaan'
   if (table === masterKategoriPermintaan) return 'masterKategoriPermintaan'
   if (table === masterDetailPermintaan) return 'masterDetailPermintaan'
@@ -375,7 +386,9 @@ function documentCreatePayload(): LocalSubmitDocumentCreatePayload {
     nominalRealisasi: 125000.5,
     isNonMaterial: false,
     jenisDokumenId: null,
+    namaDokumen: null,
     keteranganDetail: null,
+    komponenId: KOMPONEN_ID,
     jenisPermintaanId: JENIS_ID,
     kategoriPermintaanId: KATEGORI_ID,
     detailPermintaanId: DETAIL_ID,
@@ -400,7 +413,9 @@ function dokumenRow(values: ReturnType<typeof mapLocalSubmitDocumentCreateToInse
     nominalRealisasi: values.nominalRealisasi,
     isNonMaterial: values.isNonMaterial,
     jenisDokumenId: values.jenisDokumenId,
+    namaDokumen: values.namaDokumen,
     keteranganDetail: values.keteranganDetail,
+    komponenId: values.komponenId,
     jenisPermintaanId: values.jenisPermintaanId,
     kategoriPermintaanId: values.kategoriPermintaanId,
     detailPermintaanId: values.detailPermintaanId,

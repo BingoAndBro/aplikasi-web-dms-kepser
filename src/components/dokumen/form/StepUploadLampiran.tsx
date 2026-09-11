@@ -18,7 +18,9 @@ interface StepUploadLampiranProps {
   kegiatanId: string
   fungsiNama: string
   kegiatanNama: string
-  jenisDokumenNama: string
+  komponenId: string
+  komponenNama: string
+  namaDokumen: string
   jenisPermintaanId: string
   jenisPermintaanNama: string
   kategoriPermintaanId: string
@@ -48,7 +50,9 @@ export function StepUploadLampiran({
   kegiatanId,
   fungsiNama,
   kegiatanNama,
-  jenisDokumenNama,
+  komponenId,
+  komponenNama,
+  namaDokumen,
   jenisPermintaanId,
   jenisPermintaanNama,
   kategoriPermintaanId,
@@ -73,7 +77,8 @@ export function StepUploadLampiran({
   const contextParts = [
     fungsiNama,
     kegiatanNama,
-    isNonMaterial ? jenisDokumenNama : jenisPermintaanNama,
+    !isNonMaterial ? komponenNama : '',
+    isNonMaterial ? namaDokumen : jenisPermintaanNama,
     !isNonMaterial ? kategoriPermintaanNama : '',
     !isNonMaterial ? detailPermintaanNama : '',
   ].filter(Boolean)
@@ -127,6 +132,7 @@ export function StepUploadLampiran({
         initialLampirans={lampiranUrls}
         onComplete={onKelengkapanComplete}
         onDirtyChange={onAttachmentDirtyChange}
+        komponenId={!isNonMaterial ? komponenId || undefined : undefined}
         jenisPermintaanId={!isNonMaterial ? jenisPermintaanId || undefined : undefined}
         kategoriPermintaanId={!isNonMaterial ? kategoriPermintaanId || undefined : undefined}
         detailPermintaanId={!isNonMaterial ? detailPermintaanId || undefined : undefined}
@@ -135,21 +141,20 @@ export function StepUploadLampiran({
 
       <div className="space-y-2 border-t border-[#F0E1D5] pt-4">
         <label className="text-[11px] font-semibold text-stone-700">
-          {isNonMaterial ? 'Keterangan Detail Dokumen' : 'Nominal Realisasi'}
-          {' '}
-          <span className="text-[#D97706]">*</span>
+          {isNonMaterial ? 'Keterangan Detail Dokumen (opsional)' : 'Nominal Realisasi'}
+          {!isNonMaterial && <> <span className="text-[#D97706]">*</span></>}
         </label>
         {isNonMaterial ? (
           <>
             <textarea
               value={keteranganDetail}
               onChange={(e) => onKeteranganDetailChange(e.target.value)}
-              placeholder="Masukkan keterangan detail dokumen..."
+              placeholder="Masukkan keterangan detail dokumen (opsional)..."
               rows={5}
               className="min-h-32 w-full resize-none rounded-2xl border border-[#F0E1D5] bg-[#FFFAF6] px-4 py-3.5 text-sm leading-relaxed text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-[#F97316] focus:ring-2 focus:ring-[#FFEDD5]"
             />
             <p className="text-[10px] leading-relaxed text-stone-500">
-              Jelaskan konteks singkat dokumen Non-Material.
+              Jelaskan konteks singkat dokumen Non-Material (opsional).
             </p>
           </>
         ) : (

@@ -1,6 +1,6 @@
 /**
  * HierarchicalFilter — Filter bertahap dokumen laporan.
- * Urutan: Fungsi → Kegiatan → Jenis → Kategori → Detail
+ * Urutan: Fungsi → Kegiatan → Komponen → Jenis → Kategori → Detail
  * Tiap level hanya muncul setelah level sebelumnya dipilih.
  *
  * Dipakai di: Laporan Saya & Laporan Kegiatan
@@ -26,6 +26,7 @@ import { X } from 'lucide-react'
 export interface HierarchicalFilterValue {
   fungsiId?: string
   kegiatanId?: string
+  komponenId?: string
   jenisId?: string
   kategoriId?: string
   detailId?: string
@@ -56,7 +57,17 @@ type KegiatanOption = MasterOptionRow & {
   master_fungsi?: { id?: string; nama: string | null } | null
 }
 
-type JenisOption = MasterOptionRow
+type KomponenOption = MasterOptionRow & {
+  kegiatan_id: string
+  kegiatan_nama?: string
+  master_kegiatan?: { id?: string; nama: string | null } | null
+}
+
+type JenisOption = MasterOptionRow & {
+  komponen_id: string
+  komponen_nama?: string
+  master_komponen?: { id?: string; nama: string | null } | null
+}
 
 type KategoriOption = MasterOptionRow & {
   jenis_permintaan_id: string
@@ -95,14 +106,14 @@ async function fetchMasterList<T>(
 export function HierarchicalFilter({ value, onChange, showDateRange = true }: Props) {
   const [fungsis, setFungsis] = useState<FungsiOption[]>([])
   const [kegiatans, setKegiatans] = useState<KegiatanOption[]>([])
+  const [komponenList, setKomponenList] = useState<KomponenOption[]>([])
   const [jenisList, setJenisList] = useState<JenisOption[]>([])
   const [kategoriList, setKategoriList] = useState<KategoriOption[]>([])
   const [detailList, setDetailList] = useState<DetailOption[]>([])
 
-  // Init: load Fungsi & Jenis
+  // Init: load Fungsi
   useEffect(() => {
     fetchMasterList<FungsiOption>('/master-fungsi', 'fungsi').then(data => setFungsis(data))
-    fetchMasterList<JenisOption>('/master-jenis', 'jenis permintaan').then(data => setJenisList(data))
   }, [])
 
   // Kegiatan: muncul setelah Fungsi dipilih
@@ -117,6 +128,34 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
       setKegiatans([])
     }
   }, [value.fungsiId])
+
+  // Komponen: muncul setelah Kegiatan dipilih
+  useEffect(() => {
+    if (value.kegiatanId) {
+      fetchMasterList<KomponenOption>(
+        '/master-komponen',
+        'komponen',
+        { kegiatan_id: value.kegiatanId },
+      ).then(data => setKomponenList(data))
+    } else {
+      setKomponenList([])
+    }
+  }, [value.kegiatanId])
+
+  // Jenis Permintaan: muncul setelah Komponen dipilih
+  useEffect(() => {
+    if (value.komponenId) {
+      fetchMasterList<JenisOption>(
+        '/master-jenis',
+        'jenis permintaan',
+        { komponen_id: value.komponenId },
+      ).then(data => setJenisList(data))
+    } else {
+      setJenisList([])
+      setKategoriList([])
+      setDetailList([])
+    }
+  }, [value.komponenId])
 
   // Kategori: muncul setelah Jenis dipilih
   useEffect(() => {
@@ -146,10 +185,21 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
   }, [value.kategoriId])
 
   function handleFungsi(fungsiId: string) {
-    onChange({ ...value, fungsiId, kegiatanId: undefined })
+    onChange({
+      ...value,
+      fungsiId,
+      kegiatanId: undefined,
+      komponenId: undefined,
+      jenisId: undefined,
+      kategoriId: undefined,
+      detailId: undefined,
+    })
   }
   function handleKegiatan(kegiatanId: string) {
-    onChange({ ...value, kegiatanId })
+    onChange({ ...value, kegiatanId, komponenId: undefined, jenisId: undefined, kategoriId: undefined, detailId: undefined })
+  }
+  function handleKomponen(komponenId: string) {
+    onChange({ ...value, komponenId, jenisId: undefined, kategoriId: undefined, detailId: undefined })
   }
   function handleJenis(jenisId: string) {
     onChange({ ...value, jenisId, kategoriId: undefined, detailId: undefined })
@@ -165,7 +215,7 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
   }
 
   const hasAnyFilter = !!(
-    value.fungsiId || value.kegiatanId || value.jenisId ||
+    value.fungsiId || value.kegiatanId || value.komponenId || value.jenisId ||
     value.kategoriId || value.detailId ||
     value.tanggalMulai || value.tanggalAkhir
   )
@@ -236,9 +286,31 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
         </div>
       </div>
 
-      {/* Row 2: Jenis + Kategori */}
+      {/* Row 2: Komponen + Jenis Permintaan */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" hidden={!value.kegiatanId}>
+          <Label className="text-xs">Komponen</Label>
+          <Select
+            value={value.komponenId ?? ''}
+            onValueChange={v => handleKomponen((v ?? '') === '_all' ? '' : (v ?? ''))}
+          >
+            <SelectTrigger className="h-9 text-sm">
+              <SelectValue placeholder="Semua Komponen">
+                {value.komponenId && komponenList.length > 0
+                  ? komponenList.find(c => c.id === value.komponenId)?.nama ?? value.komponenId
+                  : undefined}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">Semua Komponen</SelectItem>
+              {komponenList.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.nama}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5" hidden={!value.komponenId}>
           <Label className="text-xs">Jenis Permintaan</Label>
           <Select
             value={value.jenisId ?? ''}
@@ -259,7 +331,10 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
             </SelectContent>
           </Select>
         </div>
+      </div>
 
+      {/* Row 3: Kategori */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5" hidden={!value.jenisId}>
           <Label className="text-xs">Kategori Permintaan</Label>
           <Select
@@ -283,7 +358,7 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
         </div>
       </div>
 
-      {/* Row 3: Detail (jika ada) */}
+      {/* Row 4: Detail (jika ada) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" hidden={!value.kategoriId || detailList.length === 0}>
         <div className="space-y-1.5">
           <Label className="text-xs">Detail Permintaan</Label>
@@ -308,7 +383,7 @@ export function HierarchicalFilter({ value, onChange, showDateRange = true }: Pr
         </div>
       </div>
 
-      {/* Row 4: Date Range */}
+      {/* Row 5: Date Range */}
       {showDateRange && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">

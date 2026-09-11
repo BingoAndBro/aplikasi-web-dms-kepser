@@ -1,5 +1,6 @@
 export * from './fungsi'
 export * from './kegiatan'
+export * from './komponen'
 export * from './jenis-permintaan'
 export * from './kategori-permintaan'
 export * from './detail-permintaan'

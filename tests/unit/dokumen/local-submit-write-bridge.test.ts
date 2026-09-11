@@ -26,6 +26,7 @@ const JENIS_DOKUMEN_ID = '88888888-8888-4888-8888-888888888888'
 const DOKUMEN_ID = '99999999-9999-4999-8999-999999999999'
 const REQUIRED_A_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const REQUIRED_B_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const KOMPONEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const NOW = new Date('2026-05-16T10:00:00.000Z')
 
 describe('local submit write bridge helper foundation', () => {
@@ -94,6 +95,7 @@ describe('local submit write bridge helper foundation', () => {
       ['getRequiredKelengkapan', {
         kegiatanId: KEGIATAN_ID,
         isKetuaTim: true,
+        komponenId: KOMPONEN_ID,
         jenisPermintaanId: JENIS_ID,
         kategoriPermintaanId: KATEGORI_ID,
         detailPermintaanId: DETAIL_ID,
@@ -114,6 +116,7 @@ describe('local submit write bridge helper foundation', () => {
       revisionNotes: null,
       nominalRealisasi: 125000,
       isNonMaterial: false,
+      komponenId: KOMPONEN_ID,
       jenisPermintaanId: JENIS_ID,
       kategoriPermintaanId: KATEGORI_ID,
       detailPermintaanId: DETAIL_ID,
@@ -161,7 +164,9 @@ describe('local submit write bridge helper foundation', () => {
         is_non_material: true,
         nominal_realisasi: null,
         jenisDokumenId: JENIS_DOKUMEN_ID,
+        namaDokumen: 'Dev Non-Material',
         keteranganDetail: 'Catatan non-material',
+        komponenId: undefined,
         jenisPermintaanId: undefined,
         kategoriPermintaanId: undefined,
         detailPermintaanId: undefined,
@@ -175,7 +180,6 @@ describe('local submit write bridge helper foundation', () => {
 
     expect(repository.calls).toEqual([
       ['getKegiatanById', KEGIATAN_ID],
-      ['getJenisDokumenById', JENIS_DOKUMEN_ID],
     ])
     expect(result.plan.leafName).toBe('Dev Non-Material')
     expect(result.plan.documentCreatePayload).toMatchObject({
@@ -183,7 +187,9 @@ describe('local submit write bridge helper foundation', () => {
       nominalRealisasi: 0,
       isNonMaterial: true,
       jenisDokumenId: JENIS_DOKUMEN_ID,
+      namaDokumen: 'Dev Non-Material',
       keteranganDetail: 'Catatan non-material',
+      komponenId: null,
       jenisPermintaanId: null,
       kategoriPermintaanId: null,
       detailPermintaanId: null,
@@ -267,16 +273,32 @@ describe('local submit write bridge helper foundation', () => {
       jenisPermintaanId: JENIS_ID,
     }, 'Kegiatan Fallback')).resolves.toBe('Jenis Fallback')
 
+    const komponenRepository = createRepository({
+      detailName: null,
+      kategoriName: null,
+      jenisName: null,
+      komponenName: 'Komponen Fallback',
+    })
+
+    await expect(resolveLocalSubmitLeafName(komponenRepository, {
+      detailPermintaanId: DETAIL_ID,
+      kategoriPermintaanId: KATEGORI_ID,
+      jenisPermintaanId: JENIS_ID,
+      komponenId: KOMPONEN_ID,
+    }, 'Kegiatan Fallback')).resolves.toBe('Komponen Fallback')
+
     const fallbackRepository = createRepository({
       detailName: null,
       kategoriName: null,
       jenisName: null,
+      komponenName: null,
     })
 
     await expect(resolveLocalSubmitLeafName(fallbackRepository, {
       detailPermintaanId: DETAIL_ID,
       kategoriPermintaanId: KATEGORI_ID,
       jenisPermintaanId: JENIS_ID,
+      komponenId: KOMPONEN_ID,
     }, 'Kegiatan Fallback')).resolves.toBe('Kegiatan Fallback')
   })
 
@@ -363,6 +385,7 @@ function materialPayload(): LocalSubmitPayload {
     ],
     nominal_realisasi: 125000,
     is_non_material: false,
+    komponenId: KOMPONEN_ID,
     jenisPermintaanId: JENIS_ID,
     kategoriPermintaanId: KATEGORI_ID,
     detailPermintaanId: DETAIL_ID,
@@ -406,6 +429,7 @@ function createRepository(options: {
   detailName?: string | null
   kategoriName?: string | null
   jenisName?: string | null
+  komponenName?: string | null
   failStatusUpdate?: boolean
 } = {}) {
   const calls: unknown[] = []
@@ -447,6 +471,10 @@ function createRepository(options: {
     async getJenisDokumenById(id) {
       calls.push(['getJenisDokumenById', id])
       return { id, nama: 'Dev Non-Material' }
+    },
+    async getKomponenById(id) {
+      calls.push(['getKomponenById', id])
+      return options.komponenName === null ? null : { id, nama: options.komponenName ?? 'Dev Komponen' }
     },
     async getJenisPermintaanById(id) {
       calls.push(['getJenisPermintaanById', id])
@@ -500,7 +528,9 @@ function createdDocumentFromPayload(
     nominal_realisasi: payload.nominalRealisasi,
     is_non_material: payload.isNonMaterial,
     jenis_dokumen_id: payload.jenisDokumenId,
+    nama_dokumen: payload.namaDokumen,
     keterangan_detail: payload.keteranganDetail,
+    komponen_id: payload.komponenId,
     jenis_permintaan_id: payload.jenisPermintaanId,
     kategori_permintaan_id: payload.kategoriPermintaanId,
     detail_permintaan_id: payload.detailPermintaanId,

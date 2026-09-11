@@ -23,7 +23,8 @@ export type WorkflowAttachmentNamingDocument = {
   tanggal: Date | string | null
   is_non_material: boolean | null
   kegiatan_nama: string | null
-  jenis_dokumen_nama: string | null
+  nama_dokumen: string | null
+  komponen_nama: string | null
   jenis_permintaan_nama: string | null
   kategori_permintaan_nama: string | null
   detail_permintaan_nama: string | null
@@ -43,7 +44,7 @@ export type ManualAttachmentNamingRow = {
 export type ManualAttachmentNamingDocument = {
   nama: string | null
   tanggal: Date | string | null
-  category_nama: string | null
+  komponen_nama: string | null
 }
 
 const SAFE_MIME_PATTERN = /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/
@@ -208,12 +209,13 @@ function hasBuildableWorkflowDocumentMetadata(document: WorkflowAttachmentNaming
   if (!trimToNull(formatDateLike(document.tanggal))) return false
   if (!trimToNull(document.kegiatan_nama)) return false
 
-  if (document.is_non_material === true) return Boolean(trimToNull(document.jenis_dokumen_nama))
+  if (document.is_non_material === true) return Boolean(trimToNull(document.nama_dokumen))
 
   return Boolean(
     trimToNull(document.detail_permintaan_nama)
       ?? trimToNull(document.kategori_permintaan_nama)
-      ?? trimToNull(document.jenis_permintaan_nama),
+      ?? trimToNull(document.jenis_permintaan_nama)
+      ?? trimToNull(document.komponen_nama),
   )
 }
 
@@ -257,10 +259,11 @@ function toDokumenRow(document: WorkflowAttachmentNamingDocument): DokumenRow {
     created_at: '',
     updated_at: '',
     kegiatan_nama: document.kegiatan_nama ?? undefined,
+    komponen_nama: document.komponen_nama ?? undefined,
+    nama_dokumen: document.nama_dokumen ?? undefined,
     jenis_permintaan_nama: document.jenis_permintaan_nama ?? undefined,
     kategori_permintaan_nama: document.kategori_permintaan_nama ?? undefined,
     detail_permintaan_nama: document.detail_permintaan_nama ?? undefined,
-    jenis_dokumen_nama: document.jenis_dokumen_nama ?? undefined,
   }
 }
 

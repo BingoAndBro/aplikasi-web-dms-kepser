@@ -5,9 +5,11 @@ import { db } from '#/db/client'
 import {
   masterDetailPermintaan,
   masterFungsi,
+  masterJenisPermintaan,
   masterKegiatan,
   masterKategoriPermintaan,
   masterKelengkapanDokumen,
+  masterKomponen,
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { createKelengkapanSchema } from '#/lib/schemas/master-data'
@@ -23,10 +25,12 @@ async function requireAdmin(request: Request) {
 }
 
 async function validateKelengkapanChain(payload: {
+  komponenId?: string | null
   jenisPermintaanId?: string | null
   kategoriPermintaanId?: string | null
   detailPermintaanId?: string | null
 }): Promise<string | null> {
+  const komponenId = payload.komponenId ?? null
   const jenisPermintaanId = payload.jenisPermintaanId ?? null
   const kategoriPermintaanId = payload.kategoriPermintaanId ?? null
   const detailPermintaanId = payload.detailPermintaanId ?? null
@@ -37,6 +41,26 @@ async function validateKelengkapanChain(payload: {
 
   if (kategoriPermintaanId && !jenisPermintaanId) {
     return 'Kategori permintaan harus memiliki jenis permintaan'
+  }
+
+  if (jenisPermintaanId && !komponenId) {
+    return 'Jenis permintaan harus memiliki komponen'
+  }
+
+  if (jenisPermintaanId) {
+    const [jenis] = await db
+      .select({ komponen_id: masterJenisPermintaan.komponenId })
+      .from(masterJenisPermintaan)
+      .where(eq(masterJenisPermintaan.id, jenisPermintaanId))
+      .limit(1)
+
+    if (!jenis) {
+      return 'Jenis permintaan tidak ditemukan'
+    }
+
+    if (jenis.komponen_id !== komponenId) {
+      return 'Jenis permintaan tidak sesuai dengan komponen'
+    }
   }
 
   if (kategoriPermintaanId) {
@@ -78,6 +102,7 @@ async function findDuplicateKelengkapan(payload: {
   kegiatanId: string
   isKetuaTim: boolean
   namaDokumen: string
+  komponenId?: string | null
   jenisPermintaanId?: string | null
   kategoriPermintaanId?: string | null
   detailPermintaanId?: string | null
@@ -85,6 +110,7 @@ async function findDuplicateKelengkapan(payload: {
   const normalizedName = normalizeKelengkapanName(payload.namaDokumen)
   if (!normalizedName) return null
 
+  const komponenId = payload.komponenId ?? null
   const jenisPermintaanId = payload.jenisPermintaanId ?? null
   const kategoriPermintaanId = payload.kategoriPermintaanId ?? null
   const detailPermintaanId = payload.detailPermintaanId ?? null
@@ -98,6 +124,9 @@ async function findDuplicateKelengkapan(payload: {
     .where(and(
       eq(masterKelengkapanDokumen.kegiatanId, payload.kegiatanId),
       eq(masterKelengkapanDokumen.isKetuaTim, payload.isKetuaTim),
+      komponenId
+        ? eq(masterKelengkapanDokumen.komponenId, komponenId)
+        : isNull(masterKelengkapanDokumen.komponenId),
       jenisPermintaanId
         ? eq(masterKelengkapanDokumen.jenisPermintaanId, jenisPermintaanId)
         : isNull(masterKelengkapanDokumen.jenisPermintaanId),
@@ -138,6 +167,7 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
               is_ketua_tim: masterKelengkapanDokumen.isKetuaTim,
               nama_dokumen: masterKelengkapanDokumen.namaDokumen,
               required: masterKelengkapanDokumen.required,
+              komponen_permintaan_id: masterKelengkapanDokumen.komponenId,
               jenis_permintaan_id: masterKelengkapanDokumen.jenisPermintaanId,
               kategori_permintaan_id: masterKelengkapanDokumen.kategoriPermintaanId,
               detail_permintaan_id: masterKelengkapanDokumen.detailPermintaanId,
@@ -161,6 +191,7 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
             is_ketua_tim: row.is_ketua_tim,
             nama_dokumen: row.nama_dokumen,
             required: row.required,
+            komponen_permintaan_id: row.komponen_permintaan_id,
             jenis_permintaan_id: row.jenis_permintaan_id,
             kategori_permintaan_id: row.kategori_permintaan_id,
             detail_permintaan_id: row.detail_permintaan_id,
@@ -244,6 +275,7 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
               isKetuaTim: result.data.isKetuaTim,
               namaDokumen: result.data.namaDokumen,
               required: result.data.required,
+              komponenId: result.data.komponenId ?? null,
               jenisPermintaanId: result.data.jenisPermintaanId ?? null,
               kategoriPermintaanId: result.data.kategoriPermintaanId ?? null,
               detailPermintaanId: result.data.detailPermintaanId ?? null,
@@ -254,6 +286,7 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
               is_ketua_tim: masterKelengkapanDokumen.isKetuaTim,
               nama_dokumen: masterKelengkapanDokumen.namaDokumen,
               required: masterKelengkapanDokumen.required,
+              komponen_permintaan_id: masterKelengkapanDokumen.komponenId,
               jenis_permintaan_id: masterKelengkapanDokumen.jenisPermintaanId,
               kategori_permintaan_id: masterKelengkapanDokumen.kategoriPermintaanId,
               detail_permintaan_id: masterKelengkapanDokumen.detailPermintaanId,

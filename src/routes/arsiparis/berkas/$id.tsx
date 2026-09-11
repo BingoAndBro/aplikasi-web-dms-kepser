@@ -124,7 +124,7 @@ type BerkasDetailItem = {
   } | null
   manual: {
     nama: string | null
-    category_name: string | null
+    komponen_name: string | null
     keterangan: string | null
   } | null
   warnings: string[]
@@ -1334,7 +1334,7 @@ function DocumentMetadataDialog({
               )}
               {item.manual && (
                 <>
-                  <ModalMetadataField label="Kategori" value={item.manual.category_name ?? '-'} />
+                  <ModalMetadataField label="Komponen" value={item.manual.komponen_name ?? '-'} />
                   <ModalMetadataField label="Keterangan" value={snippet(item.manual.keterangan)} />
                 </>
               )}
@@ -1518,7 +1518,7 @@ function ItemCard({
         {item.manual && (
           <div className="rounded-xl border border-sky-100 bg-sky-50/55 p-3">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-sky-700">Sumber Manual</p>
-            <MetadataLine label="Kategori" value={item.manual.category_name ?? '-'} />
+            <MetadataLine label="Komponen" value={item.manual.komponen_name ?? '-'} />
             <MetadataLine label="Keterangan" value={snippet(item.manual.keterangan)} />
           </div>
         )}
@@ -2176,7 +2176,7 @@ function buildBerkasDetailItemSearchText(item: BerkasDetailItem): string {
     item.workflow?.fungsi_nama,
     item.workflow?.kegiatan_nama,
     item.manual?.nama,
-    item.manual?.category_name,
+    item.manual?.komponen_name,
     item.manual?.keterangan,
     ...item.attachments.flatMap((attachment) => [
       attachment.label,

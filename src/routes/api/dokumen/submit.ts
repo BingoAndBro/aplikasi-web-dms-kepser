@@ -21,6 +21,7 @@ import {
   createAndSubmitDokumenSchema,
   getDokumenValidationErrorMessage,
   validateNominalForMaterial,
+  validateWorkflowChainForCharacteristic,
 } from '#/lib/schemas/dokumen'
 import { buildSubmitMovePlan } from '#/lib/storage/submit-move-plan'
 import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
@@ -432,6 +433,16 @@ export const Route = createFileRoute('/api/dokumen/submit')({
         )
         if (!nominalValidation.valid) {
           return Response.json({ error: nominalValidation.error }, { status: 400 })
+        }
+
+        // Validate the workflow chain field required per characteristic:
+        // Material -> komponenId, Non-Material -> namaDokumen.
+        const chainValidation = validateWorkflowChainForCharacteristic(
+          parsed.data.is_non_material,
+          { komponenId: parsed.data.komponenId, namaDokumen: parsed.data.namaDokumen }
+        )
+        if (!chainValidation.valid) {
+          return Response.json({ error: chainValidation.error }, { status: 400 })
         }
 
         if (isLocalAuthDryRunRequest(request)) {

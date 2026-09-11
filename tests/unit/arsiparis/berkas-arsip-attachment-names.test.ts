@@ -12,7 +12,8 @@ const DOCUMENT = {
   tanggal: '2026-05-30',
   is_non_material: false,
   kegiatan_nama: 'Kegiatan Pembayaran',
-  jenis_dokumen_nama: null,
+  nama_dokumen: null,
+  komponen_nama: 'Komponen Pembayaran',
   jenis_permintaan_nama: 'Jenis Pembayaran',
   kategori_permintaan_nama: 'Kategori Pembayaran',
   detail_permintaan_nama: 'Detail Pembayaran',
@@ -41,6 +42,7 @@ describe('berkas attachment name resolver', () => {
       ...DOCUMENT,
       tanggal: null,
       kegiatan_nama: null,
+      komponen_nama: null,
       jenis_permintaan_nama: null,
       kategori_permintaan_nama: null,
       detail_permintaan_nama: null,
@@ -126,7 +128,7 @@ describe('berkas attachment name resolver', () => {
       {
         nama: 'Pengadaan ATK',
         tanggal: '2026-05-22',
-        category_nama: 'Pengadaan',
+        komponen_nama: 'Pengadaan',
       },
     )).toEqual({
       label: 'Bukti Manual',
@@ -145,12 +147,12 @@ describe('berkas attachment name resolver', () => {
       {
         nama: null,
         tanggal: null,
-        category_nama: null,
+        komponen_nama: null,
       },
     )).toEqual({
       label: 'Bukti Manual',
-      previewTitle: 'Bukti_Manual_Arsip_Kategori_Tanggal.pdf',
-      downloadFilename: 'Bukti_Manual_Arsip_Kategori_Tanggal.pdf',
+      previewTitle: 'Bukti_Manual_Arsip_Komponen_Tanggal.pdf',
+      downloadFilename: 'Bukti_Manual_Arsip_Komponen_Tanggal.pdf',
     })
   })
 
@@ -164,7 +166,7 @@ describe('berkas attachment name resolver', () => {
       {
         nama: 'Pengadaan ATK',
         tanggal: '2026-05-22',
-        category_nama: 'Pengadaan',
+        komponen_nama: 'Pengadaan',
       },
     )).toEqual({
       label: 'Bukti Manual',

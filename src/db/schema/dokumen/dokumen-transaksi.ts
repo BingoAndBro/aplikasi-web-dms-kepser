@@ -16,6 +16,7 @@ import {
   masterFungsi,
   masterJenisDokumen,
   masterKegiatan,
+  masterKomponen,
 } from '../master'
 
 const dokumenSchema = pgSchema('dokumen')
@@ -63,6 +64,9 @@ export const dokumenTransaksi = dokumenSchema.table(
     keteranganDetail: text('keterangan_detail'),
     jenisDokumenId: uuid('jenis_dokumen_id')
       .references(() => masterJenisDokumen.id, { onDelete: 'no action', onUpdate: 'no action' }),
+    komponenId: uuid('komponen_id')
+      .references(() => masterKomponen.id, { onDelete: 'restrict', onUpdate: 'no action' }),
+    namaDokumen: text('nama_dokumen'),
   },
   (table) => [
     index('idx_dokumen_transaksi_created_by').on(table.createdBy),
@@ -80,6 +84,7 @@ export const dokumenTransaksi = dokumenSchema.table(
     index('idx_dokumen_transaksi_jenis_permintaan_id').on(table.jenisPermintaanId),
     index('idx_dokumen_transaksi_kategori_permintaan_id').on(table.kategoriPermintaanId),
     index('idx_dokumen_transaksi_detail_permintaan_id').on(table.detailPermintaanId),
+    index('idx_dokumen_transaksi_komponen_id').on(table.komponenId),
     check(
       'dokumen_nominal_realisasi_positive',
       sql`${table.nominalRealisasi} is null or ${table.nominalRealisasi} >= 0`,

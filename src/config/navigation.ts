@@ -196,6 +196,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'master_user', label: 'Master User', icon: Shield, to: ROUTES.ADMIN.MASTER_USER },
         { id: 'master_fungsi', label: 'Departemen Fungsi', icon: Building2, to: ROUTES.ADMIN.MASTER_FUNGSI },
         { id: 'master_kegiatan', label: 'Master Kegiatan', icon: ClipboardList, to: ROUTES.ADMIN.MASTER_KEGIATAN },
+        { id: 'master_komponen', label: 'Master Komponen', icon: ClipboardList, to: ROUTES.ADMIN.MASTER_KOMPONEN },
       ],
     },
     {

@@ -45,6 +45,8 @@ type DokumenDetail = {
   is_non_material: boolean
   nominal_realisasi: number | null
   keterangan_detail: string | null
+  komponen_id?: string | null
+  komponen_nama?: string
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -53,6 +55,7 @@ type DokumenDetail = {
   detail_permintaan_nama?: string
   jenis_dokumen_nama?: string
   jenis_dokumen_id?: string | null
+  nama_dokumen?: string | null
 }
 
 const WORKFLOW_STEPS_MATERIAL = [
@@ -304,14 +307,17 @@ function DokumenDetailPage() {
 }
 
 function MetadataDetailCard({ dok, isNonMaterial }: { dok: DokumenDetail; isNonMaterial: boolean }) {
-  const jenisLabel = isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan'
-  const jenisValue = isNonMaterial ? dok.jenis_dokumen_nama : dok.jenis_permintaan_nama
+  const jenisLabel = isNonMaterial ? 'Nama Dokumen' : 'Jenis Permintaan'
+  const jenisValue = isNonMaterial ? dok.nama_dokumen : dok.jenis_permintaan_nama
   const pengajuLabel = getDisplaySubmitter(dok)
 
   const metadataItems = [
     { label: 'Judul Dokumen', value: dok.judul },
     { label: 'Fungsi / Departemen', value: dok.fungsi_nama ?? '-' },
     { label: 'Kegiatan Kerja', value: dok.kegiatan_nama ?? '-' },
+    ...(!isNonMaterial
+      ? [{ label: 'Komponen', value: dok.komponen_nama ?? '-' }]
+      : []),
     {
       label: jenisLabel,
       value: (

@@ -27,16 +27,19 @@ import {
 } from '#/components/archive/ArchivePagePrimitives'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { StepIndicator } from '#/components/dokumen/StepIndicator'
+import { StepFungsiTanggal } from '#/components/dokumen/form/StepFungsiTanggal'
+import { StepKegiatan } from '#/components/dokumen/form/StepKegiatan'
+import { StepKomponen } from '#/components/dokumen/form/StepKomponen'
 import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { DatePicker } from '#/components/ui/date-picker'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { StatusBadge as SharedStatusBadge } from '#/components/ui/StatusBadge'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
 import { ROLES } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
+import type { FungsiRow, KegiatanRow, KomponenRow } from '#/lib/master-data/shared'
 import {
   DOCUMENT_PREVIEW_PDF_ONLY_BODY,
   DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
@@ -59,10 +62,9 @@ type AuthSessionResponse = {
   activeRole: string | null
 }
 
-type ManualArsipCategory = {
+type ManualArsipNamedRef = {
   id: string
   nama: string
-  deskripsi: string | null
 }
 
 type KlasifikasiNode = {
@@ -87,7 +89,9 @@ type ManualArsipListItem = {
   keterangan: string
   nominal_realisasi: number | null
   status_arsip: string
-  category: ManualArsipCategory
+  fungsi: ManualArsipNamedRef
+  kegiatan: ManualArsipNamedRef
+  komponen: ManualArsipNamedRef
   klasifikasi: {
     id: string | null
     nama: string | null
@@ -96,11 +100,6 @@ type ManualArsipListItem = {
   created_by: string
   created_at: string
   updated_at: string
-}
-
-type CategoriesResponse = {
-  categories?: ManualArsipCategory[]
-  error?: string
 }
 
 type KlasifikasiResponse = {
@@ -145,7 +144,9 @@ type ManualArsipFormState = {
   nama: string
   tanggal: string
   keterangan: string
-  category_id: string
+  fungsi_id: string
+  kegiatan_id: string
+  komponen_id: string
   klasifikasi_id: string
   nominal_realisasi: string
 }
@@ -177,7 +178,7 @@ type PreviewingAttachment = {
 type SubmittedManualArsip = {
   id: string
   nama: string
-  categoryName: string
+  komponenName: string
   klasifikasiName: string
   attachmentCount: number
   warning?: string
@@ -217,7 +218,9 @@ const emptyForm = (): ManualArsipFormState => ({
   nama: '',
   tanggal: new Date().toISOString().slice(0, 10),
   keterangan: '',
-  category_id: '',
+  fungsi_id: '',
+  kegiatan_id: '',
+  komponen_id: '',
   klasifikasi_id: '',
   nominal_realisasi: '',
 })
@@ -239,7 +242,9 @@ function readManualCreateDraft(): ManualCreateDraftState | null {
         nama: typeof form.nama === 'string' ? form.nama : '',
         tanggal: typeof form.tanggal === 'string' ? form.tanggal : emptyForm().tanggal,
         keterangan: typeof form.keterangan === 'string' ? form.keterangan : '',
-        category_id: typeof form.category_id === 'string' ? form.category_id : '',
+        fungsi_id: typeof form.fungsi_id === 'string' ? form.fungsi_id : '',
+        kegiatan_id: typeof form.kegiatan_id === 'string' ? form.kegiatan_id : '',
+        komponen_id: typeof form.komponen_id === 'string' ? form.komponen_id : '',
         klasifikasi_id: typeof form.klasifikasi_id === 'string' ? form.klasifikasi_id : '',
         nominal_realisasi: typeof form.nominal_realisasi === 'string' ? form.nominal_realisasi : '',
       },
@@ -293,7 +298,9 @@ function isManualCreateDraftDirty(
   return Boolean(
     form.nama.trim()
     || form.keterangan.trim()
-    || form.category_id
+    || form.fungsi_id
+    || form.kegiatan_id
+    || form.komponen_id
     || form.klasifikasi_id
     || form.nominal_realisasi
     || form.tanggal !== baseline.tanggal
@@ -314,7 +321,7 @@ function PenambahanArsipPage() {
   const [authChecked, setAuthChecked] = useState(false)
   const [accessDenied, setAccessDenied] = useState(false)
   const [items, setItems] = useState<ManualArsipListItem[]>([])
-  const [categories, setCategories] = useState<ManualArsipCategory[]>([])
+  const [fungsis, setFungsis] = useState<FungsiRow[]>([])
   const [klasifikasiList, setKlasifikasiList] = useState<KlasifikasiNode[]>([])
   const [limit, setLimit] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -327,14 +334,14 @@ function PenambahanArsipPage() {
     setLoading(true)
     setError(null)
     try {
-      const [categoryJson, klasifikasiJson] = await Promise.all([
-        apiFetch<CategoriesResponse>('/arsiparis/manual-arsip/categories'),
+      const [fungsiJson, klasifikasiJson] = await Promise.all([
+        apiFetch<FungsiRow[]>('/master-fungsi'),
         apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi', {
           query: { eligible_for_berkas: 'true' },
         }),
       ])
 
-      setCategories(categoryJson.categories ?? [])
+      setFungsis(fungsiJson ?? [])
       setKlasifikasiList(klasifikasiJson.klasifikasi ?? [])
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -410,7 +417,7 @@ function PenambahanArsipPage() {
                 Manual
               </span>
               <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
-                {submittedManualArsip.categoryName || 'Kategori arsip'}
+                {submittedManualArsip.komponenName || 'Komponen'}
               </span>
               <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
                 {submittedManualArsip.attachmentCount} file lampiran
@@ -486,7 +493,7 @@ function PenambahanArsipPage() {
           ) : (
             <CreateManualArsipModal
               key={formResetKey}
-              categories={categories}
+              fungsis={fungsis}
               klasifikasiList={klasifikasiList}
               isOpen
               onClose={() => { window.location.href = '/arsiparis' }}
@@ -496,7 +503,7 @@ function PenambahanArsipPage() {
                 setSubmittedManualArsip({
                   id: result.manualArsip.id,
                   nama: result.manualArsip.nama,
-                  categoryName: result.manualArsip.category.nama,
+                  komponenName: result.manualArsip.komponen.nama,
                   klasifikasiName: result.manualArsip.klasifikasi.nama ?? result.manualArsip.klasifikasi.nama_snapshot ?? '',
                   attachmentCount: result.uploadedCount,
                   warning: result.notice.tone === 'warning' ? result.notice.message : undefined,
@@ -619,7 +626,7 @@ function ManualArsipTable({
                 <th className={`w-10 text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>No</th>
                 <th className={`min-w-52 ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nama Dokumen</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal</th>
-                <th className={ARCHIVE_TABLE_HEAD_CLASS}>Kategori</th>
+                <th className={ARCHIVE_TABLE_HEAD_CLASS}>Komponen</th>
                 <th className={ARCHIVE_TABLE_HEAD_CLASS}>Cara Pembayaran</th>
                 <th className={`min-w-64 ${ARCHIVE_TABLE_HEAD_CLASS}`}>Keterangan</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal</th>
@@ -644,7 +651,7 @@ function ManualArsipTable({
                         <p className="text-[10px] text-outline mt-0.5">{shortId(item.id)}</p>
                       </td>
                       <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(item.tanggal)}</td>
-                      <td className="px-4 py-3 text-on-surface">{item.category.nama || '-'}</td>
+                      <td className="px-4 py-3 text-on-surface">{item.komponen.nama || '-'}</td>
                       <td className="px-4 py-3 text-on-surface-variant">{item.klasifikasi.nama ?? '-'}</td>
                       <td className="px-4 py-3 text-on-surface-variant">
                         <span title={item.keterangan}>{truncateText(item.keterangan, 96)}</span>
@@ -908,13 +915,13 @@ function ManualArsipPreviewModal({
 }
 
 function CreateManualArsipModal({
-  categories,
+  fungsis,
   klasifikasiList,
   isOpen,
   onClose,
   onSuccess,
 }: {
-  categories: ManualArsipCategory[]
+  fungsis: FungsiRow[]
   klasifikasiList: KlasifikasiNode[]
   isOpen: boolean
   onClose: () => void
@@ -925,6 +932,10 @@ function CreateManualArsipModal({
   const [attachmentRows, setAttachmentRows] = useState<AttachmentRow[]>(() => (
     initialDraftRef.current?.attachmentTitles.map((title) => createAttachmentRow(title)) ?? []
   ))
+  const [kegiatans, setKegiatans] = useState<KegiatanRow[]>([])
+  const [komponens, setKomponens] = useState<KomponenRow[]>([])
+  const [loadingKegiatan, setLoadingKegiatan] = useState(false)
+  const [loadingKomponen, setLoadingKomponen] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -983,6 +994,30 @@ function CreateManualArsipModal({
     setCurrentPath([])
     setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
   }, [isOpen])
+
+  // Kegiatan: muncul setelah Fungsi dipilih
+  useEffect(() => {
+    if (!form.fungsi_id) { setKegiatans([]); return }
+    let active = true
+    setLoadingKegiatan(true)
+    apiFetch<KegiatanRow[]>('/master-kegiatan', { query: { fungsi_id: form.fungsi_id } })
+      .then((data) => { if (active) setKegiatans(data) })
+      .catch(() => { if (active) setKegiatans([]) })
+      .finally(() => { if (active) setLoadingKegiatan(false) })
+    return () => { active = false }
+  }, [form.fungsi_id])
+
+  // Komponen: muncul setelah Kegiatan dipilih
+  useEffect(() => {
+    if (!form.kegiatan_id) { setKomponens([]); return }
+    let active = true
+    setLoadingKomponen(true)
+    apiFetch<KomponenRow[]>('/master-komponen', { query: { kegiatan_id: form.kegiatan_id } })
+      .then((data) => { if (active) setKomponens(data) })
+      .catch(() => { if (active) setKomponens([]) })
+      .finally(() => { if (active) setLoadingKomponen(false) })
+    return () => { active = false }
+  }, [form.kegiatan_id])
 
   useEffect(() => {
     if (!isOpen || !isDirty) {
@@ -1058,6 +1093,16 @@ function CreateManualArsipModal({
   function setField<K extends keyof ManualArsipFormState>(field: K, value: ManualArsipFormState[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
     setErrors((prev) => ({ ...prev, [field]: '' }))
+  }
+
+  function handleFungsiChange(fungsiId: string) {
+    setForm((prev) => ({ ...prev, fungsi_id: fungsiId, kegiatan_id: '', komponen_id: '' }))
+    setErrors((prev) => ({ ...prev, fungsi_id: '', kegiatan_id: '', komponen_id: '' }))
+  }
+
+  function handleKegiatanChange(kegiatanId: string) {
+    setForm((prev) => ({ ...prev, kegiatan_id: kegiatanId, komponen_id: '' }))
+    setErrors((prev) => ({ ...prev, kegiatan_id: '', komponen_id: '' }))
   }
 
   function openKlasifikasiDropdown() {
@@ -1198,13 +1243,15 @@ function CreateManualArsipModal({
     const nextErrors: Record<string, string> = {}
 
     if (step === 1) {
+      if (!form.fungsi_id) nextErrors.fungsi_id = 'Fungsi wajib dipilih'
+      if (!form.kegiatan_id) nextErrors.kegiatan_id = 'Kegiatan wajib dipilih'
+      if (!form.komponen_id) nextErrors.komponen_id = 'Komponen wajib dipilih'
       if (!form.nama.trim()) nextErrors.nama = 'Nama Dokumen wajib diisi'
       if (!form.tanggal) {
         nextErrors.tanggal = 'Tanggal Dokumen/Sumber wajib diisi'
       } else if (!isValidDateOnly(form.tanggal)) {
         nextErrors.tanggal = 'Tanggal Dokumen/Sumber harus valid'
       }
-      if (!form.category_id) nextErrors.category_id = 'Kategori wajib dipilih'
       if (!form.keterangan.trim()) nextErrors.keterangan = 'Keterangan wajib diisi'
     }
 
@@ -1318,7 +1365,9 @@ function CreateManualArsipModal({
           nama: form.nama.trim(),
           tanggal: form.tanggal,
           keterangan: form.keterangan.trim(),
-          category_id: form.category_id,
+          fungsi_id: form.fungsi_id,
+          kegiatan_id: form.kegiatan_id,
+          komponen_id: form.komponen_id,
           klasifikasi_id: form.klasifikasi_id,
           nominal_realisasi: validation.nominal,
         },
@@ -1469,51 +1518,80 @@ function CreateManualArsipModal({
 
           {step === 1 && (
             <>
-          <div className="grid gap-3 md:grid-cols-2">
-            <FormField label="Nama Dokumen" required error={errors.nama}>
-              <input
-                value={form.nama}
-                onChange={(event) => setField('nama', event.target.value)}
-                placeholder="Contoh: Berita Acara Pemeliharaan"
-                className={inputClass(errors.nama)}
-              />
-            </FormField>
+          {/*
+            Reused verbatim from Ajukan Dokumen (same fungsi/kegiatan/komponen chain, same
+            components) so the two flows look and behave identically: each child field only
+            mounts once its parent is picked — Kegiatan waits for Fungsi, Komponen waits for
+            Kegiatan — instead of showing everything at once.
+          */}
+          <StepFungsiTanggal
+            grouped
+            showFungsi
+            showTanggal={false}
+            fungsiId={form.fungsi_id}
+            fungsiList={fungsis}
+            loadingFungsi={false}
+            tanggal=""
+            tanggalError=""
+            tahun={0}
+            canAdvanceFromStep1
+            onFungsiChange={handleFungsiChange}
+            onTanggalChange={() => {}}
+            onNext={() => {}}
+          />
+          {errors.fungsi_id && <p className="text-[10px] text-error">{errors.fungsi_id}</p>}
 
-            <FormField
-              label="Tanggal Dokumen/Sumber"
-              required
-              hint="tanggal item yang diarsipkan"
-              error={errors.tanggal}
-            >
-              <DatePicker
-                value={form.tanggal}
-                onChange={(value) => setField('tanggal', value)}
-                placeholder="-- Pilih Tanggal Dokumen --"
-              />
-            </FormField>
-          </div>
+          {form.fungsi_id && (
+            <StepKegiatan
+              grouped
+              fungsiId={form.fungsi_id}
+              kegiatanId={form.kegiatan_id}
+              kegiatanList={kegiatans}
+              loadingKegiatan={loadingKegiatan}
+              canAdvanceFromStep2
+              onKegiatanChange={handleKegiatanChange}
+              onBack={() => {}}
+              onNext={() => {}}
+            />
+          )}
+          {errors.kegiatan_id && <p className="text-[10px] text-error">{errors.kegiatan_id}</p>}
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <FormField label="Kategori" required error={errors.category_id}>
-              <Select
-                value={form.category_id}
-                onValueChange={(value) => setField('category_id', value ?? '')}
-              >
-                <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
-                  <SelectValue placeholder="-- Pilih Kategori --">
-                    {(value) => value ? (categories.find((category) => category.id === value)?.nama ?? '') : '-- Pilih Kategori --'}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id} label={category.nama}>
-                      {category.nama}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-          </div>
+          {form.kegiatan_id && (
+            <StepKomponen
+              grouped
+              kegiatanNama={kegiatans.find((kegiatan) => kegiatan.id === form.kegiatan_id)?.nama ?? ''}
+              komponenId={form.komponen_id}
+              komponenList={komponens}
+              loadingKomponen={loadingKomponen}
+              canAdvanceFromKomponen
+              onKomponenChange={(value) => setField('komponen_id', value)}
+              onBack={() => {}}
+              onNext={() => {}}
+            />
+          )}
+          {errors.komponen_id && <p className="text-[10px] text-error">{errors.komponen_id}</p>}
+
+          <FormField
+            label="Tanggal Dokumen/Sumber"
+            required
+            hint="tanggal item yang diarsipkan"
+            error={errors.tanggal}
+          >
+            <DatePicker
+              value={form.tanggal}
+              onChange={(value) => setField('tanggal', value)}
+              placeholder="-- Pilih Tanggal Dokumen --"
+            />
+          </FormField>
+
+          <FormField label="Nama Dokumen" required error={errors.nama}>
+            <input
+              value={form.nama}
+              onChange={(event) => setField('nama', event.target.value)}
+              placeholder="Contoh: Berita Acara Pemeliharaan"
+              className={inputClass(errors.nama)}
+            />
+          </FormField>
 
           <FormField label="Keterangan" required error={errors.keterangan}>
             <textarea
@@ -1761,7 +1839,9 @@ function CreateManualArsipModal({
           {step === 4 && (
             <ManualCreateReview
               form={form}
-              categories={categories}
+              fungsis={fungsis}
+              kegiatans={kegiatans}
+              komponens={komponens}
               selectedNode={selectedNode}
               attachmentRows={attachmentRows}
             />
@@ -1781,13 +1861,13 @@ function CreateManualArsipModal({
               <Button
                 type="button"
                 onClick={handleNextStep}
-                disabled={submitting || categories.length === 0 || klasifikasiList.length === 0}
+                disabled={submitting || fungsis.length === 0 || klasifikasiList.length === 0}
               >
                 Lanjutkan
                 <ChevronRight size={14} />
               </Button>
             ) : (
-              <Button type="button" onClick={handleFinalSubmit} disabled={submitting || categories.length === 0 || klasifikasiList.length === 0}>
+              <Button type="button" onClick={handleFinalSubmit} disabled={submitting || fungsis.length === 0 || klasifikasiList.length === 0}>
                 {submitting && <Loader2 size={14} className="animate-spin" />}
                 Simpan Dokumen
               </Button>
@@ -2041,19 +2121,25 @@ function KlasifikasiFormField({
 
 function ManualCreateReview({
   form,
-  categories,
+  fungsis,
+  kegiatans,
+  komponens,
   selectedNode,
   attachmentRows,
 }: {
   form: ManualArsipFormState
-  categories: ManualArsipCategory[]
+  fungsis: FungsiRow[]
+  kegiatans: KegiatanRow[]
+  komponens: KomponenRow[]
   selectedNode: KlasifikasiNode | null
   attachmentRows: AttachmentRow[]
 }) {
-  const category = categories.find((item) => item.id === form.category_id)
+  const fungsi = fungsis.find((item) => item.id === form.fungsi_id)
+  const kegiatan = kegiatans.find((item) => item.id === form.kegiatan_id)
+  const komponen = komponens.find((item) => item.id === form.komponen_id)
   const finalName = [
     form.nama.trim() || '-',
-    category?.nama ?? '-',
+    komponen?.nama ?? '-',
     new Date(form.tanggal).getFullYear() || new Date().getFullYear(),
   ].join(' - ')
 
@@ -2070,7 +2156,9 @@ function ManualCreateReview({
 
       <ReviewSection title="1. Informasi Dokumen">
         <ReviewItem label="Nama Dokumen" value={form.nama || '-'} />
-        <ReviewItem label="Kategori" value={category?.nama ?? '-'} />
+        <ReviewItem label="Fungsi" value={fungsi?.nama ?? '-'} />
+        <ReviewItem label="Kegiatan" value={kegiatan?.nama ?? '-'} />
+        <ReviewItem label="Komponen" value={komponen?.nama ?? '-'} />
         <ReviewItem label="Tanggal Dokumen/Sumber" value={form.tanggal ? formatDate(form.tanggal) : '-'} />
         <ReviewItem label="Keterangan" value={form.keterangan || '-'} />
       </ReviewSection>
@@ -2451,7 +2539,9 @@ function validateForm(form: ManualArsipFormState): {
   }
 
   if (!form.keterangan.trim()) errors.keterangan = 'Keterangan wajib diisi'
-  if (!form.category_id) errors.category_id = 'Kategori wajib dipilih'
+  if (!form.fungsi_id) errors.fungsi_id = 'Fungsi wajib dipilih'
+  if (!form.kegiatan_id) errors.kegiatan_id = 'Kegiatan wajib dipilih'
+  if (!form.komponen_id) errors.komponen_id = 'Komponen wajib dipilih'
   if (!form.klasifikasi_id) errors.klasifikasi_id = 'Jenis pembayaran wajib dipilih'
 
   if (!rawNominal) {

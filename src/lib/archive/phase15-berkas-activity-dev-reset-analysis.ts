@@ -40,12 +40,12 @@ export type Phase15BerkasActivityDevResetTableCounts = {
 
 export type Phase15BerkasActivityDevResetPreservedCounts = {
   workflow_source_documents_referenced_by_berkas_items: number
-  workflow_source_documents_deleted: 0
-  workflow_approval_history_deleted: 0
-  auth_user_session_rows_deleted: 0
-  master_data_rows_deleted: 0
-  fungsi_kegiatan_rows_deleted: 0
-  kelengkapan_configuration_rows_deleted: 0
+  workflow_source_documents_deleted: number
+  workflow_approval_history_deleted: number
+  auth_user_session_rows_deleted: number
+  master_data_rows_deleted: number
+  fungsi_kegiatan_rows_deleted: number
+  kelengkapan_configuration_rows_deleted: number
 }
 
 export type Phase15BerkasActivityDevResetReport = {

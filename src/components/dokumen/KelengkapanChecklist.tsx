@@ -29,6 +29,7 @@ type KelengkapanItem = {
 
 type KelengkapanApiItem = KelengkapanItem & {
   kegiatan_id?: string | null
+  komponen_permintaan_id?: string | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -46,6 +47,7 @@ interface KelengkapanChecklistProps {
   initialLampirans?: LampiranUrl[]
   onComplete: (lampirans: LampiranUrl[], missingRequired: KelengkapanItem[]) => void
   onDirtyChange?: (dirty: boolean) => void
+  komponenId?: string
   jenisPermintaanId?: string
   kategoriPermintaanId?: string
   detailPermintaanId?: string
@@ -55,12 +57,14 @@ interface KelengkapanChecklistProps {
 function matchesCurrentChain(
   item: KelengkapanApiItem,
   filters: {
+    komponenId?: string
     jenisPermintaanId?: string
     kategoriPermintaanId?: string
     detailPermintaanId?: string
   },
 ): boolean {
   const {
+    komponenId,
     jenisPermintaanId,
     kategoriPermintaanId,
     detailPermintaanId,
@@ -81,6 +85,13 @@ function matchesCurrentChain(
       && item.detail_permintaan_id == null
   }
 
+  if (komponenId) {
+    return item.komponen_permintaan_id === komponenId
+      && item.jenis_permintaan_id == null
+      && item.kategori_permintaan_id == null
+      && item.detail_permintaan_id == null
+  }
+
   return true
 }
 
@@ -90,6 +101,7 @@ export function KelengkapanChecklist({
   initialLampirans = [],
   onComplete,
   onDirtyChange,
+  komponenId,
   jenisPermintaanId,
   kategoriPermintaanId,
   detailPermintaanId,
@@ -140,6 +152,7 @@ export function KelengkapanChecklist({
 
         const filtered = data
           .filter(item => matchesCurrentChain(item, {
+            komponenId,
             jenisPermintaanId,
             kategoriPermintaanId,
             detailPermintaanId,
@@ -160,7 +173,7 @@ export function KelengkapanChecklist({
     }
 
     fetchKelengkapan()
-  }, [kegiatanId, isKetuaTim, jenisPermintaanId, kategoriPermintaanId, detailPermintaanId, isNonMaterial])
+  }, [kegiatanId, isKetuaTim, komponenId, jenisPermintaanId, kategoriPermintaanId, detailPermintaanId, isNonMaterial])
 
   // Notify parent when lampiranUrls changes
   useEffect(() => {

@@ -64,7 +64,9 @@ describe('seedDevelopmentUsers', () => {
       admin: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       ppk: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
     })
-    expect(database.insert).toHaveBeenCalledTimes(DEV_SEED_USERS.length + 8)
+    // One `insert(users)` call per seed user, plus one `insert(userRoles)` call per role assignment.
+    const expectedRoleAssignmentInserts = DEV_SEED_USERS.reduce((sum, user) => sum + user.roles.length, 0)
+    expect(database.insert).toHaveBeenCalledTimes(DEV_SEED_USERS.length + expectedRoleAssignmentInserts)
   })
 })
 
@@ -75,6 +77,7 @@ function createSeedDatabaseMock() {
     { id: '33333333-3333-4333-8333-333333333333', nama: 'BENDAHARA' },
     { id: '44444444-4444-4444-8444-444444444444', nama: 'KEPALA_SUB_BAGIAN_UMUM' },
     { id: '55555555-5555-4555-8555-555555555555', nama: 'ADMIN' },
+    { id: '66666666-6666-4666-8666-666666666666', nama: 'PENANGGUNG_JAWAB_KINERJA' },
   ]
 
   const selectResults = [roleRows]

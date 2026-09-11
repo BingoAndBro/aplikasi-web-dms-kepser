@@ -1,11 +1,14 @@
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const ADMIN_ID = '22222222-2222-4222-8222-222222222222'
 const MANUAL_ARSIP_ID = '33333333-3333-4333-8333-333333333333'
-const CATEGORY_ID = '44444444-4444-4444-8444-444444444444'
+const FUNGSI_ID = '44444444-4444-4444-8444-444444444444'
+const KEGIATAN_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const KOMPONEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const KLASIFIKASI_ID = '55555555-5555-4555-8555-555555555555'
 const ATTACHMENT_ID = '77777777-7777-4777-8777-777777777777'
 const BERKAS_ID = '88888888-8888-4888-8888-888888888888'
@@ -55,7 +58,6 @@ vi.mock('#/lib/storage/manual-arsip-upload', async (importOriginal) => {
   }
 })
 
-import { Route as ManualArsipCategoriesRoute } from '#/routes/api/arsiparis/manual-arsip/categories'
 import { Route as ManualArsipIndexRoute } from '#/routes/api/arsiparis/manual-arsip/index'
 import { Route as ManualArsipDetailRoute } from '#/routes/api/arsiparis/manual-arsip/$id'
 import { Route as ManualArsipAttachmentsRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments'
@@ -66,10 +68,6 @@ import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 type RouteGetHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
 type RoutePostHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
 type RoutePatchHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
-
-const categoriesGetHandler = (ManualArsipCategoriesRoute as unknown as {
-  options: { server: { handlers: { GET: RouteGetHandler } } }
-}).options.server.handlers.GET
 
 const indexHandlers = (ManualArsipIndexRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler; POST: RoutePostHandler } } }
@@ -168,71 +166,10 @@ describe('manual arsip API foundation routes', () => {
     await rm(TEST_STORAGE_ROOT, { force: true, recursive: true })
   })
 
-  it('requires assigned KEPALA_SUB_BAGIAN_UMUM for category list', async () => {
-    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['PEGAWAI'], USER_ID))
-
-    const rejected = await categoriesGetHandler({
-      request: new Request('http://localhost/api/arsiparis/manual-arsip/categories'),
-    })
-
-    expect(rejected.status).toBe(403)
-    expect(await rejected.json()).toEqual({ error: 'Forbidden' })
-    expect(mocks.dbSelect).not.toHaveBeenCalled()
-
-    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
-
-    const adminRejected = await categoriesGetHandler({
-      request: new Request('http://localhost/api/arsiparis/manual-arsip/categories'),
-    })
-
-    expect(adminRejected.status).toBe(403)
-    expect(await adminRejected.json()).toEqual({ error: 'Forbidden' })
-    expect(mocks.dbSelect).not.toHaveBeenCalled()
-
-    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
-    queueSelectResults([{
-      id: CATEGORY_ID,
-      nama: 'Pemeliharaan',
-      deskripsi: 'Kategori pemeliharaan',
-    }])
-
-    const allowed = await categoriesGetHandler({
-      request: new Request('http://localhost/api/arsiparis/manual-arsip/categories'),
-    })
-
-    expect(allowed.status).toBe(200)
-    expect(await allowed.json()).toEqual({
-      categories: [{
-        id: CATEGORY_ID,
-        nama: 'Pemeliharaan',
-        deskripsi: 'Kategori pemeliharaan',
-      }],
-    })
-  })
-
-  it('allows a multi-role non-admin user with KEPALA_SUB_BAGIAN_UMUM', async () => {
-    mocks.getLocalServerSession.mockResolvedValueOnce(createSession(
-      ['PEGAWAI', 'KEPALA_SUB_BAGIAN_UMUM'],
-      USER_ID,
-    ))
-    queueSelectResults([{
-      id: CATEGORY_ID,
-      nama: 'Pemeliharaan',
-      deskripsi: 'Kategori pemeliharaan',
-    }])
-
-    const response = await categoriesGetHandler({
-      request: new Request('http://localhost/api/arsiparis/manual-arsip/categories'),
-    })
-
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({
-      categories: [{
-        id: CATEGORY_ID,
-        nama: 'Pemeliharaan',
-        deskripsi: 'Kategori pemeliharaan',
-      }],
-    })
+  it('removes the manual arsip category-list endpoint entirely (replaced by Fungsi/Kegiatan/Komponen)', () => {
+    // Konsep manual_arsip_category dihapus total; alur baru pakai Fungsi -> Kegiatan -> Komponen
+    // lewat /master-fungsi, /master-kegiatan, /master-komponen (lihat resolveManualArsipHierarchy).
+    expect(existsSync(path.resolve('src/routes/api/arsiparis/manual-arsip/categories.ts'))).toBe(false)
   })
 
   it('protects create with the same-origin guard before auth/db work', async () => {
@@ -364,7 +301,9 @@ describe('manual arsip API foundation routes', () => {
 
   it('rejects parent classification for manual document creation without DB writes', async () => {
     queueSelectResults(
-      [manualCategoryRow()],
+      [fungsiRow()],
+      [kegiatanRow()],
+      [komponenRow()],
       [klasifikasiRow()],
       [klasifikasiChildRow()],
     )
@@ -482,7 +421,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('creates manual source metadata without final archive fields and without a canonical MANUAL row', async () => {
-    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       source: {
         ...manualArsipRow(),
@@ -508,7 +447,9 @@ describe('manual arsip API foundation routes', () => {
       createdBy: USER_ID,
       archivedBy: null,
       statusArsip: 'AKTIF',
-      categoryId: CATEGORY_ID,
+      fungsiId: FUNGSI_ID,
+      kegiatanId: KEGIATAN_ID,
+      komponenId: KOMPONEN_ID,
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiKodeSnapshot: '001.02',
       klasifikasiNamaSnapshot: 'Klasifikasi A',
@@ -565,7 +506,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('reuses an existing OPEN berkas when creating a manual document', async () => {
-    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       existingOpenBerkas: openBerkasRow(),
     })
@@ -593,7 +534,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('rejects manual create when the selected jenis pembayaran already has a CLOSED berkas', async () => {
-    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       existingOpenBerkas: {
         ...openBerkasRow(),
@@ -616,7 +557,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('maps duplicate manual berkas item assignment to a safe conflict', async () => {
-    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       itemError: Object.assign(new Error('unique conflict'), { code: '23505' }),
     })
@@ -635,7 +576,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('creates with Permanen retention using the transitional sentinel dates', async () => {
-    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction()
 
     const response = await indexHandlers.POST({
@@ -657,7 +598,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('creates final manual source metadata without creating or linking a canonical MANUAL row', async () => {
-    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       source: manualArsipRow({
         nama: 'Canonical source row',
@@ -709,7 +650,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('does not create a canonical fallback when duplicate manual berkas item insert fails', async () => {
-    queueSelectResults([manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
     queueManualArchiveCreateTransaction({
       itemError: Object.assign(new Error('unique conflict'), { code: '23505' }),
     })
@@ -737,7 +678,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('rejects missing active klasifikasi lookup on create', async () => {
-    queueSelectResults([manualCategoryRow()], [])
+    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [])
 
     const response = await indexHandlers.POST({
       request: createPostRequest(validCreateBody()),
@@ -947,7 +888,9 @@ describe('manual arsip API foundation routes', () => {
 
     queueSelectResults(
       [manualArsipEditParentRow('AKTIF')],
-      [manualCategoryRow()],
+      [fungsiRow()],
+      [kegiatanRow()],
+      [komponenRow()],
       [klasifikasiRow()],
     )
     queueUpdateResult([manualArsipRow({
@@ -970,7 +913,9 @@ describe('manual arsip API foundation routes', () => {
       nama: 'Arsip manual diperbarui',
       tanggal: '2026-05-24',
       keterangan: 'Keterangan diperbarui',
-      categoryId: CATEGORY_ID,
+      fungsiId: FUNGSI_ID,
+      kegiatanId: KEGIATAN_ID,
+      komponenId: KOMPONEN_ID,
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiKodeSnapshot: '001.02',
       klasifikasiNamaSnapshot: 'Klasifikasi A',
@@ -998,11 +943,9 @@ describe('manual arsip API foundation routes', () => {
       keterangan: 'Keterangan diperbarui',
       nominal_realisasi: 1000,
       status_arsip: 'AKTIF',
-      category: {
-        id: CATEGORY_ID,
-        nama: 'Pemeliharaan',
-        deskripsi: null,
-      },
+      fungsi: { id: FUNGSI_ID, nama: 'Fungsi Umum' },
+      kegiatan: { id: KEGIATAN_ID, nama: 'Kegiatan Umum' },
+      komponen: { id: KOMPONEN_ID, nama: 'Pemeliharaan' },
       klasifikasi: {
         id: KLASIFIKASI_ID,
         nama: 'Klasifikasi A',
@@ -1029,7 +972,13 @@ describe('manual arsip API foundation routes', () => {
       metadata: { sumber: 'linked-patch' },
     }
 
-    queueSelectResults([manualArsipEditParentRow('AKTIF')], [manualCategoryRow()], [klasifikasiRow()])
+    queueSelectResults(
+      [manualArsipEditParentRow('AKTIF')],
+      [fungsiRow()],
+      [kegiatanRow()],
+      [komponenRow()],
+      [klasifikasiRow()],
+    )
     queueUpdateResult([manualArsipRow({
       nama: updateBody.nama,
       tanggal: updateBody.tanggal,
@@ -1064,7 +1013,9 @@ describe('manual arsip API foundation routes', () => {
       nama: 'Arsip manual linked diperbarui',
       tanggal: '2026-05-25',
       keterangan: 'Keterangan linked diperbarui',
-      categoryId: CATEGORY_ID,
+      fungsiId: FUNGSI_ID,
+      kegiatanId: KEGIATAN_ID,
+      komponenId: KOMPONEN_ID,
       klasifikasiId: KLASIFIKASI_ID,
       klasifikasiKodeSnapshot: '001.02',
       klasifikasiNamaSnapshot: 'Klasifikasi A',
@@ -1211,7 +1162,7 @@ describe('manual arsip API foundation routes', () => {
     }
   })
 
-  it('rejects invalid category on manual archive PATCH', async () => {
+  it('rejects invalid fungsi on manual archive PATCH', async () => {
     queueSelectResults(
       [manualArsipEditParentRow('AKTIF')],
       [],
@@ -1223,14 +1174,51 @@ describe('manual arsip API foundation routes', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Kategori dokumen tidak ditemukan' })
+    expect(await response.json()).toEqual({ error: 'Fungsi tidak ditemukan atau tidak aktif' })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid kegiatan on manual archive PATCH', async () => {
+    queueSelectResults(
+      [manualArsipEditParentRow('AKTIF')],
+      [fungsiRow()],
+      [],
+    )
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Kegiatan tidak ditemukan atau tidak aktif' })
+    expect(mocks.dbUpdate).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid komponen on manual archive PATCH', async () => {
+    queueSelectResults(
+      [manualArsipEditParentRow('AKTIF')],
+      [fungsiRow()],
+      [kegiatanRow()],
+      [],
+    )
+
+    const response = await detailPatchHandler({
+      request: createPatchRequest(validCreateBody()),
+      params: { id: MANUAL_ARSIP_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Komponen tidak ditemukan atau tidak aktif' })
     expect(mocks.dbUpdate).not.toHaveBeenCalled()
   })
 
   it('rejects invalid klasifikasi on manual archive PATCH', async () => {
     queueSelectResults(
       [manualArsipEditParentRow('AKTIF')],
-      [manualCategoryRow()],
+      [fungsiRow()],
+      [kegiatanRow()],
+      [komponenRow()],
       [],
     )
 
@@ -1247,7 +1235,9 @@ describe('manual arsip API foundation routes', () => {
   it('does not expose file access or sensitive fields in manual archive PATCH response', async () => {
     queueSelectResults(
       [manualArsipEditParentRow('AKTIF')],
-      [manualCategoryRow()],
+      [fungsiRow()],
+      [kegiatanRow()],
+      [komponenRow()],
       [klasifikasiRow()],
     )
     queueUpdateResult([{
@@ -1894,7 +1884,7 @@ describe('manual arsip API foundation routes', () => {
     queueSelectResults(
       [manualArsipUploadParentRow('AKTIF', {
         nama: 'Nama/Arsip "Rahasia"',
-        category_nama: 'Kategori\r\nA: B',
+        komponen_nama: 'Kategori\r\nA: B',
       })],
       [manualArsipAttachmentFileRow({
         judul_lampiran: 'Bukti\\Kegiatan<>?',
@@ -1953,7 +1943,7 @@ describe('manual arsip API foundation routes', () => {
     queueSelectResults(
       [manualArsipUploadParentRow('AKTIF', {
         nama: '////',
-        category_nama: '\r\n"',
+        komponen_nama: '\r\n"',
         tanggal: 'not-a-date',
       })],
       [manualArsipAttachmentFileRow({
@@ -1970,7 +1960,7 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Disposition')).toBe(
-      'attachment; filename="Lampiran_Arsip_Kategori_Tanggal.jpeg"',
+      'attachment; filename="Lampiran_Arsip_Komponen_Tanggal.jpeg"',
     )
   })
 
@@ -2019,7 +2009,9 @@ function validCreateBody() {
     nama: 'Arsip manual uji',
     tanggal: '2026-05-22',
     keterangan: 'Keterangan arsip manual',
-    category_id: CATEGORY_ID,
+    fungsi_id: FUNGSI_ID,
+    kegiatan_id: KEGIATAN_ID,
+    komponen_id: KOMPONEN_ID,
     klasifikasi_id: KLASIFIKASI_ID,
     nominal_realisasi: 1000,
     metadata: { sumber: 'manual' },
@@ -2093,11 +2085,26 @@ function attachmentFileParams(overrides: Partial<{
   }
 }
 
-function manualCategoryRow() {
+function fungsiRow() {
   return {
-    id: CATEGORY_ID,
+    id: FUNGSI_ID,
+    nama: 'Fungsi Umum',
+  }
+}
+
+function kegiatanRow() {
+  return {
+    id: KEGIATAN_ID,
+    nama: 'Kegiatan Umum',
+    fungsi_id: FUNGSI_ID,
+  }
+}
+
+function komponenRow() {
+  return {
+    id: KOMPONEN_ID,
     nama: 'Pemeliharaan',
-    deskripsi: null,
+    kegiatan_id: KEGIATAN_ID,
   }
 }
 
@@ -2161,7 +2168,9 @@ function manualArsipRow(overrides: Partial<{
   keterangan: string
   nominal_realisasi: string | number | null
   status_arsip: string
-  category_id: string
+  fungsi_id: string
+  kegiatan_id: string
+  komponen_id: string
   klasifikasi_id: string | null
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string | null
@@ -2184,7 +2193,9 @@ function manualArsipRow(overrides: Partial<{
     keterangan: overrides.keterangan ?? 'Keterangan arsip manual',
     nominal_realisasi: overrides.nominal_realisasi ?? '1000.00',
     status_arsip: overrides.status_arsip ?? 'AKTIF',
-    category_id: overrides.category_id ?? CATEGORY_ID,
+    fungsi_id: overrides.fungsi_id ?? FUNGSI_ID,
+    kegiatan_id: overrides.kegiatan_id ?? KEGIATAN_ID,
+    komponen_id: overrides.komponen_id ?? KOMPONEN_ID,
     klasifikasi_id: overrides.klasifikasi_id ?? KLASIFIKASI_ID,
     klasifikasi_kode_snapshot: overrides.klasifikasi_kode_snapshot ?? '001.02',
     klasifikasi_nama_snapshot: overrides.klasifikasi_nama_snapshot ?? 'Klasifikasi A',
@@ -2208,9 +2219,12 @@ function manualArsipJoinedRow() {
     keterangan: 'Keterangan arsip manual',
     nominal_realisasi: '1000.00',
     status_arsip: 'AKTIF',
-    category_id: CATEGORY_ID,
-    category_nama: 'Pemeliharaan',
-    category_deskripsi: null,
+    fungsi_id: FUNGSI_ID,
+    fungsi_nama: 'Fungsi Umum',
+    kegiatan_id: KEGIATAN_ID,
+    kegiatan_nama: 'Kegiatan Umum',
+    komponen_id: KOMPONEN_ID,
+    komponen_nama: 'Pemeliharaan',
     klasifikasi_id: KLASIFIKASI_ID,
     klasifikasi_nama: 'Klasifikasi A',
     klasifikasi_nama_snapshot: 'Klasifikasi A',
@@ -2224,14 +2238,14 @@ function manualArsipJoinedRow() {
 function manualArsipUploadParentRow(status_arsip: string, overrides: Partial<{
   nama: string
   tanggal: string
-  category_nama: string | null
+  komponen_nama: string | null
 }> = {}) {
   return {
     id: MANUAL_ARSIP_ID,
     nama: overrides.nama ?? 'Nama Arsip',
     tanggal: overrides.tanggal ?? '2026-05-23',
     status_arsip,
-    category_nama: overrides.category_nama ?? 'Kategori',
+    komponen_nama: overrides.komponen_nama ?? 'Kategori',
   }
 }
 
@@ -2298,6 +2312,7 @@ function createSelectBuilder(result: unknown[]): Record<string, unknown> {
   query.leftJoin = vi.fn(() => query)
   query.orderBy = vi.fn(() => query)
   query.limit = vi.fn(async () => result)
+  query.$dynamic = vi.fn(() => query)
   query.then = (resolve: (value: unknown[]) => unknown, reject: (reason: unknown) => unknown) => {
     return Promise.resolve(result).then(resolve, reject)
   }

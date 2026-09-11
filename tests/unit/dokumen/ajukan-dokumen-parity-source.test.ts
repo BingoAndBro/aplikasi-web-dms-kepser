@@ -4,6 +4,9 @@ import { describe, expect, it } from 'vitest'
 const source = readFileSync('src/routes/pegawai/dokumen/aju.tsx', 'utf8')
 const fungsiTanggalSource = readFileSync('src/components/dokumen/form/StepFungsiTanggal.tsx', 'utf8')
 const kegiatanSource = readFileSync('src/components/dokumen/form/StepKegiatan.tsx', 'utf8')
+const karakteristikSource = readFileSync('src/components/dokumen/form/StepKarakteristik.tsx', 'utf8')
+const komponenSource = readFileSync('src/components/dokumen/form/StepKomponen.tsx', 'utf8')
+const namaDokumenSource = readFileSync('src/components/dokumen/form/StepNamaDokumen.tsx', 'utf8')
 const jenisPermintaanSource = readFileSync('src/components/dokumen/form/StepJenisPermintaan.tsx', 'utf8')
 const kategoriPermintaanSource = readFileSync('src/components/dokumen/form/StepKategoriPermintaan.tsx', 'utf8')
 const uploadSource = readFileSync('src/components/dokumen/form/StepUploadLampiran.tsx', 'utf8')
@@ -63,16 +66,17 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(kegiatanSource).toContain('-- Pilih Kegiatan --')
     expect(kegiatanSource).toContain('value={kegiatanId || null}')
     expect(kegiatanSource).toContain(": '-- Pilih Kegiatan --'")
-    expect(jenisPermintaanSource).toContain('Karakteristik Dokumen')
-    expect(jenisPermintaanSource).toContain('aria-pressed={!isNonMaterial}')
-    expect(jenisPermintaanSource).toContain('aria-pressed={isNonMaterial}')
-    expect(jenisPermintaanSource).not.toContain('type="checkbox"')
+    expect(karakteristikSource).toContain('Karakteristik Dokumen')
+    expect(karakteristikSource).toContain('aria-pressed={!isNonMaterial}')
+    expect(karakteristikSource).toContain('aria-pressed={isNonMaterial}')
+    expect(karakteristikSource).not.toContain('type="checkbox"')
+    expect(komponenSource).toContain('Pilih Komponen')
+    expect(komponenSource).toContain('-- Pilih Komponen --')
+    expect(komponenSource).toContain('value={komponenId || null}')
+    expect(namaDokumenSource).toContain('Nama Dokumen')
     expect(jenisPermintaanSource).toContain('Pilih Jenis Permintaan')
-    expect(jenisPermintaanSource).toContain('-- Pilih Jenis Dokumen --')
     expect(jenisPermintaanSource).toContain('-- Pilih Jenis Permintaan --')
-    expect(jenisPermintaanSource).toContain('value={jenisDokumenId || null}')
     expect(jenisPermintaanSource).toContain('value={jenisPermintaanId || null}')
-    expect(jenisPermintaanSource).toContain(": '-- Pilih Jenis Dokumen --'")
     expect(jenisPermintaanSource).toContain(": '-- Pilih Jenis Permintaan --'")
     expect(kategoriPermintaanSource).toContain('Pilih Kategori Permintaan')
     expect(kategoriPermintaanSource).toContain('-- Pilih Kategori Permintaan --')
@@ -80,12 +84,16 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(kategoriPermintaanSource).toContain(": '-- Pilih Kategori Permintaan --'")
   })
 
-  it('RP-04: keeps both Jenis Permintaan/Jenis Dokumen Selects mounted (hidden, not unmounted) on toggle', () => {
+  it('RP-04: keeps Komponen/Nama Dokumen sections mounted (hidden, not unmounted) on characteristic toggle', () => {
     // Regression guard: swapping these via `isNonMaterial ? <A/> : <B/>` unmounted whichever Select
     // was open mid-interaction and left Base UI's popup/scroll-lock guard stuck (RP-04 bug repro).
-    expect(jenisPermintaanSource).toContain('hidden={isNonMaterial}')
-    expect(jenisPermintaanSource).toContain('hidden={!isNonMaterial}')
-    expect(jenisPermintaanSource).not.toMatch(/isNonMaterial\s*\?\s*\(?\s*<div className="space-y-2">/)
+    // The fix keeps StepKomponen/StepNamaDokumen always mounted once Kegiatan is picked, toggling
+    // visibility with the `hidden` attribute based on `isNonMaterial` instead. Material is the
+    // toggle's default value, so Komponen is visible immediately (no extra click required).
+    expect(source).toContain('<div hidden={isNonMaterial}>')
+    expect(source).toContain('<div hidden={!isNonMaterial}>')
+    expect(source).not.toMatch(/isNonMaterial\s*\?\s*<StepNamaDokumen/)
+    expect(source).not.toMatch(/isNonMaterial\s*\?\s*\(?\s*<StepKomponen/)
   })
 
   it('keeps Step 2 compact and restores a compact grouped Step 3 with a page-local warm palette', () => {
@@ -93,7 +101,7 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(uploadSource).toContain('Status kegiatan Anda:')
     expect(uploadSource).toContain('<KelengkapanChecklist')
     expect(uploadSource).toContain('<textarea')
-    expect(uploadSource).toContain('Masukkan keterangan detail dokumen...')
+    expect(uploadSource).toContain('Masukkan keterangan detail dokumen (opsional)...')
     expect(uploadSource).not.toContain('Konteks Kelengkapan')
     expect(uploadSource).not.toContain('Lampiran Dokumen')
 
@@ -146,7 +154,8 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(source).toContain("apiMutation<SubmitResponse>('/api/dokumen/submit'")
     expect(source).toContain('nominal_realisasi: nominalValue')
     expect(source).toContain('is_non_material: isNonMaterial')
-    expect(source).toContain('jenisDokumenId: isNonMaterial ? jenisDokumenId : undefined')
+    expect(source).toContain('namaDokumen: isNonMaterial ? namaDokumen.trim() : undefined')
+    expect(source).toContain('komponenId: !isNonMaterial ? selectedKomponenId : undefined')
     expect(source).toContain('jenisPermintaanId: !isNonMaterial ? selectedJenisPermintaanId : undefined')
     expect(source).toContain('kategoriPermintaanId: !isNonMaterial ? selectedKategoriPermintaanId : undefined')
     expect(source).toContain('detailPermintaanId: !isNonMaterial ? selectedDetailPermintaanId : undefined')

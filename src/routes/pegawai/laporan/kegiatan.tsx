@@ -79,6 +79,7 @@ type KegiatanFilterValue = {
 
 type DetailFilterValue = {
   pembuatId?: string
+  komponenId?: string
   jenisId?: string
   kategoriId?: string
   detailId?: string
@@ -239,6 +240,7 @@ function LaporanKegiatanPage() {
     return selectedKegiatan.dokumen
       .filter(d => {
         if (detailFilter.pembuatId && (d.pengaju_id ?? d.created_by) !== detailFilter.pembuatId) return false
+        if (detailFilter.komponenId && d.komponen_id !== detailFilter.komponenId) return false
         if (detailFilter.jenisId && d.jenis_permintaan_id !== detailFilter.jenisId) return false
         if (detailFilter.kategoriId && d.kategori_permintaan_id !== detailFilter.kategoriId) return false
         if (detailFilter.detailId && d.detail_permintaan_id !== detailFilter.detailId) return false
@@ -783,6 +785,7 @@ function KegiatanDetailView({
       <KegiatanDetailCards kegiatan={kegiatan} />
 
       <KegiatanDetailToolbar
+        kegiatanId={kegiatan.id}
         search={search}
         onSearchChange={onSearchChange}
         filter={filter}
@@ -822,6 +825,7 @@ function KegiatanDetailView({
 }
 
 function KegiatanDetailToolbar({
+  kegiatanId,
   search,
   onSearchChange,
   filter,
@@ -836,6 +840,7 @@ function KegiatanDetailToolbar({
   exportCount,
   onExportClick,
 }: {
+  kegiatanId: string
   search: string
   onSearchChange: (value: string) => void
   filter: DetailFilterValue
@@ -908,6 +913,7 @@ function KegiatanDetailToolbar({
       {filterOpen && (
         <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
           <KegiatanDetailAdvancedFilter
+            kegiatanId={kegiatanId}
             value={filter}
             onChange={onFilterChange}
             pembuatOptions={pembuatOptions}
@@ -945,21 +951,54 @@ function KegiatanDetailToolbar({
 }
 
 function KegiatanDetailAdvancedFilter({
+  kegiatanId,
   value,
   onChange,
   pembuatOptions,
 }: {
+  kegiatanId: string
   value: DetailFilterValue
   onChange: (value: DetailFilterValue) => void
   pembuatOptions: { id: string; nama: string }[]
 }) {
+  const [komponenOptions, setKomponenOptions] = useState<MasterOption[]>([])
   const [jenisOptions, setJenisOptions] = useState<MasterOption[]>([])
   const [kategoriOptions, setKategoriOptions] = useState<MasterOption[]>([])
   const [detailOptions, setDetailOptions] = useState<MasterOption[]>([])
 
   useEffect(() => {
     let active = true
-    apiFetch<MasterOption[]>('/master-jenis')
+    if (!kegiatanId) {
+      setKomponenOptions([])
+      return () => {
+        active = false
+      }
+    }
+
+    apiFetch<MasterOption[]>('/master-komponen', { query: { kegiatan_id: kegiatanId } })
+      .then(data => {
+        if (active) setKomponenOptions(data)
+      })
+      .catch(() => {
+        if (active) setKomponenOptions([])
+      })
+    return () => {
+      active = false
+    }
+  }, [kegiatanId])
+
+  useEffect(() => {
+    let active = true
+    if (!value.komponenId) {
+      setJenisOptions([])
+      setKategoriOptions([])
+      setDetailOptions([])
+      return () => {
+        active = false
+      }
+    }
+
+    apiFetch<MasterOption[]>('/master-jenis', { query: { komponen_id: value.komponenId } })
       .then(data => {
         if (active) setJenisOptions(data)
       })
@@ -969,7 +1008,7 @@ function KegiatanDetailAdvancedFilter({
     return () => {
       active = false
     }
-  }, [])
+  }, [value.komponenId])
 
   useEffect(() => {
     let active = true
@@ -1027,10 +1066,18 @@ function KegiatanDetailAdvancedFilter({
           onChange={(pembuatId) => onChange({ ...value, pembuatId })}
         />
         <DetailSelect
+          label="Komponen"
+          value={value.komponenId}
+          allLabel="Semua Komponen"
+          options={komponenOptions}
+          onChange={(komponenId) => onChange({ ...value, komponenId, jenisId: undefined, kategoriId: undefined, detailId: undefined })}
+        />
+        <DetailSelect
           label="Jenis Permintaan"
           value={value.jenisId}
           allLabel="Semua Jenis"
           options={jenisOptions}
+          disabled={!value.komponenId}
           onChange={(jenisId) => onChange({ ...value, jenisId, kategoriId: undefined, detailId: undefined })}
         />
         <DetailSelect
@@ -1432,6 +1479,7 @@ function countActiveFilters(filter: KegiatanFilterValue) {
 function countActiveDetailFilters(filter: DetailFilterValue) {
   return [
     filter.pembuatId,
+    filter.komponenId,
     filter.jenisId,
     filter.kategoriId,
     filter.detailId,

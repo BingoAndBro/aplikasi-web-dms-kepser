@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
   bigint,
-  boolean,
   check,
   date,
   index,
@@ -10,31 +9,17 @@ import {
   pgSchema,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { users } from '../auth/users'
+import { masterFungsi } from '../master/fungsi'
+import { masterKegiatan } from '../master/kegiatan'
+import { masterKomponen } from '../master/komponen'
 import { masterKlasifikasiArsip } from './klasifikasi-arsip'
 
 const arsipSchema = pgSchema('arsip')
 
 export type ManualArsipMetadataJson = Record<string, unknown>
-
-export const manualArsipCategory = arsipSchema.table(
-  'manual_arsip_category',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    nama: text('nama').notNull(),
-    deskripsi: text('deskripsi'),
-    isActive: boolean('is_active').notNull().default(true),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex('manual_arsip_category_nama_unique').on(table.nama),
-    index('idx_manual_arsip_category_is_active').on(table.isActive),
-  ],
-)
 
 export const manualArsip = arsipSchema.table(
   'manual_arsip',
@@ -46,9 +31,15 @@ export const manualArsip = arsipSchema.table(
     tanggalDiarsipkan: date('tanggal_diarsipkan'),
     keterangan: text('keterangan').notNull(),
     nominalRealisasi: numeric('nominal_realisasi', { precision: 15, scale: 2 }),
-    categoryId: uuid('category_id')
+    fungsiId: uuid('fungsi_id')
       .notNull()
-      .references(() => manualArsipCategory.id, { onDelete: 'restrict', onUpdate: 'no action' }),
+      .references(() => masterFungsi.id, { onDelete: 'restrict', onUpdate: 'no action' }),
+    kegiatanId: uuid('kegiatan_id')
+      .notNull()
+      .references(() => masterKegiatan.id, { onDelete: 'restrict', onUpdate: 'no action' }),
+    komponenId: uuid('komponen_id')
+      .notNull()
+      .references(() => masterKomponen.id, { onDelete: 'restrict', onUpdate: 'no action' }),
     klasifikasiId: uuid('klasifikasi_id')
       .references(() => masterKlasifikasiArsip.id, { onDelete: 'set null', onUpdate: 'no action' }),
     klasifikasiKodeSnapshot: text('klasifikasi_kode_snapshot'),
@@ -78,7 +69,9 @@ export const manualArsip = arsipSchema.table(
       .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
   },
   (table) => [
-    index('idx_manual_arsip_category_id').on(table.categoryId),
+    index('idx_manual_arsip_fungsi_id').on(table.fungsiId),
+    index('idx_manual_arsip_kegiatan_id').on(table.kegiatanId),
+    index('idx_manual_arsip_komponen_id').on(table.komponenId),
     index('idx_manual_arsip_klasifikasi_id').on(table.klasifikasiId),
     index('idx_manual_arsip_status_arsip').on(table.statusArsip),
     index('idx_manual_arsip_tanggal').on(table.tanggal),
@@ -123,8 +116,6 @@ export const manualArsipAttachment = arsipSchema.table(
 
 // Manual archive file paths are logical storage paths only. Future file-access
 // routes must revalidate authorization and deny access when status_arsip is DIMUSNAHKAN.
-export type ManualArsipCategory = typeof manualArsipCategory.$inferSelect
-export type NewManualArsipCategory = typeof manualArsipCategory.$inferInsert
 export type ManualArsip = typeof manualArsip.$inferSelect
 export type NewManualArsip = typeof manualArsip.$inferInsert
 export type ManualArsipAttachment = typeof manualArsipAttachment.$inferSelect

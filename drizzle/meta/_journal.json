@@ -85,6 +85,13 @@
       "when": 1780962000000,
       "tag": "0011_profile_avatar_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781048400000,
+      "tag": "0012_workflow_ubah_alur_v1_foundation",
+      "breakpoints": true
     }
   ]
 }

@@ -64,6 +64,7 @@ interface ReviewSummaryProps {
   lampiranUrls: LampiranUrl[]
   nominalRealisasi?: string | number | null
   isNonMaterial?: boolean
+  komponenNama?: string
   jenisPermintaanNama?: string
   kategoriPermintaanNama?: string
   detailPermintaanNama?: string
@@ -79,6 +80,7 @@ export function ReviewSummary({
   lampiranUrls,
   nominalRealisasi,
   isNonMaterial,
+  komponenNama,
   jenisPermintaanNama,
   kategoriPermintaanNama,
   detailPermintaanNama,
@@ -115,11 +117,14 @@ export function ReviewSummary({
         <SummaryGroup
           icon={<Tags size={15} />}
           title="Karakteristik Dokumen"
-          subtitle={isNonMaterial ? 'Jenis dan keterangan dokumen' : 'Jenis, kategori, detail, dan nominal'}
+          subtitle={isNonMaterial ? 'Nama dan keterangan dokumen' : 'Komponen, jenis, kategori, detail, dan nominal'}
         >
           <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+            {!isNonMaterial && (
+              <SummaryItem label="Komponen" value={komponenNama || '-'} className="sm:col-span-2" />
+            )}
             <SummaryItem
-              label={isNonMaterial ? 'Jenis Dokumen' : 'Jenis Permintaan'}
+              label={isNonMaterial ? 'Nama Dokumen' : 'Jenis Permintaan'}
               value={jenisPermintaanNama || '-'}
               className={isNonMaterial ? 'sm:col-span-2' : ''}
             />
@@ -130,9 +135,9 @@ export function ReviewSummary({
               <SummaryItem label="Detail" value={detailPermintaanNama} />
             )}
             <SummaryItem
-              label={isNonMaterial ? 'Keterangan Detail' : 'Nominal Realisasi'}
+              label={isNonMaterial ? 'Keterangan Detail (opsional)' : 'Nominal Realisasi'}
               value={isNonMaterial
-                ? keteranganDetail || <span className="text-error">Belum diisi</span>
+                ? keteranganDetail || <span className="text-stone-400">Tidak diisi</span>
                 : nominalRealisasi
                   ? <span className="font-mono font-bold text-stone-950">Rp {nominalRealisasi}</span>
                   : <span className="text-error">Belum diisi</span>}

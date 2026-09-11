@@ -1,6 +1,6 @@
 export type WorkflowNamaArsipSource = {
   judul?: string | null
-  jenisDokumenNama?: string | null
+  namaDokumen?: string | null
   kegiatanNama?: string | null
 }
 
@@ -9,11 +9,11 @@ const MAX_WORKFLOW_NAMA_ARSIP_LENGTH = 255
 
 export function deriveWorkflowNamaArsip(source: WorkflowNamaArsipSource): string {
   const judul = normalizeNamePart(source.judul)
-  const jenisDokumenNama = normalizeNamePart(source.jenisDokumenNama)
+  const namaDokumen = normalizeNamePart(source.namaDokumen)
   const kegiatanNama = normalizeNamePart(source.kegiatanNama)
 
-  if (judul && jenisDokumenNama) {
-    return truncateWorkflowNamaArsip(`${jenisDokumenNama} - ${judul}`)
+  if (judul && namaDokumen) {
+    return truncateWorkflowNamaArsip(`${namaDokumen} - ${judul}`)
   }
 
   if (judul) {

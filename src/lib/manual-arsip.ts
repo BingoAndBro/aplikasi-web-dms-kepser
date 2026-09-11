@@ -7,9 +7,9 @@ import {
   berkasArsipItem,
   manualArsip,
   manualArsipAttachment,
-  manualArsipCategory,
   masterKlasifikasiArsip,
 } from '#/db/schema/arsip'
+import { masterFungsi, masterKegiatan, masterKomponen } from '#/db/schema/master'
 import {
   getLocalServerSession,
   hasLocalRole,
@@ -61,10 +61,9 @@ export class ManualArsipApiError extends Error {
   }
 }
 
-export type ManualArsipCategoryResponse = {
+export type ManualArsipNamedRefResponse = {
   id: string
   nama: string
-  deskripsi: string | null
 }
 
 export type ManualArsipListItemResponse = {
@@ -74,7 +73,9 @@ export type ManualArsipListItemResponse = {
   keterangan: string
   nominal_realisasi: number | null
   status_arsip: string
-  category: ManualArsipCategoryResponse
+  fungsi: ManualArsipNamedRefResponse
+  kegiatan: ManualArsipNamedRefResponse
+  komponen: ManualArsipNamedRefResponse
   klasifikasi: {
     id: string | null
     nama: string | null
@@ -105,10 +106,9 @@ export type ManualArsipAttachmentResponse = {
 
 export type ManualArsipAttachmentFilePurpose = 'preview' | 'download'
 
-type CategoryRow = {
+type NamedRefRow = {
   id: string
   nama: string
-  deskripsi: string | null
 }
 
 type KlasifikasiRow = {
@@ -131,7 +131,7 @@ type ManualArsipAttachmentFileReference = {
   nama: string
   tanggal: string | Date | null
   status_arsip: string
-  category_nama: string | null
+  komponen_nama: string | null
   attachment: ManualArsipAttachmentFileRow
 }
 
@@ -141,7 +141,9 @@ type ManualArsipPatchUpdateValues = {
   nomorSurat: string | null
   tanggalDiarsipkan: string | null
   keterangan: string
-  categoryId: string
+  fungsiId: string
+  kegiatanId: string
+  komponenId: string
   klasifikasiId: string
   klasifikasiKodeSnapshot: string | null
   klasifikasiNamaSnapshot: string
@@ -163,7 +165,9 @@ type ManualArsipPatchUpdatedRow = {
   keterangan: string
   nominal_realisasi: string | number | null
   status_arsip: string
-  category_id: string
+  fungsi_id: string
+  kegiatan_id: string
+  komponen_id: string
   klasifikasi_id: string | null
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string | null
@@ -191,28 +195,12 @@ export async function requireManualArsipApiSession(request: Request): Promise<Lo
   return session
 }
 
-export async function listManualArsipCategories(): Promise<ManualArsipCategoryResponse[]> {
-  const rows = await db
-    .select({
-      id: manualArsipCategory.id,
-      nama: manualArsipCategory.nama,
-      deskripsi: manualArsipCategory.deskripsi,
-    })
-    .from(manualArsipCategory)
-    .where(eq(manualArsipCategory.isActive, true))
-    .orderBy(asc(manualArsipCategory.nama))
-
-  return rows
-}
-
 export async function createManualArsipRecord(
   input: CreateManualArsipInput,
   createdBy: string,
 ): Promise<ManualArsipDetailResponse> {
-  const category = await findActiveManualArsipCategory(input.category_id)
-  if (!category) {
-    throw new ManualArsipApiError('Kategori dokumen tidak ditemukan', 400)
-  }
+  const hierarchy = await resolveManualArsipHierarchy(input.fungsi_id, input.kegiatan_id, input.komponen_id)
+  const { fungsi, kegiatan, komponen } = hierarchy
 
   const klasifikasi = await findOperationalKlasifikasi(input.klasifikasi_id)
 
@@ -227,7 +215,9 @@ export async function createManualArsipRecord(
           nomorSurat: input.nomor_surat,
           tanggalDiarsipkan: input.tanggal_diarsipkan,
           keterangan: input.keterangan,
-          categoryId: category.id,
+          fungsiId: fungsi.id,
+          kegiatanId: kegiatan.id,
+          komponenId: komponen.id,
           klasifikasiId: klasifikasi.id,
           klasifikasiKodeSnapshot: klasifikasi.kode,
           klasifikasiNamaSnapshot: klasifikasi.nama,
@@ -250,7 +240,9 @@ export async function createManualArsipRecord(
           keterangan: manualArsip.keterangan,
           nominal_realisasi: manualArsip.nominalRealisasi,
           status_arsip: manualArsip.statusArsip,
-          category_id: manualArsip.categoryId,
+          fungsi_id: manualArsip.fungsiId,
+          kegiatan_id: manualArsip.kegiatanId,
+          komponen_id: manualArsip.komponenId,
           klasifikasi_id: manualArsip.klasifikasiId,
           klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
           klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
@@ -295,7 +287,7 @@ export async function createManualArsipRecord(
   }
 
   return {
-    ...toManualArsipListItem(created, category, klasifikasi),
+    ...toManualArsipListItem(created, { fungsi, kegiatan, komponen }, klasifikasi),
     metadata: sanitizeMetadata(created.metadata),
     attachments: [],
   }
@@ -493,7 +485,9 @@ export async function listManualArsipRecords(
 ): Promise<ManualArsipListItemResponse[]> {
   const filters: SQL[] = []
 
-  if (query.category_id) filters.push(eq(manualArsip.categoryId, query.category_id))
+  if (query.fungsi_id) filters.push(eq(manualArsip.fungsiId, query.fungsi_id))
+  if (query.kegiatan_id) filters.push(eq(manualArsip.kegiatanId, query.kegiatan_id))
+  if (query.komponen_id) filters.push(eq(manualArsip.komponenId, query.komponen_id))
   if (query.klasifikasi_id) filters.push(eq(manualArsip.klasifikasiId, query.klasifikasi_id))
   if (query.status_arsip) filters.push(eq(manualArsip.statusArsip, query.status_arsip))
 
@@ -505,9 +499,12 @@ export async function listManualArsipRecords(
       keterangan: manualArsip.keterangan,
       nominal_realisasi: manualArsip.nominalRealisasi,
       status_arsip: manualArsip.statusArsip,
-      category_id: manualArsip.categoryId,
-      category_nama: manualArsipCategory.nama,
-      category_deskripsi: manualArsipCategory.deskripsi,
+      fungsi_id: manualArsip.fungsiId,
+      fungsi_nama: masterFungsi.nama,
+      kegiatan_id: manualArsip.kegiatanId,
+      kegiatan_nama: masterKegiatan.nama,
+      komponen_id: manualArsip.komponenId,
+      komponen_nama: masterKomponen.nama,
       klasifikasi_id: manualArsip.klasifikasiId,
       klasifikasi_nama: masterKlasifikasiArsip.nama,
       klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
@@ -516,8 +513,11 @@ export async function listManualArsipRecords(
       updated_at: manualArsip.updatedAt,
     })
     .from(manualArsip)
-    .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
+    .leftJoin(masterFungsi, eq(manualArsip.fungsiId, masterFungsi.id))
+    .leftJoin(masterKegiatan, eq(manualArsip.kegiatanId, masterKegiatan.id))
+    .leftJoin(masterKomponen, eq(manualArsip.komponenId, masterKomponen.id))
     .leftJoin(masterKlasifikasiArsip, eq(manualArsip.klasifikasiId, masterKlasifikasiArsip.id))
+    .$dynamic()
 
   if (filters.length > 0) {
     builder = builder.where(and(...filters))
@@ -534,11 +534,9 @@ export async function listManualArsipRecords(
     keterangan: row.keterangan,
     nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
     status_arsip: row.status_arsip,
-    category: {
-      id: row.category_id,
-      nama: row.category_nama ?? '',
-      deskripsi: row.category_deskripsi ?? null,
-    },
+    fungsi: { id: row.fungsi_id, nama: row.fungsi_nama ?? '' },
+    kegiatan: { id: row.kegiatan_id, nama: row.kegiatan_nama ?? '' },
+    komponen: { id: row.komponen_id, nama: row.komponen_nama ?? '' },
     klasifikasi: {
       id: row.klasifikasi_id,
       nama: row.klasifikasi_nama ?? row.klasifikasi_nama_snapshot,
@@ -561,9 +559,12 @@ export async function getManualArsipDetail(
       keterangan: manualArsip.keterangan,
       nominal_realisasi: manualArsip.nominalRealisasi,
       status_arsip: manualArsip.statusArsip,
-      category_id: manualArsip.categoryId,
-      category_nama: manualArsipCategory.nama,
-      category_deskripsi: manualArsipCategory.deskripsi,
+      fungsi_id: manualArsip.fungsiId,
+      fungsi_nama: masterFungsi.nama,
+      kegiatan_id: manualArsip.kegiatanId,
+      kegiatan_nama: masterKegiatan.nama,
+      komponen_id: manualArsip.komponenId,
+      komponen_nama: masterKomponen.nama,
       klasifikasi_id: manualArsip.klasifikasiId,
       klasifikasi_nama: masterKlasifikasiArsip.nama,
       klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
@@ -573,7 +574,9 @@ export async function getManualArsipDetail(
       updated_at: manualArsip.updatedAt,
     })
     .from(manualArsip)
-    .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
+    .leftJoin(masterFungsi, eq(manualArsip.fungsiId, masterFungsi.id))
+    .leftJoin(masterKegiatan, eq(manualArsip.kegiatanId, masterKegiatan.id))
+    .leftJoin(masterKomponen, eq(manualArsip.komponenId, masterKomponen.id))
     .leftJoin(masterKlasifikasiArsip, eq(manualArsip.klasifikasiId, masterKlasifikasiArsip.id))
     .where(eq(manualArsip.id, id))
     .limit(1)
@@ -600,11 +603,9 @@ export async function getManualArsipDetail(
     keterangan: row.keterangan,
     nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
     status_arsip: row.status_arsip,
-    category: {
-      id: row.category_id,
-      nama: row.category_nama ?? '',
-      deskripsi: row.category_deskripsi ?? null,
-    },
+    fungsi: { id: row.fungsi_id, nama: row.fungsi_nama ?? '' },
+    kegiatan: { id: row.kegiatan_id, nama: row.kegiatan_nama ?? '' },
+    komponen: { id: row.komponen_id, nama: row.komponen_nama ?? '' },
     klasifikasi: {
       id: row.klasifikasi_id,
       nama: row.klasifikasi_nama ?? row.klasifikasi_nama_snapshot,
@@ -652,10 +653,8 @@ export async function updateManualArsipRecord(
   }
 
   const input = parsed.data
-  const category = await findActiveManualArsipCategory(input.category_id)
-  if (!category) {
-    throw new ManualArsipApiError('Kategori dokumen tidak ditemukan', 400)
-  }
+  const hierarchy = await resolveManualArsipHierarchy(input.fungsi_id, input.kegiatan_id, input.komponen_id)
+  const { fungsi, kegiatan, komponen } = hierarchy
 
   const klasifikasi = await findOperationalKlasifikasi(input.klasifikasi_id)
 
@@ -667,7 +666,9 @@ export async function updateManualArsipRecord(
     nomorSurat: input.nomor_surat,
     tanggalDiarsipkan: input.tanggal_diarsipkan,
     keterangan: input.keterangan,
-    categoryId: category.id,
+    fungsiId: fungsi.id,
+    kegiatanId: kegiatan.id,
+    komponenId: komponen.id,
     klasifikasiId: klasifikasi.id,
     klasifikasiKodeSnapshot: klasifikasi.kode,
     klasifikasiNamaSnapshot: klasifikasi.nama,
@@ -690,7 +691,7 @@ export async function updateManualArsipRecord(
   }
 
   return {
-    ...toManualArsipListItem(updated, category, klasifikasi),
+    ...toManualArsipListItem(updated, { fungsi, kegiatan, komponen }, klasifikasi),
     metadata: sanitizeMetadata(updated.metadata),
   }
 }
@@ -718,7 +719,9 @@ async function updateManualArsipSourceRecord({
       keterangan: manualArsip.keterangan,
       nominal_realisasi: manualArsip.nominalRealisasi,
       status_arsip: manualArsip.statusArsip,
-      category_id: manualArsip.categoryId,
+      fungsi_id: manualArsip.fungsiId,
+      kegiatan_id: manualArsip.kegiatanId,
+      komponen_id: manualArsip.komponenId,
       klasifikasi_id: manualArsip.klasifikasiId,
       klasifikasi_kode_snapshot: manualArsip.klasifikasiKodeSnapshot,
       klasifikasi_nama_snapshot: manualArsip.klasifikasiNamaSnapshot,
@@ -922,21 +925,59 @@ export function toSafeErrorLog(error: unknown): Record<string, unknown> {
   }
 }
 
-async function findActiveManualArsipCategory(id: string): Promise<CategoryRow | null> {
-  const [row] = await db
-    .select({
-      id: manualArsipCategory.id,
-      nama: manualArsipCategory.nama,
-      deskripsi: manualArsipCategory.deskripsi,
-    })
-    .from(manualArsipCategory)
-    .where(and(
-      eq(manualArsipCategory.id, id),
-      eq(manualArsipCategory.isActive, true),
-    ))
+/**
+ * Validates and resolves the Fungsi -> Kegiatan -> Komponen chain for a
+ * manual arsip write: each level must exist, be active, and be consistent
+ * with its declared parent.
+ */
+async function resolveManualArsipHierarchy(
+  fungsiId: string,
+  kegiatanId: string,
+  komponenId: string,
+): Promise<{ fungsi: NamedRefRow; kegiatan: NamedRefRow; komponen: NamedRefRow }> {
+  const [fungsi] = await db
+    .select({ id: masterFungsi.id, nama: masterFungsi.nama })
+    .from(masterFungsi)
+    .where(and(eq(masterFungsi.id, fungsiId), eq(masterFungsi.isActive, true)))
     .limit(1)
 
-  return row ?? null
+  if (!fungsi) {
+    throw new ManualArsipApiError('Fungsi tidak ditemukan atau tidak aktif', 400)
+  }
+
+  const [kegiatan] = await db
+    .select({ id: masterKegiatan.id, nama: masterKegiatan.nama, fungsi_id: masterKegiatan.fungsiId })
+    .from(masterKegiatan)
+    .where(and(eq(masterKegiatan.id, kegiatanId), eq(masterKegiatan.isActive, true)))
+    .limit(1)
+
+  if (!kegiatan) {
+    throw new ManualArsipApiError('Kegiatan tidak ditemukan atau tidak aktif', 400)
+  }
+
+  if (kegiatan.fungsi_id !== fungsiId) {
+    throw new ManualArsipApiError('Kegiatan tidak sesuai dengan fungsi', 400)
+  }
+
+  const [komponen] = await db
+    .select({ id: masterKomponen.id, nama: masterKomponen.nama, kegiatan_id: masterKomponen.kegiatanId })
+    .from(masterKomponen)
+    .where(and(eq(masterKomponen.id, komponenId), eq(masterKomponen.isActive, true)))
+    .limit(1)
+
+  if (!komponen) {
+    throw new ManualArsipApiError('Komponen tidak ditemukan atau tidak aktif', 400)
+  }
+
+  if (komponen.kegiatan_id !== kegiatanId) {
+    throw new ManualArsipApiError('Komponen tidak sesuai dengan kegiatan', 400)
+  }
+
+  return {
+    fungsi: { id: fungsi.id, nama: fungsi.nama },
+    kegiatan: { id: kegiatan.id, nama: kegiatan.nama },
+    komponen: { id: komponen.id, nama: komponen.nama },
+  }
 }
 
 async function findOperationalKlasifikasi(id: string): Promise<KlasifikasiRow> {
@@ -959,14 +1000,16 @@ function toManualArsipListItem(
     keterangan: string
     nominal_realisasi: string | number | null
     status_arsip: string
-    category_id: string
+    fungsi_id: string
+    kegiatan_id: string
+    komponen_id: string
     klasifikasi_id: string | null
     klasifikasi_nama_snapshot: string | null
     created_by: string
     created_at: Date | string | null
     updated_at: Date | string | null
   },
-  category: CategoryRow,
+  hierarchy: { fungsi: NamedRefRow; kegiatan: NamedRefRow; komponen: NamedRefRow },
   klasifikasi: KlasifikasiRow | null,
 ): ManualArsipListItemResponse {
   return {
@@ -976,7 +1019,9 @@ function toManualArsipListItem(
     keterangan: row.keterangan,
     nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
     status_arsip: row.status_arsip,
-    category,
+    fungsi: hierarchy.fungsi,
+    kegiatan: hierarchy.kegiatan,
+    komponen: hierarchy.komponen,
     klasifikasi: {
       id: row.klasifikasi_id,
       nama: klasifikasi?.nama ?? row.klasifikasi_nama_snapshot,
@@ -1043,10 +1088,10 @@ async function loadManualArsipAttachmentFileReference(
       nama: manualArsip.nama,
       tanggal: manualArsip.tanggal,
       status_arsip: manualArsip.statusArsip,
-      category_nama: manualArsipCategory.nama,
+      komponen_nama: masterKomponen.nama,
     })
     .from(manualArsip)
-    .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
+    .leftJoin(masterKomponen, eq(manualArsip.komponenId, masterKomponen.id))
     .where(eq(manualArsip.id, manualArsipId))
     .limit(1)
 
@@ -1075,7 +1120,7 @@ async function loadManualArsipAttachmentFileReference(
     nama: parent.nama,
     tanggal: parent.tanggal,
     status_arsip: parent.status_arsip,
-    category_nama: parent.category_nama ?? null,
+    komponen_nama: parent.komponen_nama ?? null,
     attachment,
   }
 }

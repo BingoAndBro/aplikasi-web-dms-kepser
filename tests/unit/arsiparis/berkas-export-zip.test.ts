@@ -317,7 +317,7 @@ function manualItem(overrides: Partial<BerkasArsipDetailItemDto> = {}): BerkasAr
     attachments: [],
     has_attachments: true,
     workflow: null,
-    manual: { nama: 'Dokumen Manual', category_name: null, keterangan: null },
+    manual: { nama: 'Dokumen Manual', komponen_name: null, keterangan: null },
     warnings: [],
     ...overrides,
   }

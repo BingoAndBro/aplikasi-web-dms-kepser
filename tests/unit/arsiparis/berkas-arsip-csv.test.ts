@@ -133,7 +133,7 @@ describe('folder-first berkas CSV helper', () => {
         attachment_count: 1,
         workflow: null,
         manual: {
-          category_name: 'Kategori Manual',
+          komponen_name: 'Kategori Manual',
           keterangan: 'Keterangan manual aman',
         },
         warnings: ['SOURCE_NOT_FOUND'],
@@ -144,7 +144,7 @@ describe('folder-first berkas CSV helper', () => {
     expect(csv).toContain('Persetujuan,Laporan Pembayaran')
     expect(csv).toContain('Status: ARCHIVED; Fungsi: Fungsi Keuangan; Kegiatan: Kegiatan Pembayaran')
     expect(csv).toContain('Manual,Dokumen Manual')
-    expect(csv).toContain('Kategori: Kategori Manual; Keterangan: Keterangan manual aman')
+    expect(csv).toContain('Komponen: Kategori Manual; Keterangan: Keterangan manual aman')
     expect(csv).toContain('Data sumber tidak ditemukan')
     expectNoSensitiveOutput(csv)
   })

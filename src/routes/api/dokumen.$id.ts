@@ -13,12 +13,14 @@ import {
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
+  masterKomponen,
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 import { getDokumenValidationErrorMessage, updateDokumenSchema } from '#/lib/schemas/dokumen'
 import { type LampiranUrl } from '#/lib/dokumen-helpers'
 import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
+import { deriveLocalSubmitDisplayName } from '#/lib/dokumen/local-submit-write-bridge'
 import {
   assertSafeLogicalStoragePath,
   getLocalStorageRoot,
@@ -342,8 +344,11 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
               kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+              komponen_id: dokumenTransaksi.komponenId,
+              nama_dokumen: dokumenTransaksi.namaDokumen,
               fungsi_nama: masterFungsi.nama,
               kegiatan_nama: masterKegiatan.nama,
+              komponen_nama: masterKomponen.nama,
               jenis_permintaan_nama: masterJenisPermintaan.nama,
               kategori_permintaan_nama: masterKategoriPermintaan.nama,
               detail_permintaan_nama: masterDetailPermintaan.nama,
@@ -352,6 +357,7 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterKomponen, eq(dokumenTransaksi.komponenId, masterKomponen.id))
             .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
             .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
             .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
@@ -421,6 +427,8 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           jenis_permintaan_id: string | null
           kategori_permintaan_id: string | null
           detail_permintaan_id: string | null
+          tahun: number
+          nama_dokumen: string | null
         }>
 
         try {
@@ -435,6 +443,8 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
               kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
+              tahun: dokumenTransaksi.tahun,
+              nama_dokumen: dokumenTransaksi.namaDokumen,
             })
             .from(dokumenTransaksi)
             .where(eq(dokumenTransaksi.id, params.id))
@@ -528,6 +538,17 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             if (parsed.data.keteranganDetail !== undefined) {
               updatePayload.keteranganDetail = parsed.data.keteranganDetail
             }
+            if (parsed.data.komponenId !== undefined) {
+              updatePayload.komponenId = parsed.data.komponenId
+            }
+            if (parsed.data.namaDokumen !== undefined) {
+              updatePayload.namaDokumen = parsed.data.namaDokumen
+              // Non-Material judul mirrors resolveLocalSubmitLeafName's leaf priority:
+              // `{namaDokumen} {tahun} {displayName}`. Recompute only when namaDokumen changes.
+              if (isNonMaterial && parsed.data.namaDokumen) {
+                updatePayload.judul = `${parsed.data.namaDokumen} ${dok.tahun} ${deriveLocalSubmitDisplayName(session)}`
+              }
+            }
 
             const updatedRows = await tx
               .update(dokumenTransaksi)
@@ -592,14 +613,18 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               is_non_material: dokumenTransaksi.isNonMaterial,
               jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
               keterangan_detail: dokumenTransaksi.keteranganDetail,
+              komponen_id: dokumenTransaksi.komponenId,
+              nama_dokumen: dokumenTransaksi.namaDokumen,
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,
               fungsi_nama: masterFungsi.nama,
               kegiatan_nama: masterKegiatan.nama,
+              komponen_nama: masterKomponen.nama,
             })
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterKomponen, eq(dokumenTransaksi.komponenId, masterKomponen.id))
             .where(eq(dokumenTransaksi.id, params.id))
             .limit(1)
         } catch (err) {

@@ -26,12 +26,16 @@ export type DokumenRow = {
   created_at: string
   updated_at: string
   // Chain fields (for Material)
+  komponen_id?: string | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
+  // Free-text name (for Non-Material)
+  nama_dokumen?: string | null
   // Joined fields
   fungsi_nama?: string
   kegiatan_nama?: string
+  komponen_nama?: string
   jenis_permintaan_nama?: string
   kategori_permintaan_nama?: string
   detail_permintaan_nama?: string

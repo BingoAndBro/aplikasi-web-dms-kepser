@@ -44,7 +44,7 @@ describe('resolveBerkasArsipItemAttachments (non-HTTP resolver for RP-02 ZIP exp
             contentType: 'application/pdf',
             manualNama: 'Dokumen Manual',
             manualTanggal: '2026-05-30',
-            categoryNama: 'Pengadaan',
+            komponenNama: 'Pengadaan',
           },
           {
             logicalPath: 'owner/manual/2.pdf',
@@ -53,7 +53,7 @@ describe('resolveBerkasArsipItemAttachments (non-HTTP resolver for RP-02 ZIP exp
             contentType: 'application/pdf',
             manualNama: 'Dokumen Manual',
             manualTanggal: '2026-05-30',
-            categoryNama: 'Pengadaan',
+            komponenNama: 'Pengadaan',
           },
         ],
       }),
@@ -120,7 +120,7 @@ type RepositoryOptions = {
     contentType?: string | null
     manualNama?: string | null
     manualTanggal?: string | null
-    categoryNama?: string | null
+    komponenNama?: string | null
   }>
 }
 
@@ -163,7 +163,8 @@ function createRepository(options: RepositoryOptions = {}): BerkasArsipFileAcces
         tanggal: '2026-05-29',
         is_non_material: false,
         kegiatan_nama: 'Kegiatan Pembayaran',
-        jenis_dokumen_nama: null,
+        komponen_nama: 'Komponen Pembayaran',
+        nama_dokumen: null,
         jenis_permintaan_nama: 'Jenis Pembayaran',
         kategori_permintaan_nama: 'Kategori Pembayaran',
         detail_permintaan_nama: 'Detail Pembayaran',
@@ -192,7 +193,7 @@ function createRepository(options: RepositoryOptions = {}): BerkasArsipFileAcces
         contentType: null,
         manualNama: null,
         manualTanggal: null,
-        categoryNama: null,
+        komponenNama: null,
         ...row,
       }))
     },

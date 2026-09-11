@@ -23,6 +23,18 @@ export type KegiatanRow = {
   is_active: boolean
   created_at: string
   fungsi_nama?: string
+  jumlah_komponen?: number
+}
+
+export type KomponenRow = {
+  id: string
+  nama: string
+  deskripsi: string | null
+  is_active: boolean
+  created_at: string
+  kegiatan_id: string
+  kegiatan_nama?: string
+  jumlah_jenis?: number
 }
 
 export type KelengkapanRow = {
@@ -34,6 +46,7 @@ export type KelengkapanRow = {
   created_at: string
   kegiatan_nama?: string
   fungsi_nama?: string
+  komponen_permintaan_id?: string | null
   jenis_permintaan_id?: string | null
   kategori_permintaan_id?: string | null
   detail_permintaan_id?: string | null
@@ -45,6 +58,8 @@ export type JenisRow = {
   deskripsi: string | null
   is_active: boolean
   created_at: string
+  komponen_id: string
+  komponen_nama?: string
   jumlah_kategori?: number
 }
 

@@ -7,15 +7,14 @@ import {
   berkasArsipItem,
   manualArsip,
   manualArsipAttachment,
-  manualArsipCategory,
 } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
   masterDetailPermintaan,
-  masterJenisDokumen,
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
+  masterKomponen,
 } from '#/db/schema/master'
 import {
   ARCHIVE_SOURCE_TYPE,
@@ -57,7 +56,8 @@ export type BerkasArsipWorkflowFileSourceRow = {
   tanggal: Date | string | null
   is_non_material: boolean | null
   kegiatan_nama: string | null
-  jenis_dokumen_nama: string | null
+  komponen_nama: string | null
+  nama_dokumen: string | null
   jenis_permintaan_nama: string | null
   kategori_permintaan_nama: string | null
   detail_permintaan_nama: string | null
@@ -75,7 +75,7 @@ export type BerkasArsipManualAttachmentExportRow = {
   contentType: string | null
   manualNama: string | null
   manualTanggal: Date | string | null
-  categoryNama: string | null
+  komponenNama: string | null
 }
 
 export type BerkasArsipFileAccessRepository = {
@@ -254,7 +254,7 @@ async function resolveManualItemAttachmentsForExport({
           {
             nama: row.manualNama,
             tanggal: row.manualTanggal,
-            category_nama: row.categoryNama,
+            komponen_nama: row.komponenNama,
           },
         ),
       ) ?? row.judulLampiran,
@@ -399,7 +399,8 @@ const defaultBerkasArsipFileAccessRepository: BerkasArsipFileAccessRepository = 
         tanggal: dokumenTransaksi.tanggal,
         is_non_material: dokumenTransaksi.isNonMaterial,
         kegiatan_nama: masterKegiatan.nama,
-        jenis_dokumen_nama: masterJenisDokumen.nama,
+        komponen_nama: masterKomponen.nama,
+        nama_dokumen: dokumenTransaksi.namaDokumen,
         jenis_permintaan_nama: masterJenisPermintaan.nama,
         kategori_permintaan_nama: masterKategoriPermintaan.nama,
         detail_permintaan_nama: masterDetailPermintaan.nama,
@@ -407,7 +408,7 @@ const defaultBerkasArsipFileAccessRepository: BerkasArsipFileAccessRepository = 
       })
       .from(dokumenTransaksi)
       .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
-      .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
+      .leftJoin(masterKomponen, eq(dokumenTransaksi.komponenId, masterKomponen.id))
       .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
       .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
       .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
@@ -442,11 +443,11 @@ const defaultBerkasArsipFileAccessRepository: BerkasArsipFileAccessRepository = 
         contentType: manualArsipAttachment.contentType,
         manualNama: manualArsip.nama,
         manualTanggal: manualArsip.tanggal,
-        categoryNama: manualArsipCategory.nama,
+        komponenNama: masterKomponen.nama,
       })
       .from(manualArsipAttachment)
       .innerJoin(manualArsip, eq(manualArsipAttachment.manualArsipId, manualArsip.id))
-      .leftJoin(manualArsipCategory, eq(manualArsip.categoryId, manualArsipCategory.id))
+      .leftJoin(masterKomponen, eq(manualArsip.komponenId, masterKomponen.id))
       .where(eq(manualArsipAttachment.manualArsipId, manualArsipId))
       .orderBy(asc(manualArsipAttachment.createdAt), asc(manualArsipAttachment.id)) as BerkasArsipManualAttachmentExportRow[]
 

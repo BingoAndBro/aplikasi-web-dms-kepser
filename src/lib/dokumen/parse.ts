@@ -39,6 +39,9 @@ export function parseDokumen(raw: any): DokumenRow {
     updated_at: raw.updated_at,
     fungsi_nama: raw.fungsi_nama,
     kegiatan_nama: raw.kegiatan_nama,
+    komponen_id: raw.komponen_id ?? null,
+    komponen_nama: raw.komponen_nama,
+    nama_dokumen: raw.nama_dokumen ?? null,
     jenis_permintaan_id: raw.jenis_permintaan_id,
     kategori_permintaan_id: raw.kategori_permintaan_id,
     detail_permintaan_id: raw.detail_permintaan_id,
@@ -76,6 +79,9 @@ export function parseDokumenWithNames(
     updated_at: raw.updated_at,
     fungsi_nama: fungsiMap[raw.fungsi_id] ?? raw.fungsi_nama ?? undefined,
     kegiatan_nama: kegMap[raw.kegiatan_jenis_id] ?? raw.kegiatan_nama ?? undefined,
+    komponen_id: raw.komponen_id ?? null,
+    komponen_nama: raw.komponen_nama,
+    nama_dokumen: raw.nama_dokumen ?? null,
     jenis_dokumen_nama: raw.jenis_dokumen_nama,
   }
 }

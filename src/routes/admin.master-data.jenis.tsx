@@ -2,7 +2,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import {
   AdminActionButtons,
-  AdminCountPill,
+  AdminFilterSelect,
+  AdminFormSelect,
+  AdminRelationPill,
   adminContentCompactClassName,
   adminDialogBodyClassName,
   adminDialogCancelButtonClassName,
@@ -45,13 +47,12 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import {
   Plus,
-  Search,
   Tag,
   ChevronRight,
 } from 'lucide-react'
 import { apiFetch } from '#/lib/api-client'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
-import type { JenisRow, KategoriRow } from '#/lib/master-data/shared'
+import type { JenisRow, KegiatanRow, KomponenRow } from '#/lib/master-data/shared'
 
 export const Route = createFileRoute('/admin/master-data/jenis')({
   component: JenisPage,
@@ -61,16 +62,25 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback
 }
 
+function komponenLabel(komponen: KomponenRow, kegiatans: KegiatanRow[]): string {
+  const kegiatan = kegiatans.find(k => k.id === komponen.kegiatan_id)
+  return kegiatan ? `${kegiatan.nama} / ${komponen.nama}` : komponen.nama
+}
+
 function JenisPage() {
   const { showToast } = useAppToast()
   const [items, setItems] = useState<JenisRow[]>([])
+  const [komponenList, setKomponenList] = useState<KomponenRow[]>([])
+  const [kegiatanList, setKegiatanList] = useState<KegiatanRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [filterKomponen, setFilterKomponen] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<JenisRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<JenisRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [formKomponenId, setFormKomponenId] = useState('')
   const [formNama, setFormNama] = useState('')
   const [formDeskripsi, setFormDeskripsi] = useState('')
   const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
@@ -80,35 +90,47 @@ function JenisPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const [jenis, kategoris] = await Promise.all([
+      const [jenis, komponens, kegiatans] = await Promise.all([
         apiFetch<JenisRow[]>('/master-jenis'),
-        apiFetch<KategoriRow[]>('/master-kategori'),
+        apiFetch<KomponenRow[]>('/master-komponen'),
+        apiFetch<KegiatanRow[]>('/master-kegiatan'),
       ])
-      const counts = new Map<string, number>()
-      for (const kategori of kategoris) {
-        counts.set(kategori.jenis_permintaan_id, (counts.get(kategori.jenis_permintaan_id) ?? 0) + 1)
-      }
-      setItems(jenis.map(item => ({
-        ...item,
-        jumlah_kategori: counts.get(item.id) ?? 0,
-      })))
+      setItems(jenis)
+      setKomponenList(komponens)
+      setKegiatanList(kegiatans)
     } catch { /* silent */ } finally { setLoading(false) }
   }
 
   const filtered = items.filter(f =>
-    f.nama.toLowerCase().includes(search.toLowerCase()) ||
-    (f.deskripsi ?? '').toLowerCase().includes(search.toLowerCase())
+    (f.nama.toLowerCase().includes(search.toLowerCase()) ||
+    (f.deskripsi ?? '').toLowerCase().includes(search.toLowerCase())) &&
+    (!filterKomponen || f.komponen_id === filterKomponen)
   )
+  const createDefaultKomponenId = filterKomponen || (komponenList[0]?.id ?? '')
   const isModalDirty = modalOpen && !saving && (
     editing
-      ? formNama !== editing.nama || formDeskripsi !== (editing.deskripsi ?? '')
-      : Boolean(formNama.trim() || formDeskripsi.trim())
+      ? formKomponenId !== editing.komponen_id || formNama !== editing.nama || formDeskripsi !== (editing.deskripsi ?? '')
+      : Boolean(formNama.trim() || formDeskripsi.trim() || formKomponenId !== createDefaultKomponenId)
   )
 
   useAdminFormLeaveGuard(isModalDirty)
 
-  function openCreate() { setEditing(null); setFormNama(''); setFormDeskripsi(''); setError(''); setModalOpen(true) }
-  function openEdit(item: JenisRow) { setEditing(item); setFormNama(item.nama); setFormDeskripsi(item.deskripsi ?? ''); setError(''); setModalOpen(true) }
+  function openCreate() {
+    setEditing(null)
+    setFormKomponenId(filterKomponen || (komponenList[0]?.id ?? ''))
+    setFormNama('')
+    setFormDeskripsi('')
+    setError('')
+    setModalOpen(true)
+  }
+  function openEdit(item: JenisRow) {
+    setEditing(item)
+    setFormKomponenId(item.komponen_id)
+    setFormNama(item.nama)
+    setFormDeskripsi(item.deskripsi ?? '')
+    setError('')
+    setModalOpen(true)
+  }
   function closeModal() {
     setModalOpen(false)
     setUnsavedConfirmOpen(false)
@@ -124,17 +146,26 @@ function JenisPage() {
 
   async function handleSave() {
     if (!formNama.trim()) { setError('Nama tidak boleh kosong'); return }
+    if (!formKomponenId) { setError('Komponen harus dipilih'); return }
     setSaving(true)
     try {
       if (editing) {
         await apiMutation(`/master-jenis/${editing.id}`, {
           method: 'PATCH',
-          body: { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined },
+          body: {
+            komponenId: formKomponenId,
+            nama: formNama.trim(),
+            deskripsi: formDeskripsi.trim() || undefined,
+          },
         })
       } else {
         await apiMutation('/master-jenis', {
           method: 'POST',
-          body: { nama: formNama.trim(), deskripsi: formDeskripsi.trim() || undefined },
+          body: {
+            komponenId: formKomponenId,
+            nama: formNama.trim(),
+            deskripsi: formDeskripsi.trim() || undefined,
+          },
         })
       }
       setModalOpen(false)
@@ -185,20 +216,9 @@ function JenisPage() {
             </>
           )}
           title="Jenis Permintaan"
-          description="Kelola jenis permintaan dokumen."
-          actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'}><Plus />Tambah Jenis</Button>}
+          description="Kelola jenis permintaan dokumen sebagai turunan dari Komponen."
+          actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'} disabled={komponenList.length === 0}><Plus />Tambah Jenis</Button>}
         />
-        <div className="hidden flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-outline uppercase tracking-widest mb-2">
-              <Tag size={12} /><span>Admin / Master Data</span><ChevronRight size={10} />
-              <span className="text-primary">Jenis Permintaan</span>
-            </div>
-            <h1 className="font-headline text-2xl font-extrabold text-on-surface">Jenis Permintaan</h1>
-            <p className="text-on-surface-variant text-xs mt-1">Kelola jenis permintaan dokumen (Bebas — tidak bergantung ke fungsi/kegiatan).</p>
-          </div>
-          <Button onClick={openCreate} size="sm" className="gap-1.5"><Plus size={14} />Tambah Jenis</Button>
-        </div>
 
         <AdminSearchPanel
           className={adminContentCompactClassName + ' ' + adminTableToolbarClassName}
@@ -208,16 +228,17 @@ function JenisPage() {
           onChange={setSearch}
           placeholder="Cari jenis..."
           resultText={`Total ${filtered.length} Jenis`}
-        />
-        <div className="hidden gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/40" />
-            <input type="text" aria-label="Cari jenis permintaan" placeholder="Cari jenis..." value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full bg-white border border-border rounded-lg text-xs focus:ring-1 focus:ring-ring/40 outline-none placeholder:text-outline/40"
-            />
-          </div>
-        </div>
+        >
+          <AdminFilterSelect
+            value={filterKomponen}
+            onChange={setFilterKomponen}
+            ariaLabel="Filter jenis permintaan berdasarkan komponen"
+            options={[
+              { value: '', label: 'Semua Komponen' },
+              ...komponenList.map(k => ({ value: k.id, label: komponenLabel(k, kegiatanList) })),
+            ]}
+          />
+        </AdminSearchPanel>
 
         {loading ? (
           <div className="flex items-center justify-center py-20"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>
@@ -226,9 +247,13 @@ function JenisPage() {
             <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center"><Tag size={24} className="text-primary" /></div>
             <div className="text-center">
               <p className="font-headline text-lg font-bold text-on-surface">Belum ada jenis permintaan</p>
-              <p className="text-on-surface-variant text-xs mt-1">Tambahkan jenis permintaan pertama untuk memulai.</p>
+              <p className="text-on-surface-variant text-xs mt-1">
+                {komponenList.length === 0
+                  ? 'Tambahkan komponen terlebih dahulu di Master Komponen.'
+                  : 'Tambahkan jenis permintaan pertama untuk memulai.'}
+              </p>
             </div>
-            <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Jenis</Button>
+            <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5" disabled={komponenList.length === 0}><Plus size={14} />Tambah Jenis</Button>
           </div>
         ) : (
           <AdminTableShell className={adminContentCompactClassName + ' ' + adminTableBodyClassName}>
@@ -237,8 +262,8 @@ function JenisPage() {
                 <TableRow>
                   <TableHead className="w-12 text-center">No</TableHead>
                   <TableHead>Nama</TableHead>
+                  <TableHead>Komponen Induk</TableHead>
                   <TableHead>Deskripsi</TableHead>
-                  <TableHead className="text-center">Jumlah Kategori</TableHead>
                   <TableHead className="text-center w-24">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -247,10 +272,8 @@ function JenisPage() {
                   <TableRow key={item.id} className="group hover:bg-primary/5 transition-colors">
                     <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                     <TableCell><span className="font-semibold text-sm text-on-surface">{item.nama}</span></TableCell>
+                    <TableCell><AdminRelationPill tone="blue">{item.komponen_nama || '—'}</AdminRelationPill></TableCell>
                     <TableCell><span className="text-xs text-on-surface-variant">{item.deskripsi || '—'}</span></TableCell>
-                    <TableCell className="text-center">
-                      <AdminCountPill count={item.jumlah_kategori ?? 0} label="Kategori" />
-                    </TableCell>
                     <TableCell className="text-center">
                       <AdminActionButtons
                         onEdit={() => openEdit(item)}
@@ -272,6 +295,19 @@ function JenisPage() {
           <DialogHeader className={adminDialogHeaderClassName}><DialogTitle>{editing ? 'Edit Jenis Permintaan' : 'Tambah Jenis Permintaan Baru'}</DialogTitle></DialogHeader>
           <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
+            <div className="space-y-1.5">
+              <Label className={adminFormLabelClassName}>Komponen <span className="text-error">*</span></Label>
+              <AdminFormSelect
+                value={formKomponenId}
+                onChange={setFormKomponenId}
+                ariaLabel="Pilih komponen untuk jenis permintaan"
+                placeholder="Pilih komponen..."
+                options={[
+                  { value: '', label: 'Pilih komponen...' },
+                  ...komponenList.map(k => ({ value: k.id, label: komponenLabel(k, kegiatanList) })),
+                ]}
+              />
+            </div>
             <div className="space-y-1.5">
               <Label className={adminFormLabelClassName} htmlFor="jn">Nama Jenis <span className="text-error">*</span></Label>
               <Input id="jn" value={formNama} onChange={e => setFormNama(e.target.value)} placeholder="Contoh: Perjalanan Dinas" maxLength={255} className={adminFormFieldClassName} />

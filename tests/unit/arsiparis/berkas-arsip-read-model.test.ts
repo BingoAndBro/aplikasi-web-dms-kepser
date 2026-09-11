@@ -144,7 +144,7 @@ describe('berkas arsip read model', () => {
       has_attachments: true,
       workflow: null,
       manual: {
-        category_name: 'Pengadaan',
+        komponen_name: 'Pengadaan',
         keterangan: 'Keterangan aman',
       },
     })
@@ -235,7 +235,6 @@ describe('berkas arsip read model', () => {
       itemRows: [closedWorkflowItem({
         workflow_date: null,
         kegiatan_nama: null,
-        jenis_dokumen_nama: null,
         jenis_permintaan_nama: null,
         kategori_permintaan_nama: null,
         detail_permintaan_nama: null,
@@ -447,7 +446,8 @@ function closedWorkflowItem(overrides: Partial<BerkasItemSourceReadRow> = {}): B
     ],
     fungsi_nama: 'Fungsi Keuangan',
     kegiatan_nama: 'Kegiatan Pembayaran',
-    jenis_dokumen_nama: null,
+    komponen_nama: 'Komponen Pembayaran',
+    nama_dokumen: null,
     jenis_permintaan_nama: 'Jenis Pembayaran',
     kategori_permintaan_nama: 'Kategori Pembayaran',
     detail_permintaan_nama: 'Detail Pembayaran',
@@ -455,7 +455,7 @@ function closedWorkflowItem(overrides: Partial<BerkasItemSourceReadRow> = {}): B
     manual_date: null,
     manual_nominal_realisasi: null,
     manual_created_by: null,
-    manual_category_name: null,
+    manual_komponen_name: null,
     manual_keterangan: null,
     ...overrides,
   }
@@ -479,7 +479,8 @@ function closedManualItem(): BerkasItemSourceReadRow {
     workflow_lampiran_urls: null,
     fungsi_nama: null,
     kegiatan_nama: null,
-    jenis_dokumen_nama: null,
+    komponen_nama: null,
+    nama_dokumen: null,
     jenis_permintaan_nama: null,
     kategori_permintaan_nama: null,
     detail_permintaan_nama: null,
@@ -487,7 +488,7 @@ function closedManualItem(): BerkasItemSourceReadRow {
     manual_date: '2026-05-21',
     manual_nominal_realisasi: '250000',
     manual_created_by: MANUAL_CREATOR_ID,
-    manual_category_name: 'Pengadaan',
+    manual_komponen_name: 'Pengadaan',
     manual_keterangan: 'Keterangan aman',
   }
 }

@@ -54,7 +54,9 @@ export type LocalSubmitPayload = {
   nominal_realisasi?: number | null
   is_non_material?: boolean
   jenisDokumenId?: string
+  namaDokumen?: string
   keteranganDetail?: string
+  komponenId?: string
   jenisPermintaanId?: string
   kategoriPermintaanId?: string
   detailPermintaanId?: string
@@ -80,6 +82,7 @@ export type LocalSubmitNameRow = {
 export type LocalSubmitRequiredKelengkapanRead = {
   kegiatanId: string
   isKetuaTim: boolean
+  komponenId?: string | null
   jenisPermintaanId?: string | null
   kategoriPermintaanId?: string | null
   detailPermintaanId?: string | null
@@ -96,6 +99,7 @@ export type LocalSubmitBridgeRepository = {
     input: LocalSubmitRequiredKelengkapanRead,
   ): Promise<LocalSubmitRequiredKelengkapan[]>
   getJenisDokumenById(id: string): Promise<LocalSubmitNameRow | null>
+  getKomponenById(id: string): Promise<LocalSubmitNameRow | null>
   getJenisPermintaanById(id: string): Promise<LocalSubmitNameRow | null>
   getKategoriPermintaanById(id: string): Promise<LocalSubmitNameRow | null>
   getDetailPermintaanById(id: string): Promise<LocalSubmitNameRow | null>
@@ -121,7 +125,9 @@ export type LocalSubmitDocumentCreatePayload = {
   nominalRealisasi: number
   isNonMaterial: boolean
   jenisDokumenId: string | null
+  namaDokumen: string | null
   keteranganDetail: string | null
+  komponenId: string | null
   jenisPermintaanId: string | null
   kategoriPermintaanId: string | null
   detailPermintaanId: string | null
@@ -161,7 +167,9 @@ export type LocalSubmitCreatedDocument = {
   nominal_realisasi: number | null
   is_non_material: boolean
   jenis_dokumen_id: string | null
+  nama_dokumen: string | null
   keterangan_detail: string | null
+  komponen_id: string | null
   jenis_permintaan_id: string | null
   kategori_permintaan_id: string | null
   detail_permintaan_id: string | null
@@ -169,6 +177,7 @@ export type LocalSubmitCreatedDocument = {
   updated_at: string
   fungsi_nama?: string
   kegiatan_nama?: string
+  komponen_nama?: string
   jenis_dokumen_nama?: string
 }
 
@@ -276,6 +285,7 @@ export async function prepareLocalSubmitWriteBridge({
     requiredKelengkapan = await repository.getRequiredKelengkapan({
       kegiatanId: payload.kegiatanJenisId,
       isKetuaTim: payload.isKetuaTim,
+      komponenId: payload.komponenId ?? null,
       jenisPermintaanId: payload.jenisPermintaanId ?? null,
       kategoriPermintaanId: payload.kategoriPermintaanId ?? null,
       detailPermintaanId: payload.detailPermintaanId ?? null,
@@ -420,7 +430,9 @@ export function buildLocalSubmitDocumentCreatePayload({
     nominalRealisasi: payload.nominal_realisasi ?? 0,
     isNonMaterial: Boolean(payload.is_non_material),
     jenisDokumenId: payload.jenisDokumenId ?? null,
+    namaDokumen: payload.namaDokumen ?? null,
     keteranganDetail: payload.keteranganDetail ?? null,
+    komponenId: payload.komponenId ?? null,
     jenisPermintaanId: payload.jenisPermintaanId ?? null,
     kategoriPermintaanId: payload.kategoriPermintaanId ?? null,
     detailPermintaanId: payload.detailPermintaanId ?? null,
@@ -452,7 +464,7 @@ export function buildLocalSubmitTransitionPlan(
 export async function resolveLocalSubmitLeafName(
   repository: Pick<
     LocalSubmitBridgeRepository,
-    | 'getJenisDokumenById'
+    | 'getKomponenById'
     | 'getDetailPermintaanById'
     | 'getKategoriPermintaanById'
     | 'getJenisPermintaanById'
@@ -461,15 +473,16 @@ export async function resolveLocalSubmitLeafName(
     LocalSubmitPayload,
     | 'is_non_material'
     | 'jenisDokumenId'
+    | 'namaDokumen'
+    | 'komponenId'
     | 'detailPermintaanId'
     | 'kategoriPermintaanId'
     | 'jenisPermintaanId'
   >,
   fallback: string,
 ): Promise<string> {
-  if (payload.is_non_material && payload.jenisDokumenId) {
-    const jenisDokumen = await repository.getJenisDokumenById(payload.jenisDokumenId)
-    return jenisDokumen?.nama ?? fallback
+  if (payload.is_non_material) {
+    return payload.namaDokumen?.trim() || fallback
   }
 
   if (payload.detailPermintaanId) {
@@ -485,6 +498,11 @@ export async function resolveLocalSubmitLeafName(
   if (payload.jenisPermintaanId) {
     const jenis = await repository.getJenisPermintaanById(payload.jenisPermintaanId)
     if (jenis?.nama) return jenis.nama
+  }
+
+  if (payload.komponenId) {
+    const komponen = await repository.getKomponenById(payload.komponenId)
+    if (komponen?.nama) return komponen.nama
   }
 
   return fallback
@@ -505,7 +523,7 @@ function shouldReadRequiredKelengkapan(payload: LocalSubmitPayload): boolean {
   return !payload.is_non_material || Boolean(payload.jenisPermintaanId)
 }
 
-function deriveLocalSubmitDisplayName(session: LocalServerSession): string {
+export function deriveLocalSubmitDisplayName(session: LocalServerSession): string {
   return session.user.userName
     ?? session.email.split('@')[0]
     ?? 'Unknown'

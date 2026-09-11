@@ -6,6 +6,7 @@ const KEGIATAN_ID = '33333333-3333-4333-8333-333333333333'
 const JENIS_DOKUMEN_ID = '44444444-4444-4444-8444-444444444444'
 const DOKUMEN_ID = '55555555-5555-4555-8555-555555555555'
 const KELENGKAPAN_ID = '66666666-6666-4666-8666-666666666666'
+const KOMPONEN_ID = '77777777-7777-4777-8777-777777777777'
 const TARGET_UUID = '88888888-8888-4888-8888-888888888888'
 const DASH_PENDING_PATH = `${OWNER_ID}/1778064971564-random123-Laporan.pdf`
 const UNDERSCORE_PENDING_PATH = `${OWNER_ID}/${KELENGKAPAN_ID}_1778064971564_Laporan.pdf`
@@ -166,6 +167,27 @@ describe('/api/dokumen/submit local default parity', () => {
         error: 'Nominal_realisasi wajib untuk dokumen Material',
       })
     }
+    expectNoLegacySubmitCalls()
+  })
+
+  it('returns 400 when the workflow chain field required per characteristic is missing', async () => {
+    const missingKomponen = await submitHandler({
+      request: createJsonRequest(createValidMaterialSubmitPayload({ komponenId: undefined })),
+    })
+
+    expect(missingKomponen.status).toBe(400)
+    expect(await missingKomponen.json()).toEqual({
+      error: 'Komponen wajib dipilih untuk dokumen Material',
+    })
+
+    const missingNamaDokumen = await submitHandler({
+      request: createJsonRequest(createValidNonMaterialSubmitPayload({ namaDokumen: undefined })),
+    })
+
+    expect(missingNamaDokumen.status).toBe(400)
+    expect(await missingNamaDokumen.json()).toEqual({
+      error: 'Nama Dokumen wajib diisi untuk dokumen Non-Material',
+    })
     expectNoLegacySubmitCalls()
   })
 
@@ -627,6 +649,7 @@ function createValidMaterialSubmitPayload(
     ...createBaseSubmitPayload(),
     nominal_realisasi: 100000,
     is_non_material: false,
+    komponenId: KOMPONEN_ID,
     jenisPermintaanId: '99999999-9999-4999-8999-999999999999',
     ...overrides,
   }
@@ -640,6 +663,7 @@ function createValidNonMaterialSubmitPayload(
     nominal_realisasi: null,
     is_non_material: true,
     jenisDokumenId: JENIS_DOKUMEN_ID,
+    namaDokumen: 'Notulen Rapat',
     ...overrides,
   }
 }
@@ -659,7 +683,9 @@ type SubmitPayloadFixture = ReturnType<typeof createBaseSubmitPayload> & {
   nominal_realisasi?: number | null
   is_non_material?: boolean
   jenisDokumenId?: string
+  namaDokumen?: string
   keteranganDetail?: string
+  komponenId?: string
   jenisPermintaanId?: string
   kategoriPermintaanId?: string
   detailPermintaanId?: string
@@ -744,6 +770,10 @@ function createLocalSubmitAdapter(options: {
       localSubmitAdapterCalls.push(['selectJenisDokumenById', id])
       return { id, nama: 'Dokumen Non Material' }
     },
+    async selectKomponenById(id: string) {
+      localSubmitAdapterCalls.push(['selectKomponenById', id])
+      return { id, nama: 'Komponen Pengujian' }
+    },
     async selectJenisPermintaanById(id: string) {
       localSubmitAdapterCalls.push(['selectJenisPermintaanById', id])
       return { id, nama: 'Jenis Permintaan' }
@@ -816,7 +846,9 @@ function createLocalDokumenRow(values: Record<string, unknown>) {
     nominalRealisasi: values.nominalRealisasi,
     isNonMaterial: values.isNonMaterial,
     jenisDokumenId: values.jenisDokumenId,
+    namaDokumen: values.namaDokumen,
     keteranganDetail: values.keteranganDetail,
+    komponenId: values.komponenId,
     jenisPermintaanId: values.jenisPermintaanId,
     kategoriPermintaanId: values.kategoriPermintaanId,
     detailPermintaanId: values.detailPermintaanId,
