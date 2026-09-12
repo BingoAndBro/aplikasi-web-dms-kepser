@@ -1,3 +1,5 @@
+import { normalizePeriodeSearch, type PeriodeValue } from '#/lib/laporan/periode'
+
 export type MonitoringRealisasiGroupBy = 'kegiatan' | 'pegawai'
 
 export type MonitoringRealisasiSearch = {
@@ -5,6 +7,12 @@ export type MonitoringRealisasiSearch = {
   pegawaiId?: string
   fungsiId?: string
   kegiatanId?: string
+  komponenId?: string
+  periode?: PeriodeValue['mode']
+  tahun?: number
+  triwulan?: 1 | 2 | 3 | 4
+  dari?: string
+  sampai?: string
 }
 
 export type MonitoringRealisasiHandlers = {
@@ -12,10 +20,31 @@ export type MonitoringRealisasiHandlers = {
   pegawaiId?: string
   fungsiId?: string
   kegiatanId?: string
+  komponenId?: string
+  periode: PeriodeValue
   onSelectGroupBy: (mode: MonitoringRealisasiGroupBy) => void
   onSelectPegawai: (pegawaiId: string | null) => void
   onSelectFungsi: (fungsiId: string | null) => void
   onSelectKegiatan: (fungsiId: string, kegiatanId: string | null) => void
+  onSelectKomponen: (fungsiId: string, kegiatanId: string, komponenId: string | null) => void
+  onSelectPeriode: (next: PeriodeValue) => void
+}
+
+type PeriodeSearchFields = Pick<MonitoringRealisasiSearch, 'periode' | 'tahun' | 'triwulan' | 'dari' | 'sampai'>
+
+function periodeToSearch(periode: PeriodeValue): PeriodeSearchFields {
+  switch (periode.mode) {
+    case 'TRIWULAN':
+      return { periode: 'TRIWULAN', tahun: periode.tahun, triwulan: periode.triwulan }
+    case 'TAHUNAN':
+      return { periode: 'TAHUNAN', tahun: periode.tahun }
+    case 'SEMUA':
+      return { periode: 'SEMUA' }
+    case 'KUSTOM':
+      return { periode: 'KUSTOM', dari: periode.dari, sampai: periode.sampai }
+    default:
+      return {}
+  }
 }
 
 /**
@@ -32,6 +61,19 @@ export function createMonitoringRealisasiHandlers(
 ): MonitoringRealisasiHandlers {
   const groupBy: MonitoringRealisasiGroupBy = search.groupBy === 'pegawai' ? 'pegawai' : 'kegiatan'
 
+  const periode = normalizePeriodeSearch({
+    mode: search.periode,
+    tahun: search.tahun,
+    triwulan: search.triwulan,
+    dari: search.dari,
+    sampai: search.sampai,
+  })
+
+  // Every navigation stays on the same periode unless the user explicitly
+  // changes it, so the periode fields are spread into every `go()` call
+  // alongside the pegawai scope below.
+  const periodeScope: PeriodeSearchFields = periodeToSearch(periode)
+
   // In "pegawai" mode every drilldown level keeps the selected pegawai in the
   // URL so the back navigation lands on that pegawai instead of the root list.
   const pegawaiScope: MonitoringRealisasiSearch =
@@ -46,16 +88,33 @@ export function createMonitoringRealisasiHandlers(
     pegawaiId: search.pegawaiId,
     fungsiId: search.fungsiId,
     kegiatanId: search.kegiatanId,
-    onSelectGroupBy: (mode) => go(mode === 'pegawai' ? { groupBy: 'pegawai' } : {}),
+    komponenId: search.komponenId,
+    periode,
+    onSelectGroupBy: (mode) =>
+      go({ ...periodeScope, ...(mode === 'pegawai' ? { groupBy: 'pegawai' } : {}) }),
     onSelectPegawai: (pegawaiId) =>
-      go(pegawaiId ? { groupBy: 'pegawai', pegawaiId } : { groupBy: 'pegawai' }),
+      go({ ...periodeScope, ...(pegawaiId ? { groupBy: 'pegawai', pegawaiId } : { groupBy: 'pegawai' }) }),
     onSelectFungsi: (fungsiId) =>
-      go(fungsiId ? { ...pegawaiScope, fungsiId } : { ...pegawaiScope }),
+      go(fungsiId ? { ...pegawaiScope, ...periodeScope, fungsiId } : { ...pegawaiScope, ...periodeScope }),
     onSelectKegiatan: (fungsiId, kegiatanId) =>
       go(
         kegiatanId
-          ? { ...pegawaiScope, fungsiId, kegiatanId }
-          : { ...pegawaiScope, fungsiId },
+          ? { ...pegawaiScope, ...periodeScope, fungsiId, kegiatanId }
+          : { ...pegawaiScope, ...periodeScope, fungsiId },
       ),
+    onSelectKomponen: (fungsiId, kegiatanId, komponenId) =>
+      go(
+        komponenId
+          ? { ...pegawaiScope, ...periodeScope, fungsiId, kegiatanId, komponenId }
+          : { ...pegawaiScope, ...periodeScope, fungsiId, kegiatanId },
+      ),
+    onSelectPeriode: (next) =>
+      go({
+        ...pegawaiScope,
+        fungsiId: search.fungsiId,
+        kegiatanId: search.kegiatanId,
+        komponenId: search.komponenId,
+        ...periodeToSearch(next),
+      }),
   }
 }

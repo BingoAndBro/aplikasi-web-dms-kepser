@@ -8,8 +8,14 @@ export const Route = createFileRoute('/ppk/monitoring-realisasi')({
   validateSearch: z.object({
     fungsiId: z.string().optional(),
     kegiatanId: z.string().optional(),
+    komponenId: z.string().optional(),
     groupBy: z.enum(['kegiatan', 'pegawai']).optional(),
     pegawaiId: z.string().optional(),
+    periode: z.enum(['TRIWULAN', 'TAHUNAN', 'SEMUA', 'KUSTOM']).optional(),
+    tahun: z.number().optional(),
+    triwulan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
+    dari: z.string().optional(),
+    sampai: z.string().optional(),
   }),
   component: PpkMonitoringRealisasiPage,
 })

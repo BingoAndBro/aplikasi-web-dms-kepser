@@ -28,7 +28,7 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(route).toContain('MonitoringRealisasiView')
 
     // The shared view owns the function-first drilldown implementation.
-    expect(view).toContain("apiFetch<LaporanKinerjaResponse>('/laporan/kinerja')")
+    expect(view).toContain("apiFetch<LaporanKinerjaResponse>('/laporan/kinerja'")
     expect(view).toContain('buildFungsiRows')
     expect(view).toContain('buildKegiatanRows')
     expect(view).toContain('FungsiList')
@@ -59,6 +59,18 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(source).toContain('KinerjaDocumentMetadataDialog')
   })
 
+  it('keeps the periode selector and the komponen drilldown level', () => {
+    const source = readSource(SHARED_VIEW)
+
+    expect(source).toContain('PeriodeSelector')
+    expect(source).toContain('KomponenList')
+    expect(source).toContain('KomponenDetailView')
+    expect(source).toContain('onSelectKomponen')
+    expect(source).toContain('Triwulan')
+    expect(source).toContain('Seluruh Periode')
+    expect(source).toContain('Jumlah Komponen')
+  })
+
   it('keeps realisasi monitoring metadata-only without document route or file actions', () => {
     for (const relativePath of [SHARED_VIEW, KINERJA_ROUTE, ...MONITORING_ROUTES]) {
       const source = readSource(relativePath)
@@ -74,10 +86,6 @@ describe('laporan kinerja visual parity source guard', () => {
       expect(source).not.toContain('signed')
       expect(source).not.toContain('token')
       expect(source).not.toContain('approve_destruction')
-      expect(source).not.toContain('Semua Tahun')
-      expect(source).not.toContain('detailFilter.tahun')
-      expect(source).not.toContain('value.tahun')
-      expect(source).not.toContain('yearOptions')
     }
   })
 

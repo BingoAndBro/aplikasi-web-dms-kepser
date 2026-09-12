@@ -17,7 +17,6 @@ import {
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
-import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { DatePicker } from '#/components/ui/date-picker'
 import {
@@ -48,79 +47,61 @@ import {
 } from '#/components/ui/table'
 import type { MonitoringRealisasiGroupBy } from '#/components/kinerja/monitoringRealisasiNavigation'
 import { ApiError, apiFetch } from '#/lib/api-client'
-
-type LaporanKinerjaRow = {
-  id: string
-  judul: string
-  status: 'COMPLETED' | 'TERSIMPAN' | 'ARCHIVED'
-  is_non_material: boolean
-  fungsi_nama: string | null
-  kegiatan_nama: string | null
-  tahun: number
-  tanggal: string
-  pengaju_id: string | null
-  pengaju_nama: string
-  created_at: string
-  updated_at: string
-  nominal_realisasi: number | null
-}
+import {
+  periodeForMode,
+  periodeLabel,
+  resolvePeriodeRange,
+  shiftTriwulan,
+  TRIWULAN_OPTIONS,
+  type PeriodeMode,
+  type PeriodeValue,
+} from '#/lib/laporan/periode'
+import {
+  buildFungsiRows,
+  buildKegiatanRows,
+  buildPegawaiRows,
+  compareNamedRows,
+  countKegiatan,
+  dateValue,
+  totalNominal,
+  type FungsiRow,
+  type KegiatanRow,
+  type KomponenRow,
+  type LaporanKinerjaRow,
+  type PegawaiRow,
+  type SortMode,
+} from '#/lib/laporan/monitoring-rows'
 
 type LaporanKinerjaResponse = {
   dokumen?: LaporanKinerjaRow[]
   meta?: {
     limit: number
-    final_statuses: Array<'COMPLETED' | 'TERSIMPAN' | 'ARCHIVED'>
+    count: number
+    truncated: boolean
+    final_statuses: Array<'COMPLETED' | 'ARCHIVED'>
+    tahun_tersedia: number[]
   }
   error?: string
 }
 
-type SortMode = 'updated_desc' | 'nominal_desc' | 'documents_desc' | 'name_asc'
 type DetailSortMode = 'newest' | 'oldest' | 'title_asc' | 'submitter_asc' | 'nominal_desc'
 type StatusFilter = 'ALL' | LaporanKinerjaRow['status']
-type JenisFilter = 'ALL' | 'MATERIAL' | 'NON_MATERIAL'
-
-type FungsiRow = {
-  id: string
-  nama: string
-  dokumen: LaporanKinerjaRow[]
-  kegiatan: KegiatanRow[]
-  totalNominal: number
-  latestDate: string | null
-}
-
-type PegawaiRow = {
-  id: string
-  nama: string
-  dokumen: LaporanKinerjaRow[]
-  fungsi: FungsiRow[]
-  totalNominal: number
-  latestDate: string | null
-}
-
-type KegiatanRow = {
-  id: string
-  fungsiId: string
-  nama: string
-  fungsiNama: string
-  dokumen: LaporanKinerjaRow[]
-  totalNominal: number
-  latestDate: string | null
-}
 
 type DetailFilterValue = {
   status: StatusFilter
-  jenis: JenisFilter
-  tanggalMulai?: string
-  tanggalAkhir?: string
 }
 
 export type MonitoringRealisasiViewProps = {
   fungsiId?: string
   kegiatanId?: string
+  komponenId?: string
   pegawaiId?: string
   groupBy?: MonitoringRealisasiGroupBy
+  periode: PeriodeValue
   onSelectFungsi: (fungsiId: string | null) => void
   onSelectKegiatan: (fungsiId: string, kegiatanId: string | null) => void
+  onSelectKomponen: (fungsiId: string, kegiatanId: string, komponenId: string | null) => void
+  onSelectPeriode: (next: PeriodeValue) => void
   onSelectPegawai?: (pegawaiId: string | null) => void
   onSelectGroupBy?: (mode: MonitoringRealisasiGroupBy) => void
   title?: string
@@ -156,7 +137,6 @@ const DETAIL_SORT_OPTIONS: { value: DetailSortMode; label: string }[] = [
 
 const EMPTY_DETAIL_FILTER: DetailFilterValue = {
   status: 'ALL',
-  jenis: 'ALL',
 }
 
 const GROUP_BY_OPTIONS: { value: MonitoringRealisasiGroupBy; label: string }[] = [
@@ -164,13 +144,24 @@ const GROUP_BY_OPTIONS: { value: MonitoringRealisasiGroupBy; label: string }[] =
   { value: 'pegawai', label: 'Pegawai' },
 ]
 
+const PERIODE_MODE_OPTIONS: { value: PeriodeMode; label: string }[] = [
+  { value: 'TRIWULAN', label: 'Triwulan' },
+  { value: 'TAHUNAN', label: 'Tahunan' },
+  { value: 'SEMUA', label: 'Seluruh Periode' },
+  { value: 'KUSTOM', label: 'Kustom' },
+]
+
 export function MonitoringRealisasiView({
   fungsiId,
   kegiatanId,
+  komponenId,
   pegawaiId,
   groupBy = 'kegiatan',
+  periode,
   onSelectFungsi,
   onSelectKegiatan,
+  onSelectKomponen,
+  onSelectPeriode,
   onSelectPegawai,
   onSelectGroupBy,
   title = DEFAULT_TITLE,
@@ -183,6 +174,8 @@ export function MonitoringRealisasiView({
   const activeGroupBy: MonitoringRealisasiGroupBy = pegawaiModeEnabled ? groupBy : 'kegiatan'
   const [dokumen, setDokumen] = useState<LaporanKinerjaRow[]>([])
   const [limit, setLimit] = useState<number | null>(null)
+  const [truncated, setTruncated] = useState(false)
+  const [tahunTersedia, setTahunTersedia] = useState<number[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [forbidden, setForbidden] = useState(false)
@@ -194,8 +187,16 @@ export function MonitoringRealisasiView({
   const [detailFilterOpen, setDetailFilterOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<LaporanKinerjaRow | null>(null)
 
+  const periodeRange = useMemo(() => resolvePeriodeRange(periode), [periode])
+
   useEffect(() => {
-    apiFetch<LaporanKinerjaResponse>('/laporan/kinerja')
+    const controller = new AbortController()
+    setLoading(true)
+
+    apiFetch<LaporanKinerjaResponse>('/laporan/kinerja', {
+      query: { start_date: periodeRange.dari, end_date: periodeRange.sampai },
+      signal: controller.signal,
+    })
       .then((data) => {
         if (data.error) {
           setError(data.error)
@@ -204,8 +205,12 @@ export function MonitoringRealisasiView({
 
         setDokumen(data.dokumen ?? [])
         setLimit(data.meta?.limit ?? null)
+        setTruncated(data.meta?.truncated ?? false)
+        setTahunTersedia(data.meta?.tahun_tersedia ?? [])
       })
       .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+
         if (err instanceof ApiError) {
           if (err.status === 403) {
             setForbidden(true)
@@ -221,8 +226,12 @@ export function MonitoringRealisasiView({
 
         setError('Gagal memuat data. Coba muat ulang halaman.')
       })
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [periodeRange.dari, periodeRange.sampai])
 
   const fungsiRows = useMemo(() => buildFungsiRows(dokumen), [dokumen])
   const pegawaiRows = useMemo(() => buildPegawaiRows(dokumen), [dokumen])
@@ -233,9 +242,9 @@ export function MonitoringRealisasiView({
       dokumenCount: dokumen.length,
       fungsiCount: fungsiRows.length,
       pegawaiCount: pegawaiRows.length,
-      periode: satkerPeriodeLabel(dokumen),
+      periode: periodeLabel(periode),
     }),
-    [dokumen, fungsiRows, pegawaiRows],
+    [dokumen, fungsiRows, pegawaiRows, periode],
   )
 
   const selectedPegawai = useMemo(() => {
@@ -255,6 +264,11 @@ export function MonitoringRealisasiView({
     if (!selectedFungsi) return null
     return selectedFungsi.kegiatan.find(row => row.id === kegiatanId) ?? null
   }, [kegiatanId, selectedFungsi])
+
+  const selectedKomponen = useMemo(() => {
+    if (!selectedKegiatan) return null
+    return selectedKegiatan.komponen.find(row => row.id === komponenId) ?? null
+  }, [komponenId, selectedKegiatan])
 
   const filteredPegawaiRows = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -302,16 +316,28 @@ export function MonitoringRealisasiView({
       .sort((a, b) => compareNamedRows(a, b, sortBy))
   }, [search, selectedFungsi, sortBy])
 
-  const selectedDocuments = useMemo(() => {
+  const filteredKomponenRows = useMemo(() => {
     if (!selectedKegiatan) return []
+    const query = search.trim().toLowerCase()
+    return selectedKegiatan.komponen
+      .filter(row => {
+        if (!query) return true
+        return [
+          row.nama,
+          row.kegiatanNama,
+          ...row.dokumen.map(item => item.judul),
+          ...row.dokumen.map(item => item.pengaju_nama),
+        ].some(value => value.toLowerCase().includes(query))
+      })
+      .sort((a, b) => compareNamedRows(a, b, sortBy))
+  }, [search, selectedKegiatan, sortBy])
+
+  const selectedDocuments = useMemo(() => {
+    if (!selectedKomponen) return []
     const query = detailSearch.trim().toLowerCase()
-    return selectedKegiatan.dokumen
+    return selectedKomponen.dokumen
       .filter(row => {
         if (detailFilter.status !== 'ALL' && row.status !== detailFilter.status) return false
-        if (detailFilter.jenis === 'MATERIAL' && row.is_non_material) return false
-        if (detailFilter.jenis === 'NON_MATERIAL' && !row.is_non_material) return false
-        if (detailFilter.tanggalMulai && row.tanggal < detailFilter.tanggalMulai) return false
-        if (detailFilter.tanggalAkhir && row.tanggal > detailFilter.tanggalAkhir) return false
         if (!query) return true
 
         return [
@@ -320,12 +346,11 @@ export function MonitoringRealisasiView({
           row.kegiatan_nama ?? '',
           row.pengaju_nama,
           String(row.tahun),
-          formatJenis(row),
           formatStatusLabel(row.status),
         ].some(value => value.toLowerCase().includes(query))
       })
       .sort((a, b) => compareDocuments(a, b, detailSortBy))
-  }, [detailFilter, detailSearch, detailSortBy, selectedKegiatan])
+  }, [detailFilter, detailSearch, detailSortBy, selectedKomponen])
 
   return (
     <PageLayout>
@@ -353,14 +378,46 @@ export function MonitoringRealisasiView({
           />
         )}
 
+        {!loading && !forbidden && !error && (
+          <div className="space-y-3">
+            <PeriodeSelector value={periode} tahunTersedia={tahunTersedia} onChange={onSelectPeriode} />
+            {truncated && (
+              <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+                Menampilkan {limit ?? 0} dokumen terbaru pada periode ini. Total di halaman ini belum lengkap
+                — persempit periode agar angkanya akurat.
+              </div>
+            )}
+          </div>
+        )}
+
         {!loading && !forbidden && !error && dokumen.length === 0 && (
           <>
             <KinerjaHeader title={title} description={description} />
-            <EmptyState
-              icon={<Inbox className="h-5 w-5" />}
-              title="Belum ada dokumen final"
-              description="Dokumen final dengan status Selesai, Tersimpan, dan Diarsipkan akan muncul di sini sebagai metadata Laporan Kinerja."
-            />
+            {periode.mode === 'SEMUA' ? (
+              <EmptyState
+                icon={<Inbox className="h-5 w-5" />}
+                title="Belum ada dokumen final"
+                description="Dokumen material dengan status Selesai atau Diarsipkan akan muncul di sini sebagai metadata Laporan Kinerja."
+              />
+            ) : (
+              <EmptyState
+                icon={<Inbox className="h-5 w-5" />}
+                title={`Belum ada realisasi pada ${periodeLabel(periode)}`}
+                description="Coba lihat triwulan sebelumnya atau tampilkan seluruh periode."
+                action={
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {periode.mode === 'TRIWULAN' && (
+                      <Button variant="outline" onClick={() => onSelectPeriode(shiftTriwulan(periode, -1))}>
+                        Lihat {periodeLabel(shiftTriwulan(periode, -1))}
+                      </Button>
+                    )}
+                    <Button onClick={() => onSelectPeriode({ mode: 'SEMUA' })}>
+                      Seluruh Periode
+                    </Button>
+                  </div>
+                }
+              />
+            )}
           </>
         )}
 
@@ -462,12 +519,28 @@ export function MonitoringRealisasiView({
           />
         )}
 
-        {!loading && !forbidden && !error && selectedFungsi && selectedKegiatan && (
+        {!loading && !forbidden && !error && selectedFungsi && selectedKegiatan && !selectedKomponen && (
+          <KomponenDetailView
+            fungsi={selectedFungsi}
+            kegiatan={selectedKegiatan}
+            rows={filteredKomponenRows}
+            title={title}
+            search={search}
+            onSearchChange={setSearch}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onBack={() => onSelectKegiatan(selectedFungsi.id, null)}
+            onSelectKomponen={(id) => onSelectKomponen(selectedFungsi.id, selectedKegiatan.id, id)}
+          />
+        )}
+
+        {!loading && !forbidden && !error && selectedFungsi && selectedKegiatan && selectedKomponen && (
           <KegiatanDocumentView
             fungsi={selectedFungsi}
             kegiatan={selectedKegiatan}
+            komponen={selectedKomponen}
             dokumen={selectedDocuments}
-            totalDokumen={selectedKegiatan.dokumen.length}
+            totalDokumen={selectedKomponen.dokumen.length}
             limit={limit}
             search={detailSearch}
             onSearchChange={setDetailSearch}
@@ -477,7 +550,7 @@ export function MonitoringRealisasiView({
             onFilterOpenChange={setDetailFilterOpen}
             sortBy={detailSortBy}
             onSortChange={setDetailSortBy}
-            onBack={() => onSelectKegiatan(selectedFungsi.id, null)}
+            onBack={() => onSelectKomponen(selectedFungsi.id, selectedKegiatan.id, null)}
             onOpenDocument={setSelectedDocument}
           />
         )}
@@ -510,10 +583,155 @@ function KinerjaHeader({ title, description }: { title: string; description: str
           </p>
         </div>
       </div>
-      <div className="rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
-        Metadata dokumen final saja.
+      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+        Hanya dokumen material, status Selesai/Diarsipkan, dan berkas belum dimusnahkan.
       </div>
     </section>
+  )
+}
+
+function PeriodeSelector({
+  value,
+  tahunTersedia,
+  onChange,
+}: {
+  value: PeriodeValue
+  tahunTersedia: number[]
+  onChange: (value: PeriodeValue) => void
+}) {
+  const tahunOptions = useMemo(() => {
+    const years = new Set(tahunTersedia)
+    if (value.tahun) years.add(value.tahun)
+    return Array.from(years).sort((a, b) => b - a)
+  }, [tahunTersedia, value.tahun])
+
+  return (
+    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-4">
+      <div className="flex items-center gap-2">
+        <span className="hidden text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400 sm:inline">
+          Periode
+        </span>
+        <div
+          role="group"
+          aria-label="Pilih mode periode"
+          className="inline-flex flex-wrap rounded-[10px] border border-zinc-200/80 bg-zinc-50 p-0.5"
+        >
+          {PERIODE_MODE_OPTIONS.map(option => {
+            const active = option.value === value.mode
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onChange(periodeForMode(option.value, value, tahunOptions))}
+                className={[
+                  'whitespace-nowrap rounded-[7px] px-3 py-1 text-[13px] font-semibold transition',
+                  active
+                    ? 'bg-white text-[#FF4D00] shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-800',
+                ].join(' ')}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {value.mode !== 'SEMUA' && (
+        <span className="hidden h-8 w-px shrink-0 bg-zinc-200 lg:block" aria-hidden="true" />
+      )}
+
+      {value.mode === 'TRIWULAN' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            aria-label="Triwulan sebelumnya"
+            onClick={() => onChange(shiftTriwulan(value, -1))}
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-[#FFFDF9] text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <Select
+            value={value.tahun ? String(value.tahun) : ''}
+            onValueChange={(next) => onChange({ mode: 'TRIWULAN', tahun: Number(next), triwulan: value.triwulan ?? 1 })}
+          >
+            <SelectTrigger className="min-h-10 w-fit min-w-[88px] shrink-0 rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+              <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
+            </SelectTrigger>
+            <SelectContent>
+              {tahunOptions.map(year => (
+                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={value.triwulan ? String(value.triwulan) : ''}
+            onValueChange={(next) => onChange({
+              mode: 'TRIWULAN',
+              tahun: value.tahun ?? new Date().getFullYear(),
+              triwulan: Number(next) as 1 | 2 | 3 | 4,
+            })}
+          >
+            <SelectTrigger className="min-h-10 w-fit min-w-[168px] shrink-0 rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+              <SelectValue placeholder="Triwulan">
+                {selected => TRIWULAN_OPTIONS.find(option => String(option.value) === selected)?.label ?? 'Triwulan'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {TRIWULAN_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <button
+            type="button"
+            aria-label="Triwulan berikutnya"
+            onClick={() => onChange(shiftTriwulan(value, 1))}
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-[#FFFDF9] text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
+      {value.mode === 'TAHUNAN' && (
+        <Select
+          value={value.tahun ? String(value.tahun) : ''}
+          onValueChange={(next) => onChange({ mode: 'TAHUNAN', tahun: Number(next) })}
+        >
+          <SelectTrigger className="min-h-10 w-fit min-w-[104px] shrink-0 rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+            <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
+          </SelectTrigger>
+          <SelectContent>
+            {tahunOptions.map(year => (
+              <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {value.mode === 'KUSTOM' && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="space-y-1">
+            <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
+            <DatePicker
+              value={value.dari ?? ''}
+              onChange={(tanggal) => onChange({ mode: 'KUSTOM', dari: tanggal || undefined, sampai: value.sampai })}
+              placeholder="Pilih tanggal mulai"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
+            <DatePicker
+              value={value.sampai ?? ''}
+              onChange={(tanggal) => onChange({ mode: 'KUSTOM', dari: value.dari, sampai: tanggal || undefined })}
+              placeholder="Pilih tanggal selesai"
+            />
+          </label>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -835,7 +1053,7 @@ function PegawaiDetailCards({ pegawai }: { pegawai: PegawaiRow }) {
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatCurrency(pegawai.totalNominal)}
-        detail="Hanya Belanja Material"
+        detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
         className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
         labelClassName="text-[#006B35]"
@@ -1020,7 +1238,7 @@ function FungsiDetailCards({ fungsi }: { fungsi: FungsiRow }) {
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatCurrency(fungsi.totalNominal)}
-        detail="Hanya Belanja Material"
+        detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
         className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
         labelClassName="text-[#006B35]"
@@ -1029,6 +1247,148 @@ function FungsiDetailCards({ fungsi }: { fungsi: FungsiRow }) {
         iconClassName="border-[#62C995] text-[#16A35D]"
       />
     </div>
+  )
+}
+
+function KomponenDetailView({
+  fungsi,
+  kegiatan,
+  rows,
+  title,
+  search,
+  onSearchChange,
+  sortBy,
+  onSortChange,
+  onBack,
+  onSelectKomponen,
+}: {
+  fungsi: FungsiRow
+  kegiatan: KegiatanRow
+  rows: KomponenRow[]
+  title: string
+  search: string
+  onSearchChange: (value: string) => void
+  sortBy: SortMode
+  onSortChange: (value: SortMode) => void
+  onBack: () => void
+  onSelectKomponen: (id: string) => void
+}) {
+  return (
+    <>
+      <ReportBackHeader
+        title={kegiatan.nama}
+        subtitle={`${fungsi.nama} / Detail Kegiatan`}
+        description="Daftar komponen dan dokumen final pada kegiatan terpilih."
+        onBack={onBack}
+        backLabel="Kembali ke detail fungsi"
+      />
+      <KegiatanDetailCards kegiatan={kegiatan} />
+      <SimpleReportToolbar
+        search={search}
+        onSearchChange={onSearchChange}
+        searchLabel={`Cari komponen ${title}`}
+        placeholder="Cari komponen atau dokumen..."
+        sortBy={sortBy}
+        onSortChange={onSortChange}
+        resultLabel={`${rows.length} dari ${kegiatan.komponen.length} komponen ditampilkan`}
+      />
+      {rows.length === 0 ? (
+        <EmptyState
+          icon={<Search className="h-5 w-5" />}
+          title="Tidak ada komponen yang cocok"
+          description="Ubah kata kunci atau urutan untuk melihat komponen lain."
+          compact
+        />
+      ) : (
+        <KomponenList rows={rows} onSelect={onSelectKomponen} />
+      )}
+    </>
+  )
+}
+
+function KomponenList({ rows, onSelect }: { rows: KomponenRow[]; onSelect: (id: string) => void }) {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+        <Table className="text-left">
+          <TableHeader>
+            <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
+              <TableHead className={TABLE_HEAD_CLASS}>Nama Komponen</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Jumlah Dokumen</TableHead>
+              <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Total Nominal Realisasi</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Status Ringkas</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Terakhir Diperbarui</TableHead>
+              <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-zinc-100 text-[13px]">
+            {rows.map(row => (
+              <TableRow
+                key={row.id}
+                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                onClick={() => onSelect(row.id)}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onSelect(row.id)
+                  }
+                }}
+              >
+                <TableCell className="max-w-[460px] px-6 py-5">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="mt-1 text-xs font-medium text-zinc-500">{row.kegiatanNama}</p>
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <CountPill>{row.dokumen.length} dokumen</CountPill>
+                </TableCell>
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">
+                  {formatCurrency(row.totalNominal)}
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  <StatusSummary dokumen={row.dokumen} />
+                </TableCell>
+                <TableCell className="px-6 py-5">
+                  {row.latestDate ? <DateCell value={row.latestDate} /> : <span className="text-sm font-semibold text-zinc-500">-</span>}
+                </TableCell>
+                <TableCell className="px-6 py-5 text-right">
+                  <ChevronActionButton label={`Detail komponen ${row.nama}`} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {rows.map(row => (
+          <PegawaiPanel key={row.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Komponen</p>
+                <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.nama}</h2>
+              </div>
+              <CountPill>{row.dokumen.length}</CountPill>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+              <InfoTile label="Diperbarui" value={row.latestDate ? <DateCell value={row.latestDate} className="mt-1" /> : '-'} />
+              <InfoTile label="Status" value={<StatusSummary dokumen={row.dokumen} />} />
+              <InfoTile
+                label="Nominal"
+                value={<span className="font-mono font-bold text-zinc-950">{formatCurrency(row.totalNominal)}</span>}
+                className="col-span-2"
+              />
+            </div>
+            <div className="border-t border-zinc-100 pt-3">
+              <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => onSelect(row.id)}>
+                Detail Komponen
+                <ChevronRight size={14} />
+              </Button>
+            </div>
+          </PegawaiPanel>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -1121,6 +1481,7 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
 function KegiatanDocumentView({
   fungsi,
   kegiatan,
+  komponen,
   dokumen,
   totalDokumen,
   limit,
@@ -1137,6 +1498,7 @@ function KegiatanDocumentView({
 }: {
   fungsi: FungsiRow
   kegiatan: KegiatanRow
+  komponen: KomponenRow
   dokumen: LaporanKinerjaRow[]
   totalDokumen: number
   limit: number | null
@@ -1156,13 +1518,13 @@ function KegiatanDocumentView({
   return (
     <>
       <ReportBackHeader
-        title={kegiatan.nama}
-        subtitle={`${fungsi.nama} / Detail Kegiatan`}
-        description="Daftar dokumen final dalam kegiatan terpilih."
+        title={komponen.nama}
+        subtitle={`${fungsi.nama} / ${kegiatan.nama} / Detail Komponen`}
+        description="Daftar dokumen final dalam komponen terpilih."
         onBack={onBack}
-        backLabel="Kembali ke detail fungsi"
+        backLabel="Kembali ke detail komponen"
       />
-      <KegiatanDetailCards kegiatan={kegiatan} />
+      <KomponenDetailCards komponen={komponen} />
       <KegiatanDetailToolbar
         search={search}
         onSearchChange={onSearchChange}
@@ -1228,17 +1590,14 @@ function ReportBackHeader({
           </p>
         </div>
       </div>
-      <div className="rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
-        Metadata dokumen final saja.
+      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+        Hanya dokumen material, status Selesai/Diarsipkan, dan berkas belum dimusnahkan.
       </div>
     </section>
   )
 }
 
 function KegiatanDetailCards({ kegiatan }: { kegiatan: KegiatanRow }) {
-  const materialCount = kegiatan.dokumen.filter(row => !row.is_non_material).length
-  const nonMaterialCount = kegiatan.dokumen.filter(row => row.is_non_material).length
-
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
@@ -1251,18 +1610,18 @@ function KegiatanDetailCards({ kegiatan }: { kegiatan: KegiatanRow }) {
         iconClassName="border-[#D8CDC1] text-[#6D6258]"
       />
       <SummaryCard
-        label="Dokumen Material"
-        value={materialCount.toLocaleString('id-ID')}
-        detail="Total Dokumen Belanja"
+        label="Jumlah Komponen"
+        value={kegiatan.komponen.length.toLocaleString('id-ID')}
+        detail="Komponen Terdaftar"
         icon={<ClipboardList size={16} />}
         className="border-[#F1D38A] bg-[#FFF8E6]"
         labelClassName="text-[#7A4A00]"
         iconClassName="border-[#E5BD55] text-[#B77900]"
       />
       <SummaryCard
-        label="Dokumen Non-Material"
-        value={nonMaterialCount.toLocaleString('id-ID')}
-        detail="Total Dokumen Non-Belanja"
+        label="Total Dokumen Final"
+        value={kegiatan.dokumen.length.toLocaleString('id-ID')}
+        detail="Dokumen Terverifikasi"
         icon={<FileText size={16} />}
         className="border-[#FDBA91] bg-[#FFF1E8]"
         labelClassName="text-[#B83200]"
@@ -1271,7 +1630,55 @@ function KegiatanDetailCards({ kegiatan }: { kegiatan: KegiatanRow }) {
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatCurrency(kegiatan.totalNominal)}
-        detail="Hanya Belanja Material"
+        detail="Akumulasi Seluruh Dokumen"
+        icon={<Banknote size={16} />}
+        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
+        labelClassName="text-[#006B35]"
+        valueClassName="font-mono text-[24px] text-[#02170B]"
+        detailClassName="text-[#006B35]"
+        iconClassName="border-[#62C995] text-[#16A35D]"
+      />
+    </div>
+  )
+}
+
+function KomponenDetailCards({ komponen }: { komponen: KomponenRow }) {
+  const belumDiarsipkan = komponen.dokumen.filter(row => row.status === 'COMPLETED').length
+  const sudahDiarsipkan = komponen.dokumen.filter(row => row.status === 'ARCHIVED').length
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <SummaryCard
+        label="Nama Komponen"
+        value={komponen.nama}
+        detail={`${komponen.kegiatanNama} · ${komponen.fungsiNama}`}
+        icon={<FolderOpen size={16} />}
+        className="border-[#E1D7CB] bg-[#FFFDF9]"
+        labelClassName="text-[#5F3B22]"
+        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+      />
+      <SummaryCard
+        label="Belum Diarsipkan"
+        value={belumDiarsipkan.toLocaleString('id-ID')}
+        detail="Status Selesai"
+        icon={<ClipboardList size={16} />}
+        className="border-[#F1D38A] bg-[#FFF8E6]"
+        labelClassName="text-[#7A4A00]"
+        iconClassName="border-[#E5BD55] text-[#B77900]"
+      />
+      <SummaryCard
+        label="Sudah Diarsipkan"
+        value={sudahDiarsipkan.toLocaleString('id-ID')}
+        detail="Status Diarsipkan"
+        icon={<FileText size={16} />}
+        className="border-[#FDBA91] bg-[#FFF1E8]"
+        labelClassName="text-[#B83200]"
+        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+      />
+      <SummaryCard
+        label="Total Nominal Realisasi"
+        value={formatCurrency(komponen.totalNominal)}
+        detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
         className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
         labelClassName="text-[#006B35]"
@@ -1394,7 +1801,7 @@ function KinerjaDetailAdvancedFilter({
 }) {
   return (
     <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="max-w-xs">
         <FilterSelect
           label="Status"
           value={value.status}
@@ -1402,36 +1809,9 @@ function KinerjaDetailAdvancedFilter({
           options={[
             { value: 'ALL', label: 'Semua Status' },
             { value: 'COMPLETED', label: 'Selesai' },
-            { value: 'TERSIMPAN', label: 'Tersimpan' },
             { value: 'ARCHIVED', label: 'Diarsipkan' },
           ]}
         />
-        <FilterSelect
-          label="Jenis"
-          value={value.jenis}
-          onChange={(jenis) => onChange({ ...value, jenis: jenis as JenisFilter })}
-          options={[
-            { value: 'ALL', label: 'Semua Jenis' },
-            { value: 'MATERIAL', label: 'Material' },
-            { value: 'NON_MATERIAL', label: 'Non-Material' },
-          ]}
-        />
-        <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
-          <DatePicker
-            value={value.tanggalMulai ?? ''}
-            onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
-            placeholder="Pilih tanggal mulai"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
-          <DatePicker
-            value={value.tanggalAkhir ?? ''}
-            onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
-            placeholder="Pilih tanggal selesai"
-          />
-        </label>
       </div>
     </div>
   )
@@ -1483,7 +1863,6 @@ function DocumentTable({
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
               <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
-              <TableHead className={TABLE_HEAD_CLASS}>Jenis Scope</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Tanggal Dokumen</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
               <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Nominal Realisasi</TableHead>
@@ -1512,16 +1891,13 @@ function DocumentTable({
                   </p>
                 </TableCell>
                 <TableCell className="px-6 py-5">
-                  <ScopeBadge dokumen={row} />
-                </TableCell>
-                <TableCell className="px-6 py-5">
                   <DateCell value={row.tanggal} />
                 </TableCell>
                 <TableCell className="px-6 py-5">
                   <StatusBadge status={row.status} />
                 </TableCell>
                 <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">
-                  {row.is_non_material ? '-' : formatNullableCurrency(row.nominal_realisasi)}
+                  {formatNullableCurrency(row.nominal_realisasi)}
                 </TableCell>
                 <TableCell className="px-6 py-5 text-right">
                   <ChevronActionButton label={`Metadata dokumen ${row.judul}`} />
@@ -1559,8 +1935,7 @@ function DocumentTable({
               <StatusBadge status={row.status} />
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
-              <InfoTile label="Scope" value={formatJenis(row)} />
-              <InfoTile label="Tanggal" value={<DateCell value={row.tanggal} className="mt-1" />} />
+              <InfoTile label="Tanggal" value={<DateCell value={row.tanggal} className="mt-1" />} className="col-span-2" />
               <InfoTile label="Pembuat" value={row.pengaju_nama || 'Tidak diketahui'} className="col-span-2" />
             </div>
             <div className="border-t border-zinc-100 pt-3">
@@ -1612,13 +1987,12 @@ function KinerjaDocumentMetadataDialog({
             <ModalMetadataField label="Judul Dokumen" value={dokumen.judul} className="sm:col-span-2" />
             <ModalMetadataField label="Fungsi" value={dokumen.fungsi_nama ?? '-'} />
             <ModalMetadataField label="Kegiatan" value={dokumen.kegiatan_nama ?? '-'} />
-            <ModalMetadataField label="Jenis" value={<ScopeBadge dokumen={dokumen} />} />
             <ModalMetadataField label="Status" value={formatStatusLabel(dokumen.status)} />
             <ModalMetadataField label="Tanggal Dokumen" value={formatDate(dokumen.tanggal)} />
             <ModalMetadataField label="Tahun" value={dokumen.tahun} />
             <ModalMetadataField label="Pengaju / Pembuat" value={dokumen.pengaju_nama || '-'} />
             <ModalMetadataField label="Terakhir Diperbarui" value={formatDate(dokumen.updated_at)} />
-            <ModalMetadataField label="Nominal Realisasi" value={dokumen.is_non_material ? '-' : formatNullableCurrency(dokumen.nominal_realisasi)} emphasis />
+            <ModalMetadataField label="Nominal Realisasi" value={formatNullableCurrency(dokumen.nominal_realisasi)} emphasis />
           </div>
         </div>
       </DialogContent>
@@ -1711,13 +2085,12 @@ function StatusSummary({ dokumen }: { dokumen: LaporanKinerjaRow[] }) {
       total[row.status] += 1
       return total
     },
-    { COMPLETED: 0, TERSIMPAN: 0, ARCHIVED: 0 } satisfies Record<LaporanKinerjaRow['status'], number>,
+    { COMPLETED: 0, ARCHIVED: 0 } satisfies Record<LaporanKinerjaRow['status'], number>,
   )
 
   return (
     <div className="flex flex-wrap gap-1.5">
       {counts.COMPLETED > 0 && <StatusPill className="border-emerald-200 bg-emerald-50 text-emerald-700">{counts.COMPLETED} Selesai</StatusPill>}
-      {counts.TERSIMPAN > 0 && <StatusPill className="border-zinc-200 bg-zinc-50 text-zinc-600">{counts.TERSIMPAN} Tersimpan</StatusPill>}
       {counts.ARCHIVED > 0 && <StatusPill className="border-blue-200 bg-blue-50 text-blue-700">{counts.ARCHIVED} Diarsipkan</StatusPill>}
     </div>
   )
@@ -1728,21 +2101,6 @@ function StatusPill({ children, className }: { children: ReactNode; className: s
     <span className={['inline-flex rounded-full border px-2.5 py-1 text-[11px] font-extrabold', className].join(' ')}>
       {children}
     </span>
-  )
-}
-
-function ScopeBadge({ dokumen }: { dokumen: LaporanKinerjaRow }) {
-  return (
-    <Badge
-      className={[
-        'border px-2.5 py-1 text-[11px] font-extrabold tracking-[0.04em]',
-        dokumen.is_non_material
-          ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
-          : 'border-emerald-200 bg-emerald-50 text-emerald-700',
-      ].join(' ')}
-    >
-      {formatJenis(dokumen)}
-    </Badge>
   )
 }
 
@@ -1764,97 +2122,6 @@ function InfoTile({ label, value, className }: { label: string; value: ReactNode
   )
 }
 
-function buildFungsiRows(documents: LaporanKinerjaRow[], keyPrefix = 'fungsi'): FungsiRow[] {
-  const groups = new Map<string, LaporanKinerjaRow[]>()
-
-  for (const row of documents) {
-    const fungsiName = displayName(row.fungsi_nama, 'Tanpa Fungsi')
-    const key = stableKey(keyPrefix, fungsiName)
-    groups.set(key, [...(groups.get(key) ?? []), row])
-  }
-
-  return Array.from(groups, ([id, rows]) => {
-    const nama = displayName(rows[0]?.fungsi_nama, 'Tanpa Fungsi')
-    const kegiatan = buildKegiatanRows(id, nama, rows)
-
-    return {
-      id,
-      nama,
-      dokumen: rows,
-      kegiatan,
-      totalNominal: totalNominal(rows),
-      latestDate: latestDate(rows),
-    }
-  })
-}
-
-function buildPegawaiRows(documents: LaporanKinerjaRow[]): PegawaiRow[] {
-  const groups = new Map<string, LaporanKinerjaRow[]>()
-
-  for (const row of documents) {
-    const key = stableKey('pegawai', pegawaiIdentity(row))
-    groups.set(key, [...(groups.get(key) ?? []), row])
-  }
-
-  return Array.from(groups, ([id, rows]) => ({
-    id,
-    nama: displayName(rows[0]?.pengaju_nama, 'Tanpa Pengaju'),
-    dokumen: rows,
-    fungsi: buildFungsiRows(rows, `${id}-fungsi`),
-    totalNominal: totalNominal(rows),
-    latestDate: latestDate(rows),
-  }))
-}
-
-function pegawaiIdentity(row: LaporanKinerjaRow) {
-  return row.pengaju_id?.trim() || row.pengaju_nama.trim() || 'unknown'
-}
-
-function countKegiatan(fungsi: FungsiRow[]) {
-  return fungsi.reduce((total, row) => total + row.kegiatan.length, 0)
-}
-
-function satkerPeriodeLabel(rows: LaporanKinerjaRow[]): string | null {
-  const years = rows
-    .map(row => row.tahun)
-    .filter((year): year is number => Number.isFinite(year))
-  if (years.length === 0) return null
-  const min = Math.min(...years)
-  const max = Math.max(...years)
-  return min === max ? `TA ${min}` : `TA ${min}–${max}`
-}
-
-function buildKegiatanRows(fungsiId: string, fungsiNama: string, documents: LaporanKinerjaRow[]): KegiatanRow[] {
-  const groups = new Map<string, LaporanKinerjaRow[]>()
-
-  for (const row of documents) {
-    const kegiatanName = displayName(row.kegiatan_nama, 'Tanpa Kegiatan')
-    const key = stableKey(`${fungsiId}-kegiatan`, kegiatanName)
-    groups.set(key, [...(groups.get(key) ?? []), row])
-  }
-
-  return Array.from(groups, ([id, rows]) => ({
-    id,
-    fungsiId,
-    nama: displayName(rows[0]?.kegiatan_nama, 'Tanpa Kegiatan'),
-    fungsiNama,
-    dokumen: rows,
-    totalNominal: totalNominal(rows),
-    latestDate: latestDate(rows),
-  })).sort((a, b) => compareNamedRows(a, b, 'updated_desc'))
-}
-
-function compareNamedRows(
-  a: { nama: string; dokumen: LaporanKinerjaRow[]; totalNominal: number; latestDate: string | null },
-  b: { nama: string; dokumen: LaporanKinerjaRow[]; totalNominal: number; latestDate: string | null },
-  sortBy: SortMode,
-) {
-  if (sortBy === 'name_asc') return a.nama.localeCompare(b.nama, 'id-ID')
-  if (sortBy === 'documents_desc') return b.dokumen.length - a.dokumen.length
-  if (sortBy === 'nominal_desc') return b.totalNominal - a.totalNominal
-  return dateValue(b.latestDate) - dateValue(a.latestDate)
-}
-
 function compareDocuments(a: LaporanKinerjaRow, b: LaporanKinerjaRow, sortBy: DetailSortMode) {
   if (sortBy === 'oldest') return dateValue(a.tanggal) - dateValue(b.tanggal)
   if (sortBy === 'title_asc') return a.judul.localeCompare(b.judul, 'id-ID')
@@ -1866,44 +2133,11 @@ function compareDocuments(a: LaporanKinerjaRow, b: LaporanKinerjaRow, sortBy: De
 function countActiveDetailFilters(filter: DetailFilterValue) {
   return [
     filter.status !== 'ALL',
-    filter.jenis !== 'ALL',
-    filter.tanggalMulai,
-    filter.tanggalAkhir,
   ].filter(Boolean).length
-}
-
-function totalNominal(rows: LaporanKinerjaRow[]) {
-  return rows.reduce((total, row) => {
-    if (row.is_non_material || row.nominal_realisasi === null) return total
-    return total + row.nominal_realisasi
-  }, 0)
-}
-
-function latestDate(rows: LaporanKinerjaRow[]) {
-  return rows.reduce<string | null>((latest, row) => {
-    const value = row.updated_at || row.tanggal
-    if (!value) return latest
-    if (!latest) return value
-    return dateValue(value) > dateValue(latest) ? value : latest
-  }, null)
-}
-
-function stableKey(prefix: string, value: string) {
-  return `${prefix}-${value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') || 'unknown'}`
-}
-
-function displayName(value: string | null | undefined, fallback: string) {
-  const trimmed = value?.trim()
-  return trimmed || fallback
-}
-
-function formatJenis(row: LaporanKinerjaRow) {
-  return row.is_non_material ? 'Non-Material' : 'Material'
 }
 
 function formatStatusLabel(status: LaporanKinerjaRow['status']) {
   if (status === 'COMPLETED') return 'Selesai'
-  if (status === 'TERSIMPAN') return 'Tersimpan'
   return 'Diarsipkan'
 }
 
@@ -1914,12 +2148,6 @@ function formatDate(value: string) {
     month: 'short',
     year: 'numeric',
   })
-}
-
-function dateValue(value?: string | null) {
-  if (!value) return 0
-  const time = new Date(value).getTime()
-  return Number.isFinite(time) ? time : 0
 }
 
 function formatNullableCurrency(value: number | null) {

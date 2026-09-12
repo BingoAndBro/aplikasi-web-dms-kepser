@@ -1,36 +1,50 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { desc, eq, inArray } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, isNotNull, lte, notInArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '#/db/client'
+import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
 import { users } from '#/db/schema/auth'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
   masterFungsi,
   masterKegiatan,
+  masterKomponen,
 } from '#/db/schema/master'
 import {
   getLocalServerSession,
   hasAnyLocalRole,
 } from '#/lib/auth/local-server-auth'
+import { ARCHIVE_SOURCE_TYPE, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { ROLES } from '#/lib/constants/roles'
 
+// Hanya dokumen MATERIAL yang final (COMPLETED/ARCHIVED) yang dihitung sebagai
+// realisasi. Dokumen non-material tidak pernah punya nominal realisasi dan
+// tidak pernah relevan untuk laporan ini. TERSIMPAN sengaja tidak masuk —
+// status itu eksklusif untuk dokumen non-material (lihat fsm.ts), jadi
+// menyertakannya di sini hanya membocorkan dokumen non-material. Dokumen
+// material wajib mengisi Komponen saat submit (lihat lib/schemas/dokumen.ts);
+// dokumen lama dari sebelum kolom Komponen ada dan tidak punya komponen_id
+// dianggap data yatim, bukan realisasi yang bisa dipertanggungjawabkan, jadi
+// ikut dibuang (lihat isNotNull(komponenId) di bawah).
 const FINAL_LAPORAN_KINERJA_STATUSES = [
   DOC_STATUS.COMPLETED,
-  DOC_STATUS.TERSIMPAN,
   DOC_STATUS.ARCHIVED,
 ] as const
 
-const LAPORAN_KINERJA_LIMIT = 200
+const LAPORAN_KINERJA_LIMIT = 2000
+
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 const laporanKinerjaRowSchema = z.object({
   id: z.string(),
   judul: z.string(),
   status: z.enum(FINAL_LAPORAN_KINERJA_STATUSES),
-  is_non_material: z.boolean(),
   fungsi_nama: z.string().nullable(),
   kegiatan_nama: z.string().nullable(),
+  komponen_id: z.string().nullable(),
+  komponen_nama: z.string().nullable(),
   tahun: z.number(),
   tanggal: z.string(),
   pengaju_id: z.string().nullable(),
@@ -44,7 +58,10 @@ const laporanKinerjaResponseSchema = z.object({
   dokumen: z.array(laporanKinerjaRowSchema),
   meta: z.object({
     limit: z.number(),
+    count: z.number(),
+    truncated: z.boolean(),
     final_statuses: z.array(z.enum(FINAL_LAPORAN_KINERJA_STATUSES)),
+    tahun_tersedia: z.array(z.number()),
   }),
 })
 
@@ -96,15 +113,53 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
           return Response.json({ error: 'Forbidden' }, { status: 403 })
         }
 
+        const url = new URL(request.url)
+        const startDateParam = url.searchParams.get('start_date')
+        const endDateParam = url.searchParams.get('end_date')
+
+        if (startDateParam && !ISO_DATE_PATTERN.test(startDateParam)) {
+          return Response.json({ error: 'Parameter periode tidak valid' }, { status: 400 })
+        }
+
+        if (endDateParam && !ISO_DATE_PATTERN.test(endDateParam)) {
+          return Response.json({ error: 'Parameter periode tidak valid' }, { status: 400 })
+        }
+
         try {
+          // Dokumen yang ikut dalam berkas arsip yang sudah DIMUSNAHKAN tidak
+          // lagi dihitung sebagai realisasi — otoritas "dimusnahkan" ada pada
+          // join ini, sama seperti guard akses lampiran di document-file-access.ts.
+          const destroyedRows = await db
+            .select({ dokumenId: berkasArsipItem.dokumenId })
+            .from(berkasArsipItem)
+            .innerJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
+            .where(and(
+              eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
+              eq(berkasArsip.statusArsip, BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN),
+            ))
+
+          const destroyedDocumentIds = destroyedRows
+            .map((row) => row.dokumenId)
+            .filter((id): id is string => id !== null)
+
+          const scopeFilter = and(
+            eq(dokumenTransaksi.isNonMaterial, false),
+            isNotNull(dokumenTransaksi.komponenId),
+            inArray(dokumenTransaksi.status, FINAL_LAPORAN_KINERJA_STATUSES),
+            destroyedDocumentIds.length > 0
+              ? notInArray(dokumenTransaksi.id, destroyedDocumentIds)
+              : undefined,
+          )
+
           const rows = await db
             .select({
               id: dokumenTransaksi.id,
               judul: dokumenTransaksi.judul,
               status: dokumenTransaksi.status,
-              is_non_material: dokumenTransaksi.isNonMaterial,
               fungsi_nama: masterFungsi.nama,
               kegiatan_nama: masterKegiatan.nama,
+              komponen_id: dokumenTransaksi.komponenId,
+              komponen_nama: masterKomponen.nama,
               tahun: dokumenTransaksi.tahun,
               tanggal: dokumenTransaksi.tanggal,
               pengaju_id: dokumenTransaksi.createdBy,
@@ -118,40 +173,49 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
+            .leftJoin(masterKomponen, eq(dokumenTransaksi.komponenId, masterKomponen.id))
             .leftJoin(users, eq(dokumenTransaksi.createdBy, users.id))
-            .where(inArray(dokumenTransaksi.status, FINAL_LAPORAN_KINERJA_STATUSES))
+            .where(and(
+              scopeFilter,
+              startDateParam ? gte(dokumenTransaksi.tanggal, startDateParam) : undefined,
+              endDateParam ? lte(dokumenTransaksi.tanggal, endDateParam) : undefined,
+            ))
             .orderBy(desc(dokumenTransaksi.updatedAt))
             .limit(LAPORAN_KINERJA_LIMIT)
 
-          const response = laporanKinerjaResponseSchema.parse({
-            dokumen: rows.map((row) => {
-              const isNonMaterial = row.is_non_material ?? false
+          const tahunRows = await db
+            .selectDistinct({ tahun: dokumenTransaksi.tahun })
+            .from(dokumenTransaksi)
+            .where(scopeFilter)
+            .orderBy(desc(dokumenTransaksi.tahun))
 
-              return {
-                id: row.id,
-                judul: row.judul,
-                status: row.status,
-                is_non_material: isNonMaterial,
-                fungsi_nama: row.fungsi_nama,
-                kegiatan_nama: row.kegiatan_nama,
-                tahun: row.tahun,
-                tanggal: row.tanggal,
-                pengaju_id: row.pengaju_id ?? null,
-                pengaju_nama: displayUserName({
-                  displayName: row.pengaju_display_name,
-                  namaLengkap: row.pengaju_nama_lengkap,
-                  email: row.pengaju_email,
-                }),
-                created_at: isoDateString(row.created_at),
-                updated_at: isoDateString(row.updated_at),
-                nominal_realisasi: isNonMaterial
-                  ? null
-                  : normalizeNumericValue(row.nominal_realisasi),
-              }
-            }),
+          const response = laporanKinerjaResponseSchema.parse({
+            dokumen: rows.map((row) => ({
+              id: row.id,
+              judul: row.judul,
+              status: row.status,
+              fungsi_nama: row.fungsi_nama,
+              kegiatan_nama: row.kegiatan_nama,
+              komponen_id: row.komponen_id,
+              komponen_nama: row.komponen_nama,
+              tahun: row.tahun,
+              tanggal: row.tanggal,
+              pengaju_id: row.pengaju_id ?? null,
+              pengaju_nama: displayUserName({
+                displayName: row.pengaju_display_name,
+                namaLengkap: row.pengaju_nama_lengkap,
+                email: row.pengaju_email,
+              }),
+              created_at: isoDateString(row.created_at),
+              updated_at: isoDateString(row.updated_at),
+              nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
+            })),
             meta: {
               limit: LAPORAN_KINERJA_LIMIT,
+              count: rows.length,
+              truncated: rows.length === LAPORAN_KINERJA_LIMIT,
               final_statuses: [...FINAL_LAPORAN_KINERJA_STATUSES],
+              tahun_tersedia: tahunRows.map((row) => row.tahun),
             },
           })
 
