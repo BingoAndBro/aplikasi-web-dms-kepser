@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import {
   PegawaiPagination,
   PegawaiPanel,
@@ -360,14 +361,19 @@ function PegawaiDocumentStatusBadge({
   const presentation = getPegawaiStatusPresentation(dok)
 
   return (
-    <span
-      className={[
-        'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap',
-        presentation.className,
-        className ?? '',
-      ].join(' ')}
-    >
-      {presentation.label}
+    <span className={['inline-flex flex-wrap items-center gap-1.5', className ?? ''].join(' ')}>
+      <span
+        className={[
+          'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap',
+          presentation.className,
+        ].join(' ')}
+      >
+        {presentation.label}
+      </span>
+      <LampiranDibersihkanBadge
+        lampiranDibersihkanAt={dok.lampiran_dibersihkan_at}
+        lampiranDibersihkanAlasan={dok.lampiran_dibersihkan_alasan}
+      />
     </span>
   )
 }

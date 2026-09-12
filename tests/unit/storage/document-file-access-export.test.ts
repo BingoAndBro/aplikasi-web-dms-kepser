@@ -8,6 +8,7 @@ type MockDocument = {
   status: string
   revisionTarget: string | null
   lampiranUrls: unknown
+  lampiranDibersihkanAt: string | Date | null
 }
 
 describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP export)', () => {
@@ -23,6 +24,7 @@ describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP
       status: 'COMPLETED',
       revisionTarget: null,
       lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      lampiranDibersihkanAt: null,
     }
 
     const { resolveDocumentLampiranLogicalPathForExport, resolveDocumentLampiranAccessForToken } =
@@ -59,6 +61,7 @@ describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP
       status: 'COMPLETED',
       revisionTarget: null,
       lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      lampiranDibersihkanAt: null,
     }
 
     const { resolveDocumentLampiranLogicalPathForExport } = await importWithDbMock(document)
@@ -78,6 +81,7 @@ describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP
       status: 'COMPLETED',
       revisionTarget: null,
       lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      lampiranDibersihkanAt: null,
     }
 
     const { resolveDocumentLampiranLogicalPathForExport } = await importWithDbMock(document, true)
@@ -90,6 +94,26 @@ describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP
     expect(result).toEqual({ ok: false, status: 410, message: 'Data file sudah dimusnahkan' })
   })
 
+  it('blocks a document whose lampiran has been cleaned (non-material pembersihan by ketua tim)', async () => {
+    const document: MockDocument = {
+      id: DOCUMENT_ID,
+      createdBy: 'owner-user',
+      status: 'TERSIMPAN',
+      revisionTarget: null,
+      lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      lampiranDibersihkanAt: '2026-01-01T00:00:00.000Z',
+    }
+
+    const { resolveDocumentLampiranLogicalPathForExport } = await importWithDbMock(document)
+
+    const result = await resolveDocumentLampiranLogicalPathForExport({
+      documentId: DOCUMENT_ID,
+      lampiranIndex: 0,
+    })
+
+    expect(result).toEqual({ ok: false, status: 410, message: 'Data file sudah dibersihkan' })
+  })
+
   it('returns 404 for a lampiranIndex out of range', async () => {
     const document: MockDocument = {
       id: DOCUMENT_ID,
@@ -97,6 +121,7 @@ describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP
       status: 'COMPLETED',
       revisionTarget: null,
       lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+      lampiranDibersihkanAt: null,
     }
 
     const { resolveDocumentLampiranLogicalPathForExport } = await importWithDbMock(document)
@@ -132,6 +157,7 @@ describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP
       status: 'COMPLETED',
       revisionTarget: null,
       lampiranUrls: [{ url: '../outside-root/file.pdf' }],
+      lampiranDibersihkanAt: null,
     }
 
     const { resolveDocumentLampiranLogicalPathForExport } = await importWithDbMock(document)

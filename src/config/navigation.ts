@@ -57,6 +57,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
         { id: 'revisi', label: 'Revisi Dokumen', icon: FileEdit, to: ROUTES.PEGAWAI.REVISI },
         { id: 'laporan_saya', label: 'Laporan Saya', icon: FileText, to: ROUTES.PEGAWAI.LAPORAN_SAYA },
         { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: ROUTES.PEGAWAI.LAPORAN_KEGIATAN },
+        { id: 'pembersihan_dokumen', label: 'Pembersihan Dokumen', icon: Trash2, to: ROUTES.PEGAWAI.PEMBERSIHAN_DOKUMEN },
       ],
     },
     {

@@ -43,6 +43,7 @@ type RawLogicalPathAccessDocument = {
   createdBy: string
   status: string
   revisionTarget: string | null
+  lampiranDibersihkanAt: Date | string | null
 }
 type RawLogicalPathAccessFolder = {
   id: string
@@ -179,6 +180,14 @@ export async function authorizeRawLogicalPathAccess({
     }
   }
 
+  if (context.documents.some(document => document.lampiranDibersihkanAt !== null)) {
+    return {
+      ok: false,
+      status: 410,
+      message: 'Data file sudah dibersihkan',
+    }
+  }
+
   const hasGovernedReference = context.documents.length > 0 || context.folders.length > 0
   const classification = classifyStoragePath(safeLogicalPath)
 
@@ -251,6 +260,7 @@ async function loadRawLogicalPathAccessContext(
       createdBy: dokumenTransaksi.createdBy,
       status: dokumenTransaksi.status,
       revisionTarget: dokumenTransaksi.revisionTarget,
+      lampiranDibersihkanAt: dokumenTransaksi.lampiranDibersihkanAt,
     })
     .from(dokumenTransaksi)
     .where(sql`${dokumenTransaksi.lampiranUrls} @> ${attachmentJson}::jsonb`)

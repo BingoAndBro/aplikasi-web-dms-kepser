@@ -45,11 +45,17 @@ function matchesNavItem(
   return true
 }
 
+// Nav items visible only to a PEGAWAI who leads at least one kegiatan
+// (Ketua Tim -- not a role, only an assignment; see AppLayout's
+// /users/me/ketua-tim fetch).
+const KETUA_TIM_ONLY_NAV_IDS = new Set(['laporan_kegiatan', 'pembersihan_dokumen'])
+
 export function AppSidebar({
   activeRole,
   pathname,
   searchStr,
   hasKetuaTimAssignment,
+  staleNonMaterialCount,
   mobileOpen,
   onMobileOpenChange,
   onLogout,
@@ -58,6 +64,8 @@ export function AppSidebar({
   pathname: string
   searchStr?: string
   hasKetuaTimAssignment?: boolean
+  /** Badge count for the "Pembersihan Dokumen" nav item (0/undefined hides the badge). */
+  staleNonMaterialCount?: number
   mobileOpen: boolean
   onMobileOpenChange: (open: boolean) => void
   onLogout: () => void | Promise<void>
@@ -70,17 +78,21 @@ export function AppSidebar({
         : groups
             .map((group) => ({
               ...group,
-              items: group.items.filter((item) => item.id !== 'laporan_kegiatan'),
+              items: group.items.filter((item) => !KETUA_TIM_ONLY_NAV_IDS.has(item.id)),
             }))
             .filter((group) => group.items.length > 0)
 
     return visibleGroups
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => item.id !== 'settings'),
+        items: group.items
+          .filter((item) => item.id !== 'settings')
+          .map((item) => item.id === 'pembersihan_dokumen' && staleNonMaterialCount
+            ? { ...item, badge: staleNonMaterialCount }
+            : item),
       }))
       .filter((group) => group.items.length > 0)
-  }, [activeRole, hasKetuaTimAssignment])
+  }, [activeRole, hasKetuaTimAssignment, staleNonMaterialCount])
   const directActiveId = React.useMemo(() => {
     for (const group of navGroups) {
       for (const item of group.items) {

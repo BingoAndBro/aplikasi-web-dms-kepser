@@ -59,6 +59,8 @@ export const Route = createFileRoute('/api/laporan/saya')({
               keterangan_detail: dokumenTransaksi.keteranganDetail,
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,
+              lampiran_dibersihkan_at: dokumenTransaksi.lampiranDibersihkanAt,
+              lampiran_dibersihkan_alasan: dokumenTransaksi.lampiranDibersihkanAlasan,
               komponen_id: dokumenTransaksi.komponenId,
               komponen_nama: masterKomponen.nama,
               jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,

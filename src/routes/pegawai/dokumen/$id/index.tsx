@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { StatusBadge } from '#/components/ui/StatusBadge'
+import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
 import {
@@ -43,6 +44,8 @@ type DokumenDetail = {
   created_by: string
   pengaju_nama?: string | null
   is_non_material: boolean
+  lampiran_dibersihkan_at?: string | null
+  lampiran_dibersihkan_alasan?: string | null
   nominal_realisasi: number | null
   keterangan_detail: string | null
   komponen_id?: string | null
@@ -192,8 +195,12 @@ function DokumenDetailPage() {
               <span>Detail Dokumen</span>
             </div>
           </div>
-          <div className="hidden shrink-0 sm:block">
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
             <StatusBadge status={dok.status} className="text-xs font-semibold" />
+            <LampiranDibersihkanBadge
+              lampiranDibersihkanAt={dok.lampiran_dibersihkan_at}
+              lampiranDibersihkanAlasan={dok.lampiran_dibersihkan_alasan}
+            />
           </div>
         </div>
 

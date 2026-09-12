@@ -6,6 +6,7 @@ import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { StatusBadge } from '#/components/ui/StatusBadge'
+import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { useAppToast } from '#/components/ui/AppToast'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
@@ -48,6 +49,8 @@ type DokumenDetail = {
   created_by: string
   created_at: string
   updated_at: string
+  lampiran_dibersihkan_at?: string | null
+  lampiran_dibersihkan_alasan?: string | null
   nominal_realisasi: number | null
   is_non_material?: boolean
   komponen_id?: string | null
@@ -268,8 +271,12 @@ function PpkDokumenDetailIndexPage() {
               <span>Validasi Dokumen</span>
             </div>
           </div>
-          <div className="hidden shrink-0 sm:block">
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
             <StatusBadge status={dokumen.status} className="text-xs font-semibold" />
+            <LampiranDibersihkanBadge
+              lampiranDibersihkanAt={dokumen.lampiran_dibersihkan_at}
+              lampiranDibersihkanAlasan={dokumen.lampiran_dibersihkan_alasan}
+            />
           </div>
         </div>
 

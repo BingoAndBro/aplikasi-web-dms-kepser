@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useRouterState } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useState } from 'react'
 
@@ -18,7 +18,7 @@ import { ROLES } from '#/lib/constants/roles'
 import { ROUTES } from '#/lib/constants/routes'
 import { guardRole } from '#/lib/guards'
 import { formatDate } from '#/lib/utils/format'
-import { Archive, BarChart3, CheckCircle2, FileText, FolderOpen, History, ListChecks, PenLine } from 'lucide-react'
+import { AlertTriangle, Archive, BarChart3, CheckCircle2, FileText, FolderOpen, History, ListChecks, PenLine } from 'lucide-react'
 
 export const Route = createFileRoute('/pegawai')({
   ssr: false,
@@ -32,6 +32,10 @@ function PegawaiLayout() {
   const routerState = useRouterState()
   const authState = getClientAuthState()
   const [documents, setDocuments] = useState<PegawaiDashboardDocument[]>([])
+  const [ketuaTim, setKetuaTim] = useState<{ isKetuaTim: boolean; staleNonMaterialCount: number }>({
+    isKetuaTim: false,
+    staleNonMaterialCount: 0,
+  })
   const isReady = authState.isReady
   const hasAuthenticatedSession = authState.status === 'authenticated' && !!authState.userId
   const hasPegawaiRole = hasAuthenticatedSession && authState.roles.includes(ROLES.PEGAWAI)
@@ -55,6 +59,13 @@ function PegawaiLayout() {
     apiFetch<{ dokumen?: PegawaiDashboardDocument[] }>('/dokumen')
       .then((response) => setDocuments(response.dokumen ?? []))
       .catch(() => setDocuments([]))
+
+    apiFetch<{ kegiatan?: { id: string }[]; stale_non_material_count?: number }>('/users/me/ketua-tim')
+      .then((response) => setKetuaTim({
+        isKetuaTim: (response.kegiatan?.length ?? 0) > 0,
+        staleNonMaterialCount: response.stale_non_material_count ?? 0,
+      }))
+      .catch(() => setKetuaTim({ isKetuaTim: false, staleNonMaterialCount: 0 }))
   }, [hasAuthenticatedSession, hasPegawaiRole, isReady])
 
   if (!isReady || !hasAuthenticatedSession || !hasPegawaiRole) {
@@ -80,6 +91,23 @@ function PegawaiLayout() {
             actionLabel="Ajukan Dokumen"
             actionIcon={<PenLine size={16} />}
           />
+
+          {ketuaTim.isKetuaTim && ketuaTim.staleNonMaterialCount > 0 && (
+            <div className="flex flex-col gap-3 rounded-[22px] border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-700" />
+                <p className="text-sm font-semibold text-amber-900">
+                  Ada {ketuaTim.staleNonMaterialCount} dokumen non-material yang sudah lama, belum dibersihkan.
+                </p>
+              </div>
+              <Link
+                to={ROUTES.PEGAWAI.PEMBERSIHAN_DOKUMEN}
+                className="shrink-0 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100"
+              >
+                Tinjau
+              </Link>
+            </div>
+          )}
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <DashboardMetricCard

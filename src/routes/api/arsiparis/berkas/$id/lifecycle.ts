@@ -58,7 +58,7 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id/lifecycle')({
             action: parsed.data.action,
           })
           const physicalDeletion = parsed.data.action === 'approve_destruction'
-            ? await executePhysicalDeletionAfterLifecycle(berkasId)
+            ? await executePhysicalDeletionAfterLifecycle(berkasId, sessionOrResponse.user.id)
             : undefined
 
           return Response.json({
@@ -75,11 +75,13 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id/lifecycle')({
 
 async function executePhysicalDeletionAfterLifecycle(
   berkasId: string,
+  actorUserId: string,
 ): Promise<BerkasPhysicalDestructionReport> {
   try {
     return await executeBerkasPhysicalFileDestruction({
       berkasId,
       confirmation: BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE,
+      actorUserId,
     })
   } catch {
     return failedPhysicalDeletionReport()

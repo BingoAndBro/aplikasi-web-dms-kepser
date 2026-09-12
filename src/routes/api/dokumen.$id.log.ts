@@ -1,40 +1,59 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { users } from '#/db/schema/auth'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
+import { ketuaTimAssignments } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
-function canSessionReadDokumenLog(
+async function canSessionReadDokumenLog(
   session: Awaited<ReturnType<typeof getLocalServerSession>>,
-  dokumen: { created_by: string; status: string; revision_target: string | null },
-): boolean {
+  dokumen: { created_by: string; status: string; revision_target: string | null; kegiatan_jenis_id: string },
+): Promise<boolean> {
   if (!session) return false
   if (dokumen.created_by === session.user.id) return true
-  if (hasLocalRole(session, 'PPK')) {
-    return [
-      'IN_PPK_VALIDATION',
-      'IN_BENDAHARA_APPROVAL',
-      'NEED_REVISION',
-      'COMPLETED',
-      'ARCHIVED',
-    ].includes(dokumen.status)
+
+  // Cabang peran MEMBERI izin, bukan menolak -- lihat catatan yang sama di
+  // `canSessionReadDokumen` (dokumen.$id.ts).
+  if (hasLocalRole(session, 'PPK') && [
+    'IN_PPK_VALIDATION',
+    'IN_BENDAHARA_APPROVAL',
+    'NEED_REVISION',
+    'COMPLETED',
+    'ARCHIVED',
+  ].includes(dokumen.status)) {
+    return true
   }
-  if (hasLocalRole(session, 'BENDAHARA')) {
-    return dokumen.status === 'IN_BENDAHARA_APPROVAL'
-      || dokumen.status === 'COMPLETED'
-      || dokumen.status === 'ARCHIVED'
-      || (dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'PPK')
+  if (hasLocalRole(session, 'BENDAHARA') && (
+    dokumen.status === 'IN_BENDAHARA_APPROVAL'
+    || dokumen.status === 'COMPLETED'
+    || dokumen.status === 'ARCHIVED'
+    || (dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'PPK')
+  )) {
+    return true
   }
-  if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) {
-    return dokumen.status === 'COMPLETED' || dokumen.status === 'ARCHIVED'
+  if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM') && (
+    dokumen.status === 'COMPLETED' || dokumen.status === 'ARCHIVED'
+  )) {
+    return true
   }
 
-  return false
+  // Ketua tim kegiatan ini boleh membaca log dokumen di kegiatannya,
+  // konsisten dengan akses baca metadata dokumennya.
+  const assignment = await db
+    .select({ id: ketuaTimAssignments.id })
+    .from(ketuaTimAssignments)
+    .where(and(
+      eq(ketuaTimAssignments.userId, session.user.id),
+      eq(ketuaTimAssignments.kegiatanId, dokumen.kegiatan_jenis_id),
+    ))
+    .limit(1)
+
+  return assignment.length > 0
 }
 
 // ---------------------------------------------------------------------------
@@ -59,6 +78,7 @@ export const Route = createFileRoute('/api/dokumen/$id/log')({
               created_by: dokumenTransaksi.createdBy,
               status: dokumenTransaksi.status,
               revision_target: dokumenTransaksi.revisionTarget,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
             })
             .from(dokumenTransaksi)
             .where(eq(dokumenTransaksi.id, params.id))
@@ -67,7 +87,7 @@ export const Route = createFileRoute('/api/dokumen/$id/log')({
           const dok = dokRows[0]
           if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-          if (!canSessionReadDokumenLog(session, dok)) {
+          if (!(await canSessionReadDokumenLog(session, dok))) {
             return Response.json({ error: 'Anda tidak memiliki akses ke log dokumen ini' }, { status: 403 })
           }
 

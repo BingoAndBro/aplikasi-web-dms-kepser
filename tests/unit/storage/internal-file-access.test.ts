@@ -249,6 +249,7 @@ describe('internal file access foundation', () => {
             createdBy: 'owner-user',
             status,
             revisionTarget,
+            lampiranDibersihkanAt: null,
           }],
         })),
       })
@@ -358,6 +359,7 @@ describe('internal file access foundation', () => {
           createdBy: 'admin-user',
           status: 'COMPLETED',
           revisionTarget: null,
+          lampiranDibersihkanAt: null,
         }],
       })),
     })
@@ -425,6 +427,7 @@ describe('internal file access foundation', () => {
           createdBy: 'owner-user',
           status: 'ARCHIVED',
           revisionTarget: null,
+          lampiranDibersihkanAt: null,
         }],
         folders: [{
           id: 'berkas-id',
@@ -437,6 +440,31 @@ describe('internal file access foundation', () => {
     expect(response.status).toBe(410)
     expect(await json(response)).toEqual({
       error: 'Data file sudah dimusnahkan',
+    })
+  })
+
+  it('blocks raw token access when the document\'s lampiran has been cleaned (non-material pembersihan)', async () => {
+    await writeTestFile('owner-user/document-id/file.pdf', PDF_CONTENT)
+
+    const response = await handleInternalFileAccessRequest({
+      request: requestWithToken(signedToken(logicalPathPayload())),
+      session: session('owner-user'),
+      secret: TEST_SECRET,
+      root: TEST_ROOT,
+      rawLogicalPathAccessContextResolver: rawContextResolver(rawContext({
+        documents: [{
+          id: 'document-id',
+          createdBy: 'owner-user',
+          status: 'TERSIMPAN',
+          revisionTarget: null,
+          lampiranDibersihkanAt: '2026-01-01T00:00:00.000Z',
+        }],
+      })),
+    })
+
+    expect(response.status).toBe(410)
+    expect(await json(response)).toEqual({
+      error: 'Data file sudah dibersihkan',
     })
   })
 
@@ -458,6 +486,7 @@ describe('internal file access foundation', () => {
           createdBy: 'owner-user',
           status: 'ARCHIVED',
           revisionTarget: null,
+          lampiranDibersihkanAt: null,
         }],
         folders: [{
           id: 'berkas-id',
@@ -520,6 +549,7 @@ describe('internal file access foundation', () => {
           createdBy: 'owner-user',
           status: 'IN_PPK_VALIDATION',
           revisionTarget: null,
+          lampiranDibersihkanAt: null,
         }],
       })),
     })
@@ -694,6 +724,7 @@ type MockDocumentAccessDocument = {
   status: string
   revisionTarget: string | null
   lampiranUrls: unknown
+  lampiranDibersihkanAt?: string | Date | null
 }
 
 async function resolveDocumentTokenWithMockedContext({
@@ -739,12 +770,18 @@ async function resolveDocumentTokenWithMockedContext({
 function createDocumentAccessDbMock(
   document: MockDocumentAccessDocument,
   destroyedBerkasMembership = false,
+  ketuaTimAssignment = false,
 ) {
+  const documentRow = {
+    lampiranDibersihkanAt: null,
+    kegiatanJenisId: 'kegiatan-id',
+    ...document,
+  }
   const select = vi.fn()
     .mockReturnValueOnce({
       from: vi.fn(() => ({
         where: vi.fn(() => ({
-          limit: vi.fn(async () => [document]),
+          limit: vi.fn(async () => [documentRow]),
         })),
       })),
     })
@@ -756,6 +793,15 @@ function createDocumentAccessDbMock(
               ? [{ id: '22222222-2222-4222-8222-222222222222' }]
               : []),
           })),
+        })),
+      })),
+    })
+    // Panggilan berikutnya: lookup ketua_tim_assignments -- hanya tercapai
+    // kalau pemilik & seluruh cabang peran tidak memberi izin.
+    .mockReturnValue({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn(async () => ketuaTimAssignment ? [{ id: 'assignment-id' }] : []),
         })),
       })),
     })

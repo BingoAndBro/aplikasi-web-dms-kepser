@@ -497,6 +497,34 @@ export function AttachmentViewer({
   }
 
   // ==========================================================================
+  // RENDER: Lampiran fisik sudah dibersihkan (non-material) -- metadata di
+  // `lampiranUrls` tetap ditampilkan sebagai daftar nama, tapi preview/unduh
+  // diganti pesan informatif alih-alih membiarkan klik berujung 410 mentah.
+  // Meniru pola "Data file sudah dimusnahkan" di halaman berkas kasubag.
+  // ==========================================================================
+  if (dokumen.lampiran_dibersihkan_at) {
+    return (
+      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm">
+        <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Lampiran & Kelengkapan Wajib</h2>
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700">
+          Data file sudah dibersihkan
+        </div>
+        <ul className="mt-3 space-y-1.5">
+          {lampiranUrls.map((lampiran, index) => (
+            <li
+              key={`${lampiran.kelengkapan_id}-${index}`}
+              className="flex items-center gap-2 rounded-xl border border-[#F1E5DA] bg-white/60 px-3 py-2 text-xs font-semibold text-zinc-500"
+            >
+              <FileText size={15} className="shrink-0 text-zinc-400" />
+              <span className="min-w-0 flex-1 truncate">{lampiran.nama}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  // ==========================================================================
   // RENDER: Two sections (admin + user docs) or single section
   // ==========================================================================
   return (

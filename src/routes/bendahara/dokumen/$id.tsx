@@ -6,6 +6,7 @@ import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { StatusBadge } from '#/components/ui/StatusBadge'
+import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { useAppToast } from '#/components/ui/AppToast'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer } from '#/components/dokumen/AttachmentViewer'
@@ -25,6 +26,8 @@ type DokumenDetail = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
   is_ketua_tim: boolean; status: string; lampiran_urls: any[]
   tahun: number; tanggal: string; created_by: string; created_at: string
+  lampiran_dibersihkan_at?: string | null
+  lampiran_dibersihkan_alasan?: string | null
   revision_notes?: string
   nominal_realisasi: number | null
   is_non_material?: boolean
@@ -247,8 +250,12 @@ function BendaharaDokumenDetailPage() {
               <span>Persetujuan Dokumen</span>
             </div>
           </div>
-          <div className="hidden shrink-0 sm:block">
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
             <StatusBadge status={dokumen.status} className="text-xs font-semibold" />
+            <LampiranDibersihkanBadge
+              lampiranDibersihkanAt={dokumen.lampiran_dibersihkan_at}
+              lampiranDibersihkanAlasan={dokumen.lampiran_dibersihkan_alasan}
+            />
           </div>
         </div>
 

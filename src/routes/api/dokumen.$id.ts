@@ -5,8 +5,10 @@ import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { berkasArsipItem } from '#/db/schema/arsip'
+import { auditLog } from '#/db/schema/audit'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
+  ketuaTimAssignments,
   masterDetailPermintaan,
   masterFungsi,
   masterJenisDokumen,
@@ -50,32 +52,54 @@ function normalizeNumericValue(value: string | number | null): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function canSessionReadDokumen(
+async function canSessionReadDokumen(
   session: Awaited<ReturnType<typeof getLocalServerSession>>,
-  dokumen: { created_by: string; status: string; revision_target: string | null },
-): boolean {
+  dokumen: { created_by: string; status: string; revision_target: string | null; kegiatan_jenis_id: string },
+): Promise<boolean> {
   if (!session) return false
   if (dokumen.created_by === session.user.id) return true
-  if (hasLocalRole(session, 'PPK')) {
-    return [
-      'IN_PPK_VALIDATION',
-      'IN_BENDAHARA_APPROVAL',
-      'NEED_REVISION',
-      'COMPLETED',
-      'ARCHIVED',
-    ].includes(dokumen.status)
+
+  // Tiap cabang peran MEMBERI izin, bukan menolak: satu user bisa memegang
+  // beberapa peran sekaligus (ada role switcher), jadi cabang yang tidak
+  // cocok harus jatuh ke pengecekan berikutnya -- bukan `return false` yang
+  // memotong jalur ketua tim di bawah.
+  if (hasLocalRole(session, 'PPK') && [
+    'IN_PPK_VALIDATION',
+    'IN_BENDAHARA_APPROVAL',
+    'NEED_REVISION',
+    'COMPLETED',
+    'ARCHIVED',
+  ].includes(dokumen.status)) {
+    return true
   }
-  if (hasLocalRole(session, 'BENDAHARA')) {
-    return dokumen.status === 'IN_BENDAHARA_APPROVAL'
-      || dokumen.status === 'COMPLETED'
-      || dokumen.status === 'ARCHIVED'
-      || (dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'PPK')
+  if (hasLocalRole(session, 'BENDAHARA') && (
+    dokumen.status === 'IN_BENDAHARA_APPROVAL'
+    || dokumen.status === 'COMPLETED'
+    || dokumen.status === 'ARCHIVED'
+    || (dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'PPK')
+  )) {
+    return true
   }
-  if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM')) {
-    return dokumen.status === 'COMPLETED' || dokumen.status === 'ARCHIVED'
+  if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM') && (
+    dokumen.status === 'COMPLETED' || dokumen.status === 'ARCHIVED'
+  )) {
+    return true
   }
 
-  return false
+  // Ketua tim kegiatan ini boleh membaca metadata dokumen apa pun (termasuk
+  // yang bukan miliknya) di kegiatan yang ia pimpin -- selaras dengan
+  // "Laporan Kegiatan" & "Pembersihan Dokumen" yang sudah menampilkan
+  // dokumen ini ke ketua tim. Read-only: guard PATCH/DELETE tidak berubah.
+  const assignment = await db
+    .select({ id: ketuaTimAssignments.id })
+    .from(ketuaTimAssignments)
+    .where(and(
+      eq(ketuaTimAssignments.userId, session.user.id),
+      eq(ketuaTimAssignments.kegiatanId, dokumen.kegiatan_jenis_id),
+    ))
+    .limit(1)
+
+  return assignment.length > 0
 }
 
 function localAttachmentFailureResponse(
@@ -346,6 +370,8 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
               komponen_id: dokumenTransaksi.komponenId,
               nama_dokumen: dokumenTransaksi.namaDokumen,
+              lampiran_dibersihkan_at: dokumenTransaksi.lampiranDibersihkanAt,
+              lampiran_dibersihkan_alasan: dokumenTransaksi.lampiranDibersihkanAlasan,
               fungsi_nama: masterFungsi.nama,
               kegiatan_nama: masterKegiatan.nama,
               komponen_nama: masterKomponen.nama,
@@ -370,7 +396,7 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
           }
 
-          if (!canSessionReadDokumen(session, row)) {
+          if (!(await canSessionReadDokumen(session, row))) {
             return Response.json({ error: 'Anda tidak memiliki akses ke dokumen ini' }, { status: 403 })
           }
 
@@ -429,6 +455,7 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           detail_permintaan_id: string | null
           tahun: number
           nama_dokumen: string | null
+          lampiran_dibersihkan_at: Date | null
         }>
 
         try {
@@ -445,6 +472,7 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
               tahun: dokumenTransaksi.tahun,
               nama_dokumen: dokumenTransaksi.namaDokumen,
+              lampiran_dibersihkan_at: dokumenTransaksi.lampiranDibersihkanAt,
             })
             .from(dokumenTransaksi)
             .where(eq(dokumenTransaksi.id, params.id))
@@ -468,12 +496,17 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           (!dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
 
         // Allow edit for:
-        // 1. Non-Material with TERSIMPAN status
+        // 1. Non-Material with TERSIMPAN status, lampiran belum dibersihkan
         // 2. Material with NEED_REVISION target=USER
-        const canEditNonMaterial = isNonMaterial && dok.status === 'TERSIMPAN'
+        const canEditNonMaterial = isNonMaterial
+          && dok.status === 'TERSIMPAN'
+          && dok.lampiran_dibersihkan_at === null
         const canEditMaterial = !isNonMaterial && dok.status === 'NEED_REVISION' && dok.revision_target === 'USER'
 
         if (!canEditNonMaterial && !canEditMaterial) {
+          if (isNonMaterial && dok.lampiran_dibersihkan_at !== null) {
+            return Response.json({ error: 'Dokumen Non-Material tidak bisa diedit — lampiran sudah dibersihkan' }, { status: 400 })
+          }
           if (isNonMaterial) {
             return Response.json({ error: 'Dokumen Non-Material hanya bisa diedit jika status Tersimpan' }, { status: 400 })
           }
@@ -664,7 +697,10 @@ export const Route = createFileRoute('/api/dokumen/$id')({
 
         let dokRows: Array<{
           id: string
+          judul: string
+          nama_dokumen: string | null
           created_by: string
+          kegiatan_jenis_id: string
           status: string
           lampiran_urls: unknown
           is_non_material: boolean | null
@@ -677,7 +713,10 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           dokRows = await db
             .select({
               id: dokumenTransaksi.id,
+              judul: dokumenTransaksi.judul,
+              nama_dokumen: dokumenTransaksi.namaDokumen,
               created_by: dokumenTransaksi.createdBy,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
               status: dokumenTransaksi.status,
               lampiran_urls: dokumenTransaksi.lampiranUrls,
               is_non_material: dokumenTransaksi.isNonMaterial,
@@ -749,6 +788,24 @@ export const Route = createFileRoute('/api/dokumen/$id')({
 
         try {
           await db.transaction(async (tx) => {
+            // Jejak audit ditulis SEBELUM baris dihapus, di tabel TANPA FK ke
+            // dokumen (audit.audit_log) -- log_aktivitas di bawah ini ikut
+            // cascade-terhapus sedetik kemudian bersama dokumennya, jadi
+            // bukan jejak yang bisa diandalkan setelah hard delete.
+            await tx.insert(auditLog).values({
+              entityType: 'DOKUMEN',
+              entityId: params.id,
+              aksi: 'DOKUMEN_DIHAPUS_PERMANEN',
+              actorUserId: session.user.id,
+              metadataSnapshot: {
+                judul: dok.judul,
+                nama_dokumen: dok.nama_dokumen,
+                pemilik_id: dok.created_by,
+                kegiatan_id: dok.kegiatan_jenis_id,
+                jumlah_lampiran: lampiranUrls.length,
+              },
+            })
+
             await tx.insert(logAktivitas).values({
               dokumenId: params.id,
               userId: session.user.id,

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import {
   Table,
@@ -1266,7 +1267,13 @@ function DocumentTable({
                   <DateCell value={dok.tanggal} />
                 </TableCell>
                 <TableCell className="px-6 py-5">
-                  <ReportStatusBadge status={dok.status} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <ReportStatusBadge status={dok.status} />
+                    <LampiranDibersihkanBadge
+                      lampiranDibersihkanAt={dok.lampiran_dibersihkan_at}
+                      lampiranDibersihkanAlasan={dok.lampiran_dibersihkan_alasan}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">
                   {dok.is_non_material ? '-' : formatRupiah(dok.nominal_realisasi ?? 0)}
@@ -1301,7 +1308,13 @@ function DocumentTable({
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Dokumen #{idx + 1}</p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{dok.judul}</h2>
               </div>
-              <ReportStatusBadge status={dok.status} className="shrink-0" />
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                <ReportStatusBadge status={dok.status} />
+                <LampiranDibersihkanBadge
+                  lampiranDibersihkanAt={dok.lampiran_dibersihkan_at}
+                  lampiranDibersihkanAlasan={dok.lampiran_dibersihkan_alasan}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
               <InfoTile label="Scope" value={dok.is_non_material ? 'Non-Material' : 'Material'} />

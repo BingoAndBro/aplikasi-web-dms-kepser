@@ -323,6 +323,98 @@ describe('folder-first berkas physical file destruction helper', () => {
     expectNoLeak(first)
     expectNoLeak(second)
   })
+
+  describe('lampiran-cleaned bookkeeping (badge/audit side effect, never affects the report)', () => {
+    const ACTOR_ID = '66666666-6666-4666-8666-666666666666'
+
+    it('calls the optional repository hook with the berkas\'s workflow document ids after a completed destruction', async () => {
+      await writeLogicalFile(WORKFLOW_LOGICAL_PATH, 'workflow')
+      await writeLogicalFile(MANUAL_LOGICAL_PATH, 'manual')
+
+      const markCleaned = vi.fn(async () => {})
+      const repository = { ...createRepository(), markWorkflowDocumentsLampiranCleaned: markCleaned }
+
+      const report = await executeBerkasPhysicalFileDestruction({
+        berkasId: BERKAS_ID,
+        confirmation: BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE,
+        actorUserId: ACTOR_ID,
+        repository,
+        storage: createLocalBerkasPhysicalDestructionStorage(TEST_ROOT),
+      })
+
+      expect(report.status).toBe('completed')
+      expect(markCleaned).toHaveBeenCalledExactlyOnceWith({ dokumenIds: [DOKUMEN_ID], actorUserId: ACTOR_ID })
+    })
+
+    it('does not call the hook without an actorUserId', async () => {
+      await writeLogicalFile(WORKFLOW_LOGICAL_PATH, 'workflow')
+      await writeLogicalFile(MANUAL_LOGICAL_PATH, 'manual')
+
+      const markCleaned = vi.fn(async () => {})
+      const repository = { ...createRepository(), markWorkflowDocumentsLampiranCleaned: markCleaned }
+
+      await executeBerkasPhysicalFileDestruction({
+        berkasId: BERKAS_ID,
+        confirmation: BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE,
+        repository,
+        storage: createLocalBerkasPhysicalDestructionStorage(TEST_ROOT),
+      })
+
+      expect(markCleaned).not.toHaveBeenCalled()
+    })
+
+    it('does not call the hook for a dry-run analysis', async () => {
+      await writeLogicalFile(WORKFLOW_LOGICAL_PATH, 'workflow')
+      await writeLogicalFile(MANUAL_LOGICAL_PATH, 'manual')
+
+      const markCleaned = vi.fn(async () => {})
+      const repository = { ...createRepository(), markWorkflowDocumentsLampiranCleaned: markCleaned }
+
+      await analyzeBerkasPhysicalFileDestruction({
+        berkasId: BERKAS_ID,
+        repository,
+        storage: createLocalBerkasPhysicalDestructionStorage(TEST_ROOT),
+      })
+
+      expect(markCleaned).not.toHaveBeenCalled()
+    })
+
+    it('never lets a failing bookkeeping hook change the returned report', async () => {
+      await writeLogicalFile(WORKFLOW_LOGICAL_PATH, 'workflow')
+      await writeLogicalFile(MANUAL_LOGICAL_PATH, 'manual')
+
+      const repository = {
+        ...createRepository(),
+        markWorkflowDocumentsLampiranCleaned: vi.fn(async () => { throw new Error('boom') }),
+      }
+
+      const report = await executeBerkasPhysicalFileDestruction({
+        berkasId: BERKAS_ID,
+        confirmation: BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE,
+        actorUserId: ACTOR_ID,
+        repository,
+        storage: createLocalBerkasPhysicalDestructionStorage(TEST_ROOT),
+      })
+
+      expect(report).toMatchObject({ status: 'completed', deleted_count: 2 })
+      expectNoLeak(report)
+    })
+
+    it('skips silently when the repository does not implement the optional hook', async () => {
+      await writeLogicalFile(WORKFLOW_LOGICAL_PATH, 'workflow')
+      await writeLogicalFile(MANUAL_LOGICAL_PATH, 'manual')
+
+      const report = await executeBerkasPhysicalFileDestruction({
+        berkasId: BERKAS_ID,
+        confirmation: BERKAS_PHYSICAL_DESTRUCTION_CONFIRMATION_PHRASE,
+        actorUserId: ACTOR_ID,
+        repository: createRepository(),
+        storage: createLocalBerkasPhysicalDestructionStorage(TEST_ROOT),
+      })
+
+      expect(report.status).toBe('completed')
+    })
+  })
 })
 
 type RepositoryOptions = {

@@ -77,8 +77,12 @@ function EditDokumenPage() {
       const isNonMaterial = dokumen.is_non_material === true ||
         (!dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)
 
-      if (!isNonMaterial || dokumen.status !== 'TERSIMPAN') {
-        setError('Dokumen ini tidak bisa diedit')
+      if (!isNonMaterial || dokumen.status !== 'TERSIMPAN' || dokumen.lampiran_dibersihkan_at) {
+        setError(
+          dokumen.lampiran_dibersihkan_at
+            ? 'Dokumen ini tidak bisa diedit — lampiran sudah dibersihkan'
+            : 'Dokumen ini tidak bisa diedit',
+        )
         setLoading(false)
         return
       }

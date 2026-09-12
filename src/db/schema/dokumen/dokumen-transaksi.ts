@@ -67,6 +67,15 @@ export const dokumenTransaksi = dokumenSchema.table(
     komponenId: uuid('komponen_id')
       .references(() => masterKomponen.id, { onDelete: 'restrict', onUpdate: 'no action' }),
     namaDokumen: text('nama_dokumen'),
+    // Kondisi lampiran fisik -- TERPISAH dari `status` (posisi proses/FSM).
+    // Diisi lewat dua jalur: pembersihan non-material oleh ketua tim
+    // ('PEMBERSIHAN_NON_MATERIAL'), atau pemusnahan berkas oleh kasubag
+    // ('BERKAS_DIMUSNAHKAN'). Hanya untuk tampilan (badge "File Dibersihkan");
+    // otoritas pemblokiran akses arsip tetap join ke berkasArsip.statusArsip.
+    lampiranDibersihkanAt: timestamp('lampiran_dibersihkan_at', { withTimezone: true }),
+    lampiranDibersihkanBy: uuid('lampiran_dibersihkan_by')
+      .references(() => users.id, { onDelete: 'set null', onUpdate: 'no action' }),
+    lampiranDibersihkanAlasan: text('lampiran_dibersihkan_alasan'),
   },
   (table) => [
     index('idx_dokumen_transaksi_created_by').on(table.createdBy),
@@ -85,9 +94,14 @@ export const dokumenTransaksi = dokumenSchema.table(
     index('idx_dokumen_transaksi_kategori_permintaan_id').on(table.kategoriPermintaanId),
     index('idx_dokumen_transaksi_detail_permintaan_id').on(table.detailPermintaanId),
     index('idx_dokumen_transaksi_komponen_id').on(table.komponenId),
+    index('idx_dokumen_transaksi_lampiran_dibersihkan_at').on(table.lampiranDibersihkanAt),
     check(
       'dokumen_nominal_realisasi_positive',
       sql`${table.nominalRealisasi} is null or ${table.nominalRealisasi} >= 0`,
+    ),
+    check(
+      'dokumen_lampiran_dibersihkan_alasan_check',
+      sql`${table.lampiranDibersihkanAlasan} is null or ${table.lampiranDibersihkanAlasan} in ('BERKAS_DIMUSNAHKAN', 'PEMBERSIHAN_NON_MATERIAL')`,
     ),
   ],
 )

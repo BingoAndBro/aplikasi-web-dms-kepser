@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
+import { ketuaTimAssignments } from '#/db/schema/master'
 import {
   getLocalServerSession,
   type LocalServerSession,
@@ -27,7 +28,9 @@ type DocumentRow = {
   createdBy: string
   status: string
   revisionTarget: string | null
+  kegiatanJenisId: string
   lampiranUrls: unknown
+  lampiranDibersihkanAt: Date | string | null
 }
 
 type LampiranFileReference = {
@@ -37,6 +40,13 @@ type LampiranFileReference = {
 export type DocumentAccessContext = {
   document: DocumentRow
   isInDestroyedBerkas: boolean
+  /**
+   * Lampiran fisik sudah dibersihkan -- baik lewat pembersihan non-material
+   * oleh ketua tim, maupun (via `isInDestroyedBerkas`) pemusnahan berkas oleh
+   * kasubag. Kolom ini murni untuk tampilan/pesan; `isInDestroyedBerkas` di
+   * atas tetap otoritas pemblokiran akses arsip material dan TIDAK berubah.
+   */
+  isLampiranCleaned: boolean
 }
 
 export type FileReferenceResult =
@@ -88,7 +98,7 @@ export async function createDocumentLampiranAccessUrlResponse({
     return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
   }
 
-  if (!canRouteAccessDocument(mode, session, context.document)) {
+  if (!(await canRouteAccessDocument(mode, session, context.document))) {
     return Response.json({ error: routeForbiddenMessage(mode) }, { status: 403 })
   }
 
@@ -158,7 +168,7 @@ export async function resolveDocumentLampiranAccessForToken({
     return { ok: false, status: 404, message: 'Dokumen tidak ditemukan' }
   }
 
-  if (!canSessionReadDocument(session, context.document)) {
+  if (!(await canSessionReadDocument(session, context.document))) {
     return { ok: false, status: 403, message: 'Akses ditolak' }
   }
 
@@ -221,7 +231,9 @@ async function loadDocumentAccessContext(documentId: string): Promise<DocumentAc
       createdBy: dokumenTransaksi.createdBy,
       status: dokumenTransaksi.status,
       revisionTarget: dokumenTransaksi.revisionTarget,
+      kegiatanJenisId: dokumenTransaksi.kegiatanJenisId,
       lampiranUrls: dokumenTransaksi.lampiranUrls,
+      lampiranDibersihkanAt: dokumenTransaksi.lampiranDibersihkanAt,
     })
     .from(dokumenTransaksi)
     .where(eq(dokumenTransaksi.id, documentId))
@@ -247,6 +259,7 @@ async function loadDocumentAccessContext(documentId: string): Promise<DocumentAc
   return {
     document,
     isInDestroyedBerkas: destroyedBerkasRows.length > 0,
+    isLampiranCleaned: document.lampiranDibersihkanAt !== null,
   }
 }
 
@@ -259,6 +272,14 @@ function resolveDocumentLampiranReference(
       ok: false,
       status: 410,
       message: 'Data file sudah dimusnahkan',
+    }
+  }
+
+  if (context.isLampiranCleaned) {
+    return {
+      ok: false,
+      status: 410,
+      message: 'Data file sudah dibersihkan',
     }
   }
 
@@ -302,11 +323,13 @@ function parseLampiranFileReferences(value: unknown): LampiranFileReference[] {
     .filter((entry): entry is LampiranFileReference => entry !== null)
 }
 
-function canRouteAccessDocument(
+async function canRouteAccessDocument(
   mode: DocumentAccessRouteMode,
   session: DocumentAccessSession,
   document: DocumentRow,
-): boolean {
+): Promise<boolean> {
+  // Route peran eksplisit (/api/ppk/..., /api/bendahara/...) tetap murni
+  // role-gated -- tidak ada jalur ketua tim di sini.
   if (mode === 'ppk') {
     return session.roles.includes(ROLES.PPK) && canPpkReadDocument(document)
   }
@@ -318,18 +341,36 @@ function canRouteAccessDocument(
   return canSessionReadDocument(session, document)
 }
 
-function canSessionReadDocument(
+async function canSessionReadDocument(
   session: DocumentAccessSession,
   document: DocumentRow,
-): boolean {
-  if (!isAdminOnlySession(session) && document.createdBy === session.userId) return true
-  if (session.roles.includes(ROLES.PPK)) return canPpkReadDocument(document)
-  if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadDocument(document)
-  if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
-    return document.status === 'COMPLETED' || document.status === 'ARCHIVED'
+): Promise<boolean> {
+  if (isAdminOnlySession(session)) return false
+  if (document.createdBy === session.userId) return true
+
+  // Cabang peran MEMBERI izin, bukan menolak: satu user bisa memegang
+  // beberapa peran, jadi yang tidak cocok harus jatuh ke cek berikutnya.
+  if (session.roles.includes(ROLES.PPK) && canPpkReadDocument(document)) return true
+  if (session.roles.includes(ROLES.BENDAHARA) && canBendaharaReadDocument(document)) return true
+  if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM) && (
+    document.status === 'COMPLETED' || document.status === 'ARCHIVED'
+  )) {
+    return true
   }
 
-  return false
+  // Ketua tim boleh membuka lampiran dokumen di kegiatan yang ia pimpin --
+  // konsisten dengan "Ekspor Semua File (ZIP)" di Laporan Kegiatan yang
+  // sudah memberi mereka seluruh file kegiatan itu.
+  const assignment = await db
+    .select({ id: ketuaTimAssignments.id })
+    .from(ketuaTimAssignments)
+    .where(and(
+      eq(ketuaTimAssignments.userId, session.userId),
+      eq(ketuaTimAssignments.kegiatanId, document.kegiatanJenisId),
+    ))
+    .limit(1)
+
+  return assignment.length > 0
 }
 
 function isAdminOnlySession(session: DocumentAccessSession): boolean {

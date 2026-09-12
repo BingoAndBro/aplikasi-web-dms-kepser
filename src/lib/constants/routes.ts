@@ -13,6 +13,7 @@ export const ROUTES = {
     REVISI: '/pegawai/revisi',
     LAPORAN_SAYA: '/pegawai/laporan/saya',
     LAPORAN_KEGIATAN: '/pegawai/laporan/kegiatan',
+    PEMBERSIHAN_DOKUMEN: '/pegawai/pembersihan-dokumen',
   },
   PPK: {
     ROOT: '/ppk',

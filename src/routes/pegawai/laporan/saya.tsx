@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import {
   Table,
@@ -406,7 +407,13 @@ function ReportDocumentList({
                   <span className="block truncate text-sm font-normal text-zinc-900">{dok.kegiatan_nama ?? '-'}</span>
                 </TableCell>
                 <TableCell className="px-6 py-5">
-                  <ReportStatusBadge status={dok.status} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <ReportStatusBadge status={dok.status} />
+                    <LampiranDibersihkanBadge
+                      lampiranDibersihkanAt={dok.lampiran_dibersihkan_at}
+                      lampiranDibersihkanAlasan={dok.lampiran_dibersihkan_alasan}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell className="px-6 py-5">
                   <DateCell value={dok.tanggal} />
@@ -436,7 +443,13 @@ function ReportDocumentList({
                 </p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</h2>
               </div>
-              <ReportStatusBadge status={dok.status} className="shrink-0" />
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                <ReportStatusBadge status={dok.status} />
+                <LampiranDibersihkanBadge
+                  lampiranDibersihkanAt={dok.lampiran_dibersihkan_at}
+                  lampiranDibersihkanAlasan={dok.lampiran_dibersihkan_alasan}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
               <InfoTile label="Fungsi" value={dok.fungsi_nama ?? '-'} />

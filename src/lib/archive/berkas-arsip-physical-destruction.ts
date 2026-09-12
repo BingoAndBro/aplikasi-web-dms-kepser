@@ -88,6 +88,18 @@ export type BerkasPhysicalDestructionRepository = {
   listBerkasItems(berkasId: string): Promise<BerkasPhysicalDestructionItemRow[]>
   listWorkflowAttachmentSources(dokumenIds: string[]): Promise<BerkasPhysicalDestructionWorkflowSourceRow[]>
   listManualAttachmentSources(manualArsipIds: string[]): Promise<BerkasPhysicalDestructionManualAttachmentRow[]>
+  /**
+   * Optional -- view-only bookkeeping, not part of the destruction report.
+   * Marks the WORKFLOW-sourced documents in this berkas as
+   * lampiran-dibersihkan (badge display only; does NOT gate access -- the
+   * berkas AKTIF/DIMUSNAHKAN join stays the sole access authority) and
+   * writes one audit_log row per document. Never allowed to affect the
+   * returned `BerkasPhysicalDestructionReport`.
+   */
+  markWorkflowDocumentsLampiranCleaned?(input: {
+    dokumenIds: string[]
+    actorUserId: string
+  }): Promise<void>
 }
 
 export type BerkasPhysicalFileDeleteOutcome =
@@ -114,6 +126,8 @@ export type AnalyzeBerkasPhysicalFileDestructionInput = {
 export type ExecuteBerkasPhysicalFileDestructionInput =
   AnalyzeBerkasPhysicalFileDestructionInput & {
     confirmation?: string
+    /** Used only for the badge/audit-log bookkeeping side effect below. */
+    actorUserId?: string
   }
 
 type CandidateSource = 'WORKFLOW' | 'MANUAL'
@@ -130,6 +144,8 @@ type CandidateCollection = {
   manualAttachmentCandidates: number
   skippedUnsafeCount: number
   errors: Set<BerkasPhysicalDestructionErrorCategory>
+  /** dokumen_transaksi ids for this berkas's WORKFLOW-sourced items (not part of the report). */
+  workflowDocumentIds: string[]
 }
 
 type CandidatePreparation = {
@@ -164,6 +180,29 @@ export async function executeBerkasPhysicalFileDestruction(
   })
 }
 
+/**
+ * Best-effort bookkeeping, isolated from the destruction report on purpose:
+ * a failure here must never change the caller's report or throw. A
+ * repository that doesn't implement the optional method is simply skipped.
+ */
+async function markWorkflowDocumentsCleanedSafely({
+  dokumenIds,
+  actorUserId,
+  repository,
+}: {
+  dokumenIds: string[]
+  actorUserId: string
+  repository: BerkasPhysicalDestructionRepository
+}): Promise<void> {
+  if (!repository.markWorkflowDocumentsLampiranCleaned || dokumenIds.length === 0) return
+
+  try {
+    await repository.markWorkflowDocumentsLampiranCleaned({ dokumenIds, actorUserId })
+  } catch (error) {
+    console.error('[berkas-arsip-physical-destruction] lampiran-cleaned bookkeeping failed:', error)
+  }
+}
+
 export function createLocalBerkasPhysicalDestructionStorage(
   root = getLocalStorageRoot(),
 ): BerkasPhysicalDestructionStorage {
@@ -186,7 +225,8 @@ async function runBerkasPhysicalFileDestruction({
   repository = defaultBerkasPhysicalDestructionRepository,
   storage = createLocalBerkasPhysicalDestructionStorage(),
   dryRun,
-}: AnalyzeBerkasPhysicalFileDestructionInput & {
+  actorUserId,
+}: ExecuteBerkasPhysicalFileDestructionInput & {
   dryRun: boolean
 }): Promise<BerkasPhysicalDestructionReport> {
   const folder = await repository.getBerkasForPhysicalDestruction(berkasId)
@@ -245,16 +285,26 @@ async function runBerkasPhysicalFileDestruction({
   const skippedDuplicateCount = prepared.skippedDuplicateCount
   if (skippedDuplicateCount > 0) errors.add('DUPLICATE_FILE_CANDIDATE_SKIPPED')
 
+  const status = dryRun
+    ? 'dry_run'
+    : resolveExecutionStatus({
+      attemptedCount: prepared.candidates.length,
+      deletedCount,
+      alreadyMissingCount,
+      skippedUnsafeCount,
+      failedCount,
+    })
+
+  if (!dryRun && actorUserId && (status === 'completed' || status === 'partial')) {
+    await markWorkflowDocumentsCleanedSafely({
+      dokumenIds: collection.workflowDocumentIds,
+      actorUserId,
+      repository,
+    })
+  }
+
   return {
-    status: dryRun
-      ? 'dry_run'
-      : resolveExecutionStatus({
-        attemptedCount: prepared.candidates.length,
-        deletedCount,
-        alreadyMissingCount,
-        skippedUnsafeCount,
-        failedCount,
-      }),
+    status,
     total_items: collection.totalItems,
     workflow_attachment_candidates: collection.workflowAttachmentCandidates,
     manual_attachment_candidates: collection.manualAttachmentCandidates,
@@ -306,6 +356,7 @@ async function collectFolderCandidates({
     manualAttachmentCandidates: manualCandidates.rawCandidateCount,
     skippedUnsafeCount: workflowCandidates.skippedUnsafeCount + manualCandidates.skippedUnsafeCount,
     errors,
+    workflowDocumentIds: workflowIds,
   }
 }
 
@@ -626,6 +677,51 @@ const defaultBerkasPhysicalDestructionRepository: BerkasPhysicalDestructionRepos
         asc(manualArsipAttachment.createdAt),
         asc(manualArsipAttachment.id),
       ) as Promise<BerkasPhysicalDestructionManualAttachmentRow[]>
+  },
+
+  async markWorkflowDocumentsLampiranCleaned({ dokumenIds, actorUserId }) {
+    const database = await getDatabase()
+    const { auditLog } = await import('#/db/schema/audit')
+    const now = new Date()
+
+    const docs = await database
+      .select({
+        id: dokumenTransaksi.id,
+        judul: dokumenTransaksi.judul,
+        namaDokumen: dokumenTransaksi.namaDokumen,
+        createdBy: dokumenTransaksi.createdBy,
+        kegiatanJenisId: dokumenTransaksi.kegiatanJenisId,
+        lampiranUrls: dokumenTransaksi.lampiranUrls,
+      })
+      .from(dokumenTransaksi)
+      .where(inArray(dokumenTransaksi.id, dokumenIds))
+
+    await database.transaction(async (tx) => {
+      for (const doc of docs) {
+        await tx
+          .update(dokumenTransaksi)
+          .set({
+            lampiranDibersihkanAt: now,
+            lampiranDibersihkanBy: actorUserId,
+            lampiranDibersihkanAlasan: 'BERKAS_DIMUSNAHKAN',
+          })
+          .where(eq(dokumenTransaksi.id, doc.id))
+
+        await tx.insert(auditLog).values({
+          entityType: 'DOKUMEN',
+          entityId: doc.id,
+          aksi: 'BERKAS_LAMPIRAN_DIBERSIHKAN',
+          actorUserId,
+          metadataSnapshot: {
+            judul: doc.judul,
+            nama_dokumen: doc.namaDokumen,
+            pemilik_id: doc.createdBy,
+            kegiatan_id: doc.kegiatanJenisId,
+            jumlah_lampiran: Array.isArray(doc.lampiranUrls) ? doc.lampiranUrls.length : 0,
+          },
+        })
+      }
+    })
   },
 }
 

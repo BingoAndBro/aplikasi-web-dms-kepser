@@ -25,6 +25,10 @@ export type DokumenRow = {
   keterangan_detail: string | null
   created_at: string
   updated_at: string
+  // Kondisi lampiran fisik -- TERPISAH dari `status`. Diisi lewat pembersihan
+  // non-material oleh ketua tim, atau pemusnahan berkas oleh kasubag.
+  lampiran_dibersihkan_at?: string | null
+  lampiran_dibersihkan_alasan?: string | null
   // Chain fields (for Material)
   komponen_id?: string | null
   jenis_permintaan_id?: string | null

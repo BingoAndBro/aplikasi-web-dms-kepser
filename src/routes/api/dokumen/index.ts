@@ -50,6 +50,8 @@ export const Route = createFileRoute('/api/dokumen/')({
               keterangan_detail: dokumenTransaksi.keteranganDetail,
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,
+              lampiran_dibersihkan_at: dokumenTransaksi.lampiranDibersihkanAt,
+              lampiran_dibersihkan_alasan: dokumenTransaksi.lampiranDibersihkanAlasan,
               fungsi_nama: masterFungsi.nama,
               kegiatan_nama: masterKegiatan.nama,
             })

@@ -462,6 +462,7 @@ describe('berkas arsip API routes', () => {
     expect(mocks.executeBerkasPhysicalFileDestruction).toHaveBeenCalledWith({
       berkasId: BERKAS_ID,
       confirmation: 'HAPUS FILE FISIK ARSIP',
+      actorUserId: USER_ID,
     })
     expect(
       mocks.transitionBerkasArchiveStatus.mock.invocationCallOrder[0],

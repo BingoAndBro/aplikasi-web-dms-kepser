@@ -33,6 +33,7 @@ function getInitials(name?: string, email?: string): string {
 
 type ChairmanStatusResponse = {
   kegiatan?: { id: string; nama: string }[]
+  stale_non_material_count?: number
 }
 
 type AuthSessionResponse = {
@@ -72,6 +73,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [chairmanKegiatan, setChairmanKegiatan] = React.useState<{ id: string; nama: string }[]>([])
+  const [staleNonMaterialCount, setStaleNonMaterialCount] = React.useState(0)
 
   const [hasSession, setHasSession] = React.useState(false)
   const [roleSwitcherOpen, setRoleSwitcherOpen] = React.useState(false)
@@ -134,14 +136,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     setEmail(data.session.email)
     setAvatarUrl(null)
     setChairmanKegiatan([])
+    setStaleNonMaterialCount(0)
 
     await refreshCurrentUserProfile()
 
     try {
       const ktData = await apiFetch<ChairmanStatusResponse>('/users/me/ketua-tim')
       setChairmanKegiatan(ktData.kegiatan || [])
+      setStaleNonMaterialCount(ktData.stale_non_material_count ?? 0)
     } catch (err) {
       setChairmanKegiatan([])
+      setStaleNonMaterialCount(0)
       if (!(err instanceof Error && err.name === 'ApiError')) {
         console.error('Failed to fetch chairman status:', err)
       }
@@ -289,6 +294,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar
           activeRole={activeRole}
           hasKetuaTimAssignment={chairmanKegiatan.length > 0}
+          staleNonMaterialCount={staleNonMaterialCount}
           mobileOpen={mobileSidebarOpen}
           onMobileOpenChange={setMobileSidebarOpen}
           pathname={routerState.location.pathname}
