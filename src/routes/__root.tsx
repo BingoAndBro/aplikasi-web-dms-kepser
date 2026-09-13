@@ -7,7 +7,18 @@ import { ConfirmProvider } from '../components/ui/confirm/ConfirmProvider'
 import { PUBLIC_PATHS } from '../lib/constants/routes'
 import appCss from '../styles.css?url'
 
-const THEME_INIT_SCRIPT = `(function(){try{var root=document.documentElement;root.classList.remove('light','dark');root.classList.add('light');root.style.colorScheme='light';}catch(e){}})();`
+// Fase 0 dev-only theme switch (docs/planning/tema-global): append ?theme=sp or ?theme=st
+// to any URL to preview that theme locally via [data-theme]. No persistence, no UI, no DB —
+// superseded by the real GLOBAL admin-controlled setting in a later phase.
+const THEME_INIT_SCRIPT = `(function(){try{
+  var root=document.documentElement;
+  root.classList.remove('light','dark');
+  root.classList.add('light');
+  root.style.colorScheme='light';
+  var params=new URLSearchParams(window.location.search);
+  var theme=params.get('theme');
+  if(theme==='sp'||theme==='st'){root.dataset.theme=theme;}else{delete root.dataset.theme;}
+}catch(e){}})();`
 
 export const Route = createRootRoute({
   ssr: false,
