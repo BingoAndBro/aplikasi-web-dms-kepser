@@ -709,8 +709,8 @@ type LampiranFixture = {
 }
 
 function createLocalSession(overrides: {
-  roles: Array<'PEGAWAI' | 'PPK' | 'BENDAHARA' | 'KEPALA_SUB_BAGIAN_UMUM' | 'ADMIN'>
-  activeRole: 'PEGAWAI' | 'PPK' | 'BENDAHARA' | 'KEPALA_SUB_BAGIAN_UMUM' | 'ADMIN'
+  roles: Array<'PEGAWAI' | 'PPK' | 'PPSPM' | 'KEPALA_SUB_BAGIAN_UMUM' | 'ADMIN'>
+  activeRole: 'PEGAWAI' | 'PPK' | 'PPSPM' | 'KEPALA_SUB_BAGIAN_UMUM' | 'ADMIN'
 }) {
   return {
     user: {

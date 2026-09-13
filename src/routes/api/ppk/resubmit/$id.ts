@@ -127,7 +127,7 @@ async function prepareAndMoveAttachments({
 // ---------------------------------------------------------------------------
 // GET /api/ppk/resubmit/[id] - get dokumen detail for resubmit page
 // PATCH /api/ppk/resubmit/[id] - save lampiran (no FSM transition)
-// POST /api/ppk/resubmit/[id] - resubmit after Bendahara rejection (FSM transition)
+// POST /api/ppk/resubmit/[id] - resubmit after Ppspm rejection (FSM transition)
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/ppk/resubmit/$id')({

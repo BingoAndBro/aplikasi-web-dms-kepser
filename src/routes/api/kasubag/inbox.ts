@@ -70,12 +70,12 @@ export const Route = createFileRoute('/api/kasubag/inbox')({
             .from(logAktivitas)
             .where(and(
               inArray(logAktivitas.dokumenId, docs.map((d) => d.id)),
-              eq(logAktivitas.aksi, 'BENDAHARA_APPROVE'),
+              eq(logAktivitas.aksi, 'PPSPM_APPROVE'),
             ))
 
-          const bendaharaLogMap: Record<string, Date> = {}
+          const ppspmLogMap: Record<string, Date> = {}
           for (const log of logs) {
-            bendaharaLogMap[log.dokumen_id] = log.timestamp
+            ppspmLogMap[log.dokumen_id] = log.timestamp
           }
 
           return Response.json({
@@ -93,7 +93,7 @@ export const Route = createFileRoute('/api/kasubag/inbox')({
               nominal_realisasi: d.nominal_realisasi,
               source_type: ARCHIVE_SOURCE_TYPE.WORKFLOW,
               created_at: d.created_at,
-              bendahara_approve_at: bendaharaLogMap[d.id] ?? null,
+              ppspm_approve_at: ppspmLogMap[d.id] ?? null,
             })),
           })
         } catch (err) {

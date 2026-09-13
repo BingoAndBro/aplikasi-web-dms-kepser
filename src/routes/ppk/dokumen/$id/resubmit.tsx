@@ -34,7 +34,7 @@ export const Route = createFileRoute('/ppk/dokumen/$id/resubmit')({
 const WORKFLOW_STEPS = [
   { key: 'DRAFT', label: 'Draft' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
-  { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
+  { key: 'IN_PPSPM_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 
@@ -560,7 +560,7 @@ function PpkResubmitPage() {
                     {WORKFLOW_STEPS.map((step, i) => {
                       const isCurrent = step.key === dokumen.status
                       const isPast = workflowIdx > i || dokumen.status === 'COMPLETED'
-                      const showAsRevision = dokumen.status === 'NEED_REVISION' && step.key === 'IN_BENDAHARA_APPROVAL'
+                      const showAsRevision = dokumen.status === 'NEED_REVISION' && step.key === 'IN_PPSPM_APPROVAL'
                       const showAsRevisionPpk = dokumen.status === 'NEED_REVISION' && step.key === 'IN_PPK_VALIDATION'
 
                       return (

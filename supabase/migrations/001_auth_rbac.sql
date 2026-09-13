@@ -107,7 +107,7 @@ CREATE POLICY user_roles_delete_admin ON user_roles
 INSERT INTO roles (nama, deskripsi) VALUES
   ('PEGAWAI', 'Role dasar — semua pegawai punya role ini'),
   ('PPK', 'Pejabat Pembuat Komitmen — validasi dokumen'),
-  ('BENDAHARA', 'Bendahara — approve pencairan'),
+  ('PPSPM', 'Ppspm — approve pencairan'),
   ('ARSIPARIS', 'Arsiparis — arsipkan dokumen'),
   ('ADMIN', 'Administrator — kelola user & master data')
 ON CONFLICT (nama) DO NOTHING;

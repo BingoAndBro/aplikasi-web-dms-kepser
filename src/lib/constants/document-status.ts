@@ -1,7 +1,7 @@
 export const DOC_STATUS_VALUES = [
   'DRAFT',
   'IN_PPK_VALIDATION',
-  'IN_BENDAHARA_APPROVAL',
+  'IN_PPSPM_APPROVAL',
   'NEED_REVISION',
   'COMPLETED',
   'TERSIMPAN',
@@ -12,7 +12,7 @@ export type StatusDokumen = typeof DOC_STATUS_VALUES[number]
 export const DOC_STATUS: { [K in StatusDokumen]: K } = {
   DRAFT: 'DRAFT',
   IN_PPK_VALIDATION: 'IN_PPK_VALIDATION',
-  IN_BENDAHARA_APPROVAL: 'IN_BENDAHARA_APPROVAL',
+  IN_PPSPM_APPROVAL: 'IN_PPSPM_APPROVAL',
   NEED_REVISION: 'NEED_REVISION',
   COMPLETED: 'COMPLETED',
   TERSIMPAN: 'TERSIMPAN',
@@ -20,7 +20,7 @@ export const DOC_STATUS: { [K in StatusDokumen]: K } = {
 
 export const CURRENT_STEPS = {
   PPK: 'PPK',
-  BENDAHARA: 'BENDAHARA',
+  PPSPM: 'PPSPM',
 } as const
 
 export type CurrentStep = typeof CURRENT_STEPS[keyof typeof CURRENT_STEPS] | null

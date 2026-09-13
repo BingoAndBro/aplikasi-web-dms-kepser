@@ -12,7 +12,7 @@ const SHARED_VIEW = 'src/components/kinerja/MonitoringRealisasiView.tsx'
 const KINERJA_ROUTE = 'src/routes/penanggung-jawab-kinerja/laporan-kinerja.tsx'
 const MONITORING_ROUTES = [
   'src/routes/ppk/monitoring-realisasi.tsx',
-  'src/routes/bendahara/monitoring-realisasi.tsx',
+  'src/routes/ppspm/monitoring-realisasi.tsx',
 ]
 
 describe('laporan kinerja visual parity source guard', () => {

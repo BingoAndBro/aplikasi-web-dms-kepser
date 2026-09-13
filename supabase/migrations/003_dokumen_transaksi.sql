@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS "dokumen_transaksi" (
 );
 
 COMMENT ON TABLE "dokumen_transaksi" IS 'Dokumen transaksi/SPD yang diajukan pegawai';
-COMMENT ON COLUMN "dokumen_transaksi"."status" IS 'DRAFT | IN_PPK_VALIDATION | IN_BENDAHARA_APPROVAL | NEED_REVISION | COMPLETED | ARCHIVED';
-COMMENT ON COLUMN "dokumen_transaksi"."current_step" IS 'PPK | BENDAHARA | null';
+COMMENT ON COLUMN "dokumen_transaksi"."status" IS 'DRAFT | IN_PPK_VALIDATION | IN_PPSPM_APPROVAL | NEED_REVISION | COMPLETED | ARCHIVED';
+COMMENT ON COLUMN "dokumen_transaksi"."current_step" IS 'PPK | PPSPM | null';
 COMMENT ON COLUMN "dokumen_transaksi"."revision_target" IS 'USER | PPK | null — siapa yang perlu memperbaiki';
 COMMENT ON COLUMN "dokumen_transaksi"."lampiran_urls" IS 'JSON array of { kelengkapan_id, nama, url, uploaded_at }';
 
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS "log_aktivitas" (
 );
 
 COMMENT ON TABLE "log_aktivitas" IS 'Audit trail — APPEND ONLY. Tidak ada operasi UPDATE/DELETE.';
-COMMENT ON COLUMN "log_aktivitas"."aksi" IS 'SUBMIT | RESUBMIT | PPK_APPROVE | PPK_REJECT | BENDAHARA_APPROVE | BENDAHARA_REJECT | ARCHIVE | ARCHIVE_SKIP';
+COMMENT ON COLUMN "log_aktivitas"."aksi" IS 'SUBMIT | RESUBMIT | PPK_APPROVE | PPK_REJECT | PPSPM_APPROVE | PPSPM_REJECT | ARCHIVE | ARCHIVE_SKIP';
 
 -- ============================================================
 -- INDEX: for faster log_aktivitas queries by dokumen_id
@@ -73,13 +73,13 @@ CREATE POLICY "pegawai_update_own_dokumen" ON "dokumen_transaksi"
     AND "revision_target" = 'USER'
   );
 
--- PPK/BENDAHARA/ARSIPARIS/ADMIN: can see documents in their step
+-- PPK/PPSPM/ARSIPARIS/ADMIN: can see documents in their step
 CREATE POLICY "approver_select_dokumen" ON "dokumen_transaksi"
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM "public"."user_roles" ur
       JOIN "public"."roles" r ON r.id = ur.role_id
-      WHERE ur.user_id = auth.uid() AND r.nama IN ('PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN')
+      WHERE ur.user_id = auth.uid() AND r.nama IN ('PPK', 'PPSPM', 'ARSIPARIS', 'ADMIN')
     )
   );
 
@@ -99,7 +99,7 @@ CREATE POLICY "log_read" ON "log_aktivitas"
     OR EXISTS (
       SELECT 1 FROM "public"."user_roles" ur
       JOIN "public"."roles" r ON r.id = ur.role_id
-      WHERE ur.user_id = auth.uid() AND r.nama IN ('PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN')
+      WHERE ur.user_id = auth.uid() AND r.nama IN ('PPK', 'PPSPM', 'ARSIPARIS', 'ADMIN')
     )
   );
 

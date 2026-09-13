@@ -51,7 +51,7 @@ const BENTO_CONFIGS: Record<RoleName, BentoConfig> = {
     ],
     chart: false,
   },
-  BENDAHARA: {
+  PPSPM: {
     stats: [
       { label: 'Menunggu Persetujuan', value: '—', icon: Clock, color: 'text-primary' },
       { label: 'Disetujui', value: '—', icon: CheckCircle, color: 'text-green-500' },

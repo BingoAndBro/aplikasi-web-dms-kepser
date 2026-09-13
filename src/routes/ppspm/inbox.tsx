@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'
 import {
   DocumentListStatusBadge,
   WorkflowActionButton,
@@ -17,43 +17,51 @@ import {
   WorkflowTableShell,
   WORKFLOW_TABLE_HEAD_CLASS,
 } from '#/components/workflow/PpkPpspmPagePrimitives'
-import { FileText, ChevronRight, Banknote } from 'lucide-react'
-import { ApiError, apiFetch } from '#/lib/api-client'
+import {
+  FileText, ChevronRight, Banknote,
+} from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
+import { ApiError, apiFetch } from '#/lib/api-client'
 
-type Item = { id: string; judul: string; fungsi_nama: string; kegiatan_nama: string; tahun: number; updated_at: string; revision_notes: string | null }
-type BendaharaDitolakResponse = { dokumen?: Item[]; error?: string }
+export const Route = createFileRoute('/ppspm/inbox')({ component: PpspmInboxPage })
 
-const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, kegiatan, atau catatan...'
+const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, atau kegiatan...'
 
-function truncate(str: string | null, len = 50): string { if (!str) return '-'; return str.length > len ? str.slice(0, len) + '...' : str }
-
-function RejectedBadge() {
-  return <DocumentListStatusBadge status="NEED_REVISION" label="Ditolak PPSPM" />
+type InboxItem = {
+  id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
+  created_by: string; tahun: number; tanggal: string; created_at: string
+  ppk_user_id: string | null; ppk_validated_at: string | null
 }
 
-export const Route = createFileRoute('/bendahara/ditolak')({ component: BendaharaDitolakPage })
-
-function BendaharaDitolakPage() {
+function PpspmInboxPage() {
   const navigate = useNavigate()
-  const [items, setItems] = useState<Item[]>([])
+  const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
-  useEffect(() => {
-    apiFetch<BendaharaDitolakResponse>('/bendahara/ditolak')
-      .then(d => { setItems(d.dokumen ?? []); setLoading(false) })
-      .catch((error) => {
-        if (!(error instanceof ApiError)) {
-          setError('Gagal memuat data')
-        }
-        setLoading(false)
-      })
-  }, [])
+  async function fetchData() {
+    setLoading(true); setError(null)
+    try {
+      const json = await apiFetch<{ dokumen?: InboxItem[]; error?: string }>('/ppspm/inbox')
+      setItems(json.dokumen ?? [])
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const payload = err.payload
+        setError(payload && typeof payload === 'object' && 'error' in payload
+          ? (payload as { error?: string }).error ?? 'Gagal'
+          : 'Gagal')
+        return
+      }
 
-  function openDocument(dok: Item) {
-    navigate({ to: '/bendahara/dokumen/$id', params: { id: dok.id } })
+      setError('Terjadi kesalahan')
+    } finally { setLoading(false) }
+  }
+
+  useEffect(() => { fetchData() }, [])
+
+  function openDocument(dok: InboxItem) {
+    navigate({ to: '/ppspm/dokumen/$id', params: { id: dok.id } })
   }
 
   const filtered = items.filter(d => {
@@ -62,7 +70,6 @@ function BendaharaDitolakPage() {
       || d.judul.toLowerCase().includes(query)
       || (d.fungsi_nama ?? '').toLowerCase().includes(query)
       || (d.kegiatan_nama ?? '').toLowerCase().includes(query)
-      || (d.revision_notes ?? '').toLowerCase().includes(query)
   })
 
   return (
@@ -74,23 +81,44 @@ function BendaharaDitolakPage() {
           eyebrow={
             <Banknote size={22} />
           }
-          title="Dokumen Ditolak"
-          description={`${items.length} dokumen ditolak PPSPM dan dikembalikan ke PPK untuk perbaikan.`}
+          title="Persetujuan Dokumen"
+          description={`${items.length} dokumen Material sudah divalidasi PPK dan menunggu persetujuan PPSPM.`}
         />
+
         <WorkflowSearchPanel
           search={search}
           onSearchChange={setSearch}
           placeholder={WORKFLOW_SEARCH_PLACEHOLDER}
           resultLabel={`Total ${filtered.length} Dokumen`}
-        />
+        >
+          {search && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch('')
+              }}
+            >
+              Reset
+            </Button>
+          )}
+        </WorkflowSearchPanel>
+
         {loading ? (
           <LoadingState variant="list" rows={4} />
         ) : error ? (
-          <ErrorState title="Gagal memuat data" description={error} variant="page" />
+          <ErrorState
+            title="Gagal memuat data"
+            description={error}
+            variant="page"
+            action={<Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>}
+          />
         ) : filtered.length === 0 ? (
           <EmptyState
             title="Tidak ada dokumen"
-            description={search ? 'Tidak ada dokumen yang cocok dengan pencarian Anda.' : 'Dokumen yang Anda tolak akan muncul di sini.'}
+            description={search
+              ? 'Tidak ada dokumen yang cocok dengan filter Anda.'
+              : 'Dokumen yang menunggu persetujuan PPSPM akan muncul di sini.'}
             icon={<FileText size={20} />}
           />
         ) : (
@@ -103,7 +131,7 @@ function BendaharaDitolakPage() {
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Kegiatan</TableHead>
                     <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>
-                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal</TableHead>
+                    <TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal Ajuan</TableHead>
                     <TableHead className={`w-20 text-right ${WORKFLOW_TABLE_HEAD_CLASS}`}>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -130,8 +158,8 @@ function BendaharaDitolakPage() {
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[220px] px-6 py-5"><span className="block truncate text-sm font-normal text-zinc-900">{d.kegiatan_nama ?? '-'}</span></TableCell>
-                      <TableCell className="px-6 py-5"><RejectedBadge /></TableCell>
-                      <TableCell className="px-6 py-5"><WorkflowDateCell value={formatDate(d.updated_at)} /></TableCell>
+                      <TableCell className="px-6 py-5"><DocumentListStatusBadge status="IN_PPSPM_APPROVAL" /></TableCell>
+                      <TableCell className="px-6 py-5"><WorkflowDateCell value={formatDate(d.tanggal)} /></TableCell>
                       <TableCell className="px-6 py-5 text-right">
                         <WorkflowActionButton label={`Buka dokumen ${d.judul}`} />
                       </TableCell>
@@ -147,14 +175,14 @@ function BendaharaDitolakPage() {
                   key={d.id}
                   title={d.judul}
                   subtitle={d.fungsi_nama ?? '-'}
-                  status={<RejectedBadge />}
+                  status={<DocumentListStatusBadge status="IN_PPSPM_APPROVAL" />}
                   meta={[
                     { label: 'Kegiatan', value: d.kegiatan_nama ?? '-', wide: true },
-                    { label: 'Tanggal Penolakan', value: <WorkflowDateCell value={formatDate(d.updated_at)} className="mt-1" /> },
-                    { label: 'Catatan', value: truncate(d.revision_notes, 80), wide: true },
+                    { label: 'Tanggal', value: <WorkflowDateCell value={formatDate(d.tanggal)} className="mt-1" /> },
+                    { label: 'Tanggal Validasi PPK', value: d.ppk_validated_at ? <WorkflowDateCell value={formatDate(d.ppk_validated_at)} className="mt-1" /> : '-' },
                   ]}
                   action={
-                    <Link to="/bendahara/dokumen/$id" params={{ id: d.id }}>
+                    <Link to="/ppspm/dokumen/$id" params={{ id: d.id }}>
                       <Button variant="outline" size="sm" className="w-full gap-1.5">
                         <ChevronRight size={14} />
                         Buka Dokumen

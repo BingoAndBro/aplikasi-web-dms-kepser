@@ -103,7 +103,7 @@ describe('Laporan Kinerja API route', () => {
     expect(mocks.dbSelect).not.toHaveBeenCalled()
   })
 
-  it.each(['PPK', 'BENDAHARA'])('allows %s to read realisasi monitoring metadata', async (role) => {
+  it.each(['PPK', 'PPSPM'])('allows %s to read realisasi monitoring metadata', async (role) => {
     mocks.getLocalServerSession.mockResolvedValue(createSession([role], role))
     setupDbSelect([createRow({ status: 'COMPLETED', nominal_realisasi: '5000.00' })])
 

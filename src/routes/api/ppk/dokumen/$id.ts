@@ -92,7 +92,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
 
           const ppkStatuses = [
             'IN_PPK_VALIDATION',
-            'IN_BENDAHARA_APPROVAL',
+            'IN_PPSPM_APPROVAL',
             'NEED_REVISION',
             'COMPLETED',
           ]

@@ -3,7 +3,7 @@ import { ROLES, type RoleName } from '../../lib/constants/roles'
 export const SEED_ROLE_IDS: Record<RoleName, string> = {
   PEGAWAI: '11111111-1111-4111-8111-111111111111',
   PPK: '22222222-2222-4222-8222-222222222222',
-  BENDAHARA: '33333333-3333-4333-8333-333333333333',
+  PPSPM: '33333333-3333-4333-8333-333333333333',
   KEPALA_SUB_BAGIAN_UMUM: '44444444-4444-4444-8444-444444444444',
   PENANGGUNG_JAWAB_KINERJA: '66666666-6666-4666-8666-666666666666',
   ADMIN: '55555555-5555-4555-8555-555555555555',
@@ -13,7 +13,7 @@ export const SEED_USER_IDS = {
   admin: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   pegawai: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   ppk: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-  bendahara: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  ppspm: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   kepalaSubBagianUmum: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
 } as const
 
@@ -44,9 +44,9 @@ export const CANONICAL_SEED_ROLES = [
     description: 'Pejabat Pembuat Komitmen',
   },
   {
-    id: SEED_ROLE_IDS.BENDAHARA,
-    nama: ROLES.BENDAHARA,
-    description: 'Bendahara pemeriksa dan penyelesai dokumen',
+    id: SEED_ROLE_IDS.PPSPM,
+    nama: ROLES.PPSPM,
+    description: 'PPSPM pemeriksa dan penyelesai dokumen',
   },
   {
     id: SEED_ROLE_IDS.KEPALA_SUB_BAGIAN_UMUM,
@@ -76,7 +76,7 @@ export const DEV_SEED_USERS = [
   },
   {
     // Workflow branch: single all-hats account to walk a document through the
-    // full PEGAWAI -> PPK -> BENDAHARA flow. Keeps the 'ppk' key so the seed
+    // full PEGAWAI -> PPK -> PPSPM flow. Keeps the 'ppk' key so the seed
     // helpers (requireSeededUserId, seedKetuaTimFixture) still resolve.
     key: 'ppk',
     id: SEED_USER_IDS.ppk,
@@ -86,7 +86,7 @@ export const DEV_SEED_USERS = [
     roles: [
       ROLES.PEGAWAI,
       ROLES.PPK,
-      ROLES.BENDAHARA,
+      ROLES.PPSPM,
       ROLES.KEPALA_SUB_BAGIAN_UMUM,
       ROLES.PENANGGUNG_JAWAB_KINERJA,
     ],

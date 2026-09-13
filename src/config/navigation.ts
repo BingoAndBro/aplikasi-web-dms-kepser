@@ -103,17 +103,17 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       ],
     },
   ],
-  BENDAHARA: [
+  PPSPM: [
     {
       title: 'GENERAL',
-      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.BENDAHARA.ROOT }],
+      items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: ROUTES.PPSPM.ROOT }],
     },
     {
       title: 'PERSETUJUAN',
       items: [
-        { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: ROUTES.BENDAHARA.INBOX },
-        { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: ROUTES.BENDAHARA.DITOLAK },
-        { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: ROUTES.BENDAHARA.SELESAI },
+        { id: 'persetujuan', label: 'Persetujuan Dokumen', icon: Banknote, to: ROUTES.PPSPM.INBOX },
+        { id: 'ditolak', label: 'Dokumen Ditolak', icon: FileX, to: ROUTES.PPSPM.DITOLAK },
+        { id: 'selesai', label: 'Dokumen Selesai', icon: CheckSquare, to: ROUTES.PPSPM.SELESAI },
       ],
     },
     {
@@ -123,7 +123,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
           id: 'monitoring_realisasi',
           label: 'Nominal Realisasi',
           icon: BarChart3,
-          to: ROUTES.BENDAHARA.MONITORING_REALISASI,
+          to: ROUTES.PPSPM.MONITORING_REALISASI,
         },
       ],
     },

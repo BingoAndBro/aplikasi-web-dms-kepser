@@ -15,8 +15,8 @@ import { ROUTES } from '#/lib/constants/routes'
 import { byOldest, formatDate, formatRelativeAge } from '#/lib/utils/format'
 import { Banknote, CheckCircle2, ClipboardCheck, FileCheck2, FileText, FileX, History } from 'lucide-react'
 
-export const Route = createFileRoute('/bendahara/')({
-  component: BendaharaDashboardPage,
+export const Route = createFileRoute('/ppspm/')({
+  component: PpspmDashboardPage,
 })
 
 type WorkflowDashboardItem = {
@@ -37,16 +37,16 @@ type WorkflowDetailResponse = {
   }
 }
 
-function BendaharaDashboardPage() {
+function PpspmDashboardPage() {
   const [waiting, setWaiting] = useState<WorkflowDashboardItem[]>([])
   const [finished, setFinished] = useState<WorkflowDashboardItem[]>([])
   const [rejected, setRejected] = useState<WorkflowDashboardItem[]>([])
 
   useEffect(() => {
     Promise.all([
-      apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/bendahara/inbox').catch(() => ({ dokumen: [] })),
-      apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/bendahara/selesai').catch(() => ({ dokumen: [] })),
-      apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/bendahara/ditolak').catch(() => ({ dokumen: [] })),
+      apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/ppspm/inbox').catch(() => ({ dokumen: [] })),
+      apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/ppspm/selesai').catch(() => ({ dokumen: [] })),
+      apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/ppspm/ditolak').catch(() => ({ dokumen: [] })),
     ]).then(async ([waitingResponse, finishedResponse, rejectedResponse]) => {
       const waitingDocuments = waitingResponse.dokumen ?? []
       setWaiting(await enrichWaitingNominal(waitingDocuments))
@@ -62,7 +62,7 @@ function BendaharaDashboardPage() {
       <RoleDashboardHeader
         title="Dashboard PPSPM"
         description="Pantau dokumen yang menunggu persetujuan akhir."
-        actionHref={ROUTES.BENDAHARA.INBOX}
+        actionHref={ROUTES.PPSPM.INBOX}
         actionLabel="Persetujuan Dokumen"
         actionIcon={<Banknote size={16} />}
       />
@@ -120,7 +120,7 @@ function BendaharaDashboardPage() {
                         ? `Tanggal ${formatDate(document.tanggal)}`
                         : undefined)
                   }
-                  href={`/bendahara/dokumen/${document.id}`}
+                  href={`/ppspm/dokumen/${document.id}`}
                   actionLabel="Tinjau"
                 />
               ))}
@@ -135,9 +135,9 @@ function BendaharaDashboardPage() {
 
         <DashboardQuickActions
           actions={[
-            { href: ROUTES.BENDAHARA.INBOX, label: 'Persetujuan Dokumen', icon: <Banknote size={16} /> },
-            { href: ROUTES.BENDAHARA.SELESAI, label: 'Dokumen Selesai', icon: <FileCheck2 size={16} /> },
-            { href: ROUTES.BENDAHARA.DITOLAK, label: 'Dokumen Ditolak', icon: <FileX size={16} /> },
+            { href: ROUTES.PPSPM.INBOX, label: 'Persetujuan Dokumen', icon: <Banknote size={16} /> },
+            { href: ROUTES.PPSPM.SELESAI, label: 'Dokumen Selesai', icon: <FileCheck2 size={16} /> },
+            { href: ROUTES.PPSPM.DITOLAK, label: 'Dokumen Ditolak', icon: <FileX size={16} /> },
           ]}
         />
       </div>
@@ -168,7 +168,7 @@ async function enrichWaitingNominal(items: WorkflowDashboardItem[]) {
     if (item.nominal_realisasi !== undefined) return item
 
     try {
-      const detail = await apiFetch<WorkflowDetailResponse>(`/bendahara/dokumen/${item.id}`)
+      const detail = await apiFetch<WorkflowDetailResponse>(`/ppspm/dokumen/${item.id}`)
       return {
         ...item,
         nominal_realisasi: detail.dokumen?.nominal_realisasi ?? null,

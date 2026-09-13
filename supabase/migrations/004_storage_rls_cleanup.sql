@@ -41,7 +41,7 @@ CREATE POLICY "storage_select_own" ON "storage"."objects"
       OR EXISTS (
         SELECT 1 FROM "public"."user_roles" ur
         JOIN "public"."roles" r ON r.id = ur.role_id
-        WHERE ur.user_id = auth.uid() AND r.nama IN ('PPK', 'BENDAHARA', 'ARSIPARIS', 'ADMIN')
+        WHERE ur.user_id = auth.uid() AND r.nama IN ('PPK', 'PPSPM', 'ARSIPARIS', 'ADMIN')
       )
     )
   );

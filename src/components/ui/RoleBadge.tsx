@@ -5,7 +5,7 @@ import { cn } from "#/lib/utils"
 export const ROLE_BADGE_LABELS = {
   PEGAWAI: "Pegawai",
   PPK: "PPK",
-  BENDAHARA: "PPSPM",
+  PPSPM: "PPSPM",
   KEPALA_SUB_BAGIAN_UMUM: "Kepala Sub Bagian Umum",
   PENANGGUNG_JAWAB_KINERJA: "Penanggung Jawab Kinerja",
   ADMIN: "Admin Sistem",
@@ -22,7 +22,7 @@ type RoleBadgeTone =
 const roleToneByName: Record<RoleName, RoleBadgeTone> = {
   PEGAWAI: "green",
   PPK: "blue",
-  BENDAHARA: "orange",
+  PPSPM: "orange",
   KEPALA_SUB_BAGIAN_UMUM: "amber",
   PENANGGUNG_JAWAB_KINERJA: "slate",
   ADMIN: "neutral",

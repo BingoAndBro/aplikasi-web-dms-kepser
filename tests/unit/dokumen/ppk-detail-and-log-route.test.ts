@@ -25,7 +25,7 @@ vi.mock('#/db/client', () => ({
 
 import { Route as DokumenLogRoute } from '#/routes/api/dokumen.$id.log'
 import { Route as PpkDetailRoute } from '#/routes/api/ppk/dokumen/$id'
-import { Route as BendaharaDetailRoute } from '#/routes/api/bendahara/dokumen/$id'
+import { Route as PpspmDetailRoute } from '#/routes/api/ppspm/dokumen/$id'
 import { Route as KepalaSubBagianUmumDetailRoute } from '#/routes/api/kasubag/dokumen.$id'
 
 type RouteGetHandler = (args: {
@@ -41,7 +41,7 @@ const ppkDetailHandler = (PpkDetailRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
 }).options.server.handlers.GET
 
-const bendaharaDetailHandler = (BendaharaDetailRoute as unknown as {
+const ppspmDetailHandler = (PpspmDetailRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
 }).options.server.handlers.GET
 
@@ -95,22 +95,22 @@ describe('PPK detail and document log route UUID parity', () => {
     expect(mocks.dbSelect).toHaveBeenCalledTimes(2)
   })
 
-  it('allows the same valid document id through Bendahara detail lookup', async () => {
-    mocks.getLocalServerSession.mockResolvedValue(createSession(PPK_ID, ['PEGAWAI', 'BENDAHARA'], 'BENDAHARA'))
+  it('allows the same valid document id through Ppspm detail lookup', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(PPK_ID, ['PEGAWAI', 'PPSPM'], 'PPSPM'))
     mocks.dbSelect
-      .mockReturnValueOnce(createQueryBuilder([createBendaharaDetailRow()]))
+      .mockReturnValueOnce(createQueryBuilder([createPpspmDetailRow()]))
       .mockReturnValueOnce(createQueryBuilder([], { orderByTerminal: false }))
       .mockReturnValueOnce(createQueryBuilder([]))
 
-    const response = await bendaharaDetailHandler({
-      request: new Request(`http://localhost/api/bendahara/dokumen/${DOKUMEN_ID}`),
+    const response = await ppspmDetailHandler({
+      request: new Request(`http://localhost/api/ppspm/dokumen/${DOKUMEN_ID}`),
       params: { id: DOKUMEN_ID },
     })
     const body = await response.json()
 
     expect(response.status).toBe(200)
     expect(body.dokumen.id).toBe(DOKUMEN_ID)
-    expect(body.dokumen.status).toBe('IN_BENDAHARA_APPROVAL')
+    expect(body.dokumen.status).toBe('IN_PPSPM_APPROVAL')
     expect(body.ppkValidation).toBeNull()
     expect(body.logs).toEqual([])
     expect(mocks.dbSelect).toHaveBeenCalledTimes(3)
@@ -133,7 +133,7 @@ describe('PPK detail and document log route UUID parity', () => {
     expect(body.dokumen.id).toBe(DOKUMEN_ID)
     expect(body.dokumen.status).toBe('COMPLETED')
     expect(body.dokumen.is_archived).toBe(false)
-    expect(body.bendahara_approve).toBeNull()
+    expect(body.ppspm_approve).toBeNull()
     expect(body.arsip).toBeNull()
     expect(mocks.dbSelect).toHaveBeenCalledTimes(3)
     expectNoSensitiveOutput(body)
@@ -156,7 +156,7 @@ describe('PPK detail and document log route UUID parity', () => {
     expect(body.dokumen.id).toBe(DOKUMEN_ID)
     expect(body.dokumen.status).toBe('COMPLETED')
     expect(body.dokumen.is_archived).toBe(true)
-    expect(body.bendahara_approve).toEqual({
+    expect(body.ppspm_approve).toEqual({
       nama: 'PPSPM',
       tanggal: '2026-05-20T00:00:00.000Z',
     })
@@ -255,11 +255,11 @@ function createPpkDetailRow() {
   }
 }
 
-function createBendaharaDetailRow() {
+function createPpspmDetailRow() {
   return {
     ...createPpkDetailRow(),
-    status: 'IN_BENDAHARA_APPROVAL',
-    current_step: 'BENDAHARA',
+    status: 'IN_PPSPM_APPROVAL',
+    current_step: 'PPSPM',
   }
 }
 

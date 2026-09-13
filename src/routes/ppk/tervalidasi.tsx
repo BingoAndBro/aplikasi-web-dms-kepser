@@ -33,7 +33,7 @@ export const Route = createFileRoute('/ppk/tervalidasi')({ component: PpkTervali
 const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, atau kegiatan...'
 const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'Semua Status' },
-  { value: 'IN_BENDAHARA_APPROVAL', label: 'Menunggu Persetujuan' },
+  { value: 'IN_PPSPM_APPROVAL', label: 'Menunggu Persetujuan' },
   { value: 'COMPLETED', label: 'Selesai' },
 ]
 

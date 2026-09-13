@@ -84,7 +84,7 @@ export const Route = createFileRoute('/admin/master-data/user')({
 const ROLE_COLORS: Record<RoleName, string> = {
   PEGAWAI: 'bg-blue-100 text-blue-700 border-blue-200',
   PPK: 'bg-purple-100 text-purple-700 border-purple-200',
-  BENDAHARA: 'bg-green-100 text-green-700 border-green-200',
+  PPSPM: 'bg-green-100 text-green-700 border-green-200',
   KEPALA_SUB_BAGIAN_UMUM: 'bg-orange-100 text-orange-700 border-orange-200',
   PENANGGUNG_JAWAB_KINERJA: 'bg-cyan-100 text-cyan-700 border-cyan-200',
   ADMIN: 'bg-red-100 text-red-700 border-red-200',
@@ -93,7 +93,7 @@ const ROLE_COLORS: Record<RoleName, string> = {
 const ALL_ROLES: RoleName[] = [
   'PEGAWAI',
   'PPK',
-  'BENDAHARA',
+  'PPSPM',
   'KEPALA_SUB_BAGIAN_UMUM',
   'PENANGGUNG_JAWAB_KINERJA',
   'ADMIN',
@@ -102,7 +102,7 @@ const ALL_ROLES: RoleName[] = [
 const ROLE_HELP_TEXT: Record<RoleName, string> = {
   PEGAWAI: 'Mengajukan dokumen dan melihat laporan pribadi.',
   PPK: 'Memvalidasi dokumen sebelum persetujuan.',
-  BENDAHARA: 'Menyetujui pembayaran dokumen.',
+  PPSPM: 'Menyetujui pembayaran dokumen.',
   KEPALA_SUB_BAGIAN_UMUM: 'Mengelola klasifikasi dan lifecycle arsip.',
   PENANGGUNG_JAWAB_KINERJA: 'Melihat dashboard dan laporan metadata.',
   ADMIN: 'Mengelola user dan data referensi sistem.',

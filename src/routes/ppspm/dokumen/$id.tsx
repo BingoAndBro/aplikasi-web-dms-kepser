@@ -20,7 +20,7 @@ import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { apiFetch } from '#/lib/api-client'
 
-export const Route = createFileRoute('/bendahara/dokumen/$id')({ component: BendaharaDokumenDetailPage })
+export const Route = createFileRoute('/ppspm/dokumen/$id')({ component: PpspmDokumenDetailPage })
 
 type DokumenDetail = {
   id: string; judul: string; fungsi_nama: string; kegiatan_nama: string
@@ -47,7 +47,7 @@ type DokumenDetail = {
 const WORKFLOW_STEPS = [
   { key: 'DRAFT', label: 'Draf' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
-  { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
+  { key: 'IN_PPSPM_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 
@@ -73,7 +73,7 @@ type ActionResult = {
   kind: 'approve' | 'reject'
 }
 
-function BendaharaDokumenDetailPage() {
+function PpspmDokumenDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
   const { showToast } = useAppToast()
@@ -91,7 +91,7 @@ function BendaharaDokumenDetailPage() {
   async function fetchData() {
     setLoading(true)
     try {
-      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/bendahara/dokumen/${id}`)
+      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/ppspm/dokumen/${id}`)
       setDokumen(json.dokumen)
     } catch (err) {
       if (err instanceof ApiError) {
@@ -109,7 +109,7 @@ function BendaharaDokumenDetailPage() {
   async function handleApprove() {
     setActionLoading('approve')
     try {
-      await apiMutation(`/api/bendahara/dokumen/${id}/approve`, { method: 'POST' })
+      await apiMutation(`/api/ppspm/dokumen/${id}/approve`, { method: 'POST' })
       showToast({
         title: 'Berhasil',
         description: 'Dokumen berhasil disetujui.',
@@ -143,7 +143,7 @@ function BendaharaDokumenDetailPage() {
     if (trimmed.length < 10) return
     setActionLoading('reject')
     try {
-      await apiMutation(`/api/bendahara/dokumen/${id}/reject`, {
+      await apiMutation(`/api/ppspm/dokumen/${id}/reject`, {
         method: 'POST',
         body: { catatan: trimmed },
       })
@@ -170,7 +170,7 @@ function BendaharaDokumenDetailPage() {
       return
     }
 
-    navigate({ to: '/bendahara/inbox' })
+    navigate({ to: '/ppspm/inbox' })
   }
 
   if (loading) return (
@@ -185,7 +185,7 @@ function BendaharaDokumenDetailPage() {
         title="Dokumen tidak dapat dibuka"
         description={fetchError}
         variant="page"
-        action={<Button variant="outline" size="sm" onClick={() => navigate({ to: '/bendahara/inbox' })}>Kembali</Button>}
+        action={<Button variant="outline" size="sm" onClick={() => navigate({ to: '/ppspm/inbox' })}>Kembali</Button>}
       />
     </PageLayout>
   )
@@ -196,7 +196,7 @@ function BendaharaDokumenDetailPage() {
         title="Dokumen tidak ditemukan"
         description="Dokumen tidak ditemukan atau tidak dalam tahap persetujuan PPSPM."
         variant="page"
-        action={<Button variant="outline" size="sm" onClick={() => navigate({ to: '/bendahara/inbox' })}>Kembali ke Inbox</Button>}
+        action={<Button variant="outline" size="sm" onClick={() => navigate({ to: '/ppspm/inbox' })}>Kembali ke Inbox</Button>}
       />
     </PageLayout>
   )
@@ -228,7 +228,7 @@ function BendaharaDokumenDetailPage() {
           </p>
 
           <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Link to="/bendahara/inbox">
+            <Link to="/ppspm/inbox">
               <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
                 Setujui Dokumen Lain
               </Button>
@@ -241,7 +241,7 @@ function BendaharaDokumenDetailPage() {
             >
               Lihat Detail Dokumen
             </Button>
-            <Link to="/bendahara">
+            <Link to="/ppspm">
               <Button variant="ghost" size="lg" className="w-full sm:w-auto">
                 Kembali ke Beranda
               </Button>
@@ -376,7 +376,7 @@ function BendaharaDokumenDetailPage() {
               </section>
 
               <section className={cn(activeTab === 'lampiran' ? 'block' : 'hidden')}>
-                <AttachmentViewer dokumen={dokumen as any} lampiranUrls={dokumen.lampiran_urls} apiType="bendahara" />
+                <AttachmentViewer dokumen={dokumen as any} lampiranUrls={dokumen.lampiran_urls} apiType="ppspm" />
               </section>
 
               <section className={cn(activeTab === 'riwayat' ? 'block' : 'hidden')}>
@@ -401,7 +401,7 @@ function BendaharaDokumenDetailPage() {
             )}
 
             <div className="space-y-1.5 px-0.5 pt-0.5">
-              {dokumen.status === 'IN_BENDAHARA_APPROVAL' && (
+              {dokumen.status === 'IN_PPSPM_APPROVAL' && (
                 <>
                   <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]" onClick={() => setApproveOpen(true)} disabled={!!actionLoading}>
                     {actionLoading === 'approve' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
@@ -545,7 +545,7 @@ function RoleStatusPanel({
   workflowIdx: number
   workflowSteps: { key: string; label: string }[]
 }) {
-  const revisionStepKey = 'IN_BENDAHARA_APPROVAL'
+  const revisionStepKey = 'IN_PPSPM_APPROVAL'
   const isRevisionStatus = status === 'NEED_REVISION'
   const revisionStepIdx = workflowSteps.findIndex(step => step.key === revisionStepKey)
   const isTerminalSuccess = status === 'COMPLETED' || status === 'TERSIMPAN'
@@ -633,7 +633,7 @@ function getStatusDescription(status: string, isNonMaterial: boolean): string {
       : 'Status non-material dapat dipantau di sini.'
   }
 
-  if (status === 'IN_BENDAHARA_APPROVAL') {
+  if (status === 'IN_PPSPM_APPROVAL') {
     return 'Menunggu persetujuan PPSPM. Tinjau hasil validasi PPK dan lampiran sebelum menyelesaikan dokumen.'
   }
   if (status === 'IN_PPK_VALIDATION') {

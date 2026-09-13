@@ -13,7 +13,7 @@ describe('local auth role resolution', () => {
   })
 
   it('uses the first assigned role as primary when PEGAWAI is absent', () => {
-    expect(resolvePrimaryRole([ROLES.BENDAHARA, ROLES.KEPALA_SUB_BAGIAN_UMUM])).toBe(ROLES.BENDAHARA)
+    expect(resolvePrimaryRole([ROLES.PPSPM, ROLES.KEPALA_SUB_BAGIAN_UMUM])).toBe(ROLES.PPSPM)
   })
 
   it('uses a valid requested active role', () => {
@@ -21,8 +21,8 @@ describe('local auth role resolution', () => {
   })
 
   it('falls back to the primary role when the requested active role is missing or invalid', () => {
-    expect(resolveActiveRole([ROLES.PEGAWAI, ROLES.BENDAHARA], null)).toBe(ROLES.PEGAWAI)
-    expect(resolveActiveRole([ROLES.PEGAWAI, ROLES.BENDAHARA], ROLES.PPK)).toBe(ROLES.PEGAWAI)
+    expect(resolveActiveRole([ROLES.PEGAWAI, ROLES.PPSPM], null)).toBe(ROLES.PEGAWAI)
+    expect(resolveActiveRole([ROLES.PEGAWAI, ROLES.PPSPM], ROLES.PPK)).toBe(ROLES.PEGAWAI)
   })
 
   it('rejects users with no assigned roles', () => {

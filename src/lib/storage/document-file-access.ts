@@ -19,7 +19,7 @@ import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
 import { createInternalFileAccessUrl } from '#/lib/storage/internal-file-access-url'
 import type { FileAccessTokenPayload } from '#/lib/storage/file-access-token'
 
-type DocumentAccessRouteMode = 'central' | 'ppk' | 'bendahara'
+type DocumentAccessRouteMode = 'central' | 'ppk' | 'ppspm'
 type DocumentAccessPurpose = 'preview' | 'download'
 type DocumentAccessSession = Pick<LocalServerSession, 'userId' | 'roles' | 'sessionId'>
 
@@ -328,14 +328,14 @@ async function canRouteAccessDocument(
   session: DocumentAccessSession,
   document: DocumentRow,
 ): Promise<boolean> {
-  // Route peran eksplisit (/api/ppk/..., /api/bendahara/...) tetap murni
+  // Route peran eksplisit (/api/ppk/..., /api/ppspm/...) tetap murni
   // role-gated -- tidak ada jalur ketua tim di sini.
   if (mode === 'ppk') {
     return session.roles.includes(ROLES.PPK) && canPpkReadDocument(document)
   }
 
-  if (mode === 'bendahara') {
-    return session.roles.includes(ROLES.BENDAHARA) && canBendaharaReadDocument(document)
+  if (mode === 'ppspm') {
+    return session.roles.includes(ROLES.PPSPM) && canPpspmReadDocument(document)
   }
 
   return canSessionReadDocument(session, document)
@@ -351,7 +351,7 @@ async function canSessionReadDocument(
   // Cabang peran MEMBERI izin, bukan menolak: satu user bisa memegang
   // beberapa peran, jadi yang tidak cocok harus jatuh ke cek berikutnya.
   if (session.roles.includes(ROLES.PPK) && canPpkReadDocument(document)) return true
-  if (session.roles.includes(ROLES.BENDAHARA) && canBendaharaReadDocument(document)) return true
+  if (session.roles.includes(ROLES.PPSPM) && canPpspmReadDocument(document)) return true
   if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM) && document.status === 'COMPLETED') {
     return true
   }
@@ -378,14 +378,14 @@ function isAdminOnlySession(session: DocumentAccessSession): boolean {
 function canPpkReadDocument(document: DocumentRow): boolean {
   return [
     'IN_PPK_VALIDATION',
-    'IN_BENDAHARA_APPROVAL',
+    'IN_PPSPM_APPROVAL',
     'NEED_REVISION',
     'COMPLETED',
   ].includes(document.status)
 }
 
-function canBendaharaReadDocument(document: DocumentRow): boolean {
-  return document.status === 'IN_BENDAHARA_APPROVAL'
+function canPpspmReadDocument(document: DocumentRow): boolean {
+  return document.status === 'IN_PPSPM_APPROVAL'
     || document.status === 'COMPLETED'
     || (document.status === 'NEED_REVISION' && document.revisionTarget === 'PPK')
 }

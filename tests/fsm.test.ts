@@ -29,11 +29,11 @@ describe('FSM transition()', () => {
       expect(result.stepUrutan).toBe(1)
     })
 
-    it('IN_PPK_VALIDATION + APPROVE → IN_BENDAHARA_APPROVAL, step=2', () => {
+    it('IN_PPK_VALIDATION + APPROVE → IN_PPSPM_APPROVAL, step=2', () => {
       const result = transition('IN_PPK_VALIDATION', 'APPROVE', 'PPK')
       assertSuccess(result)
-      expect(result.newStatus).toBe('IN_BENDAHARA_APPROVAL')
-      expect(result.newCurrentStep).toBe('BENDAHARA')
+      expect(result.newStatus).toBe('IN_PPSPM_APPROVAL')
+      expect(result.newCurrentStep).toBe('PPSPM')
       expect(result.newRevisionTarget).toBeNull()
       expect(result.stepUrutan).toBe(2)
     })
@@ -47,8 +47,8 @@ describe('FSM transition()', () => {
       expect(result.stepUrutan).toBe(1)
     })
 
-    it('IN_BENDAHARA_APPROVAL + APPROVE → COMPLETED, step=2', () => {
-      const result = transition('IN_BENDAHARA_APPROVAL', 'APPROVE', 'BENDAHARA')
+    it('IN_PPSPM_APPROVAL + APPROVE → COMPLETED, step=2', () => {
+      const result = transition('IN_PPSPM_APPROVAL', 'APPROVE', 'PPSPM')
       assertSuccess(result)
       expect(result.newStatus).toBe('COMPLETED')
       expect(result.newCurrentStep).toBeNull()
@@ -56,11 +56,11 @@ describe('FSM transition()', () => {
       expect(result.stepUrutan).toBe(2)
     })
 
-    it('IN_BENDAHARA_APPROVAL + REJECT → NEED_REVISION, target=PPK, step=1', () => {
-      const result = transition('IN_BENDAHARA_APPROVAL', 'REJECT', 'BENDAHARA', 'PPK')
+    it('IN_PPSPM_APPROVAL + REJECT → NEED_REVISION, target=PPK, step=1', () => {
+      const result = transition('IN_PPSPM_APPROVAL', 'REJECT', 'PPSPM', 'PPK')
       assertSuccess(result)
       expect(result.newStatus).toBe('NEED_REVISION')
-      expect(result.newCurrentStep).toBe('BENDAHARA')
+      expect(result.newCurrentStep).toBe('PPSPM')
       expect(result.newRevisionTarget).toBe('PPK')
       expect(result.stepUrutan).toBe(1)
     })
@@ -74,11 +74,11 @@ describe('FSM transition()', () => {
       expect(result.stepUrutan).toBe(1)
     })
 
-    it('NEED_REVISION + RESUBMIT_PPK → IN_BENDAHARA_APPROVAL, step=2', () => {
+    it('NEED_REVISION + RESUBMIT_PPK → IN_PPSPM_APPROVAL, step=2', () => {
       const result = transition('NEED_REVISION', 'RESUBMIT_PPK', 'PPK', 'PPK')
       assertSuccess(result)
-      expect(result.newStatus).toBe('IN_BENDAHARA_APPROVAL')
-      expect(result.newCurrentStep).toBe('BENDAHARA')
+      expect(result.newStatus).toBe('IN_PPSPM_APPROVAL')
+      expect(result.newCurrentStep).toBe('PPSPM')
       expect(result.newRevisionTarget).toBeNull()
       expect(result.stepUrutan).toBe(2)
     })
@@ -98,8 +98,8 @@ describe('FSM transition()', () => {
     it('SUBMIT by PPK → error', () => {
       assertError(transition('DRAFT', 'SUBMIT', 'PPK'))
     })
-    it('SUBMIT by BENDAHARA → error', () => {
-      assertError(transition('DRAFT', 'SUBMIT', 'BENDAHARA'))
+    it('SUBMIT by PPSPM → error', () => {
+      assertError(transition('DRAFT', 'SUBMIT', 'PPSPM'))
     })
     it('SUBMIT by KEPALA_SUB_BAGIAN_UMUM → error', () => {
       assertError(transition('DRAFT', 'SUBMIT', 'KEPALA_SUB_BAGIAN_UMUM'))
@@ -113,14 +113,14 @@ describe('FSM transition()', () => {
       const result = transition('IN_PPK_VALIDATION', 'APPROVE', 'PPK')
       assertSuccess(result)
     })
-    it('APPROVE by BENDAHARA on IN_PPK_VALIDATION → error', () => {
-      assertError(transition('IN_PPK_VALIDATION', 'APPROVE', 'BENDAHARA'))
+    it('APPROVE by PPSPM on IN_PPK_VALIDATION → error', () => {
+      assertError(transition('IN_PPK_VALIDATION', 'APPROVE', 'PPSPM'))
     })
-    it('APPROVE by PPK on IN_BENDAHARA_APPROVAL → error', () => {
-      assertError(transition('IN_BENDAHARA_APPROVAL', 'APPROVE', 'PPK'))
+    it('APPROVE by PPK on IN_PPSPM_APPROVAL → error', () => {
+      assertError(transition('IN_PPSPM_APPROVAL', 'APPROVE', 'PPK'))
     })
-    it('APPROVE by BENDAHARA on IN_BENDAHARA_APPROVAL → success', () => {
-      const result = transition('IN_BENDAHARA_APPROVAL', 'APPROVE', 'BENDAHARA')
+    it('APPROVE by PPSPM on IN_PPSPM_APPROVAL → success', () => {
+      const result = transition('IN_PPSPM_APPROVAL', 'APPROVE', 'PPSPM')
       assertSuccess(result)
     })
 
@@ -129,12 +129,12 @@ describe('FSM transition()', () => {
       const result = transition('IN_PPK_VALIDATION', 'REJECT', 'PPK', 'USER')
       assertSuccess(result)
     })
-    it('REJECT by BENDAHARA on IN_BENDAHARA_APPROVAL → success', () => {
-      const result = transition('IN_BENDAHARA_APPROVAL', 'REJECT', 'BENDAHARA', 'PPK')
+    it('REJECT by PPSPM on IN_PPSPM_APPROVAL → success', () => {
+      const result = transition('IN_PPSPM_APPROVAL', 'REJECT', 'PPSPM', 'PPK')
       assertSuccess(result)
     })
-    it('REJECT by BENDAHARA on IN_PPK_VALIDATION → error', () => {
-      assertError(transition('IN_PPK_VALIDATION', 'REJECT', 'BENDAHARA', 'USER'))
+    it('REJECT by PPSPM on IN_PPK_VALIDATION → error', () => {
+      assertError(transition('IN_PPK_VALIDATION', 'REJECT', 'PPSPM', 'USER'))
     })
 
     // RESUBMIT
@@ -169,8 +169,8 @@ describe('FSM transition()', () => {
       const result = transition('IN_PPK_VALIDATION', 'REJECT', 'PPK', 'USER')
       assertSuccess(result)
     })
-    it('REJECT with PPK target from Bendahara step → success', () => {
-      const result = transition('IN_BENDAHARA_APPROVAL', 'REJECT', 'BENDAHARA', 'PPK')
+    it('REJECT with PPK target from Ppspm step → success', () => {
+      const result = transition('IN_PPSPM_APPROVAL', 'REJECT', 'PPSPM', 'PPK')
       assertSuccess(result)
     })
   })
@@ -219,8 +219,8 @@ describe('FSM transition()', () => {
     it('IN_PPK_VALIDATION + RESUBMIT → error', () => {
       assertError(transition('IN_PPK_VALIDATION', 'RESUBMIT', 'PEGAWAI', 'USER'))
     })
-    it('IN_BENDAHARA_APPROVAL + SUBMIT → error', () => {
-      assertError(transition('IN_BENDAHARA_APPROVAL', 'SUBMIT', 'PEGAWAI'))
+    it('IN_PPSPM_APPROVAL + SUBMIT → error', () => {
+      assertError(transition('IN_PPSPM_APPROVAL', 'SUBMIT', 'PEGAWAI'))
     })
   })
 

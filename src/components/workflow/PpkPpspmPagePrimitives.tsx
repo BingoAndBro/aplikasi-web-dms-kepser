@@ -288,7 +288,7 @@ export function WorkflowMobileCard({
 const documentListStatusClassName: Record<string, string> = {
   DRAFT: 'border-slate-200 bg-slate-50 text-slate-700',
   IN_PPK_VALIDATION: 'border-amber-200 bg-amber-50 text-amber-700',
-  IN_BENDAHARA_APPROVAL: 'border-sky-200 bg-sky-50 text-sky-700',
+  IN_PPSPM_APPROVAL: 'border-sky-200 bg-sky-50 text-sky-700',
   NEED_REVISION: 'border-rose-200 bg-rose-50 text-rose-700',
   COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   TERSIMPAN: 'border-slate-200 bg-slate-50 text-slate-700',
@@ -297,7 +297,7 @@ const documentListStatusClassName: Record<string, string> = {
 const documentListStatusLabel: Record<string, string> = {
   DRAFT: 'Draft',
   IN_PPK_VALIDATION: 'Validasi PPK',
-  IN_BENDAHARA_APPROVAL: 'Menunggu Persetujuan',
+  IN_PPSPM_APPROVAL: 'Menunggu Persetujuan',
   NEED_REVISION: 'Perlu Revisi',
   COMPLETED: 'Selesai',
   TERSIMPAN: 'Tersimpan',

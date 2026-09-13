@@ -47,7 +47,7 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'Semua Status' },
   { value: 'DRAFT', label: 'Draft' },
   { value: 'IN_PPK_VALIDATION', label: 'Validasi PPK' },
-  { value: 'IN_BENDAHARA_APPROVAL', label: 'Menunggu Persetujuan' },
+  { value: 'IN_PPSPM_APPROVAL', label: 'Menunggu Persetujuan' },
   { value: 'NEED_REVISION', label: 'Perlu Revisi' },
   { value: 'COMPLETED', label: 'Selesai' },
   { value: 'TERSIMPAN', label: 'Tersimpan' },
@@ -338,7 +338,7 @@ function getPegawaiStatusPresentation(dok: DokumenRow) {
   const statusMap: Record<string, { label: string; className: string }> = {
     DRAFT: { label: 'Draft', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
     IN_PPK_VALIDATION: { label: 'Validasi PPK', className: 'border-amber-200/80 bg-amber-50/80 text-amber-700' },
-    IN_BENDAHARA_APPROVAL: { label: 'Menunggu Persetujuan', className: 'border-sky-200/80 bg-sky-50/80 text-sky-700' },
+    IN_PPSPM_APPROVAL: { label: 'Menunggu Persetujuan', className: 'border-sky-200/80 bg-sky-50/80 text-sky-700' },
     COMPLETED: { label: 'Selesai', className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
     TERSIMPAN: { label: 'Tersimpan', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
   }

@@ -10,9 +10,9 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     expect(ROLE_DISPLAY[ROLES.PENANGGUNG_JAWAB_KINERJA]).toBe('Penanggung Jawab Kinerja')
   })
 
-  it('keeps BENDAHARA internal value while displaying PPSPM', () => {
-    expect(ROLES.BENDAHARA).toBe('BENDAHARA')
-    expect(ROLE_DISPLAY[ROLES.BENDAHARA]).toBe('PPSPM')
+  it('keeps PPSPM internal value while displaying PPSPM', () => {
+    expect(ROLES.PPSPM).toBe('PPSPM')
+    expect(ROLE_DISPLAY[ROLES.PPSPM]).toBe('PPSPM')
   })
 
   it('uses the Penanggung Jawab Kinerja dashboard as the role default route', () => {

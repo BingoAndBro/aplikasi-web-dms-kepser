@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 const pegawaiDetail = readFileSync('src/routes/pegawai/dokumen/$id/index.tsx', 'utf8')
 const ppkDetail = readFileSync('src/routes/ppk/dokumen/$id/index.tsx', 'utf8')
-const ppspmDetail = readFileSync('src/routes/bendahara/dokumen/$id.tsx', 'utf8')
+const ppspmDetail = readFileSync('src/routes/ppspm/dokumen/$id.tsx', 'utf8')
 const attachmentViewer = readFileSync('src/components/dokumen/AttachmentViewer.tsx', 'utf8')
 
 describe('Phase 15L.3B cross-role document detail visual parity source guard', () => {
@@ -29,7 +29,7 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
     expect(pegawaiDetail).toContain('<WorkflowPanel')
     expect(pegawaiDetail).toContain('function RevisionNoteCard')
     expect(pegawaiDetail).toContain("return revisionTarget === 'PPK' ? 'PPSPM' : 'PPK'")
-    expect(pegawaiDetail).toContain("return revisionTarget === 'PPK' ? 'IN_BENDAHARA_APPROVAL' : 'IN_PPK_VALIDATION'")
+    expect(pegawaiDetail).toContain("return revisionTarget === 'PPK' ? 'IN_PPSPM_APPROVAL' : 'IN_PPK_VALIDATION'")
 
     for (const source of [ppkDetail, ppspmDetail]) {
       expect(source).toContain("rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C]")
@@ -62,24 +62,24 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
     expect(ppkDetail).toContain('window.history.back()')
     expect(ppkDetail).toContain('apiType="ppk"')
 
-    expect(ppspmDetail).toContain("apiFetch<{ dokumen: DokumenDetail }>(`/bendahara/dokumen/${id}`)")
-    expect(ppspmDetail).toContain("apiMutation(`/api/bendahara/dokumen/${id}/approve`, { method: 'POST' })")
-    expect(ppspmDetail).toContain("apiMutation(`/api/bendahara/dokumen/${id}/reject`,")
+    expect(ppspmDetail).toContain("apiFetch<{ dokumen: DokumenDetail }>(`/ppspm/dokumen/${id}`)")
+    expect(ppspmDetail).toContain("apiMutation(`/api/ppspm/dokumen/${id}/approve`, { method: 'POST' })")
+    expect(ppspmDetail).toContain("apiMutation(`/api/ppspm/dokumen/${id}/reject`,")
     expect(ppspmDetail).toContain("body: { catatan: trimmed }")
     expect(ppspmDetail).toContain('withReason={{')
     expect(ppspmDetail).toContain("setActionResult({ documentId: id, title: dokumen?.judul ?? 'Dokumen', kind: 'approve' })")
     expect(ppspmDetail).toContain("setActionResult({ documentId: id, title: dokumen?.judul ?? 'Dokumen', kind: 'reject' })")
     expect(ppspmDetail).toContain('window.history.back()')
-    expect(ppspmDetail).toContain('apiType="bendahara"')
+    expect(ppspmDetail).toContain('apiType="ppspm"')
   })
 
-  it('keeps user-facing PPSPM terminology while preserving the internal bendahara namespace', () => {
+  it('keeps user-facing PPSPM terminology while preserving the internal ppspm namespace', () => {
     expect(ppspmDetail).toContain('PPSPM')
-    expect(ppspmDetail).toContain("navigate({ to: '/bendahara/inbox' })")
+    expect(ppspmDetail).toContain("navigate({ to: '/ppspm/inbox' })")
     expect(ppspmDetail).not.toContain('Daftar Selesai')
     expect(ppspmDetail).not.toContain('Daftar Ditolak')
-    expect(ppspmDetail).not.toContain('Tugas Bendahara')
-    expect(ppspmDetail).not.toContain('Persetujuan Bendahara')
+    expect(ppspmDetail).not.toContain('Tugas Ppspm')
+    expect(ppspmDetail).not.toContain('Persetujuan Ppspm')
   })
 
   it('keeps detail rail actions ordered and uses browser history for return', () => {
@@ -106,10 +106,10 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
   it('keeps attachment viewer route-safe while applying the approved soft surface tone', () => {
     expect(attachmentViewer).toContain("return `/api/dokumen/${dokumen.id}/preview/${idx}`")
     expect(attachmentViewer).toContain("return `/api/ppk/dokumen/${dokumen.id}/preview/${idx}`")
-    expect(attachmentViewer).toContain("return `/api/bendahara/dokumen/${dokumen.id}/preview/${idx}`")
+    expect(attachmentViewer).toContain("return `/api/ppspm/dokumen/${dokumen.id}/preview/${idx}`")
     expect(attachmentViewer).toContain("return `/api/dokumen/${dokumen.id}/download/${idx}`")
     expect(attachmentViewer).toContain("return `/api/ppk/dokumen/${dokumen.id}/download/${idx}`")
-    expect(attachmentViewer).toContain("return `/api/bendahara/dokumen/${dokumen.id}/download/${idx}`")
+    expect(attachmentViewer).toContain("return `/api/ppspm/dokumen/${dokumen.id}/download/${idx}`")
     expect(attachmentViewer).toContain("bg-[#FFFDF9]")
     expect(attachmentViewer).toContain('Lampiran & Kelengkapan Wajib')
     expect(attachmentViewer).toContain('Dokumen Pendukung Tambahan')

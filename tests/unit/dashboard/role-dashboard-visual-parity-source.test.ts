@@ -50,7 +50,7 @@ describe('role dashboard visual parity source guard', () => {
 
   it('keeps PPK and PPSPM dashboards using existing workflow APIs for pending nominal', () => {
     const ppkSource = readSource('src/routes/ppk/index.tsx')
-    const ppspmSource = readSource('src/routes/bendahara/index.tsx')
+    const ppspmSource = readSource('src/routes/ppspm/index.tsx')
 
     expect(ppkSource).toContain("apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/ppk/inbox')")
     expect(ppkSource).toContain('Menunggu Validasi')
@@ -68,7 +68,7 @@ describe('role dashboard visual parity source guard', () => {
     expect(ppkSource).not.toContain('Estimasi')
     expect(ppkSource).not.toContain('value="-"')
 
-    expect(ppspmSource).toContain("apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/bendahara/inbox')")
+    expect(ppspmSource).toContain("apiFetch<{ dokumen?: WorkflowDashboardItem[] }>('/ppspm/inbox')")
     expect(ppspmSource).toContain('Dashboard PPSPM')
     expect(ppspmSource).toContain('Menunggu Persetujuan')
     expect(ppspmSource).toContain('Disetujui')
@@ -77,12 +77,12 @@ describe('role dashboard visual parity source guard', () => {
     expect(ppspmSource).toContain('badge="Nominal"')
     expect(ppspmSource).toContain('valueClassName="font-mono text-zinc-950"')
     expect(ppspmSource).toContain('formatPendingNominal(waiting)')
-    expect(ppspmSource).toContain("apiFetch<WorkflowDetailResponse>(`/bendahara/dokumen/${item.id}`)")
+    expect(ppspmSource).toContain("apiFetch<WorkflowDetailResponse>(`/ppspm/dokumen/${item.id}`)")
     expect(ppspmSource).toContain('DashboardQuickActions')
     expect(ppspmSource).not.toContain('Prioritas')
     expect(ppspmSource).not.toContain('Estimasi')
     expect(ppspmSource).not.toContain('value="-"')
-    expect(ppspmSource).not.toContain('Dashboard Bendahara')
+    expect(ppspmSource).not.toContain('Dashboard Ppspm')
   })
 
   it('keeps Kepala Sub Bagian Umum dashboard folder-first and action-list based', () => {
@@ -151,7 +151,7 @@ describe('role dashboard visual parity source guard', () => {
     const dashboardSources = [
       readSource('src/routes/pegawai.tsx'),
       readSource('src/routes/ppk/index.tsx'),
-      readSource('src/routes/bendahara/index.tsx'),
+      readSource('src/routes/ppspm/index.tsx'),
       readSource('src/routes/kasubag/index.tsx'),
       readSource('src/routes/penanggung-jawab-kinerja/index.tsx'),
       readSource('src/routes/admin.index.tsx'),

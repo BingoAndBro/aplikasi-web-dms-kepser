@@ -6,23 +6,23 @@ import { masterFungsi, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 // ---------------------------------------------------------------------------
-// GET /api/bendahara/inbox - list dokumen IN_BENDAHARA_APPROVAL
+// GET /api/ppspm/inbox - list dokumen IN_PPSPM_APPROVAL
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/api/bendahara/inbox')({
+export const Route = createFileRoute('/api/ppspm/inbox')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'BENDAHARA')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'PPSPM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         const url = new URL(request.url)
         const fungsiId = url.searchParams.get('fungsi_id') ?? undefined
         const startDate = url.searchParams.get('start_date') ?? undefined
         const endDate = url.searchParams.get('end_date') ?? undefined
 
-        const filters: SQL[] = [eq(dokumenTransaksi.status, 'IN_BENDAHARA_APPROVAL')]
+        const filters: SQL[] = [eq(dokumenTransaksi.status, 'IN_PPSPM_APPROVAL')]
         if (fungsiId) filters.push(eq(dokumenTransaksi.fungsiId, fungsiId))
         if (startDate) filters.push(sql`${dokumenTransaksi.createdAt} >= ${startDate}`)
         if (endDate) filters.push(sql`${dokumenTransaksi.createdAt} <= ${endDate + 'T23:59:59'}`)
@@ -83,7 +83,7 @@ export const Route = createFileRoute('/api/bendahara/inbox')({
             })),
           })
         } catch (err) {
-          console.error('[bendahara/inbox] GET local query error:', err)
+          console.error('[ppspm/inbox] GET local query error:', err)
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
       },

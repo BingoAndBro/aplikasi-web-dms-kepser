@@ -8,9 +8,9 @@ const ppkInbox = readFileSync('src/routes/ppk/inbox.tsx', 'utf8')
 const ppkTervalidasi = readFileSync('src/routes/ppk/tervalidasi.tsx', 'utf8')
 const ppkDitolak = readFileSync('src/routes/ppk/ditolak.tsx', 'utf8')
 const ppkRevisi = readFileSync('src/routes/ppk/revisi.tsx', 'utf8')
-const bendaharaInbox = readFileSync('src/routes/bendahara/inbox.tsx', 'utf8')
-const bendaharaSelesai = readFileSync('src/routes/bendahara/selesai.tsx', 'utf8')
-const bendaharaDitolak = readFileSync('src/routes/bendahara/ditolak.tsx', 'utf8')
+const ppspmInbox = readFileSync('src/routes/ppspm/inbox.tsx', 'utf8')
+const ppspmSelesai = readFileSync('src/routes/ppspm/selesai.tsx', 'utf8')
+const ppspmDitolak = readFileSync('src/routes/ppspm/ditolak.tsx', 'utf8')
 
 describe('Phase 15L.3A cross-role document list visual parity source guard', () => {
   it('keeps workflow list primitives aligned with the approved warm compact list pattern', () => {
@@ -34,7 +34,7 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     expect(workflowPrimitives).toContain('group-hover:bg-orange-50 group-hover:text-orange-600')
     expect(workflowPrimitives).toContain('export function DocumentListStatusBadge')
     expect(workflowPrimitives).toContain("IN_PPK_VALIDATION: 'Validasi PPK'")
-    expect(workflowPrimitives).toContain("IN_BENDAHARA_APPROVAL: 'Menunggu Persetujuan'")
+    expect(workflowPrimitives).toContain("IN_PPSPM_APPROVAL: 'Menunggu Persetujuan'")
     expect(workflowPrimitives).toContain("NEED_REVISION: 'Perlu Revisi'")
     expect(workflowPrimitives).not.toContain('bg-gradient-to-br')
   })
@@ -84,20 +84,20 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
   })
 
   it('keeps PPSPM inbox on the shared table component instead of a local raw table', () => {
-    expect(bendaharaInbox).toContain("import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'")
-    expect(bendaharaInbox).toContain('<Table className="text-left">')
-    expect(bendaharaInbox).toContain('<TableHeader>')
-    expect(bendaharaInbox).toContain('<TableBody className="divide-y divide-zinc-100 text-[13px]">')
-    expect(bendaharaInbox).not.toContain('<table className="w-full text-xs">')
-    expect(bendaharaInbox).toContain("value: d.kegiatan_nama ?? '-', wide: true")
-    expect(bendaharaInbox).toContain('variant="list"')
-    expect(bendaharaInbox).toContain('WorkflowDateCell')
-    expect(bendaharaInbox).toContain('WorkflowActionButton')
-    expect(bendaharaInbox).toContain('className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"')
+    expect(ppspmInbox).toContain("import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#/components/ui/table'")
+    expect(ppspmInbox).toContain('<Table className="text-left">')
+    expect(ppspmInbox).toContain('<TableHeader>')
+    expect(ppspmInbox).toContain('<TableBody className="divide-y divide-zinc-100 text-[13px]">')
+    expect(ppspmInbox).not.toContain('<table className="w-full text-xs">')
+    expect(ppspmInbox).toContain("value: d.kegiatan_nama ?? '-', wide: true")
+    expect(ppspmInbox).toContain('variant="list"')
+    expect(ppspmInbox).toContain('WorkflowDateCell')
+    expect(ppspmInbox).toContain('WorkflowActionButton')
+    expect(ppspmInbox).toContain('className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"')
   })
 
   it('uses row-level navigation and one chevron affordance across PPK/PPSPM lists', () => {
-    for (const source of [ppkInbox, ppkTervalidasi, ppkDitolak, ppkRevisi, bendaharaInbox, bendaharaSelesai, bendaharaDitolak]) {
+    for (const source of [ppkInbox, ppkTervalidasi, ppkDitolak, ppkRevisi, ppspmInbox, ppspmSelesai, ppspmDitolak]) {
       expect(source).toContain('useNavigate')
       expect(source).toContain('cursor-pointer')
       expect(source).toContain('WorkflowActionButton')
@@ -122,9 +122,9 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
       ppkTervalidasi,
       ppkDitolak,
       ppkRevisi,
-      bendaharaInbox,
-      bendaharaSelesai,
-      bendaharaDitolak,
+      ppspmInbox,
+      ppspmSelesai,
+      ppspmDitolak,
     ]) {
       expect(source).toContain('border-neutral-200 bg-neutral-100 hover:bg-neutral-100')
       expect(source).not.toContain('bg-[#FFFCF8] hover:bg-[#FFFCF8]')
@@ -142,11 +142,11 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     expect(ppkDitolak).toContain("value: truncate(d.revision_notes, 80), wide: true")
     expect(ppkDitolak).toContain('<DocumentListStatusBadge status="NEED_REVISION" label="Ditolak PPK" />')
 
-    expect(bendaharaDitolak).toContain('Ditolak PPSPM')
-    expect(bendaharaDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>')
-    expect(bendaharaDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal</TableHead>')
-    expect(bendaharaDitolak).toContain("value: truncate(d.revision_notes, 80), wide: true")
-    expect(bendaharaDitolak).toContain('<DocumentListStatusBadge status="NEED_REVISION" label="Ditolak PPSPM" />')
+    expect(ppspmDitolak).toContain('Ditolak PPSPM')
+    expect(ppspmDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Status</TableHead>')
+    expect(ppspmDitolak).toContain('<TableHead className={WORKFLOW_TABLE_HEAD_CLASS}>Tanggal</TableHead>')
+    expect(ppspmDitolak).toContain("value: truncate(d.revision_notes, 80), wide: true")
+    expect(ppspmDitolak).toContain('<DocumentListStatusBadge status="NEED_REVISION" label="Ditolak PPSPM" />')
   })
 
   it('keeps workflow list search and result count consistent without redundant fixed-status filters', () => {
@@ -157,9 +157,9 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
       ppkTervalidasi,
       ppkDitolak,
       ppkRevisi,
-      bendaharaInbox,
-      bendaharaSelesai,
-      bendaharaDitolak,
+      ppspmInbox,
+      ppspmSelesai,
+      ppspmDitolak,
     ]
 
     for (const source of routesWithSearch) {
@@ -170,18 +170,18 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
       expect(source).not.toContain('Dokumen Ditemukan')
     }
 
-    for (const source of [ppkDitolak, ppkRevisi, bendaharaSelesai, bendaharaDitolak]) {
+    for (const source of [ppkDitolak, ppkRevisi, ppspmSelesai, ppspmDitolak]) {
       expect(source).toContain('WorkflowSearchPanel')
       expect(source).not.toContain('Semua Status')
       expect(source).not.toContain('statusFilter')
     }
 
-    for (const source of [pegawaiRevisi, ppkDitolak, ppkRevisi, bendaharaDitolak]) {
+    for (const source of [pegawaiRevisi, ppkDitolak, ppkRevisi, ppspmDitolak]) {
       expect(source).toContain("const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, kegiatan, atau catatan...'")
       expect(source).toContain('revision_notes ??')
     }
 
-    for (const source of [pegawaiDokumen, ppkInbox, ppkTervalidasi, bendaharaInbox, bendaharaSelesai]) {
+    for (const source of [pegawaiDokumen, ppkInbox, ppkTervalidasi, ppspmInbox, ppspmSelesai]) {
       expect(source).toContain("const WORKFLOW_SEARCH_PLACEHOLDER = 'Cari judul, fungsi, atau kegiatan...'")
     }
 
@@ -195,9 +195,9 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     expect(ppkInbox).not.toContain('type="date"')
     expect(ppkInbox).not.toContain('fungsiFilter')
     expect(ppkInbox).not.toContain('/master-fungsi')
-    expect(bendaharaInbox).not.toContain('<option value="">Semua Fungsi</option>')
-    expect(bendaharaInbox).not.toContain('fungsiFilter')
-    expect(bendaharaInbox).not.toContain('/master-fungsi')
+    expect(ppspmInbox).not.toContain('<option value="">Semua Fungsi</option>')
+    expect(ppspmInbox).not.toContain('fungsiFilter')
+    expect(ppspmInbox).not.toContain('/master-fungsi')
   })
 
   it('does not introduce forbidden legacy or backend surfaces in touched list sources', () => {
@@ -209,9 +209,9 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
       ppkTervalidasi,
       ppkDitolak,
       ppkRevisi,
-      bendaharaInbox,
-      bendaharaSelesai,
-      bendaharaDitolak,
+      ppspmInbox,
+      ppspmSelesai,
+      ppspmDitolak,
     ].join('\n')
 
     expect(combined).not.toContain('Cari Arsip')

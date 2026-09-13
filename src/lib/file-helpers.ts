@@ -30,7 +30,7 @@ export function buildPreviewFilename(dok: DokumenRow, lamp: LampiranUrl): string
   return buildFormalFilename(dok, lamp)
 }
 
-export type RoleContext = 'pegawai' | 'ppk' | 'bendahara'
+export type RoleContext = 'pegawai' | 'ppk' | 'ppspm'
 
 function getApiBasePath(role: RoleContext): string {
   return role === 'pegawai' ? '/api/dokumen' : `/api/${role}/dokumen`

@@ -49,7 +49,7 @@ import {
 // ============================================================================
 // INTERFACE: Props untuk AttachmentViewer
 // ============================================================================
-export type ViewerApiType = 'default' | 'ppk' | 'bendahara'
+export type ViewerApiType = 'default' | 'ppk' | 'ppspm'
 
 export interface KelengkapanItem {
   id: string
@@ -145,8 +145,8 @@ export function AttachmentViewer({
     switch (apiType) {
       case 'ppk':
         return `/api/ppk/dokumen/${dokumen.id}/preview/${idx}`
-      case 'bendahara':
-        return `/api/bendahara/dokumen/${dokumen.id}/preview/${idx}`
+      case 'ppspm':
+        return `/api/ppspm/dokumen/${dokumen.id}/preview/${idx}`
       default:
         return `/api/dokumen/${dokumen.id}/preview/${idx}`
     }
@@ -156,8 +156,8 @@ export function AttachmentViewer({
     switch (apiType) {
       case 'ppk':
         return `/api/ppk/dokumen/${dokumen.id}/download/${idx}`
-      case 'bendahara':
-        return `/api/bendahara/dokumen/${dokumen.id}/download/${idx}`
+      case 'ppspm':
+        return `/api/ppspm/dokumen/${dokumen.id}/download/${idx}`
       default:
         return `/api/dokumen/${dokumen.id}/download/${idx}`
     }

@@ -4,7 +4,7 @@ import { test, expect, Page } from '@playwright/test'
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
 const PEGAWAI_EMAIL = 'pegawai@testbps.local'
 const PPK_EMAIL = 'ppk@testbps.local'
-const BENDAHARA_EMAIL = 'bendahara@testbps.local'
+const PPSPM_EMAIL = 'ppspm@testbps.local'
 const MULTI_ROLE_EMAIL = 'multi@testbps.local'
 const TEST_PASSWORD = 'Test BPS123'
 
@@ -51,7 +51,7 @@ async function loginAs(page: Page, email: string) {
 const EMAIL_TO_ROLE: Record<string, string> = {
   'pegawai@testbps.local': 'PEGAWAI',
   'ppk@testbps.local': 'PPK',
-  'bendahara@testbps.local': 'BENDAHARA',
+  'ppspm@testbps.local': 'PPSPM',
   'multi@testbps.local': 'PPK', // multi-role user: default to PPK for approval flow tests
 }
 
@@ -553,13 +553,13 @@ test.describe('TC-11: PPK Resubmit — Edit Lampiran + FSM', () => {
 })
 
 // =============================================================================
-// TC-12: Bendahara Inbox — List
+// TC-12: Ppspm Inbox — List
 // =============================================================================
 
-test.describe('TC-12: Bendahara Inbox — List', () => {
+test.describe('TC-12: Ppspm Inbox — List', () => {
   test('should display inbox with PPK validation info', async ({ page }) => {
-    await loginAsAndSwitch(page, BENDAHARA_EMAIL)
-    await page.goto(`${BASE_URL}/bendahara/inbox`)
+    await loginAsAndSwitch(page, PPSPM_EMAIL)
+    await page.goto(`${BASE_URL}/ppspm/inbox`)
     await page.waitForLoadState('domcontentloaded')
     await waitForLoadingDone(page)
 
@@ -576,13 +576,13 @@ test.describe('TC-12: Bendahara Inbox — List', () => {
 })
 
 // =============================================================================
-// TC-13: Bendahara Detail — PPK Validation Badge
+// TC-13: Ppspm Detail — PPK Validation Badge
 // =============================================================================
 
-test.describe('TC-13: Bendahara Detail — PPK Validation Badge', () => {
+test.describe('TC-13: Ppspm Detail — PPK Validation Badge', () => {
   test('should show detail with PPK badge and action buttons', async ({ page }) => {
-    await loginAsAndSwitch(page, BENDAHARA_EMAIL)
-    await page.goto(`${BASE_URL}/bendahara/inbox`)
+    await loginAsAndSwitch(page, PPSPM_EMAIL)
+    await page.goto(`${BASE_URL}/ppspm/inbox`)
     await page.waitForLoadState('domcontentloaded')
     await waitForLoadingDone(page)
 
@@ -607,13 +607,13 @@ test.describe('TC-13: Bendahara Detail — PPK Validation Badge', () => {
 })
 
 // =============================================================================
-// TC-14: Bendahara Approve → COMPLETED
+// TC-14: Ppspm Approve → COMPLETED
 // =============================================================================
 
-test.describe('TC-14: Bendahara Approve → COMPLETED', () => {
+test.describe('TC-14: Ppspm Approve → COMPLETED', () => {
   test('should approve dokumen and mark as COMPLETED', async ({ page }) => {
-    await loginAsAndSwitch(page, BENDAHARA_EMAIL)
-    await page.goto(`${BASE_URL}/bendahara/inbox`)
+    await loginAsAndSwitch(page, PPSPM_EMAIL)
+    await page.goto(`${BASE_URL}/ppspm/inbox`)
     await page.waitForLoadState('domcontentloaded')
     await waitForLoadingDone(page)
 
@@ -630,18 +630,18 @@ test.describe('TC-14: Bendahara Approve → COMPLETED', () => {
     await page.waitForTimeout(3000)
 
     // Should redirect to inbox
-    await expect(page).toHaveURL(/\/bendahara\/inbox/, { timeout: 10000 })
+    await expect(page).toHaveURL(/\/ppspm\/inbox/, { timeout: 10000 })
   })
 })
 
 // =============================================================================
-// TC-15: Bendahara Reject — back to PPK
+// TC-15: Ppspm Reject — back to PPK
 // =============================================================================
 
-test.describe('TC-15: Bendahara Reject — back to PPK', () => {
+test.describe('TC-15: Ppspm Reject — back to PPK', () => {
   test('should reject dokumen and redirect to inbox', async ({ page }) => {
-    await loginAsAndSwitch(page, BENDAHARA_EMAIL)
-    await page.goto(`${BASE_URL}/bendahara/inbox`)
+    await loginAsAndSwitch(page, PPSPM_EMAIL)
+    await page.goto(`${BASE_URL}/ppspm/inbox`)
     await page.waitForLoadState('domcontentloaded')
     await waitForLoadingDone(page)
 
@@ -662,20 +662,20 @@ test.describe('TC-15: Bendahara Reject — back to PPK', () => {
     await page.locator('button', { hasText: 'Tolak Dokumen' }).click()
     await page.waitForTimeout(3000)
 
-    await expect(page).toHaveURL(/\/bendahara\/inbox/, { timeout: 10000 })
+    await expect(page).toHaveURL(/\/ppspm\/inbox/, { timeout: 10000 })
   })
 })
 
 // =============================================================================
-// TC-16: Bendahara Ditolak + Selesai Pages
+// TC-16: Ppspm Ditolak + Selesai Pages
 // =============================================================================
 
-test.describe('TC-16: Bendahara Ditolak + Selesai Pages', () => {
+test.describe('TC-16: Ppspm Ditolak + Selesai Pages', () => {
   test('should display ditolak and selesai lists', async ({ page }) => {
-    await loginAsAndSwitch(page, BENDAHARA_EMAIL)
+    await loginAsAndSwitch(page, PPSPM_EMAIL)
 
     // Ditolak
-    await page.goto(`${BASE_URL}/bendahara/ditolak`)
+    await page.goto(`${BASE_URL}/ppspm/ditolak`)
     await page.waitForLoadState('domcontentloaded')
     await waitForLoadingDone(page)
     await expect(page.locator('h2', { hasText: /Dokumen Ditolak/i })).toBeVisible({ timeout: 10000 })
@@ -683,7 +683,7 @@ test.describe('TC-16: Bendahara Ditolak + Selesai Pages', () => {
     await expect(dOrEmpty).toBeVisible({ timeout: 5000 })
 
     // Selesai
-    await page.goto(`${BASE_URL}/bendahara/selesai`)
+    await page.goto(`${BASE_URL}/ppspm/selesai`)
     await page.waitForLoadState('domcontentloaded')
     await waitForLoadingDone(page)
     await expect(page.locator('h2', { hasText: /Selesai/i })).toBeVisible({ timeout: 10000 })

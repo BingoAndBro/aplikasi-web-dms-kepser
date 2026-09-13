@@ -4,7 +4,7 @@ import { cn } from "#/lib/utils"
 export type DocumentStatus =
   | "DRAFT"
   | "IN_PPK_VALIDATION"
-  | "IN_BENDAHARA_APPROVAL"
+  | "IN_PPSPM_APPROVAL"
   | "NEED_REVISION"
   | "COMPLETED"
   | "TERSIMPAN"
@@ -53,7 +53,7 @@ const toneClassName: Record<StatusBadgeTone, string> = {
 export const DOCUMENT_STATUS_BADGE_CONFIG = {
   DRAFT: { label: "Draft", tone: "neutral" },
   IN_PPK_VALIDATION: { label: "Menunggu PPK", tone: "info" },
-  IN_BENDAHARA_APPROVAL: { label: "Menunggu PPSPM", tone: "orange" },
+  IN_PPSPM_APPROVAL: { label: "Menunggu PPSPM", tone: "orange" },
   NEED_REVISION: { label: "Perlu Revisi", tone: "warning" },
   COMPLETED: { label: "Selesai", tone: "success" },
   TERSIMPAN: { label: "Tersimpan", tone: "success" },

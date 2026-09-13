@@ -140,7 +140,7 @@ export const createAndSubmitDokumenSchema = z.object({
 })
 
 // ---------------------------------------------------------------------------
-// Approval actions — for PPK and Bendahara
+// Approval actions — for PPK and Ppspm
 // ---------------------------------------------------------------------------
 
 // Approve dokumen — no body needed
@@ -151,7 +151,7 @@ export const rejectDokumenSchema = z.object({
   catatan: z.string().min(10, 'Catatan minimal 10 karakter').max(2000, 'Catatan maksimal 2000 karakter'),
 })
 
-// Resubmit by PPK after Bendahara rejection — optional lampiran update
+// Resubmit by PPK after Ppspm rejection — optional lampiran update
 export const resubmitDokumenSchema = z.object({
   lampiranUrls: requestLampiranUrlsSchema.optional(),
   nominalRealisasi: z.number().min(0).max(999999999999).nullable().optional(),

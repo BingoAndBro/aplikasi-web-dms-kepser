@@ -9,20 +9,20 @@ type AuthSessionResponse = {
   activeRole: string | null
 }
 
-export const Route = createFileRoute('/bendahara')({
+export const Route = createFileRoute('/ppspm')({
   beforeLoad: ({ event }) => {
-    guardRole('BENDAHARA')(event)
+    guardRole('PPSPM')(event)
   },
-  component: BendaharaLayout,
+  component: PpspmLayout,
 })
 
-function BendaharaLayout() {
+function PpspmLayout() {
   useEffect(() => {
     async function checkAuth() {
       try {
         const auth = await apiFetch<AuthSessionResponse>('/auth/session')
         if (!auth.session) { window.location.href = '/login'; return }
-        if (!auth.roles.includes('BENDAHARA')) { window.location.href = '/forbidden'; return }
+        if (!auth.roles.includes('PPSPM')) { window.location.href = '/forbidden'; return }
       } catch {
         window.location.href = '/login'
       }

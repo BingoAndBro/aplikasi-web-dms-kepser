@@ -107,7 +107,7 @@ export const logAktivitas = pgTable('log_aktivitas', {
   id: uuid('id').primaryKey().defaultRandom(),
   dokumenId: uuid('dokumen_id').notNull().references(() => dokumenTransaksi.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull(), // UUID from auth.users (no FK)
-  aksi: text('aksi').notNull(), // SUBMIT, RESUBMIT, PPK_APPROVE, PPK_REJECT, BENDAHARA_APPROVE, BENDAHARA_REJECT, ARCHIVE, ARCHIVE_SKIP
+  aksi: text('aksi').notNull(), // SUBMIT, RESUBMIT, PPK_APPROVE, PPK_REJECT, PPSPM_APPROVE, PPSPM_REJECT, ARCHIVE, ARCHIVE_SKIP
   catatan: text('catatan'),
   stepUrutan: integer('step_urutan'),
   timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),

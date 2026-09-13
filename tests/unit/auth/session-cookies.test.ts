@@ -77,7 +77,7 @@ describe('session cookie helpers', () => {
   })
 
   it('reads only canonical active role cookie values', () => {
-    expect(getActiveRoleCookieValue('dms_active_role=BENDAHARA')).toBe(ROLES.BENDAHARA)
+    expect(getActiveRoleCookieValue('dms_active_role=PPSPM')).toBe(ROLES.PPSPM)
     expect(getActiveRoleCookieValue('dms_active_role=INVALID')).toBeNull()
   })
 

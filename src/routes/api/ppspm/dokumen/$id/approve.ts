@@ -13,10 +13,10 @@ function isUuid(value: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/bendahara/dokumen/[id]/approve
+// POST /api/ppspm/dokumen/[id]/approve
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
+export const Route = createFileRoute('/api/ppspm/dokumen/$id/approve')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -25,7 +25,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        if (!hasLocalRole(session, 'BENDAHARA')) {
+        if (!hasLocalRole(session, 'PPSPM')) {
           return Response.json({ error: 'Akses ditolak - bukan PPSPM' }, { status: 403 })
         }
 
@@ -49,13 +49,13 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
             .where(eq(dokumenTransaksi.id, params.id))
             .limit(1)
         } catch (err) {
-          console.error('[API/bendahara/dokumen/:id/approve] local lookup error:', err)
+          console.error('[API/ppspm/dokumen/:id/approve] local lookup error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }
 
         const dok = dokRows[0]
         if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
-        if (dok.status !== 'IN_BENDAHARA_APPROVAL') return Response.json({ error: 'Dokumen sudah tidak dalam tahap persetujuan' }, { status: 400 })
+        if (dok.status !== 'IN_PPSPM_APPROVAL') return Response.json({ error: 'Dokumen sudah tidak dalam tahap persetujuan' }, { status: 400 })
 
         // Preserve legacy duplicate approval guard.
         let existingApproveRows: Array<{ id: string }>
@@ -65,16 +65,16 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
             .from(logAktivitas)
             .where(and(
               eq(logAktivitas.dokumenId, params.id),
-              eq(logAktivitas.aksi, 'BENDAHARA_APPROVE'),
+              eq(logAktivitas.aksi, 'PPSPM_APPROVE'),
             ))
             .limit(1)
         } catch (err) {
-          console.error('[API/bendahara/dokumen/:id/approve] local audit lookup error:', err)
+          console.error('[API/ppspm/dokumen/:id/approve] local audit lookup error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }
         if (existingApproveRows.length > 0) return Response.json({ error: 'Dokumen sudah pernah disetujui' }, { status: 400 })
 
-        const result = transition(dok.status as StatusDokumen, 'APPROVE', 'BENDAHARA')
+        const result = transition(dok.status as StatusDokumen, 'APPROVE', 'PPSPM')
         if (!result.success) return Response.json({ error: result.error ?? 'Transisi gagal' }, { status: 400 })
 
         try {
@@ -98,16 +98,16 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/approve')({
             await tx.insert(logAktivitas).values({
               dokumenId: params.id,
               userId: session.user.id,
-              aksi: 'BENDAHARA_APPROVE',
+              aksi: 'PPSPM_APPROVE',
               stepUrutan: result.stepUrutan ?? 2,
             })
           })
         } catch (err) {
-          console.error('[API/bendahara/dokumen/:id/approve] local transaction error:', err)
+          console.error('[API/ppspm/dokumen/:id/approve] local transaction error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }
 
-        return Response.json({ success: true, message: 'Dokumen disetujui', redirectTo: '/bendahara/selesai' })
+        return Response.json({ success: true, message: 'Dokumen disetujui', redirectTo: '/ppspm/selesai' })
       },
     },
   },

@@ -689,7 +689,7 @@ function AjukanDokumenPage() {
       ? 'Tidak ada alur persetujuan lanjutan'
       : submittedDocument.current_step === 'PPK'
         ? 'Validasi PPK'
-        : submittedDocument.current_step === 'BENDAHARA'
+        : submittedDocument.current_step === 'PPSPM'
           ? 'Persetujuan PPSPM'
           : 'Pantau pada detail dokumen'
 

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { MonitoringRealisasiView } from '#/components/kinerja/MonitoringRealisasiView'
 import { createMonitoringRealisasiHandlers } from '#/components/kinerja/monitoringRealisasiNavigation'
 
-export const Route = createFileRoute('/bendahara/monitoring-realisasi')({
+export const Route = createFileRoute('/ppspm/monitoring-realisasi')({
   validateSearch: z.object({
     fungsiId: z.string().optional(),
     kegiatanId: z.string().optional(),
@@ -17,16 +17,16 @@ export const Route = createFileRoute('/bendahara/monitoring-realisasi')({
     dari: z.string().optional(),
     sampai: z.string().optional(),
   }),
-  component: BendaharaMonitoringRealisasiPage,
+  component: PpspmMonitoringRealisasiPage,
 })
 
 const PAGE_TITLE = 'Monitoring Nominal Realisasi'
 
-function BendaharaMonitoringRealisasiPage() {
+function PpspmMonitoringRealisasiPage() {
   const navigate = useNavigate()
   const search = Route.useSearch()
   const handlers = createMonitoringRealisasiHandlers(search, (next) =>
-    navigate({ to: '/bendahara/monitoring-realisasi', search: next }),
+    navigate({ to: '/ppspm/monitoring-realisasi', search: next }),
   )
 
   return (

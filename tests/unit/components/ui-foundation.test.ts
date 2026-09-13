@@ -13,7 +13,7 @@ describe('Phase 15E shared UI foundation mappings', () => {
   it('uses canonical document status labels without prototype-only statuses', () => {
     expect(DOCUMENT_STATUS_BADGE_CONFIG.DRAFT.label).toBe('Draft')
     expect(DOCUMENT_STATUS_BADGE_CONFIG.IN_PPK_VALIDATION.label).toBe('Menunggu PPK')
-    expect(DOCUMENT_STATUS_BADGE_CONFIG.IN_BENDAHARA_APPROVAL.label).toBe('Menunggu PPSPM')
+    expect(DOCUMENT_STATUS_BADGE_CONFIG.IN_PPSPM_APPROVAL.label).toBe('Menunggu PPSPM')
     expect(DOCUMENT_STATUS_BADGE_CONFIG.NEED_REVISION.label).toBe('Perlu Revisi')
     expect(DOCUMENT_STATUS_BADGE_CONFIG.COMPLETED.label).toBe('Selesai')
     expect(DOCUMENT_STATUS_BADGE_CONFIG.TERSIMPAN.label).toBe('Tersimpan')
@@ -43,11 +43,11 @@ describe('Phase 15E shared UI foundation mappings', () => {
   it('uses Phase 15 role display labels without changing internal values', () => {
     expect(ROLE_BADGE_LABELS.PEGAWAI).toBe('Pegawai')
     expect(ROLE_BADGE_LABELS.PPK).toBe('PPK')
-    expect(ROLE_BADGE_LABELS.BENDAHARA).toBe('PPSPM')
+    expect(ROLE_BADGE_LABELS.PPSPM).toBe('PPSPM')
     expect(ROLE_BADGE_LABELS.KEPALA_SUB_BAGIAN_UMUM).toBe('Kepala Sub Bagian Umum')
     expect(ROLE_BADGE_LABELS.PENANGGUNG_JAWAB_KINERJA).toBe('Penanggung Jawab Kinerja')
     expect(ROLE_BADGE_LABELS.ADMIN).toBe('Admin Sistem')
-    expect(getRoleBadgeLabel('BENDAHARA')).toBe('PPSPM')
+    expect(getRoleBadgeLabel('PPSPM')).toBe('PPSPM')
     expect(getRoleBadgeLabel('ADMIN')).toBe('Admin Sistem')
     expect(getRoleBadgeLabel('LOWERCASE_PROTOTYPE_ROLE')).toBe('Role tidak dikenal')
   })

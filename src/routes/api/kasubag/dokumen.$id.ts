@@ -99,7 +99,7 @@ export const Route = createFileRoute('/api/kasubag/dokumen/$id')({
             return Response.json({ error: 'Dokumen belum menyelesaikan approval' }, { status: 400 })
           }
 
-          const bendaharaLogs = await db
+          const ppspmLogs = await db
             .select({
               user_id: logAktivitas.userId,
               timestamp: logAktivitas.timestamp,
@@ -107,7 +107,7 @@ export const Route = createFileRoute('/api/kasubag/dokumen/$id')({
             .from(logAktivitas)
             .where(and(
               eq(logAktivitas.dokumenId, params.id),
-              eq(logAktivitas.aksi, 'BENDAHARA_APPROVE'),
+              eq(logAktivitas.aksi, 'PPSPM_APPROVE'),
             ))
             .orderBy(asc(logAktivitas.timestamp))
             .limit(1)
@@ -128,7 +128,7 @@ export const Route = createFileRoute('/api/kasubag/dokumen/$id')({
             ))
             .limit(1)
 
-          const bendaharaLog = bendaharaLogs[0]
+          const ppspmLog = ppspmLogs[0]
           const berkasRecord = berkasItemRows[0]
           const isClassified = Boolean(berkasRecord)
 
@@ -157,8 +157,8 @@ export const Route = createFileRoute('/api/kasubag/dokumen/$id')({
               status: dok.status,
               is_archived: isClassified,
             },
-            bendahara_approve: bendaharaLog
-              ? { nama: 'PPSPM', tanggal: bendaharaLog.timestamp }
+            ppspm_approve: ppspmLog
+              ? { nama: 'PPSPM', tanggal: ppspmLog.timestamp }
               : null,
             arsip: berkasRecord
               ? {

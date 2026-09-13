@@ -69,7 +69,7 @@ type DokumenDetail = {
 const WORKFLOW_STEPS = [
   { key: 'DRAFT', label: 'Draf' },
   { key: 'IN_PPK_VALIDATION', label: 'PPK' },
-  { key: 'IN_BENDAHARA_APPROVAL', label: 'PPSPM' },
+  { key: 'IN_PPSPM_APPROVAL', label: 'PPSPM' },
   { key: 'COMPLETED', label: 'Selesai' },
 ]
 
@@ -557,7 +557,7 @@ function RevisionNoteCard({
 }
 
 function getRevisionStepKey(revisionTarget: string | null): string {
-  return revisionTarget === 'PPK' ? 'IN_BENDAHARA_APPROVAL' : 'IN_PPK_VALIDATION'
+  return revisionTarget === 'PPK' ? 'IN_PPSPM_APPROVAL' : 'IN_PPK_VALIDATION'
 }
 
 function RoleStatusPanel({
@@ -664,7 +664,7 @@ function getStatusDescription(status: string, isNonMaterial: boolean): string {
   if (status === 'IN_PPK_VALIDATION') {
     return 'Menunggu validasi PPK. Tinjau metadata dan lampiran sebelum meneruskan ke PPSPM.'
   }
-  if (status === 'IN_BENDAHARA_APPROVAL') {
+  if (status === 'IN_PPSPM_APPROVAL') {
     return 'Sudah divalidasi PPK dan menunggu PPSPM.'
   }
   if (status === 'NEED_REVISION') {

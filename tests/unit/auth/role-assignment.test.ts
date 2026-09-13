@@ -26,9 +26,9 @@ describe('admin user role assignment normalization', () => {
   })
 
   it('keeps PEGAWAI for non-admin role combinations', () => {
-    expect(normalizeAdminRoleToggle([ROLES.PEGAWAI, ROLES.BENDAHARA], ROLES.PENANGGUNG_JAWAB_KINERJA)).toEqual([
+    expect(normalizeAdminRoleToggle([ROLES.PEGAWAI, ROLES.PPSPM], ROLES.PENANGGUNG_JAWAB_KINERJA)).toEqual([
       ROLES.PEGAWAI,
-      ROLES.BENDAHARA,
+      ROLES.PPSPM,
       ROLES.PENANGGUNG_JAWAB_KINERJA,
     ])
   })

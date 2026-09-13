@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PpspmRouteImport } from './routes/ppspm'
 import { Route as PpkRouteImport } from './routes/ppk'
 import { Route as PenanggungJawabKinerjaRouteImport } from './routes/penanggung-jawab-kinerja'
 import { Route as PegawaiRouteImport } from './routes/pegawai'
@@ -17,14 +18,17 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as KasubagRouteImport } from './routes/kasubag'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DokumenRouteImport } from './routes/dokumen'
-import { Route as BendaharaRouteImport } from './routes/bendahara'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PpspmIndexRouteImport } from './routes/ppspm/index'
 import { Route as PpkIndexRouteImport } from './routes/ppk/index'
 import { Route as PenanggungJawabKinerjaIndexRouteImport } from './routes/penanggung-jawab-kinerja/index'
 import { Route as KasubagIndexRouteImport } from './routes/kasubag/index'
-import { Route as BendaharaIndexRouteImport } from './routes/bendahara/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as PpspmSelesaiRouteImport } from './routes/ppspm/selesai'
+import { Route as PpspmMonitoringRealisasiRouteImport } from './routes/ppspm/monitoring-realisasi'
+import { Route as PpspmInboxRouteImport } from './routes/ppspm/inbox'
+import { Route as PpspmDitolakRouteImport } from './routes/ppspm/ditolak'
 import { Route as PpkTervalidasiRouteImport } from './routes/ppk/tervalidasi'
 import { Route as PpkRevisiRouteImport } from './routes/ppk/revisi'
 import { Route as PpkMonitoringRealisasiRouteImport } from './routes/ppk/monitoring-realisasi'
@@ -41,10 +45,6 @@ import { Route as DokumenSayaRouteImport } from './routes/dokumen/saya'
 import { Route as DokumenAjuRouteImport } from './routes/dokumen/aju'
 import { Route as DokumenAjiRouteImport } from './routes/dokumen/aji'
 import { Route as DokumenIdRouteImport } from './routes/dokumen/$id'
-import { Route as BendaharaSelesaiRouteImport } from './routes/bendahara/selesai'
-import { Route as BendaharaMonitoringRealisasiRouteImport } from './routes/bendahara/monitoring-realisasi'
-import { Route as BendaharaInboxRouteImport } from './routes/bendahara/inbox'
-import { Route as BendaharaDitolakRouteImport } from './routes/bendahara/ditolak'
 import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as ApiPembersihanDokumenRouteImport } from './routes/api/pembersihan-dokumen'
 import { Route as ApiMasterKomponenRouteImport } from './routes/api/master-komponen'
@@ -63,6 +63,7 @@ import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
 import { Route as ApiKetuaTimIndexRouteImport } from './routes/api/ketua-tim/index'
 import { Route as ApiDokumenIndexRouteImport } from './routes/api/dokumen/index'
 import { Route as AdminMasterDataIndexRouteImport } from './routes/admin.master-data.index'
+import { Route as PpspmDokumenIdRouteImport } from './routes/ppspm/dokumen/$id'
 import { Route as PpkDokumenIdRouteImport } from './routes/ppk/dokumen/$id'
 import { Route as PegawaiLaporanSayaRouteImport } from './routes/pegawai/laporan/saya'
 import { Route as PegawaiLaporanKegiatanRouteImport } from './routes/pegawai/laporan/kegiatan'
@@ -71,9 +72,11 @@ import { Route as PegawaiDokumenIdRouteImport } from './routes/pegawai/dokumen/$
 import { Route as KasubagBerkasTertutupRouteImport } from './routes/kasubag/berkas/tertutup'
 import { Route as KasubagBerkasIdRouteImport } from './routes/kasubag/berkas/$id'
 import { Route as DokumenIdEditRouteImport } from './routes/dokumen/$id/edit'
-import { Route as BendaharaDokumenIdRouteImport } from './routes/bendahara/dokumen/$id'
 import { Route as ApiUsersMeRouteImport } from './routes/api/users/me'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
+import { Route as ApiPpspmSelesaiRouteImport } from './routes/api/ppspm/selesai'
+import { Route as ApiPpspmInboxRouteImport } from './routes/api/ppspm/inbox'
+import { Route as ApiPpspmDitolakRouteImport } from './routes/api/ppspm/ditolak'
 import { Route as ApiPpkTervalidasiRouteImport } from './routes/api/ppk/tervalidasi'
 import { Route as ApiPpkRevisiRouteImport } from './routes/api/ppk/revisi'
 import { Route as ApiPpkInboxRouteImport } from './routes/api/ppk/inbox'
@@ -99,9 +102,6 @@ import { Route as ApiDokumenRenamePendingRouteImport } from './routes/api/dokume
 import { Route as ApiDokumenPreviewUrlRouteImport } from './routes/api/dokumen/preview-url'
 import { Route as ApiDokumenDownloadUrlRouteImport } from './routes/api/dokumen/download-url'
 import { Route as ApiDokumenIdRouteImport } from './routes/api/dokumen.$id'
-import { Route as ApiBendaharaSelesaiRouteImport } from './routes/api/bendahara/selesai'
-import { Route as ApiBendaharaInboxRouteImport } from './routes/api/bendahara/inbox'
-import { Route as ApiBendaharaDitolakRouteImport } from './routes/api/bendahara/ditolak'
 import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthRoleSwitchRouteImport } from './routes/api/auth/role-switch'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -131,6 +131,7 @@ import { Route as ApiUsersMeChangePasswordRouteImport } from './routes/api/users
 import { Route as ApiUsersIdResetPasswordRouteImport } from './routes/api/users/$id/reset-password'
 import { Route as ApiUsersIdDeactivateRouteImport } from './routes/api/users/$id/deactivate'
 import { Route as ApiUsersIdActivateRouteImport } from './routes/api/users/$id/activate'
+import { Route as ApiPpspmDokumenIdRouteImport } from './routes/api/ppspm/dokumen/$id'
 import { Route as ApiPpkResubmitIdRouteImport } from './routes/api/ppk/resubmit/$id'
 import { Route as ApiPpkKembalikanIdRouteImport } from './routes/api/ppk/kembalikan/$id'
 import { Route as ApiPpkDokumenIdRouteImport } from './routes/api/ppk/dokumen/$id'
@@ -146,8 +147,9 @@ import { Route as ApiKasubagBerkasIdRouteImport } from './routes/api/kasubag/ber
 import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id.submit'
 import { Route as ApiDokumenIdNominalRouteImport } from './routes/api/dokumen/$id.nominal'
 import { Route as ApiDokumenIdLogRouteImport } from './routes/api/dokumen.$id.log'
-import { Route as ApiBendaharaDokumenIdRouteImport } from './routes/api/bendahara/dokumen/$id'
 import { Route as ApiUsersMeIsKetuaTimKegiatanIdRouteImport } from './routes/api/users/me/is-ketua-tim/$kegiatanId'
+import { Route as ApiPpspmDokumenIdRejectRouteImport } from './routes/api/ppspm/dokumen/$id/reject'
+import { Route as ApiPpspmDokumenIdApproveRouteImport } from './routes/api/ppspm/dokumen/$id/approve'
 import { Route as ApiPpkDokumenIdRejectRouteImport } from './routes/api/ppk/dokumen/$id/reject'
 import { Route as ApiPpkDokumenIdApproveRouteImport } from './routes/api/ppk/dokumen/$id/approve'
 import { Route as ApiKasubagManualArsipIdAttachmentsRouteImport } from './routes/api/kasubag/manual-arsip/$id/attachments'
@@ -158,12 +160,10 @@ import { Route as ApiKasubagBerkasIdExportZipRouteImport } from './routes/api/ka
 import { Route as ApiKasubagBerkasIdCloseRouteImport } from './routes/api/kasubag/berkas/$id/close'
 import { Route as ApiDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/dokumen.$id.preview.$lampiranIndex'
 import { Route as ApiDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/dokumen.$id.download.$lampiranIndex'
-import { Route as ApiBendaharaDokumenIdRejectRouteImport } from './routes/api/bendahara/dokumen/$id/reject'
-import { Route as ApiBendaharaDokumenIdApproveRouteImport } from './routes/api/bendahara/dokumen/$id/approve'
+import { Route as ApiPpspmDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppspm/dokumen/$id/preview/$lampiranIndex'
+import { Route as ApiPpspmDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppspm/dokumen/$id/download/$lampiranIndex'
 import { Route as ApiPpkDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/preview/$lampiranIndex'
 import { Route as ApiPpkDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/download/$lampiranIndex'
-import { Route as ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/bendahara/dokumen/$id/preview/$lampiranIndex'
-import { Route as ApiBendaharaDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/bendahara/dokumen/$id/download/$lampiranIndex'
 import { Route as ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRouteImport } from './routes/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
 import { Route as ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRouteImport } from './routes/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
 import { Route as ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRouteImport } from './routes/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex'
@@ -172,6 +172,11 @@ import { Route as ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRouteImport 
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PpspmRoute = PpspmRouteImport.update({
+  id: '/ppspm',
+  path: '/ppspm',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PpkRoute = PpkRouteImport.update({
@@ -209,11 +214,6 @@ const DokumenRoute = DokumenRouteImport.update({
   path: '/dokumen',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BendaharaRoute = BendaharaRouteImport.update({
-  id: '/bendahara',
-  path: '/bendahara',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -223,6 +223,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PpspmIndexRoute = PpspmIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PpspmRoute,
 } as any)
 const PpkIndexRoute = PpkIndexRouteImport.update({
   id: '/',
@@ -240,15 +245,31 @@ const KasubagIndexRoute = KasubagIndexRouteImport.update({
   path: '/',
   getParentRoute: () => KasubagRoute,
 } as any)
-const BendaharaIndexRoute = BendaharaIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => BendaharaRoute,
-} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const PpspmSelesaiRoute = PpspmSelesaiRouteImport.update({
+  id: '/selesai',
+  path: '/selesai',
+  getParentRoute: () => PpspmRoute,
+} as any)
+const PpspmMonitoringRealisasiRoute =
+  PpspmMonitoringRealisasiRouteImport.update({
+    id: '/monitoring-realisasi',
+    path: '/monitoring-realisasi',
+    getParentRoute: () => PpspmRoute,
+  } as any)
+const PpspmInboxRoute = PpspmInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => PpspmRoute,
+} as any)
+const PpspmDitolakRoute = PpspmDitolakRouteImport.update({
+  id: '/ditolak',
+  path: '/ditolak',
+  getParentRoute: () => PpspmRoute,
 } as any)
 const PpkTervalidasiRoute = PpkTervalidasiRouteImport.update({
   id: '/tervalidasi',
@@ -331,27 +352,6 @@ const DokumenIdRoute = DokumenIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => DokumenRoute,
-} as any)
-const BendaharaSelesaiRoute = BendaharaSelesaiRouteImport.update({
-  id: '/selesai',
-  path: '/selesai',
-  getParentRoute: () => BendaharaRoute,
-} as any)
-const BendaharaMonitoringRealisasiRoute =
-  BendaharaMonitoringRealisasiRouteImport.update({
-    id: '/monitoring-realisasi',
-    path: '/monitoring-realisasi',
-    getParentRoute: () => BendaharaRoute,
-  } as any)
-const BendaharaInboxRoute = BendaharaInboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => BendaharaRoute,
-} as any)
-const BendaharaDitolakRoute = BendaharaDitolakRouteImport.update({
-  id: '/ditolak',
-  path: '/ditolak',
-  getParentRoute: () => BendaharaRoute,
 } as any)
 const ApiUploadRoute = ApiUploadRouteImport.update({
   id: '/api/upload',
@@ -443,6 +443,11 @@ const AdminMasterDataIndexRoute = AdminMasterDataIndexRouteImport.update({
   path: '/master-data/',
   getParentRoute: () => AdminRoute,
 } as any)
+const PpspmDokumenIdRoute = PpspmDokumenIdRouteImport.update({
+  id: '/dokumen/$id',
+  path: '/dokumen/$id',
+  getParentRoute: () => PpspmRoute,
+} as any)
 const PpkDokumenIdRoute = PpkDokumenIdRouteImport.update({
   id: '/dokumen/$id',
   path: '/dokumen/$id',
@@ -483,11 +488,6 @@ const DokumenIdEditRoute = DokumenIdEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => DokumenIdRoute,
 } as any)
-const BendaharaDokumenIdRoute = BendaharaDokumenIdRouteImport.update({
-  id: '/dokumen/$id',
-  path: '/dokumen/$id',
-  getParentRoute: () => BendaharaRoute,
-} as any)
 const ApiUsersMeRoute = ApiUsersMeRouteImport.update({
   id: '/api/users/me',
   path: '/api/users/me',
@@ -496,6 +496,21 @@ const ApiUsersMeRoute = ApiUsersMeRouteImport.update({
 const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
   id: '/api/users/$id',
   path: '/api/users/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPpspmSelesaiRoute = ApiPpspmSelesaiRouteImport.update({
+  id: '/api/ppspm/selesai',
+  path: '/api/ppspm/selesai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPpspmInboxRoute = ApiPpspmInboxRouteImport.update({
+  id: '/api/ppspm/inbox',
+  path: '/api/ppspm/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPpspmDitolakRoute = ApiPpspmDitolakRouteImport.update({
+  id: '/api/ppspm/ditolak',
+  path: '/api/ppspm/ditolak',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPpkTervalidasiRoute = ApiPpkTervalidasiRouteImport.update({
@@ -622,21 +637,6 @@ const ApiDokumenDownloadUrlRoute = ApiDokumenDownloadUrlRouteImport.update({
 const ApiDokumenIdRoute = ApiDokumenIdRouteImport.update({
   id: '/api/dokumen/$id',
   path: '/api/dokumen/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBendaharaSelesaiRoute = ApiBendaharaSelesaiRouteImport.update({
-  id: '/api/bendahara/selesai',
-  path: '/api/bendahara/selesai',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBendaharaInboxRoute = ApiBendaharaInboxRouteImport.update({
-  id: '/api/bendahara/inbox',
-  path: '/api/bendahara/inbox',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBendaharaDitolakRoute = ApiBendaharaDitolakRouteImport.update({
-  id: '/api/bendahara/ditolak',
-  path: '/api/bendahara/ditolak',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
@@ -790,6 +790,11 @@ const ApiUsersIdActivateRoute = ApiUsersIdActivateRouteImport.update({
   path: '/activate',
   getParentRoute: () => ApiUsersIdRoute,
 } as any)
+const ApiPpspmDokumenIdRoute = ApiPpspmDokumenIdRouteImport.update({
+  id: '/api/ppspm/dokumen/$id',
+  path: '/api/ppspm/dokumen/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPpkResubmitIdRoute = ApiPpkResubmitIdRouteImport.update({
   id: '/api/ppk/resubmit/$id',
   path: '/api/ppk/resubmit/$id',
@@ -867,16 +872,22 @@ const ApiDokumenIdLogRoute = ApiDokumenIdLogRouteImport.update({
   path: '/log',
   getParentRoute: () => ApiDokumenIdRoute,
 } as any)
-const ApiBendaharaDokumenIdRoute = ApiBendaharaDokumenIdRouteImport.update({
-  id: '/api/bendahara/dokumen/$id',
-  path: '/api/bendahara/dokumen/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiUsersMeIsKetuaTimKegiatanIdRoute =
   ApiUsersMeIsKetuaTimKegiatanIdRouteImport.update({
     id: '/is-ketua-tim/$kegiatanId',
     path: '/is-ketua-tim/$kegiatanId',
     getParentRoute: () => ApiUsersMeRoute,
+  } as any)
+const ApiPpspmDokumenIdRejectRoute = ApiPpspmDokumenIdRejectRouteImport.update({
+  id: '/reject',
+  path: '/reject',
+  getParentRoute: () => ApiPpspmDokumenIdRoute,
+} as any)
+const ApiPpspmDokumenIdApproveRoute =
+  ApiPpspmDokumenIdApproveRouteImport.update({
+    id: '/approve',
+    path: '/approve',
+    getParentRoute: () => ApiPpspmDokumenIdRoute,
   } as any)
 const ApiPpkDokumenIdRejectRoute = ApiPpkDokumenIdRejectRouteImport.update({
   id: '/reject',
@@ -934,17 +945,17 @@ const ApiDokumenIdDownloadLampiranIndexRoute =
     path: '/download/$lampiranIndex',
     getParentRoute: () => ApiDokumenIdRoute,
   } as any)
-const ApiBendaharaDokumenIdRejectRoute =
-  ApiBendaharaDokumenIdRejectRouteImport.update({
-    id: '/reject',
-    path: '/reject',
-    getParentRoute: () => ApiBendaharaDokumenIdRoute,
+const ApiPpspmDokumenIdPreviewLampiranIndexRoute =
+  ApiPpspmDokumenIdPreviewLampiranIndexRouteImport.update({
+    id: '/preview/$lampiranIndex',
+    path: '/preview/$lampiranIndex',
+    getParentRoute: () => ApiPpspmDokumenIdRoute,
   } as any)
-const ApiBendaharaDokumenIdApproveRoute =
-  ApiBendaharaDokumenIdApproveRouteImport.update({
-    id: '/approve',
-    path: '/approve',
-    getParentRoute: () => ApiBendaharaDokumenIdRoute,
+const ApiPpspmDokumenIdDownloadLampiranIndexRoute =
+  ApiPpspmDokumenIdDownloadLampiranIndexRouteImport.update({
+    id: '/download/$lampiranIndex',
+    path: '/download/$lampiranIndex',
+    getParentRoute: () => ApiPpspmDokumenIdRoute,
   } as any)
 const ApiPpkDokumenIdPreviewLampiranIndexRoute =
   ApiPpkDokumenIdPreviewLampiranIndexRouteImport.update({
@@ -957,18 +968,6 @@ const ApiPpkDokumenIdDownloadLampiranIndexRoute =
     id: '/download/$lampiranIndex',
     path: '/download/$lampiranIndex',
     getParentRoute: () => ApiPpkDokumenIdRoute,
-  } as any)
-const ApiBendaharaDokumenIdPreviewLampiranIndexRoute =
-  ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport.update({
-    id: '/preview/$lampiranIndex',
-    path: '/preview/$lampiranIndex',
-    getParentRoute: () => ApiBendaharaDokumenIdRoute,
-  } as any)
-const ApiBendaharaDokumenIdDownloadLampiranIndexRoute =
-  ApiBendaharaDokumenIdDownloadLampiranIndexRouteImport.update({
-    id: '/download/$lampiranIndex',
-    path: '/download/$lampiranIndex',
-    getParentRoute: () => ApiBendaharaDokumenIdRoute,
   } as any)
 const ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute =
   ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRouteImport.update({
@@ -998,7 +997,6 @@ const ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/bendahara': typeof BendaharaRouteWithChildren
   '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/kasubag': typeof KasubagRouteWithChildren
@@ -1006,6 +1004,7 @@ export interface FileRoutesByFullPath {
   '/pegawai': typeof PegawaiRouteWithChildren
   '/penanggung-jawab-kinerja': typeof PenanggungJawabKinerjaRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
+  '/ppspm': typeof PpspmRouteWithChildren
   '/profile': typeof ProfileRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
@@ -1017,10 +1016,6 @@ export interface FileRoutesByFullPath {
   '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/pembersihan-dokumen': typeof ApiPembersihanDokumenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
-  '/bendahara/ditolak': typeof BendaharaDitolakRoute
-  '/bendahara/inbox': typeof BendaharaInboxRoute
-  '/bendahara/monitoring-realisasi': typeof BendaharaMonitoringRealisasiRoute
-  '/bendahara/selesai': typeof BendaharaSelesaiRoute
   '/dokumen/$id': typeof DokumenIdRouteWithChildren
   '/dokumen/aji': typeof DokumenAjiRoute
   '/dokumen/aju': typeof DokumenAjuRoute
@@ -1037,11 +1032,15 @@ export interface FileRoutesByFullPath {
   '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
+  '/ppspm/ditolak': typeof PpspmDitolakRoute
+  '/ppspm/inbox': typeof PpspmInboxRoute
+  '/ppspm/monitoring-realisasi': typeof PpspmMonitoringRealisasiRoute
+  '/ppspm/selesai': typeof PpspmSelesaiRoute
   '/admin/': typeof AdminIndexRoute
-  '/bendahara/': typeof BendaharaIndexRoute
   '/kasubag/': typeof KasubagIndexRoute
   '/penanggung-jawab-kinerja/': typeof PenanggungJawabKinerjaIndexRoute
   '/ppk/': typeof PpkIndexRoute
+  '/ppspm/': typeof PpspmIndexRoute
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
   '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
@@ -1057,9 +1056,6 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
-  '/api/bendahara/ditolak': typeof ApiBendaharaDitolakRoute
-  '/api/bendahara/inbox': typeof ApiBendaharaInboxRoute
-  '/api/bendahara/selesai': typeof ApiBendaharaSelesaiRoute
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
@@ -1085,9 +1081,11 @@ export interface FileRoutesByFullPath {
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
   '/api/ppk/revisi': typeof ApiPpkRevisiRoute
   '/api/ppk/tervalidasi': typeof ApiPpkTervalidasiRoute
+  '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
+  '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
+  '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
-  '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/kasubag/berkas/$id': typeof KasubagBerkasIdRoute
   '/kasubag/berkas/tertutup': typeof KasubagBerkasTertutupRoute
@@ -1096,6 +1094,7 @@ export interface FileRoutesByFullPath {
   '/pegawai/laporan/kegiatan': typeof PegawaiLaporanKegiatanRoute
   '/pegawai/laporan/saya': typeof PegawaiLaporanSayaRoute
   '/ppk/dokumen/$id': typeof PpkDokumenIdRouteWithChildren
+  '/ppspm/dokumen/$id': typeof PpspmDokumenIdRoute
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
   '/api/dokumen/': typeof ApiDokumenIndexRoute
   '/api/ketua-tim/': typeof ApiKetuaTimIndexRoute
@@ -1104,7 +1103,6 @@ export interface FileRoutesByFullPath {
   '/kasubag/berkas/': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
-  '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
@@ -1120,6 +1118,7 @@ export interface FileRoutesByFullPath {
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
+  '/api/ppspm/dokumen/$id': typeof ApiPpspmDokumenIdRouteWithChildren
   '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
   '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
   '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
@@ -1134,8 +1133,6 @@ export interface FileRoutesByFullPath {
   '/kasubag/dokumen/$id/': typeof KasubagDokumenIdIndexRoute
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
-  '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
-  '/api/bendahara/dokumen/$id/reject': typeof ApiBendaharaDokumenIdRejectRoute
   '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
   '/api/dokumen/$id/preview/$lampiranIndex': typeof ApiDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/berkas/$id/close': typeof ApiKasubagBerkasIdCloseRoute
@@ -1146,11 +1143,13 @@ export interface FileRoutesByFullPath {
   '/api/kasubag/manual-arsip/$id/attachments': typeof ApiKasubagManualArsipIdAttachmentsRouteWithChildren
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
+  '/api/ppspm/dokumen/$id/approve': typeof ApiPpspmDokumenIdApproveRoute
+  '/api/ppspm/dokumen/$id/reject': typeof ApiPpspmDokumenIdRejectRoute
   '/api/users/me/is-ketua-tim/$kegiatanId': typeof ApiUsersMeIsKetuaTimKegiatanIdRoute
-  '/api/bendahara/dokumen/$id/download/$lampiranIndex': typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
-  '/api/bendahara/dokumen/$id/preview/$lampiranIndex': typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
   '/api/ppk/dokumen/$id/download/$lampiranIndex': typeof ApiPpkDokumenIdDownloadLampiranIndexRoute
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
+  '/api/ppspm/dokumen/$id/download/$lampiranIndex': typeof ApiPpspmDokumenIdDownloadLampiranIndexRoute
+  '/api/ppspm/dokumen/$id/preview/$lampiranIndex': typeof ApiPpspmDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute
   '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute
@@ -1173,10 +1172,6 @@ export interface FileRoutesByTo {
   '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/pembersihan-dokumen': typeof ApiPembersihanDokumenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
-  '/bendahara/ditolak': typeof BendaharaDitolakRoute
-  '/bendahara/inbox': typeof BendaharaInboxRoute
-  '/bendahara/monitoring-realisasi': typeof BendaharaMonitoringRealisasiRoute
-  '/bendahara/selesai': typeof BendaharaSelesaiRoute
   '/dokumen/aji': typeof DokumenAjiRoute
   '/dokumen/aju': typeof DokumenAjuRoute
   '/dokumen/saya': typeof DokumenSayaRoute
@@ -1191,11 +1186,15 @@ export interface FileRoutesByTo {
   '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
+  '/ppspm/ditolak': typeof PpspmDitolakRoute
+  '/ppspm/inbox': typeof PpspmInboxRoute
+  '/ppspm/monitoring-realisasi': typeof PpspmMonitoringRealisasiRoute
+  '/ppspm/selesai': typeof PpspmSelesaiRoute
   '/admin': typeof AdminIndexRoute
-  '/bendahara': typeof BendaharaIndexRoute
   '/kasubag': typeof KasubagIndexRoute
   '/penanggung-jawab-kinerja': typeof PenanggungJawabKinerjaIndexRoute
   '/ppk': typeof PpkIndexRoute
+  '/ppspm': typeof PpspmIndexRoute
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
   '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
@@ -1211,9 +1210,6 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
-  '/api/bendahara/ditolak': typeof ApiBendaharaDitolakRoute
-  '/api/bendahara/inbox': typeof ApiBendaharaInboxRoute
-  '/api/bendahara/selesai': typeof ApiBendaharaSelesaiRoute
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
@@ -1239,15 +1235,18 @@ export interface FileRoutesByTo {
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
   '/api/ppk/revisi': typeof ApiPpkRevisiRoute
   '/api/ppk/tervalidasi': typeof ApiPpkTervalidasiRoute
+  '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
+  '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
+  '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
-  '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/kasubag/berkas/$id': typeof KasubagBerkasIdRoute
   '/kasubag/berkas/tertutup': typeof KasubagBerkasTertutupRoute
   '/pegawai/dokumen/aju': typeof PegawaiDokumenAjuRoute
   '/pegawai/laporan/kegiatan': typeof PegawaiLaporanKegiatanRoute
   '/pegawai/laporan/saya': typeof PegawaiLaporanSayaRoute
+  '/ppspm/dokumen/$id': typeof PpspmDokumenIdRoute
   '/admin/master-data': typeof AdminMasterDataIndexRoute
   '/api/dokumen': typeof ApiDokumenIndexRoute
   '/api/ketua-tim': typeof ApiKetuaTimIndexRoute
@@ -1256,7 +1255,6 @@ export interface FileRoutesByTo {
   '/kasubag/berkas': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen': typeof PegawaiDokumenIndexRoute
-  '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
@@ -1272,6 +1270,7 @@ export interface FileRoutesByTo {
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
+  '/api/ppspm/dokumen/$id': typeof ApiPpspmDokumenIdRouteWithChildren
   '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
   '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
   '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
@@ -1286,8 +1285,6 @@ export interface FileRoutesByTo {
   '/kasubag/dokumen/$id': typeof KasubagDokumenIdIndexRoute
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id': typeof PpkDokumenIdIndexRoute
-  '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
-  '/api/bendahara/dokumen/$id/reject': typeof ApiBendaharaDokumenIdRejectRoute
   '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
   '/api/dokumen/$id/preview/$lampiranIndex': typeof ApiDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/berkas/$id/close': typeof ApiKasubagBerkasIdCloseRoute
@@ -1298,11 +1295,13 @@ export interface FileRoutesByTo {
   '/api/kasubag/manual-arsip/$id/attachments': typeof ApiKasubagManualArsipIdAttachmentsRouteWithChildren
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
+  '/api/ppspm/dokumen/$id/approve': typeof ApiPpspmDokumenIdApproveRoute
+  '/api/ppspm/dokumen/$id/reject': typeof ApiPpspmDokumenIdRejectRoute
   '/api/users/me/is-ketua-tim/$kegiatanId': typeof ApiUsersMeIsKetuaTimKegiatanIdRoute
-  '/api/bendahara/dokumen/$id/download/$lampiranIndex': typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
-  '/api/bendahara/dokumen/$id/preview/$lampiranIndex': typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
   '/api/ppk/dokumen/$id/download/$lampiranIndex': typeof ApiPpkDokumenIdDownloadLampiranIndexRoute
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
+  '/api/ppspm/dokumen/$id/download/$lampiranIndex': typeof ApiPpspmDokumenIdDownloadLampiranIndexRoute
+  '/api/ppspm/dokumen/$id/preview/$lampiranIndex': typeof ApiPpspmDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute
   '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute
@@ -1312,7 +1311,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/bendahara': typeof BendaharaRouteWithChildren
   '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/kasubag': typeof KasubagRouteWithChildren
@@ -1320,6 +1318,7 @@ export interface FileRoutesById {
   '/pegawai': typeof PegawaiRouteWithChildren
   '/penanggung-jawab-kinerja': typeof PenanggungJawabKinerjaRouteWithChildren
   '/ppk': typeof PpkRouteWithChildren
+  '/ppspm': typeof PpspmRouteWithChildren
   '/profile': typeof ProfileRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
@@ -1331,10 +1330,6 @@ export interface FileRoutesById {
   '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/pembersihan-dokumen': typeof ApiPembersihanDokumenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
-  '/bendahara/ditolak': typeof BendaharaDitolakRoute
-  '/bendahara/inbox': typeof BendaharaInboxRoute
-  '/bendahara/monitoring-realisasi': typeof BendaharaMonitoringRealisasiRoute
-  '/bendahara/selesai': typeof BendaharaSelesaiRoute
   '/dokumen/$id': typeof DokumenIdRouteWithChildren
   '/dokumen/aji': typeof DokumenAjiRoute
   '/dokumen/aju': typeof DokumenAjuRoute
@@ -1351,11 +1346,15 @@ export interface FileRoutesById {
   '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
+  '/ppspm/ditolak': typeof PpspmDitolakRoute
+  '/ppspm/inbox': typeof PpspmInboxRoute
+  '/ppspm/monitoring-realisasi': typeof PpspmMonitoringRealisasiRoute
+  '/ppspm/selesai': typeof PpspmSelesaiRoute
   '/admin/': typeof AdminIndexRoute
-  '/bendahara/': typeof BendaharaIndexRoute
   '/kasubag/': typeof KasubagIndexRoute
   '/penanggung-jawab-kinerja/': typeof PenanggungJawabKinerjaIndexRoute
   '/ppk/': typeof PpkIndexRoute
+  '/ppspm/': typeof PpspmIndexRoute
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
   '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
@@ -1371,9 +1370,6 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/role-switch': typeof ApiAuthRoleSwitchRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
-  '/api/bendahara/ditolak': typeof ApiBendaharaDitolakRoute
-  '/api/bendahara/inbox': typeof ApiBendaharaInboxRoute
-  '/api/bendahara/selesai': typeof ApiBendaharaSelesaiRoute
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
@@ -1399,9 +1395,11 @@ export interface FileRoutesById {
   '/api/ppk/inbox': typeof ApiPpkInboxRoute
   '/api/ppk/revisi': typeof ApiPpkRevisiRoute
   '/api/ppk/tervalidasi': typeof ApiPpkTervalidasiRoute
+  '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
+  '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
+  '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
-  '/bendahara/dokumen/$id': typeof BendaharaDokumenIdRoute
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/kasubag/berkas/$id': typeof KasubagBerkasIdRoute
   '/kasubag/berkas/tertutup': typeof KasubagBerkasTertutupRoute
@@ -1410,6 +1408,7 @@ export interface FileRoutesById {
   '/pegawai/laporan/kegiatan': typeof PegawaiLaporanKegiatanRoute
   '/pegawai/laporan/saya': typeof PegawaiLaporanSayaRoute
   '/ppk/dokumen/$id': typeof PpkDokumenIdRouteWithChildren
+  '/ppspm/dokumen/$id': typeof PpspmDokumenIdRoute
   '/admin/master-data/': typeof AdminMasterDataIndexRoute
   '/api/dokumen/': typeof ApiDokumenIndexRoute
   '/api/ketua-tim/': typeof ApiKetuaTimIndexRoute
@@ -1418,7 +1417,6 @@ export interface FileRoutesById {
   '/kasubag/berkas/': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
-  '/api/bendahara/dokumen/$id': typeof ApiBendaharaDokumenIdRouteWithChildren
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
@@ -1434,6 +1432,7 @@ export interface FileRoutesById {
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
+  '/api/ppspm/dokumen/$id': typeof ApiPpspmDokumenIdRouteWithChildren
   '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
   '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
   '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
@@ -1448,8 +1447,6 @@ export interface FileRoutesById {
   '/kasubag/dokumen/$id/': typeof KasubagDokumenIdIndexRoute
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
-  '/api/bendahara/dokumen/$id/approve': typeof ApiBendaharaDokumenIdApproveRoute
-  '/api/bendahara/dokumen/$id/reject': typeof ApiBendaharaDokumenIdRejectRoute
   '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
   '/api/dokumen/$id/preview/$lampiranIndex': typeof ApiDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/berkas/$id/close': typeof ApiKasubagBerkasIdCloseRoute
@@ -1460,11 +1457,13 @@ export interface FileRoutesById {
   '/api/kasubag/manual-arsip/$id/attachments': typeof ApiKasubagManualArsipIdAttachmentsRouteWithChildren
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
+  '/api/ppspm/dokumen/$id/approve': typeof ApiPpspmDokumenIdApproveRoute
+  '/api/ppspm/dokumen/$id/reject': typeof ApiPpspmDokumenIdRejectRoute
   '/api/users/me/is-ketua-tim/$kegiatanId': typeof ApiUsersMeIsKetuaTimKegiatanIdRoute
-  '/api/bendahara/dokumen/$id/download/$lampiranIndex': typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
-  '/api/bendahara/dokumen/$id/preview/$lampiranIndex': typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
   '/api/ppk/dokumen/$id/download/$lampiranIndex': typeof ApiPpkDokumenIdDownloadLampiranIndexRoute
   '/api/ppk/dokumen/$id/preview/$lampiranIndex': typeof ApiPpkDokumenIdPreviewLampiranIndexRoute
+  '/api/ppspm/dokumen/$id/download/$lampiranIndex': typeof ApiPpspmDokumenIdDownloadLampiranIndexRoute
+  '/api/ppspm/dokumen/$id/preview/$lampiranIndex': typeof ApiPpspmDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute
   '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute
@@ -1475,7 +1474,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
-    | '/bendahara'
     | '/dokumen'
     | '/forbidden'
     | '/kasubag'
@@ -1483,6 +1481,7 @@ export interface FileRouteTypes {
     | '/pegawai'
     | '/penanggung-jawab-kinerja'
     | '/ppk'
+    | '/ppspm'
     | '/profile'
     | '/api/master-detail'
     | '/api/master-fungsi'
@@ -1494,10 +1493,6 @@ export interface FileRouteTypes {
     | '/api/master-komponen'
     | '/api/pembersihan-dokumen'
     | '/api/upload'
-    | '/bendahara/ditolak'
-    | '/bendahara/inbox'
-    | '/bendahara/monitoring-realisasi'
-    | '/bendahara/selesai'
     | '/dokumen/$id'
     | '/dokumen/aji'
     | '/dokumen/aju'
@@ -1514,11 +1509,15 @@ export interface FileRouteTypes {
     | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
+    | '/ppspm/ditolak'
+    | '/ppspm/inbox'
+    | '/ppspm/monitoring-realisasi'
+    | '/ppspm/selesai'
     | '/admin/'
-    | '/bendahara/'
     | '/kasubag/'
     | '/penanggung-jawab-kinerja/'
     | '/ppk/'
+    | '/ppspm/'
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
     | '/admin/master-data/jenis'
@@ -1534,9 +1533,6 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
-    | '/api/bendahara/ditolak'
-    | '/api/bendahara/inbox'
-    | '/api/bendahara/selesai'
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
@@ -1562,9 +1558,11 @@ export interface FileRouteTypes {
     | '/api/ppk/inbox'
     | '/api/ppk/revisi'
     | '/api/ppk/tervalidasi'
+    | '/api/ppspm/ditolak'
+    | '/api/ppspm/inbox'
+    | '/api/ppspm/selesai'
     | '/api/users/$id'
     | '/api/users/me'
-    | '/bendahara/dokumen/$id'
     | '/dokumen/$id/edit'
     | '/kasubag/berkas/$id'
     | '/kasubag/berkas/tertutup'
@@ -1573,6 +1571,7 @@ export interface FileRouteTypes {
     | '/pegawai/laporan/kegiatan'
     | '/pegawai/laporan/saya'
     | '/ppk/dokumen/$id'
+    | '/ppspm/dokumen/$id'
     | '/admin/master-data/'
     | '/api/dokumen/'
     | '/api/ketua-tim/'
@@ -1581,7 +1580,6 @@ export interface FileRouteTypes {
     | '/kasubag/berkas/'
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
-    | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
@@ -1597,6 +1595,7 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
+    | '/api/ppspm/dokumen/$id'
     | '/api/users/$id/activate'
     | '/api/users/$id/deactivate'
     | '/api/users/$id/reset-password'
@@ -1611,8 +1610,6 @@ export interface FileRouteTypes {
     | '/kasubag/dokumen/$id/'
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
-    | '/api/bendahara/dokumen/$id/approve'
-    | '/api/bendahara/dokumen/$id/reject'
     | '/api/dokumen/$id/download/$lampiranIndex'
     | '/api/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/berkas/$id/close'
@@ -1623,11 +1620,13 @@ export interface FileRouteTypes {
     | '/api/kasubag/manual-arsip/$id/attachments'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
+    | '/api/ppspm/dokumen/$id/approve'
+    | '/api/ppspm/dokumen/$id/reject'
     | '/api/users/me/is-ketua-tim/$kegiatanId'
-    | '/api/bendahara/dokumen/$id/download/$lampiranIndex'
-    | '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
     | '/api/ppk/dokumen/$id/download/$lampiranIndex'
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
+    | '/api/ppspm/dokumen/$id/download/$lampiranIndex'
+    | '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
     | '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex'
@@ -1650,10 +1649,6 @@ export interface FileRouteTypes {
     | '/api/master-komponen'
     | '/api/pembersihan-dokumen'
     | '/api/upload'
-    | '/bendahara/ditolak'
-    | '/bendahara/inbox'
-    | '/bendahara/monitoring-realisasi'
-    | '/bendahara/selesai'
     | '/dokumen/aji'
     | '/dokumen/aju'
     | '/dokumen/saya'
@@ -1668,11 +1663,15 @@ export interface FileRouteTypes {
     | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
+    | '/ppspm/ditolak'
+    | '/ppspm/inbox'
+    | '/ppspm/monitoring-realisasi'
+    | '/ppspm/selesai'
     | '/admin'
-    | '/bendahara'
     | '/kasubag'
     | '/penanggung-jawab-kinerja'
     | '/ppk'
+    | '/ppspm'
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
     | '/admin/master-data/jenis'
@@ -1688,9 +1687,6 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
-    | '/api/bendahara/ditolak'
-    | '/api/bendahara/inbox'
-    | '/api/bendahara/selesai'
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
@@ -1716,15 +1712,18 @@ export interface FileRouteTypes {
     | '/api/ppk/inbox'
     | '/api/ppk/revisi'
     | '/api/ppk/tervalidasi'
+    | '/api/ppspm/ditolak'
+    | '/api/ppspm/inbox'
+    | '/api/ppspm/selesai'
     | '/api/users/$id'
     | '/api/users/me'
-    | '/bendahara/dokumen/$id'
     | '/dokumen/$id/edit'
     | '/kasubag/berkas/$id'
     | '/kasubag/berkas/tertutup'
     | '/pegawai/dokumen/aju'
     | '/pegawai/laporan/kegiatan'
     | '/pegawai/laporan/saya'
+    | '/ppspm/dokumen/$id'
     | '/admin/master-data'
     | '/api/dokumen'
     | '/api/ketua-tim'
@@ -1733,7 +1732,6 @@ export interface FileRouteTypes {
     | '/kasubag/berkas'
     | '/kasubag/pembersihan'
     | '/pegawai/dokumen'
-    | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
@@ -1749,6 +1747,7 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
+    | '/api/ppspm/dokumen/$id'
     | '/api/users/$id/activate'
     | '/api/users/$id/deactivate'
     | '/api/users/$id/reset-password'
@@ -1763,8 +1762,6 @@ export interface FileRouteTypes {
     | '/kasubag/dokumen/$id'
     | '/pegawai/dokumen/$id'
     | '/ppk/dokumen/$id'
-    | '/api/bendahara/dokumen/$id/approve'
-    | '/api/bendahara/dokumen/$id/reject'
     | '/api/dokumen/$id/download/$lampiranIndex'
     | '/api/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/berkas/$id/close'
@@ -1775,11 +1772,13 @@ export interface FileRouteTypes {
     | '/api/kasubag/manual-arsip/$id/attachments'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
+    | '/api/ppspm/dokumen/$id/approve'
+    | '/api/ppspm/dokumen/$id/reject'
     | '/api/users/me/is-ketua-tim/$kegiatanId'
-    | '/api/bendahara/dokumen/$id/download/$lampiranIndex'
-    | '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
     | '/api/ppk/dokumen/$id/download/$lampiranIndex'
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
+    | '/api/ppspm/dokumen/$id/download/$lampiranIndex'
+    | '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
     | '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex'
@@ -1788,7 +1787,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
-    | '/bendahara'
     | '/dokumen'
     | '/forbidden'
     | '/kasubag'
@@ -1796,6 +1794,7 @@ export interface FileRouteTypes {
     | '/pegawai'
     | '/penanggung-jawab-kinerja'
     | '/ppk'
+    | '/ppspm'
     | '/profile'
     | '/api/master-detail'
     | '/api/master-fungsi'
@@ -1807,10 +1806,6 @@ export interface FileRouteTypes {
     | '/api/master-komponen'
     | '/api/pembersihan-dokumen'
     | '/api/upload'
-    | '/bendahara/ditolak'
-    | '/bendahara/inbox'
-    | '/bendahara/monitoring-realisasi'
-    | '/bendahara/selesai'
     | '/dokumen/$id'
     | '/dokumen/aji'
     | '/dokumen/aju'
@@ -1827,11 +1822,15 @@ export interface FileRouteTypes {
     | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
+    | '/ppspm/ditolak'
+    | '/ppspm/inbox'
+    | '/ppspm/monitoring-realisasi'
+    | '/ppspm/selesai'
     | '/admin/'
-    | '/bendahara/'
     | '/kasubag/'
     | '/penanggung-jawab-kinerja/'
     | '/ppk/'
+    | '/ppspm/'
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
     | '/admin/master-data/jenis'
@@ -1847,9 +1846,6 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/role-switch'
     | '/api/auth/session'
-    | '/api/bendahara/ditolak'
-    | '/api/bendahara/inbox'
-    | '/api/bendahara/selesai'
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
@@ -1875,9 +1871,11 @@ export interface FileRouteTypes {
     | '/api/ppk/inbox'
     | '/api/ppk/revisi'
     | '/api/ppk/tervalidasi'
+    | '/api/ppspm/ditolak'
+    | '/api/ppspm/inbox'
+    | '/api/ppspm/selesai'
     | '/api/users/$id'
     | '/api/users/me'
-    | '/bendahara/dokumen/$id'
     | '/dokumen/$id/edit'
     | '/kasubag/berkas/$id'
     | '/kasubag/berkas/tertutup'
@@ -1886,6 +1884,7 @@ export interface FileRouteTypes {
     | '/pegawai/laporan/kegiatan'
     | '/pegawai/laporan/saya'
     | '/ppk/dokumen/$id'
+    | '/ppspm/dokumen/$id'
     | '/admin/master-data/'
     | '/api/dokumen/'
     | '/api/ketua-tim/'
@@ -1894,7 +1893,6 @@ export interface FileRouteTypes {
     | '/kasubag/berkas/'
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
-    | '/api/bendahara/dokumen/$id'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
@@ -1910,6 +1908,7 @@ export interface FileRouteTypes {
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
     | '/api/ppk/resubmit/$id'
+    | '/api/ppspm/dokumen/$id'
     | '/api/users/$id/activate'
     | '/api/users/$id/deactivate'
     | '/api/users/$id/reset-password'
@@ -1924,8 +1923,6 @@ export interface FileRouteTypes {
     | '/kasubag/dokumen/$id/'
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
-    | '/api/bendahara/dokumen/$id/approve'
-    | '/api/bendahara/dokumen/$id/reject'
     | '/api/dokumen/$id/download/$lampiranIndex'
     | '/api/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/berkas/$id/close'
@@ -1936,11 +1933,13 @@ export interface FileRouteTypes {
     | '/api/kasubag/manual-arsip/$id/attachments'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
+    | '/api/ppspm/dokumen/$id/approve'
+    | '/api/ppspm/dokumen/$id/reject'
     | '/api/users/me/is-ketua-tim/$kegiatanId'
-    | '/api/bendahara/dokumen/$id/download/$lampiranIndex'
-    | '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
     | '/api/ppk/dokumen/$id/download/$lampiranIndex'
     | '/api/ppk/dokumen/$id/preview/$lampiranIndex'
+    | '/api/ppspm/dokumen/$id/download/$lampiranIndex'
+    | '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
     | '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex'
@@ -1950,7 +1949,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  BendaharaRoute: typeof BendaharaRouteWithChildren
   DokumenRoute: typeof DokumenRouteWithChildren
   ForbiddenRoute: typeof ForbiddenRoute
   KasubagRoute: typeof KasubagRouteWithChildren
@@ -1958,6 +1956,7 @@ export interface RootRouteChildren {
   PegawaiRoute: typeof PegawaiRouteWithChildren
   PenanggungJawabKinerjaRoute: typeof PenanggungJawabKinerjaRouteWithChildren
   PpkRoute: typeof PpkRouteWithChildren
+  PpspmRoute: typeof PpspmRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ApiMasterDetailRoute: typeof ApiMasterDetailRouteWithChildren
   ApiMasterFungsiRoute: typeof ApiMasterFungsiRouteWithChildren
@@ -1975,9 +1974,6 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthRoleSwitchRoute: typeof ApiAuthRoleSwitchRoute
   ApiAuthSessionRoute: typeof ApiAuthSessionRoute
-  ApiBendaharaDitolakRoute: typeof ApiBendaharaDitolakRoute
-  ApiBendaharaInboxRoute: typeof ApiBendaharaInboxRoute
-  ApiBendaharaSelesaiRoute: typeof ApiBendaharaSelesaiRoute
   ApiDokumenIdRoute: typeof ApiDokumenIdRouteWithChildren
   ApiDokumenDownloadUrlRoute: typeof ApiDokumenDownloadUrlRoute
   ApiDokumenPreviewUrlRoute: typeof ApiDokumenPreviewUrlRoute
@@ -1994,12 +1990,14 @@ export interface RootRouteChildren {
   ApiPpkInboxRoute: typeof ApiPpkInboxRoute
   ApiPpkRevisiRoute: typeof ApiPpkRevisiRoute
   ApiPpkTervalidasiRoute: typeof ApiPpkTervalidasiRoute
+  ApiPpspmDitolakRoute: typeof ApiPpspmDitolakRoute
+  ApiPpspmInboxRoute: typeof ApiPpspmInboxRoute
+  ApiPpspmSelesaiRoute: typeof ApiPpspmSelesaiRoute
   ApiUsersIdRoute: typeof ApiUsersIdRouteWithChildren
   ApiUsersMeRoute: typeof ApiUsersMeRouteWithChildren
   ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
   ApiKetuaTimIndexRoute: typeof ApiKetuaTimIndexRoute
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
-  ApiBendaharaDokumenIdRoute: typeof ApiBendaharaDokumenIdRouteWithChildren
   ApiKasubagBerkasIdRoute: typeof ApiKasubagBerkasIdRouteWithChildren
   ApiKasubagBerkasOpenRoute: typeof ApiKasubagBerkasOpenRoute
   ApiKasubagDokumenIdRoute: typeof ApiKasubagDokumenIdRouteWithChildren
@@ -2010,6 +2008,7 @@ export interface RootRouteChildren {
   ApiPpkDokumenIdRoute: typeof ApiPpkDokumenIdRouteWithChildren
   ApiPpkKembalikanIdRoute: typeof ApiPpkKembalikanIdRoute
   ApiPpkResubmitIdRoute: typeof ApiPpkResubmitIdRoute
+  ApiPpspmDokumenIdRoute: typeof ApiPpspmDokumenIdRouteWithChildren
   ApiKasubagBerkasIndexRoute: typeof ApiKasubagBerkasIndexRoute
   ApiKasubagKlasifikasiIndexRoute: typeof ApiKasubagKlasifikasiIndexRoute
   ApiKasubagManualArsipIndexRoute: typeof ApiKasubagManualArsipIndexRoute
@@ -2022,6 +2021,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ppspm': {
+      id: '/ppspm'
+      path: '/ppspm'
+      fullPath: '/ppspm'
+      preLoaderRoute: typeof PpspmRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ppk': {
@@ -2073,13 +2079,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DokumenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bendahara': {
-      id: '/bendahara'
-      path: '/bendahara'
-      fullPath: '/bendahara'
-      preLoaderRoute: typeof BendaharaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -2093,6 +2092,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/ppspm/': {
+      id: '/ppspm/'
+      path: '/'
+      fullPath: '/ppspm/'
+      preLoaderRoute: typeof PpspmIndexRouteImport
+      parentRoute: typeof PpspmRoute
     }
     '/ppk/': {
       id: '/ppk/'
@@ -2115,19 +2121,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KasubagIndexRouteImport
       parentRoute: typeof KasubagRoute
     }
-    '/bendahara/': {
-      id: '/bendahara/'
-      path: '/'
-      fullPath: '/bendahara/'
-      preLoaderRoute: typeof BendaharaIndexRouteImport
-      parentRoute: typeof BendaharaRoute
-    }
     '/admin/': {
       id: '/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/ppspm/selesai': {
+      id: '/ppspm/selesai'
+      path: '/selesai'
+      fullPath: '/ppspm/selesai'
+      preLoaderRoute: typeof PpspmSelesaiRouteImport
+      parentRoute: typeof PpspmRoute
+    }
+    '/ppspm/monitoring-realisasi': {
+      id: '/ppspm/monitoring-realisasi'
+      path: '/monitoring-realisasi'
+      fullPath: '/ppspm/monitoring-realisasi'
+      preLoaderRoute: typeof PpspmMonitoringRealisasiRouteImport
+      parentRoute: typeof PpspmRoute
+    }
+    '/ppspm/inbox': {
+      id: '/ppspm/inbox'
+      path: '/inbox'
+      fullPath: '/ppspm/inbox'
+      preLoaderRoute: typeof PpspmInboxRouteImport
+      parentRoute: typeof PpspmRoute
+    }
+    '/ppspm/ditolak': {
+      id: '/ppspm/ditolak'
+      path: '/ditolak'
+      fullPath: '/ppspm/ditolak'
+      preLoaderRoute: typeof PpspmDitolakRouteImport
+      parentRoute: typeof PpspmRoute
     }
     '/ppk/tervalidasi': {
       id: '/ppk/tervalidasi'
@@ -2240,34 +2267,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/dokumen/$id'
       preLoaderRoute: typeof DokumenIdRouteImport
       parentRoute: typeof DokumenRoute
-    }
-    '/bendahara/selesai': {
-      id: '/bendahara/selesai'
-      path: '/selesai'
-      fullPath: '/bendahara/selesai'
-      preLoaderRoute: typeof BendaharaSelesaiRouteImport
-      parentRoute: typeof BendaharaRoute
-    }
-    '/bendahara/monitoring-realisasi': {
-      id: '/bendahara/monitoring-realisasi'
-      path: '/monitoring-realisasi'
-      fullPath: '/bendahara/monitoring-realisasi'
-      preLoaderRoute: typeof BendaharaMonitoringRealisasiRouteImport
-      parentRoute: typeof BendaharaRoute
-    }
-    '/bendahara/inbox': {
-      id: '/bendahara/inbox'
-      path: '/inbox'
-      fullPath: '/bendahara/inbox'
-      preLoaderRoute: typeof BendaharaInboxRouteImport
-      parentRoute: typeof BendaharaRoute
-    }
-    '/bendahara/ditolak': {
-      id: '/bendahara/ditolak'
-      path: '/ditolak'
-      fullPath: '/bendahara/ditolak'
-      preLoaderRoute: typeof BendaharaDitolakRouteImport
-      parentRoute: typeof BendaharaRoute
     }
     '/api/upload': {
       id: '/api/upload'
@@ -2395,6 +2394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMasterDataIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/ppspm/dokumen/$id': {
+      id: '/ppspm/dokumen/$id'
+      path: '/dokumen/$id'
+      fullPath: '/ppspm/dokumen/$id'
+      preLoaderRoute: typeof PpspmDokumenIdRouteImport
+      parentRoute: typeof PpspmRoute
+    }
     '/ppk/dokumen/$id': {
       id: '/ppk/dokumen/$id'
       path: '/dokumen/$id'
@@ -2451,13 +2457,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DokumenIdEditRouteImport
       parentRoute: typeof DokumenIdRoute
     }
-    '/bendahara/dokumen/$id': {
-      id: '/bendahara/dokumen/$id'
-      path: '/dokumen/$id'
-      fullPath: '/bendahara/dokumen/$id'
-      preLoaderRoute: typeof BendaharaDokumenIdRouteImport
-      parentRoute: typeof BendaharaRoute
-    }
     '/api/users/me': {
       id: '/api/users/me'
       path: '/api/users/me'
@@ -2470,6 +2469,27 @@ declare module '@tanstack/react-router' {
       path: '/api/users/$id'
       fullPath: '/api/users/$id'
       preLoaderRoute: typeof ApiUsersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ppspm/selesai': {
+      id: '/api/ppspm/selesai'
+      path: '/api/ppspm/selesai'
+      fullPath: '/api/ppspm/selesai'
+      preLoaderRoute: typeof ApiPpspmSelesaiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ppspm/inbox': {
+      id: '/api/ppspm/inbox'
+      path: '/api/ppspm/inbox'
+      fullPath: '/api/ppspm/inbox'
+      preLoaderRoute: typeof ApiPpspmInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ppspm/ditolak': {
+      id: '/api/ppspm/ditolak'
+      path: '/api/ppspm/ditolak'
+      fullPath: '/api/ppspm/ditolak'
+      preLoaderRoute: typeof ApiPpspmDitolakRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ppk/tervalidasi': {
@@ -2645,27 +2665,6 @@ declare module '@tanstack/react-router' {
       path: '/api/dokumen/$id'
       fullPath: '/api/dokumen/$id'
       preLoaderRoute: typeof ApiDokumenIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/bendahara/selesai': {
-      id: '/api/bendahara/selesai'
-      path: '/api/bendahara/selesai'
-      fullPath: '/api/bendahara/selesai'
-      preLoaderRoute: typeof ApiBendaharaSelesaiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/bendahara/inbox': {
-      id: '/api/bendahara/inbox'
-      path: '/api/bendahara/inbox'
-      fullPath: '/api/bendahara/inbox'
-      preLoaderRoute: typeof ApiBendaharaInboxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/bendahara/ditolak': {
-      id: '/api/bendahara/ditolak'
-      path: '/api/bendahara/ditolak'
-      fullPath: '/api/bendahara/ditolak'
-      preLoaderRoute: typeof ApiBendaharaDitolakRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/session': {
@@ -2871,6 +2870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersIdActivateRouteImport
       parentRoute: typeof ApiUsersIdRoute
     }
+    '/api/ppspm/dokumen/$id': {
+      id: '/api/ppspm/dokumen/$id'
+      path: '/api/ppspm/dokumen/$id'
+      fullPath: '/api/ppspm/dokumen/$id'
+      preLoaderRoute: typeof ApiPpspmDokumenIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ppk/resubmit/$id': {
       id: '/api/ppk/resubmit/$id'
       path: '/api/ppk/resubmit/$id'
@@ -2976,19 +2982,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDokumenIdLogRouteImport
       parentRoute: typeof ApiDokumenIdRoute
     }
-    '/api/bendahara/dokumen/$id': {
-      id: '/api/bendahara/dokumen/$id'
-      path: '/api/bendahara/dokumen/$id'
-      fullPath: '/api/bendahara/dokumen/$id'
-      preLoaderRoute: typeof ApiBendaharaDokumenIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/users/me/is-ketua-tim/$kegiatanId': {
       id: '/api/users/me/is-ketua-tim/$kegiatanId'
       path: '/is-ketua-tim/$kegiatanId'
       fullPath: '/api/users/me/is-ketua-tim/$kegiatanId'
       preLoaderRoute: typeof ApiUsersMeIsKetuaTimKegiatanIdRouteImport
       parentRoute: typeof ApiUsersMeRoute
+    }
+    '/api/ppspm/dokumen/$id/reject': {
+      id: '/api/ppspm/dokumen/$id/reject'
+      path: '/reject'
+      fullPath: '/api/ppspm/dokumen/$id/reject'
+      preLoaderRoute: typeof ApiPpspmDokumenIdRejectRouteImport
+      parentRoute: typeof ApiPpspmDokumenIdRoute
+    }
+    '/api/ppspm/dokumen/$id/approve': {
+      id: '/api/ppspm/dokumen/$id/approve'
+      path: '/approve'
+      fullPath: '/api/ppspm/dokumen/$id/approve'
+      preLoaderRoute: typeof ApiPpspmDokumenIdApproveRouteImport
+      parentRoute: typeof ApiPpspmDokumenIdRoute
     }
     '/api/ppk/dokumen/$id/reject': {
       id: '/api/ppk/dokumen/$id/reject'
@@ -3060,19 +3073,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDokumenIdDownloadLampiranIndexRouteImport
       parentRoute: typeof ApiDokumenIdRoute
     }
-    '/api/bendahara/dokumen/$id/reject': {
-      id: '/api/bendahara/dokumen/$id/reject'
-      path: '/reject'
-      fullPath: '/api/bendahara/dokumen/$id/reject'
-      preLoaderRoute: typeof ApiBendaharaDokumenIdRejectRouteImport
-      parentRoute: typeof ApiBendaharaDokumenIdRoute
+    '/api/ppspm/dokumen/$id/preview/$lampiranIndex': {
+      id: '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
+      path: '/preview/$lampiranIndex'
+      fullPath: '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
+      preLoaderRoute: typeof ApiPpspmDokumenIdPreviewLampiranIndexRouteImport
+      parentRoute: typeof ApiPpspmDokumenIdRoute
     }
-    '/api/bendahara/dokumen/$id/approve': {
-      id: '/api/bendahara/dokumen/$id/approve'
-      path: '/approve'
-      fullPath: '/api/bendahara/dokumen/$id/approve'
-      preLoaderRoute: typeof ApiBendaharaDokumenIdApproveRouteImport
-      parentRoute: typeof ApiBendaharaDokumenIdRoute
+    '/api/ppspm/dokumen/$id/download/$lampiranIndex': {
+      id: '/api/ppspm/dokumen/$id/download/$lampiranIndex'
+      path: '/download/$lampiranIndex'
+      fullPath: '/api/ppspm/dokumen/$id/download/$lampiranIndex'
+      preLoaderRoute: typeof ApiPpspmDokumenIdDownloadLampiranIndexRouteImport
+      parentRoute: typeof ApiPpspmDokumenIdRoute
     }
     '/api/ppk/dokumen/$id/preview/$lampiranIndex': {
       id: '/api/ppk/dokumen/$id/preview/$lampiranIndex'
@@ -3087,20 +3100,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/ppk/dokumen/$id/download/$lampiranIndex'
       preLoaderRoute: typeof ApiPpkDokumenIdDownloadLampiranIndexRouteImport
       parentRoute: typeof ApiPpkDokumenIdRoute
-    }
-    '/api/bendahara/dokumen/$id/preview/$lampiranIndex': {
-      id: '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
-      path: '/preview/$lampiranIndex'
-      fullPath: '/api/bendahara/dokumen/$id/preview/$lampiranIndex'
-      preLoaderRoute: typeof ApiBendaharaDokumenIdPreviewLampiranIndexRouteImport
-      parentRoute: typeof ApiBendaharaDokumenIdRoute
-    }
-    '/api/bendahara/dokumen/$id/download/$lampiranIndex': {
-      id: '/api/bendahara/dokumen/$id/download/$lampiranIndex'
-      path: '/download/$lampiranIndex'
-      fullPath: '/api/bendahara/dokumen/$id/download/$lampiranIndex'
-      preLoaderRoute: typeof ApiBendaharaDokumenIdDownloadLampiranIndexRouteImport
-      parentRoute: typeof ApiBendaharaDokumenIdRoute
     }
     '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': {
       id: '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
@@ -3162,28 +3161,6 @@ const AdminRouteChildren: AdminRouteChildren = {
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
-
-interface BendaharaRouteChildren {
-  BendaharaDitolakRoute: typeof BendaharaDitolakRoute
-  BendaharaInboxRoute: typeof BendaharaInboxRoute
-  BendaharaMonitoringRealisasiRoute: typeof BendaharaMonitoringRealisasiRoute
-  BendaharaSelesaiRoute: typeof BendaharaSelesaiRoute
-  BendaharaIndexRoute: typeof BendaharaIndexRoute
-  BendaharaDokumenIdRoute: typeof BendaharaDokumenIdRoute
-}
-
-const BendaharaRouteChildren: BendaharaRouteChildren = {
-  BendaharaDitolakRoute: BendaharaDitolakRoute,
-  BendaharaInboxRoute: BendaharaInboxRoute,
-  BendaharaMonitoringRealisasiRoute: BendaharaMonitoringRealisasiRoute,
-  BendaharaSelesaiRoute: BendaharaSelesaiRoute,
-  BendaharaIndexRoute: BendaharaIndexRoute,
-  BendaharaDokumenIdRoute: BendaharaDokumenIdRoute,
-}
-
-const BendaharaRouteWithChildren = BendaharaRoute._addFileChildren(
-  BendaharaRouteChildren,
-)
 
 interface DokumenIdRouteChildren {
   DokumenIdEditRoute: typeof DokumenIdEditRoute
@@ -3345,6 +3322,26 @@ const PpkRouteChildren: PpkRouteChildren = {
 }
 
 const PpkRouteWithChildren = PpkRoute._addFileChildren(PpkRouteChildren)
+
+interface PpspmRouteChildren {
+  PpspmDitolakRoute: typeof PpspmDitolakRoute
+  PpspmInboxRoute: typeof PpspmInboxRoute
+  PpspmMonitoringRealisasiRoute: typeof PpspmMonitoringRealisasiRoute
+  PpspmSelesaiRoute: typeof PpspmSelesaiRoute
+  PpspmIndexRoute: typeof PpspmIndexRoute
+  PpspmDokumenIdRoute: typeof PpspmDokumenIdRoute
+}
+
+const PpspmRouteChildren: PpspmRouteChildren = {
+  PpspmDitolakRoute: PpspmDitolakRoute,
+  PpspmInboxRoute: PpspmInboxRoute,
+  PpspmMonitoringRealisasiRoute: PpspmMonitoringRealisasiRoute,
+  PpspmSelesaiRoute: PpspmSelesaiRoute,
+  PpspmIndexRoute: PpspmIndexRoute,
+  PpspmDokumenIdRoute: PpspmDokumenIdRoute,
+}
+
+const PpspmRouteWithChildren = PpspmRoute._addFileChildren(PpspmRouteChildren)
 
 interface ApiMasterDetailRouteChildren {
   ApiMasterDetailIdRoute: typeof ApiMasterDetailIdRoute
@@ -3528,27 +3525,6 @@ const ApiUsersMeRouteWithChildren = ApiUsersMeRoute._addFileChildren(
   ApiUsersMeRouteChildren,
 )
 
-interface ApiBendaharaDokumenIdRouteChildren {
-  ApiBendaharaDokumenIdApproveRoute: typeof ApiBendaharaDokumenIdApproveRoute
-  ApiBendaharaDokumenIdRejectRoute: typeof ApiBendaharaDokumenIdRejectRoute
-  ApiBendaharaDokumenIdDownloadLampiranIndexRoute: typeof ApiBendaharaDokumenIdDownloadLampiranIndexRoute
-  ApiBendaharaDokumenIdPreviewLampiranIndexRoute: typeof ApiBendaharaDokumenIdPreviewLampiranIndexRoute
-}
-
-const ApiBendaharaDokumenIdRouteChildren: ApiBendaharaDokumenIdRouteChildren = {
-  ApiBendaharaDokumenIdApproveRoute: ApiBendaharaDokumenIdApproveRoute,
-  ApiBendaharaDokumenIdRejectRoute: ApiBendaharaDokumenIdRejectRoute,
-  ApiBendaharaDokumenIdDownloadLampiranIndexRoute:
-    ApiBendaharaDokumenIdDownloadLampiranIndexRoute,
-  ApiBendaharaDokumenIdPreviewLampiranIndexRoute:
-    ApiBendaharaDokumenIdPreviewLampiranIndexRoute,
-}
-
-const ApiBendaharaDokumenIdRouteWithChildren =
-  ApiBendaharaDokumenIdRoute._addFileChildren(
-    ApiBendaharaDokumenIdRouteChildren,
-  )
-
 interface ApiKasubagBerkasIdItemsRouteChildren {
   ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute: typeof ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute
   ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRoute: typeof ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRoute
@@ -3648,10 +3624,28 @@ const ApiPpkDokumenIdRouteWithChildren = ApiPpkDokumenIdRoute._addFileChildren(
   ApiPpkDokumenIdRouteChildren,
 )
 
+interface ApiPpspmDokumenIdRouteChildren {
+  ApiPpspmDokumenIdApproveRoute: typeof ApiPpspmDokumenIdApproveRoute
+  ApiPpspmDokumenIdRejectRoute: typeof ApiPpspmDokumenIdRejectRoute
+  ApiPpspmDokumenIdDownloadLampiranIndexRoute: typeof ApiPpspmDokumenIdDownloadLampiranIndexRoute
+  ApiPpspmDokumenIdPreviewLampiranIndexRoute: typeof ApiPpspmDokumenIdPreviewLampiranIndexRoute
+}
+
+const ApiPpspmDokumenIdRouteChildren: ApiPpspmDokumenIdRouteChildren = {
+  ApiPpspmDokumenIdApproveRoute: ApiPpspmDokumenIdApproveRoute,
+  ApiPpspmDokumenIdRejectRoute: ApiPpspmDokumenIdRejectRoute,
+  ApiPpspmDokumenIdDownloadLampiranIndexRoute:
+    ApiPpspmDokumenIdDownloadLampiranIndexRoute,
+  ApiPpspmDokumenIdPreviewLampiranIndexRoute:
+    ApiPpspmDokumenIdPreviewLampiranIndexRoute,
+}
+
+const ApiPpspmDokumenIdRouteWithChildren =
+  ApiPpspmDokumenIdRoute._addFileChildren(ApiPpspmDokumenIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  BendaharaRoute: BendaharaRouteWithChildren,
   DokumenRoute: DokumenRouteWithChildren,
   ForbiddenRoute: ForbiddenRoute,
   KasubagRoute: KasubagRouteWithChildren,
@@ -3659,6 +3653,7 @@ const rootRouteChildren: RootRouteChildren = {
   PegawaiRoute: PegawaiRouteWithChildren,
   PenanggungJawabKinerjaRoute: PenanggungJawabKinerjaRouteWithChildren,
   PpkRoute: PpkRouteWithChildren,
+  PpspmRoute: PpspmRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ApiMasterDetailRoute: ApiMasterDetailRouteWithChildren,
   ApiMasterFungsiRoute: ApiMasterFungsiRouteWithChildren,
@@ -3676,9 +3671,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthRoleSwitchRoute: ApiAuthRoleSwitchRoute,
   ApiAuthSessionRoute: ApiAuthSessionRoute,
-  ApiBendaharaDitolakRoute: ApiBendaharaDitolakRoute,
-  ApiBendaharaInboxRoute: ApiBendaharaInboxRoute,
-  ApiBendaharaSelesaiRoute: ApiBendaharaSelesaiRoute,
   ApiDokumenIdRoute: ApiDokumenIdRouteWithChildren,
   ApiDokumenDownloadUrlRoute: ApiDokumenDownloadUrlRoute,
   ApiDokumenPreviewUrlRoute: ApiDokumenPreviewUrlRoute,
@@ -3695,12 +3687,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpkInboxRoute: ApiPpkInboxRoute,
   ApiPpkRevisiRoute: ApiPpkRevisiRoute,
   ApiPpkTervalidasiRoute: ApiPpkTervalidasiRoute,
+  ApiPpspmDitolakRoute: ApiPpspmDitolakRoute,
+  ApiPpspmInboxRoute: ApiPpspmInboxRoute,
+  ApiPpspmSelesaiRoute: ApiPpspmSelesaiRoute,
   ApiUsersIdRoute: ApiUsersIdRouteWithChildren,
   ApiUsersMeRoute: ApiUsersMeRouteWithChildren,
   ApiDokumenIndexRoute: ApiDokumenIndexRoute,
   ApiKetuaTimIndexRoute: ApiKetuaTimIndexRoute,
   ApiUsersIndexRoute: ApiUsersIndexRoute,
-  ApiBendaharaDokumenIdRoute: ApiBendaharaDokumenIdRouteWithChildren,
   ApiKasubagBerkasIdRoute: ApiKasubagBerkasIdRouteWithChildren,
   ApiKasubagBerkasOpenRoute: ApiKasubagBerkasOpenRoute,
   ApiKasubagDokumenIdRoute: ApiKasubagDokumenIdRouteWithChildren,
@@ -3711,6 +3705,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpkDokumenIdRoute: ApiPpkDokumenIdRouteWithChildren,
   ApiPpkKembalikanIdRoute: ApiPpkKembalikanIdRoute,
   ApiPpkResubmitIdRoute: ApiPpkResubmitIdRoute,
+  ApiPpspmDokumenIdRoute: ApiPpspmDokumenIdRouteWithChildren,
   ApiKasubagBerkasIndexRoute: ApiKasubagBerkasIndexRoute,
   ApiKasubagKlasifikasiIndexRoute: ApiKasubagKlasifikasiIndexRoute,
   ApiKasubagManualArsipIndexRoute: ApiKasubagManualArsipIndexRoute,

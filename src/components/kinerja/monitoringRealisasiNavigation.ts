@@ -49,7 +49,7 @@ function periodeToSearch(periode: PeriodeValue): PeriodeSearchFields {
 
 /**
  * Builds the navigation props for {@link MonitoringRealisasiView}. The view is
- * shared by the PPK, Bendahara, and Penanggung Jawab Kinerja routes, so the
+ * shared by the PPK, Ppspm, and Penanggung Jawab Kinerja routes, so the
  * search-param wiring lives here to keep the three thin wrappers in sync.
  *
  * `go` receives the next search object and is expected to call the route's

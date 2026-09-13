@@ -24,23 +24,23 @@ function normalizeNumericValue(value: string | number | null): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function canBendaharaRead(status: string, revisionTarget: string | null): boolean {
-  return status === 'IN_BENDAHARA_APPROVAL'
+function canPpspmRead(status: string, revisionTarget: string | null): boolean {
+  return status === 'IN_PPSPM_APPROVAL'
     || status === 'COMPLETED'
     || (status === 'NEED_REVISION' && revisionTarget === 'PPK')
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/bendahara/dokumen/[id] - get dokumen detail for Bendahara
+// GET /api/ppspm/dokumen/[id] - get dokumen detail for Ppspm
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
+export const Route = createFileRoute('/api/ppspm/dokumen/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'BENDAHARA')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'PPSPM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         if (!isUuid(params.id)) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
@@ -86,7 +86,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
           const dok = rows[0]
           if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-          if (!canBendaharaRead(dok.status, dok.revision_target)) {
+          if (!canPpspmRead(dok.status, dok.revision_target)) {
             return Response.json({ error: 'Dokumen tidak tersedia untuk PPSPM' }, { status: 400 })
           }
 
@@ -151,7 +151,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id')({
             logs,
           })
         } catch (err) {
-          console.error('[bendahara/dokumen/:id] GET local query error:', err)
+          console.error('[ppspm/dokumen/:id] GET local query error:', err)
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
       },

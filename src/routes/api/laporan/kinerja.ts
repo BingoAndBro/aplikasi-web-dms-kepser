@@ -26,7 +26,7 @@ import { ROLES } from '#/lib/constants/roles'
 // (lihat isNotNull(komponenId) di bawah). Dokumen non-material (TERSIMPAN)
 // tidak pernah punya nominal realisasi — hanya disertakan saat
 // ?scope=laporan_kinerja diminta secara eksplisit oleh halaman Laporan
-// Kinerja (PJK); Monitoring Realisasi (PPK/Bendahara) tidak mengirim scope
+// Kinerja (PJK); Monitoring Realisasi (PPK/Ppspm) tidak mengirim scope
 // itu sehingga tetap hanya melihat dokumen material COMPLETED, seperti semula.
 const ALL_LAPORAN_KINERJA_STATUSES = [
   DOC_STATUS.COMPLETED,
@@ -108,7 +108,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
           !hasAnyLocalRole(session, [
             ROLES.PENANGGUNG_JAWAB_KINERJA,
             ROLES.PPK,
-            ROLES.BENDAHARA,
+            ROLES.PPSPM,
           ])
         ) {
           return Response.json({ error: 'Forbidden' }, { status: 403 })

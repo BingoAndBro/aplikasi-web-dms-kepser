@@ -21,14 +21,14 @@ async function canSessionReadDokumenLog(
   // `canSessionReadDokumen` (dokumen.$id.ts).
   if (hasLocalRole(session, 'PPK') && [
     'IN_PPK_VALIDATION',
-    'IN_BENDAHARA_APPROVAL',
+    'IN_PPSPM_APPROVAL',
     'NEED_REVISION',
     'COMPLETED',
   ].includes(dokumen.status)) {
     return true
   }
-  if (hasLocalRole(session, 'BENDAHARA') && (
-    dokumen.status === 'IN_BENDAHARA_APPROVAL'
+  if (hasLocalRole(session, 'PPSPM') && (
+    dokumen.status === 'IN_PPSPM_APPROVAL'
     || dokumen.status === 'COMPLETED'
     || (dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'PPK')
   )) {

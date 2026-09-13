@@ -24,8 +24,8 @@ const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> =
     stepUrutan: 1,
   },
   [`${DOC_STATUS.IN_PPK_VALIDATION}:${FSM_ACTIONS.APPROVE}`]: {
-    newStatus: DOC_STATUS.IN_BENDAHARA_APPROVAL,
-    newCurrentStep: CURRENT_STEPS.BENDAHARA,
+    newStatus: DOC_STATUS.IN_PPSPM_APPROVAL,
+    newCurrentStep: CURRENT_STEPS.PPSPM,
     newRevisionTarget: null,
     stepUrutan: 2,
   },
@@ -35,15 +35,15 @@ const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> =
     newRevisionTarget: REVISION_TARGETS.USER,
     stepUrutan: 1,
   },
-  [`${DOC_STATUS.IN_BENDAHARA_APPROVAL}:${FSM_ACTIONS.APPROVE}`]: {
+  [`${DOC_STATUS.IN_PPSPM_APPROVAL}:${FSM_ACTIONS.APPROVE}`]: {
     newStatus: DOC_STATUS.COMPLETED,
     newCurrentStep: null,
     newRevisionTarget: null,
     stepUrutan: 2,
   },
-  [`${DOC_STATUS.IN_BENDAHARA_APPROVAL}:${FSM_ACTIONS.REJECT}`]: {
+  [`${DOC_STATUS.IN_PPSPM_APPROVAL}:${FSM_ACTIONS.REJECT}`]: {
     newStatus: DOC_STATUS.NEED_REVISION,
-    newCurrentStep: CURRENT_STEPS.BENDAHARA,
+    newCurrentStep: CURRENT_STEPS.PPSPM,
     newRevisionTarget: REVISION_TARGETS.PPK,
     stepUrutan: 1,
   },
@@ -54,8 +54,8 @@ const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> =
     stepUrutan: 1,
   },
   [`${DOC_STATUS.NEED_REVISION}:${FSM_ACTIONS.RESUBMIT_PPK}`]: {
-    newStatus: DOC_STATUS.IN_BENDAHARA_APPROVAL,
-    newCurrentStep: CURRENT_STEPS.BENDAHARA,
+    newStatus: DOC_STATUS.IN_PPSPM_APPROVAL,
+    newCurrentStep: CURRENT_STEPS.PPSPM,
     newRevisionTarget: null,
     stepUrutan: 2,
   },
@@ -137,12 +137,12 @@ function isActorValidForAction(
     case FSM_ACTIONS.APPROVE:
       return (
         (status === DOC_STATUS.IN_PPK_VALIDATION && role === ROLES.PPK) ||
-        (status === DOC_STATUS.IN_BENDAHARA_APPROVAL && role === ROLES.BENDAHARA)
+        (status === DOC_STATUS.IN_PPSPM_APPROVAL && role === ROLES.PPSPM)
       )
     case FSM_ACTIONS.REJECT:
       return (
         (status === DOC_STATUS.IN_PPK_VALIDATION && role === ROLES.PPK) ||
-        (status === DOC_STATUS.IN_BENDAHARA_APPROVAL && role === ROLES.BENDAHARA)
+        (status === DOC_STATUS.IN_PPSPM_APPROVAL && role === ROLES.PPSPM)
       )
     case FSM_ACTIONS.RESUBMIT:
       return role === ROLES.PEGAWAI

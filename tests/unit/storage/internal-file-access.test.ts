@@ -233,7 +233,7 @@ describe('internal file access foundation', () => {
       revisionTarget?: string | null
     }> = [
       { role: ROLES.PPK, status: 'IN_PPK_VALIDATION' },
-      { role: ROLES.BENDAHARA, status: 'IN_BENDAHARA_APPROVAL' },
+      { role: ROLES.PPSPM, status: 'IN_PPSPM_APPROVAL' },
       { role: ROLES.KEPALA_SUB_BAGIAN_UMUM, status: 'COMPLETED' },
     ]
 

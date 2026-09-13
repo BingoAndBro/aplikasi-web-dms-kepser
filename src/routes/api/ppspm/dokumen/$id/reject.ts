@@ -13,10 +13,10 @@ function isUuid(value: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/bendahara/dokumen/[id]/reject
+// POST /api/ppspm/dokumen/[id]/reject
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
+export const Route = createFileRoute('/api/ppspm/dokumen/$id/reject')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -25,7 +25,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-        if (!hasLocalRole(session, 'BENDAHARA')) {
+        if (!hasLocalRole(session, 'PPSPM')) {
           return Response.json({ error: 'Akses ditolak - bukan PPSPM' }, { status: 403 })
         }
 
@@ -49,16 +49,16 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
             .where(eq(dokumenTransaksi.id, params.id))
             .limit(1)
         } catch (err) {
-          console.error('[API/bendahara/dokumen/:id/reject] local lookup error:', err)
+          console.error('[API/ppspm/dokumen/:id/reject] local lookup error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }
 
         const dok = dokRows[0]
         if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
 
-        // Idempotency: if the document is no longer at Bendahara, preserve the
-        // legacy "already actioned" response only when a Bendahara action exists.
-        if (dok.status !== 'IN_BENDAHARA_APPROVAL') {
+        // Idempotency: if the document is no longer at Ppspm, preserve the
+        // legacy "already actioned" response only when a Ppspm action exists.
+        if (dok.status !== 'IN_PPSPM_APPROVAL') {
           let existingActionRows: Array<{ id: string }>
           try {
             existingActionRows = await db
@@ -66,11 +66,11 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
               .from(logAktivitas)
               .where(and(
                 eq(logAktivitas.dokumenId, params.id),
-                inArray(logAktivitas.aksi, ['BENDAHARA_APPROVE', 'BENDAHARA_REJECT']),
+                inArray(logAktivitas.aksi, ['PPSPM_APPROVE', 'PPSPM_REJECT']),
               ))
               .limit(1)
           } catch (err) {
-            console.error('[API/bendahara/dokumen/:id/reject] local audit lookup error:', err)
+            console.error('[API/ppspm/dokumen/:id/reject] local audit lookup error:', err)
             return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
           }
 
@@ -78,7 +78,7 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
           return Response.json({ error: 'Dokumen sudah tidak dalam tahap persetujuan' }, { status: 400 })
         }
 
-        const result = transition(dok.status as StatusDokumen, 'REJECT', 'BENDAHARA', 'PPK')
+        const result = transition(dok.status as StatusDokumen, 'REJECT', 'PPSPM', 'PPK')
         if (!result.success) return Response.json({ error: result.error ?? 'Transisi gagal' }, { status: 400 })
 
         try {
@@ -102,17 +102,17 @@ export const Route = createFileRoute('/api/bendahara/dokumen/$id/reject')({
             await tx.insert(logAktivitas).values({
               dokumenId: params.id,
               userId: session.user.id,
-              aksi: 'BENDAHARA_REJECT',
+              aksi: 'PPSPM_REJECT',
               catatan: parsed.data.catatan,
               stepUrutan: result.stepUrutan ?? 1,
             })
           })
         } catch (err) {
-          console.error('[API/bendahara/dokumen/:id/reject] local transaction error:', err)
+          console.error('[API/ppspm/dokumen/:id/reject] local transaction error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }
 
-        return Response.json({ success: true, message: 'Dokumen dikembalikan ke PPK', redirectTo: '/bendahara/ditolak' })
+        return Response.json({ success: true, message: 'Dokumen dikembalikan ke PPK', redirectTo: '/ppspm/ditolak' })
       },
     },
   },

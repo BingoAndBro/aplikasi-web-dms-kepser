@@ -23,12 +23,12 @@ export const ROUTES = {
     REVISI: '/ppk/revisi',
     MONITORING_REALISASI: '/ppk/monitoring-realisasi',
   },
-  BENDAHARA: {
-    ROOT: '/bendahara',
-    INBOX: '/bendahara/inbox',
-    DITOLAK: '/bendahara/ditolak',
-    SELESAI: '/bendahara/selesai',
-    MONITORING_REALISASI: '/bendahara/monitoring-realisasi',
+  PPSPM: {
+    ROOT: '/ppspm',
+    INBOX: '/ppspm/inbox',
+    DITOLAK: '/ppspm/ditolak',
+    SELESAI: '/ppspm/selesai',
+    MONITORING_REALISASI: '/ppspm/monitoring-realisasi',
   },
   KEPALA_SUB_BAGIAN_UMUM: {
     ROOT: '/kasubag',
@@ -67,7 +67,7 @@ export const PUBLIC_PATHS = [ROUTES.LOGIN, ROUTES.API_PREFIX] as const
 export const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
   PEGAWAI: ROUTES.PEGAWAI.ROOT,
   PPK: ROUTES.PPK.ROOT,
-  BENDAHARA: ROUTES.BENDAHARA.ROOT,
+  PPSPM: ROUTES.PPSPM.ROOT,
   KEPALA_SUB_BAGIAN_UMUM: ROUTES.KEPALA_SUB_BAGIAN_UMUM.ROOT,
   PENANGGUNG_JAWAB_KINERJA: ROUTES.PENANGGUNG_JAWAB_KINERJA.ROOT,
   ADMIN: ROUTES.ADMIN.ROOT,
@@ -89,7 +89,7 @@ export const MESH_ROUTES = [
   ROUTES.HOME,
   ROUTES.PEGAWAI.ROOT,
   ROUTES.PPK.ROOT,
-  ROUTES.BENDAHARA.ROOT,
+  ROUTES.PPSPM.ROOT,
   ROUTES.KEPALA_SUB_BAGIAN_UMUM.ROOT,
   ROUTES.PENANGGUNG_JAWAB_KINERJA.ROOT,
   ROUTES.ADMIN.ROOT,

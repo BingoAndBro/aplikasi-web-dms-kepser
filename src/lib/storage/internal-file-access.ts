@@ -20,7 +20,7 @@ import {
 const FILE_TOKEN_SECRET_ENV = 'DMS_FILE_TOKEN_SECRET'
 const RAW_PATH_COMPATIBILITY_ROLES: readonly RoleName[] = [
   ROLES.PPK,
-  ROLES.BENDAHARA,
+  ROLES.PPSPM,
   ROLES.KEPALA_SUB_BAGIAN_UMUM,
 ]
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
@@ -320,7 +320,7 @@ function canSessionReadRawReferencedDocument(
 ): boolean {
   if (!isAdminOnlySession(session) && document.createdBy === session.userId) return true
   if (session.roles.includes(ROLES.PPK)) return canPpkReadRawReferencedDocument(document)
-  if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadRawReferencedDocument(document)
+  if (session.roles.includes(ROLES.PPSPM)) return canPpspmReadRawReferencedDocument(document)
   if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
     return document.status === 'COMPLETED'
   }
@@ -335,14 +335,14 @@ function isAdminOnlySession(session: FileAccessSession): boolean {
 function canPpkReadRawReferencedDocument(document: RawLogicalPathAccessDocument): boolean {
   return [
     'IN_PPK_VALIDATION',
-    'IN_BENDAHARA_APPROVAL',
+    'IN_PPSPM_APPROVAL',
     'NEED_REVISION',
     'COMPLETED',
   ].includes(document.status)
 }
 
-function canBendaharaReadRawReferencedDocument(document: RawLogicalPathAccessDocument): boolean {
-  return document.status === 'IN_BENDAHARA_APPROVAL'
+function canPpspmReadRawReferencedDocument(document: RawLogicalPathAccessDocument): boolean {
+  return document.status === 'IN_PPSPM_APPROVAL'
     || document.status === 'COMPLETED'
     || (document.status === 'NEED_REVISION' && document.revisionTarget === 'PPK')
 }

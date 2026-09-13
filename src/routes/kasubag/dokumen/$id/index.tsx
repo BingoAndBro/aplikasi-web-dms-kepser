@@ -155,7 +155,7 @@ type DokumenDetail = {
   created_by: { id: string; nama: string }
   status: string
   is_ketua_tim: boolean
-  bendahara_approve: { nama: string; tanggal: string } | null
+  ppspm_approve: { nama: string; tanggal: string } | null
   arsip: { id: string; status_arsip: string; nomor_surat: string | null } | null
   is_archived: boolean
   nominal_realisasi: number | null
@@ -605,7 +605,7 @@ function ArsiparisDokumenDetailPage() {
               </div>
             )}
             <div><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Peran</p><p className="text-sm font-semibold text-on-surface">{dokumen.is_ketua_tim ? 'Ketua Tim' : 'Anggota'}</p></div>
-            <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Disetujui PPSPM</p><p className="text-sm font-semibold text-on-surface">{dokumen.bendahara_approve ? `${dokumen.bendahara_approve.nama} — ${formatDate(dokumen.bendahara_approve.tanggal)}` : '—'}</p></div>
+            <div className="col-span-2"><p className="text-[10px] text-outline uppercase tracking-wider font-semibold mb-1">Disetujui PPSPM</p><p className="text-sm font-semibold text-on-surface">{dokumen.ppspm_approve ? `${dokumen.ppspm_approve.nama} — ${formatDate(dokumen.ppspm_approve.tanggal)}` : '—'}</p></div>
           </div>
         </div>
         </section>

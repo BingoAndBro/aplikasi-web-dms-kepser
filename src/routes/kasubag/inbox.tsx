@@ -41,7 +41,7 @@ type InboxItem = {
   nominal_realisasi: string | number | null
   source_type: 'WORKFLOW' | 'MANUAL'
   created_at: string
-  bendahara_approve_at: string | null
+  ppspm_approve_at: string | null
 }
 
 type ArsiparisInboxResponse = {
@@ -289,7 +289,7 @@ function normalizeNominal(value: string | number | null): number | null {
 }
 
 function formatInboxFinishedDate(item: InboxItem): string {
-  return item.bendahara_approve_at ? formatDate(item.bendahara_approve_at) : formatDate(item.tanggal)
+  return item.ppspm_approve_at ? formatDate(item.ppspm_approve_at) : formatDate(item.tanggal)
 }
 
 function compareInboxItems(left: InboxItem, right: InboxItem, sortOrder: SortOrder): number {
@@ -299,7 +299,7 @@ function compareInboxItems(left: InboxItem, right: InboxItem, sortOrder: SortOrd
     return sortOrder === 'nominal_desc' ? rightNominal - leftNominal : leftNominal - rightNominal
   }
 
-  const leftDate = new Date(left.bendahara_approve_at ?? left.created_at ?? left.tanggal).getTime()
-  const rightDate = new Date(right.bendahara_approve_at ?? right.created_at ?? right.tanggal).getTime()
+  const leftDate = new Date(left.ppspm_approve_at ?? left.created_at ?? left.tanggal).getTime()
+  const rightDate = new Date(right.ppspm_approve_at ?? right.created_at ?? right.tanggal).getTime()
   return sortOrder === 'oldest' ? leftDate - rightDate : rightDate - leftDate
 }

@@ -5,13 +5,13 @@ import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { masterFungsi, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
-export const Route = createFileRoute('/api/bendahara/selesai')({
+export const Route = createFileRoute('/api/ppspm/selesai')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
         const session = await getLocalServerSession(request)
         if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        if (!hasLocalRole(session, 'BENDAHARA')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
+        if (!hasLocalRole(session, 'PPSPM')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
         try {
           const docs = await db
@@ -44,7 +44,7 @@ export const Route = createFileRoute('/api/bendahara/selesai')({
             })),
           })
         } catch (err) {
-          console.error('[bendahara/selesai] GET local query error:', err)
+          console.error('[ppspm/selesai] GET local query error:', err)
           return Response.json({ error: 'Gagal mengambil data' }, { status: 500 })
         }
       },
