@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
@@ -31,6 +31,7 @@ import { formatDate } from '#/lib/utils/format'
 import { PEMBERSIHAN_DOKUMEN_CONFIRMATION_PHRASE } from '#/lib/dokumen/pembersihan'
 import {
   AlertTriangle,
+  ChevronRight,
   Clock3,
   Filter,
   FolderOpen,
@@ -148,6 +149,7 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 
 function PembersihanDokumenPage() {
   const { showToast } = useAppToast()
+  const navigate = useNavigate()
 
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
@@ -165,6 +167,7 @@ function PembersihanDokumenPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmPending, setConfirmPending] = useState(false)
+  const [pendingCleanupIds, setPendingCleanupIds] = useState<string[]>([])
 
   useEffect(() => { fetchData() }, [])
 
@@ -257,13 +260,35 @@ function PembersihanDokumenPage() {
     [selectedRows],
   )
 
+  // Dipisah dari `selectedIds` (centang bulk) supaya tombol "Bersihkan" per
+  // baris di kolom Aksi bisa memicu dialog konfirmasi yang sama tanpa harus
+  // mencentang baris itu dulu -- ada 2 jalur menghapus, tapi satu dialog.
+  const pendingCleanupRows = useMemo(
+    () => dokumen.filter(row => pendingCleanupIds.includes(row.id)),
+    [dokumen, pendingCleanupIds],
+  )
+
+  function openBulkConfirm() {
+    setPendingCleanupIds([...selectedIds])
+    setConfirmOpen(true)
+  }
+
+  function openRowConfirm(row: PembersihanDokumenRow) {
+    setPendingCleanupIds([row.id])
+    setConfirmOpen(true)
+  }
+
+  function openDetail(row: PembersihanDokumenRow) {
+    navigate({ to: '/pegawai/dokumen/$id', params: { id: row.id } })
+  }
+
   async function handleConfirmBersihkan() {
     setConfirmPending(true)
     try {
       const response = await apiFetch<PembersihanBersihkanResponse>('/pembersihan-dokumen/bersihkan', {
         method: 'POST',
         body: JSON.stringify({
-          dokumen_ids: [...selectedIds],
+          dokumen_ids: pendingCleanupIds,
           confirmation: PEMBERSIHAN_DOKUMEN_CONFIRMATION_PHRASE,
         }),
       })
@@ -282,7 +307,12 @@ function PembersihanDokumenPage() {
       }
 
       setConfirmOpen(false)
-      setSelectedIds(new Set())
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        for (const id of pendingCleanupIds) next.delete(id)
+        return next
+      })
+      setPendingCleanupIds([])
       await fetchData()
     } catch (err) {
       showToast({
@@ -326,7 +356,7 @@ function PembersihanDokumenPage() {
                   </h1>
                   <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
                     Bersihkan lampiran fisik dokumen non-material dari kegiatan yang Anda pimpin. Metadata
-                    dokumen tetap tersimpan — hanya file yang dihapus, dan tindakan ini tidak dapat dibatalkan.
+                    dokumen tetap tersimpan, hanya file yang dihapus, dan tindakan ini tidak dapat dibatalkan.
                   </p>
                 </div>
               </div>
@@ -403,6 +433,8 @@ function PembersihanDokumenPage() {
                 someSelected={someSelected}
                 onToggleAll={toggleAll}
                 selectableCount={filteredRows.length}
+                onOpenDetail={openDetail}
+                onDeleteRow={openRowConfirm}
               />
             )}
           </>
@@ -428,7 +460,7 @@ function PembersihanDokumenPage() {
               <Button
                 type="button"
                 className="gap-2 bg-rose-600 font-bold text-white hover:bg-rose-700"
-                onClick={() => setConfirmOpen(true)}
+                onClick={openBulkConfirm}
               >
                 <Trash2 size={16} />
                 Bersihkan Lampiran
@@ -440,7 +472,11 @@ function PembersihanDokumenPage() {
 
       <ConfirmDialog
         open={confirmOpen}
-        onOpenChange={(open) => { if (!confirmPending) setConfirmOpen(open) }}
+        onOpenChange={(open) => {
+          if (confirmPending) return
+          setConfirmOpen(open)
+          if (!open) setPendingCleanupIds([])
+        }}
         tone="destructive"
         title="Bersihkan Lampiran Dokumen"
         description="File fisik dihapus permanen. Metadata dokumen tetap tersimpan dan ditandai 'File Dibersihkan'."
@@ -450,7 +486,7 @@ function PembersihanDokumenPage() {
         onConfirm={handleConfirmBersihkan}
         size="lg"
       >
-        <BersihkanSummary rows={selectedRows} staleDays={staleDays} />
+        <BersihkanSummary rows={pendingCleanupRows} staleDays={staleDays} />
       </ConfirmDialog>
     </PageLayout>
   )
@@ -641,6 +677,8 @@ function DocumentTable({
   someSelected,
   onToggleAll,
   selectableCount,
+  onOpenDetail,
+  onDeleteRow,
 }: {
   rows: PembersihanDokumenRow[]
   selectedIds: Set<string>
@@ -649,6 +687,8 @@ function DocumentTable({
   someSelected: boolean
   onToggleAll: (checked: boolean) => void
   selectableCount: number
+  onOpenDetail: (row: PembersihanDokumenRow) => void
+  onDeleteRow: (row: PembersihanDokumenRow) => void
 }) {
   return (
     <>
@@ -671,6 +711,7 @@ function DocumentTable({
               <TableHead className={TABLE_HEAD_CLASS}>Tanggal</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Umur</TableHead>
               <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Lampiran</TableHead>
+              <TableHead className={`w-24 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-zinc-100 text-[13px]">
@@ -680,6 +721,8 @@ function DocumentTable({
                 row={row}
                 checked={selectedIds.has(row.id)}
                 onToggle={onToggleRow}
+                onOpenDetail={onOpenDetail}
+                onDeleteRow={onDeleteRow}
               />
             ))}
           </TableBody>
@@ -694,6 +737,8 @@ function DocumentTable({
             index={idx}
             checked={selectedIds.has(row.id)}
             onToggle={onToggleRow}
+            onOpenDetail={onOpenDetail}
+            onDeleteRow={onDeleteRow}
           />
         ))}
       </div>
@@ -705,14 +750,29 @@ function DesktopRow({
   row,
   checked,
   onToggle,
+  onOpenDetail,
+  onDeleteRow,
 }: {
   row: PembersihanDokumenRow
   checked: boolean
   onToggle: (id: string, checked: boolean) => void
+  onOpenDetail: (row: PembersihanDokumenRow) => void
+  onDeleteRow: (row: PembersihanDokumenRow) => void
 }) {
   return (
-    <TableRow className="border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70">
-      <TableCell className="px-4 py-5">
+    <TableRow
+      className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+      onClick={() => onOpenDetail(row)}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onOpenDetail(row)
+        }
+      }}
+      aria-label={`Buka detail ${displayDocumentName(row)}`}
+    >
+      <TableCell className="px-4 py-5" onClick={(event) => event.stopPropagation()}>
         <Checkbox
           checked={checked}
           onCheckedChange={(value) => onToggle(row.id, value === true)}
@@ -720,7 +780,7 @@ function DesktopRow({
         />
       </TableCell>
       <TableCell className="max-w-[380px] px-4 py-5">
-        <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950">
+        <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
           {displayDocumentName(row)}
         </p>
         <p className="mt-1 text-xs font-medium text-zinc-500">Pembuat: {row.pengaju_nama}</p>
@@ -737,6 +797,18 @@ function DesktopRow({
       <TableCell className="px-4 py-5 text-center text-sm font-semibold text-zinc-700">
         {row.jumlah_lampiran}
       </TableCell>
+      <TableCell className="px-4 py-5 text-right" onClick={(event) => event.stopPropagation()}>
+        <Button
+          type="button"
+          size="icon-lg"
+          variant="ghost"
+          className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-rose-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+          aria-label={`Bersihkan lampiran ${displayDocumentName(row)}`}
+          onClick={() => onDeleteRow(row)}
+        >
+          <Trash2 size={18} />
+        </Button>
+      </TableCell>
     </TableRow>
   )
 }
@@ -746,11 +818,15 @@ function MobileCard({
   index,
   checked,
   onToggle,
+  onOpenDetail,
+  onDeleteRow,
 }: {
   row: PembersihanDokumenRow
   index: number
   checked: boolean
   onToggle: (id: string, checked: boolean) => void
+  onOpenDetail: (row: PembersihanDokumenRow) => void
+  onDeleteRow: (row: PembersihanDokumenRow) => void
 }) {
   return (
     <PegawaiPanel className="space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
@@ -774,6 +850,28 @@ function MobileCard({
         <InfoTile label="Tanggal" value={<DateCell value={row.tanggal} className="mt-1" />} />
         <InfoTile label="Lampiran" value={`${row.jumlah_lampiran} file`} />
         <InfoTile label="Pembuat" value={row.pengaju_nama} className="col-span-2" />
+      </div>
+      <div className="flex gap-2 border-t border-zinc-100 pt-3">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="flex-1 gap-1.5 rounded-xl border-zinc-200/80 bg-[#FFFDF9] text-xs font-bold text-zinc-700"
+          onClick={() => onOpenDetail(row)}
+        >
+          <ChevronRight size={14} />
+          Buka Detail
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="flex-1 gap-1.5 rounded-xl border-rose-200 bg-white text-xs font-bold text-rose-600 hover:bg-rose-50"
+          onClick={() => onDeleteRow(row)}
+        >
+          <Trash2 size={14} />
+          Bersihkan
+        </Button>
       </div>
     </PegawaiPanel>
   )

@@ -22,7 +22,7 @@ function Checkbox({
         // #F0E1D5-on-#FFFDF9 control styling: a checkbox has no label text
         // to fall back on, so it must read as a control by shape alone even
         // against the near-identical cream table-row background.
-        "peer size-[18px] shrink-0 rounded-md border-2 border-zinc-400 bg-white shadow-sm outline-none transition",
+        "peer inline-flex size-[18px] shrink-0 items-center justify-center rounded-md border-2 border-zinc-400 bg-white shadow-sm outline-none transition",
         "hover:border-orange-400",
         "focus-visible:ring-4 focus-visible:ring-orange-100/70 focus-visible:border-orange-400",
         "data-[checked]:border-[#FF4D00] data-[checked]:bg-[#FF4D00]",
