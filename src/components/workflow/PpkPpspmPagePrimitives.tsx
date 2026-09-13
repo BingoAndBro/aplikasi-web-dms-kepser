@@ -292,7 +292,6 @@ const documentListStatusClassName: Record<string, string> = {
   NEED_REVISION: 'border-rose-200 bg-rose-50 text-rose-700',
   COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   TERSIMPAN: 'border-slate-200 bg-slate-50 text-slate-700',
-  ARCHIVED: 'border-slate-200 bg-slate-50 text-slate-700',
 }
 
 const documentListStatusLabel: Record<string, string> = {
@@ -302,7 +301,6 @@ const documentListStatusLabel: Record<string, string> = {
   NEED_REVISION: 'Perlu Revisi',
   COMPLETED: 'Selesai',
   TERSIMPAN: 'Tersimpan',
-  ARCHIVED: 'Diarsipkan',
 }
 
 type DocumentListStatusBadgeProps = {

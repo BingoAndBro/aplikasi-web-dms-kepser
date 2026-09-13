@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 describe('Master Klasifikasi Dokumen UI source guard', () => {
-  const source = readFileSync('src/routes/arsiparis/klasifikasi.tsx', 'utf8')
+  const source = readFileSync('src/routes/kasubag/klasifikasi.tsx', 'utf8')
 
   it('derives parent and leaf visual status from children', () => {
     expect(source).toContain('function hasChildNodes')

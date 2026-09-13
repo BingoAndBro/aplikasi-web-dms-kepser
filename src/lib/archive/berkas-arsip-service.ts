@@ -434,7 +434,7 @@ export async function transitionBerkasArchiveStatus(
   if (!existing.statusArsip) {
     throw new BerkasArsipServiceError(
       'BERKAS_LIFECYCLE_UNKNOWN',
-      'Status arsip berkas belum tersedia',
+      'Status berkas belum tersedia',
     )
   }
 
@@ -448,7 +448,7 @@ export async function transitionBerkasArchiveStatus(
   if (!updated) {
     throw new BerkasArsipServiceError(
       'BERKAS_LIFECYCLE_INVALID',
-      'Status arsip berkas sudah berubah',
+      'Status berkas sudah berubah',
     )
   }
   await repository.appendBerkasActivity({
@@ -490,7 +490,7 @@ export async function updateActiveBerkasMetadata(
   if (!updated) {
     throw new BerkasArsipServiceError(
       'BERKAS_METADATA_NOT_EDITABLE',
-      'Metadata arsip aktif sudah tidak dapat diedit',
+      'Metadata Tersimpan sudah tidak dapat diedit',
     )
   }
   await repository.appendBerkasActivity({
@@ -515,13 +515,13 @@ export function buildActiveBerkasMetadataPlan(
   metadata: unknown,
   existingClosedAt: Date | string | null,
 ): ActiveBerkasMetadataPlan {
-  const parsed = parseCloseBerkasMetadata(metadata, 'Metadata arsip aktif tidak valid')
+  const parsed = parseCloseBerkasMetadata(metadata, 'Metadata Tersimpan tidak valid')
 
   const retentionBaseDateOnly = dateLikeToDateOnly(existingClosedAt)
   if (!retentionBaseDateOnly) {
     throw new BerkasArsipServiceError(
       'BERKAS_METADATA_NOT_EDITABLE',
-      'Metadata arsip aktif belum memiliki tanggal tutup',
+      'Metadata Tersimpan belum memiliki tanggal tutup',
     )
   }
 
@@ -906,7 +906,7 @@ function nextStatusForBerkasLifecycleAction(
   if (!nextStatus) {
     throw new BerkasArsipServiceError(
       'BERKAS_LIFECYCLE_INVALID',
-      'Perubahan status arsip berkas tidak valid',
+      'Perubahan status berkas tidak valid',
     )
   }
 

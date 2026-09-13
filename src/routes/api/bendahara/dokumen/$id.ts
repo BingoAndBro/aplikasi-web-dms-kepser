@@ -27,7 +27,6 @@ function normalizeNumericValue(value: string | number | null): number | null {
 function canBendaharaRead(status: string, revisionTarget: string | null): boolean {
   return status === 'IN_BENDAHARA_APPROVAL'
     || status === 'COMPLETED'
-    || status === 'ARCHIVED'
     || (status === 'NEED_REVISION' && revisionTarget === 'PPK')
 }
 

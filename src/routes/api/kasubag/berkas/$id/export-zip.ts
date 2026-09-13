@@ -23,7 +23,7 @@ import { sanitizeStoragePathSegment } from '#/lib/storage/local-storage-paths'
 
 const EXPORT_MAX_ITEMS = 500
 
-export const Route = createFileRoute('/api/arsiparis/berkas/$id/export-zip')({
+export const Route = createFileRoute('/api/kasubag/berkas/$id/export-zip')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

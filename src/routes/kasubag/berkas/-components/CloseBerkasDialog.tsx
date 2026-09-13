@@ -112,16 +112,16 @@ export function CloseBerkasDialog({
         <DialogHeader>
           <div className="px-5 pt-5 sm:px-7 sm:pt-7">
           <DialogTitle className="font-headline text-xl font-extrabold tracking-tight text-zinc-950 sm:text-2xl">
-            Tutup berkas dan lengkapi metadata arsip
+            Tutup berkas dan lengkapi metadata
           </DialogTitle>
           <DialogDescription className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-zinc-700">
             Setelah berkas ditutup, dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini.
           </DialogDescription>
           <div className="sr-only">
-            <p>Berkas akan difinalisasi menjadi arsip Tersimpan.</p>
+            <p>Berkas akan difinalisasi menjadi Tersimpan.</p>
             <p>Setelah ditutup, Cara Pembayaran ini tidak bisa menerima dokumen baru.</p>
             <p>Dokumen dan file fisik tidak dihapus.</p>
-            <p>Status berkas menjadi Ditutup dan status arsip menjadi Tersimpan.</p>
+            <p>Status berkas menjadi Ditutup dan statusnya menjadi Tersimpan.</p>
           </div>
           </div>
         </DialogHeader>
@@ -129,7 +129,7 @@ export function CloseBerkasDialog({
         <div className="space-y-5 border-t border-[#F1E5DA] px-5 py-5 sm:px-7">
           <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/5">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
-              Cara Pembayaran / Klasifikasi Arsip
+              Cara Pembayaran
             </p>
             <p className="mt-1 text-base font-extrabold tracking-tight text-zinc-950">
               {summary.klasifikasiLabel}
@@ -164,15 +164,15 @@ export function CloseBerkasDialog({
               />
             </label>
             <label className={ARCHIVE_FORM_LABEL_CLASS} htmlFor="close-berkas-closed-at">
-              <span>Tanggal SPM / Tanggal Arsip</span>
+              <span>Tanggal SPM / Tanggal Tersimpan</span>
               <span className="sr-only">Tanggal Tutup</span>
               <DatePicker
                 value={form.closed_at}
                 disabled
-                placeholder="Tanggal arsip diisi otomatis"
+                placeholder="Tanggal diisi otomatis"
               />
               <span className="mt-1 block text-[11px] font-semibold leading-relaxed text-zinc-500">
-                Tanggal arsip diisi otomatis dari tanggal sistem saat berkas ditutup.
+                Tanggal diisi otomatis dari tanggal sistem saat berkas ditutup.
               </span>
             </label>
             <label className={ARCHIVE_FORM_LABEL_CLASS} id="close-berkas-retensi-aktif-label">
@@ -234,7 +234,7 @@ export function CloseBerkasDialog({
       tone="success"
       icon={<Archive className="size-6" />}
       title="Tutup berkas?"
-      description="Berkas akan ditutup dan tersimpan sebagai arsip. Dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini."
+      description="Berkas akan ditutup dan berstatus Tersimpan. Dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini."
       confirmLabel="Tutup Berkas"
       cancelLabel="Batalkan"
       pending={pending}
@@ -246,7 +246,7 @@ export function CloseBerkasDialog({
           <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">Ditutup</span>
         </div>
         <div className="mt-2 flex items-center justify-between gap-3">
-          <span>Status arsip:</span>
+          <span>Status:</span>
           <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-extrabold text-emerald-700">Tersimpan</span>
         </div>
       </div>

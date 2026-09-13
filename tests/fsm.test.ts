@@ -83,23 +83,6 @@ describe('FSM transition()', () => {
       expect(result.stepUrutan).toBe(2)
     })
 
-    it('COMPLETED + ARCHIVE → ARCHIVED', () => {
-      const result = transition('COMPLETED', 'ARCHIVE', 'KEPALA_SUB_BAGIAN_UMUM')
-      assertSuccess(result)
-      expect(result.newStatus).toBe('ARCHIVED')
-      expect(result.newCurrentStep).toBeNull()
-      expect(result.newRevisionTarget).toBeNull()
-      expect(result.stepUrutan).toBeNull()
-    })
-
-    it('COMPLETED + SKIP → COMPLETED (stays), step=null', () => {
-      const result = transition('COMPLETED', 'SKIP', 'KEPALA_SUB_BAGIAN_UMUM')
-      assertSuccess(result)
-      expect(result.newStatus).toBe('COMPLETED')
-      expect(result.newCurrentStep).toBeNull()
-      expect(result.newRevisionTarget).toBeNull()
-      expect(result.stepUrutan).toBeNull()
-    })
   })
 
   // ═══════════════════════════════════════════════════════
@@ -172,23 +155,6 @@ describe('FSM transition()', () => {
       assertError(transition('NEED_REVISION', 'RESUBMIT_PPK', 'PEGAWAI', 'PPK'))
     })
 
-    // ARCHIVE
-    it('ARCHIVE by KEPALA_SUB_BAGIAN_UMUM → success', () => {
-      const result = transition('COMPLETED', 'ARCHIVE', 'KEPALA_SUB_BAGIAN_UMUM')
-      assertSuccess(result)
-    })
-    it('ARCHIVE by PPK → error', () => {
-      assertError(transition('COMPLETED', 'ARCHIVE', 'PPK'))
-    })
-
-    // SKIP
-    it('SKIP by KEPALA_SUB_BAGIAN_UMUM → success', () => {
-      const result = transition('COMPLETED', 'SKIP', 'KEPALA_SUB_BAGIAN_UMUM')
-      assertSuccess(result)
-    })
-    it('SKIP by PPK → error', () => {
-      assertError(transition('COMPLETED', 'SKIP', 'PPK'))
-    })
   })
 
   // ═══════════════════════════════════════════════════════
@@ -243,10 +209,6 @@ describe('FSM transition()', () => {
     })
     it('COMPLETED + SUBMIT → error', () => {
       assertError(transition('COMPLETED', 'SUBMIT', 'PEGAWAI'))
-    })
-    it('ARCHIVED + any action → error', () => {
-      assertError(transition('ARCHIVED', 'SUBMIT', 'PEGAWAI'))
-      assertError(transition('ARCHIVED', 'APPROVE', 'PPK'))
     })
     it('NEED_REVISION + APPROVE → error', () => {
       assertError(transition('NEED_REVISION', 'APPROVE', 'PPK'))

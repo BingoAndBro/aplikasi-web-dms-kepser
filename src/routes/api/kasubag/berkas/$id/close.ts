@@ -9,7 +9,7 @@ import {
 import { closeBerkasMetadataSchema } from '#/lib/schemas/berkas-arsip'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
-export const Route = createFileRoute('/api/arsiparis/berkas/$id/close')({
+export const Route = createFileRoute('/api/kasubag/berkas/$id/close')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

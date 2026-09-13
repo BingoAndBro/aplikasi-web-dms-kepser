@@ -36,7 +36,7 @@ import {
 } from '#/lib/archive/berkas-arsip-csv'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
-export const Route = createFileRoute('/arsiparis/berkas/')({ component: BerkasArsipAktifPage })
+export const Route = createFileRoute('/kasubag/berkas/')({ component: BerkasArsipAktifPage })
 
 type BerkasFolder = {
   berkas_id: string
@@ -91,8 +91,8 @@ function BerkasArsipAktifPage() {
     setError(null)
     try {
       // RP-01: halaman ini hanya menampilkan berkas OPEN. Daftar berkas tertutup
-      // (status_arsip=AKTIF) pindah ke /arsiparis/berkas/tertutup.
-      const openJson = await apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+      // (status_arsip=AKTIF) pindah ke /kasubag/berkas/tertutup.
+      const openJson = await apiFetch<BerkasFolderListResponse>('/kasubag/berkas', {
         query: {
           status_berkas: 'OPEN',
           status_arsip: 'null',
@@ -179,7 +179,7 @@ function BerkasArsipAktifPage() {
           <BerkasUnifiedSection
             folders={filteredFolders}
             hasSearchQuery={hasSearchQuery}
-            onOpen={(folder) => navigate({ to: '/arsiparis/berkas/$id', params: { id: folder.berkas_id } })}
+            onOpen={(folder) => navigate({ to: '/kasubag/berkas/$id', params: { id: folder.berkas_id } })}
           />
         )}
       </div>
@@ -235,7 +235,7 @@ function BerkasTable({
           <thead>
             <tr className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
               <th className={`w-16 text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>No</th>
-              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Klasifikasi Arsip</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Cara Pembayaran</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Berkas</th>
@@ -276,7 +276,7 @@ function BerkasTable({
                 </td>
                 <td className="px-6 py-5 text-right">
                   <Link
-                    to="/arsiparis/berkas/$id"
+                    to="/kasubag/berkas/$id"
                     params={{ id: folder.berkas_id }}
                     aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
                     onClick={(event) => event.stopPropagation()}
@@ -310,7 +310,7 @@ function BerkasTable({
             ]}
             action={
               <Link
-                to="/arsiparis/berkas/$id"
+                to="/kasubag/berkas/$id"
                 params={{ id: folder.berkas_id }}
                 className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
               >

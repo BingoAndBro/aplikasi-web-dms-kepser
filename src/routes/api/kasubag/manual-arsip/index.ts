@@ -13,7 +13,7 @@ import {
   listManualArsipQuerySchema,
 } from '#/lib/schemas/manual-arsip'
 
-export const Route = createFileRoute('/api/arsiparis/manual-arsip/')({
+export const Route = createFileRoute('/api/kasubag/manual-arsip/')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {

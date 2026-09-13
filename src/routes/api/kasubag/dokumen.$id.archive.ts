@@ -39,12 +39,12 @@ function toSafeErrorLog(error: unknown): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/arsiparis/dokumen/[id]/archive - workflow classification into an OPEN berkas
+// POST /api/kasubag/dokumen/[id]/archive - workflow classification into an OPEN berkas
 // ---------------------------------------------------------------------------
 
 const RETENSI_OPTIONS = ['1 Tahun', '3 Tahun', '5 Tahun', '10 Tahun', 'Permanen'] as const
 
-export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
+export const Route = createFileRoute('/api/kasubag/dokumen/$id/archive')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -93,12 +93,11 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
             .limit(1)
         } catch (err) {
           console.error('[archive] dokumen lookup error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
+          return Response.json({ error: 'Gagal mengklasifikasikan dokumen' }, { status: 500 })
         }
 
         const dok = dokRows[0]
         if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
-        if (dok.status === 'ARCHIVED') return Response.json({ error: 'Dokumen sudah diarsipkan' }, { status: 400 })
         if (dok.status !== 'COMPLETED') return Response.json({ error: 'Dokumen belum berada di tahap final' }, { status: 400 })
 
         try {
@@ -124,7 +123,7 @@ export const Route = createFileRoute('/api/arsiparis/dokumen/$id/archive')({
           }
 
           console.error('[archive] local transaction error:', toSafeErrorLog(err))
-          return Response.json({ error: 'Gagal mengarsipkan dokumen' }, { status: 500 })
+          return Response.json({ error: 'Gagal mengklasifikasikan dokumen' }, { status: 500 })
         }
 
         return Response.json({ success: true, message: 'Dokumen berhasil diklasifikasikan' })

@@ -8,10 +8,10 @@ import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-aut
 import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 
 // ---------------------------------------------------------------------------
-// GET /api/arsiparis/inbox - list dokumen COMPLETED yang belum masuk berkas
+// GET /api/kasubag/inbox - list dokumen COMPLETED yang belum masuk berkas
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/api/arsiparis/inbox')({
+export const Route = createFileRoute('/api/kasubag/inbox')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {

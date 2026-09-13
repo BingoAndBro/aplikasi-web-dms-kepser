@@ -83,7 +83,7 @@ describe('folder-first berkas CSV helper', () => {
     ])
 
     // RP-01: header "Jenis Pembayaran" -> "Cara Pembayaran"; kolom "Umur Berkas" ditambahkan.
-    expect(csv).toContain('No,Kategori / Section,Cara Pembayaran,Status Berkas,Status Arsip,Umur Berkas,Jumlah Dokumen,Dokumen Workflow,Dokumen Manual,Total Nominal,Nomor SPM,Tanggal Ditutup,Terakhir Diperbarui')
+    expect(csv).toContain('No,Kategori / Section,Cara Pembayaran,Status Berkas,Status,Umur Berkas,Jumlah Dokumen,Dokumen Workflow,Dokumen Manual,Total Nominal,Nomor SPM,Tanggal Ditutup,Terakhir Diperbarui')
     expect(csv).toContain('Berkas Terbuka')
     expect(csv).toContain('Berkas Tertutup')
     expect(csv).toContain('42 hari')
@@ -94,7 +94,7 @@ describe('folder-first berkas CSV helper', () => {
   it('provides clear lifecycle list CSV filenames (RP-01 de-arsip)', () => {
     expect(BERKAS_TERTUTUP_LIST_CSV_FILENAME).toBe('daftar-berkas-tertutup.csv')
     expect(BERKAS_PEMBERSIHAN_LIST_CSV_FILENAME).toBe('daftar-pembersihan-berkas.csv')
-    // Konstanta lama dibuang bersama halaman /arsiparis/inaktif & /arsiparis/usul-musnah.
+    // Konstanta lama dibuang bersama halaman /kasubag/inaktif & /kasubag/usul-musnah.
     expect(berkasArsipCsv).not.toHaveProperty('BERKAS_INAKTIF_LIST_CSV_FILENAME')
     expect(berkasArsipCsv).not.toHaveProperty('BERKAS_USUL_MUSNAH_LIST_CSV_FILENAME')
   })
@@ -113,7 +113,7 @@ describe('folder-first berkas CSV helper', () => {
         source_created_by_display_name: 'Pegawai Workflow',
         attachment_count: 2,
         workflow: {
-          status: 'ARCHIVED',
+          status: 'COMPLETED',
           fungsi_nama: 'Fungsi Keuangan',
           kegiatan_nama: 'Kegiatan Pembayaran',
         },
@@ -142,7 +142,7 @@ describe('folder-first berkas CSV helper', () => {
 
     expect(csv).toContain('No,Sumber,Nama Dokumen,Tanggal Dokumen,Dibuat Oleh,Nominal,Jumlah Lampiran,Keterangan / Provenance,Catatan')
     expect(csv).toContain('Persetujuan,Laporan Pembayaran')
-    expect(csv).toContain('Status: ARCHIVED; Fungsi: Fungsi Keuangan; Kegiatan: Kegiatan Pembayaran')
+    expect(csv).toContain('Status: COMPLETED; Fungsi: Fungsi Keuangan; Kegiatan: Kegiatan Pembayaran')
     expect(csv).toContain('Manual,Dokumen Manual')
     expect(csv).toContain('Komponen: Kategori Manual; Keterangan: Keterangan manual aman')
     expect(csv).toContain('Data sumber tidak ditemukan')

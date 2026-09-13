@@ -120,7 +120,7 @@ describe('berkas arsip read model', () => {
       ],
       has_attachments: true,
       workflow: {
-        status: 'ARCHIVED',
+        status: 'COMPLETED',
         current_step: null,
         fungsi_nama: 'Fungsi Keuangan',
         kegiatan_nama: 'Kegiatan Pembayaran',
@@ -434,7 +434,7 @@ function closedWorkflowItem(overrides: Partial<BerkasItemSourceReadRow> = {}): B
     dokumen_id: 'workflow-source-id',
     manual_arsip_id: null,
     workflow_title: 'Laporan Pembayaran',
-    workflow_status: 'ARCHIVED',
+    workflow_status: 'COMPLETED',
     workflow_current_step: null,
     workflow_date: '2026-05-20',
     workflow_nominal_realisasi: '1000000',

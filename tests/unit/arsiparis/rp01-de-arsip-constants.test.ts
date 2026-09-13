@@ -16,15 +16,15 @@ describe('RP-01 — konstanta & tipe', () => {
   })
 
   it('rute KSBU: PEMBERSIHAN menggantikan USUL_MUSNAH', () => {
-    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN).toBe('/arsiparis/pembersihan')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN).toBe('/kasubag/pembersihan')
     expect(
       (ROUTES.KEPALA_SUB_BAGIAN_UMUM as Record<string, string>).USUL_MUSNAH,
     ).toBeUndefined()
   })
 
   it('rute KSBU: BERKAS_TERTUTUP ditambahkan, INAKTIF dihapus', () => {
-    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_TERTUTUP).toBe('/arsiparis/berkas/tertutup')
-    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/arsiparis/berkas')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_TERTUTUP).toBe('/kasubag/berkas/tertutup')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/kasubag/berkas')
     expect(
       (ROUTES.KEPALA_SUB_BAGIAN_UMUM as Record<string, string>).INAKTIF,
     ).toBeUndefined()

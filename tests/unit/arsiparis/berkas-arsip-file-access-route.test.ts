@@ -18,8 +18,8 @@ vi.mock('#/lib/archive/berkas-arsip-file-access', () => ({
   createBerkasArsipItemAttachmentFileResponse: mocks.createBerkasArsipItemAttachmentFileResponse,
 }))
 
-import { Route as DownloadRoute } from '#/routes/api/arsiparis/berkas/$id/items/$itemId/download/$lampiranIndex'
-import { Route as PreviewRoute } from '#/routes/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex'
+import { Route as DownloadRoute } from '#/routes/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex'
+import { Route as PreviewRoute } from '#/routes/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex'
 
 type RouteGetHandler = (args: {
   request: Request
@@ -164,6 +164,6 @@ function validParams(): Record<string, string> {
 
 function fileRequest(purpose: 'preview' | 'download'): Request {
   return new Request(
-    `http://localhost/api/arsiparis/berkas/${BERKAS_ID}/items/${ITEM_ID}/${purpose}/0`,
+    `http://localhost/api/kasubag/berkas/${BERKAS_ID}/items/${ITEM_ID}/${purpose}/0`,
   )
 }

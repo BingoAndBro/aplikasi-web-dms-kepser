@@ -49,10 +49,10 @@ vi.mock('#/lib/archive/berkas-arsip-physical-destruction', () => ({
   executeBerkasPhysicalFileDestruction: mocks.executeBerkasPhysicalFileDestruction,
 }))
 
-import { Route as OpenBerkasRoute } from '#/routes/api/arsiparis/berkas/open'
-import { Route as AddBerkasItemRoute } from '#/routes/api/arsiparis/berkas/$id/items'
-import { Route as CloseBerkasRoute } from '#/routes/api/arsiparis/berkas/$id/close'
-import { Route as LifecycleBerkasRoute } from '#/routes/api/arsiparis/berkas/$id/lifecycle'
+import { Route as OpenBerkasRoute } from '#/routes/api/kasubag/berkas/open'
+import { Route as AddBerkasItemRoute } from '#/routes/api/kasubag/berkas/$id/items'
+import { Route as CloseBerkasRoute } from '#/routes/api/kasubag/berkas/$id/close'
+import { Route as LifecycleBerkasRoute } from '#/routes/api/kasubag/berkas/$id/lifecycle'
 
 type PostHandler = (args: {
   request: Request
@@ -90,7 +90,7 @@ describe('berkas arsip API routes', () => {
 
   it('protects POST routes with same-origin before auth or service work', async () => {
     const response = await openPostHandler({
-      request: jsonRequest('/api/arsiparis/berkas/open', {
+      request: jsonRequest('/api/kasubag/berkas/open', {
         klasifikasi_id: KLASIFIKASI_ID,
       }, 'https://evil.example'),
     })
@@ -105,7 +105,7 @@ describe('berkas arsip API routes', () => {
     mocks.getLocalServerSession.mockResolvedValueOnce(null)
 
     const response = await openPostHandler({
-      request: jsonRequest('/api/arsiparis/berkas/open', {
+      request: jsonRequest('/api/kasubag/berkas/open', {
         klasifikasi_id: KLASIFIKASI_ID,
       }),
     })
@@ -123,7 +123,7 @@ describe('berkas arsip API routes', () => {
       )
 
       const response = await openPostHandler({
-        request: jsonRequest('/api/arsiparis/berkas/open', {
+        request: jsonRequest('/api/kasubag/berkas/open', {
           klasifikasi_id: KLASIFIKASI_ID,
         }),
       })
@@ -136,7 +136,7 @@ describe('berkas arsip API routes', () => {
 
   it('validates open-folder klasifikasi_id before service work', async () => {
     const response = await openPostHandler({
-      request: jsonRequest('/api/arsiparis/berkas/open', {
+      request: jsonRequest('/api/kasubag/berkas/open', {
         klasifikasi_id: 'not-a-uuid',
       }),
     })
@@ -148,7 +148,7 @@ describe('berkas arsip API routes', () => {
 
   it('opens or returns an OPEN berkas by jenis pembayaran', async () => {
     const response = await openPostHandler({
-      request: jsonRequest('/api/arsiparis/berkas/open', {
+      request: jsonRequest('/api/kasubag/berkas/open', {
         klasifikasi_id: KLASIFIKASI_ID,
       }),
     })
@@ -173,7 +173,7 @@ describe('berkas arsip API routes', () => {
     )
 
     const response = await openPostHandler({
-      request: jsonRequest('/api/arsiparis/berkas/open', {
+      request: jsonRequest('/api/kasubag/berkas/open', {
         klasifikasi_id: KLASIFIKASI_ID,
       }),
     })
@@ -197,7 +197,7 @@ describe('berkas arsip API routes', () => {
       mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
 
       const response = await addItemPostHandler({
-        request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/items`, body),
+        request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/items`, body),
         params: { id: BERKAS_ID },
       })
 
@@ -209,7 +209,7 @@ describe('berkas arsip API routes', () => {
 
   it('routes WORKFLOW and MANUAL add-item requests to the matching service helper', async () => {
     const workflow = await addItemPostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/items`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/items`, {
         source_type: 'WORKFLOW',
         dokumen_id: DOKUMEN_ID,
       }),
@@ -225,7 +225,7 @@ describe('berkas arsip API routes', () => {
     })
 
     const manual = await addItemPostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/items`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/items`, {
         source_type: 'MANUAL',
         manual_arsip_id: MANUAL_ARSIP_ID,
       }),
@@ -250,7 +250,7 @@ describe('berkas arsip API routes', () => {
     )
 
     const response = await addItemPostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/items`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/items`, {
         source_type: 'WORKFLOW',
         dokumen_id: DOKUMEN_ID,
       }),
@@ -272,7 +272,7 @@ describe('berkas arsip API routes', () => {
     )
 
     const response = await addItemPostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/items`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/items`, {
         source_type: 'WORKFLOW',
         dokumen_id: DOKUMEN_ID,
       }),
@@ -287,7 +287,7 @@ describe('berkas arsip API routes', () => {
 
   it('validates close metadata before service work', async () => {
     const response = await closePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/close`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/close`, {
         nomor_spm: '',
         retensi_aktif: '1 Tahun',
       }),
@@ -311,7 +311,7 @@ describe('berkas arsip API routes', () => {
       mocks.closeBerkasArsip.mockRejectedValueOnce(new mocks.BerkasArsipServiceError(code, message))
 
       const response = await closePostHandler({
-        request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/close`, validCloseBody()),
+        request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/close`, validCloseBody()),
         params: { id: BERKAS_ID },
       })
 
@@ -322,7 +322,7 @@ describe('berkas arsip API routes', () => {
 
   it('closes a non-empty OPEN berkas with safe DTO response', async () => {
     const response = await closePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/close`, validCloseBody()),
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/close`, validCloseBody()),
       params: { id: BERKAS_ID },
     })
 
@@ -342,7 +342,7 @@ describe('berkas arsip API routes', () => {
     mocks.getLocalServerSession.mockResolvedValueOnce(null)
 
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'mark_inactive',
       }),
       params: { id: BERKAS_ID },
@@ -355,7 +355,7 @@ describe('berkas arsip API routes', () => {
 
   it('protects lifecycle POST with same-origin before auth or service work', async () => {
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'mark_inactive',
       }, 'https://evil.example'),
       params: { id: BERKAS_ID },
@@ -371,7 +371,7 @@ describe('berkas arsip API routes', () => {
     mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
 
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'mark_inactive',
       }),
       params: { id: BERKAS_ID },
@@ -384,7 +384,7 @@ describe('berkas arsip API routes', () => {
 
   it('validates lifecycle request body before service work', async () => {
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'restore_active',
       }),
       params: { id: BERKAS_ID },
@@ -404,7 +404,7 @@ describe('berkas arsip API routes', () => {
       mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
 
       const response = await lifecyclePostHandler({
-        request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, body),
+        request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, body),
         params: { id: BERKAS_ID },
       })
 
@@ -417,7 +417,7 @@ describe('berkas arsip API routes', () => {
 
   it('moves lifecycle through the folder service for assigned KEPALA_SUB_BAGIAN_UMUM', async () => {
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'propose_destruction',
       }),
       params: { id: BERKAS_ID },
@@ -440,7 +440,7 @@ describe('berkas arsip API routes', () => {
     mocks.transitionBerkasArchiveStatus.mockResolvedValueOnce(destroyedBerkasDto())
 
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
         confirmation: 'BERSIHKAN FILE BERKAS',
       }),
@@ -490,7 +490,7 @@ describe('berkas arsip API routes', () => {
     mocks.executeBerkasPhysicalFileDestruction.mockResolvedValueOnce(partialReport)
 
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
         confirmation: 'BERSIHKAN FILE BERKAS',
       }),
@@ -514,7 +514,7 @@ describe('berkas arsip API routes', () => {
     )
 
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
         confirmation: 'BERSIHKAN FILE BERKAS',
       }),
@@ -547,12 +547,12 @@ describe('berkas arsip API routes', () => {
     mocks.transitionBerkasArchiveStatus.mockRejectedValueOnce(
       new mocks.BerkasArsipServiceError(
         'BERKAS_LIFECYCLE_INVALID',
-        'Perubahan status arsip berkas tidak valid',
+        'Perubahan status berkas tidak valid',
       ),
     )
 
     const response = await lifecyclePostHandler({
-      request: jsonRequest(`/api/arsiparis/berkas/${BERKAS_ID}/lifecycle`, {
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
         action: 'approve_destruction',
         confirmation: 'BERSIHKAN FILE BERKAS',
       }),
@@ -562,7 +562,7 @@ describe('berkas arsip API routes', () => {
     const body = await response.json()
 
     expect(response.status).toBe(409)
-    expect(body).toEqual({ error: 'Perubahan status arsip berkas tidak valid' })
+    expect(body).toEqual({ error: 'Perubahan status berkas tidak valid' })
     expect(mocks.executeBerkasPhysicalFileDestruction).not.toHaveBeenCalled()
     expectNoSensitiveOutput(body)
   })

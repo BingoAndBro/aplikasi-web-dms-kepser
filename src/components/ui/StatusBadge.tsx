@@ -8,7 +8,6 @@ export type DocumentStatus =
   | "NEED_REVISION"
   | "COMPLETED"
   | "TERSIMPAN"
-  | "ARCHIVED"
 
 export type FolderStatus = "OPEN" | "CLOSED"
 
@@ -58,7 +57,6 @@ export const DOCUMENT_STATUS_BADGE_CONFIG = {
   NEED_REVISION: { label: "Perlu Revisi", tone: "warning" },
   COMPLETED: { label: "Selesai", tone: "success" },
   TERSIMPAN: { label: "Tersimpan", tone: "success" },
-  ARCHIVED: { label: "Diarsipkan", tone: "neutral" },
 } as const satisfies Record<DocumentStatus, StatusConfig>
 
 export const FOLDER_STATUS_BADGE_CONFIG = {

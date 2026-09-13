@@ -49,7 +49,7 @@ import {
   canEditActiveMetadata,
   canShowCloseBerkasForm,
   isBerkasEmptyForClose,
-} from '#/routes/arsiparis/berkas/$id'
+} from '#/routes/kasubag/berkas/$id'
 import {
   formatBerkasArchiveStatusLabel,
   formatBerkasStatusLabel,
@@ -58,8 +58,8 @@ import {
   resolveSecondaryBerkasLifecycleAction,
   formatSourceTypeLabel,
 } from '#/lib/archive/berkas-arsip-page-format'
-import { Route as BerkasListRoute } from '#/routes/api/arsiparis/berkas/index'
-import { Route as BerkasDetailRoute } from '#/routes/api/arsiparis/berkas/$id'
+import { Route as BerkasListRoute } from '#/routes/api/kasubag/berkas/index'
+import { Route as BerkasDetailRoute } from '#/routes/api/kasubag/berkas/$id'
 
 type RouteGetHandler = (args: {
   request: Request
@@ -109,7 +109,7 @@ describe('folder-first berkas archive read API routes', () => {
     authMocks.getLocalServerSession.mockResolvedValueOnce(null)
 
     const unauthenticated = await listGetHandler({
-      request: new Request('http://localhost/api/arsiparis/berkas'),
+      request: new Request('http://localhost/api/kasubag/berkas'),
     })
 
     expect(unauthenticated.status).toBe(401)
@@ -119,7 +119,7 @@ describe('folder-first berkas archive read API routes', () => {
     authMocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN']))
 
     const adminOnly = await listGetHandler({
-      request: new Request('http://localhost/api/arsiparis/berkas'),
+      request: new Request('http://localhost/api/kasubag/berkas'),
     })
 
     expect(adminOnly.status).toBe(403)
@@ -129,7 +129,7 @@ describe('folder-first berkas archive read API routes', () => {
 
   it('passes validated active-folder filters to the Phase 13N read model', async () => {
     const response = await listGetHandler({
-      request: new Request('http://localhost/api/arsiparis/berkas?status_berkas=CLOSED&status_arsip=AKTIF'),
+      request: new Request('http://localhost/api/kasubag/berkas?status_berkas=CLOSED&status_arsip=AKTIF'),
     })
 
     const body = await response.json()
@@ -166,7 +166,7 @@ describe('folder-first berkas archive read API routes', () => {
     }))
 
     const response = await listGetHandler({
-      request: new Request('http://localhost/api/arsiparis/berkas?status_berkas=OPEN&status_arsip=null'),
+      request: new Request('http://localhost/api/kasubag/berkas?status_berkas=OPEN&status_arsip=null'),
     })
 
     const body = await response.json()
@@ -195,7 +195,7 @@ describe('folder-first berkas archive read API routes', () => {
     }))
 
     const response = await listGetHandler({
-      request: new Request(`http://localhost/api/arsiparis/berkas?status_berkas=CLOSED&status_arsip=${statusArsip}`),
+      request: new Request(`http://localhost/api/kasubag/berkas?status_berkas=CLOSED&status_arsip=${statusArsip}`),
     })
 
     const body = await response.json()
@@ -225,7 +225,7 @@ describe('folder-first berkas archive read API routes', () => {
     })
 
     const response = await detailGetHandler({
-      request: new Request(`http://localhost/api/arsiparis/berkas/${BERKAS_ID}`),
+      request: new Request(`http://localhost/api/kasubag/berkas/${BERKAS_ID}`),
       params: { id: BERKAS_ID },
     })
 
@@ -245,7 +245,7 @@ describe('folder-first berkas archive read API routes', () => {
 
   it('rejects invalid list filters before read model work', async () => {
     const response = await listGetHandler({
-      request: new Request('http://localhost/api/arsiparis/berkas?status_arsip=TERHAPUS'),
+      request: new Request('http://localhost/api/kasubag/berkas?status_arsip=TERHAPUS'),
     })
 
     expect(response.status).toBe(400)
@@ -255,7 +255,7 @@ describe('folder-first berkas archive read API routes', () => {
 
   it('returns safe detail DTOs from getBerkasArsipDetail with internal file keys but no bridge ids', async () => {
     const response = await detailGetHandler({
-      request: new Request(`http://localhost/api/arsiparis/berkas/${BERKAS_ID}`),
+      request: new Request(`http://localhost/api/kasubag/berkas/${BERKAS_ID}`),
       params: { id: BERKAS_ID },
     })
 
@@ -284,7 +284,7 @@ describe('folder-first berkas archive read API routes', () => {
 
   it('updates active archive metadata through existing detail API PATCH guard', async () => {
     const response = await detailPatchHandler({
-      request: new Request(`http://localhost/api/arsiparis/berkas/${BERKAS_ID}`, {
+      request: new Request(`http://localhost/api/kasubag/berkas/${BERKAS_ID}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -325,7 +325,7 @@ describe('folder-first berkas archive read API routes', () => {
     readModelMocks.getBerkasArsipDetail.mockResolvedValueOnce({ status: 'not_found' })
 
     const response = await detailGetHandler({
-      request: new Request(`http://localhost/api/arsiparis/berkas/${BERKAS_ID}`),
+      request: new Request(`http://localhost/api/kasubag/berkas/${BERKAS_ID}`),
       params: { id: BERKAS_ID },
     })
 
@@ -339,7 +339,7 @@ describe('folder-first berkas archive page formatting', () => {
     expect(formatBerkasStatusLabel('OPEN')).toBe('Berkas terbuka')
     expect(formatBerkasStatusLabel('CLOSED')).toBe('Berkas ditutup')
     expect(formatBerkasArchiveStatusLabel(null, 'OPEN')).toBe('Belum final')
-    expect(formatBerkasArchiveStatusLabel(null, 'CLOSED')).toBe('Status arsip belum tersedia')
+    expect(formatBerkasArchiveStatusLabel(null, 'CLOSED')).toBe('Status belum tersedia')
     expect(formatBerkasArchiveStatusLabel('AKTIF', 'CLOSED')).toBe('Tersimpan')
     expect(formatBerkasArchiveStatusLabel('USUL_MUSNAH', 'CLOSED')).toBe('Usul Pembersihan')
     expect(formatBerkasArchiveStatusLabel('DIMUSNAHKAN', 'CLOSED')).toBe('File Dibersihkan')
@@ -498,7 +498,7 @@ describe('folder-first berkas archive page formatting', () => {
       'Dokumen Persetujuan diklasifikasikan',
       'Penambahan dokumen manual sukses',
       'Berkas ditutup',
-      'Metadata arsip aktif diperbarui',
+      'Metadata Tersimpan diperbarui',
       'Berkas dipindahkan ke Inaktif (usang)',
       'Berkas diusulkan untuk pembersihan',
       'File berkas dibersihkan',
@@ -626,7 +626,7 @@ describe('folder-first berkas archive page formatting', () => {
   })
 
   it('keeps exact destroyed-file and destruction-confirmation phrases in folder detail surfaces', () => {
-    const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
+    const detailSource = readFileSync('src/routes/kasubag/berkas/$id.tsx', 'utf8')
     const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
 
     // Locked file-access copy is unchanged by RP-01.
@@ -639,13 +639,13 @@ describe('folder-first berkas archive page formatting', () => {
   // (UI pages) once $id.tsx / index.tsx / CloseBerkasDialog.tsx / navigation /
   // routes / routeTree reflect the new labels, routes, and the 2-stage lifecycle.
   it.skip('keeps the active folder page constrained to open and active sections', () => {
-    const listSource = readFileSync('src/routes/arsiparis/berkas/index.tsx', 'utf8')
-    const detailSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
-    const closeDialogSource = readFileSync('src/routes/arsiparis/berkas/-components/CloseBerkasDialog.tsx', 'utf8')
+    const listSource = readFileSync('src/routes/kasubag/berkas/index.tsx', 'utf8')
+    const detailSource = readFileSync('src/routes/kasubag/berkas/$id.tsx', 'utf8')
+    const closeDialogSource = readFileSync('src/routes/kasubag/berkas/-components/CloseBerkasDialog.tsx', 'utf8')
     const formatSource = readFileSync('src/lib/archive/berkas-arsip-page-format.ts', 'utf8')
-    const dashboardSource = readFileSync('src/routes/arsiparis/index.tsx', 'utf8')
-    const inactiveSource = readFileSync('src/routes/arsiparis/inaktif/index.tsx', 'utf8')
-    const proposedSource = readFileSync('src/routes/arsiparis/usul-musnah/index.tsx', 'utf8')
+    const dashboardSource = readFileSync('src/routes/kasubag/index.tsx', 'utf8')
+    const inactiveSource = readFileSync('src/routes/kasubag/inaktif/index.tsx', 'utf8')
+    const proposedSource = readFileSync('src/routes/kasubag/usul-musnah/index.tsx', 'utf8')
     const headerSource = readFileSync('src/components/layout/AppHeader.tsx', 'utf8')
     const navigationSource = readFileSync('src/config/navigation.ts', 'utf8')
     const routesSource = readFileSync('src/lib/constants/routes.ts', 'utf8')
@@ -710,7 +710,6 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('DocumentItemTable')
     expect(detailSource).toContain('FolderActionPanel')
     expect(detailSource).toContain("label: 'Metadata Berkas'")
-    expect(detailSource).toContain("label: 'Metadata Arsip'")
     expect(detailSource).toContain('WorkflowSearchPanel')
     expect(detailSource).toContain("value: 'WORKFLOW', label: 'Persetujuan'")
     expect(detailSource).toContain("value: 'MANUAL', label: 'Manual'")
@@ -755,9 +754,9 @@ describe('folder-first berkas archive page formatting', () => {
     expect(detailSource).toContain('description: resolveErrorMessage(error)')
     expect(detailSource).not.toContain('setActionSuccess')
     expect(detailSource).toContain('useNavigate')
-    expect(detailSource).toContain("await navigate({ to: '/arsiparis/berkas' })")
-    expect(detailSource).toContain("await navigate({ to: '/arsiparis/inaktif' })")
-    expect(detailSource).toContain("await navigate({ to: '/arsiparis/usul-musnah' })")
+    expect(detailSource).toContain("await navigate({ to: '/kasubag/berkas' })")
+    expect(detailSource).toContain("await navigate({ to: '/kasubag/inaktif' })")
+    expect(detailSource).toContain("await navigate({ to: '/kasubag/usul-musnah' })")
     expect(detailSource).toContain('CloseBerkasDialog')
     expect(detailSource).toContain('setCloseDialogOpen(true)')
     expect(detailSource).toContain('setCloseDialogOpen(false)')
@@ -783,12 +782,12 @@ describe('folder-first berkas archive page formatting', () => {
     expectSafeSearchSource(detailSearchSource)
     expect(detailSearchSource).not.toContain('item_file_key')
 
-    expect(existsSync('src/routes/arsiparis/arsip/$id.tsx')).toBe(false)
-    expect(existsSync('src/routes/arsiparis/aktif/index.tsx')).toBe(false)
-    expect(existsSync('src/routes/arsiparis/search.tsx')).toBe(false)
+    expect(existsSync('src/routes/kasubag/arsip/$id.tsx')).toBe(false)
+    expect(existsSync('src/routes/kasubag/aktif/index.tsx')).toBe(false)
+    expect(existsSync('src/routes/kasubag/search.tsx')).toBe(false)
 
     expect(dashboardSource).toContain("label: 'Pemberkasan Arsip Aktif'")
-    expect(dashboardSource).toContain("apiFetch<BerkasStatsResponse>('/arsiparis/berkas'")
+    expect(dashboardSource).toContain("apiFetch<BerkasStatsResponse>('/kasubag/berkas'")
     expect(dashboardSource).toContain("status_berkas: 'CLOSED'")
     expect(dashboardSource).toContain("status_arsip: 'AKTIF'")
     expect(dashboardSource).toContain("status_arsip: 'INAKTIF'")
@@ -796,31 +795,31 @@ describe('folder-first berkas archive page formatting', () => {
     expect(dashboardSource).toContain('setInactiveFolders(inactiveResponse.berkas ?? [])')
     expect(dashboardSource).toContain('setProposedDestructionCount(proposedResponse.summary?.total_rows_returned ?? 0)')
     expect(dashboardSource).toContain('href: ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF')
-    expect(dashboardSource).not.toContain("window.location.href = '/arsiparis/aktif'")
+    expect(dashboardSource).not.toContain("window.location.href = '/kasubag/aktif'")
     expect(dashboardSource).not.toContain("label: 'Pencarian'")
-    expect(dashboardSource).not.toContain("window.location.href = '/arsiparis/search'")
-    expect(dashboardSource).not.toContain("apiFetch<InaktifStatsResponse>('/arsiparis/inaktif')")
-    expect(dashboardSource).not.toContain("apiFetch<UsulMusnahStatsResponse>('/arsiparis/usul-musnah')")
+    expect(dashboardSource).not.toContain("window.location.href = '/kasubag/search'")
+    expect(dashboardSource).not.toContain("apiFetch<InaktifStatsResponse>('/kasubag/inaktif')")
+    expect(dashboardSource).not.toContain("apiFetch<UsulMusnahStatsResponse>('/kasubag/usul-musnah')")
 
     expect(navigationSource).not.toContain('laporan_klasifikasi')
     expect(navigationSource).not.toContain('Laporan Klasifikasi Arsip')
     expect(navigationSource).not.toContain('LAPORAN_KLASIFIKASI')
     expect(routesSource).not.toContain('LAPORAN_KLASIFIKASI')
-    expect(routesSource).not.toContain('/arsiparis/laporan-klasifikasi')
-    expect(routesSource).not.toContain('AKTIF: \'/arsiparis/aktif\'')
-    expect(routesSource).not.toContain('SEARCH: \'/arsiparis/search\'')
-    expect(existsSync('src/routes/arsiparis/laporan-klasifikasi.tsx')).toBe(false)
-    expect(existsSync('src/routes/arsiparis.laporan-klasifikasi_.detail.tsx')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/arsip/classification-report.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/arsip/classification-report-detail.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/aktif.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/inaktif.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/usul-musnah.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/search.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/arsip/$id.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/arsip/$id/lifecycle.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/arsip/aggregate.ts')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/arsip/export.ts')).toBe(false)
+    expect(routesSource).not.toContain('/kasubag/laporan-klasifikasi')
+    expect(routesSource).not.toContain('AKTIF: \'/kasubag/aktif\'')
+    expect(routesSource).not.toContain('SEARCH: \'/kasubag/search\'')
+    expect(existsSync('src/routes/kasubag/laporan-klasifikasi.tsx')).toBe(false)
+    expect(existsSync('src/routes/kasubag.laporan-klasifikasi_.detail.tsx')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/arsip/classification-report.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/arsip/classification-report-detail.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/aktif.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/inaktif.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/usul-musnah.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/search.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/arsip/$id.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/arsip/$id/lifecycle.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/arsip/aggregate.ts')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/arsip/export.ts')).toBe(false)
     expect(existsSync('src/lib/archive/berkas-arsip-report.ts')).toBe(false)
     expect(existsSync('src/lib/archive/unified-archive-query.ts')).toBe(false)
     expect(existsSync('src/lib/archive/unified-archive-detail.ts')).toBe(false)
@@ -828,30 +827,30 @@ describe('folder-first berkas archive page formatting', () => {
     expect(existsSync('src/lib/archive/unified-archive-lifecycle.ts')).toBe(false)
     expect(existsSync('src/lib/archive/unified-archive-aggregate-export.ts')).toBe(false)
     expect(existsSync('src/lib/archive/unified-archive-physical-destruction.ts')).toBe(false)
-    expect(routeTreeSource).not.toContain('/arsiparis/laporan-klasifikasi')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/arsip/classification-report')
-    expect(routeTreeSource).not.toContain('/arsiparis/arsip/$id')
-    expect(routeTreeSource).not.toContain('/arsiparis/aktif')
-    expect(routeTreeSource).not.toContain('/arsiparis/search')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/aktif')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/inaktif')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/usul-musnah')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/search')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/arsip/$id')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/arsip/aggregate')
-    expect(routeTreeSource).not.toContain('/api/arsiparis/arsip/export')
+    expect(routeTreeSource).not.toContain('/kasubag/laporan-klasifikasi')
+    expect(routeTreeSource).not.toContain('/api/kasubag/arsip/classification-report')
+    expect(routeTreeSource).not.toContain('/kasubag/arsip/$id')
+    expect(routeTreeSource).not.toContain('/kasubag/aktif')
+    expect(routeTreeSource).not.toContain('/kasubag/search')
+    expect(routeTreeSource).not.toContain('/api/kasubag/aktif')
+    expect(routeTreeSource).not.toContain('/api/kasubag/inaktif')
+    expect(routeTreeSource).not.toContain('/api/kasubag/usul-musnah')
+    expect(routeTreeSource).not.toContain('/api/kasubag/search')
+    expect(routeTreeSource).not.toContain('/api/kasubag/arsip/$id')
+    expect(routeTreeSource).not.toContain('/api/kasubag/arsip/aggregate')
+    expect(routeTreeSource).not.toContain('/api/kasubag/arsip/export')
     expect(routeTreeSource).not.toContain('berkas-arsip-report')
 
     expect(headerSource).toContain('DMS Workspace')
     expect(headerSource).toContain('Panel visual-only')
     expect(headerSource).not.toContain('Cari Arsip')
 
-    expect(inactiveSource).toContain("createFileRoute('/arsiparis/inaktif/')")
-    expect(inactiveSource).toContain("apiFetch<BerkasFolderListResponse>('/arsiparis/berkas'")
+    expect(inactiveSource).toContain("createFileRoute('/kasubag/inaktif/')")
+    expect(inactiveSource).toContain("apiFetch<BerkasFolderListResponse>('/kasubag/berkas'")
     expect(inactiveSource).toContain("status_berkas: 'CLOSED'")
     expect(inactiveSource).toContain("status_arsip: 'INAKTIF'")
     expect(inactiveSource).not.toContain("body: JSON.stringify({ action: 'propose_destruction' })")
-    expect(inactiveSource).not.toContain("await navigate({ to: '/arsiparis/usul-musnah' })")
+    expect(inactiveSource).not.toContain("await navigate({ to: '/kasubag/usul-musnah' })")
     expect(inactiveSource).not.toContain('Usulkan Musnah')
     expect(inactiveSource).toContain('Berkas yang sudah ditutup dan berada pada lifecycle arsip Inaktif.')
     expect(inactiveSource).toContain('Cari berkas inaktif di halaman ini...')
@@ -862,15 +861,15 @@ describe('folder-first berkas archive page formatting', () => {
     expect(inactiveSource).toContain('folders: filteredFolders')
     expect(inactiveSource).toContain('Tidak ada data untuk diekspor.')
     expect(inactiveSource).toContain('folders={filteredFolders}')
-    expect(inactiveSource).toContain('to="/arsiparis/berkas/$id"')
+    expect(inactiveSource).toContain('to="/kasubag/berkas/$id"')
     expect(inactiveSource).toContain('Klasifikasi Arsip')
     expect(inactiveSource).toContain('Nomor SPM')
     expect(inactiveSource).toContain('Jumlah Dokumen')
     expect(inactiveSource).toContain('Nominal Realisasi')
     expect(inactiveSource).toContain('Tanggal Ditutup')
     expect(inactiveSource).toContain('Masa Inaktif Berakhir')
-    expect(inactiveSource).not.toContain("apiFetch<ArsipInaktifResponse>('/arsiparis/inaktif')")
-    expect(inactiveSource).not.toContain('to="/arsiparis/arsip/$id"')
+    expect(inactiveSource).not.toContain("apiFetch<ArsipInaktifResponse>('/kasubag/inaktif')")
+    expect(inactiveSource).not.toContain('to="/kasubag/arsip/$id"')
 
     const inactiveExportSource = extractFunctionBlock(inactiveSource, 'function exportCsv')
     expect(inactiveExportSource).toContain('folders: filteredFolders')
@@ -885,8 +884,8 @@ describe('folder-first berkas archive page formatting', () => {
     expect(inactiveSearchSource).toContain('item_count')
     expectSafeSearchSource(inactiveSearchSource)
 
-    expect(proposedSource).toContain("createFileRoute('/arsiparis/usul-musnah/')")
-    expect(proposedSource).toContain("apiFetch<BerkasFolderListResponse>('/arsiparis/berkas'")
+    expect(proposedSource).toContain("createFileRoute('/kasubag/usul-musnah/')")
+    expect(proposedSource).toContain("apiFetch<BerkasFolderListResponse>('/kasubag/berkas'")
     expect(proposedSource).toContain("status_berkas: 'CLOSED'")
     expect(proposedSource).toContain("status_arsip: 'USUL_MUSNAH'")
     expect(proposedSource).not.toContain("action: 'approve_destruction'")
@@ -914,7 +913,7 @@ describe('folder-first berkas archive page formatting', () => {
     expect(proposedSource).toContain('folders: filteredFolders')
     expect(proposedSource).toContain('Tidak ada data untuk diekspor.')
     expect(proposedSource).toContain('folders={filteredFolders}')
-    expect(proposedSource).toContain('to="/arsiparis/berkas/$id"')
+    expect(proposedSource).toContain('to="/kasubag/berkas/$id"')
     expect(proposedSource).toContain('Klasifikasi Arsip')
     expect(proposedSource).toContain('Nomor SPM')
     expect(proposedSource).toContain('Jumlah Dokumen')
@@ -922,8 +921,8 @@ describe('folder-first berkas archive page formatting', () => {
     expect(proposedSource).toContain('Tanggal Ditutup')
     expect(proposedSource).not.toContain('rounded-2xl border border-error/30 bg-error/5 p-4')
     expect(proposedSource).not.toContain('Dimusnahkan list')
-    expect(proposedSource).not.toContain("apiFetch<UsulMusnahResponse>('/arsiparis/usul-musnah')")
-    expect(proposedSource).not.toContain('to="/arsiparis/arsip/$id"')
+    expect(proposedSource).not.toContain("apiFetch<UsulMusnahResponse>('/kasubag/usul-musnah')")
+    expect(proposedSource).not.toContain('to="/kasubag/arsip/$id"')
 
     const proposedExportSource = extractFunctionBlock(proposedSource, 'function exportCsv')
     expect(proposedExportSource).toContain('folders: filteredFolders')
@@ -938,9 +937,9 @@ describe('folder-first berkas archive page formatting', () => {
     expect(proposedSearchSource).toContain('item_count')
     expectSafeSearchSource(proposedSearchSource)
 
-    expect(existsSync('src/routes/arsiparis/dimusnahkan')).toBe(false)
-    expect(existsSync('src/routes/arsiparis/dimusnahkan.tsx')).toBe(false)
-    expect(existsSync('src/routes/api/arsiparis/dimusnahkan.ts')).toBe(false)
+    expect(existsSync('src/routes/kasubag/dimusnahkan')).toBe(false)
+    expect(existsSync('src/routes/kasubag/dimusnahkan.tsx')).toBe(false)
+    expect(existsSync('src/routes/api/kasubag/dimusnahkan.ts')).toBe(false)
 
     expect(closeDialogSource).toContain('Dialog')
     expect(closeDialogSource).toContain('DialogContent')
@@ -971,7 +970,7 @@ describe('folder-first berkas archive page formatting', () => {
     )
 
     expect(href).toBe(
-      `/api/arsiparis/berkas/${BERKAS_ID}/items/44444444-4444-4444-8444-444444444444/preview/0`,
+      `/api/kasubag/berkas/${BERKAS_ID}/items/44444444-4444-4444-8444-444444444444/preview/0`,
     )
     expect(href).not.toContain('logical_path')
     expect(href).not.toContain('storage')
@@ -979,7 +978,7 @@ describe('folder-first berkas archive page formatting', () => {
   })
 
   it('renders folder item file actions only from safe attachment DTOs', () => {
-    const detailPageSource = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
+    const detailPageSource = readFileSync('src/routes/kasubag/berkas/$id.tsx', 'utf8')
 
     expect(detailPageSource).toContain('const availableAttachments = item.attachments')
     expect(detailPageSource).toContain('availableAttachments.map((attachment, lampiranIndex)')
@@ -987,8 +986,8 @@ describe('folder-first berkas archive page formatting', () => {
   })
 
   it('keeps archive classification inbox aligned to the compact workflow table columns', () => {
-    const inboxSource = readFileSync('src/routes/arsiparis/inbox.tsx', 'utf8')
-    const inboxApiSource = readFileSync('src/routes/api/arsiparis/inbox.ts', 'utf8')
+    const inboxSource = readFileSync('src/routes/kasubag/inbox.tsx', 'utf8')
+    const inboxApiSource = readFileSync('src/routes/api/kasubag/inbox.ts', 'utf8')
 
     expect(inboxSource).toContain('Judul Dokumen')
     expect(inboxSource).toContain('Kegiatan')
@@ -1067,7 +1066,7 @@ function detailResult() {
         has_attachments: true,
         workflow: {
           title: 'Laporan Pembayaran',
-          status: 'ARCHIVED',
+          status: 'COMPLETED',
           current_step: null,
           fungsi_nama: 'Fungsi Keuangan',
           kegiatan_nama: 'Kegiatan Pembayaran',

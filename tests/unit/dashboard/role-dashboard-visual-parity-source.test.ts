@@ -86,7 +86,7 @@ describe('role dashboard visual parity source guard', () => {
   })
 
   it('keeps Kepala Sub Bagian Umum dashboard folder-first and action-list based', () => {
-    const source = readSource('src/routes/arsiparis/index.tsx')
+    const source = readSource('src/routes/kasubag/index.tsx')
 
     expect(source).toContain('Dashboard Kepala Sub Bagian Umum')
     expect(source).toContain('Siap Diklasifikasikan')
@@ -96,26 +96,26 @@ describe('role dashboard visual parity source guard', () => {
     // RP-01 de-arsip: kartu "Arsip Inaktif" dihapus; "Usul Musnah" -> "Usul Pembersihan".
     expect(source).not.toContain('Arsip Inaktif')
     expect(source).not.toContain('Usul Musnah')
-    expect(source).toContain('Perlu Tindakan Kearsipan')
+    expect(source).toContain('Perlu Tindakan Pemberkasan')
     expect(source).toContain('Perlu Diklasifikasikan (Terlama)')
     expect(source).toContain("query: { status_berkas: 'OPEN' }")
     expect(source).toContain("query: { status_berkas: 'CLOSED', status_arsip: 'AKTIF' }")
     expect(source).toContain("query: { status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' }")
     expect(source).not.toContain("status_arsip: 'INAKTIF'")
     expect(source).not.toContain('label="Siap Diklasifikasikan"')
-    expect(source).not.toContain('/arsiparis/aktif')
+    expect(source).not.toContain('/kasubag/aktif')
   })
 
   it('keeps Penanggung Jawab Kinerja dashboard metadata-only', () => {
     const source = readSource('src/routes/penanggung-jawab-kinerja/index.tsx')
 
-    expect(source).toContain("apiFetch<LaporanKinerjaResponse>('/laporan/kinerja')")
+    expect(source).toContain("apiFetch<LaporanKinerjaResponse>('/laporan/kinerja', { query: { scope: 'laporan_kinerja' } })")
     expect(source).toContain('Dashboard Penanggung Jawab Kinerja')
     expect(source).toContain('Total Dokumen Final')
     expect(source).toContain('Total Nominal Realisasi')
     expect(source).toContain('badge="Final"')
     expect(source).toContain('badge="Realisasi"')
-    expect(source).toContain('badge="Diarsipkan"')
+    expect(source).toContain('badge="Diberkaskan"')
     expect(source).toContain('valueClassName="font-mono text-zinc-950"')
     expect(source).toContain('Dokumen Final Terbaru')
     expect(source).toContain('DashboardQuickActions')
@@ -152,7 +152,7 @@ describe('role dashboard visual parity source guard', () => {
       readSource('src/routes/pegawai.tsx'),
       readSource('src/routes/ppk/index.tsx'),
       readSource('src/routes/bendahara/index.tsx'),
-      readSource('src/routes/arsiparis/index.tsx'),
+      readSource('src/routes/kasubag/index.tsx'),
       readSource('src/routes/penanggung-jawab-kinerja/index.tsx'),
       readSource('src/routes/admin.index.tsx'),
     ].join('\n')

@@ -352,9 +352,7 @@ async function canSessionReadDocument(
   // beberapa peran, jadi yang tidak cocok harus jatuh ke cek berikutnya.
   if (session.roles.includes(ROLES.PPK) && canPpkReadDocument(document)) return true
   if (session.roles.includes(ROLES.BENDAHARA) && canBendaharaReadDocument(document)) return true
-  if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM) && (
-    document.status === 'COMPLETED' || document.status === 'ARCHIVED'
-  )) {
+  if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM) && document.status === 'COMPLETED') {
     return true
   }
 
@@ -383,14 +381,12 @@ function canPpkReadDocument(document: DocumentRow): boolean {
     'IN_BENDAHARA_APPROVAL',
     'NEED_REVISION',
     'COMPLETED',
-    'ARCHIVED',
   ].includes(document.status)
 }
 
 function canBendaharaReadDocument(document: DocumentRow): boolean {
   return document.status === 'IN_BENDAHARA_APPROVAL'
     || document.status === 'COMPLETED'
-    || document.status === 'ARCHIVED'
     || (document.status === 'NEED_REVISION' && document.revisionTarget === 'PPK')
 }
 

@@ -6,7 +6,7 @@ import { masterFungsi, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 
 // ---------------------------------------------------------------------------
-// GET /api/ppk/tervalidasi - list dokumen IN_BENDAHARA_APPROVAL, COMPLETED, ARCHIVED
+// GET /api/ppk/tervalidasi - list dokumen IN_BENDAHARA_APPROVAL, COMPLETED
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/ppk/tervalidasi')({
@@ -34,7 +34,7 @@ export const Route = createFileRoute('/api/ppk/tervalidasi')({
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
-            .where(inArray(dokumenTransaksi.status, ['IN_BENDAHARA_APPROVAL', 'COMPLETED', 'ARCHIVED']))
+            .where(inArray(dokumenTransaksi.status, ['IN_BENDAHARA_APPROVAL', 'COMPLETED']))
             .orderBy(desc(dokumenTransaksi.createdAt))
 
           return Response.json({

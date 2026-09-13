@@ -93,7 +93,7 @@ export const createManualArsipSchema = z
     nama: z.string().trim().min(1, 'Nama dokumen wajib diisi').max(255),
     tanggal: z.string().refine(isDateOnlyString, 'Tanggal harus valid dengan format YYYY-MM-DD'),
     nomor_surat: optionalTrimmedString(120, 'Nomor surat maksimal 120 karakter').optional(),
-    tanggal_diarsipkan: optionalDateOnlyString('Tanggal arsip harus valid dengan format YYYY-MM-DD').optional(),
+    tanggal_diarsipkan: optionalDateOnlyString('Tanggal harus valid dengan format YYYY-MM-DD').optional(),
     keterangan: z.string().trim().min(1, 'Keterangan wajib diisi'),
     fungsi_id: z.string().uuid('Fungsi tidak valid'),
     kegiatan_id: z.string().uuid('Kegiatan tidak valid'),

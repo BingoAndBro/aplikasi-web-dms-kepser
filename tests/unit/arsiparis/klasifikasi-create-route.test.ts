@@ -20,7 +20,7 @@ vi.mock('#/db/client', () => ({
   },
 }))
 
-import { Route as KlasifikasiCreateRoute } from '#/routes/api/arsiparis/klasifikasi/index'
+import { Route as KlasifikasiCreateRoute } from '#/routes/api/kasubag/klasifikasi/index'
 
 type RoutePostHandler = (args: {
   request: Request
@@ -178,7 +178,7 @@ describe('arsiparis klasifikasi create route', () => {
     queueSelectResults(klasifikasiRows())
 
     const response = await getHandler({
-      request: new Request('http://localhost/api/arsiparis/klasifikasi'),
+      request: new Request('http://localhost/api/kasubag/klasifikasi'),
     })
 
     expect(response.status).toBe(200)
@@ -202,7 +202,7 @@ describe('arsiparis klasifikasi create route', () => {
     )
 
     const response = await getHandler({
-      request: new Request('http://localhost/api/arsiparis/klasifikasi?eligible_for_berkas=true'),
+      request: new Request('http://localhost/api/kasubag/klasifikasi?eligible_for_berkas=true'),
     })
 
     expect(response.status).toBe(200)
@@ -296,7 +296,7 @@ function activeKlasifikasiRows() {
 }
 
 function createPostRequest(body: Record<string, unknown>) {
-  return new Request('http://localhost/api/arsiparis/klasifikasi', {
+  return new Request('http://localhost/api/kasubag/klasifikasi', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

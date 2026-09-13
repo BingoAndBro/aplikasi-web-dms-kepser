@@ -26,7 +26,7 @@ vi.mock('#/db/client', () => ({
 import { Route as DokumenLogRoute } from '#/routes/api/dokumen.$id.log'
 import { Route as PpkDetailRoute } from '#/routes/api/ppk/dokumen/$id'
 import { Route as BendaharaDetailRoute } from '#/routes/api/bendahara/dokumen/$id'
-import { Route as KepalaSubBagianUmumDetailRoute } from '#/routes/api/arsiparis/dokumen.$id'
+import { Route as KepalaSubBagianUmumDetailRoute } from '#/routes/api/kasubag/dokumen.$id'
 
 type RouteGetHandler = (args: {
   request: Request
@@ -124,7 +124,7 @@ describe('PPK detail and document log route UUID parity', () => {
       .mockReturnValueOnce(createQueryBuilder([]))
 
     const response = await kepalaSubBagianUmumDetailHandler({
-      request: new Request(`http://localhost/api/arsiparis/dokumen/${DOKUMEN_ID}`),
+      request: new Request(`http://localhost/api/kasubag/dokumen/${DOKUMEN_ID}`),
       params: { id: DOKUMEN_ID },
     })
     const body = await response.json()
@@ -147,7 +147,7 @@ describe('PPK detail and document log route UUID parity', () => {
       .mockReturnValueOnce(createQueryBuilder([createFolderFirstArchiveEvidenceRow()]))
 
     const response = await kepalaSubBagianUmumDetailHandler({
-      request: new Request(`http://localhost/api/arsiparis/dokumen/${DOKUMEN_ID}`),
+      request: new Request(`http://localhost/api/kasubag/dokumen/${DOKUMEN_ID}`),
       params: { id: DOKUMEN_ID },
     })
     const body = await response.json()
@@ -173,7 +173,7 @@ describe('PPK detail and document log route UUID parity', () => {
     mocks.getLocalServerSession.mockResolvedValue(null)
 
     const response = await kepalaSubBagianUmumDetailHandler({
-      request: new Request(`http://localhost/api/arsiparis/dokumen/${DOKUMEN_ID}`),
+      request: new Request(`http://localhost/api/kasubag/dokumen/${DOKUMEN_ID}`),
       params: { id: DOKUMEN_ID },
     })
 
@@ -186,7 +186,7 @@ describe('PPK detail and document log route UUID parity', () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(PPK_ID, ['ADMIN'], 'ADMIN'))
 
     const response = await kepalaSubBagianUmumDetailHandler({
-      request: new Request(`http://localhost/api/arsiparis/dokumen/${DOKUMEN_ID}`),
+      request: new Request(`http://localhost/api/kasubag/dokumen/${DOKUMEN_ID}`),
       params: { id: DOKUMEN_ID },
     })
 

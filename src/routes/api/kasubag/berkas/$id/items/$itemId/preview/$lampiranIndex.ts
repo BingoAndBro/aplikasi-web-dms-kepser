@@ -10,7 +10,7 @@ import {
 const uuidParamSchema = z.uuid()
 const lampiranIndexSchema = z.coerce.number().int().min(0)
 
-export const Route = createFileRoute('/api/arsiparis/berkas/$id/items/$itemId/preview/$lampiranIndex')({
+export const Route = createFileRoute('/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

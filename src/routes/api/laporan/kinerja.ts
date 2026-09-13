@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, desc, eq, gte, inArray, isNotNull, lte, notInArray } from 'drizzle-orm'
+import { and, desc, eq, gte, isNotNull, isNull, lte, notInArray, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '#/db/client'
@@ -19,18 +19,18 @@ import { ARCHIVE_SOURCE_TYPE, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/arch
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { ROLES } from '#/lib/constants/roles'
 
-// Hanya dokumen MATERIAL yang final (COMPLETED/ARCHIVED) yang dihitung sebagai
-// realisasi. Dokumen non-material tidak pernah punya nominal realisasi dan
-// tidak pernah relevan untuk laporan ini. TERSIMPAN sengaja tidak masuk —
-// status itu eksklusif untuk dokumen non-material (lihat fsm.ts), jadi
-// menyertakannya di sini hanya membocorkan dokumen non-material. Dokumen
-// material wajib mengisi Komponen saat submit (lihat lib/schemas/dokumen.ts);
-// dokumen lama dari sebelum kolom Komponen ada dan tidak punya komponen_id
-// dianggap data yatim, bukan realisasi yang bisa dipertanggungjawabkan, jadi
-// ikut dibuang (lihat isNotNull(komponenId) di bawah).
-const FINAL_LAPORAN_KINERJA_STATUSES = [
+// Dokumen material yang final (COMPLETED) dihitung sebagai realisasi — wajib
+// mengisi Komponen saat submit (lihat lib/schemas/dokumen.ts); dokumen lama
+// dari sebelum kolom Komponen ada dan tidak punya komponen_id dianggap data
+// yatim, bukan realisasi yang bisa dipertanggungjawabkan, jadi ikut dibuang
+// (lihat isNotNull(komponenId) di bawah). Dokumen non-material (TERSIMPAN)
+// tidak pernah punya nominal realisasi — hanya disertakan saat
+// ?scope=laporan_kinerja diminta secara eksplisit oleh halaman Laporan
+// Kinerja (PJK); Monitoring Realisasi (PPK/Bendahara) tidak mengirim scope
+// itu sehingga tetap hanya melihat dokumen material COMPLETED, seperti semula.
+const ALL_LAPORAN_KINERJA_STATUSES = [
   DOC_STATUS.COMPLETED,
-  DOC_STATUS.ARCHIVED,
+  DOC_STATUS.TERSIMPAN,
 ] as const
 
 const LAPORAN_KINERJA_LIMIT = 2000
@@ -40,7 +40,7 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 const laporanKinerjaRowSchema = z.object({
   id: z.string(),
   judul: z.string(),
-  status: z.enum(FINAL_LAPORAN_KINERJA_STATUSES),
+  status: z.enum(ALL_LAPORAN_KINERJA_STATUSES),
   fungsi_nama: z.string().nullable(),
   kegiatan_nama: z.string().nullable(),
   komponen_id: z.string().nullable(),
@@ -52,6 +52,7 @@ const laporanKinerjaRowSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   nominal_realisasi: z.number().nullable(),
+  is_diberkaskan: z.boolean(),
 })
 
 const laporanKinerjaResponseSchema = z.object({
@@ -60,7 +61,7 @@ const laporanKinerjaResponseSchema = z.object({
     limit: z.number(),
     count: z.number(),
     truncated: z.boolean(),
-    final_statuses: z.array(z.enum(FINAL_LAPORAN_KINERJA_STATUSES)),
+    final_statuses: z.array(z.enum(ALL_LAPORAN_KINERJA_STATUSES)),
     tahun_tersedia: z.array(z.number()),
   }),
 })
@@ -116,6 +117,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
         const url = new URL(request.url)
         const startDateParam = url.searchParams.get('start_date')
         const endDateParam = url.searchParams.get('end_date')
+        const includeNonMaterial = url.searchParams.get('scope') === 'laporan_kinerja'
 
         if (startDateParam && !ISO_DATE_PATTERN.test(startDateParam)) {
           return Response.json({ error: 'Parameter periode tidak valid' }, { status: 400 })
@@ -142,10 +144,37 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             .map((row) => row.dokumenId)
             .filter((id): id is string => id !== null)
 
-          const scopeFilter = and(
+          // "Diberkaskan" adalah metadata tambahan (dokumen sudah ditempel ke
+          // berkas_arsip_item), bukan status FSM — dokumen TERSIMPAN tidak
+          // pernah bisa masuk sini (klasifikasi mensyaratkan status COMPLETED).
+          const berkasedRows = await db
+            .select({ dokumenId: berkasArsipItem.dokumenId })
+            .from(berkasArsipItem)
+            .where(eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW))
+
+          const berkasedDocumentIds = new Set(
+            berkasedRows
+              .map((row) => row.dokumenId)
+              .filter((id): id is string => id !== null),
+          )
+
+          const materialFilter = and(
             eq(dokumenTransaksi.isNonMaterial, false),
             isNotNull(dokumenTransaksi.komponenId),
-            inArray(dokumenTransaksi.status, FINAL_LAPORAN_KINERJA_STATUSES),
+            eq(dokumenTransaksi.status, DOC_STATUS.COMPLETED),
+          )
+
+          const scopeFilter = and(
+            includeNonMaterial
+              ? or(
+                  materialFilter,
+                  and(
+                    eq(dokumenTransaksi.isNonMaterial, true),
+                    eq(dokumenTransaksi.status, DOC_STATUS.TERSIMPAN),
+                    isNull(dokumenTransaksi.lampiranDibersihkanAt),
+                  ),
+                )
+              : materialFilter,
             destroyedDocumentIds.length > 0
               ? notInArray(dokumenTransaksi.id, destroyedDocumentIds)
               : undefined,
@@ -209,12 +238,15 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
               created_at: isoDateString(row.created_at),
               updated_at: isoDateString(row.updated_at),
               nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
+              is_diberkaskan: berkasedDocumentIds.has(row.id),
             })),
             meta: {
               limit: LAPORAN_KINERJA_LIMIT,
               count: rows.length,
               truncated: rows.length === LAPORAN_KINERJA_LIMIT,
-              final_statuses: [...FINAL_LAPORAN_KINERJA_STATUSES],
+              final_statuses: includeNonMaterial
+                ? [...ALL_LAPORAN_KINERJA_STATUSES]
+                : [DOC_STATUS.COMPLETED],
               tahun_tersedia: tahunRows.map((row) => row.tahun),
             },
           })

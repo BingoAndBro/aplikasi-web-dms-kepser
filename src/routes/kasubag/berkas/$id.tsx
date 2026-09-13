@@ -97,7 +97,7 @@ import {
   isPdfLikeFilename,
 } from '#/lib/upload/document-upload-policy'
 
-export const Route = createFileRoute('/arsiparis/berkas/$id')({ component: BerkasArsipDetailPage })
+export const Route = createFileRoute('/kasubag/berkas/$id')({ component: BerkasArsipDetailPage })
 
 type BerkasDetailItem = {
   item_key: string
@@ -222,7 +222,7 @@ function BerkasArsipDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const json = await apiFetch<BerkasDetailResponse>(`/arsiparis/berkas/${encodeURIComponent(id)}`)
+      const json = await apiFetch<BerkasDetailResponse>(`/kasubag/berkas/${encodeURIComponent(id)}`)
       setDetail(json.berkas ?? null)
     } catch (error) {
       setError(resolveErrorMessage(error))
@@ -249,7 +249,7 @@ function BerkasArsipDetailPage() {
     setPendingLifecycleAction(true)
 
     try {
-      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}/lifecycle`, {
+      await apiFetch(`/kasubag/berkas/${encodeURIComponent(detail.berkas_id)}/lifecycle`, {
         method: 'POST',
         body: JSON.stringify({
           action: lifecycleAction.action,
@@ -266,7 +266,7 @@ function BerkasArsipDetailPage() {
       setLifecycleConfirmOpen(false)
       setDestructionDialogOpen(false)
       if (lifecycleAction.action === 'propose_destruction') {
-        await navigate({ to: '/arsiparis/pembersihan' })
+        await navigate({ to: '/kasubag/pembersihan' })
       } else {
         await fetchData()
       }
@@ -295,7 +295,7 @@ function BerkasArsipDetailPage() {
     setPendingLifecycleAction(true)
 
     try {
-      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}/lifecycle`, {
+      await apiFetch(`/kasubag/berkas/${encodeURIComponent(detail.berkas_id)}/lifecycle`, {
         method: 'POST',
         body: JSON.stringify({ action: secondaryAction.action }),
       })
@@ -335,7 +335,7 @@ function BerkasArsipDetailPage() {
     setPendingClose(true)
 
     try {
-      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}/close`, {
+      await apiFetch(`/kasubag/berkas/${encodeURIComponent(detail.berkas_id)}/close`, {
         method: 'POST',
         body: JSON.stringify(buildCloseBerkasRequestBody(closeForm)),
       })
@@ -346,7 +346,7 @@ function BerkasArsipDetailPage() {
       })
       setCloseDialogOpen(false)
       setCloseForm(EMPTY_CLOSE_BERKAS_FORM)
-      await navigate({ to: '/arsiparis/berkas' })
+      await navigate({ to: '/kasubag/berkas' })
     } catch (error) {
       showToast({
         title: 'Gagal',
@@ -384,13 +384,13 @@ function BerkasArsipDetailPage() {
     setPendingMetadataEdit(true)
 
     try {
-      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(detail.berkas_id)}`, {
+      await apiFetch(`/kasubag/berkas/${encodeURIComponent(detail.berkas_id)}`, {
         method: 'PATCH',
         body: JSON.stringify(buildCloseBerkasRequestBody(metadataForm)),
       })
       showToast({
         title: 'Berhasil',
-        description: 'Metadata arsip aktif berhasil diperbarui.',
+        description: 'Metadata Tersimpan berhasil diperbarui.',
         variant: 'success',
       })
       setMetadataDialogOpen(false)
@@ -423,7 +423,7 @@ function BerkasArsipDetailPage() {
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
                 <Link
-                  to="/arsiparis/berkas"
+                  to="/kasubag/berkas"
                   className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
                 >
                   Kembali
@@ -439,7 +439,7 @@ function BerkasArsipDetailPage() {
             icon={<FolderOpen size={22} />}
             action={
               <Link
-                to="/arsiparis/berkas"
+                to="/kasubag/berkas"
                 className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
               >
                 Kembali ke daftar
@@ -456,7 +456,7 @@ function BerkasArsipDetailPage() {
                 { id: 'history' as const, label: 'Riwayat Aktivitas Berkas' },
               ]
               : [
-                { id: 'metadata' as const, label: 'Metadata Arsip' },
+                { id: 'metadata' as const, label: 'Metadata Berkas' },
                 { id: 'documents' as const, label: 'Daftar Dokumen' },
                 { id: 'history' as const, label: 'Riwayat Aktivitas' },
               ]
@@ -466,7 +466,7 @@ function BerkasArsipDetailPage() {
               <>
                 <div className="flex items-center gap-3">
                   <Link
-                    to="/arsiparis/berkas"
+                    to="/kasubag/berkas"
                     aria-label="Kembali ke daftar berkas"
                     className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
                   >
@@ -478,7 +478,7 @@ function BerkasArsipDetailPage() {
                     </h1>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                       <FolderOpen size={13} className="text-zinc-500" />
-                      <Link to="/arsiparis/berkas" className="font-medium text-zinc-800 hover:text-orange-700">
+                      <Link to="/kasubag/berkas" className="font-medium text-zinc-800 hover:text-orange-700">
                         Berkas Terbuka
                       </Link>
                       <ChevronRight size={12} className="text-zinc-300" />
@@ -515,8 +515,8 @@ function BerkasArsipDetailPage() {
                             <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
                               {activeTab === 'metadata'
                                 ? isOpenFolder
-                                  ? 'Metadata berkas berjalan sebelum finalisasi arsip.'
-                                  : 'Metadata final folder-first untuk lifecycle arsip.'
+                                  ? 'Metadata berkas berjalan sebelum finalisasi berkas.'
+                                  : 'Metadata final folder-first untuk lifecycle berkas.'
                                 : activeTab === 'documents'
                                   ? 'Dokumen dalam berkas dengan metadata sumber dan akses lampiran.'
                                   : 'Kronologi khusus berkas berdasarkan data yang tersedia.'}
@@ -630,7 +630,7 @@ function EditActiveMetadataDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-2xl sm:rounded-3xl">
         <DialogHeader>
-          <DialogTitle>Edit Metadata Arsip Tersimpan</DialogTitle>
+          <DialogTitle>Edit Metadata Tersimpan</DialogTitle>
           <DialogDescription>
             Perbarui metadata final berkas selama statusnya masih Tersimpan.
           </DialogDescription>
@@ -702,9 +702,9 @@ function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
   return (
     <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
-        <MetadataCell label="Klasifikasi Arsip" value={formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)} />
+        <MetadataCell label="Cara Pembayaran" value={formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)} />
         <MetadataCell label="Status Berkas" value={formatBerkasStatusLabel(detail.status_berkas)} />
-        <MetadataCell label="Status Arsip" value={formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)} />
+        <MetadataCell label="Status" value={formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)} />
         <MetadataCell label="Jumlah Dokumen" value={String(detail.item_count)} />
         <MetadataCell label="Dokumen Persetujuan" value={String(detail.workflow_item_count)} />
         <MetadataCell label="Dokumen Manual" value={String(detail.manual_item_count)} />
@@ -870,7 +870,7 @@ function FolderActionPanel({
               onClick={onOpenMetadataEditDialog}
             >
               {pendingMetadataEdit ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
-              {pendingMetadataEdit ? 'Memproses...' : 'Edit Metadata Arsip'}
+              {pendingMetadataEdit ? 'Memproses...' : 'Edit Metadata Tersimpan'}
             </Button>
           )}
           {canShowClose && (
@@ -897,7 +897,7 @@ function FolderActionPanel({
             <Download size={14} />
             Ekspor ZIP
           </Button>
-          <Link to="/arsiparis/berkas" className="block">
+          <Link to="/kasubag/berkas" className="block">
             <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold">
               <ChevronLeft size={13} />
               Kembali ke Daftar
@@ -1053,7 +1053,7 @@ export function exportBerkasZipDisabledReason(detail: Pick<BerkasDetail, 'status
 }
 
 export function buildBerkasExportZipUrl(berkasId: string): string {
-  return `/api/arsiparis/berkas/${encodeURIComponent(berkasId)}/export-zip`
+  return `/api/kasubag/berkas/${encodeURIComponent(berkasId)}/export-zip`
 }
 
 function getFolderLifecycleDescription(detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'>): string {
@@ -1061,7 +1061,7 @@ function getFolderLifecycleDescription(detail: Pick<BerkasDetail, 'status_berkas
     return 'Berkas masih terbuka dan dapat menerima dokumen baru untuk Cara Pembayaran ini.'
   }
   if (detail.status_arsip === 'AKTIF') {
-    return 'Berkas sudah ditutup dan Tersimpan. Metadata arsip masih dapat diperbarui selama status tetap Tersimpan.'
+    return 'Berkas sudah ditutup dan Tersimpan. Metadata masih dapat diperbarui selama status tetap Tersimpan.'
   }
   if (detail.status_arsip === 'USUL_MUSNAH') {
     return 'Berkas masuk daftar Usul Pembersihan dan menunggu konfirmasi pembersihan file. Usulan masih dapat dibatalkan.'
@@ -1884,9 +1884,9 @@ function buildAuthoritativeBerkasHistoryHelper(event: BerkasActivityEvent): stri
     case 'BERKAS_DITUTUP':
       return 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.'
     case 'METADATA_ARSIP_AKTIF_DIPERBARUI':
-      return 'Metadata arsip diperbarui.'
+      return 'Metadata Tersimpan diperbarui.'
     case 'BERKAS_DIPINDAHKAN_KE_INAKTIF':
-      return 'Status warisan pra-RP-01. Berkas keluar dari arsip aktif dan metadata menjadi baca saja.'
+      return 'Status warisan pra-RP-01. Berkas keluar dari status Tersimpan dan metadata menjadi baca saja.'
     case 'BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH':
       return 'Berkas masuk daftar Usul Pembersihan.'
     case 'BERKAS_DIMUSNAHKAN':
@@ -1979,7 +1979,7 @@ function buildCurrentLifecycleHistoryItem(detail: BerkasDetail, originalIndex: n
     return historyItem({
       label: 'Berkas dipindahkan ke Inaktif (usang)',
       date: detail.updated_at,
-      helper: 'Status warisan pra-RP-01. Berkas keluar dari arsip aktif dan metadata menjadi baca saja.',
+      helper: 'Status warisan pra-RP-01. Berkas keluar dari status Tersimpan dan metadata menjadi baca saja.',
       icon: <Archive size={15} />,
       iconTone: 'bg-amber-50 text-amber-700',
       timestampNote: 'Tidak ada log timestamp per-transisi; waktu ini berasal dari pembaruan status berkas saat ini.',
@@ -2097,7 +2097,7 @@ export function buildBerkasItemAttachmentFileUrl(
   purpose: 'preview' | 'download',
 ): string {
   return [
-    '/api/arsiparis/berkas',
+    '/api/kasubag/berkas',
     encodeURIComponent(berkasId),
     'items',
     encodeURIComponent(itemFileKey),

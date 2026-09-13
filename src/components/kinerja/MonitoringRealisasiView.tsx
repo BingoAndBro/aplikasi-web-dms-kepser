@@ -78,7 +78,7 @@ type LaporanKinerjaResponse = {
     limit: number
     count: number
     truncated: boolean
-    final_statuses: Array<'COMPLETED' | 'ARCHIVED'>
+    final_statuses: Array<'COMPLETED' | 'TERSIMPAN'>
     tahun_tersedia: number[]
   }
   error?: string
@@ -104,6 +104,7 @@ export type MonitoringRealisasiViewProps = {
   onSelectPeriode: (next: PeriodeValue) => void
   onSelectPegawai?: (pegawaiId: string | null) => void
   onSelectGroupBy?: (mode: MonitoringRealisasiGroupBy) => void
+  scope?: 'laporan_kinerja'
   title?: string
   description?: string
   forbiddenTitle?: string
@@ -164,6 +165,7 @@ export function MonitoringRealisasiView({
   onSelectPeriode,
   onSelectPegawai,
   onSelectGroupBy,
+  scope,
   title = DEFAULT_TITLE,
   description = DEFAULT_DESCRIPTION,
   forbiddenTitle = DEFAULT_FORBIDDEN_TITLE,
@@ -194,7 +196,7 @@ export function MonitoringRealisasiView({
     setLoading(true)
 
     apiFetch<LaporanKinerjaResponse>('/laporan/kinerja', {
-      query: { start_date: periodeRange.dari, end_date: periodeRange.sampai },
+      query: { start_date: periodeRange.dari, end_date: periodeRange.sampai, scope },
       signal: controller.signal,
     })
       .then((data) => {
@@ -231,7 +233,7 @@ export function MonitoringRealisasiView({
       })
 
     return () => controller.abort()
-  }, [periodeRange.dari, periodeRange.sampai])
+  }, [periodeRange.dari, periodeRange.sampai, scope])
 
   const fungsiRows = useMemo(() => buildFungsiRows(dokumen), [dokumen])
   const pegawaiRows = useMemo(() => buildPegawaiRows(dokumen), [dokumen])
@@ -397,7 +399,7 @@ export function MonitoringRealisasiView({
               <EmptyState
                 icon={<Inbox className="h-5 w-5" />}
                 title="Belum ada dokumen final"
-                description="Dokumen material dengan status Selesai atau Diarsipkan akan muncul di sini sebagai metadata Laporan Kinerja."
+                description="Dokumen final (status Selesai atau Tersimpan) akan muncul di sini sebagai metadata Laporan Kinerja."
               />
             ) : (
               <EmptyState
@@ -584,7 +586,7 @@ function KinerjaHeader({ title, description }: { title: string; description: str
         </div>
       </div>
       <div className="max-w-xs rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
-        Hanya dokumen material, status Selesai/Diarsipkan, dan berkas belum dimusnahkan.
+        Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
       </div>
     </section>
   )
@@ -1591,7 +1593,7 @@ function ReportBackHeader({
         </div>
       </div>
       <div className="max-w-xs rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
-        Hanya dokumen material, status Selesai/Diarsipkan, dan berkas belum dimusnahkan.
+        Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
       </div>
     </section>
   )
@@ -1643,8 +1645,9 @@ function KegiatanDetailCards({ kegiatan }: { kegiatan: KegiatanRow }) {
 }
 
 function KomponenDetailCards({ komponen }: { komponen: KomponenRow }) {
-  const belumDiarsipkan = komponen.dokumen.filter(row => row.status === 'COMPLETED').length
-  const sudahDiarsipkan = komponen.dokumen.filter(row => row.status === 'ARCHIVED').length
+  const materialDokumen = komponen.dokumen.filter(row => row.status === 'COMPLETED')
+  const belumDiberkaskan = materialDokumen.filter(row => !row.is_diberkaskan).length
+  const sudahDiberkaskan = materialDokumen.filter(row => row.is_diberkaskan).length
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1658,18 +1661,18 @@ function KomponenDetailCards({ komponen }: { komponen: KomponenRow }) {
         iconClassName="border-[#D8CDC1] text-[#6D6258]"
       />
       <SummaryCard
-        label="Belum Diarsipkan"
-        value={belumDiarsipkan.toLocaleString('id-ID')}
-        detail="Status Selesai"
+        label="Belum Diberkaskan"
+        value={belumDiberkaskan.toLocaleString('id-ID')}
+        detail="Menunggu Pemberkasan"
         icon={<ClipboardList size={16} />}
         className="border-[#F1D38A] bg-[#FFF8E6]"
         labelClassName="text-[#7A4A00]"
         iconClassName="border-[#E5BD55] text-[#B77900]"
       />
       <SummaryCard
-        label="Sudah Diarsipkan"
-        value={sudahDiarsipkan.toLocaleString('id-ID')}
-        detail="Status Diarsipkan"
+        label="Sudah Diberkaskan"
+        value={sudahDiberkaskan.toLocaleString('id-ID')}
+        detail="Sudah Masuk Berkas"
         icon={<FileText size={16} />}
         className="border-[#FDBA91] bg-[#FFF1E8]"
         labelClassName="text-[#B83200]"
@@ -1809,7 +1812,7 @@ function KinerjaDetailAdvancedFilter({
           options={[
             { value: 'ALL', label: 'Semua Status' },
             { value: 'COMPLETED', label: 'Selesai' },
-            { value: 'ARCHIVED', label: 'Diarsipkan' },
+            { value: 'TERSIMPAN', label: 'Tersimpan' },
           ]}
         />
       </div>
@@ -2085,13 +2088,13 @@ function StatusSummary({ dokumen }: { dokumen: LaporanKinerjaRow[] }) {
       total[row.status] += 1
       return total
     },
-    { COMPLETED: 0, ARCHIVED: 0 } satisfies Record<LaporanKinerjaRow['status'], number>,
+    { COMPLETED: 0, TERSIMPAN: 0 } satisfies Record<LaporanKinerjaRow['status'], number>,
   )
 
   return (
     <div className="flex flex-wrap gap-1.5">
       {counts.COMPLETED > 0 && <StatusPill className="border-emerald-200 bg-emerald-50 text-emerald-700">{counts.COMPLETED} Selesai</StatusPill>}
-      {counts.ARCHIVED > 0 && <StatusPill className="border-blue-200 bg-blue-50 text-blue-700">{counts.ARCHIVED} Diarsipkan</StatusPill>}
+      {counts.TERSIMPAN > 0 && <StatusPill className="border-blue-200 bg-blue-50 text-blue-700">{counts.TERSIMPAN} Tersimpan</StatusPill>}
     </div>
   )
 }
@@ -2138,7 +2141,7 @@ function countActiveDetailFilters(filter: DetailFilterValue) {
 
 function formatStatusLabel(status: LaporanKinerjaRow['status']) {
   if (status === 'COMPLETED') return 'Selesai'
-  return 'Diarsipkan'
+  return 'Tersimpan'
 }
 
 function formatDate(value: string) {

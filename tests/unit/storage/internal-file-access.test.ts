@@ -425,7 +425,7 @@ describe('internal file access foundation', () => {
         documents: [{
           id: 'document-id',
           createdBy: 'owner-user',
-          status: 'ARCHIVED',
+          status: 'COMPLETED',
           revisionTarget: null,
           lampiranDibersihkanAt: null,
         }],
@@ -484,7 +484,7 @@ describe('internal file access foundation', () => {
         documents: [{
           id: 'document-id',
           createdBy: 'owner-user',
-          status: 'ARCHIVED',
+          status: 'COMPLETED',
           revisionTarget: null,
           lampiranDibersihkanAt: null,
         }],
@@ -592,7 +592,7 @@ describe('internal file access foundation', () => {
       document: {
         id: '11111111-1111-4111-8111-111111111111',
         createdBy: 'owner-user',
-        status: 'ARCHIVED',
+        status: 'COMPLETED',
         revisionTarget: null,
         lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
       },

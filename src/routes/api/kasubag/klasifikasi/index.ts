@@ -22,8 +22,8 @@ export type KlasifikasiNode = {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/arsiparis/klasifikasi — list semua klasifikasi aktif dalam tree structure
-// POST /api/arsiparis/klasifikasi — create klasifikasi baru
+// GET /api/kasubag/klasifikasi — list semua klasifikasi aktif dalam tree structure
+// POST /api/kasubag/klasifikasi — create klasifikasi baru
 // ---------------------------------------------------------------------------
 
 const createKlasifikasiSchema = z.object({
@@ -123,7 +123,7 @@ function buildTree(items: Omit<KlasifikasiNode, 'children'>[]): KlasifikasiNode[
   return roots
 }
 
-export const Route = createFileRoute('/api/arsiparis/klasifikasi/')({
+export const Route = createFileRoute('/api/kasubag/klasifikasi/')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {

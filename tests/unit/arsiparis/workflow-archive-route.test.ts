@@ -29,7 +29,7 @@ vi.mock('#/db/client', () => ({
   },
 }))
 
-import { Route as WorkflowArchiveRoute } from '#/routes/api/arsiparis/dokumen.$id.archive'
+import { Route as WorkflowArchiveRoute } from '#/routes/api/kasubag/dokumen.$id.archive'
 
 type RoutePostHandler = (args: {
   request: Request
@@ -321,21 +321,7 @@ describe('workflow classification to berkas route', () => {
     expect(mocks.txUpdate).not.toHaveBeenCalled()
   })
 
-  it('rejects ARCHIVED documents with already-archived copy before archive writes', async () => {
-    queueSelectResults([dokumenRow({ status: 'ARCHIVED' })])
-
-    const response = await postHandler({
-      request: createPostRequest(validArchiveBody()),
-      params: { id: DOCUMENT_ID },
-    })
-
-    expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Dokumen sudah diarsipkan' })
-    expect(mocks.dbTransaction).not.toHaveBeenCalled()
-    expect(mocks.txUpdate).not.toHaveBeenCalled()
-  })
-
-  it('rejects non-COMPLETED non-ARCHIVED documents with safe not-final copy', async () => {
+  it('rejects non-COMPLETED documents with safe not-final copy', async () => {
     queueSelectResults([dokumenRow({ status: 'IN_PPK_VALIDATION' })])
 
     const response = await postHandler({
@@ -391,7 +377,7 @@ function validArchiveBody() {
 }
 
 function createPostRequest(body: Record<string, unknown>, origin = 'http://localhost') {
-  return new Request(`http://localhost/api/arsiparis/dokumen/${DOCUMENT_ID}/archive`, {
+  return new Request(`http://localhost/api/kasubag/dokumen/${DOCUMENT_ID}/archive`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

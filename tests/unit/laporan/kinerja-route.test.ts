@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const FINAL_STATUSES = ['COMPLETED', 'ARCHIVED']
+const NARROW_FINAL_STATUSES = ['COMPLETED']
+const BROAD_FINAL_STATUSES = ['COMPLETED', 'TERSIMPAN']
 
 const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
   dbSelect: vi.fn(),
   dbSelectDistinct: vi.fn(),
   eq: vi.fn(),
-  inArray: vi.fn(),
+  or: vi.fn(),
+  isNull: vi.fn(),
   notInArray: vi.fn(),
   isNotNull: vi.fn(),
   and: vi.fn(),
@@ -21,7 +23,8 @@ vi.mock('drizzle-orm', async (importActual) => {
     ...actual,
     desc: vi.fn((column: unknown) => ({ type: 'desc', column })),
     eq: mocks.eq,
-    inArray: mocks.inArray,
+    or: mocks.or,
+    isNull: mocks.isNull,
     notInArray: mocks.notInArray,
     isNotNull: mocks.isNotNull,
     and: mocks.and,
@@ -59,10 +62,8 @@ describe('Laporan Kinerja API route', () => {
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.eq.mockImplementation((left: unknown, right: unknown) => ({ type: 'eq', left, right }))
-    mocks.inArray.mockImplementation((_column: unknown, values: readonly string[]) => ({
-      type: 'inArray',
-      values,
-    }))
+    mocks.or.mockImplementation((...clauses: unknown[]) => ({ type: 'or', clauses }))
+    mocks.isNull.mockImplementation((column: unknown) => ({ type: 'isNull', column }))
     mocks.notInArray.mockImplementation((column: unknown, values: readonly string[]) => ({
       type: 'notInArray',
       column,
@@ -121,9 +122,9 @@ describe('Laporan Kinerja API route', () => {
       'PENANGGUNG_JAWAB_KINERJA',
     ))
     setupDbSelect([
-      createRow({ status: 'COMPLETED', nominal_realisasi: '12345.00' }),
-      createRow({ status: 'ARCHIVED', nominal_realisasi: null }),
-    ])
+      createRow({ id: 'doc-1', status: 'COMPLETED', nominal_realisasi: '12345.00' }),
+      createRow({ id: 'doc-2', status: 'COMPLETED', nominal_realisasi: null }),
+    ], [], ['doc-1'])
 
     const response = await getHandler({
       request: new Request('http://localhost/api/laporan/kinerja'),
@@ -135,14 +136,52 @@ describe('Laporan Kinerja API route', () => {
       limit: 2000,
       count: 2,
       truncated: false,
-      final_statuses: FINAL_STATUSES,
+      final_statuses: NARROW_FINAL_STATUSES,
       tahun_tersedia: [],
     })
     expect(body.dokumen).toHaveLength(2)
-    expect(body.dokumen.map((row: { status: string }) => row.status)).toEqual(FINAL_STATUSES)
+    expect(body.dokumen.map((row: { status: string }) => row.status)).toEqual(['COMPLETED', 'COMPLETED'])
     expect(body.dokumen[0]).not.toHaveProperty('lampiran_urls')
     expect(body.dokumen[0]).not.toHaveProperty('file_url')
+    expect(body.dokumen[0].is_diberkaskan).toBe(true)
+    expect(body.dokumen[1].is_diberkaskan).toBe(false)
     expect(body.dokumen[1].nominal_realisasi).toBeNull()
+  })
+
+  it('includes TERSIMPAN (non-material) documents only when scope=laporan_kinerja is requested', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(
+      ['PENANGGUNG_JAWAB_KINERJA'],
+      'PENANGGUNG_JAWAB_KINERJA',
+    ))
+    setupDbSelect([
+      createRow({ id: 'doc-1', status: 'COMPLETED', nominal_realisasi: '12345.00' }),
+      createRow({ id: 'doc-2', status: 'TERSIMPAN', nominal_realisasi: null, komponen_id: null, komponen_nama: null }),
+    ])
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja?scope=laporan_kinerja'),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.meta.final_statuses).toEqual(BROAD_FINAL_STATUSES)
+    expect(body.dokumen.map((row: { status: string }) => row.status)).toEqual(['COMPLETED', 'TERSIMPAN'])
+    expect(mocks.or).toHaveBeenCalled()
+    expect(mocks.isNull).toHaveBeenCalledWith(expect.anything())
+  })
+
+  it('does not broaden scope for Monitoring Realisasi requests without the scope param', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
+    setupDbSelect([])
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja'),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.meta.final_statuses).toEqual(NARROW_FINAL_STATUSES)
+    expect(mocks.or).not.toHaveBeenCalled()
   })
 
   it('includes komponen id and name in each row', async () => {
@@ -161,7 +200,7 @@ describe('Laporan Kinerja API route', () => {
     expect(body.dokumen[0].komponen_nama).toBe('Komponen A')
   })
 
-  it('filters only final statuses and excludes non-final workflow statuses', async () => {
+  it('filters to only the COMPLETED status without scope=laporan_kinerja', async () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(
       ['PENANGGUNG_JAWAB_KINERJA'],
       'PENANGGUNG_JAWAB_KINERJA',
@@ -173,13 +212,8 @@ describe('Laporan Kinerja API route', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(mocks.inArray).toHaveBeenCalledWith(expect.anything(), FINAL_STATUSES)
-    const [, statuses] = mocks.inArray.mock.calls[0]
-    expect(statuses).not.toContain('DRAFT')
-    expect(statuses).not.toContain('IN_PPK_VALIDATION')
-    expect(statuses).not.toContain('IN_BENDAHARA_APPROVAL')
-    expect(statuses).not.toContain('NEED_REVISION')
-    expect(statuses).not.toContain('TERSIMPAN')
+    expect(mocks.eq).toHaveBeenCalledWith(expect.anything(), 'COMPLETED')
+    expect(mocks.eq).not.toHaveBeenCalledWith(expect.anything(), 'TERSIMPAN')
   })
 
   it('filters to material documents only', async () => {
@@ -352,17 +386,22 @@ function createSession(roles: string[], activeRole: string) {
   }
 }
 
-// The route issues two `db.select(...)` calls in order: destroyed-berkas
-// document ids first, then the main row query. `setupDbSelect` queues both
-// via `mockReturnValueOnce` so each test only has to describe the shapes it
-// cares about.
-function setupDbSelect(mainRows: unknown[], destroyedDokumenIds: string[] = []) {
+// The route issues three `db.select(...)` calls in order: destroyed-berkas
+// document ids, then berkased (diberkaskan) document ids, then the main row
+// query. `setupDbSelect` queues all three via `mockReturnValueOnce` so each
+// test only has to describe the shapes it cares about.
+function setupDbSelect(
+  mainRows: unknown[],
+  destroyedDokumenIds: string[] = [],
+  berkasedDokumenIds: string[] = [],
+) {
   mocks.dbSelect
-    .mockReturnValueOnce(createDestroyedIdsQueryBuilder(destroyedDokumenIds.map((dokumenId) => ({ dokumenId }))))
+    .mockReturnValueOnce(createIdListQueryBuilder(destroyedDokumenIds.map((dokumenId) => ({ dokumenId }))))
+    .mockReturnValueOnce(createIdListQueryBuilder(berkasedDokumenIds.map((dokumenId) => ({ dokumenId }))))
     .mockReturnValueOnce(createQueryBuilder(mainRows))
 }
 
-function createDestroyedIdsQueryBuilder(result: { dokumenId: string }[]): Record<string, unknown> {
+function createIdListQueryBuilder(result: { dokumenId: string }[]): Record<string, unknown> {
   const query: Record<string, unknown> = {}
 
   query.from = vi.fn(() => query)

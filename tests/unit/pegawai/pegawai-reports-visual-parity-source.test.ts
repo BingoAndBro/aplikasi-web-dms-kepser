@@ -19,7 +19,7 @@ describe('pegawai report visual parity source guard', () => {
     expect(source).toContain('rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9]')
     expect(source).toContain('to="/pegawai/dokumen/$id"')
     expect(source).toContain('Detail Dokumen')
-    expect(source).not.toContain('/arsiparis')
+    expect(source).not.toContain('/kasubag')
     expect(source).not.toContain('berkas')
   })
 
@@ -50,7 +50,7 @@ describe('pegawai report visual parity source guard', () => {
     expect(source).not.toContain('detailFilter.kegiatanId')
     expect(source).not.toContain('getKegiatanIdFromUrl')
     expect(source).not.toContain('window.history.pushState')
-    expect(source).not.toContain('/arsiparis')
+    expect(source).not.toContain('/kasubag')
     expect(source).not.toContain('approve_destruction')
   })
 })

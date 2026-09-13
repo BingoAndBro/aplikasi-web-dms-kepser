@@ -52,7 +52,7 @@ import {
 import { cn } from '#/lib/utils'
 import { formatDate, formatDateTime } from '#/lib/utils/format'
 
-export const Route = createFileRoute('/arsiparis/penambahan-arsip')({
+export const Route = createFileRoute('/kasubag/penambahan-arsip')({
   component: PenambahanArsipPage,
 })
 
@@ -208,7 +208,7 @@ const MANUAL_CREATE_STEP_SUBTITLES = [
   'Pratinjau & Simpan',
 ]
 const MANUAL_CREATE_STEP_DESCRIPTIONS = [
-  'Lengkapi informasi dasar dokumen kearsipan dalam satu form compact.',
+  'Lengkapi informasi dasar dokumen dalam satu form compact.',
   'Pilih jenis pembayaran dan nominal realisasi belanja fisik.',
   'Tambah atau unggah berkas pendukung sebagai berkas lampiran opsional.',
   'Tinjau kembali seluruh rincian informasi sebelum disimpan.',
@@ -336,7 +336,7 @@ function PenambahanArsipPage() {
     try {
       const [fungsiJson, klasifikasiJson] = await Promise.all([
         apiFetch<FungsiRow[]>('/master-fungsi'),
-        apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi', {
+        apiFetch<KlasifikasiResponse>('/kasubag/klasifikasi', {
           query: { eligible_for_berkas: 'true' },
         }),
       ])
@@ -427,7 +427,7 @@ function PenambahanArsipPage() {
             <p className="mt-4 max-w-xl text-xs font-medium leading-relaxed text-zinc-500 sm:text-sm">
               Dokumen masuk ke folder Cara Pembayaran{' '}
               <span className="font-bold text-zinc-700">{submittedManualArsip.klasifikasiName || 'yang dipilih'}</span>.
-              Metadata arsip final tetap diisi saat berkas ditutup.
+              Metadata final tetap diisi saat berkas ditutup.
             </p>
 
             {submittedManualArsip.warning && (
@@ -440,16 +440,16 @@ function PenambahanArsipPage() {
               <Button
                 type="button"
                 size="lg"
-                onClick={() => navigate({ to: '/arsiparis/berkas' })}
+                onClick={() => navigate({ to: '/kasubag/berkas' })}
                 className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto"
               >
-                Lihat Pemberkasan Arsip <ArrowRight size={14} />
+                Lihat Berkas Terbuka <ArrowRight size={14} />
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="lg"
-                onClick={() => navigate({ to: '/arsiparis' })}
+                onClick={() => navigate({ to: '/kasubag' })}
                 className="w-full border-[#F0E1D5] bg-white sm:w-auto"
               >
                 Kembali ke Dashboard
@@ -496,7 +496,7 @@ function PenambahanArsipPage() {
               fungsis={fungsis}
               klasifikasiList={klasifikasiList}
               isOpen
-              onClose={() => { window.location.href = '/arsiparis' }}
+              onClose={() => { window.location.href = '/kasubag' }}
               onSuccess={async (result) => {
                 await fetchData()
                 setNotice(result.notice)
@@ -564,7 +564,7 @@ function ManualArsipTable({
 
     try {
       const detailJson = await apiFetch<ManualArsipDetailResponse>(
-        `/arsiparis/manual-arsip/${encodeURIComponent(item.id)}`,
+        `/kasubag/manual-arsip/${encodeURIComponent(item.id)}`,
       )
 
       if (!detailJson.manual_arsip) {
@@ -1359,7 +1359,7 @@ function CreateManualArsipModal({
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const createResponse = await apiMutation<ManualArsipCreateResponse>('/api/arsiparis/manual-arsip', {
+      const createResponse = await apiMutation<ManualArsipCreateResponse>('/api/kasubag/manual-arsip', {
         method: 'POST',
         body: {
           nama: form.nama.trim(),
@@ -1404,7 +1404,7 @@ function CreateManualArsipModal({
 
       try {
         const uploadResponse = await apiMutation<ManualArsipUploadResponse>(
-          `/api/arsiparis/manual-arsip/${createdId}/attachments`,
+          `/api/kasubag/manual-arsip/${createdId}/attachments`,
           {
             method: 'POST',
             body: formData,
@@ -1468,7 +1468,7 @@ function CreateManualArsipModal({
               <p className="font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">Penambahan Dokumen</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                 <FileText size={13} className="text-zinc-500" />
-                <span className="font-medium text-zinc-800">Kearsipan KSUB</span>
+                <span className="font-medium text-zinc-800">Pemberkasan KSBU</span>
                 <ChevronRight size={12} className="text-zinc-300" />
                 <span>Tambahkan dokumen manual ke folder</span>
               </div>
@@ -1513,7 +1513,7 @@ function CreateManualArsipModal({
 
             <div className="space-y-3 rounded-b-[1.25rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-3.5 sm:p-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-snug text-amber-800">
-            Dokumen manual ini belum menjadi arsip final. Dokumen akan menjadi bagian arsip ketika berkas Cara Pembayaran ditutup.
+            Dokumen manual ini belum final. Dokumen akan menjadi bagian berkas ketika berkas Cara Pembayaran ditutup.
           </div>
 
           {step === 1 && (
@@ -1574,7 +1574,7 @@ function CreateManualArsipModal({
           <FormField
             label="Tanggal Dokumen/Sumber"
             required
-            hint="tanggal item yang diarsipkan"
+            hint="tanggal item dimasukkan ke berkas"
             error={errors.tanggal}
           >
             <DatePicker
@@ -1647,7 +1647,7 @@ function CreateManualArsipModal({
           </div>
 
           <div className="rounded-lg border border-outline-variant/30 bg-surface-container-low/20 px-3 py-1.5 text-[10px] text-on-surface-variant">
-            <p>Catatan: Dokumen akan masuk ke folder Cara Pembayaran yang dipilih. Metadata arsip baru diisi ketika berkas ditutup.</p>
+            <p>Catatan: Dokumen akan masuk ke folder Cara Pembayaran yang dipilih. Metadata baru diisi ketika berkas ditutup.</p>
           </div>
             </>
           )}
@@ -2194,7 +2194,7 @@ function ManualCreateReview({
           <div>
             <p className="text-xs font-extrabold uppercase tracking-wide text-zinc-950">Pemberitahuan Konsekuensi</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-orange-800">
-              Dokumen akan masuk ke folder Cara Pembayaran yang dipilih. Metadata arsip baru diisi ketika berkas ditutup.
+              Dokumen akan masuk ke folder Cara Pembayaran yang dipilih. Metadata baru diisi ketika berkas ditutup.
             </p>
           </div>
         </div>
@@ -2390,7 +2390,7 @@ function buildManualArsipAttachmentFileUrl(
   attachmentId: string,
   purpose: 'preview' | 'download',
 ) {
-  return `/api/arsiparis/manual-arsip/${encodeURIComponent(manualArsipId)}/attachments/${encodeURIComponent(attachmentId)}/${purpose}`
+  return `/api/kasubag/manual-arsip/${encodeURIComponent(manualArsipId)}/attachments/${encodeURIComponent(attachmentId)}/${purpose}`
 }
 
 function formatFriendlyAttachmentMetadata(attachment: ManualArsipAttachmentMetadata) {

@@ -11,7 +11,7 @@ import {
 } from '#/lib/archive/berkas-arsip-page-format'
 
 export const BERKAS_FOLDER_LIST_CSV_FILENAME = 'daftar-berkas-terbuka.csv'
-// RP-01: `/arsiparis/inaktif` dihapus & `/arsiparis/usul-musnah` -> `/arsiparis/pembersihan`.
+// RP-01: `/kasubag/inaktif` dihapus & `/kasubag/usul-musnah` -> `/kasubag/pembersihan`.
 // Nama file lama dibuang; halaman Berkas Tertutup + Pembersihan Berkas memakai ini.
 export const BERKAS_TERTUTUP_LIST_CSV_FILENAME = 'daftar-berkas-tertutup.csv'
 export const BERKAS_PEMBERSIHAN_LIST_CSV_FILENAME = 'daftar-pembersihan-berkas.csv'
@@ -63,7 +63,7 @@ const FOLDER_LIST_HEADERS = [
   'Kategori / Section',
   'Cara Pembayaran',
   'Status Berkas',
-  'Status Arsip',
+  'Status',
   'Umur Berkas',
   'Jumlah Dokumen',
   'Dokumen Workflow',

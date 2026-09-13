@@ -17,8 +17,9 @@ describe('Phase 15E shared UI foundation mappings', () => {
     expect(DOCUMENT_STATUS_BADGE_CONFIG.NEED_REVISION.label).toBe('Perlu Revisi')
     expect(DOCUMENT_STATUS_BADGE_CONFIG.COMPLETED.label).toBe('Selesai')
     expect(DOCUMENT_STATUS_BADGE_CONFIG.TERSIMPAN.label).toBe('Tersimpan')
-    expect(DOCUMENT_STATUS_BADGE_CONFIG.ARCHIVED.label).toBe('Diarsipkan')
     expect(DOCUMENT_STATUS_BADGE_CONFIG).not.toHaveProperty('IN_REVIEW')
+    expect(DOCUMENT_STATUS_BADGE_CONFIG).not.toHaveProperty('ARCHIVED')
+    expect(getStatusBadgeConfig('ARCHIVED', 'document').label).toBe('Status tidak dikenal')
   })
 
   it('uses canonical folder, lifecycle, and source labels', () => {

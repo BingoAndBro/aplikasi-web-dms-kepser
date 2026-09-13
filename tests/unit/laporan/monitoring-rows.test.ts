@@ -25,6 +25,7 @@ function row(overrides: Partial<LaporanKinerjaRow> = {}): LaporanKinerjaRow {
     created_at: '2026-05-01T00:00:00.000Z',
     updated_at: '2026-05-10T00:00:00.000Z',
     nominal_realisasi: 1_000_000,
+    is_diberkaskan: false,
     ...overrides,
   }
 }
@@ -133,7 +134,7 @@ describe('totalNominal', () => {
   it('sums every document with a non-null nominal', () => {
     const rows = [
       row({ nominal_realisasi: 100 }),
-      row({ status: 'ARCHIVED', nominal_realisasi: 200 }),
+      row({ status: 'TERSIMPAN', nominal_realisasi: 200 }),
       row({ nominal_realisasi: null }),
     ]
     expect(totalNominal(rows)).toBe(300)

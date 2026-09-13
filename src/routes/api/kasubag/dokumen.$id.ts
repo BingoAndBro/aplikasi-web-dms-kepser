@@ -42,10 +42,10 @@ function toSafeErrorLog(error: unknown): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/arsiparis/dokumen/[id] - detail dokumen untuk review arsip
+// GET /api/kasubag/dokumen/[id] - detail dokumen untuk review arsip
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute('/api/arsiparis/dokumen/$id')({
+export const Route = createFileRoute('/api/kasubag/dokumen/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

@@ -58,11 +58,11 @@ vi.mock('#/lib/storage/manual-arsip-upload', async (importOriginal) => {
   }
 })
 
-import { Route as ManualArsipIndexRoute } from '#/routes/api/arsiparis/manual-arsip/index'
-import { Route as ManualArsipDetailRoute } from '#/routes/api/arsiparis/manual-arsip/$id'
-import { Route as ManualArsipAttachmentsRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments'
-import { Route as ManualArsipAttachmentPreviewRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/preview'
-import { Route as ManualArsipAttachmentDownloadRoute } from '#/routes/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download'
+import { Route as ManualArsipIndexRoute } from '#/routes/api/kasubag/manual-arsip/index'
+import { Route as ManualArsipDetailRoute } from '#/routes/api/kasubag/manual-arsip/$id'
+import { Route as ManualArsipAttachmentsRoute } from '#/routes/api/kasubag/manual-arsip/$id/attachments'
+import { Route as ManualArsipAttachmentPreviewRoute } from '#/routes/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
+import { Route as ManualArsipAttachmentDownloadRoute } from '#/routes/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 
 type RouteGetHandler = (args: { request: Request; params?: Record<string, string> }) => Promise<Response>
@@ -140,7 +140,7 @@ describe('manual archive retention helper', () => {
       tanggalDiarsipkan: '2026-02-31',
       retensiAktif: '1 Tahun',
       retensiInaktif: '1 Tahun',
-    })).toThrow('Tanggal arsip harus valid dengan format YYYY-MM-DD')
+    })).toThrow('Tanggal harus valid dengan format YYYY-MM-DD')
   })
 })
 
@@ -169,7 +169,7 @@ describe('manual arsip API foundation routes', () => {
   it('removes the manual arsip category-list endpoint entirely (replaced by Fungsi/Kegiatan/Komponen)', () => {
     // Konsep manual_arsip_category dihapus total; alur baru pakai Fungsi -> Kegiatan -> Komponen
     // lewat /master-fungsi, /master-kegiatan, /master-komponen (lihat resolveManualArsipHierarchy).
-    expect(existsSync(path.resolve('src/routes/api/arsiparis/manual-arsip/categories.ts'))).toBe(false)
+    expect(existsSync(path.resolve('src/routes/api/kasubag/manual-arsip/categories.ts'))).toBe(false)
   })
 
   it('protects create with the same-origin guard before auth/db work', async () => {
@@ -237,9 +237,9 @@ describe('manual arsip API foundation routes', () => {
 
   it('rejects invalid or partial final retention metadata without a 500', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [{ ...validCreateBody(), tanggal_diarsipkan: '24/05/2026' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
-      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
-      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-02-31' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '24/05/2026' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-02-31' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
       [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
       [{ ...validCreateBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
     ]
@@ -778,10 +778,10 @@ describe('manual arsip API foundation routes', () => {
     )
 
     const listResponse = await indexHandlers.GET({
-      request: new Request('http://localhost/api/arsiparis/manual-arsip'),
+      request: new Request('http://localhost/api/kasubag/manual-arsip'),
     })
     const detailResponse = await detailGetHandler({
-      request: new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}`),
+      request: new Request(`http://localhost/api/kasubag/manual-arsip/${MANUAL_ARSIP_ID}`),
       params: { id: MANUAL_ARSIP_ID },
     })
 
@@ -1104,7 +1104,7 @@ describe('manual arsip API foundation routes', () => {
 
   it('rejects invalid or partial final metadata fields on manual archive PATCH', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal arsip harus valid dengan format YYYY-MM-DD'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
       [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
       [{ ...validCreateBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
       [omit(validCreateBody(), 'klasifikasi_id'), 'Jenis pembayaran wajib dipilih'],
@@ -1636,7 +1636,7 @@ describe('manual arsip API foundation routes', () => {
     formData.append('titles', new File([new Uint8Array(1)], 'judul.txt', { type: 'text/plain' }))
 
     const response = await attachmentsPostHandler({
-      request: new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}/attachments`, {
+      request: new Request(`http://localhost/api/kasubag/manual-arsip/${MANUAL_ARSIP_ID}/attachments`, {
         method: 'POST',
         headers: { Origin: 'http://localhost' },
         body: formData,
@@ -2025,7 +2025,7 @@ function omit(source: Record<string, unknown>, key: string): Record<string, unkn
 }
 
 function createPostRequest(body: Record<string, unknown>, origin = 'http://localhost') {
-  return new Request('http://localhost/api/arsiparis/manual-arsip', {
+  return new Request('http://localhost/api/kasubag/manual-arsip', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -2036,7 +2036,7 @@ function createPostRequest(body: Record<string, unknown>, origin = 'http://local
 }
 
 function createPatchRequest(body: Record<string, unknown>, origin = 'http://localhost') {
-  return new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}`, {
+  return new Request(`http://localhost/api/kasubag/manual-arsip/${MANUAL_ARSIP_ID}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -2060,7 +2060,7 @@ function createAttachmentUploadRequest(
     formData.append('titles', title)
   }
 
-  return new Request(`http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}/attachments`, {
+  return new Request(`http://localhost/api/kasubag/manual-arsip/${MANUAL_ARSIP_ID}/attachments`, {
     method: 'POST',
     headers: {
       Origin: origin,
@@ -2071,7 +2071,7 @@ function createAttachmentUploadRequest(
 
 function createAttachmentFileRequest(purpose: 'preview' | 'download') {
   return new Request(
-    `http://localhost/api/arsiparis/manual-arsip/${MANUAL_ARSIP_ID}/attachments/${ATTACHMENT_ID}/${purpose}`,
+    `http://localhost/api/kasubag/manual-arsip/${MANUAL_ARSIP_ID}/attachments/${ATTACHMENT_ID}/${purpose}`,
   )
 }
 

@@ -8,8 +8,8 @@ import { ROLES } from '#/lib/constants/roles'
 import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
-// PATCH /api/arsiparis/klasifikasi/$id — update klasifikasi
-// DELETE /api/arsiparis/klasifikasi/$id — soft delete klasifikasi
+// PATCH /api/kasubag/klasifikasi/$id — update klasifikasi
+// DELETE /api/kasubag/klasifikasi/$id — soft delete klasifikasi
 // ---------------------------------------------------------------------------
 
 const updateKlasifikasiSchema = z.object({
@@ -147,7 +147,7 @@ async function isDescendantOf(targetId: string, ancestorId: string): Promise<boo
   return descendants.includes(ancestorId)
 }
 
-export const Route = createFileRoute('/api/arsiparis/klasifikasi/$id')({
+export const Route = createFileRoute('/api/kasubag/klasifikasi/$id')({
   server: {
     handlers: {
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

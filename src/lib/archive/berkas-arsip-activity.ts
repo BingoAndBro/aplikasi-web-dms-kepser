@@ -18,7 +18,7 @@ export const BERKAS_ACTIVITY_EVENT_LABELS: Record<BerkasActivityEventType, strin
   DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN: 'Dokumen Persetujuan diklasifikasikan',
   DOKUMEN_MANUAL_DITAMBAHKAN: 'Penambahan dokumen manual sukses',
   BERKAS_DITUTUP: 'Berkas ditutup',
-  METADATA_ARSIP_AKTIF_DIPERBARUI: 'Metadata arsip aktif diperbarui',
+  METADATA_ARSIP_AKTIF_DIPERBARUI: 'Metadata Tersimpan diperbarui',
   // RP-01: nilai enum dipertahankan (DB CHECK) tetapi event ini tak lagi ditulis runtime.
   BERKAS_DIPINDAHKAN_KE_INAKTIF: 'Berkas dipindahkan ke Inaktif (usang)',
   BERKAS_DIPINDAHKAN_KE_USUL_MUSNAH: 'Berkas diusulkan untuk pembersihan',

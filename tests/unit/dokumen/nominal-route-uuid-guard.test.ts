@@ -148,21 +148,6 @@ describe('/api/dokumen/$id/nominal UUID guard', () => {
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
-  it('keeps the ARCHIVED document guard', async () => {
-    mockDocumentAndArchive(createDokumen({ status: 'ARCHIVED' }), [])
-
-    const response = await nominalPatchHandler({
-      request: createPatchRequest(),
-      params: { id: DOKUMEN_ID },
-    })
-
-    expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({
-      error: 'Tidak bisa update dokumen yang sudah diarsipkan',
-    })
-    expect(mocks.dbTransaction).not.toHaveBeenCalled()
-  })
-
   it('keeps the DIMUSNAHKAN archive guard', async () => {
     mockDocumentAndArchive(createDokumen(), [{ status_arsip: 'DIMUSNAHKAN' }])
 

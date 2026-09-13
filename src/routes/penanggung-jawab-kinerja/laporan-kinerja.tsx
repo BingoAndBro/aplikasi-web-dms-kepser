@@ -27,5 +27,5 @@ function LaporanKinerjaPage() {
     navigate({ to: '/penanggung-jawab-kinerja/laporan-kinerja', search: next }),
   )
 
-  return <MonitoringRealisasiView {...handlers} />
+  return <MonitoringRealisasiView {...handlers} scope="laporan_kinerja" />
 }

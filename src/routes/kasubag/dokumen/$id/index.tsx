@@ -22,7 +22,7 @@ import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
 
-export const Route = createFileRoute('/arsiparis/dokumen/$id/')({
+export const Route = createFileRoute('/kasubag/dokumen/$id/')({
   component: ArsiparisDokumenDetailPage,
 })
 
@@ -291,7 +291,7 @@ function ArsiparisDokumenDetailPage() {
   async function fetchData() {
     setLoading(true); setFetchError(null)
     try {
-      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/arsiparis/dokumen/${id}`)
+      const json = await apiFetch<{ dokumen: DokumenDetail }>(`/kasubag/dokumen/${id}`)
       setDokumen(json.dokumen)
     } catch (err) {
       if (err instanceof ApiError) {
@@ -308,7 +308,7 @@ function ArsiparisDokumenDetailPage() {
   }
 
   useEffect(() => {
-    apiFetch<{ klasifikasi?: Klasifikasi[] }>('/arsiparis/klasifikasi', {
+    apiFetch<{ klasifikasi?: Klasifikasi[] }>('/kasubag/klasifikasi', {
       query: { eligible_for_berkas: 'true' },
     })
       .then(json => setKlasifikasiList(json.klasifikasi ?? []))
@@ -392,7 +392,7 @@ function ArsiparisDokumenDetailPage() {
 
     setFormLoading(true); setFormSubmitError(null)
     try {
-      await apiMutation(`/api/arsiparis/dokumen/${id}/archive`, {
+      await apiMutation(`/api/kasubag/dokumen/${id}/archive`, {
         method: 'POST',
         body: {
           klasifikasi_id: klasifikasi,
@@ -401,7 +401,7 @@ function ArsiparisDokumenDetailPage() {
       })
       clearClassificationDraft(id)
       skipBeforeUnloadRef.current = true
-      window.location.href = '/arsiparis/berkas'
+      window.location.href = '/kasubag/berkas'
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -475,7 +475,7 @@ function ArsiparisDokumenDetailPage() {
     <ErrorState
       title="Dokumen tidak dapat dimuat"
       description={fetchError ?? 'Dokumen tidak ditemukan'}
-      action={<Button variant="outline" size="sm" onClick={() => window.location.href = '/arsiparis/inbox'}>Kembali ke Pengklasifikasian</Button>}
+      action={<Button variant="outline" size="sm" onClick={() => window.location.href = '/kasubag/inbox'}>Kembali ke Pengklasifikasian</Button>}
       variant="page"
     />
   )
@@ -485,7 +485,7 @@ function ArsiparisDokumenDetailPage() {
       <div className="mx-auto max-w-[92rem] space-y-4">
         <div className="flex items-center gap-3">
           <Link
-            to="/arsiparis/inbox"
+            to="/kasubag/inbox"
             aria-label="Kembali ke Pengklasifikasian Dokumen"
             className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
           >
@@ -635,7 +635,7 @@ function ArsiparisDokumenDetailPage() {
               Formulir Pengindeksan
             </p>
             <h2 className="mt-1.5 font-headline text-xl font-extrabold tracking-tight text-zinc-950">
-              Klasifikasi Arsip
+              Klasifikasi Dokumen
             </h2>
             <div className="my-4 h-px bg-[#F0E1D5]" />
             <div className="space-y-4">
@@ -789,7 +789,7 @@ function ArsiparisDokumenDetailPage() {
                   {formLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                   Klasifikasikan Dokumen
                 </Button>
-                <Link to="/arsiparis/inbox" className="flex h-11 w-full items-center justify-center rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] text-sm font-extrabold text-zinc-950 transition hover:bg-[#FFF8F1]">
+                <Link to="/kasubag/inbox" className="flex h-11 w-full items-center justify-center rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] text-sm font-extrabold text-zinc-950 transition hover:bg-[#FFF8F1]">
                   Kembali
                 </Link>
               </div>
@@ -825,7 +825,7 @@ function ArsiparisDokumenDetailPage() {
           </div>
           <ul className="mt-4 space-y-2 border-t border-[#F1E5DA] pt-4 text-sm font-medium leading-relaxed text-zinc-700">
             <li>Dokumen masuk ke folder berkas yang masih terbuka.</li>
-            <li>Metadata arsip belum diisi pada tahap ini.</li>
+            <li>Metadata belum diisi pada tahap ini.</li>
           </ul>
         </div>
       </ConfirmDialog>

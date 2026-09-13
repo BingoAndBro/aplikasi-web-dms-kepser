@@ -29,7 +29,7 @@ export interface TransitionResult {
   newStatus: StatusDokumen
   newCurrentStep: CurrentStep
   newRevisionTarget: RevisionTarget
-  /** Step ke berapa saat aksi dilakukan (untuk log_aktivitas). null untuk ARCHIVE/SKIP */
+  /** Step ke berapa saat aksi dilakukan (untuk log_aktivitas) */
   stepUrutan: number | null
   error?: string
 }

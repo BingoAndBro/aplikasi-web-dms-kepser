@@ -95,7 +95,6 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id')({
             'IN_BENDAHARA_APPROVAL',
             'NEED_REVISION',
             'COMPLETED',
-            'ARCHIVED',
           ]
           if (!ppkStatuses.includes(dok.status)) {
             return Response.json({ error: 'Dokumen tidak tersedia untuk PPK' }, { status: 400 })

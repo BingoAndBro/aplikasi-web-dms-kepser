@@ -21,7 +21,7 @@ vi.mock('#/db/client', () => ({
   },
 }))
 
-import { Route as KlasifikasiUpdateRoute } from '#/routes/api/arsiparis/klasifikasi/$id'
+import { Route as KlasifikasiUpdateRoute } from '#/routes/api/kasubag/klasifikasi/$id'
 
 type RoutePatchHandler = (args: {
   request: Request
@@ -327,7 +327,7 @@ function inactiveParent() {
 }
 
 function createPatchRequest(body: Record<string, unknown>) {
-  return new Request(`http://localhost/api/arsiparis/klasifikasi/${CURRENT_ID}`, {
+  return new Request(`http://localhost/api/kasubag/klasifikasi/${CURRENT_ID}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -338,7 +338,7 @@ function createPatchRequest(body: Record<string, unknown>) {
 }
 
 function createDeleteRequest() {
-  return new Request(`http://localhost/api/arsiparis/klasifikasi/${CURRENT_ID}`, {
+  return new Request(`http://localhost/api/kasubag/klasifikasi/${CURRENT_ID}`, {
     method: 'DELETE',
     headers: {
       Origin: 'http://localhost',

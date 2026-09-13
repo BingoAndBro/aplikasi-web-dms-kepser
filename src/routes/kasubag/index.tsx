@@ -16,7 +16,7 @@ import { ROUTES } from '#/lib/constants/routes'
 import { byOldest, formatDate, formatRelativeAge } from '#/lib/utils/format'
 import { ClipboardList, FilePlus, FolderCheck, FolderOpen, Network, Tags, Trash2 } from 'lucide-react'
 
-export const Route = createFileRoute('/arsiparis/')({
+export const Route = createFileRoute('/kasubag/')({
   component: KepalaSubBagianUmumDashboard,
 })
 
@@ -78,14 +78,14 @@ function KepalaSubBagianUmumDashboard() {
 
   useEffect(() => {
     Promise.all([
-      apiFetch<InboxStatsResponse>('/arsiparis/inbox').catch(() => ({ inbox: [] })),
-      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+      apiFetch<InboxStatsResponse>('/kasubag/inbox').catch(() => ({ inbox: [] })),
+      apiFetch<BerkasStatsResponse>('/kasubag/berkas', {
         query: { status_berkas: 'OPEN' },
       }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
-      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+      apiFetch<BerkasStatsResponse>('/kasubag/berkas', {
         query: { status_berkas: 'CLOSED', status_arsip: 'AKTIF' },
       }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
-      apiFetch<BerkasStatsResponse>('/arsiparis/berkas', {
+      apiFetch<BerkasStatsResponse>('/kasubag/berkas', {
         query: { status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' },
       }).catch(() => ({ berkas: [], summary: { total_rows_returned: 0 } })),
     ]).then(([inboxResponse, openResponse, closedResponse, proposedResponse]) => {
@@ -103,7 +103,7 @@ function KepalaSubBagianUmumDashboard() {
     <RoleDashboardPage>
       <RoleDashboardHeader
         title="Dashboard Kepala Sub Bagian Umum"
-        description="Pantau pengklasifikasian dokumen, pemberkasan, dan siklus hidup arsip."
+        description="Pantau pengklasifikasian dokumen, pemberkasan, dan siklus hidup berkas."
         actionHref={ROUTES.KEPALA_SUB_BAGIAN_UMUM.INBOX}
         actionLabel="Pengklasifikasian Dokumen"
         actionIcon={<FolderOpen size={16} />}
@@ -135,7 +135,7 @@ function KepalaSubBagianUmumDashboard() {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-8">
-          <DashboardSection title="Perlu Tindakan Kearsipan">
+          <DashboardSection title="Perlu Tindakan Pemberkasan">
             {hasArchiveTask ? (
               <div>
                 {classificationQueue.length > 0 && (
@@ -159,7 +159,7 @@ function KepalaSubBagianUmumDashboard() {
               </div>
             ) : (
               <DashboardEmptyState
-                title="Tidak ada tindakan kearsipan"
+                title="Tidak ada tindakan pemberkasan"
                 description="Antrean klasifikasi dan usul pembersihan yang membutuhkan tindakan akan muncul di sini."
               />
             )}
@@ -181,7 +181,7 @@ function KepalaSubBagianUmumDashboard() {
                       formatRelativeAge(document.created_at ?? document.tanggal ?? '') ??
                       (document.tanggal ? `Tanggal ${formatDate(document.tanggal)}` : undefined)
                     }
-                    href={`/arsiparis/dokumen/${document.id}`}
+                    href={`/kasubag/dokumen/${document.id}`}
                     actionLabel="Detail"
                   />
                 ))}

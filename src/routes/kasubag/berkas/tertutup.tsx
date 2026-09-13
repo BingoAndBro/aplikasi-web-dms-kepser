@@ -33,7 +33,7 @@ import {
 } from '#/lib/archive/berkas-arsip-csv'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
-export const Route = createFileRoute('/arsiparis/berkas/tertutup')({ component: BerkasTertutupPage })
+export const Route = createFileRoute('/kasubag/berkas/tertutup')({ component: BerkasTertutupPage })
 
 type BerkasFolder = {
   berkas_id: string
@@ -80,7 +80,7 @@ function BerkasTertutupPage() {
     setError(null)
     try {
       // Server mengurutkan closed_at ASC (terlama dulu) untuk daftar CLOSED.
-      const json = await apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+      const json = await apiFetch<BerkasFolderListResponse>('/kasubag/berkas', {
         query: {
           status_berkas: 'CLOSED',
           status_arsip: 'AKTIF',
@@ -112,7 +112,7 @@ function BerkasTertutupPage() {
   async function proposeDestruction(folder: BerkasFolder) {
     setPendingBerkasId(folder.berkas_id)
     try {
-      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(folder.berkas_id)}/lifecycle`, {
+      await apiFetch(`/kasubag/berkas/${encodeURIComponent(folder.berkas_id)}/lifecycle`, {
         method: 'POST',
         body: JSON.stringify({ action: 'propose_destruction' }),
       })
@@ -130,7 +130,7 @@ function BerkasTertutupPage() {
     setBatchRunning(true)
     const ids = dueFolders.map((folder) => folder.berkas_id)
     const results = await mapWithConcurrency(ids, 4, (id) =>
-      apiFetch(`/arsiparis/berkas/${encodeURIComponent(id)}/lifecycle`, {
+      apiFetch(`/kasubag/berkas/${encodeURIComponent(id)}/lifecycle`, {
         method: 'POST',
         body: JSON.stringify({ action: 'propose_destruction' }),
       })
@@ -207,14 +207,14 @@ function BerkasTertutupPage() {
             title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : 'Belum ada berkas tertutup'}
             description={hasSearchQuery
               ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.'
-              : 'Berkas tertutup muncul setelah berkas terbuka ditutup dan disimpan sebagai arsip.'}
+              : 'Berkas tertutup muncul setelah berkas terbuka ditutup dan berstatus Tersimpan.'}
             icon={<ChevronRight size={22} />}
           />
         ) : (
           <BerkasTertutupTable
             folders={filteredFolders}
             pendingBerkasId={pendingBerkasId}
-            onOpen={(folder) => navigate({ to: '/arsiparis/berkas/$id', params: { id: folder.berkas_id } })}
+            onOpen={(folder) => navigate({ to: '/kasubag/berkas/$id', params: { id: folder.berkas_id } })}
             onProposeDestruction={proposeDestruction}
           />
         )}

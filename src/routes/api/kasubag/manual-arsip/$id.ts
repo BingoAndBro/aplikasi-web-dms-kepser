@@ -9,7 +9,7 @@ import {
   updateManualArsipRecord,
 } from '#/lib/manual-arsip'
 
-export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id')({
+export const Route = createFileRoute('/api/kasubag/manual-arsip/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

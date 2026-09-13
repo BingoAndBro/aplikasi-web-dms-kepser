@@ -9,7 +9,7 @@ import {
 } from '#/lib/archive/berkas-arsip-read-model'
 import { requireBerkasArsipApiSession } from '#/lib/archive/berkas-arsip-api'
 
-export const Route = createFileRoute('/api/arsiparis/berkas/')({
+export const Route = createFileRoute('/api/kasubag/berkas/')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
@@ -25,7 +25,7 @@ export const Route = createFileRoute('/api/arsiparis/berkas/')({
           return Response.json(safeFolderListResult(result))
         } catch {
           console.error('[arsiparis/berkas] folder-first list query error')
-          return Response.json({ error: 'Gagal mengambil daftar berkas arsip' }, { status: 500 })
+          return Response.json({ error: 'Gagal mengambil daftar berkas' }, { status: 500 })
         }
       },
     },

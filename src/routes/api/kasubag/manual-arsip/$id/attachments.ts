@@ -21,7 +21,7 @@ import {
 const MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME = 'titles'
 const MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH = 120
 
-export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachments')({
+export const Route = createFileRoute('/api/kasubag/manual-arsip/$id/attachments')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

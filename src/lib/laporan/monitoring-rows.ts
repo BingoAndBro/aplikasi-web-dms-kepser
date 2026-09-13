@@ -1,7 +1,7 @@
 export type LaporanKinerjaRow = {
   id: string
   judul: string
-  status: 'COMPLETED' | 'ARCHIVED'
+  status: 'COMPLETED' | 'TERSIMPAN'
   fungsi_nama: string | null
   kegiatan_nama: string | null
   komponen_id: string | null
@@ -13,6 +13,7 @@ export type LaporanKinerjaRow = {
   created_at: string
   updated_at: string
   nominal_realisasi: number | null
+  is_diberkaskan: boolean
 }
 
 export type SortMode = 'updated_desc' | 'nominal_desc' | 'documents_desc' | 'name_asc'

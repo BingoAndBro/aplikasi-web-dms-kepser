@@ -73,10 +73,10 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     expect(pemberkasanGroup?.items).not.toContainEqual(
       expect.objectContaining({
         id: 'arsip_aktif',
-        to: '/arsiparis/aktif',
+        to: '/kasubag/aktif',
       }),
     )
-    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/arsiparis/berkas')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_AKTIF).toBe('/kasubag/berkas')
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('AKTIF')
   })
 
@@ -85,20 +85,20 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     const items = pemberkasanGroup?.items ?? []
 
     expect(items).toContainEqual(
-      expect.objectContaining({ id: 'berkas_tertutup', label: 'Berkas Tertutup', to: '/arsiparis/berkas/tertutup' }),
+      expect.objectContaining({ id: 'berkas_tertutup', label: 'Berkas Tertutup', to: '/kasubag/berkas/tertutup' }),
     )
     expect(items).toContainEqual(
-      expect.objectContaining({ id: 'pembersihan', label: 'Pembersihan Berkas', to: '/arsiparis/pembersihan' }),
+      expect.objectContaining({ id: 'pembersihan', label: 'Pembersihan Berkas', to: '/kasubag/pembersihan' }),
     )
 
     // Removed / renamed surfaces must be gone.
-    expect(items.some((item) => item.to === '/arsiparis/inaktif')).toBe(false)
-    expect(items.some((item) => item.to === '/arsiparis/usul-musnah')).toBe(false)
+    expect(items.some((item) => item.to === '/kasubag/inaktif')).toBe(false)
+    expect(items.some((item) => item.to === '/kasubag/usul-musnah')).toBe(false)
     expect(items.some((item) => item.id === 'arsip_inaktif')).toBe(false)
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('INAKTIF')
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('USUL_MUSNAH')
-    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_TERTUTUP).toBe('/arsiparis/berkas/tertutup')
-    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN).toBe('/arsiparis/pembersihan')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.BERKAS_TERTUTUP).toBe('/kasubag/berkas/tertutup')
+    expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM.PEMBERSIHAN).toBe('/kasubag/pembersihan')
 
     // Order per PB-6.
     expect(items.map((item) => item.id)).toEqual([
@@ -126,7 +126,7 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     )
     expect(allItems).not.toContainEqual(
       expect.objectContaining({
-        to: '/arsiparis/search',
+        to: '/kasubag/search',
       }),
     )
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('SEARCH')
@@ -147,7 +147,7 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
     )
     expect(allItems).not.toContainEqual(
       expect.objectContaining({
-        to: '/arsiparis/laporan-klasifikasi',
+        to: '/kasubag/laporan-klasifikasi',
       }),
     )
     expect(ROUTES.KEPALA_SUB_BAGIAN_UMUM).not.toHaveProperty('LAPORAN_KLASIFIKASI')

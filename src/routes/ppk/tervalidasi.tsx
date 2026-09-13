@@ -35,7 +35,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'ALL', label: 'Semua Status' },
   { value: 'IN_BENDAHARA_APPROVAL', label: 'Menunggu Persetujuan' },
   { value: 'COMPLETED', label: 'Selesai' },
-  { value: 'ARCHIVED', label: 'Diarsipkan' },
 ]
 
 function PpkTervalidasiPage() {

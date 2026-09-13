@@ -8,7 +8,7 @@ import {
   buildBerkasExportZipUrl,
   canExportBerkasZip,
   exportBerkasZipDisabledReason,
-} from '#/routes/arsiparis/berkas/$id'
+} from '#/routes/kasubag/berkas/$id'
 
 const BERKAS_ID = '55555555-5555-4555-8555-555555555555'
 
@@ -46,7 +46,7 @@ vi.mock('#/db/client', () => ({
   db: { insert: mocks.dbInsert },
 }))
 
-import { Route as ExportZipRoute } from '#/routes/api/arsiparis/berkas/$id/export-zip'
+import { Route as ExportZipRoute } from '#/routes/api/kasubag/berkas/$id/export-zip'
 
 type RouteGetHandler = (args: {
   request: Request
@@ -57,7 +57,7 @@ const getHandler = (ExportZipRoute as unknown as {
   options: { server: { handlers: { GET: RouteGetHandler } } }
 }).options.server.handlers.GET
 
-describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
+describe('GET /api/kasubag/berkas/$id/export-zip', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -90,7 +90,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
       headers: { 'Content-Type': 'application/zip' },
     }))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toBe('application/zip')
@@ -110,7 +110,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
     mocks.resolveBerkasArsipItemAttachments.mockResolvedValue({ ok: true, attachments: [] })
     mocks.streamDocumentZip.mockImplementation(async () => new Response(null, { status: 200 }))
 
-    await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     const [entries] = mocks.streamDocumentZip.mock.calls[0] as [DocumentZipEntry[], unknown]
     expect(entries[0].folderPath).toContain('[Tanpa Nomor SPM] - Keuangan/')
@@ -120,7 +120,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
     mocks.getBerkasArsipDetail.mockResolvedValue(detailResult({ items: [] }))
     mocks.streamDocumentZip.mockImplementation(async () => new Response(null, { status: 200 }))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(200)
     const [entries] = mocks.streamDocumentZip.mock.calls[0] as [DocumentZipEntry[], unknown]
@@ -134,7 +134,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
     mocks.resolveBerkasArsipItemAttachments.mockResolvedValue({ ok: false, status: 404, message: 'Lampiran berkas tidak ditemukan' })
     mocks.streamDocumentZip.mockImplementation(async () => new Response(null, { status: 200 }))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(200)
     const [entries] = mocks.streamDocumentZip.mock.calls[0] as [DocumentZipEntry[], unknown]
@@ -144,7 +144,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
   it('returns 401 without a session', async () => {
     mocks.getLocalServerSession.mockResolvedValue(null)
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(401)
     expect(mocks.getBerkasArsipDetail).not.toHaveBeenCalled()
@@ -153,14 +153,14 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
   it('returns 403 for a non-KEPALA_SUB_BAGIAN_UMUM role, including ADMIN', async () => {
     mocks.getLocalServerSession.mockResolvedValue(session(['ADMIN']))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(403)
     expect(mocks.getBerkasArsipDetail).not.toHaveBeenCalled()
   })
 
   it('returns 404 for a non-UUID berkas id, without querying the detail read-model', async () => {
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: 'not-a-uuid' } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: 'not-a-uuid' } })
 
     expect(response.status).toBe(404)
     expect(mocks.getBerkasArsipDetail).not.toHaveBeenCalled()
@@ -169,7 +169,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
   it('returns 404 when the berkas does not exist', async () => {
     mocks.getBerkasArsipDetail.mockResolvedValue({ status: 'not_found' } satisfies BerkasArsipDetailResult)
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(404)
   })
@@ -177,7 +177,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
   it('returns 409 for a berkas that is still OPEN', async () => {
     mocks.getBerkasArsipDetail.mockResolvedValue(detailResult({ status_berkas: 'OPEN' }))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(409)
     expect(mocks.streamDocumentZip).not.toHaveBeenCalled()
@@ -186,7 +186,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
   it('returns 410 "Data file sudah dimusnahkan" for a DIMUSNAHKAN berkas', async () => {
     mocks.getBerkasArsipDetail.mockResolvedValue(detailResult({ status_arsip: 'DIMUSNAHKAN' }))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(410)
     expect(await response.json()).toEqual({ error: 'Data file sudah dimusnahkan' })
@@ -198,7 +198,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
       items: Array.from({ length: 501 }, (_, i) => workflowItem({ item_id: `item-${i}` })),
     }))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(413)
     const body = await response.json()
@@ -214,7 +214,7 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
     mocks.resolveBerkasArsipItemAttachments.mockResolvedValue({ ok: true, attachments: [] })
     mocks.streamDocumentZip.mockRejectedValue(new DocumentZipTooManyEntriesError(600, 500))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(413)
   })
@@ -226,14 +226,14 @@ describe('GET /api/arsiparis/berkas/$id/export-zip', () => {
     mocks.resolveBerkasArsipItemAttachments.mockResolvedValue({ ok: true, attachments: [] })
     mocks.streamDocumentZip.mockImplementation(async () => new Response(null, { status: 200 }))
 
-    const response = await getHandler({ request: new Request('http://localhost/api/arsiparis/berkas/x/export-zip'), params: { id: BERKAS_ID } })
+    const response = await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     expect(response.status).toBe(200)
     expect(mocks.dbInsert).not.toHaveBeenCalled()
   })
 })
 
-describe('Ekspor ZIP button + dialog (/arsiparis/berkas/$id)', () => {
+describe('Ekspor ZIP button + dialog (/kasubag/berkas/$id)', () => {
   it('canExportBerkasZip is true only for CLOSED non-DIMUSNAHKAN berkas', () => {
     expect(canExportBerkasZip({ status_berkas: 'CLOSED', status_arsip: 'AKTIF' })).toBe(true)
     expect(canExportBerkasZip({ status_berkas: 'CLOSED', status_arsip: 'USUL_MUSNAH' })).toBe(true)
@@ -253,13 +253,13 @@ describe('Ekspor ZIP button + dialog (/arsiparis/berkas/$id)', () => {
   it('builds the export-zip URL without leaking any storage/path details', () => {
     const url = buildBerkasExportZipUrl(BERKAS_ID)
 
-    expect(url).toBe(`/api/arsiparis/berkas/${BERKAS_ID}/export-zip`)
+    expect(url).toBe(`/api/kasubag/berkas/${BERKAS_ID}/export-zip`)
     expect(url).not.toContain('logical')
     expect(url).not.toContain('storage')
   })
 
   it('renders the button disabled with a tooltip reason for OPEN/DIMUSNAHKAN, and wires the confirm dialog to a plain GET navigation (no fetch+blob needed)', () => {
-    const source = readFileSync('src/routes/arsiparis/berkas/$id.tsx', 'utf8')
+    const source = readFileSync('src/routes/kasubag/berkas/$id.tsx', 'utf8')
 
     expect(source).toContain('Ekspor ZIP')
     expect(source).toContain('disabled={!canExportZip}')

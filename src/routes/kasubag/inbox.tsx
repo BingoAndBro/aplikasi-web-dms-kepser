@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { formatDate } from '#/lib/utils/format'
 
-export const Route = createFileRoute('/arsiparis/inbox')({ component: ArsiparisInboxPage })
+export const Route = createFileRoute('/kasubag/inbox')({ component: ArsiparisInboxPage })
 
 type InboxItem = {
   id: string
@@ -78,7 +78,7 @@ function ArsiparisInboxPage() {
     setLoading(true)
     setError(null)
     try {
-      const json = await apiFetch<ArsiparisInboxResponse>('/arsiparis/inbox')
+      const json = await apiFetch<ArsiparisInboxResponse>('/kasubag/inbox')
       setItems(json.inbox ?? [])
     } catch (error) {
       if (error instanceof ApiError) {
@@ -111,7 +111,7 @@ function ArsiparisInboxPage() {
     .sort((left, right) => compareInboxItems(left, right, sortOrder))
 
   function openDocument(dokumen: InboxItem) {
-    navigate({ to: '/arsiparis/dokumen/$id', params: { id: dokumen.id } })
+    navigate({ to: '/kasubag/dokumen/$id', params: { id: dokumen.id } })
   }
 
   return (
@@ -245,7 +245,7 @@ function ArsiparisInboxPage() {
                     { label: 'Tanggal selesai', value: formatInboxFinishedDate(dokumen) },
                   ]}
                   action={
-                    <Link to="/arsiparis/dokumen/$id" params={{ id: dokumen.id }}>
+                    <Link to="/kasubag/dokumen/$id" params={{ id: dokumen.id }}>
                       <Button size="sm" variant="outline" className="w-full gap-1.5">
                         <ChevronRight size={14} />
                         Klasifikasikan

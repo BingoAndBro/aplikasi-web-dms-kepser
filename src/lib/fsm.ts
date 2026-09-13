@@ -65,18 +65,6 @@ const TRANSITIONS: Record<string, Omit<TransitionResult, 'success' | 'error'>> =
     newRevisionTarget: REVISION_TARGETS.USER,
     stepUrutan: 1,
   },
-  [`${DOC_STATUS.COMPLETED}:${FSM_ACTIONS.ARCHIVE}`]: {
-    newStatus: DOC_STATUS.ARCHIVED,
-    newCurrentStep: null,
-    newRevisionTarget: null,
-    stepUrutan: null,
-  },
-  [`${DOC_STATUS.COMPLETED}:${FSM_ACTIONS.SKIP}`]: {
-    newStatus: DOC_STATUS.COMPLETED,
-    newCurrentStep: null,
-    newRevisionTarget: null,
-    stepUrutan: null,
-  },
 }
 
 function makeError(currentStatus: StatusDokumen, error: string): TransitionResult {
@@ -162,9 +150,6 @@ function isActorValidForAction(
       return role === ROLES.PPK
     case FSM_ACTIONS.KEMBALIKAN:
       return role === ROLES.PPK && status === DOC_STATUS.NEED_REVISION
-    case FSM_ACTIONS.ARCHIVE:
-    case FSM_ACTIONS.SKIP:
-      return role === ROLES.KEPALA_SUB_BAGIAN_UMUM
     default:
       return false
   }

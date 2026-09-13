@@ -12,7 +12,7 @@ import {
 import { addBerkasItemRequestSchema } from '#/lib/schemas/berkas-arsip'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
-export const Route = createFileRoute('/api/arsiparis/berkas/$id/items')({
+export const Route = createFileRoute('/api/kasubag/berkas/$id/items')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

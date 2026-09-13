@@ -15,7 +15,7 @@ import {
 import { closeBerkasMetadataSchema } from '#/lib/schemas/berkas-arsip'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
-export const Route = createFileRoute('/api/arsiparis/berkas/$id')({
+export const Route = createFileRoute('/api/kasubag/berkas/$id')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -34,7 +34,7 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id')({
           return Response.json({ berkas: safeBerkasDetail(result.detail) })
         } catch {
           console.error('[arsiparis/berkas/:id] folder-first detail query error')
-          return Response.json({ error: 'Gagal mengambil detail berkas arsip' }, { status: 500 })
+          return Response.json({ error: 'Gagal mengambil detail berkas' }, { status: 500 })
         }
       },
       PATCH: async ({ request, params }: { request: Request; params: Record<string, string> }) => {
@@ -50,7 +50,7 @@ export const Route = createFileRoute('/api/arsiparis/berkas/$id')({
         const parsed = closeBerkasMetadataSchema.safeParse(await request.json().catch(() => null))
         if (!parsed.success) {
           return Response.json(
-            { error: parsed.error.issues[0]?.message ?? 'Metadata arsip aktif tidak valid' },
+            { error: parsed.error.issues[0]?.message ?? 'Metadata Tersimpan tidak valid' },
             { status: 400 },
           )
         }

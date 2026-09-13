@@ -33,7 +33,7 @@ const lifecycleBodySchema = z.discriminatedUnion('action', [
   approveDestructionLifecycleBodySchema,
 ])
 
-export const Route = createFileRoute('/api/arsiparis/berkas/$id/lifecycle')({
+export const Route = createFileRoute('/api/kasubag/berkas/$id/lifecycle')({
   server: {
     handlers: {
       POST: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

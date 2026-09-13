@@ -51,7 +51,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'NEED_REVISION', label: 'Perlu Revisi' },
   { value: 'COMPLETED', label: 'Selesai' },
   { value: 'TERSIMPAN', label: 'Tersimpan' },
-  { value: 'ARCHIVED', label: 'Diarsipkan' },
 ]
 
 type AuthSessionResponse = {
@@ -342,7 +341,6 @@ function getPegawaiStatusPresentation(dok: DokumenRow) {
     IN_BENDAHARA_APPROVAL: { label: 'Menunggu Persetujuan', className: 'border-sky-200/80 bg-sky-50/80 text-sky-700' },
     COMPLETED: { label: 'Selesai', className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
     TERSIMPAN: { label: 'Tersimpan', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
-    ARCHIVED: { label: 'Diarsipkan', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
   }
 
   return statusMap[dok.status] ?? {

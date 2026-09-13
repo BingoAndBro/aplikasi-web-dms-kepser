@@ -322,7 +322,7 @@ function canSessionReadRawReferencedDocument(
   if (session.roles.includes(ROLES.PPK)) return canPpkReadRawReferencedDocument(document)
   if (session.roles.includes(ROLES.BENDAHARA)) return canBendaharaReadRawReferencedDocument(document)
   if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
-    return document.status === 'COMPLETED' || document.status === 'ARCHIVED'
+    return document.status === 'COMPLETED'
   }
 
   return false
@@ -338,14 +338,12 @@ function canPpkReadRawReferencedDocument(document: RawLogicalPathAccessDocument)
     'IN_BENDAHARA_APPROVAL',
     'NEED_REVISION',
     'COMPLETED',
-    'ARCHIVED',
   ].includes(document.status)
 }
 
 function canBendaharaReadRawReferencedDocument(document: RawLogicalPathAccessDocument): boolean {
   return document.status === 'IN_BENDAHARA_APPROVAL'
     || document.status === 'COMPLETED'
-    || document.status === 'ARCHIVED'
     || (document.status === 'NEED_REVISION' && document.revisionTarget === 'PPK')
 }
 

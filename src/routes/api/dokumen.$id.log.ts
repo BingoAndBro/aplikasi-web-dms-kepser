@@ -24,21 +24,17 @@ async function canSessionReadDokumenLog(
     'IN_BENDAHARA_APPROVAL',
     'NEED_REVISION',
     'COMPLETED',
-    'ARCHIVED',
   ].includes(dokumen.status)) {
     return true
   }
   if (hasLocalRole(session, 'BENDAHARA') && (
     dokumen.status === 'IN_BENDAHARA_APPROVAL'
     || dokumen.status === 'COMPLETED'
-    || dokumen.status === 'ARCHIVED'
     || (dokumen.status === 'NEED_REVISION' && dokumen.revision_target === 'PPK')
   )) {
     return true
   }
-  if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM') && (
-    dokumen.status === 'COMPLETED' || dokumen.status === 'ARCHIVED'
-  )) {
+  if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM') && dokumen.status === 'COMPLETED') {
     return true
   }
 

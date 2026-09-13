@@ -26,7 +26,7 @@ export function calculateManualArchiveRetentionDates(input: {
   masaInaktifBerakhir: string
 } {
   if (!isDateOnlyString(input.tanggalDiarsipkan)) {
-    throw new Error('Tanggal arsip harus valid dengan format YYYY-MM-DD')
+    throw new Error('Tanggal harus valid dengan format YYYY-MM-DD')
   }
 
   if (input.retensiAktif === 'Permanen') {

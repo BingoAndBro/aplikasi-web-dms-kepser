@@ -28,7 +28,7 @@ import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
 import { cn } from '#/lib/utils'
 
-export const Route = createFileRoute('/arsiparis/klasifikasi')({ component: KlasifikasiPage })
+export const Route = createFileRoute('/kasubag/klasifikasi')({ component: KlasifikasiPage })
 
 type KlasifikasiNode = {
   id: string
@@ -308,7 +308,7 @@ function KlasifikasiDetail({
             <h3 className="text-sm font-bold text-zinc-950">Detail Atribut Klasifikasi</h3>
             <ClassificationStatusBadge node={node} />
           </div>
-          <p className="mt-0.5 text-[10.5px] font-medium text-zinc-500">Informasi tata aturan kearsipan node terpilih</p>
+          <p className="mt-0.5 text-[10.5px] font-medium text-zinc-500">Informasi tata aturan pemberkasan node terpilih</p>
         </div>
       </div>
 
@@ -464,7 +464,7 @@ function AddKlasifikasiModal({
     setLoading(true)
     setError(null)
     try {
-      await apiMutation('/api/arsiparis/klasifikasi', {
+      await apiMutation('/api/kasubag/klasifikasi', {
         method: 'POST',
         body: {
           nama: nama.trim(),
@@ -600,7 +600,7 @@ function EditKlasifikasiModal({
     setLoading(true)
     setError(null)
     try {
-      await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
+      await apiMutation(`/api/kasubag/klasifikasi/${node.id}`, {
         method: 'PATCH',
         body: {
           nama: nama.trim(),
@@ -709,7 +709,7 @@ function NonaktifkanKlasifikasiModal({
     setLoading(true)
     setError(null)
     try {
-      await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
+      await apiMutation(`/api/kasubag/klasifikasi/${node.id}`, {
         method: 'DELETE',
       })
       await onSuccess()
@@ -778,7 +778,7 @@ function AktifkanKlasifikasiModal({
     setLoading(true)
     setError(null)
     try {
-      await apiMutation(`/api/arsiparis/klasifikasi/${node.id}`, {
+      await apiMutation(`/api/kasubag/klasifikasi/${node.id}`, {
         method: 'PATCH',
         body: { is_active: true },
       })
@@ -912,7 +912,7 @@ function KlasifikasiPage() {
     setLoading(true)
     setError(null)
     try {
-      const json = await apiFetch<KlasifikasiResponse>('/arsiparis/klasifikasi')
+      const json = await apiFetch<KlasifikasiResponse>('/kasubag/klasifikasi')
       const data = json.klasifikasi ?? []
 
       const markRoot = (nodes: KlasifikasiNode[]): KlasifikasiNode[] => (
@@ -976,7 +976,7 @@ function KlasifikasiPage() {
           <div className="min-w-0">
             <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
               <Archive size={12} />
-              <Link to="/arsiparis" className="hover:text-[#FF5A00]">Kearsipan KSBU</Link>
+              <Link to="/kasubag" className="hover:text-[#FF5A00]">Pemberkasan KSBU</Link>
               <ChevronRight size={10} />
               <span className="text-[#FF5A00]">Klasifikasi Dokumen</span>
             </div>
@@ -1003,7 +1003,7 @@ function KlasifikasiPage() {
         <div className="flex items-start gap-2.5 rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-orange-900 shadow-sm">
           <Info size={15} className="mt-0.5 shrink-0 text-[#FF5A00]" />
           <p>
-            <span className="font-extrabold">Petunjuk Kearsipan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-[#FF5A00]">Cara Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
+            <span className="font-extrabold">Petunjuk Pemberkasan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-[#FF5A00]">Cara Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
           </p>
         </div>
 

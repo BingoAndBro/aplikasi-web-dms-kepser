@@ -40,7 +40,7 @@ import {
 } from '#/lib/archive/berkas-arsip-csv'
 import { ApiError, apiFetch } from '#/lib/api-client'
 
-export const Route = createFileRoute('/arsiparis/pembersihan/')({ component: UsulMusnahPage })
+export const Route = createFileRoute('/kasubag/pembersihan/')({ component: UsulMusnahPage })
 
 type BerkasFolder = {
   berkas_id: string
@@ -100,13 +100,13 @@ function UsulMusnahPage() {
     setError(null)
     try {
       const [proposedJson, destroyedJson] = await Promise.all([
-        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+        apiFetch<BerkasFolderListResponse>('/kasubag/berkas', {
           query: {
             status_berkas: 'CLOSED',
             status_arsip: 'USUL_MUSNAH',
           },
         }),
-        apiFetch<BerkasFolderListResponse>('/arsiparis/berkas', {
+        apiFetch<BerkasFolderListResponse>('/kasubag/berkas', {
           query: {
             status_berkas: 'CLOSED',
             status_arsip: 'DIMUSNAHKAN',
@@ -146,7 +146,7 @@ function UsulMusnahPage() {
   ) {
     setPendingBerkasId(folder.berkas_id)
     try {
-      await apiFetch(`/arsiparis/berkas/${encodeURIComponent(folder.berkas_id)}/lifecycle`, {
+      await apiFetch(`/kasubag/berkas/${encodeURIComponent(folder.berkas_id)}/lifecycle`, {
         method: 'POST',
         body: JSON.stringify(
           action === 'approve_destruction'
@@ -244,7 +244,7 @@ function UsulMusnahPage() {
             folders={filteredFolders}
             isProposalList={statusFilter === 'USUL_MUSNAH'}
             pendingBerkasId={pendingBerkasId}
-            onOpen={(folder) => navigate({ to: '/arsiparis/berkas/$id', params: { id: folder.berkas_id } })}
+            onOpen={(folder) => navigate({ to: '/kasubag/berkas/$id', params: { id: folder.berkas_id } })}
             onApproveDestruction={(folder) => runLifecycleAction(
               folder,
               'approve_destruction',
@@ -287,11 +287,11 @@ function BerkasLifecycleTable({
         <table className="w-full text-left">
           <thead>
             <tr className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
-              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Klasifikasi Arsip</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Cara Pembayaran</th>
               <th className={ARCHIVE_TABLE_HEAD_CLASS}>Nomor SPM</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Jumlah Dokumen</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nominal Realisasi</th>
-              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status Arsip</th>
+              <th className={ARCHIVE_TABLE_HEAD_CLASS}>Status</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Umur Berkas</th>
               <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal Ditutup</th>
               <th className={`w-64 text-right ${ARCHIVE_TABLE_HEAD_CLASS}`}>Aksi</th>
@@ -326,7 +326,7 @@ function BerkasLifecycleTable({
                     />
                   ) : (
                     <Link
-                      to="/arsiparis/berkas/$id"
+                      to="/kasubag/berkas/$id"
                       params={{ id: folder.berkas_id }}
                       aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
                       className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
@@ -366,7 +366,7 @@ function BerkasLifecycleTable({
                 />
               ) : (
                 <Link
-                  to="/arsiparis/berkas/$id"
+                  to="/kasubag/berkas/$id"
                   params={{ id: folder.berkas_id }}
                   className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
                 >

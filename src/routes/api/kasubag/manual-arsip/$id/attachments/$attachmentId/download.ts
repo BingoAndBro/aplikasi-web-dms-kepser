@@ -6,7 +6,7 @@ import {
   toSafeErrorLog,
 } from '#/lib/manual-arsip'
 
-export const Route = createFileRoute('/api/arsiparis/manual-arsip/$id/attachments/$attachmentId/download')({
+export const Route = createFileRoute('/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download')({
   server: {
     handlers: {
       GET: async ({ request, params }: { request: Request; params: Record<string, string> }) => {

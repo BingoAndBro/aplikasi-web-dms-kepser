@@ -14,7 +14,7 @@ import {
 import { apiFetch } from '#/lib/api-client'
 import { ROUTES } from '#/lib/constants/routes'
 import { formatDate } from '#/lib/utils/format'
-import { Archive, BarChart3, CheckCircle2, ClipboardList, FileCheck2 } from 'lucide-react'
+import { BarChart3, CheckCircle2, ClipboardList, FileCheck2, FolderCheck } from 'lucide-react'
 
 export const Route = createFileRoute('/penanggung-jawab-kinerja/')({
   component: PenanggungJawabKinerjaDashboard,
@@ -23,12 +23,13 @@ export const Route = createFileRoute('/penanggung-jawab-kinerja/')({
 type KinerjaDashboardDocument = {
   id: string
   judul: string
-  status: 'COMPLETED' | 'TERSIMPAN' | 'ARCHIVED'
+  status: 'COMPLETED' | 'TERSIMPAN'
   is_non_material: boolean
   fungsi_nama: string | null
   kegiatan_nama: string | null
   updated_at: string
   nominal_realisasi: number | null
+  is_diberkaskan: boolean
 }
 
 type LaporanKinerjaResponse = {
@@ -39,7 +40,7 @@ function PenanggungJawabKinerjaDashboard() {
   const [documents, setDocuments] = useState<KinerjaDashboardDocument[]>([])
 
   useEffect(() => {
-    apiFetch<LaporanKinerjaResponse>('/laporan/kinerja')
+    apiFetch<LaporanKinerjaResponse>('/laporan/kinerja', { query: { scope: 'laporan_kinerja' } })
       .then((response) => setDocuments(response.dokumen ?? []))
       .catch(() => setDocuments([]))
   }, [])
@@ -49,7 +50,7 @@ function PenanggungJawabKinerjaDashboard() {
     return total + document.nominal_realisasi
   }, 0)
   const completedCount = documents.filter((document) => document.status === 'COMPLETED').length
-  const archivedCount = documents.filter((document) => document.status === 'ARCHIVED').length
+  const diberkaskanCount = documents.filter((document) => document.is_diberkaskan).length
   const latestDocuments = [...documents]
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, 3)
@@ -88,10 +89,10 @@ function PenanggungJawabKinerjaDashboard() {
           tone="sky"
         />
         <DashboardMetricCard
-          label="Dokumen Diarsipkan"
-          value={archivedCount}
-          badge="Diarsipkan"
-          icon={<Archive size={20} />}
+          label="Dokumen Diberkaskan"
+          value={diberkaskanCount}
+          badge="Diberkaskan"
+          icon={<FolderCheck size={20} />}
           tone="emerald"
         />
       </div>
@@ -138,7 +139,6 @@ function PenanggungJawabKinerjaDashboard() {
 }
 
 function formatStatusLabel(status: KinerjaDashboardDocument['status']) {
-  if (status === 'COMPLETED') return 'Selesai'
   if (status === 'TERSIMPAN') return 'Tersimpan'
-  return 'Diarsipkan'
+  return 'Selesai'
 }

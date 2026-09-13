@@ -41,7 +41,7 @@ export const dokumenTransaksi = dokumenSchema.table(
       .references(() => masterKegiatan.id, { onDelete: 'restrict', onUpdate: 'no action' }),
     isKetuaTim: boolean('is_ketua_tim').notNull().default(false),
     // Canonical values: DRAFT, IN_PPK_VALIDATION, IN_BENDAHARA_APPROVAL,
-    // NEED_REVISION, COMPLETED, TERSIMPAN, ARCHIVED.
+    // NEED_REVISION, COMPLETED, TERSIMPAN.
     status: text('status').notNull().default('DRAFT'),
     // Canonical values: PPK, BENDAHARA, null.
     currentStep: text('current_step'),

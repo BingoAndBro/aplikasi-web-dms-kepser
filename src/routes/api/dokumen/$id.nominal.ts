@@ -100,13 +100,6 @@ export const Route = createFileRoute('/api/dokumen/$id/nominal')({
         }
 
         // 5. Check status — final material workflow documents cannot be updated
-        if (dok.status === DOC_STATUS.ARCHIVED) {
-          return Response.json(
-            { error: 'Tidak bisa update dokumen yang sudah diarsipkan' },
-            { status: 400 }
-          )
-        }
-
         if (dok.is_non_material !== true && dok.status === DOC_STATUS.COMPLETED) {
           return Response.json(
             { error: 'Tidak bisa update dokumen yang sudah selesai' },

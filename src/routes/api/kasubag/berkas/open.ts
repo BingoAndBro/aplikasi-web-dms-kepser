@@ -8,7 +8,7 @@ import {
 import { openBerkasRequestSchema } from '#/lib/schemas/berkas-arsip'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
-export const Route = createFileRoute('/api/arsiparis/berkas/open')({
+export const Route = createFileRoute('/api/kasubag/berkas/open')({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {

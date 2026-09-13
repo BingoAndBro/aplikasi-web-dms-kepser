@@ -5,7 +5,6 @@ export const DOC_STATUS_VALUES = [
   'NEED_REVISION',
   'COMPLETED',
   'TERSIMPAN',
-  'ARCHIVED',
 ] as const
 
 export type StatusDokumen = typeof DOC_STATUS_VALUES[number]
@@ -17,7 +16,6 @@ export const DOC_STATUS: { [K in StatusDokumen]: K } = {
   NEED_REVISION: 'NEED_REVISION',
   COMPLETED: 'COMPLETED',
   TERSIMPAN: 'TERSIMPAN',
-  ARCHIVED: 'ARCHIVED',
 }
 
 export const CURRENT_STEPS = {
@@ -41,8 +39,6 @@ export const FSM_ACTIONS = {
   RESUBMIT: 'RESUBMIT',
   RESUBMIT_PPK: 'RESUBMIT_PPK',
   KEMBALIKAN: 'KEMBALIKAN',
-  ARCHIVE: 'ARCHIVE',
-  SKIP: 'SKIP',
 } as const
 
 export type FSMAction = typeof FSM_ACTIONS[keyof typeof FSM_ACTIONS]
