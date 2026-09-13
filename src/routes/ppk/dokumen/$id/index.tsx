@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
@@ -95,6 +95,12 @@ function getWorkflowIndexNonMaterial(status: string): number {
   return WORKFLOW_STEPS_NON_MATERIAL.findIndex(s => s.key === status)
 }
 
+type ActionResult = {
+  documentId: string
+  title: string
+  kind: 'approve' | 'reject'
+}
+
 function PpkDokumenDetailIndexPage() {
   const { id } = Route.useParams()
   const { showToast } = useAppToast()
@@ -105,6 +111,7 @@ function PpkDokumenDetailIndexPage() {
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
+  const [actionResult, setActionResult] = useState<ActionResult | null>(null)
 
   useEffect(() => { fetchData() }, [id])
 
@@ -138,7 +145,8 @@ function PpkDokumenDetailIndexPage() {
         description: 'Dokumen berhasil divalidasi.',
         variant: 'success',
       })
-      window.location.href = '/ppk/inbox'
+      setApproveOpen(false)
+      setActionResult({ documentId: id, title: dokumen?.judul ?? 'Dokumen', kind: 'approve' })
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -174,7 +182,8 @@ function PpkDokumenDetailIndexPage() {
         description: 'Dokumen berhasil dikembalikan untuk revisi.',
         variant: 'success',
       })
-      window.location.href = '/ppk/inbox'
+      setRejectOpen(false)
+      setActionResult({ documentId: id, title: dokumen?.judul ?? 'Dokumen', kind: 'reject' })
     } catch (err) {
       const description =
         err instanceof ApiError &&
@@ -212,6 +221,57 @@ function PpkDokumenDetailIndexPage() {
       />
     </PageLayout>
   )
+
+  if (actionResult) {
+    const isApprove = actionResult.kind === 'approve'
+    return (
+      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-[calc(100vh-9rem)] max-w-3xl flex-col items-center justify-center px-2 py-8 text-center">
+          <div className={cn(
+            'flex size-20 items-center justify-center rounded-full border',
+            isApprove
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+              : 'border-orange-200 bg-orange-50 text-[#EA580C]',
+          )}>
+            {isApprove ? <CheckCircle2 size={38} strokeWidth={2.4} /> : <AlertTriangle size={34} strokeWidth={2.2} />}
+          </div>
+          <p className="mt-6 text-xs font-bold text-[#EA580C]">
+            {isApprove ? 'Validasi PPK selesai' : 'Penolakan PPK selesai'}
+          </p>
+          <h1 className="mt-2 font-headline text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">
+            {isApprove ? 'Dokumen Berhasil Divalidasi' : 'Dokumen Dikembalikan untuk Revisi'}
+          </h1>
+          <p className="mt-3 max-w-xl text-sm font-medium leading-relaxed text-zinc-600">
+            Dokumen <span className="font-bold text-zinc-950">{actionResult.title}</span>{' '}
+            {isApprove
+              ? 'telah diteruskan ke PPSPM untuk tahap persetujuan.'
+              : 'telah dikembalikan ke pengaju untuk diperbaiki.'}
+          </p>
+
+          <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link to="/ppk/inbox">
+              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+                Validasi Dokumen Lain
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+              onClick={() => { setActionResult(null); fetchData() }}
+            >
+              Lihat Detail Dokumen
+            </Button>
+            <Link to="/ppk">
+              <Button variant="ghost" size="lg" className="w-full sm:w-auto">
+                Kembali ke Beranda
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </PageLayout>
+    )
+  }
 
   const isNonMaterial = dokumen.is_non_material === true ||
     (dokumen.is_non_material === undefined && !dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)

@@ -24,7 +24,7 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(source).toContain('Ajukan dokumen ini?')
     expect(source).toContain('Pastikan jenis permintaan, kegiatan, nominal realisasi, dan kelengkapan sudah benar.')
     expect(source).toContain('setSubmittedDocument(response.dokumen)')
-    expect(source).toContain('Lihat Daftar Dokumen')
+    expect(source).toContain('Kembali ke Beranda')
     expect(source).toContain('Ajukan Dokumen Lain')
     expect(source).toContain('Lihat Detail Dokumen')
     expect(source).toContain('useAppToast()')

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { Button } from '#/components/ui/button'
@@ -67,6 +67,12 @@ type DetailTab = typeof DETAIL_TABS[number]['key']
 function getWorkflowIdx(status: string) { return WORKFLOW_STEPS.findIndex(s => s.key === status) }
 function getWorkflowIdxNonMaterial(status: string) { return WORKFLOW_STEPS_NON_MATERIAL.findIndex(s => s.key === status) }
 
+type ActionResult = {
+  documentId: string
+  title: string
+  kind: 'approve' | 'reject'
+}
+
 function BendaharaDokumenDetailPage() {
   const { id } = Route.useParams()
   const navigate = useNavigate()
@@ -78,6 +84,7 @@ function BendaharaDokumenDetailPage() {
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<DetailTab>('metadata')
+  const [actionResult, setActionResult] = useState<ActionResult | null>(null)
 
   useEffect(() => { fetchData() }, [id])
 
@@ -108,7 +115,8 @@ function BendaharaDokumenDetailPage() {
         description: 'Dokumen berhasil disetujui.',
         variant: 'success',
       })
-      navigate({ to: '/bendahara/selesai' })
+      setApproveOpen(false)
+      setActionResult({ documentId: id, title: dokumen?.judul ?? 'Dokumen', kind: 'approve' })
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -144,7 +152,8 @@ function BendaharaDokumenDetailPage() {
         description: 'Dokumen berhasil dikembalikan ke PPK.',
         variant: 'success',
       })
-      navigate({ to: '/bendahara/ditolak' })
+      setRejectOpen(false)
+      setActionResult({ documentId: id, title: dokumen?.judul ?? 'Dokumen', kind: 'reject' })
     } catch (err) {
       const description =
         err instanceof ApiError &&
@@ -191,6 +200,57 @@ function BendaharaDokumenDetailPage() {
       />
     </PageLayout>
   )
+
+  if (actionResult) {
+    const isApprove = actionResult.kind === 'approve'
+    return (
+      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-[calc(100vh-9rem)] max-w-3xl flex-col items-center justify-center px-2 py-8 text-center">
+          <div className={cn(
+            'flex size-20 items-center justify-center rounded-full border',
+            isApprove
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+              : 'border-orange-200 bg-orange-50 text-[#EA580C]',
+          )}>
+            {isApprove ? <CheckCircle2 size={38} strokeWidth={2.4} /> : <AlertTriangle size={34} strokeWidth={2.2} />}
+          </div>
+          <p className="mt-6 text-xs font-bold text-[#EA580C]">
+            {isApprove ? 'Persetujuan PPSPM selesai' : 'Penolakan PPSPM selesai'}
+          </p>
+          <h1 className="mt-2 font-headline text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">
+            {isApprove ? 'Dokumen Berhasil Disetujui' : 'Dokumen Dikembalikan ke PPK'}
+          </h1>
+          <p className="mt-3 max-w-xl text-sm font-medium leading-relaxed text-zinc-600">
+            Dokumen <span className="font-bold text-zinc-950">{actionResult.title}</span>{' '}
+            {isApprove
+              ? 'telah disetujui dan statusnya menjadi Selesai.'
+              : 'telah dikembalikan ke PPK untuk diperbaiki.'}
+          </p>
+
+          <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link to="/bendahara/inbox">
+              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+                Setujui Dokumen Lain
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+              onClick={() => { setActionResult(null); fetchData() }}
+            >
+              Lihat Detail Dokumen
+            </Button>
+            <Link to="/bendahara">
+              <Button variant="ghost" size="lg" className="w-full sm:w-auto">
+                Kembali ke Beranda
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </PageLayout>
+    )
+  }
 
   const isNonMaterial = dokumen.is_non_material === true ||
     (dokumen.is_non_material === undefined && !dokumen.jenis_permintaan_id && !dokumen.kategori_permintaan_id && !dokumen.detail_permintaan_id)

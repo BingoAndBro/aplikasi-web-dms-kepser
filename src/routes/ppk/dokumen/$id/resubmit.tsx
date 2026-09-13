@@ -207,6 +207,10 @@ function PpkResubmitPage() {
         }
       }
     } catch (err) {
+      if (err instanceof ApiError && err.status === 400) {
+        navigate({ to: '/ppk/dokumen/$id', params: { id }, replace: true })
+        return
+      }
       setFetchError(getSafeErrorMessage(err, 'Terjadi kesalahan'))
     } finally {
       setLoading(false)
@@ -431,19 +435,19 @@ function PpkResubmitPage() {
           </div>
 
           <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Link to="/ppk/revisi">
-              <Button variant="outline" size="lg" className="w-full border-[#F0E1D5] bg-white sm:w-auto">
-                Lihat Daftar Revisi
+            <Link to="/ppk/revisi" replace>
+              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+                Revisi Dokumen Lain
               </Button>
             </Link>
-            <Link to="/ppk/dokumen/$id" params={{ id: resubmitSuccess.documentId }}>
-              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+            <Link to="/ppk/dokumen/$id" params={{ id: resubmitSuccess.documentId }} replace>
+              <Button variant="outline" size="lg" className="w-full border-[#F0E1D5] bg-white sm:w-auto">
                 Lihat Detail Dokumen
               </Button>
             </Link>
-            <Link to="/ppk">
+            <Link to="/ppk" replace>
               <Button variant="ghost" size="lg" className="w-full sm:w-auto">
-                Kembali ke Beranda PPK
+                Kembali ke Beranda
               </Button>
             </Link>
           </div>

@@ -199,8 +199,7 @@ function DokumenRevisiPage() {
       const dokumen = json.dokumen as DokumenRow
 
       if (dokumen.status !== 'NEED_REVISION' || dokumen.revision_target !== 'USER') {
-        setError('Dokumen ini tidak bisa direvisi')
-        setLoading(false)
+        navigate({ to: '/pegawai/dokumen/$id', params: { id }, replace: true })
         return
       }
 
@@ -421,19 +420,19 @@ function DokumenRevisiPage() {
           </div>
 
           <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Link to="/pegawai/revisi">
-              <Button variant="outline" size="lg" className="w-full border-[#F0E1D5] bg-white sm:w-auto">
-                Lihat Daftar Revisi
+            <Link to="/pegawai/revisi" replace>
+              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+                Revisi Dokumen Lain
               </Button>
             </Link>
-            <Link to="/pegawai/dokumen/$id" params={{ id: resubmitSuccess.documentId }}>
-              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+            <Link to="/pegawai/dokumen/$id" params={{ id: resubmitSuccess.documentId }} replace>
+              <Button variant="outline" size="lg" className="w-full border-[#F0E1D5] bg-white sm:w-auto">
                 Lihat Detail Dokumen
               </Button>
             </Link>
-            <Link to="/pegawai/dokumen">
+            <Link to="/pegawai" replace>
               <Button variant="ghost" size="lg" className="w-full sm:w-auto">
-                Kembali ke Daftar Dokumen
+                Kembali ke Beranda
               </Button>
             </Link>
           </div>

@@ -732,10 +732,10 @@ function AjukanDokumenPage() {
                 <Button
                   type="button"
                   size="lg"
-                  onClick={() => navigate({ to: '/pegawai/dokumen' })}
+                  onClick={handleSubmitAnother}
                   className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto"
                 >
-                  Lihat Daftar Dokumen <ArrowRight size={14} />
+                  Ajukan Dokumen Lain <ArrowRight size={14} />
                 </Button>
                 {submittedDocument.id && (
                   <Button
@@ -753,12 +753,12 @@ function AjukanDokumenPage() {
                 )}
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="lg"
-                  onClick={handleSubmitAnother}
-                  className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+                  onClick={() => navigate({ to: '/pegawai' })}
+                  className="w-full sm:w-auto"
                 >
-                  Ajukan Dokumen Lain
+                  Kembali ke Beranda
                 </Button>
               </div>
           </div>
