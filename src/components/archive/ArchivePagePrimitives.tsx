@@ -78,7 +78,7 @@ export function ArchivePanel({ children, className }: ArchivePanelProps) {
   return (
     <div
       className={cn(
-        'rounded-[1.15rem] border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]',
+        'rounded-[1.15rem] border border-orange-100/80 bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]',
         className,
       )}
     >
@@ -162,7 +162,7 @@ export function ArchiveExportButton({
       type="button"
       variant="outline"
       size="sm"
-      className="h-10 w-fit gap-1.5 rounded-xl border-orange-200/80 bg-[#FFF8F1] px-3 text-xs font-extrabold text-[#FF4D00] shadow-sm shadow-orange-500/10 transition hover:border-orange-300 hover:bg-orange-50 hover:text-[#EA580C] disabled:opacity-50"
+      className="h-10 w-fit gap-1.5 rounded-xl border-orange-200/80 bg-brand-surface px-3 text-xs font-extrabold text-brand-text shadow-sm shadow-orange-500/10 transition hover:border-orange-300 hover:bg-orange-50 hover:text-brand-solid-hover disabled:opacity-50"
       disabled={disabled}
       title={title}
       onClick={onClick}
@@ -191,7 +191,7 @@ export function ArchiveSummaryCard({
   return (
     <div
       className={cn(
-        'rounded-[1.15rem] border border-orange-100 bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]',
+        'rounded-[1.15rem] border border-orange-100 bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]',
         className,
       )}
     >
@@ -254,10 +254,10 @@ export function ArchiveMobileCard({
   action,
 }: ArchiveMobileCardProps) {
   return (
-    <div className="group rounded-[22px] border border-zinc-200/80 bg-[#FFFDF9] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFF8F1]">
+    <div className="group rounded-[22px] border border-zinc-200/80 bg-bg-surface p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-brand-surface">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+          <h3 className="line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">
             {title}
           </h3>
           {subtitle && <div className="mt-1 text-xs text-zinc-600">{subtitle}</div>}
@@ -267,7 +267,7 @@ export function ArchiveMobileCard({
       {meta.length > 0 && (
         <div className="mt-4 grid gap-2 text-xs text-zinc-600">
           {meta.map((item, index) => (
-            <div key={index} className="min-w-0 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
+            <div key={index} className="min-w-0 rounded-xl border border-zinc-200/80 bg-bg-surface p-2.5">
               <p className="font-semibold text-zinc-500">{item.label}</p>
               <div className="mt-0.5 break-words font-medium text-zinc-900">{item.value}</div>
             </div>
@@ -291,7 +291,7 @@ export function ArchiveFieldCard({
   className,
 }: ArchiveFieldCardProps) {
   return (
-    <div className={cn('rounded-xl border border-orange-100 bg-[#FFFDF9] p-3 shadow-sm shadow-zinc-950/[0.025]', className)}>
+    <div className={cn('rounded-xl border border-orange-100 bg-bg-surface p-3 shadow-sm shadow-zinc-950/[0.025]', className)}>
       <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </p>
@@ -328,7 +328,7 @@ export function ArchivePagination({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="rounded-full border border-orange-100 bg-[#FFFDF9] px-3 py-1 text-xs font-semibold text-zinc-600">
+      <span className="rounded-full border border-orange-100 bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
         Halaman {page + 1} dari {totalPages}
       </span>
       <Button
@@ -356,7 +356,7 @@ export function ArchiveTabs<T extends string>({
   onChange,
 }: ArchiveTabsProps<T>) {
   return (
-    <div className="w-fit max-w-full overflow-x-auto rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1 shadow-sm">
+    <div className="w-fit max-w-full overflow-x-auto rounded-xl border border-brand-border bg-[#F7F2EC] p-1 shadow-sm">
       <div className="flex min-w-max gap-1">
         {tabs.map((tab) => {
           const active = tab.id === activeTab
@@ -368,7 +368,7 @@ export function ArchiveTabs<T extends string>({
               className={cn(
                 'cursor-pointer rounded-lg px-3 py-2 text-xs font-bold transition',
                 active
-                  ? 'bg-[#FFFDF9] text-[#FF5A00] shadow-sm'
+                  ? 'bg-bg-surface text-brand-solid shadow-sm'
                   : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
               )}
             >

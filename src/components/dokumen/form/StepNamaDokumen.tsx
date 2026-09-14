@@ -29,7 +29,7 @@ export function StepNamaDokumen({
 
       <div className="space-y-2">
         <label htmlFor="nama-dokumen-non-material" className="text-[11px] font-bold text-zinc-700">
-          Nama Dokumen <span className="text-[#D97706]">*</span>
+          Nama Dokumen <span className="text-warning-solid">*</span>
         </label>
         <Input
           id="nama-dokumen-non-material"
@@ -37,7 +37,7 @@ export function StepNamaDokumen({
           onChange={e => onNamaDokumenChange(e.target.value)}
           placeholder="Contoh: Laporan Kegiatan Bulanan"
           maxLength={255}
-          className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]"
+          className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong"
         />
       </div>
 

@@ -29,22 +29,22 @@ export const adminContentWideClassName = 'mx-auto w-full max-w-[1480px]'
 export const adminTableToolbarClassName = ''
 export const adminTableBodyClassName = ''
 export const adminFormFieldClassName =
-  'h-11 rounded-[14px] border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-[#071A3A] shadow-none transition placeholder:text-[#8A8A8A] hover:border-[#FF5A00] focus-visible:border-[#FF5A00] focus-visible:ring-2 focus-visible:ring-[#FF5A00]/20'
+  'h-11 rounded-[14px] border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-text-strong shadow-none transition placeholder:text-[#8A8A8A] hover:border-brand-solid focus-visible:border-brand-solid focus-visible:ring-2 focus-visible:ring-brand-solid/20'
 export const adminTextareaClassName =
-  'min-h-24 w-full resize-none rounded-[14px] border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#071A3A] outline-none transition placeholder:text-[#8A8A8A] hover:border-[#FF5A00] focus:border-[#FF5A00] focus:ring-2 focus:ring-[#FF5A00]/20'
+  'min-h-24 w-full resize-none rounded-[14px] border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-text-strong outline-none transition placeholder:text-[#8A8A8A] hover:border-brand-solid focus:border-brand-solid focus:ring-2 focus:ring-brand-solid/20'
 export const adminPrimaryActionClassName =
-  'h-11 rounded-[20px] bg-[#FF5A00] px-5 text-sm font-extrabold text-white shadow-[0_8px_14px_rgba(255,90,0,0.20),inset_0_-1px_0_rgba(132,37,0,0.20)] hover:bg-[#F04F00] focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 [&_svg]:size-[16px] [&_svg]:stroke-[2.4]'
+  'h-11 rounded-[20px] bg-brand-solid px-5 text-sm font-extrabold text-white shadow-[0_8px_14px_rgba(255,90,0,0.20),inset_0_-1px_0_rgba(132,37,0,0.20)] hover:bg-[#F04F00] focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 [&_svg]:size-[16px] [&_svg]:stroke-[2.4]'
 export const adminDialogContentClassName =
-  'overflow-hidden rounded-[26px] border border-[#CAD4E2] bg-white p-0 text-[#071A3A] shadow-2xl shadow-slate-950/20'
+  'overflow-hidden rounded-[26px] border border-[#CAD4E2] bg-white p-0 text-text-strong shadow-2xl shadow-slate-950/20'
 export const adminDialogHeaderClassName =
   'border-b border-[#E8EEF5] bg-white px-7 py-6 pr-14'
 export const adminDialogBodyClassName = 'space-y-6 px-7 py-6'
 export const adminDialogFooterClassName =
   'gap-3 border-t border-[#E8EEF5] bg-[#F7FAFD] px-7 py-5'
 export const adminDialogCancelButtonClassName =
-  'h-10 rounded-full border-[#DCE6F0] bg-white px-6 text-sm font-bold text-[#071A3A] hover:bg-slate-50'
+  'h-10 rounded-full border-[#DCE6F0] bg-white px-6 text-sm font-bold text-text-strong hover:bg-slate-50'
 export const adminDialogSubmitButtonClassName =
-  'h-10 rounded-full bg-[#FF5A00] px-6 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(255,90,0,0.18)] hover:bg-[#F04F00]'
+  'h-10 rounded-full bg-brand-solid px-6 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(255,90,0,0.18)] hover:bg-[#F04F00]'
 export const adminDialogDestructiveButtonClassName =
   'h-10 rounded-full bg-[#F00446] px-6 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(240,4,70,0.18)] hover:bg-[#D9043D]'
 export const adminFormLabelClassName =
@@ -116,7 +116,7 @@ export function AdminPanel({ children, className }: AdminPanelProps) {
   return (
     <div
       className={cn(
-        'rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] p-5 shadow-[0_3px_14px_rgba(15,23,42,0.07)]',
+        'rounded-[26px] border border-zinc-200/80 bg-bg-surface p-5 shadow-[0_3px_14px_rgba(15,23,42,0.07)]',
         className,
       )}
     >
@@ -368,7 +368,7 @@ export function AdminRelationPill({
   const toneClassName = {
     warm: 'border-[#F4D7A8] bg-[#FFF9F0] text-[#5B3A00]',
     blue: 'border-[#D8E5F7] bg-[#F2F7FF] text-[#001A42]',
-    orange: 'border-orange-200 bg-orange-50 text-[#FF4D00]',
+    orange: 'border-orange-200 bg-orange-50 text-brand-text',
   }[tone]
 
   return (
@@ -404,7 +404,7 @@ export function AdminActionButtons({
         variant="ghost"
         onClick={onEdit}
         aria-label={editLabel}
-        className="size-9 rounded-xl text-black transition hover:bg-orange-50 hover:text-[#FF4D00]"
+        className="size-9 rounded-xl text-black transition hover:bg-orange-50 hover:text-brand-text"
       >
         <Edit2 size={20} strokeWidth={2.5} />
       </Button>

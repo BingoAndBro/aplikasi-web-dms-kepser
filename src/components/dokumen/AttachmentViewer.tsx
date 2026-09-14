@@ -347,9 +347,9 @@ export function AttachmentViewer({
   }
 
   const fileActionButtonClassName = [
-    'h-8 rounded-xl border border-zinc-200/70 bg-[#FFFDF9] px-2.5',
+    'h-8 rounded-xl border border-zinc-200/70 bg-bg-surface px-2.5',
     'text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500 shadow-sm shadow-zinc-950/[0.025]',
-    'transition hover:border-orange-300 hover:bg-orange-50 hover:text-[#FF5A00] hover:shadow-orange-500/10',
+    'transition hover:border-orange-300 hover:bg-orange-50 hover:text-brand-solid hover:shadow-orange-500/10',
     'focus-visible:border-orange-300 focus-visible:ring-orange-100',
   ].join(' ')
 
@@ -370,17 +370,17 @@ export function AttachmentViewer({
       <div key={globalIdx} className="space-y-1.5">
         <div
           className={cn(
-            'flex min-h-16 items-center gap-3 rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3',
+            'flex min-h-16 items-center gap-3 rounded-2xl border border-[#F1E5DA] bg-bg-surface px-4 py-3',
             labelColor === 'blue'
-              ? 'border-[#F1E5DA] bg-[#FFFDF9]'
-              : 'border-[#F1E5DA] bg-[#FFFDF9]'
+              ? 'border-[#F1E5DA] bg-bg-surface'
+              : 'border-[#F1E5DA] bg-bg-surface'
             )}
         >
           <span className={cn(
             'flex size-10 shrink-0 items-center justify-center rounded-2xl border',
             labelColor === 'blue'
-              ? 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-800'
-              : 'border-orange-100 bg-orange-50 text-[#FF5A00]',
+              ? 'border-[#F1E5DA] bg-bg-surface text-zinc-800'
+              : 'border-orange-100 bg-orange-50 text-brand-solid',
           )}>
             <FileText size={18} />
           </span>
@@ -391,7 +391,7 @@ export function AttachmentViewer({
                 {lamp.nama || 'Tanpa Nama'}
               </p>
               {showBadge && (
-                <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">Tambahan</span>
+                <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">Tambahan</span>
               )}
             </div>
             <p className="mt-1 text-[11px] font-medium text-zinc-500">
@@ -450,7 +450,7 @@ export function AttachmentViewer({
                   onChange={e => handleFileChange(globalIdx, e)}
                   accept={DOCUMENT_UPLOAD_ACCEPT}
                 />
-                <span className="inline-flex h-8 items-center gap-1 rounded-xl border border-orange-200 bg-[#FFFDF9] px-2 text-xs font-bold text-[#FF5A00] hover:bg-orange-50">
+                <span className="inline-flex h-8 items-center gap-1 rounded-xl border border-orange-200 bg-bg-surface px-2 text-xs font-bold text-brand-solid hover:bg-orange-50">
                   <Upload size={12} />
                   {hasFile ? 'Ganti' : 'Unggah'}
                 </span>
@@ -484,7 +484,7 @@ export function AttachmentViewer({
   // ==========================================================================
   if (lampiranUrls.length === 0) {
     return (
-      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm">
+      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 shadow-sm">
         <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Lampiran & Kelengkapan Wajib</h2>
         <p className="mt-0.5 text-xs font-medium leading-relaxed text-zinc-700 sm:text-sm">
           Seluruh dokumen yang wajib dipenuhi sebagai prasyarat utama verifikasi dan pelunasan anggaran.
@@ -504,7 +504,7 @@ export function AttachmentViewer({
   // ==========================================================================
   if (dokumen.lampiran_dibersihkan_at) {
     return (
-      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm">
+      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 shadow-sm">
         <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Lampiran & Kelengkapan Wajib</h2>
         <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700">
           Data file sudah dibersihkan

@@ -102,7 +102,7 @@ describe('Phase 15L.2 Revisi Dokumen parity source guard', () => {
     expect(editorSource).toContain('getDocumentUploadValidationUiMessage')
     expect(editorSource).toContain('border border-amber-200 bg-[#FFF8EA]')
     expect(editorSource).toContain('validationUi.actionLabel')
-    expect(editorSource).toContain('border border-[#FF5A00] bg-white px-3 text-xs font-semibold text-[#FF5A00]')
+    expect(editorSource).toContain('border border-brand-solid bg-white px-3 text-xs font-semibold text-brand-solid')
     expect(editorSource).toContain('Tambah Dokumen Pendukung')
     expect(editorSource).toContain('border border-dashed border-orange-300')
     expect(editorSource).toContain('rounded-xl border border-orange-200 bg-[#FFFAF6]')

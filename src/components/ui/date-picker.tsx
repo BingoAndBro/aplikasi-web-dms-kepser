@@ -162,7 +162,7 @@ export function DatePicker({
           disabled={disabled}
           className={cn(
             "group flex min-h-10 w-full items-center gap-2 rounded-xl border px-3 py-2 text-left",
-            "border-[#F0E1D5] bg-[#FFFAF6] text-zinc-950 transition",
+            "border-brand-border bg-[#FFFAF6] text-zinc-950 transition",
             "hover:border-[#FF5A14] hover:bg-[#FFF1E8]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB27A]/70",
             "cursor-pointer",
@@ -175,7 +175,7 @@ export function DatePicker({
               "flex size-7 shrink-0 items-center justify-center rounded-lg border transition",
               open
                 ? "border-[#FF5A14] bg-[#FF7A00] text-white"
-                : "border-[#F0E1D5] bg-white text-[#8A6B58]",
+                : "border-brand-border bg-white text-[#8A6B58]",
               "group-hover:border-[#FF5A14] group-hover:bg-[#FF7A00] group-hover:text-white"
             )}
           >
@@ -242,9 +242,9 @@ export function DatePicker({
         disabled={disabled}
         className={cn(
           "w-full flex items-center gap-2 px-4 py-2.5",
-          "bg-[#FFFAF6] border border-[#F0E1D5] rounded-xl",
+          "bg-[#FFFAF6] border border-brand-border rounded-xl",
           "text-sm font-semibold text-zinc-950",
-          "outline-none transition-all hover:border-[#FFBC80]",
+          "outline-none transition-all hover:border-brand-border-strong",
           "focus-visible:ring-2 focus-visible:ring-orange-200/70 focus-visible:border-orange-300",
           "cursor-pointer",
           disabled && "cursor-not-allowed bg-zinc-50 text-zinc-500 opacity-70",
@@ -269,7 +269,7 @@ export function DatePicker({
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
 
           <div className="absolute top-full left-0 z-50 mt-2 animate-in fade-in-0 zoom-in-95 duration-150">
-            <div className="min-w-[280px] rounded-2xl border border-[#F0E1D5] bg-[#FFFDF9] p-3 shadow-2xl shadow-zinc-950/10">
+            <div className="min-w-[280px] rounded-2xl border border-brand-border bg-bg-surface p-3 shadow-2xl shadow-zinc-950/10">
               <DayPicker
                 mode="single"
                 selected={selectedDate}
@@ -339,7 +339,7 @@ function PrototypeCalendar({
   const yearStart = year - 5
 
   return (
-    <div className="w-[266px] overflow-hidden rounded-[14px] border border-[#F3D3C0] bg-[#FFFDF9] shadow-xl shadow-zinc-950/8">
+    <div className="w-[266px] overflow-hidden rounded-[14px] border border-[#F3D3C0] bg-bg-surface shadow-xl shadow-zinc-950/8">
       <div className="grid h-9 grid-cols-3 bg-[#FFF4EE] p-1">
         <PickerTab active={view === "day"} onClick={() => onViewChange("day")}>Hari</PickerTab>
         <PickerTab active={view === "month"} onClick={() => onViewChange("month")}>Bulan</PickerTab>

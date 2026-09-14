@@ -23,7 +23,7 @@ export function PegawaiPageHeader({
   return (
     <div
       className={cn(
-        'rounded-3xl border border-orange-100 bg-[#FFF8F1] p-5 shadow-sm sm:p-6',
+        'rounded-3xl border border-orange-100 bg-brand-surface p-5 shadow-sm sm:p-6',
         className,
       )}
     >
@@ -55,7 +55,7 @@ export function PegawaiPanel({ children, className, ...props }: PegawaiPanelProp
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100/80 bg-[#FFFDF9] p-4 shadow-sm',
+        'rounded-2xl border border-orange-100/80 bg-bg-surface p-4 shadow-sm',
         className,
       )}
       {...props}
@@ -123,7 +123,7 @@ export function PegawaiFieldCard({
   className,
 }: PegawaiFieldCardProps) {
   return (
-    <div className={cn('rounded-xl border border-orange-100 bg-[#FFFDF9] p-3', className)}>
+    <div className={cn('rounded-xl border border-orange-100 bg-bg-surface p-3', className)}>
       <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </p>
@@ -160,7 +160,7 @@ export function PegawaiPagination({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="rounded-full border border-orange-100 bg-[#FFFDF9] px-3 py-1 text-xs font-semibold text-zinc-600">
+      <span className="rounded-full border border-orange-100 bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
         Halaman {page + 1} dari {totalPages}
       </span>
       <Button

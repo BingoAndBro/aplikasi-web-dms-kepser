@@ -37,21 +37,21 @@ export function StepKomponen({
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-1">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Komponen <span className="text-[#D97706]">*</span>
+            Pilih Komponen <span className="text-warning-solid">*</span>
           </label>
           <span className="text-[10px] font-medium text-zinc-500">{kegiatanNama}</span>
         </div>
         {loadingKomponen ? (
-          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 text-xs text-zinc-500">
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-border bg-[#FFFAF6] px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : komponenList.length === 0 ? (
-          <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
+          <p className="rounded-xl border border-brand-border bg-[#FFFAF6] p-3 text-xs text-zinc-500">
             Tidak ada komponen untuk kegiatan yang dipilih.
           </p>
         ) : (
           <Select value={komponenId || null} onValueChange={v => onKomponenChange(v ?? '')}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong">
               <SelectValue placeholder="-- Pilih Komponen --">
                 {v => v ? (komponenList.find(k => k.id === v)?.nama ?? '') : '-- Pilih Komponen --'}
               </SelectValue>

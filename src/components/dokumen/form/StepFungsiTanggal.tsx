@@ -51,14 +51,14 @@ export function StepFungsiTanggal({
       {showFungsi && (
         <div className="space-y-2.5">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Fungsi <span className="text-[#D97706]">*</span>
+            Pilih Fungsi <span className="text-warning-solid">*</span>
           </label>
           {loadingFungsi ? (
-            <div className="flex min-h-16 items-center justify-center gap-2 rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] text-xs text-zinc-500">
+            <div className="flex min-h-16 items-center justify-center gap-2 rounded-xl border border-brand-border bg-[#FFFAF6] text-xs text-zinc-500">
               <Loader2 size={14} className="animate-spin" />Memuat fungsi...
             </div>
           ) : fungsiList.length === 0 ? (
-            <p className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-3 text-xs text-zinc-500">
+            <p className="rounded-xl border border-brand-border bg-[#FFFAF6] p-3 text-xs text-zinc-500">
               Tidak ada fungsi tersedia.
             </p>
           ) : (
@@ -75,7 +75,7 @@ export function StepFungsiTanggal({
                     className={`relative min-h-16 rounded-xl border p-3 pr-8 text-left transition ${
                       selected
                         ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
-                        : 'border-[#F0E1D5] bg-[#FFFAF6] hover:border-[#FFBC80] hover:bg-[#FFF4EA]'
+                        : 'border-brand-border bg-[#FFFAF6] hover:border-brand-border-strong hover:bg-[#FFF4EA]'
                     }`}
                   >
                     <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold ${
@@ -104,7 +104,7 @@ export function StepFungsiTanggal({
       {showTanggal && (
         <div className="space-y-2">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Tanggal Laporan <span className="text-[#D97706]">*</span>
+            Pilih Tanggal Laporan <span className="text-warning-solid">*</span>
           </label>
           <DatePicker
             value={tanggal}

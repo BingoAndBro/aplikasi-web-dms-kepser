@@ -290,7 +290,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       <AppToastProvider>
-        <div className="relative flex h-screen overflow-hidden bg-[#FFF8F1] selection:bg-primary-container selection:text-on-primary-container">
+        <div className="relative flex h-screen overflow-hidden bg-brand-surface selection:bg-primary-container selection:text-on-primary-container">
         <AppSidebar
           activeRole={activeRole}
           hasKetuaTimAssignment={chairmanKegiatan.length > 0}
@@ -321,11 +321,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             userRoles={userRoles}
           />
 
-          <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#FFF8F1]">
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-brand-surface">
             <section className="flex-1 overflow-y-auto custom-scrollbar border-r border-orange-100/60 bg-[radial-gradient(circle_at_top_right,rgba(255,219,203,0.45),transparent_32rem),linear-gradient(180deg,#FFF8F1_0%,#FFF4E8_100%)]">
               {children}
             </section>
-            <footer className="w-full py-3 flex flex-wrap justify-center gap-x-8 gap-y-2 items-center border-t border-orange-100/70 shrink-0 bg-[#FFFDF9]/90">
+            <footer className="w-full py-3 flex flex-wrap justify-center gap-x-8 gap-y-2 items-center border-t border-orange-100/70 shrink-0 bg-bg-surface/90">
               <span className="font-body text-[10px] font-bold tracking-widest text-outline uppercase">
                 &copy; {new Date().getFullYear()} BPS Kabupaten Kepulauan Seribu
               </span>

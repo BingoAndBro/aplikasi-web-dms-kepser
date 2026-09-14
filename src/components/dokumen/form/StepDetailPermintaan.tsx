@@ -36,12 +36,12 @@ export function StepDetailPermintaan({
       <div className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-1">
           <label className="text-[11px] font-bold text-zinc-700">
-            Pilih Detail Permintaan <span className="text-[#D97706]">*</span>
+            Pilih Detail Permintaan <span className="text-warning-solid">*</span>
           </label>
           <span className="text-[10px] font-medium text-zinc-500">{kategoriPermintaanNama}</span>
         </div>
         <Select value={detailPermintaanId || null} onValueChange={v => onDetailChange(v ?? '')}>
-          <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm hover:border-[#FFBC80]">
+          <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong">
             <SelectValue placeholder="-- Pilih Detail Permintaan --">
               {v => v ? (detailList.find(d => d.id === v)?.nama ?? '') : '-- Pilih Detail Permintaan --'}
             </SelectValue>

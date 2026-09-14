@@ -25,8 +25,8 @@ function Checkbox({
         "peer inline-flex size-[18px] shrink-0 items-center justify-center rounded-md border-2 border-zinc-400 bg-white shadow-sm outline-none transition",
         "hover:border-orange-400",
         "focus-visible:ring-4 focus-visible:ring-orange-100/70 focus-visible:border-orange-400",
-        "data-[checked]:border-[#FF4D00] data-[checked]:bg-[#FF4D00]",
-        "data-[indeterminate]:border-[#FF4D00] data-[indeterminate]:bg-[#FF4D00]",
+        "data-[checked]:border-brand-text data-[checked]:bg-brand-text",
+        "data-[indeterminate]:border-brand-text data-[indeterminate]:bg-brand-text",
         "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
         className,
       )}

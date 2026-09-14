@@ -27,7 +27,7 @@ export function StepKarakteristik({
       )}
 
       <label className="text-[11px] font-bold text-zinc-700">
-        Karakteristik Dokumen <span className="text-[#D97706]">*</span>
+        Karakteristik Dokumen <span className="text-warning-solid">*</span>
       </label>
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <button
@@ -37,7 +37,7 @@ export function StepKarakteristik({
           className={`relative rounded-xl border p-3 text-left transition ${
             !isNonMaterial
               ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
-              : 'border-[#F0E1D5] bg-[#FFFAF6] hover:border-[#FFBC80] hover:bg-[#FFF4EA]'
+              : 'border-brand-border bg-[#FFFAF6] hover:border-brand-border-strong hover:bg-[#FFF4EA]'
           }`}
         >
           <span className="text-[11px] font-bold text-zinc-950">Material</span>
@@ -58,7 +58,7 @@ export function StepKarakteristik({
           className={`relative rounded-xl border p-3 text-left transition ${
             isNonMaterial
               ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
-              : 'border-[#F0E1D5] bg-[#FFFAF6] hover:border-[#FFBC80] hover:bg-[#FFF4EA]'
+              : 'border-brand-border bg-[#FFFAF6] hover:border-brand-border-strong hover:bg-[#FFF4EA]'
           }`}
         >
           <span className="text-[11px] font-bold text-zinc-950">Non-Material</span>

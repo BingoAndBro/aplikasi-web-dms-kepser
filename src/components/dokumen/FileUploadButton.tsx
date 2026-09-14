@@ -304,7 +304,7 @@ export function FileUploadButton({
   if (state === 'uploading') {
     return (
       <div className={cn('flex items-center gap-2 rounded-lg bg-[#FFF3D6] px-3 py-2', className)}>
-        <Loader2 size={14} className="shrink-0 animate-spin text-[#D97706]" />
+        <Loader2 size={14} className="shrink-0 animate-spin text-warning-solid" />
         <p className="text-[10px] font-semibold text-stone-600">Mengunggah...</p>
       </div>
     )
@@ -354,7 +354,7 @@ export function FileUploadButton({
       <Button
         type="button"
         size="sm"
-        className="h-10 w-full rounded-2xl bg-[#FFF0DD] px-5 text-[11px] font-bold text-[#EA580C] hover:bg-[#FFE4BF] sm:w-auto"
+        className="h-10 w-full rounded-2xl bg-[#FFF0DD] px-5 text-[11px] font-bold text-brand-solid-hover hover:bg-[#FFE4BF] sm:w-auto"
         onClick={() => inputRef.current?.click()}
       >
         <Upload size={12} />

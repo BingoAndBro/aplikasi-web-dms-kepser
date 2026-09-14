@@ -302,7 +302,7 @@ export function KelengkapanChecklist({
                   'flex min-w-0 flex-col gap-3 rounded-[1.5rem] border px-5 py-4 transition-colors sm:flex-row sm:items-center',
                   uploaded
                     ? 'border-emerald-200 bg-emerald-50/45'
-                    : 'border-stone-200 bg-[#FFFDF9]',
+                    : 'border-stone-200 bg-bg-surface',
                 )}
               >
                 <div className={cn(
@@ -346,12 +346,12 @@ export function KelengkapanChecklist({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-orange-200 bg-[#FFFDF9]">
+      <div className="overflow-hidden rounded-xl border border-orange-200 bg-bg-surface">
         <div className="border-b border-orange-100 px-3.5 py-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-[13px] font-semibold text-[#FF5A00]">Dokumen Pendukung</h3>
-              <p className="mt-0.5 text-[11px] text-[#FF5A00]">
+              <h3 className="text-[13px] font-semibold text-brand-solid">Dokumen Pendukung</h3>
+              <p className="mt-0.5 text-[11px] text-brand-solid">
                 Tambahkan dokumen pendukung untuk melengkapi
               </p>
             </div>
@@ -360,7 +360,7 @@ export function KelengkapanChecklist({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAddForm(true)}
-                className="h-8 shrink-0 cursor-pointer gap-1 text-[#FF5A00] hover:bg-[#FFF1E7] hover:text-[#EA580C]"
+                className="h-8 shrink-0 cursor-pointer gap-1 text-brand-solid hover:bg-[#FFF1E7] hover:text-brand-solid-hover"
               >
                 <Plus size={13} /> Tambah
               </Button>
@@ -436,7 +436,7 @@ export function KelengkapanChecklist({
                   setUserDocError('')
                 }}
                 placeholder="Nama dokumen (misal: Bukti Transfer)"
-                className="h-8 flex-1 border-orange-200 bg-white text-sm focus:ring-[#FF5A00]"
+                className="h-8 flex-1 border-orange-200 bg-white text-sm focus:ring-brand-solid"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
@@ -449,7 +449,7 @@ export function KelengkapanChecklist({
                 }}
                 autoFocus
               />
-              <Button size="sm" onClick={addUserDoc} disabled={!newDocTitle.trim()} className="h-8 bg-[#FF5A00] px-4 text-xs font-bold text-white hover:bg-[#EA580C]">
+              <Button size="sm" onClick={addUserDoc} disabled={!newDocTitle.trim()} className="h-8 bg-brand-solid px-4 text-xs font-bold text-white hover:bg-brand-solid-hover">
                 Simpan
               </Button>
               <Button
@@ -469,7 +469,7 @@ export function KelengkapanChecklist({
             <button
               type="button"
               onClick={() => setShowAddForm(true)}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-[#FF5A00] transition-colors hover:border-[#FF5A00] hover:bg-[#FFF1E7]"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-[#FFF1E7]"
             >
               <Plus size={14} />
               <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>

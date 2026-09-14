@@ -1,78 +1,74 @@
 {
   "src/components/admin/AdminPagePrimitives.tsx": {
-    "hex": 38,
+    "hex": 23,
     "orange": 12
   },
   "src/components/archive/ArchivePagePrimitives.tsx": {
-    "hex": 17,
+    "hex": 3,
     "orange": 14
   },
   "src/components/dashboard/RoleDashboardPrimitives.tsx": {
-    "hex": 14,
+    "hex": 3,
     "orange": 13
   },
-  "src/components/dokumen/ActivityLog.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
   "src/components/dokumen/AttachmentEditor.tsx": {
-    "hex": 31,
+    "hex": 19,
     "orange": 18
   },
   "src/components/dokumen/AttachmentViewer.tsx": {
-    "hex": 23,
+    "hex": 11,
     "orange": 10
   },
   "src/components/dokumen/FileUploadButton.tsx": {
-    "hex": 10,
+    "hex": 8,
     "orange": 0
   },
   "src/components/dokumen/form/StepDetailPermintaan.tsx": {
-    "hex": 4,
+    "hex": 1,
     "orange": 0
   },
   "src/components/dokumen/form/StepFungsiTanggal.tsx": {
-    "hex": 14,
+    "hex": 8,
     "orange": 0
   },
   "src/components/dokumen/form/StepJenisPermintaan.tsx": {
-    "hex": 8,
+    "hex": 3,
     "orange": 0
   },
   "src/components/dokumen/form/StepKarakteristik.tsx": {
-    "hex": 17,
+    "hex": 12,
     "orange": 0
   },
   "src/components/dokumen/form/StepKategoriPermintaan.tsx": {
-    "hex": 8,
+    "hex": 3,
     "orange": 0
   },
   "src/components/dokumen/form/StepKegiatan.tsx": {
-    "hex": 8,
+    "hex": 3,
     "orange": 0
   },
   "src/components/dokumen/form/StepKomponen.tsx": {
-    "hex": 8,
+    "hex": 3,
     "orange": 0
   },
   "src/components/dokumen/form/StepNamaDokumen.tsx": {
-    "hex": 4,
+    "hex": 1,
     "orange": 0
   },
   "src/components/dokumen/form/StepperControls.tsx": {
-    "hex": 5,
+    "hex": 1,
     "orange": 0
   },
   "src/components/dokumen/form/StepUploadLampiran.tsx": {
-    "hex": 22,
+    "hex": 15,
     "orange": 0
   },
   "src/components/dokumen/KelengkapanChecklist.tsx": {
-    "hex": 21,
+    "hex": 10,
     "orange": 8
   },
   "src/components/dokumen/ReviewSummary.tsx": {
-    "hex": 21,
+    "hex": 12,
     "orange": 0
   },
   "src/components/dokumen/StepIndicator.tsx": {
@@ -80,7 +76,7 @@
     "orange": 1
   },
   "src/components/kinerja/KinerjaPagePrimitives.tsx": {
-    "hex": 4,
+    "hex": 0,
     "orange": 5
   },
   "src/components/kinerja/MonitoringRealisasiView.tsx": {
@@ -88,19 +84,19 @@
     "orange": 32
   },
   "src/components/laporan/ExportZipDialog.tsx": {
-    "hex": 4,
+    "hex": 2,
     "orange": 0
   },
   "src/components/layout/AppHeader.tsx": {
-    "hex": 4,
+    "hex": 0,
     "orange": 13
   },
   "src/components/layout/AppLayout.tsx": {
-    "hex": 3,
+    "hex": 0,
     "orange": 2
   },
   "src/components/layout/AppSidebar.tsx": {
-    "hex": 1,
+    "hex": 0,
     "orange": 14
   },
   "src/components/layout/RoleDropdown.tsx": {
@@ -112,11 +108,11 @@
     "orange": 5
   },
   "src/components/pegawai/PegawaiPagePrimitives.tsx": {
-    "hex": 4,
+    "hex": 0,
     "orange": 5
   },
   "src/components/ui/alert-dialog.tsx": {
-    "hex": 2,
+    "hex": 1,
     "orange": 0
   },
   "src/components/ui/AppToast.tsx": {
@@ -124,15 +120,15 @@
     "orange": 1
   },
   "src/components/ui/checkbox.tsx": {
-    "hex": 6,
+    "hex": 2,
     "orange": 3
   },
   "src/components/ui/date-picker.tsx": {
-    "hex": 44,
+    "hex": 37,
     "orange": 2
   },
   "src/components/ui/dialog.tsx": {
-    "hex": 5,
+    "hex": 1,
     "orange": 2
   },
   "src/components/ui/EmptyState.tsx": {
@@ -140,11 +136,11 @@
     "orange": 3
   },
   "src/components/ui/select.tsx": {
-    "hex": 4,
+    "hex": 0,
     "orange": 6
   },
   "src/components/workflow/PpkPpspmPagePrimitives.tsx": {
-    "hex": 10,
+    "hex": 1,
     "orange": 25
   },
   "src/routes/admin.master-data.detail.tsx": {

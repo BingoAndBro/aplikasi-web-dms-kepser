@@ -110,7 +110,7 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
     expect(attachmentViewer).toContain("return `/api/dokumen/${dokumen.id}/download/${idx}`")
     expect(attachmentViewer).toContain("return `/api/ppk/dokumen/${dokumen.id}/download/${idx}`")
     expect(attachmentViewer).toContain("return `/api/ppspm/dokumen/${dokumen.id}/download/${idx}`")
-    expect(attachmentViewer).toContain("bg-[#FFFDF9]")
+    expect(attachmentViewer).toContain("bg-bg-surface")
     expect(attachmentViewer).toContain('Lampiran & Kelengkapan Wajib')
     expect(attachmentViewer).toContain('Dokumen Pendukung Tambahan')
     expect(attachmentViewer).toContain('Preview')

@@ -63,7 +63,7 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Popup
         data-slot="confirm-dialog"
         className={cn(
-          "fixed top-1/2 left-1/2 z-[70] flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-3xl border border-[#F0E1D5] bg-[#FFFAF6] p-6 text-sm text-zinc-950 shadow-2xl shadow-slate-950/15 duration-100 outline-none sm:max-w-sm sm:p-8 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-[70] flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-y-auto rounded-3xl border border-brand-border bg-[#FFFAF6] p-6 text-sm text-zinc-950 shadow-2xl shadow-slate-950/15 duration-100 outline-none sm:max-w-sm sm:p-8 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}

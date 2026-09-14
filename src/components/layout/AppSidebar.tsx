@@ -145,7 +145,7 @@ export function AppSidebar({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[82vw] shrink-0 flex-col gap-5 border-r border-orange-100/80 bg-[#FFFDF9] px-4 py-5 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none',
+          'fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[82vw] shrink-0 flex-col gap-5 border-r border-orange-100/80 bg-bg-surface px-4 py-5 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none',
           useCompactDesktopWidth ? 'lg:w-56 xl:w-60' : 'lg:w-60 xl:w-60',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}

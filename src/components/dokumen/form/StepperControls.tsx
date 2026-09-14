@@ -17,13 +17,13 @@ export function StepperControls({
   submitLabel = 'Ajukan Dokumen',
 }: StepperControlsProps) {
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 border-t border-[#F0E1D5] bg-[#FFFDF9]/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
+    <div className="sticky bottom-0 z-10 -mx-4 border-t border-brand-border bg-bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-0">
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
         <Button
           variant="outline"
           size="lg"
           onClick={onBack}
-          className="w-full gap-1.5 border-[#F0E1D5] bg-white sm:w-auto"
+          className="w-full gap-1.5 border-brand-border bg-white sm:w-auto"
           disabled={submitting}
         >
           <ChevronLeft size={14} />Kembali
@@ -32,7 +32,7 @@ export function StepperControls({
           size="lg"
           onClick={onSubmit}
           disabled={submitDisabled}
-          className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-[#EA580C] sm:w-auto"
+          className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
         >
           {submitting ? (
             <>

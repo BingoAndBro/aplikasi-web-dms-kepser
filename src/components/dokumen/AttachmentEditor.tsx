@@ -101,7 +101,7 @@ function FileActionButton({
       type="button"
       onClick={() => { void onClick() }}
       aria-label={ariaLabel}
-      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#F0E1D5] bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-[#FFF7F0] hover:text-[#FF5A00]"
+      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-brand-border bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-[#FFF7F0] hover:text-brand-solid"
     >
       {children}
     </button>
@@ -119,7 +119,7 @@ function UploadReplaceButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-[#FF5A00] bg-white px-3 text-xs font-semibold text-[#FF5A00] transition-colors hover:bg-[#FFF1E7]"
+      className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-brand-solid bg-white px-3 text-xs font-semibold text-brand-solid transition-colors hover:bg-[#FFF1E7]"
     >
       <Upload size={13} />
       {hasFile ? 'Ganti' : 'Unggah'}
@@ -949,7 +949,7 @@ export function AttachmentEditor({
         {!isNonMaterial && (
           <div className={cn(
             'rounded-xl border bg-[#FFFAF6] p-3 transition-colors',
-            hasNominalChanged ? 'border-orange-300 bg-orange-50/20' : 'border-[#F0E1D5]'
+            hasNominalChanged ? 'border-orange-300 bg-orange-50/20' : 'border-brand-border'
           )}>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
               <div className="flex-1">
@@ -985,8 +985,8 @@ export function AttachmentEditor({
         {/* Material documents: show kelengkapan from master + dokumen pendukung */}
         {/* Non-Material documents: only show empty dokumen pendukung section */}
         {!isNonMaterial && kelengkapan.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-[#F0E1D5] bg-[#FFFAF6]">
-            <div className="border-b border-[#F0E1D5] px-3.5 py-2.5">
+          <div className="overflow-hidden rounded-xl border border-brand-border bg-[#FFFAF6]">
+            <div className="border-b border-brand-border px-3.5 py-2.5">
               <h3 className="text-[13px] font-semibold text-on-surface">Kelengkapan Dokumen</h3>
               <p className="mt-0.5 text-[11px] text-on-surface-variant">
                 {requiredItems.length > 0
@@ -1070,8 +1070,8 @@ export function AttachmentEditor({
         {/* ========== DOKUMEN PENDUKUNG ========== */}
         <div className="overflow-hidden rounded-xl border border-orange-200 bg-[#FFFAF6]">
           <div className="border-b border-orange-100 px-3.5 py-2.5">
-            <h3 className="text-[13px] font-semibold text-[#FF5A00]">Dokumen Pendukung</h3>
-            <p className="mt-0.5 text-[11px] text-[#FF5A00]">
+            <h3 className="text-[13px] font-semibold text-brand-solid">Dokumen Pendukung</h3>
+            <p className="mt-0.5 text-[11px] text-brand-solid">
               Tambahkan dokumen pendukung untuk melengkapi
             </p>
           </div>
@@ -1173,7 +1173,7 @@ export function AttachmentEditor({
                     setUserDocError('')
                   }}
                   placeholder="Nama dokumen (misal: Bukti Transfer)"
-                  className="h-8 flex-1 rounded-lg border border-orange-200 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-[#FF5A00]"
+                  className="h-8 flex-1 rounded-lg border border-orange-200 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand-solid"
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleAddUserDoc()
                     if (e.key === 'Escape') { setShowAddForm(false); setNewDocTitle('') }
@@ -1187,7 +1187,7 @@ export function AttachmentEditor({
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-[#FF5A00] transition-colors hover:border-[#FF5A00] hover:bg-[#FFF1E7]"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-[#FFF1E7]"
               >
                 <Plus size={14} />
                 <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>

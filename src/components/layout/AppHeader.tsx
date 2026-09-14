@@ -48,7 +48,7 @@ export function AppHeader({
   const [notificationOpen, setNotificationOpen] = React.useState(false)
 
   return (
-    <header className="z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-orange-100/70 bg-[#FFF8F1]/90 px-4 shadow-sm shadow-orange-950/5 backdrop-blur-xl md:h-20 md:px-8">
+    <header className="z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-orange-100/70 bg-brand-surface/90 px-4 shadow-sm shadow-orange-950/5 backdrop-blur-xl md:h-20 md:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-5">
         <button
           type="button"
@@ -99,14 +99,14 @@ export function AppHeader({
                 aria-label="Notifikasi"
                 className="fixed left-3 right-3 top-20 z-50 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-xl shadow-orange-950/10 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-96"
               >
-                <div className="bg-[#FFF8F1] px-4 py-4">
+                <div className="bg-brand-surface px-4 py-4">
                   <p className="text-sm font-black text-on-surface">Notifikasi</p>
                   <p className="mt-1 text-xs font-medium leading-5 text-on-surface-variant">
                     Panel visual-only. Belum ada sumber backend notifikasi pada phase ini.
                   </p>
                 </div>
                 <div className="p-4">
-                  <div className="rounded-2xl border border-dashed border-orange-200 bg-[#FFFDF9] px-4 py-6 text-center">
+                  <div className="rounded-2xl border border-dashed border-orange-200 bg-bg-surface px-4 py-6 text-center">
                     <p className="text-sm font-bold text-on-surface">Belum ada notifikasi aktif</p>
                     <p className="mt-1 text-xs leading-5 text-outline">
                       Tidak ada hitungan unread atau status operasional yang ditampilkan tanpa API resmi.
@@ -118,7 +118,7 @@ export function AppHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-3 rounded-full border border-orange-100/80 bg-[#FFFDF9] py-1 pl-2 pr-1 shadow-sm shadow-orange-950/5 md:gap-4 md:pl-4">
+        <div className="flex items-center gap-3 rounded-full border border-orange-100/80 bg-bg-surface py-1 pl-2 pr-1 shadow-sm shadow-orange-950/5 md:gap-4 md:pl-4">
           {canSwitchRole && (
             <RoleDropdown
               currentRole={activeRole}

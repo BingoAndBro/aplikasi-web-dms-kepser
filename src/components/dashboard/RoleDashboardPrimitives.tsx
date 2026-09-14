@@ -42,7 +42,7 @@ export function RoleDashboardHeader({
         <Button
           nativeButton={false}
           render={<a href={actionHref} />}
-          className="h-11 w-full gap-2 rounded-xl bg-[#FF5A00] px-5 text-sm font-extrabold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C] sm:w-auto"
+          className="h-11 w-full gap-2 rounded-xl bg-brand-solid px-5 text-sm font-extrabold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover sm:w-auto"
         >
           {actionIcon}
           {actionLabel}
@@ -124,7 +124,7 @@ export function DashboardMetricCard({
   return (
     <div
       className={cn(
-        'group relative flex min-h-[150px] flex-col overflow-hidden rounded-[22px] border bg-[#FFFDF9] p-5 shadow-[0_3px_14px_rgba(15,23,42,0.07)] transition-all duration-300 ease-out hover:-translate-y-2 hover:scale-[1.018] active:translate-y-0 active:scale-[0.995]',
+        'group relative flex min-h-[150px] flex-col overflow-hidden rounded-[22px] border bg-bg-surface p-5 shadow-[0_3px_14px_rgba(15,23,42,0.07)] transition-all duration-300 ease-out hover:-translate-y-2 hover:scale-[1.018] active:translate-y-0 active:scale-[0.995]',
         toneClass.border,
         toneClass.glow,
       )}
@@ -172,7 +172,7 @@ export function DashboardSection({
   className,
 }: DashboardSectionProps) {
   return (
-    <section className={cn('overflow-hidden rounded-[24px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]', className)}>
+    <section className={cn('overflow-hidden rounded-[24px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]', className)}>
       <div className="border-b border-zinc-100 bg-[#F7F3EF] px-5 py-4">
         <h2 className="text-base font-black text-zinc-950">{title}</h2>
         {description && <p className="mt-1 text-xs font-medium leading-5 text-zinc-600">{description}</p>}
@@ -202,21 +202,21 @@ export function DashboardActionRow({
   return (
     <a
       href={href}
-      className="group flex cursor-pointer flex-col gap-4 border-b border-zinc-100 px-5 py-4 transition last:border-b-0 hover:bg-[#FFF8F1] sm:flex-row sm:items-center sm:justify-between"
+      className="group flex cursor-pointer flex-col gap-4 border-b border-zinc-100 px-5 py-4 transition last:border-b-0 hover:bg-brand-surface sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex min-w-0 items-start gap-4">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-700">
           {icon}
         </div>
         <div className="min-w-0">
-          <h3 className="line-clamp-1 text-sm font-extrabold text-zinc-950 transition group-hover:text-[#FF4D00]">
+          <h3 className="line-clamp-1 text-sm font-extrabold text-zinc-950 transition group-hover:text-brand-text">
             {title}
           </h3>
           {description && <p className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-zinc-600">{description}</p>}
           {meta && <div className="mt-2 text-[11px] font-semibold text-zinc-500">{meta}</div>}
         </div>
       </div>
-      <span className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-100 bg-orange-50 px-4 text-xs font-extrabold text-[#FF4D00] shadow-sm transition group-hover:border-orange-200 group-hover:bg-orange-100 sm:w-auto">
+      <span className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-100 bg-orange-50 px-4 text-xs font-extrabold text-brand-text shadow-sm transition group-hover:border-orange-200 group-hover:bg-orange-100 sm:w-auto">
         {actionLabel}
         <ArrowRight size={14} />
       </span>
@@ -238,7 +238,7 @@ export function DashboardQuickActions({
   className,
 }: DashboardQuickActionsProps) {
   return (
-    <aside className={cn('rounded-[24px] border border-zinc-200/80 bg-[#FFFDF9] p-5 shadow-[0_3px_14px_rgba(15,23,42,0.07)]', className)}>
+    <aside className={cn('rounded-[24px] border border-zinc-200/80 bg-bg-surface p-5 shadow-[0_3px_14px_rgba(15,23,42,0.07)]', className)}>
       <h2 className="text-base font-black text-zinc-950">{title}</h2>
       {description && <p className="mt-1 text-xs font-medium leading-5 text-zinc-600">{description}</p>}
       <div className="mt-4 grid gap-3">
@@ -246,7 +246,7 @@ export function DashboardQuickActions({
           <a
             key={action.href}
             href={action.href}
-            className="group flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-[#FFFDF9] px-3 py-2.5 text-sm font-extrabold text-zinc-900 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#FF4D00]"
+            className="group flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-bg-surface px-3 py-2.5 text-sm font-extrabold text-zinc-900 transition hover:border-orange-200 hover:bg-orange-50 hover:text-brand-text"
           >
             <span className="flex min-w-0 items-center gap-3">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 transition group-hover:bg-orange-600 group-hover:text-white">
@@ -254,7 +254,7 @@ export function DashboardQuickActions({
               </span>
               <span className="line-clamp-1">{action.label}</span>
             </span>
-            <ArrowRight size={15} className="shrink-0 text-zinc-400 transition group-hover:text-[#FF4D00]" />
+            <ArrowRight size={15} className="shrink-0 text-zinc-400 transition group-hover:text-brand-text" />
           </a>
         ))}
       </div>
