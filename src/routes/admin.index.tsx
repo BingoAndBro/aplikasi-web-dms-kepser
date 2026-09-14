@@ -103,28 +103,28 @@ function AdminDashboard() {
           value={stats.totalUsers}
           badge="Terdaftar"
           icon={<Users size={20} />}
-          tone="sky"
+          tone="info"
         />
         <DashboardMetricCard
           label="User Aktif"
           value={stats.activeUsers}
           badge="Aktif"
           icon={<CheckCircle2 size={20} />}
-          tone="emerald"
+          tone="success"
         />
         <DashboardMetricCard
           label="Role Terpakai"
           value={stats.usedRoles}
           badge="Akses"
           icon={<Shield size={20} />}
-          tone="amber"
+          tone="warning"
         />
         <DashboardMetricCard
           label="Total Kegiatan"
           value={stats.kegiatan}
           badge="Konfigurasi"
           icon={<Settings size={20} />}
-          tone="sky"
+          tone="info"
         />
       </div>
 

@@ -1,15 +1,15 @@
 {
   "src/components/admin/AdminPagePrimitives.tsx": {
-    "hex": 52,
-    "orange": 31
+    "hex": 49,
+    "orange": 20
   },
   "src/components/archive/ArchivePagePrimitives.tsx": {
     "hex": 22,
-    "orange": 22
+    "orange": 19
   },
   "src/components/dashboard/RoleDashboardPrimitives.tsx": {
     "hex": 14,
-    "orange": 22
+    "orange": 13
   },
   "src/components/dokumen/ActivityLog.tsx": {
     "hex": 3,
@@ -80,8 +80,8 @@
     "orange": 1
   },
   "src/components/kinerja/KinerjaPagePrimitives.tsx": {
-    "hex": 9,
-    "orange": 13
+    "hex": 6,
+    "orange": 10
   },
   "src/components/kinerja/MonitoringRealisasiView.tsx": {
     "hex": 162,
@@ -120,16 +120,12 @@
     "orange": 0
   },
   "src/components/ui/AppToast.tsx": {
-    "hex": 4,
+    "hex": 0,
     "orange": 1
   },
   "src/components/ui/checkbox.tsx": {
     "hex": 6,
     "orange": 3
-  },
-  "src/components/ui/ConfirmDialog.tsx": {
-    "hex": 7,
-    "orange": 6
   },
   "src/components/ui/date-picker.tsx": {
     "hex": 44,
@@ -143,25 +139,13 @@
     "hex": 0,
     "orange": 3
   },
-  "src/components/ui/ErrorState.tsx": {
-    "hex": 0,
-    "orange": 3
-  },
-  "src/components/ui/RoleBadge.tsx": {
-    "hex": 0,
-    "orange": 4
-  },
   "src/components/ui/select.tsx": {
     "hex": 4,
     "orange": 6
   },
-  "src/components/ui/StatusBadge.tsx": {
-    "hex": 0,
-    "orange": 4
-  },
   "src/components/workflow/PpkPpspmPagePrimitives.tsx": {
-    "hex": 21,
-    "orange": 33
+    "hex": 19,
+    "orange": 29
   },
   "src/routes/admin.master-data.detail.tsx": {
     "hex": 1,
@@ -197,7 +181,7 @@
   },
   "src/routes/admin.master-data.user.tsx": {
     "hex": 35,
-    "orange": 12
+    "orange": 9
   },
   "src/routes/kasubag/berkas/$id.tsx": {
     "hex": 70,

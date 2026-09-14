@@ -113,63 +113,6 @@ export function AdminPanel({ children, className }: AdminPanelProps) {
   )
 }
 
-type AdminSummaryCardProps = {
-  label: ReactNode
-  value: ReactNode
-  helper?: ReactNode
-  icon?: ReactNode
-  emphasis?: boolean
-  className?: string
-}
-
-export function AdminSummaryCard({
-  label,
-  value,
-  helper,
-  icon,
-  emphasis = false,
-  className,
-}: AdminSummaryCardProps) {
-  return (
-    <div
-      className={cn(
-        'rounded-2xl border p-4 shadow-sm',
-        emphasis
-          ? 'border-orange-200 bg-gradient-to-br from-orange-50 via-[#FFFDF9] to-[#FFF8F1]'
-          : 'border-orange-100 bg-[#FFFDF9]',
-        className,
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
-            {label}
-          </p>
-          <div
-            className={cn(
-              'mt-2 font-headline text-2xl font-extrabold text-zinc-950',
-              emphasis && 'text-orange-900',
-            )}
-          >
-            {value}
-          </div>
-        </div>
-        {icon && (
-          <div
-            className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-2xl',
-              emphasis ? 'bg-orange-100 text-orange-800' : 'bg-orange-50 text-orange-700',
-            )}
-          >
-            {icon}
-          </div>
-        )}
-      </div>
-      {helper && <div className="mt-2 text-xs leading-relaxed text-zinc-600">{helper}</div>}
-    </div>
-  )
-}
-
 type AdminSearchPanelProps = {
   id: string
   label: string
@@ -477,37 +420,6 @@ export function AdminTableShell({ children, className }: AdminPanelProps) {
       )}
     >
       <div className="overflow-x-auto">{children}</div>
-    </div>
-  )
-}
-
-type AdminNoticeProps = {
-  tone?: 'info' | 'success' | 'warning' | 'destructive'
-  children: ReactNode
-  className?: string
-}
-
-const noticeToneClassName: Record<NonNullable<AdminNoticeProps['tone']>, string> = {
-  info: 'border-orange-200 bg-orange-50 text-orange-900',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900',
-  destructive: 'border-red-200 bg-red-50 text-red-900',
-}
-
-export function AdminNotice({
-  tone = 'info',
-  children,
-  className,
-}: AdminNoticeProps) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border px-4 py-3 text-xs leading-relaxed shadow-sm',
-        noticeToneClassName[tone],
-        className,
-      )}
-    >
-      {children}
     </div>
   )
 }

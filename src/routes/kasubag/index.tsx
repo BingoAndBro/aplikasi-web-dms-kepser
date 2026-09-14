@@ -115,21 +115,21 @@ function KepalaSubBagianUmumDashboard() {
           value={openFolders.length}
           badge="Terbuka"
           icon={<FolderOpen size={20} />}
-          tone="amber"
+          tone="warning"
         />
         <DashboardMetricCard
           label="Berkas Tertutup"
           value={closedFolders.length}
           badge="Tersimpan"
           icon={<FolderCheck size={20} />}
-          tone="emerald"
+          tone="success"
         />
         <DashboardMetricCard
           label="Usul Pembersihan"
           value={proposedDestructionCount}
           badge="Usul Pembersihan"
           icon={<Trash2 size={20} />}
-          tone="rose"
+          tone="danger"
         />
       </div>
 

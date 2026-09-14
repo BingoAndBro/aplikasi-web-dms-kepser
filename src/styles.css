@@ -80,10 +80,10 @@
   --danger-solid: #DC2626;
   --danger-on-solid: #FFFFFF;
 
-  --info-surface: #EFF6FF;
-  --info-border: #AECBF5;
-  --info-text: #1E5BA8;
-  --info-solid: #2563EB;
+  --info-surface: #F0F9FF;             /* corrected to actual sky-50 — rencana.md §5's draft (#EFF6FF) was blue-family, not sky */
+  --info-border: #BAE6FD;              /* sky-200 */
+  --info-text: #075985;                /* sky-800 — matches StatusBadge's existing "Menunggu PPK" badge exactly */
+  --info-solid: #0284C7;               /* sky-600 */
   --info-on-solid: #FFFFFF;
 
   --neutral-status-surface: #F4F4F5;

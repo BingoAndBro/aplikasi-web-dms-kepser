@@ -71,14 +71,14 @@ function PenanggungJawabKinerjaDashboard() {
           value={documents.length}
           badge="Final"
           icon={<CheckCircle2 size={20} />}
-          tone="emerald"
+          tone="success"
         />
         <DashboardMetricCard
           label="Total Nominal Realisasi"
           value={formatDashboardCurrency(totalNominal)}
           badge="Realisasi"
           icon={<ClipboardList size={20} />}
-          tone="amber"
+          tone="warning"
           valueClassName="font-mono text-zinc-950"
         />
         <DashboardMetricCard
@@ -86,14 +86,14 @@ function PenanggungJawabKinerjaDashboard() {
           value={completedCount}
           badge="Selesai"
           icon={<FileCheck2 size={20} />}
-          tone="sky"
+          tone="info"
         />
         <DashboardMetricCard
           label="Dokumen Diberkaskan"
           value={diberkaskanCount}
           badge="Diberkaskan"
           icon={<FolderCheck size={20} />}
-          tone="emerald"
+          tone="success"
         />
       </div>
 

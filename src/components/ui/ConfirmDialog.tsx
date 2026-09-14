@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from "#/components/ui/alert-dialog"
 import { Button } from "#/components/ui/button"
+import { toneClasses, type Tone } from "#/lib/tone"
 import { cn } from "#/lib/utils"
 
 /**
@@ -94,22 +95,19 @@ const VARIANT_TO_TONE: Record<ConfirmDialogVariant, ConfirmTone> = {
   destructive: "destructive",
 }
 
-const toneBadgeClassName: Record<ConfirmTone, string> = {
-  default: "bg-orange-50 text-orange-600",
-  primary: "bg-orange-50 text-orange-600",
-  warning: "bg-amber-50 text-amber-600",
-  destructive: "bg-rose-50 text-rose-600",
-  success: "bg-emerald-50 text-emerald-600",
-  info: "bg-slate-50 text-slate-600",
-}
-
-const toneConfirmClassName: Record<ConfirmTone, string> = {
-  default: "bg-[#FF5F1F] text-white hover:bg-[#EA580C]",
-  primary: "bg-[#FF5F1F] text-white hover:bg-[#EA580C]",
-  warning: "bg-amber-600 text-white hover:bg-amber-700",
-  destructive: "bg-rose-600 text-white hover:bg-rose-700",
-  success: "bg-emerald-600 text-white hover:bg-emerald-700",
-  info: "bg-slate-700 text-white hover:bg-slate-800",
+// ConfirmTone is the public API (kept for the ~60 existing call sites across
+// ConfirmDialog/AdminConfirmationDialog/useConfirm); CONFIRM_TONE_TO_TONE maps
+// it onto the shared semantic Tone used by toneClasses(). "info" here was
+// confirmed to have zero real call sites (AdminConfirmationDialog's own
+// tone="info" bridges to "primary", never reaches this) — mapped correctly
+// anyway so it renders right if something starts using it.
+const CONFIRM_TONE_TO_TONE: Record<ConfirmTone, Tone> = {
+  default: "brand",
+  primary: "brand",
+  warning: "warning",
+  destructive: "danger",
+  success: "success",
+  info: "info",
 }
 
 const toneIcon: Record<ConfirmTone, React.ComponentType<{ className?: string }>> = {
@@ -223,6 +221,7 @@ export function ConfirmDialog({
 
   const IconComponent = toneIcon[tone]
   const iconNode = icon ?? <IconComponent className="size-6" />
+  const semanticTone = CONFIRM_TONE_TO_TONE[tone]
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
@@ -235,7 +234,7 @@ export function ConfirmDialog({
           <span
             className={cn(
               "flex size-12 shrink-0 items-center justify-center rounded-full",
-              toneBadgeClassName[tone],
+              toneClasses(semanticTone, 'icon'),
             )}
             aria-hidden="true"
           >
@@ -274,10 +273,10 @@ export function ConfirmDialog({
                   placeholder={reasonConfig.placeholder || undefined}
                   disabled={pending}
                   className={cn(
-                    "w-full resize-none rounded-xl border bg-[#FFFDF9] px-3 py-2 text-sm text-zinc-950 outline-none transition focus:ring-2",
+                    "w-full resize-none rounded-xl border bg-surface px-3 py-2 text-sm text-zinc-950 outline-none transition focus:ring-2",
                     tone === "destructive"
-                      ? "border-rose-200 focus:border-rose-400 focus:ring-rose-100"
-                      : "border-[#F0E1D5] focus:border-orange-300 focus:ring-orange-100",
+                      ? "border-danger-border focus:border-danger-solid focus:ring-danger-surface"
+                      : "border-brand-border focus:border-brand-border-strong focus:ring-brand-surface",
                   )}
                 />
                 <div className="flex items-center justify-between text-[10px] font-medium text-outline">
@@ -300,7 +299,7 @@ export function ConfirmDialog({
 
             {requiresPhrase && (
               <div className="space-y-2">
-                <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-3 text-xs font-semibold leading-relaxed text-rose-700">
+                <div className="rounded-2xl border border-danger-border bg-danger-surface/70 p-3 text-xs font-semibold leading-relaxed text-danger-text">
                   {typedConfirmationHint ?? (
                     <>
                       Ketik <span className="font-mono font-bold">{`"${phrase}"`}</span>{" "}
@@ -318,7 +317,7 @@ export function ConfirmDialog({
                   placeholder={phrase}
                   disabled={pending}
                   autoComplete="off"
-                  className="w-full rounded-xl border border-red-200 bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  className="w-full rounded-xl border border-danger-border bg-surface px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition focus:border-danger-solid focus:ring-2 focus:ring-danger-surface"
                 />
               </div>
             )}
@@ -338,7 +337,7 @@ export function ConfirmDialog({
             type="button"
             disabled={confirmDisabled}
             onClick={handleConfirm}
-            className={cn("rounded-xl px-5 font-extrabold", toneConfirmClassName[tone])}
+            className={cn("rounded-xl px-5 font-extrabold", toneClasses(semanticTone, 'solid'))}
           >
             {pending ? (
               <>

@@ -78,28 +78,28 @@ function PpkDashboardPage() {
           value={waiting.length}
           badge="Antrean"
           icon={<ShieldCheck size={20} />}
-          tone="amber"
+          tone="warning"
         />
         <DashboardMetricCard
           label="Sudah Divalidasi"
           value={validated.length}
           badge="Selesai"
           icon={<CheckCircle2 size={20} />}
-          tone="emerald"
+          tone="success"
         />
         <DashboardMetricCard
           label="Dikembalikan untuk Revisi"
           value={revision.length + rejected.length}
           badge="Revisi"
           icon={<History size={20} />}
-          tone="rose"
+          tone="danger"
         />
         <DashboardMetricCard
           label="Total Nominal Menunggu"
           value={pendingNominal}
           badge="Nominal"
           icon={<FileText size={20} />}
-          tone="sky"
+          tone="info"
           valueClassName="font-mono text-zinc-950"
         />
       </div>

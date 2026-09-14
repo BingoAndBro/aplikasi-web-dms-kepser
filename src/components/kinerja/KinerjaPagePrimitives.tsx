@@ -64,63 +64,6 @@ export function KinerjaPanel({ children, className }: KinerjaPanelProps) {
   )
 }
 
-type KinerjaSummaryCardProps = {
-  label: ReactNode
-  value: ReactNode
-  helper?: ReactNode
-  icon?: ReactNode
-  emphasis?: boolean
-  className?: string
-}
-
-export function KinerjaSummaryCard({
-  label,
-  value,
-  helper,
-  icon,
-  emphasis = false,
-  className,
-}: KinerjaSummaryCardProps) {
-  return (
-    <div
-      className={cn(
-        'rounded-2xl border p-4 shadow-sm',
-        emphasis
-          ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-[#FFFDF9] to-[#FFF8F1]'
-          : 'border-orange-100 bg-[#FFFDF9]',
-        className,
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
-            {label}
-          </p>
-          <div
-            className={cn(
-              'mt-2 font-headline text-2xl font-extrabold text-zinc-950',
-              emphasis && 'text-emerald-900',
-            )}
-          >
-            {value}
-          </div>
-        </div>
-        {icon && (
-          <div
-            className={cn(
-              'flex size-10 shrink-0 items-center justify-center rounded-2xl',
-              emphasis ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-50 text-orange-700',
-            )}
-          >
-            {icon}
-          </div>
-        )}
-      </div>
-      {helper && <div className="mt-2 text-xs leading-relaxed text-zinc-600">{helper}</div>}
-    </div>
-  )
-}
-
 type KinerjaSearchPanelProps = {
   id: string
   label: string
@@ -234,24 +177,6 @@ export function KinerjaMobileCard({
           ))}
         </div>
       )}
-    </div>
-  )
-}
-
-type KinerjaNoticeProps = {
-  children: ReactNode
-  className?: string
-}
-
-export function KinerjaNotice({ children, className }: KinerjaNoticeProps) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-950 shadow-sm',
-        className,
-      )}
-    >
-      {children}
     </div>
   )
 }

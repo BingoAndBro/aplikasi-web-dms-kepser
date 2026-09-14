@@ -3,11 +3,14 @@ import { describe, expect, it } from 'vitest'
 
 import { type ColorBudget, scanColorBudget } from './color-budget-scan'
 
+// Scanned once at module load and shared by both assertions below — this file
+// walks every .ts/.tsx under src/ synchronously (hundreds of files), so
+// scanning twice roughly doubled this file's I/O footprint for no reason.
+const baseline: ColorBudget = JSON.parse(readFileSync('tests/unit/styles/color-budget.baseline.json', 'utf8'))
+const current = scanColorBudget()
+
 describe('color budget guardrail (Fase 0 — Tema Global consolidation)', () => {
   it('does not let hardcoded hex colors or orange-* classes grow in any src/ file', () => {
-    const baseline: ColorBudget = JSON.parse(readFileSync('tests/unit/styles/color-budget.baseline.json', 'utf8'))
-    const current = scanColorBudget()
-
     const regressions: string[] = []
     for (const [file, counts] of Object.entries(current)) {
       const base = baseline[file] ?? { hex: 0, orange: 0 }
@@ -28,9 +31,6 @@ describe('color budget guardrail (Fase 0 — Tema Global consolidation)', () => 
   })
 
   it('baseline only ever shrinks — this test breaks the moment someone reduces a count without regenerating the file', () => {
-    const baseline: ColorBudget = JSON.parse(readFileSync('tests/unit/styles/color-budget.baseline.json', 'utf8'))
-    const current = scanColorBudget()
-
     const stale: string[] = []
     for (const [file, base] of Object.entries(baseline)) {
       const counts = current[file]

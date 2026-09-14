@@ -1,5 +1,6 @@
 import { Badge } from "#/components/ui/badge"
 import { type RoleName } from "#/lib/constants/roles"
+import { toneClasses, type Tone } from "#/lib/tone"
 import { cn } from "#/lib/utils"
 
 export const ROLE_BADGE_LABELS = {
@@ -11,35 +12,18 @@ export const ROLE_BADGE_LABELS = {
   ADMIN: "Admin Sistem",
 } as const satisfies Record<RoleName, string>
 
-type RoleBadgeTone =
-  | "neutral"
-  | "blue"
-  | "orange"
-  | "green"
-  | "amber"
-  | "slate"
-
-const roleToneByName: Record<RoleName, RoleBadgeTone> = {
-  PEGAWAI: "green",
-  PPK: "blue",
-  PPSPM: "orange",
-  KEPALA_SUB_BAGIAN_UMUM: "amber",
-  PENANGGUNG_JAWAB_KINERJA: "slate",
+// Organizational identity, not a status — deliberately kept as its own
+// role -> tone assignment table rather than folded into semantic Tone
+// (see plan Fase 2, "Sengaja tidak digeneralisasi"). Mapping matches
+// rencana.md §4 Group 5 exactly (PJ Kinerja and Admin share "neutral" —
+// that's the plan's own taxonomy, not an accidental collision).
+export const ROLE_TONE: Record<RoleName, Tone> = {
+  PEGAWAI: "success",
+  PPK: "info",
+  PPSPM: "brand",
+  KEPALA_SUB_BAGIAN_UMUM: "warning",
+  PENANGGUNG_JAWAB_KINERJA: "neutral",
   ADMIN: "neutral",
-}
-
-const roleToneClassName: Record<RoleBadgeTone, string> = {
-  neutral:
-    "border-zinc-200 bg-zinc-50 text-zinc-800 hover:bg-zinc-50",
-  blue: "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-50",
-  orange:
-    "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-50",
-  green:
-    "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50",
-  amber:
-    "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50",
-  slate:
-    "border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-50",
 }
 
 export function getRoleBadgeLabel(role: RoleName | string | null | undefined) {
@@ -56,12 +40,12 @@ export type RoleBadgeProps = {
 export function RoleBadge({ role, className }: RoleBadgeProps) {
   const knownRole = role && role in ROLE_BADGE_LABELS ? (role as RoleName) : null
   const label = getRoleBadgeLabel(role)
-  const tone = knownRole ? roleToneByName[knownRole] : "neutral"
+  const tone = knownRole ? ROLE_TONE[knownRole] : "neutral"
 
   return (
     <Badge
       variant="outline"
-      className={cn(roleToneClassName[tone], className)}
+      className={cn(toneClasses(tone, 'badge'), className)}
       title={label}
     >
       {label}

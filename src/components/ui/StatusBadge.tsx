@@ -1,4 +1,5 @@
 import { Badge } from "#/components/ui/badge"
+import { toneClasses, type Tone } from "#/lib/tone"
 import { cn } from "#/lib/utils"
 
 export type DocumentStatus =
@@ -23,37 +24,18 @@ export type SourceType = "WORKFLOW" | "MANUAL"
 
 export type StatusBadgeKind = "document" | "folder" | "archive" | "source"
 
-export type StatusBadgeTone =
-  | "neutral"
-  | "info"
-  | "warning"
-  | "success"
-  | "destructive"
-  | "orange"
+/** @deprecated use `Tone` from #/lib/tone — kept as an alias so existing imports still resolve */
+export type StatusBadgeTone = Tone
 
 export type StatusConfig = {
   label: string
-  tone: StatusBadgeTone
-}
-
-const toneClassName: Record<StatusBadgeTone, string> = {
-  neutral:
-    "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50",
-  info: "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-50",
-  warning:
-    "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50",
-  success:
-    "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-50",
-  destructive:
-    "border-red-200 bg-red-50 text-red-800 hover:bg-red-50",
-  orange:
-    "border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-50",
+  tone: Tone
 }
 
 export const DOCUMENT_STATUS_BADGE_CONFIG = {
   DRAFT: { label: "Draft", tone: "neutral" },
   IN_PPK_VALIDATION: { label: "Menunggu PPK", tone: "info" },
-  IN_PPSPM_APPROVAL: { label: "Menunggu PPSPM", tone: "orange" },
+  IN_PPSPM_APPROVAL: { label: "Menunggu PPSPM", tone: "brand" },
   NEED_REVISION: { label: "Perlu Revisi", tone: "warning" },
   COMPLETED: { label: "Selesai", tone: "success" },
   TERSIMPAN: { label: "Tersimpan", tone: "success" },
@@ -66,13 +48,13 @@ export const FOLDER_STATUS_BADGE_CONFIG = {
 
 export const ARCHIVE_STATUS_BADGE_CONFIG = {
   AKTIF: { label: "Tersimpan", tone: "success" },
-  USUL_MUSNAH: { label: "Usul Pembersihan", tone: "orange" },
-  DIMUSNAHKAN: { label: "File Dibersihkan", tone: "destructive" },
+  USUL_MUSNAH: { label: "Usul Pembersihan", tone: "brand" },
+  DIMUSNAHKAN: { label: "File Dibersihkan", tone: "danger" },
 } as const satisfies Record<ArchiveLifecycleStatus, StatusConfig>
 
 export const SOURCE_TYPE_BADGE_CONFIG = {
   WORKFLOW: { label: "Persetujuan", tone: "info" },
-  MANUAL: { label: "Manual", tone: "orange" },
+  MANUAL: { label: "Manual", tone: "brand" },
 } as const satisfies Record<SourceType, StatusConfig>
 
 const statusConfigByKind = {
@@ -115,7 +97,7 @@ export function StatusBadge({
   return (
     <Badge
       variant="outline"
-      className={cn(toneClassName[config.tone], className)}
+      className={cn(toneClasses(config.tone, 'badge'), className)}
       title={label}
     >
       {label}

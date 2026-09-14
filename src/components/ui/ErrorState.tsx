@@ -1,14 +1,21 @@
 import * as React from "react"
 
+import { toneClasses } from "#/lib/tone"
 import { cn } from "#/lib/utils"
 
+// "inline" and "warning" are confirmed dead (0 real call sites; every one of
+// the 30+ usages passes "page" or "destructive") — kept for API stability,
+// now correctly token-based rather than removed. "page" mixes a layout
+// concern (full-page white bg) into what's otherwise a tone enum; splitting
+// that out would mean editing 26+ call sites for no visible change, so it
+// stays a local one-off rather than routing through toneClasses().
 export type ErrorStateVariant = "inline" | "page" | "warning" | "destructive"
 
 const variantClassName: Record<ErrorStateVariant, string> = {
-  inline: "border-orange-200 bg-orange-50 text-orange-900",
-  page: "border-red-200 bg-white text-red-950",
-  warning: "border-amber-200 bg-amber-50 text-amber-950",
-  destructive: "border-red-200 bg-red-50 text-red-950",
+  inline: toneClasses('brand', 'notice'),
+  page: "border-danger-border bg-white text-danger-text",
+  warning: toneClasses('warning', 'notice'),
+  destructive: toneClasses('danger', 'notice'),
 }
 
 export type ErrorStateProps = {

@@ -4,9 +4,21 @@ import * as React from "react"
 import { CheckCircle2, Info, TriangleAlert, X, XCircle } from "lucide-react"
 
 import { Button } from "#/components/ui/button"
+import { toneClasses, type Tone } from "#/lib/tone"
 import { cn } from "#/lib/utils"
 
 export type AppToastVariant = "success" | "error" | "info" | "warning"
+
+// AppToastVariant is the public API (used across the app as showToast({ variant })) —
+// kept as-is; VARIANT_TO_TONE maps it onto the shared semantic Tone. "info" used to
+// render slate here (a 3rd, different "info" from StatusBadge's sky and AdminNotice's
+// orange) — now correctly sky, matching the rest of the app.
+const VARIANT_TO_TONE: Record<AppToastVariant, Tone> = {
+  success: "success",
+  error: "danger",
+  info: "info",
+  warning: "warning",
+}
 
 export type AppToastMessage = {
   id?: string
@@ -28,25 +40,21 @@ const AppToastContext = React.createContext<AppToastContextValue | null>(null)
 
 const DEFAULT_TOAST_DURATION_MS = 4500
 
+// Card background/text deliberately stay neutral regardless of severity —
+// only the border + shadow carry the tone tint — so this stays a local table
+// rather than the shared toneClasses() 'notice' surface (which tints the bg).
 const variantClassName: Record<AppToastVariant, string> = {
-  success: "border-emerald-200/80 bg-[#FFFDF9] text-zinc-950 shadow-emerald-950/[0.08]",
-  error: "border-rose-200/80 bg-[#FFFDF9] text-zinc-950 shadow-rose-950/[0.08]",
-  info: "border-slate-200/90 bg-[#FFFDF9] text-zinc-950 shadow-slate-950/[0.08]",
-  warning: "border-amber-200/90 bg-[#FFFDF9] text-zinc-950 shadow-amber-950/[0.08]",
-}
-
-const variantIconClassName: Record<AppToastVariant, string> = {
-  success: "border-emerald-100 bg-emerald-50 text-emerald-700",
-  error: "border-rose-100 bg-rose-50 text-rose-700",
-  info: "border-slate-100 bg-slate-50 text-slate-700",
-  warning: "border-amber-100 bg-amber-50 text-amber-700",
+  success: "border-success-border bg-surface text-zinc-950 shadow-success-solid/10",
+  error: "border-danger-border bg-surface text-zinc-950 shadow-danger-solid/10",
+  info: "border-info-border bg-surface text-zinc-950 shadow-info-solid/10",
+  warning: "border-warning-border bg-surface text-zinc-950 shadow-warning-solid/10",
 }
 
 const variantProgressClassName: Record<AppToastVariant, string> = {
-  success: "bg-emerald-500",
-  error: "bg-rose-500",
-  info: "bg-slate-500",
-  warning: "bg-amber-500",
+  success: "bg-success-solid",
+  error: "bg-danger-solid",
+  info: "bg-info-solid",
+  warning: "bg-warning-solid",
 }
 
 const variantIcon = {
@@ -143,7 +151,7 @@ export function AppToastViewport({
             )}
           >
             <div className="flex gap-3">
-              <span className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl border", variantIconClassName[toast.variant])}>
+              <span className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl border", toneClasses(VARIANT_TO_TONE[toast.variant], 'notice'))}>
                 <Icon className="size-4" aria-hidden="true" />
               </span>
               <div className="min-w-0 flex-1">

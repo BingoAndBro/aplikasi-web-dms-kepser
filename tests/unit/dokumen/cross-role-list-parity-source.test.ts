@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const workflowPrimitives = readFileSync('src/components/workflow/PpkPpspmPagePrimitives.tsx', 'utf8')
+const statusBadgeSource = readFileSync('src/components/ui/StatusBadge.tsx', 'utf8')
 const pegawaiDokumen = readFileSync('src/routes/pegawai/dokumen/index.tsx', 'utf8')
 const pegawaiRevisi = readFileSync('src/routes/pegawai/revisi.tsx', 'utf8')
 const ppkInbox = readFileSync('src/routes/ppk/inbox.tsx', 'utf8')
@@ -14,8 +15,9 @@ const ppspmDitolak = readFileSync('src/routes/ppspm/ditolak.tsx', 'utf8')
 
 describe('Phase 15L.3A cross-role document list visual parity source guard', () => {
   it('keeps workflow list primitives aligned with the approved warm compact list pattern', () => {
-    expect(workflowPrimitives).toContain("ppk: 'border-orange-100 bg-[#FFF8F1] text-orange-800'")
-    expect(workflowPrimitives).toContain("ppspm: 'border-orange-100 bg-[#FFF8F1] text-orange-800'")
+    // ppk/ppspm rendered byte-identical classes (tone was inert) — Fase 2 of the
+    // tema-global plan collapsed it to one token-based constant, see WORKFLOW_PANEL_TONE_CLASS
+    expect(workflowPrimitives).toContain("WORKFLOW_PANEL_TONE_CLASS = 'border-brand-border bg-brand-surface text-brand-text'")
     expect(workflowPrimitives).toContain("variant?: 'panel' | 'list'")
     expect(workflowPrimitives).toContain("export const WORKFLOW_TABLE_HEAD_CLASS")
     expect(workflowPrimitives).toContain('text-neutral-500')
@@ -33,9 +35,17 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     expect(workflowPrimitives).toContain('rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9]')
     expect(workflowPrimitives).toContain('group-hover:bg-orange-50 group-hover:text-orange-600')
     expect(workflowPrimitives).toContain('export function DocumentListStatusBadge')
-    expect(workflowPrimitives).toContain("IN_PPK_VALIDATION: 'Validasi PPK'")
-    expect(workflowPrimitives).toContain("IN_PPSPM_APPROVAL: 'Menunggu Persetujuan'")
-    expect(workflowPrimitives).toContain("NEED_REVISION: 'Perlu Revisi'")
+    // Labels/colors now come from the single source of truth (StatusBadge's
+    // DOCUMENT_STATUS_BADGE_CONFIG) instead of a second, divergent map here —
+    // list views ("Validasi PPK") and detail views ("Menunggu PPK") used to
+    // show different text for the same status; "Menunggu PPK"/"Menunggu PPSPM"
+    // won as the app-wide standard (tema-global Fase 2).
+    expect(workflowPrimitives).toContain('DOCUMENT_STATUS_BADGE_CONFIG')
+    expect(workflowPrimitives).not.toContain('documentListStatusLabel')
+    expect(workflowPrimitives).not.toContain('documentListStatusClassName')
+    expect(statusBadgeSource).toContain('IN_PPK_VALIDATION: { label: "Menunggu PPK"')
+    expect(statusBadgeSource).toContain('IN_PPSPM_APPROVAL: { label: "Menunggu PPSPM"')
+    expect(statusBadgeSource).toContain('NEED_REVISION: { label: "Perlu Revisi"')
     expect(workflowPrimitives).not.toContain('bg-gradient-to-br')
   })
 

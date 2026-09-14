@@ -296,37 +296,6 @@ export function ArchiveFieldCard({
   )
 }
 
-type ArchiveNoticeProps = {
-  tone?: 'info' | 'success' | 'warning' | 'destructive'
-  children: ReactNode
-  className?: string
-}
-
-const noticeToneClassName: Record<NonNullable<ArchiveNoticeProps['tone']>, string> = {
-  info: 'border-orange-200 bg-orange-50 text-orange-900',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900',
-  destructive: 'border-red-200 bg-red-50 text-red-900',
-}
-
-export function ArchiveNotice({
-  tone = 'info',
-  children,
-  className,
-}: ArchiveNoticeProps) {
-  return (
-    <div
-      className={cn(
-        'rounded-xl border px-4 py-3 text-xs leading-relaxed shadow-sm',
-        noticeToneClassName[tone],
-        className,
-      )}
-    >
-      {children}
-    </div>
-  )
-}
-
 type ArchivePaginationProps = {
   page: number
   totalPages: number

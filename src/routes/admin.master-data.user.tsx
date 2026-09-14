@@ -50,7 +50,8 @@ import { Input } from '#/components/ui/input'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { RoleBadge } from '#/components/ui/RoleBadge'
+import { ROLE_TONE, RoleBadge } from '#/components/ui/RoleBadge'
+import { toneClasses } from '#/lib/tone'
 import { useAppToast } from '#/components/ui/AppToast'
 import {
   Edit2,
@@ -80,15 +81,6 @@ export const Route = createFileRoute('/admin/master-data/user')({
 // ---------------------------------------------------------------------------
 // Role card colors
 // ---------------------------------------------------------------------------
-
-const ROLE_COLORS: Record<RoleName, string> = {
-  PEGAWAI: 'bg-blue-100 text-blue-700 border-blue-200',
-  PPK: 'bg-purple-100 text-purple-700 border-purple-200',
-  PPSPM: 'bg-green-100 text-green-700 border-green-200',
-  KEPALA_SUB_BAGIAN_UMUM: 'bg-orange-100 text-orange-700 border-orange-200',
-  PENANGGUNG_JAWAB_KINERJA: 'bg-cyan-100 text-cyan-700 border-cyan-200',
-  ADMIN: 'bg-red-100 text-red-700 border-red-200',
-}
 
 const ALL_ROLES: RoleName[] = [
   'PEGAWAI',
@@ -1314,7 +1306,7 @@ function MasterUserPage() {
                     disabled={isRoleButtonDisabled(role, createForm.roles, 'create')}
                     className={`${adminRoleCardClassName} ${
                       createForm.roles.includes(role)
-                        ? `${ROLE_COLORS[role]} border-current shadow-sm ring-1 ring-current/10`
+                        ? `${toneClasses(ROLE_TONE[role], 'notice')} border-current shadow-sm ring-1 ring-current/10`
                         : 'bg-white border-zinc-200 text-zinc-600 hover:border-orange-200 hover:bg-orange-50'
                     } ${isRoleButtonDisabled(role, createForm.roles, 'create') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
@@ -1462,7 +1454,7 @@ function MasterUserPage() {
                     disabled={isRoleButtonDisabled(role, editForm.roles, 'edit')}
                     className={`${adminRoleCardClassName} ${
                       editForm.roles.includes(role)
-                        ? `${ROLE_COLORS[role]} border-current shadow-sm ring-1 ring-current/10`
+                        ? `${toneClasses(ROLE_TONE[role], 'notice')} border-current shadow-sm ring-1 ring-current/10`
                         : 'bg-white border-zinc-200 text-zinc-600 hover:border-orange-200 hover:bg-orange-50'
                     } ${isRoleButtonDisabled(role, editForm.roles, 'edit') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >

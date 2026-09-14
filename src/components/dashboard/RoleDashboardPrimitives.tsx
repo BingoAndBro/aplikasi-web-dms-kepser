@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { Button } from '#/components/ui/button'
+import type { Tone } from '#/lib/tone'
 import { cn } from '#/lib/utils'
 import { ArrowRight, Inbox } from 'lucide-react'
 
@@ -56,11 +57,45 @@ type DashboardMetricCardProps = {
   value: ReactNode
   badge?: ReactNode
   icon: ReactNode
-  tone?: 'sky' | 'rose' | 'emerald' | 'amber' | 'orange' | 'zinc'
+  tone?: Tone
   valueClassName?: string
 }
 
-const metricToneClassName: Record<NonNullable<DashboardMetricCardProps['tone']>, {
+// border/icon/badge/label draw from the shared semantic tokens (src/styles.css
+// Group 3); glow/accent are card-specific decoration kept local rather than
+// added to the shared toneClasses() helper (plan Fase 2: "glow/accent ->
+// lapisan extension, bukan core"). Re-keyed from Tailwind color names
+// (sky/rose/emerald/amber/orange/zinc) to semantic Tone — "zinc" was
+// confirmed unused at every one of the 23 call sites, "orange" was the
+// unused default; both are now folded into "neutral"/"brand" respectively.
+const metricToneExtra: Record<Tone, { glow: string; accent: string }> = {
+  info: {
+    glow: 'hover:border-info-border hover:shadow-[0_18px_42px_rgba(14,165,233,0.18)]',
+    accent: 'from-info-surface/80 via-white/40 to-transparent',
+  },
+  danger: {
+    glow: 'hover:border-danger-border hover:shadow-[0_18px_42px_rgba(244,63,94,0.18)]',
+    accent: 'from-danger-surface/80 via-white/40 to-transparent',
+  },
+  success: {
+    glow: 'hover:border-success-border hover:shadow-[0_18px_42px_rgba(16,185,129,0.18)]',
+    accent: 'from-success-surface/80 via-white/40 to-transparent',
+  },
+  warning: {
+    glow: 'hover:border-warning-border hover:shadow-[0_18px_42px_rgba(245,158,11,0.2)]',
+    accent: 'from-warning-surface/80 via-white/40 to-transparent',
+  },
+  brand: {
+    glow: 'hover:border-brand-border-strong hover:shadow-[0_18px_42px_rgba(249,115,22,0.2)]',
+    accent: 'from-brand-surface/80 via-white/40 to-transparent',
+  },
+  neutral: {
+    glow: 'hover:border-neutral-status-border hover:shadow-[0_18px_42px_rgba(63,63,70,0.14)]',
+    accent: 'from-neutral-status-surface/80 via-white/40 to-transparent',
+  },
+}
+
+const metricToneClassName: Record<Tone, {
   border: string
   icon: string
   badge: string
@@ -68,54 +103,12 @@ const metricToneClassName: Record<NonNullable<DashboardMetricCardProps['tone']>,
   glow: string
   accent: string
 }> = {
-  sky: {
-    border: 'border-sky-200',
-    icon: 'border-sky-100 bg-sky-50 text-sky-600',
-    badge: 'bg-sky-50 text-sky-700',
-    label: 'text-sky-700',
-    glow: 'hover:border-sky-300 hover:shadow-[0_18px_42px_rgba(14,165,233,0.18)]',
-    accent: 'from-sky-100/80 via-white/40 to-transparent',
-  },
-  rose: {
-    border: 'border-rose-200',
-    icon: 'border-rose-100 bg-rose-50 text-rose-600',
-    badge: 'bg-rose-50 text-rose-700',
-    label: 'text-rose-700',
-    glow: 'hover:border-rose-300 hover:shadow-[0_18px_42px_rgba(244,63,94,0.18)]',
-    accent: 'from-rose-100/80 via-white/40 to-transparent',
-  },
-  emerald: {
-    border: 'border-emerald-200',
-    icon: 'border-emerald-100 bg-emerald-50 text-emerald-700',
-    badge: 'bg-emerald-50 text-emerald-700',
-    label: 'text-emerald-700',
-    glow: 'hover:border-emerald-300 hover:shadow-[0_18px_42px_rgba(16,185,129,0.18)]',
-    accent: 'from-emerald-100/80 via-white/40 to-transparent',
-  },
-  amber: {
-    border: 'border-amber-200',
-    icon: 'border-amber-100 bg-amber-50 text-amber-700',
-    badge: 'bg-amber-50 text-amber-700',
-    label: 'text-amber-700',
-    glow: 'hover:border-amber-300 hover:shadow-[0_18px_42px_rgba(245,158,11,0.2)]',
-    accent: 'from-amber-100/80 via-white/40 to-transparent',
-  },
-  orange: {
-    border: 'border-orange-200',
-    icon: 'border-orange-100 bg-orange-50 text-orange-700',
-    badge: 'bg-orange-50 text-orange-700',
-    label: 'text-orange-700',
-    glow: 'hover:border-orange-300 hover:shadow-[0_18px_42px_rgba(249,115,22,0.2)]',
-    accent: 'from-orange-100/80 via-white/40 to-transparent',
-  },
-  zinc: {
-    border: 'border-zinc-200',
-    icon: 'border-zinc-100 bg-zinc-50 text-zinc-600',
-    badge: 'bg-zinc-50 text-zinc-700',
-    label: 'text-zinc-700',
-    glow: 'hover:border-zinc-300 hover:shadow-[0_18px_42px_rgba(63,63,70,0.14)]',
-    accent: 'from-zinc-100/80 via-white/40 to-transparent',
-  },
+  info: { border: 'border-info-border', icon: 'border-info-border bg-info-surface text-info-text', badge: 'bg-info-surface text-info-text', label: 'text-info-text', ...metricToneExtra.info },
+  danger: { border: 'border-danger-border', icon: 'border-danger-border bg-danger-surface text-danger-text', badge: 'bg-danger-surface text-danger-text', label: 'text-danger-text', ...metricToneExtra.danger },
+  success: { border: 'border-success-border', icon: 'border-success-border bg-success-surface text-success-text', badge: 'bg-success-surface text-success-text', label: 'text-success-text', ...metricToneExtra.success },
+  warning: { border: 'border-warning-border', icon: 'border-warning-border bg-warning-surface text-warning-text', badge: 'bg-warning-surface text-warning-text', label: 'text-warning-text', ...metricToneExtra.warning },
+  brand: { border: 'border-brand-border', icon: 'border-brand-border bg-brand-surface text-brand-text', badge: 'bg-brand-surface text-brand-text', label: 'text-brand-text', ...metricToneExtra.brand },
+  neutral: { border: 'border-neutral-status-border', icon: 'border-neutral-status-border bg-neutral-status-surface text-neutral-status-text', badge: 'bg-neutral-status-surface text-neutral-status-text', label: 'text-neutral-status-text', ...metricToneExtra.neutral },
 }
 
 export function DashboardMetricCard({
@@ -123,7 +116,7 @@ export function DashboardMetricCard({
   value,
   badge,
   icon,
-  tone = 'orange',
+  tone = 'brand',
   valueClassName,
 }: DashboardMetricCardProps) {
   const toneClass = metricToneClassName[tone]

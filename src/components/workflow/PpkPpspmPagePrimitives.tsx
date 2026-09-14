@@ -8,15 +8,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '#/components/ui/select'
+import { DOCUMENT_STATUS_BADGE_CONFIG } from '#/components/ui/StatusBadge'
+import { toneClasses } from '#/lib/tone'
 import { cn } from '#/lib/utils'
 import { ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react'
 
+// ppk and ppspm rendered byte-identical classes — the tone was never doing
+// anything. Kept as an accepted (but now unused) prop so the 3 existing
+// tone="ppspm" call sites don't need edits; the panel always uses this.
 type WorkflowRoleTone = 'ppk' | 'ppspm'
 
-const toneClassName: Record<WorkflowRoleTone, string> = {
-  ppk: 'border-orange-100 bg-[#FFF8F1] text-orange-800',
-  ppspm: 'border-orange-100 bg-[#FFF8F1] text-orange-800',
-}
+export const WORKFLOW_PANEL_TONE_CLASS = 'border-brand-border bg-brand-surface text-brand-text'
 
 export const WORKFLOW_TABLE_HEAD_CLASS = 'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
 
@@ -66,7 +68,7 @@ export function WorkflowPageHeader({
     <div
       className={cn(
         'rounded-3xl border p-5 shadow-sm sm:p-6',
-        toneClassName[tone],
+        WORKFLOW_PANEL_TONE_CLASS,
         className,
       )}
     >
@@ -285,43 +287,37 @@ export function WorkflowMobileCard({
   )
 }
 
-const documentListStatusClassName: Record<string, string> = {
-  DRAFT: 'border-slate-200 bg-slate-50 text-slate-700',
-  IN_PPK_VALIDATION: 'border-amber-200 bg-amber-50 text-amber-700',
-  IN_PPSPM_APPROVAL: 'border-sky-200 bg-sky-50 text-sky-700',
-  NEED_REVISION: 'border-rose-200 bg-rose-50 text-rose-700',
-  COMPLETED: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  TERSIMPAN: 'border-slate-200 bg-slate-50 text-slate-700',
-}
-
-const documentListStatusLabel: Record<string, string> = {
-  DRAFT: 'Draft',
-  IN_PPK_VALIDATION: 'Validasi PPK',
-  IN_PPSPM_APPROVAL: 'Menunggu Persetujuan',
-  NEED_REVISION: 'Perlu Revisi',
-  COMPLETED: 'Selesai',
-  TERSIMPAN: 'Tersimpan',
-}
-
 type DocumentListStatusBadgeProps = {
   status: string | null | undefined
   label?: ReactNode
   className?: string
 }
 
+/**
+ * List-view status badge (compact/uppercase shell, distinct from the pill
+ * StatusBadge used in detail views). Colors and default labels come from
+ * DOCUMENT_STATUS_BADGE_CONFIG — the single source of truth — so a status
+ * never reads differently between a list and a detail page again (it used
+ * to: this badge had its own label map with "Validasi PPK" / "Menunggu
+ * Persetujuan" while StatusBadge said "Menunggu PPK" / "Menunggu PPSPM" for
+ * the same statuses; the latter won as the app-wide standard).
+ */
 export function DocumentListStatusBadge({
   status,
   label,
   className,
 }: DocumentListStatusBadgeProps) {
-  const key = status ?? ''
-  const resolvedLabel = label ?? documentListStatusLabel[key] ?? 'Status'
+  const config =
+    status && status in DOCUMENT_STATUS_BADGE_CONFIG
+      ? DOCUMENT_STATUS_BADGE_CONFIG[status as keyof typeof DOCUMENT_STATUS_BADGE_CONFIG]
+      : undefined
+  const resolvedLabel = label ?? config?.label ?? 'Status'
 
   return (
     <span
       className={cn(
         'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap',
-        documentListStatusClassName[key] ?? 'border-slate-200 bg-slate-50 text-slate-700',
+        toneClasses(config?.tone ?? 'neutral', 'notice'),
         className,
       )}
       title={typeof resolvedLabel === 'string' ? resolvedLabel : undefined}

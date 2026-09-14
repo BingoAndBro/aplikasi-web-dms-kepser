@@ -115,28 +115,28 @@ function PegawaiLayout() {
               value={documents.length}
               badge="Aktif"
               icon={<FileText size={20} />}
-              tone="sky"
+              tone="info"
             />
             <DashboardMetricCard
               label="Perlu Revisi"
               value={revisionDocuments.length}
               badge="Perlu Tindakan"
               icon={<History size={20} />}
-              tone="rose"
+              tone="danger"
             />
             <DashboardMetricCard
               label="Dokumen Selesai"
               value={documents.filter((document) => document.status === 'COMPLETED').length}
               badge="Selesai"
               icon={<CheckCircle2 size={20} />}
-              tone="emerald"
+              tone="success"
             />
             <DashboardMetricCard
               label="Dokumen Tersimpan"
               value={documents.filter((document) => document.status === 'DRAFT' || document.status === 'TERSIMPAN').length}
               badge="Tersimpan"
               icon={<FolderOpen size={20} />}
-              tone="amber"
+              tone="warning"
             />
           </div>
 
