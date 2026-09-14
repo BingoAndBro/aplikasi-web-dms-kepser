@@ -9,6 +9,13 @@ import {
   SelectValue,
 } from '#/components/ui/select'
 import { DOCUMENT_STATUS_BADGE_CONFIG } from '#/components/ui/StatusBadge'
+import {
+  DATA_FILTER_SELECT_MENU_TONE_CLASS,
+  DATA_FILTER_SELECT_TRIGGER_TONE_CLASS,
+  DATA_SEARCH_ICON_TONE_CLASS,
+  DATA_SEARCH_INPUT_TONE_CLASS,
+  DATA_TABLE_SHELL_TONE_CLASS,
+} from '#/lib/data-table-classes'
 import { toneClasses } from '#/lib/tone'
 import { cn } from '#/lib/utils'
 import { ChevronLeft, ChevronRight, Clock3, Search } from 'lucide-react'
@@ -126,14 +133,14 @@ export function WorkflowSearchPanel({
   resultLabel,
 }: WorkflowSearchPanelProps) {
   return (
-    <WorkflowPanel className="rounded-[26px] border-zinc-200/80 p-4 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+    <WorkflowPanel className="rounded-[26px] border-border-default p-4 shadow-[0_2px_12px_var(--shadow-card)]">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         {onSearchChange && (
           <label className="relative min-w-0 flex-1 lg:max-w-xl">
             <span className="sr-only">Cari dokumen</span>
             <Search
               size={17}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+              className={cn('absolute left-4 top-1/2 -translate-y-1/2', DATA_SEARCH_ICON_TONE_CLASS)}
               aria-hidden="true"
             />
             <input
@@ -141,7 +148,7 @@ export function WorkflowSearchPanel({
               placeholder={placeholder}
               value={search ?? ''}
               onChange={(event) => onSearchChange(event.target.value)}
-              className="h-10 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+              className={cn('h-10 w-full rounded-[20px] border pl-11 pr-4 text-sm font-medium', DATA_SEARCH_INPUT_TONE_CLASS)}
             />
           </label>
         )}
@@ -188,7 +195,8 @@ export function WorkflowStatusSelect({
       <SelectTrigger
         aria-label={ariaLabel}
         className={cn(
-          'h-11 w-full min-w-[148px] rounded-[22px] border-zinc-200 bg-[#FFFDF9] px-4 text-sm font-medium text-zinc-950 shadow-[0_2px_8px_rgba(15,23,42,0.08)] hover:border-zinc-300 hover:bg-[#FFF8F1] focus-visible:border-orange-200 focus-visible:ring-orange-100/70 sm:w-fit [&_svg]:text-zinc-950',
+          'h-11 w-full min-w-[148px] rounded-[22px] px-4 text-sm font-medium text-zinc-950 shadow-[0_2px_8px_rgba(15,23,42,0.08)] sm:w-fit [&_svg]:text-zinc-950',
+          DATA_FILTER_SELECT_TRIGGER_TONE_CLASS,
           className,
         )}
       >
@@ -199,14 +207,14 @@ export function WorkflowStatusSelect({
       <SelectContent
         align="start"
         sideOffset={8}
-        className="rounded-[18px] border border-zinc-100 bg-[#FFFDF9] p-2 shadow-[0_12px_32px_rgba(15,23,42,0.14)]"
+        className={cn('rounded-[18px] border p-2 shadow-[0_12px_32px_rgba(15,23,42,0.14)]', DATA_FILTER_SELECT_MENU_TONE_CLASS)}
       >
         {options.map(option => (
           <SelectItem
             key={option.value}
             value={option.value}
             label={option.label}
-            className="min-h-10 rounded-xl px-3 py-2 text-sm font-medium text-zinc-900 focus:bg-[#FFF1E6] focus:text-[#FF4D00] data-[selected]:bg-[#FFF1E6] data-[selected]:text-[#FF4D00]"
+            className="min-h-10 rounded-xl px-3 py-2 text-sm font-medium text-zinc-900 focus:bg-brand-surface focus:text-brand-text data-[selected]:bg-brand-surface data-[selected]:text-brand-text"
           >
             {option.label}
           </SelectItem>
@@ -220,7 +228,8 @@ export function WorkflowTableShell({ children, className }: WorkflowPanelProps) 
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
+        'hidden overflow-hidden rounded-[26px] border md:block',
+        DATA_TABLE_SHELL_TONE_CLASS,
         className,
       )}
     >

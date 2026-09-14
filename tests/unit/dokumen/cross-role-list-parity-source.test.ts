@@ -24,15 +24,23 @@ describe('Phase 15L.3A cross-role document list visual parity source guard', () 
     expect(workflowPrimitives).toContain('export function WorkflowDateCell')
     expect(workflowPrimitives).toContain('export function WorkflowActionButton')
     expect(workflowPrimitives).toContain('export function WorkflowStatusSelect')
-    expect(workflowPrimitives).toContain('className="h-10 w-full rounded-[20px]')
+    // Fase 3 (tema-global plan): search input / filter-select / table-shell colors
+    // moved to shared token classes in src/lib/data-table-classes.ts — was raw hex
+    // (bg-[#FFFDF9], border-zinc-200 etc), now a cn() call pulling from DATA_SEARCH_*
+    // / DATA_FILTER_SELECT_* / DATA_TABLE_SHELL_* constants. Layout-only fragments
+    // (radii, non-brand neutral text) are unchanged and still asserted verbatim.
+    expect(workflowPrimitives).toContain("DATA_SEARCH_INPUT_TONE_CLASS")
+    expect(workflowPrimitives).toContain("cn('h-10 w-full rounded-[20px] border pl-11 pr-4 text-sm font-medium', DATA_SEARCH_INPUT_TONE_CLASS)")
     expect(workflowPrimitives).toContain('min-w-[148px] rounded-[22px]')
     expect(workflowPrimitives).toContain('text-sm font-medium text-zinc-950')
-    expect(workflowPrimitives).toContain("className=\"rounded-[18px] border border-zinc-100 bg-[#FFFDF9] p-2")
-    expect(workflowPrimitives).toContain("focus:bg-[#FFF1E6] focus:text-[#FF4D00]")
+    expect(workflowPrimitives).toContain("DATA_FILTER_SELECT_MENU_TONE_CLASS")
+    expect(workflowPrimitives).toContain("cn('rounded-[18px] border p-2 shadow-[0_12px_32px_rgba(15,23,42,0.14)]', DATA_FILTER_SELECT_MENU_TONE_CLASS)")
+    expect(workflowPrimitives).toContain("focus:bg-brand-surface focus:text-brand-text data-[selected]:bg-brand-surface data-[selected]:text-brand-text")
     expect(workflowPrimitives).toContain("meta?: Array<{ label: ReactNode; value: ReactNode; wide?: boolean }>")
     expect(workflowPrimitives).toContain("item.wide && 'col-span-2'")
     expect(workflowPrimitives).toContain("border-t border-zinc-100 pt-3")
-    expect(workflowPrimitives).toContain('rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9]')
+    expect(workflowPrimitives).toContain("DATA_TABLE_SHELL_TONE_CLASS")
+    expect(workflowPrimitives).toContain("'hidden overflow-hidden rounded-[26px] border md:block'")
     expect(workflowPrimitives).toContain('group-hover:bg-orange-50 group-hover:text-orange-600')
     expect(workflowPrimitives).toContain('export function DocumentListStatusBadge')
     // Labels/colors now come from the single source of truth (StatusBadge's

@@ -4,10 +4,22 @@ import { Check, ChevronDown, Edit2, Search, Trash2 } from 'lucide-react'
 
 import { Button } from '#/components/ui/button'
 import { ConfirmDialog } from '#/components/ui/ConfirmDialog'
+import {
+  DATA_FILTER_SELECT_MENU_TONE_CLASS,
+  DATA_FILTER_SELECT_OPTION_SELECTED_TONE_CLASS,
+  DATA_FILTER_SELECT_OPTION_TONE_CLASS,
+  DATA_FILTER_SELECT_TRIGGER_DISABLED_TONE_CLASS,
+  DATA_FILTER_SELECT_TRIGGER_TONE_CLASS,
+  DATA_SEARCH_ICON_TONE_CLASS,
+  DATA_SEARCH_INPUT_TONE_CLASS,
+  DATA_TABLE_SHELL_TONE_CLASS,
+} from '#/lib/data-table-classes'
 import { cn } from '#/lib/utils'
 
-export const adminNativeSelectClassName =
-  'h-11 min-w-[180px] rounded-[22px] border border-zinc-200 bg-white px-5 text-sm font-bold text-zinc-950 shadow-[0_3px_10px_rgba(15,23,42,0.06)] outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:opacity-50'
+export const adminNativeSelectClassName = cn(
+  'h-11 min-w-[180px] rounded-[22px] px-5 text-sm font-bold shadow-[0_3px_10px_var(--shadow-card)] disabled:cursor-not-allowed disabled:opacity-50',
+  DATA_FILTER_SELECT_TRIGGER_TONE_CLASS,
+)
 
 export const adminPageContainerClassName =
   'mx-auto w-full max-w-[1480px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10'
@@ -154,7 +166,7 @@ export function AdminSearchPanel({
             <span className="sr-only">{label}</span>
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-700/50"
+              className={cn('absolute left-3 top-1/2 -translate-y-1/2', DATA_SEARCH_ICON_TONE_CLASS)}
               aria-hidden="true"
             />
             <input
@@ -162,7 +174,7 @@ export function AdminSearchPanel({
               type="search"
               value={value}
               onChange={(event) => onChange(event.target.value)}
-              className="h-11 w-full rounded-xl border border-[#E9D2BD] bg-[#FFFDF9] pl-11 pr-4 text-sm font-semibold text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+              className={cn('h-11 w-full rounded-xl border pl-11 pr-4 text-sm font-semibold', DATA_SEARCH_INPUT_TONE_CLASS)}
               placeholder={placeholder}
               autoComplete="off"
             />
@@ -231,17 +243,15 @@ export function AdminFilterSelect({
         disabled={disabled}
         onClick={() => setOpen(current => !current)}
         className={cn(
-          'grid h-11 w-full grid-cols-[minmax(0,1fr)_24px] items-center gap-3 rounded-[22px] border bg-white py-2 pl-5 pr-4 text-sm font-bold shadow-[0_3px_10px_rgba(15,23,42,0.06)] transition',
-          disabled
-            ? 'cursor-not-allowed border-zinc-200 text-zinc-300'
-            : 'border-zinc-200 text-zinc-950 hover:border-orange-200 hover:bg-[#FFF8F1]',
+          'grid h-11 w-full grid-cols-[minmax(0,1fr)_24px] items-center gap-3 rounded-[22px] border py-2 pl-5 pr-4 text-sm font-bold shadow-[0_3px_10px_var(--shadow-card)] transition',
+          disabled ? DATA_FILTER_SELECT_TRIGGER_DISABLED_TONE_CLASS : DATA_FILTER_SELECT_TRIGGER_TONE_CLASS,
         )}
       >
         <span className="min-w-0 truncate text-left">{selected?.label ?? placeholder}</span>
-        <ChevronDown size={16} className={cn('justify-self-center text-[#FF4D00] transition-transform', open && 'rotate-180')} />
+        <ChevronDown size={16} className={cn('justify-self-center text-brand-text transition-transform', open && 'rotate-180')} />
       </button>
       {open && !disabled && (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-40 min-w-full overflow-hidden rounded-[20px] border border-orange-100 bg-white py-1 shadow-xl shadow-orange-950/10">
+        <div className={cn('absolute left-0 top-[calc(100%+8px)] z-40 min-w-full overflow-hidden rounded-[20px] border py-1 shadow-xl shadow-brand-glow', DATA_FILTER_SELECT_MENU_TONE_CLASS)}>
           {options.map(option => {
             const isSelected = option.value === value
             return (
@@ -256,12 +266,12 @@ export function AdminFilterSelect({
                 }}
                 className={cn(
                   'flex w-full items-center justify-between gap-3 px-5 py-3 text-left text-sm font-semibold transition',
-                  isSelected ? 'bg-[#FFF0E7] text-[#FF4D00]' : 'text-zinc-950 hover:bg-[#FFF4ED]',
-                  option.disabled && 'cursor-not-allowed text-zinc-300 hover:bg-white',
+                  isSelected ? DATA_FILTER_SELECT_OPTION_SELECTED_TONE_CLASS : DATA_FILTER_SELECT_OPTION_TONE_CLASS,
+                  option.disabled && 'cursor-not-allowed text-text-disabled hover:bg-surface',
                 )}
               >
                 <span className="min-w-0 truncate">{option.label}</span>
-                {isSelected && <Check size={15} className="shrink-0 text-[#FF4D00]" />}
+                {isSelected && <Check size={15} className="shrink-0 text-brand-text" />}
               </button>
             )
           })}
@@ -415,7 +425,8 @@ export function AdminTableShell({ children, className }: AdminPanelProps) {
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] [&_tbody]:divide-y [&_tbody]:divide-zinc-100 [&_tbody]:text-[13px] [&_td]:px-6 [&_td]:py-5 [&_th]:px-6 [&_th]:py-4 [&_th]:text-[12px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.07em] [&_th]:text-zinc-950 [&_thead_tr]:border-neutral-200 [&_thead_tr]:bg-neutral-100 [&_thead_tr]:hover:bg-neutral-100 [&_tbody_tr]:border-zinc-100 [&_tbody_tr]:bg-[#FFFDF9] [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-[#FFF8F1]/70',
+        'overflow-hidden rounded-[26px] border [&_tbody]:divide-y [&_tbody]:divide-border-default [&_tbody]:text-[13px] [&_td]:px-6 [&_td]:py-5 [&_th]:px-6 [&_th]:py-4 [&_th]:text-[12px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.07em] [&_th]:text-zinc-950 [&_thead_tr]:border-border-default [&_thead_tr]:bg-sunken [&_thead_tr]:hover:bg-sunken [&_tbody_tr]:border-border-default [&_tbody_tr]:bg-surface [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-brand-surface/70',
+        DATA_TABLE_SHELL_TONE_CLASS,
         className,
       )}
     >

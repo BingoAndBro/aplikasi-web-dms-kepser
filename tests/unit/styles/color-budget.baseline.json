@@ -1,11 +1,11 @@
 {
   "src/components/admin/AdminPagePrimitives.tsx": {
-    "hex": 49,
-    "orange": 20
+    "hex": 38,
+    "orange": 12
   },
   "src/components/archive/ArchivePagePrimitives.tsx": {
-    "hex": 22,
-    "orange": 19
+    "hex": 17,
+    "orange": 14
   },
   "src/components/dashboard/RoleDashboardPrimitives.tsx": {
     "hex": 14,
@@ -80,8 +80,8 @@
     "orange": 1
   },
   "src/components/kinerja/KinerjaPagePrimitives.tsx": {
-    "hex": 6,
-    "orange": 10
+    "hex": 4,
+    "orange": 5
   },
   "src/components/kinerja/MonitoringRealisasiView.tsx": {
     "hex": 162,
@@ -112,8 +112,8 @@
     "orange": 5
   },
   "src/components/pegawai/PegawaiPagePrimitives.tsx": {
-    "hex": 5,
-    "orange": 9
+    "hex": 4,
+    "orange": 5
   },
   "src/components/ui/alert-dialog.tsx": {
     "hex": 2,
@@ -144,8 +144,8 @@
     "orange": 6
   },
   "src/components/workflow/PpkPpspmPagePrimitives.tsx": {
-    "hex": 19,
-    "orange": 29
+    "hex": 10,
+    "orange": 25
   },
   "src/routes/admin.master-data.detail.tsx": {
     "hex": 1,

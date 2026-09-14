@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react'
 
 import { Button } from '#/components/ui/button'
+import {
+  DATA_SEARCH_ICON_TONE_CLASS,
+  DATA_SEARCH_INPUT_TONE_CLASS,
+  DATA_TABLE_BODY_ROW_TONE_CLASS,
+  DATA_TABLE_SHELL_TONE_CLASS,
+} from '#/lib/data-table-classes'
 import { cn } from '#/lib/utils'
 import { ChevronLeft, ChevronRight, Download, FolderOpen, Search } from 'lucide-react'
 
@@ -13,11 +19,10 @@ export const ARCHIVE_DETAIL_CONTAINER_CLASS =
 export const ARCHIVE_TABLE_HEAD_CLASS =
   'px-6 py-4 text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500'
 
-export const ARCHIVE_TABLE_ROW_CLASS =
-  'group border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70'
+export const ARCHIVE_TABLE_ROW_CLASS = cn('group', DATA_TABLE_BODY_ROW_TONE_CLASS)
 
 export const ARCHIVE_INLINE_ACTION_CLASS =
-  'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700'
+  'inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface px-3 text-xs font-bold text-zinc-600 shadow-sm transition hover:border-brand-border hover:bg-brand-surface hover:text-brand-text'
 
 type ArchivePageHeaderProps = {
   eyebrow: ReactNode
@@ -104,14 +109,14 @@ export function ArchiveSearchPanel({
   children,
 }: ArchiveSearchPanelProps) {
   return (
-    <ArchivePanel className="rounded-[26px] border-zinc-200/80 p-4 shadow-[0_2px_12px_rgba(15,23,42,0.06)]">
+    <ArchivePanel className="rounded-[26px] border-border-default p-4 shadow-[0_2px_12px_var(--shadow-card)]">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
           <label className="relative min-w-0 flex-1 lg:max-w-xl" htmlFor={id}>
             <span className="sr-only">{label}</span>
             <Search
               size={17}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+              className={cn('absolute left-4 top-1/2 -translate-y-1/2', DATA_SEARCH_ICON_TONE_CLASS)}
               aria-hidden="true"
             />
             <input
@@ -119,7 +124,7 @@ export function ArchiveSearchPanel({
               type="search"
               value={value}
               onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+              className={cn('h-10 w-full rounded-[20px] border pl-11 pr-4 text-sm font-medium', DATA_SEARCH_INPUT_TONE_CLASS)}
               placeholder={placeholder}
               autoComplete="off"
             />
@@ -214,7 +219,8 @@ export function ArchiveTableShell({ children, className }: ArchivePanelProps) {
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block',
+        'hidden overflow-hidden rounded-[26px] border md:block',
+        DATA_TABLE_SHELL_TONE_CLASS,
         className,
       )}
     >

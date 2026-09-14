@@ -2,6 +2,11 @@ import type { ReactNode } from 'react'
 
 import { Search } from 'lucide-react'
 
+import {
+  DATA_SEARCH_ICON_TONE_CLASS,
+  DATA_SEARCH_INPUT_TONE_CLASS,
+  DATA_TABLE_SHELL_TONE_CLASS,
+} from '#/lib/data-table-classes'
 import { cn } from '#/lib/utils'
 
 type KinerjaPageHeaderProps = {
@@ -93,7 +98,7 @@ export function KinerjaSearchPanel({
             <span className="sr-only">{label}</span>
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-700/50"
+              className={cn('absolute left-3 top-1/2 -translate-y-1/2', DATA_SEARCH_ICON_TONE_CLASS)}
               aria-hidden="true"
             />
             <input
@@ -101,7 +106,7 @@ export function KinerjaSearchPanel({
               type="search"
               value={value}
               onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-full rounded-xl border border-orange-100 bg-[#FFFDF9] pl-9 pr-4 text-sm font-semibold text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+              className={cn('h-10 w-full rounded-xl border pl-9 pr-4 text-sm font-semibold', DATA_SEARCH_INPUT_TONE_CLASS)}
               placeholder={placeholder}
               autoComplete="off"
             />
@@ -127,7 +132,8 @@ export function KinerjaTableShell({ children, className }: KinerjaPanelProps) {
   return (
     <div
       className={cn(
-        'hidden overflow-hidden rounded-2xl border border-orange-100 bg-[#FFFDF9] shadow-sm lg:block',
+        'hidden overflow-hidden rounded-2xl border lg:block',
+        DATA_TABLE_SHELL_TONE_CLASS,
         className,
       )}
     >

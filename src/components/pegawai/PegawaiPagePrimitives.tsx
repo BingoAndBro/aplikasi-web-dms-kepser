@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 
 import { Button } from '#/components/ui/button'
+import { DATA_SEARCH_ICON_TONE_CLASS, DATA_SEARCH_INPUT_TONE_CLASS } from '#/lib/data-table-classes'
 import { cn } from '#/lib/utils'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
@@ -87,7 +88,7 @@ export function PegawaiSearchPanel({
             <span className="sr-only">Cari dokumen</span>
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-700/50"
+              className={cn('absolute left-3 top-1/2 -translate-y-1/2', DATA_SEARCH_ICON_TONE_CLASS)}
               aria-hidden="true"
             />
             <input
@@ -95,7 +96,7 @@ export function PegawaiSearchPanel({
               placeholder={placeholder}
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              className="h-10 w-full rounded-xl border border-orange-100 bg-[#FFFDF9] pl-9 pr-4 text-sm text-zinc-900 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 placeholder:text-zinc-400"
+              className={cn('h-10 w-full rounded-xl border pl-9 pr-4 text-sm', DATA_SEARCH_INPUT_TONE_CLASS)}
             />
           </label>
           {children}
