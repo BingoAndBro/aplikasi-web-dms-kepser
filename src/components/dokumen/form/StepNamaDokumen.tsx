@@ -37,7 +37,7 @@ export function StepNamaDokumen({
           onChange={e => onNamaDokumenChange(e.target.value)}
           placeholder="Contoh: Laporan Kegiatan Bulanan"
           maxLength={255}
-          className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong"
+          className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm hover:border-brand-border-strong"
         />
       </div>
 

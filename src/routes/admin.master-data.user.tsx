@@ -113,7 +113,7 @@ function AccountStatusSwitch({
 }) {
   return (
     <div
-      className="inline-flex h-10 w-fit items-center rounded-[15px] border border-[#E6CDA8] bg-white p-0.5 shadow-[0_1px_2px_rgba(91,58,0,0.04)]"
+      className="inline-flex h-10 w-fit items-center rounded-[15px] border border-brand-border-strong bg-white p-0.5 shadow-[0_1px_2px_rgba(91,58,0,0.04)]"
       role="group"
       aria-label="Status akun"
     >
@@ -124,8 +124,8 @@ function AccountStatusSwitch({
         className={[
           'h-8 rounded-[11px] px-4 text-sm font-extrabold transition-colors',
           isActive
-            ? 'bg-[#C9F8E1] text-[#006B3A]'
-            : 'bg-transparent text-[#35527A] hover:bg-[#ECF8F2]',
+            ? 'bg-success-surface text-success-text'
+            : 'bg-transparent text-text-muted hover:bg-success-surface',
         ].join(' ')}
       >
         Aktif
@@ -137,8 +137,8 @@ function AccountStatusSwitch({
         className={[
           'h-8 rounded-[11px] px-4 text-sm font-extrabold transition-colors',
           !isActive
-            ? 'bg-[#FFE4EA] text-[#B00032]'
-            : 'bg-transparent text-[#35527A] hover:bg-[#FFF1F4]',
+            ? 'bg-danger-surface text-danger-text'
+            : 'bg-transparent text-text-muted hover:bg-danger-surface',
         ].join(' ')}
       >
         Nonaktif
@@ -1327,9 +1327,9 @@ function MasterUserPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {dialogChairmanAssignments.map((c) => (
-                  <span key={c.id} className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-brand-surface px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-brand-text">
+                  <span key={c.id} className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-brand-border-strong bg-brand-surface px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-brand-text">
                     {c.kegiatan_nama}
-                    <button type="button" aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`} onClick={() => handleRemoveChairman(c.id, 'new-user')} className="ml-1 rounded-full p-0.5 text-brand-text hover:bg-[#FFE7D5] hover:text-[#B93800]">
+                    <button type="button" aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`} onClick={() => handleRemoveChairman(c.id, 'new-user')} className="ml-1 rounded-full p-0.5 text-brand-text hover:bg-brand-surface-strong hover:text-brand-solid-active">
                       <X size={12} />
                     </button>
                   </span>
@@ -1358,7 +1358,7 @@ function MasterUserPage() {
                   isActive={createForm.isActive}
                   onChange={nextActive => requestAccountStatusChange('create', nextActive)}
                 />
-                <p className="text-sm font-semibold text-[#35527A]">
+                <p className="text-sm font-semibold text-text-muted">
                   User aktif dapat login menggunakan email BPS mereka.
                 </p>
               </div>
@@ -1488,14 +1488,14 @@ function MasterUserPage() {
                 {dialogChairmanAssignments.map((c) => (
                   <span
                     key={c.id}
-                    className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-brand-surface px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-brand-text"
+                    className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-brand-border-strong bg-brand-surface px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-brand-text"
                   >
                     {c.kegiatan_nama}
                     <button
                       type="button"
                       aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`}
                       onClick={() => selectedUser && handleRemoveChairman(c.id, selectedUser.id)}
-                      className="ml-1 cursor-pointer rounded-full p-0.5 text-brand-text hover:bg-[#FFE7D5] hover:text-[#B93800]"
+                      className="ml-1 cursor-pointer rounded-full p-0.5 text-brand-text hover:bg-brand-surface-strong hover:text-brand-solid-active"
                     >
                       <X size={12} />
                     </button>
@@ -1533,7 +1533,7 @@ function MasterUserPage() {
                   isActive={editForm.isActive}
                   onChange={nextActive => requestAccountStatusChange('edit', nextActive)}
                 />
-                <p className="text-sm font-semibold text-[#35527A]">
+                <p className="text-sm font-semibold text-text-muted">
                   User aktif dapat login menggunakan email BPS mereka.
                 </p>
               </div>
@@ -1593,7 +1593,7 @@ function MasterUserPage() {
                   placeholder="Min 8 karakter"
                   className={adminFormFieldClassName}
                 />
-                <p className="mt-2 text-xs font-medium text-[#6D82A0]">Minimal 8 karakter.</p>
+                <p className="mt-2 text-xs font-medium text-text-muted">Minimal 8 karakter.</p>
               </div>
               <div>
                 <label className={adminFormLabelClassName}>Konfirmasi Password *</label>
@@ -1606,7 +1606,7 @@ function MasterUserPage() {
                 />
               </div>
             </div>
-            <p className="rounded-[20px] border border-orange-200 bg-[#FFF9F2] px-4 py-4 text-sm leading-6 text-text-strong">
+            <p className="rounded-[20px] border border-orange-200 bg-brand-surface px-4 py-4 text-sm leading-6 text-text-strong">
               Password akan langsung berlaku. User harus login dengan password baru.
             </p>
           </div>

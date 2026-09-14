@@ -82,10 +82,10 @@ function getInitials(name?: string, email?: string): string {
 function InfoField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <dt className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6E87B3]">
+      <dt className="text-[10px] font-black uppercase tracking-[0.18em] text-text-muted">
         {label}
       </dt>
-      <dd className="mt-1.5 break-words text-sm font-bold leading-5 text-[#071733]">
+      <dd className="mt-1.5 break-words text-sm font-bold leading-5 text-text-strong">
         {value}
       </dd>
     </div>
@@ -418,28 +418,28 @@ function ProfilePage() {
     <PageLayout className="mx-auto w-full max-w-[1280px] px-4 py-4 sm:px-6 lg:px-10">
       <div className="space-y-6">
         <section className="pt-1">
-          <h1 className="font-headline text-[32px] font-black leading-none tracking-tight text-[#2C2102] sm:text-[38px]">
+          <h1 className="font-headline text-[32px] font-black leading-none tracking-tight text-text-strong sm:text-[38px]">
             Profil Saya
           </h1>
-          <p className="mt-2.5 max-w-3xl text-base font-medium leading-6 text-[#8A5A08]">
+          <p className="mt-2.5 max-w-3xl text-base font-medium leading-6 text-brand-text-muted">
             Kelola informasi akun, foto profil, dan keamanan password Anda.
           </p>
         </section>
 
         <div className="grid gap-7 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[430px_minmax(0,1fr)]">
           <div className="space-y-5">
-            <section className="overflow-hidden rounded-[24px] border border-[#E8DDD0] bg-white text-center shadow-[0_1px_8px_rgba(71,50,22,0.14)]">
-              <div className="h-[94px] bg-[#FFF0D9]" />
+            <section className="overflow-hidden rounded-[24px] border border-brand-border bg-white text-center shadow-[0_1px_8px_rgba(71,50,22,0.14)]">
+              <div className="h-[94px] bg-brand-surface-strong" />
               <div className="-mt-16 px-8 pb-6">
                 <UserAvatar
                   src={user.avatar_url}
                   alt={`Foto profil ${displayName}`}
                   initials={initials}
-                  className="mx-auto size-28 border-[5px] border-white bg-[#FF5A14] text-[36px] shadow-sm ring-1 ring-[#FF8A4D]/45"
+                  className="mx-auto size-28 border-[5px] border-white bg-brand-solid text-[36px] shadow-sm ring-1 ring-brand-gradient-to/45"
                 />
 
-                <h2 className="mt-7 truncate text-[24px] font-black leading-tight text-[#050B22]">{displayName}</h2>
-                <p className="mt-2 truncate text-[15px] font-medium text-[#4B5563]">{user.email}</p>
+                <h2 className="mt-7 truncate text-[24px] font-black leading-tight text-text-strong">{displayName}</h2>
+                <p className="mt-2 truncate text-[15px] font-medium text-text-muted">{user.email}</p>
                 <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">
                   <span className="size-1.5 rounded-full bg-emerald-500" />
                   Akun Aktif
@@ -458,7 +458,7 @@ function ProfilePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-10 rounded-[16px] border-[#FFB16F] bg-[#FFF7ED] text-sm font-bold text-[#FF4A00] shadow-none hover:bg-[#FFEAD4]"
+                  className="h-10 rounded-[16px] border-brand-border-strong bg-bg-surface text-sm font-bold text-brand-text shadow-none hover:bg-brand-surface-strong"
                   disabled={photoLoading}
                   onClick={openPhotoDialog}
                 >
@@ -469,7 +469,7 @@ function ProfilePage() {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-10 rounded-[16px] border border-red-200 bg-red-50 text-sm font-bold text-[#E5003A] shadow-none hover:bg-red-100"
+                    className="h-10 rounded-[16px] border border-red-200 bg-red-50 text-sm font-bold text-danger-text shadow-none hover:bg-red-100"
                     disabled={photoLoading}
                     onClick={handleRemovePhoto}
                   >
@@ -480,7 +480,7 @@ function ProfilePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-10 rounded-[16px] border-red-200 bg-red-50 text-sm font-bold text-[#E5003A] shadow-none hover:bg-red-100"
+                  className="h-10 rounded-[16px] border-red-200 bg-red-50 text-sm font-bold text-danger-text shadow-none hover:bg-red-100"
                   disabled={logoutLoading}
                   onClick={handleLogout}
                 >
@@ -492,22 +492,22 @@ function ProfilePage() {
           </div>
 
           <div className="space-y-5">
-            <section className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+            <section className="rounded-[24px] border border-brand-border bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-full bg-[#EEF5FF] text-[#102B54]">
+                  <div className="flex size-9 items-center justify-center rounded-full bg-info-surface text-info-text">
                     <Shield size={18} />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-[#061231]">Keamanan Akun</h3>
-                    <p className="mt-0.5 text-xs font-semibold text-[#60799F]">
+                    <h3 className="text-base font-black text-text-strong">Keamanan Akun</h3>
+                    <p className="mt-0.5 text-xs font-semibold text-text-muted">
                       Ubah password akun Anda secara mandiri.
                     </p>
                   </div>
                 </div>
                 <Button
                   type="button"
-                  className="h-11 rounded-2xl border border-[#030817] bg-[#17233A] px-6 text-sm font-black text-white shadow-[0_2px_0_rgba(0,0,0,0.45)] hover:bg-[#0F172A]"
+                  className="h-11 rounded-2xl border border-ink-border bg-ink-solid px-6 text-sm font-black text-white shadow-[0_2px_0_rgba(0,0,0,0.45)] hover:bg-ink-solid-hover"
                   onClick={() => {
                     setPasswordError(null)
                     setPasswordDialogOpen(true)
@@ -518,9 +518,9 @@ function ProfilePage() {
               </div>
             </section>
 
-            <div className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
-              <h3 className="text-base font-black text-[#061231]">Informasi Akun</h3>
-              <div className="mt-2.5 border-t border-[#E8EEF5]" />
+            <div className="rounded-[24px] border border-brand-border bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+              <h3 className="text-base font-black text-text-strong">Informasi Akun</h3>
+              <div className="mt-2.5 border-t border-info-border" />
 
               <dl className="mt-5 grid gap-x-16 gap-y-5 sm:grid-cols-2">
                 <InfoField label="Nama Lengkap" value={displayName} />
@@ -528,17 +528,17 @@ function ProfilePage() {
                 <InfoField label="NIP/NRP" value={user.metadata.nip_nrp || '-'} />
                 <InfoField label="Fungsi/Departemen" value={user.metadata.departemen || '-'} />
               </dl>
-              <p className="mt-7 flex items-center gap-1.5 border-t border-[#E8EEF5] pt-4 text-[11px] font-medium text-[#7E92B4]">
+              <p className="mt-7 flex items-center gap-1.5 border-t border-info-border pt-4 text-[11px] font-medium text-text-muted">
                 <Info size={13} />
                 Perubahan data utama akun dikelola oleh Admin Sistem.
               </p>
             </div>
 
-            <div className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
-              <h3 className="text-base font-black text-[#061231]">Hak Akses</h3>
-              <div className="mt-2.5 border-t border-[#E8EEF5]" />
-              <p className="mt-5 text-sm font-medium text-[#244066]">
-                Role aktif saat ini: <span className="font-bold text-[#071733]">{activeRoleLabel}</span>
+            <div className="rounded-[24px] border border-brand-border bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+              <h3 className="text-base font-black text-text-strong">Hak Akses</h3>
+              <div className="mt-2.5 border-t border-info-border" />
+              <p className="mt-5 text-sm font-medium text-info-text">
+                Role aktif saat ini: <span className="font-bold text-text-strong">{activeRoleLabel}</span>
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {user.roles.length > 0 ? (
@@ -549,18 +549,18 @@ function ProfilePage() {
                   <span className="text-sm font-semibold text-outline">-</span>
                 )}
               </div>
-              <p className="mt-5 text-sm font-medium leading-6 text-[#244066]">
+              <p className="mt-5 text-sm font-medium leading-6 text-info-text">
                 Anda memiliki {user.roles.length || 0} hak akses yang dikelola oleh Admin Sistem.
               </p>
-              <p className="mt-5 flex items-center gap-1.5 border-t border-[#E8EEF5] pt-4 text-[11px] font-medium text-[#7E92B4]">
+              <p className="mt-5 flex items-center gap-1.5 border-t border-info-border pt-4 text-[11px] font-medium text-text-muted">
                 <Info size={13} />
                 Hak akses ditentukan oleh Admin Sistem.
               </p>
             </div>
 
-            <div className="rounded-[24px] border border-[#E8DDD0] bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
-              <h3 className="text-base font-black text-[#061231]">Penugasan</h3>
-              <div className="mt-2.5 border-t border-[#E8EEF5]" />
+            <div className="rounded-[24px] border border-brand-border bg-white p-6 shadow-[0_1px_8px_rgba(71,50,22,0.12)]">
+              <h3 className="text-base font-black text-text-strong">Penugasan</h3>
+              <div className="mt-2.5 border-t border-info-border" />
 
               <div className="mt-5">
                 {ketuaTimKegiatan.length > 0 ? (
@@ -568,7 +568,7 @@ function ProfilePage() {
                     {ketuaTimKegiatan.map((kegiatan) => (
                       <div
                         key={kegiatan.id}
-                        className="rounded-[5px] border border-[#D6E0EC] bg-[#F8FBFF] px-2.5 py-1 text-xs font-black uppercase text-[#071733]"
+                        className="rounded-[5px] border border-info-border bg-info-surface px-2.5 py-1 text-xs font-black uppercase text-text-strong"
                       >
                         {kegiatan.nama}
                       </div>
@@ -584,7 +584,7 @@ function ProfilePage() {
                 )}
               </div>
               {ketuaTimKegiatan.length > 0 && (
-                <p className="mt-4 text-xs font-medium leading-5 text-[#244066]">
+                <p className="mt-4 text-xs font-medium leading-5 text-info-text">
                   Kegiatan yang Anda pimpin sebagai Ketua Tim.
                 </p>
               )}
@@ -603,7 +603,7 @@ function ProfilePage() {
         title={user.avatar_url ? 'Ganti Foto Profil' : 'Unggah Foto Profil'}
         size="md"
         showCloseButton={!photoLoading}
-        contentClassName="border-[#E8DDD0] bg-white"
+        contentClassName="border-brand-border bg-white"
         footer={
           <>
             <Button
@@ -620,7 +620,7 @@ function ProfilePage() {
             </Button>
             <Button
               type="button"
-              className="h-10 rounded-2xl bg-[#FF5A14] px-6 text-white hover:bg-[#EA4D0C]"
+              className="h-10 rounded-2xl bg-brand-solid px-6 text-white hover:bg-brand-solid-hover"
               disabled={photoLoading || !pendingPhotoFile}
               onClick={handleSavePhoto}
             >
@@ -634,13 +634,13 @@ function ProfilePage() {
             src={pendingPhotoPreviewUrl ?? user.avatar_url}
             alt="Preview foto profil"
             initials={initials}
-            className="size-28 border-[5px] border-white bg-[#FF5A14] text-[36px] shadow-sm ring-1 ring-[#FF8A4D]/45"
+            className="size-28 border-[5px] border-white bg-brand-solid text-[36px] shadow-sm ring-1 ring-brand-gradient-to/45"
           />
 
           <Button
             type="button"
             variant="outline"
-            className="mt-5 h-10 rounded-2xl border-[#FFB16F] bg-[#FFF7ED] px-5 text-sm font-bold text-[#FF4A00] shadow-none hover:bg-[#FFEAD4]"
+            className="mt-5 h-10 rounded-2xl border-brand-border-strong bg-bg-surface px-5 text-sm font-bold text-brand-text shadow-none hover:bg-brand-surface-strong"
             disabled={photoLoading}
             onClick={() => fileInputRef.current?.click()}
           >
@@ -648,15 +648,15 @@ function ProfilePage() {
             Pilih File
           </Button>
 
-          <p className="mt-4 text-sm font-semibold text-[#244066]">
+          <p className="mt-4 text-sm font-semibold text-info-text">
             JPG, PNG, atau WebP • Maks. 2 MB
           </p>
-          <p className="mt-1 text-xs font-medium text-[#7E92B4]">
+          <p className="mt-1 text-xs font-medium text-text-muted">
             Foto akan digunakan di topbar dan menu akun.
           </p>
 
           {pendingPhotoFile && (
-            <p className="mt-3 max-w-full truncate rounded-full border border-[#D6E0EC] bg-[#F8FBFF] px-3 py-1 text-xs font-semibold text-[#244066]">
+            <p className="mt-3 max-w-full truncate rounded-full border border-info-border bg-info-surface px-3 py-1 text-xs font-semibold text-info-text">
               {pendingPhotoFile.name}
             </p>
           )}

@@ -20,7 +20,7 @@ describe('AttachmentViewer destroyed-file UX wiring', () => {
     expect(source).toContain('getDocumentUploadValidationUiMessage')
     expect(source).toContain('DOCUMENT_UPLOAD_HELPER_TEXT')
     expect(source).toContain('uploadValidationErrors')
-    expect(source).toContain('border border-amber-200 bg-[#FFF8EA]')
+    expect(source).toContain('border border-amber-200 bg-warning-surface')
     expect(source).toContain('validationUi.actionLabel')
     expect(source).not.toContain('alert(result.error)')
     expect(source).not.toContain('File berhasil diunduh.')

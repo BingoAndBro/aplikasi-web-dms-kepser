@@ -396,7 +396,7 @@ function PenambahanArsipPage() {
 
   if (submittedManualArsip) {
     return (
-      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-6 sm:px-6 lg:px-8">
+      <PageLayout className="min-h-full bg-bg-surface px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex min-h-[calc(100vh-9rem)] items-center justify-center">
           <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
             <div className="flex size-20 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600">
@@ -441,7 +441,7 @@ function PenambahanArsipPage() {
                 type="button"
                 size="lg"
                 onClick={() => navigate({ to: '/kasubag/berkas' })}
-                className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto"
+                className="w-full gap-1.5 bg-brand-solid text-white hover:bg-brand-solid-hover sm:w-auto"
               >
                 Lihat Berkas Terbuka <ArrowRight size={14} />
               </Button>
@@ -471,7 +471,7 @@ function PenambahanArsipPage() {
   }
 
   return (
-    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+    <PageLayout className="min-h-full bg-bg-surface px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
         {notice && (
           <NoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
@@ -694,7 +694,7 @@ function ManualArsipTable({
             </tbody>
           </table>
         </div>
-        <div className="border-t border-zinc-100 bg-[#FFFAF6] px-4 py-2.5 text-xs text-zinc-500">
+        <div className="border-t border-zinc-100 bg-bg-surface px-4 py-2.5 text-xs text-zinc-500">
           Menampilkan {items.length}{limit ? ` dari maksimal ${limit}` : ''} dokumen manual. Preview/download lampiran menggunakan endpoint API terotorisasi; lifecycle dan ekspor tidak tersedia pada halaman ini.
         </div>
       </div>
@@ -795,7 +795,7 @@ function ManualArsipAttachmentRow({
   onPreview: (manualArsipId: string, attachment: ManualArsipAttachmentMetadata) => void
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-[#F1E5DA] bg-bg-surface px-3 py-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-xl border border-brand-border bg-bg-surface px-3 py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <FileText size={15} />
@@ -1489,7 +1489,7 @@ function CreateManualArsipModal({
 
         <form onSubmit={handleFormSubmit} className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
           <div className="min-w-0 overflow-visible rounded-[1.25rem] bg-transparent">
-            <div className="rounded-t-[1.25rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-3 text-white sm:px-4">
+            <div className="rounded-t-[1.25rem] bg-gradient-to-r from-brand-solid to-brand-gradient-to px-4 py-3 text-white sm:px-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
                   <FileText size={16} />
@@ -1511,7 +1511,7 @@ function CreateManualArsipModal({
               </div>
             </div>
 
-            <div className="space-y-3 rounded-b-[1.25rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-3.5 sm:p-4">
+            <div className="space-y-3 rounded-b-[1.25rem] border border-t-0 border-brand-border bg-bg-surface p-3.5 sm:p-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-snug text-amber-800">
             Dokumen manual ini belum final. Dokumen akan menjadi bagian berkas ketika berkas Cara Pembayaran ditutup.
           </div>
@@ -1670,7 +1670,7 @@ function CreateManualArsipModal({
                       size="sm"
                       onClick={openAttachmentTitleForm}
                       disabled={submitting || showAttachmentTitleForm || attachmentRows.length >= MANUAL_ARSIP_ATTACHMENT_MAX_FILES}
-                      className="h-8 shrink-0 cursor-pointer gap-1 text-brand-solid hover:bg-[#FFF1E7] hover:text-brand-solid-hover"
+                      className="h-8 shrink-0 cursor-pointer gap-1 text-brand-solid hover:bg-bg-surface hover:text-brand-solid-hover"
                     >
                       <Plus size={13} /> Tambah
                     </Button>
@@ -1689,7 +1689,7 @@ function CreateManualArsipModal({
                       <button
                         type="button"
                         onClick={openAttachmentTitleForm}
-                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-[#FFF1E7]"
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
                       >
                         <Plus size={14} />
                         <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>
@@ -1708,7 +1708,7 @@ function CreateManualArsipModal({
                       key={row.id}
                       className={cn(
                         'flex min-w-0 flex-col gap-1.5 rounded-xl border px-2.5 py-1.5 transition-colors',
-                        row.file ? 'border-orange-100 bg-[#FFF7F0]' : 'border-[#F4E7DC] bg-[#FFFCF8]',
+                        row.file ? 'border-orange-100 bg-bg-surface' : 'border-brand-border bg-bg-surface',
                       )}
                     >
                       <div className="flex min-w-0 items-start gap-2.5">
@@ -1751,7 +1751,7 @@ function CreateManualArsipModal({
                             <Eye size={13} />
                           </Button>
                         )}
-                        <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-brand-solid bg-white px-4 text-xs font-bold text-brand-solid transition hover:bg-[#FFF1E7]">
+                        <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-brand-solid bg-white px-4 text-xs font-bold text-brand-solid transition hover:bg-bg-surface">
                           <Upload size={13} />
                           {row.file ? 'Ganti' : 'Unggah'}
                           <input
@@ -1786,7 +1786,7 @@ function CreateManualArsipModal({
               )}
 
               {showAttachmentTitleForm && (
-                <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-[#FFF7F0] p-2.5 sm:flex-row sm:items-start">
+                <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-bg-surface p-2.5 sm:flex-row sm:items-start">
                   <div className="min-w-0 flex-1">
                     <input
                       value={newAttachmentTitle}
@@ -1877,7 +1877,7 @@ function CreateManualArsipModal({
           </div>
 
           <aside className="min-w-0 space-y-3 xl:sticky xl:top-3">
-            <ArchivePanel className="hidden border-[#F1E5DA] bg-bg-surface p-3.5 shadow-none xl:block">
+            <ArchivePanel className="hidden border-brand-border bg-bg-surface p-3.5 shadow-none xl:block">
               <p className="text-[11px] font-semibold text-zinc-600">Progress Pengisian</p>
               <div className="mt-1.5 flex items-end justify-between gap-2">
                 <span className="font-headline text-2xl font-bold tracking-tight text-zinc-950">
@@ -1889,7 +1889,7 @@ function CreateManualArsipModal({
               </div>
               <div className="mt-2 h-1 overflow-hidden rounded-full bg-zinc-100">
                 <div
-                  className="h-full rounded-full bg-[#F97316] transition-[width]"
+                  className="h-full rounded-full bg-brand-solid transition-[width]"
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
@@ -1904,7 +1904,7 @@ function CreateManualArsipModal({
                   <div key={label} className="flex w-full items-center gap-2 px-0 py-1.5 text-left">
                     <span className={cn(
                       'flex size-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold',
-                      isComplete ? 'bg-emerald-100 text-emerald-700' : isActive ? 'bg-[#F97316] text-white' : 'bg-zinc-100 text-zinc-400',
+                      isComplete ? 'bg-emerald-100 text-emerald-700' : isActive ? 'bg-brand-solid text-white' : 'bg-zinc-100 text-zinc-400',
                     )}>
                       {isComplete ? <CheckCircle2 size={15} strokeWidth={2.5} /> : stepNumber}
                     </span>
@@ -1921,7 +1921,7 @@ function CreateManualArsipModal({
               </div>
             </ArchivePanel>
 
-            <ArchivePanel className="border-[#FDBA8C] bg-[#FFF1E7] p-3 shadow-none">
+            <ArchivePanel className="border-brand-border-strong bg-bg-surface p-3 shadow-none">
               <div className="flex items-start gap-2.5">
                 <div className="flex size-5 shrink-0 items-center justify-center text-brand-solid">
                   <AlertCircle size={14} />
@@ -1998,7 +1998,7 @@ function KlasifikasiFormField({
           type="button"
           onClick={onToggle}
           className={cn(
-            'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-[#FFFAF6] px-4 py-2 text-left text-sm outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+            'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-bg-surface px-4 py-2 text-left text-sm outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
             error ? 'border-error' : 'border-brand-border',
           )}
         >
@@ -2023,7 +2023,7 @@ function KlasifikasiFormField({
         </button>
 
         {dropdownOpen && (
-          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-brand-border bg-[#FFFAF6] shadow-lg">
+          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-brand-border bg-bg-surface shadow-lg">
             <div className="border-b border-brand-border p-3">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/50" />
@@ -2068,7 +2068,7 @@ function KlasifikasiFormField({
                       key={option.id}
                       type="button"
                       onClick={() => onSelect(option.node)}
-                      className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#FFF4EA]"
+                      className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-bg-surface"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-on-surface">
@@ -2094,7 +2094,7 @@ function KlasifikasiFormField({
                       key={node.id}
                       type="button"
                       onClick={() => onSelect(node)}
-                      className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-[#FFF4EA]"
+                      className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-bg-surface"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-on-surface">
@@ -2177,7 +2177,7 @@ function ManualCreateReview({
         ) : (
           <div className="space-y-2">
             {attachmentRows.map((row, index) => (
-              <div key={row.id} className="rounded-xl border border-brand-border bg-[#FFFAF6] px-3 py-2">
+              <div key={row.id} className="rounded-xl border border-brand-border bg-bg-surface px-3 py-2">
                 <p className="text-xs font-extrabold text-zinc-950">{row.title || `Lampiran ${index + 1}`}</p>
                 <p className="mt-0.5 text-[10px] font-medium text-emerald-700">
                   {row.file ? `${row.file.name} (${formatFileSize(row.file.size)})` : 'File belum dipilih'}
@@ -2316,7 +2316,7 @@ function ManualAttachmentValidationInline({
   const validationUi = getDocumentUploadValidationUiMessage(message)
 
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5">
+    <div className="flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-warning-surface p-2.5">
       <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
         <AlertCircle size={13} />
       </div>
@@ -2326,7 +2326,7 @@ function ManualAttachmentValidationInline({
       </div>
       <label
         htmlFor={inputId}
-        className="flex h-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] transition-colors hover:bg-[#FFF1D6] hover:text-[#A84800]"
+        className="flex h-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#B77900] transition-colors hover:bg-warning-surface hover:text-[#B77900]"
       >
         {validationUi.actionLabel}
       </label>

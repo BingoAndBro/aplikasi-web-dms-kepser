@@ -36,8 +36,8 @@ export function StepKarakteristik({
           onClick={() => onSelectCharacteristic(false)}
           className={`relative rounded-xl border p-3 text-left transition ${
             !isNonMaterial
-              ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
-              : 'border-brand-border bg-[#FFFAF6] hover:border-brand-border-strong hover:bg-[#FFF4EA]'
+              ? 'border-brand-solid bg-bg-surface ring-1 ring-brand-border-strong'
+              : 'border-brand-border bg-bg-surface hover:border-brand-border-strong hover:bg-bg-surface'
           }`}
         >
           <span className="text-[11px] font-bold text-zinc-950">Material</span>
@@ -45,7 +45,7 @@ export function StepKarakteristik({
             Memiliki nominal realisasi dan mengikuti proses validasi serta persetujuan.
           </span>
           {!isNonMaterial && (
-            <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-[#F97316] text-white">
+            <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-brand-solid text-white">
               <Check size={12} strokeWidth={3} />
             </span>
           )}
@@ -57,8 +57,8 @@ export function StepKarakteristik({
           onClick={() => onSelectCharacteristic(true)}
           className={`relative rounded-xl border p-3 text-left transition ${
             isNonMaterial
-              ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
-              : 'border-brand-border bg-[#FFFAF6] hover:border-brand-border-strong hover:bg-[#FFF4EA]'
+              ? 'border-brand-solid bg-bg-surface ring-1 ring-brand-border-strong'
+              : 'border-brand-border bg-bg-surface hover:border-brand-border-strong hover:bg-bg-surface'
           }`}
         >
           <span className="text-[11px] font-bold text-zinc-950">Non-Material</span>
@@ -66,7 +66,7 @@ export function StepKarakteristik({
             Tanpa nominal realisasi dan disimpan sebagai Tersimpan.
           </span>
           {isNonMaterial && (
-            <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-[#F97316] text-white">
+            <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-brand-solid text-white">
               <Check size={12} strokeWidth={3} />
             </span>
           )}

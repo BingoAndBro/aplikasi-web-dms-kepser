@@ -77,7 +77,7 @@ function ResetActionButton({
       type="button"
       onClick={() => { void onClick() }}
       className={cn(
-        'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-orange-100 px-2.5 text-[11px] font-semibold text-[#E65100] transition-colors hover:bg-orange-200',
+        'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-orange-100 px-2.5 text-[11px] font-semibold text-brand-solid-hover transition-colors hover:bg-orange-200',
         className,
       )}
     >
@@ -101,7 +101,7 @@ function FileActionButton({
       type="button"
       onClick={() => { void onClick() }}
       aria-label={ariaLabel}
-      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-brand-border bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-[#FFF7F0] hover:text-brand-solid"
+      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-brand-border bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-bg-surface hover:text-brand-solid"
     >
       {children}
     </button>
@@ -119,7 +119,7 @@ function UploadReplaceButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-brand-solid bg-white px-3 text-xs font-semibold text-brand-solid transition-colors hover:bg-[#FFF1E7]"
+      className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-brand-solid bg-white px-3 text-xs font-semibold text-brand-solid transition-colors hover:bg-bg-surface"
     >
       <Upload size={13} />
       {hasFile ? 'Ganti' : 'Unggah'}
@@ -137,7 +137,7 @@ function UploadValidationInline({
   const validationUi = getDocumentUploadValidationUiMessage(message)
 
   return (
-    <div className="ml-0 flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5 sm:ml-4">
+    <div className="ml-0 flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-warning-surface p-2.5 sm:ml-4">
       <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
         <AlertCircle size={13} />
       </div>
@@ -150,7 +150,7 @@ function UploadValidationInline({
         variant="outline"
         size="xs"
         onClick={onAction}
-        className="h-7 shrink-0 border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] hover:bg-[#FFF1D6] hover:text-[#A84800]"
+        className="h-7 shrink-0 border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#B77900] hover:bg-warning-surface hover:text-[#B77900]"
       >
         {validationUi.actionLabel}
       </Button>
@@ -948,7 +948,7 @@ export function AttachmentEditor({
         {/* ========== NOMINAL REALISASI ========== */}
         {!isNonMaterial && (
           <div className={cn(
-            'rounded-xl border bg-[#FFFAF6] p-3 transition-colors',
+            'rounded-xl border bg-bg-surface p-3 transition-colors',
             hasNominalChanged ? 'border-orange-300 bg-orange-50/20' : 'border-brand-border'
           )}>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
@@ -985,7 +985,7 @@ export function AttachmentEditor({
         {/* Material documents: show kelengkapan from master + dokumen pendukung */}
         {/* Non-Material documents: only show empty dokumen pendukung section */}
         {!isNonMaterial && kelengkapan.length > 0 && (
-          <div className="overflow-hidden rounded-xl border border-brand-border bg-[#FFFAF6]">
+          <div className="overflow-hidden rounded-xl border border-brand-border bg-bg-surface">
             <div className="border-b border-brand-border px-3.5 py-2.5">
               <h3 className="text-[13px] font-semibold text-on-surface">Kelengkapan Dokumen</h3>
               <p className="mt-0.5 text-[11px] text-on-surface-variant">
@@ -1004,7 +1004,7 @@ export function AttachmentEditor({
                   <div key={kel.id} className="space-y-1.5">
                     <div className={cn(
                       'flex flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
-                      isPending ? 'border-orange-200 bg-orange-50/30' : 'border-[#F4E7DC] bg-[#FFFCF8]'
+                      isPending ? 'border-orange-200 bg-orange-50/30' : 'border-brand-border bg-bg-surface'
                     )}>
                       {/* Status icon */}
                       {isPending ? (
@@ -1068,7 +1068,7 @@ export function AttachmentEditor({
         )}
 
         {/* ========== DOKUMEN PENDUKUNG ========== */}
-        <div className="overflow-hidden rounded-xl border border-orange-200 bg-[#FFFAF6]">
+        <div className="overflow-hidden rounded-xl border border-orange-200 bg-bg-surface">
           <div className="border-b border-orange-100 px-3.5 py-2.5">
             <h3 className="text-[13px] font-semibold text-brand-solid">Dokumen Pendukung</h3>
             <p className="mt-0.5 text-[11px] text-brand-solid">
@@ -1092,7 +1092,7 @@ export function AttachmentEditor({
                 <div key={doc.id} className="space-y-1.5">
                   <div className={cn(
                     'flex flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
-                    isPending ? 'border-orange-200 bg-orange-50/30' : hasFile ? 'border-orange-100 bg-[#FFF7F0]' : 'border-[#F4E7DC] bg-[#FFFCF8]'
+                    isPending ? 'border-orange-200 bg-orange-50/30' : hasFile ? 'border-orange-100 bg-bg-surface' : 'border-brand-border bg-bg-surface'
                   )}>
                     {/* Status icon */}
                     {isPending ? (
@@ -1106,7 +1106,7 @@ export function AttachmentEditor({
                     {/* Info */}
                     <div className="min-w-0 flex-1">
                       <span className="text-[13px] font-medium">{doc.nama}</span>
-                      <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-[#E65100]">TAMBAHAN</span>
+                      <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-brand-solid-hover">TAMBAHAN</span>
                     </div>
 
                     {/* Actions */}
@@ -1164,7 +1164,7 @@ export function AttachmentEditor({
 
             {/* Add form */}
             {showAddForm ? (
-              <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-[#FFF7F0] p-2.5 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-bg-surface p-2.5 sm:flex-row sm:items-center">
                 <input
                   type="text"
                   value={newDocTitle}
@@ -1187,7 +1187,7 @@ export function AttachmentEditor({
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-[#FFF1E7]"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
               >
                 <Plus size={14} />
                 <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>

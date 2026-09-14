@@ -42,16 +42,16 @@ export function StepKomponen({
           <span className="text-[10px] font-medium text-zinc-500">{kegiatanNama}</span>
         </div>
         {loadingKomponen ? (
-          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-border bg-[#FFFAF6] px-3 text-xs text-zinc-500">
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-border bg-bg-surface px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : komponenList.length === 0 ? (
-          <p className="rounded-xl border border-brand-border bg-[#FFFAF6] p-3 text-xs text-zinc-500">
+          <p className="rounded-xl border border-brand-border bg-bg-surface p-3 text-xs text-zinc-500">
             Tidak ada komponen untuk kegiatan yang dipilih.
           </p>
         ) : (
           <Select value={komponenId || null} onValueChange={v => onKomponenChange(v ?? '')}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm hover:border-brand-border-strong">
               <SelectValue placeholder="-- Pilih Komponen --">
                 {v => v ? (komponenList.find(k => k.id === v)?.nama ?? '') : '-- Pilih Komponen --'}
               </SelectValue>

@@ -370,16 +370,16 @@ export function AttachmentViewer({
       <div key={globalIdx} className="space-y-1.5">
         <div
           className={cn(
-            'flex min-h-16 items-center gap-3 rounded-2xl border border-[#F1E5DA] bg-bg-surface px-4 py-3',
+            'flex min-h-16 items-center gap-3 rounded-2xl border border-brand-border bg-bg-surface px-4 py-3',
             labelColor === 'blue'
-              ? 'border-[#F1E5DA] bg-bg-surface'
-              : 'border-[#F1E5DA] bg-bg-surface'
+              ? 'border-brand-border bg-bg-surface'
+              : 'border-brand-border bg-bg-surface'
             )}
         >
           <span className={cn(
             'flex size-10 shrink-0 items-center justify-center rounded-2xl border',
             labelColor === 'blue'
-              ? 'border-[#F1E5DA] bg-bg-surface text-zinc-800'
+              ? 'border-brand-border bg-bg-surface text-zinc-800'
               : 'border-orange-100 bg-orange-50 text-brand-solid',
           )}>
             <FileText size={18} />
@@ -459,7 +459,7 @@ export function AttachmentViewer({
           )}
         </div>
         {validationUi && (
-          <div className="flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5">
+          <div className="flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-warning-surface p-2.5">
             <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
               <AlertCircle size={13} />
             </div>
@@ -469,7 +469,7 @@ export function AttachmentViewer({
             </div>
             <label
               htmlFor={fileInputId}
-              className="flex h-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] transition-colors hover:bg-[#FFF1D6] hover:text-[#A84800]"
+              className="flex h-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#B77900] transition-colors hover:bg-warning-surface hover:text-[#B77900]"
             >
               {validationUi.actionLabel}
             </label>
@@ -484,7 +484,7 @@ export function AttachmentViewer({
   // ==========================================================================
   if (lampiranUrls.length === 0) {
     return (
-      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 shadow-sm">
+      <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 shadow-sm">
         <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Lampiran & Kelengkapan Wajib</h2>
         <p className="mt-0.5 text-xs font-medium leading-relaxed text-zinc-700 sm:text-sm">
           Seluruh dokumen yang wajib dipenuhi sebagai prasyarat utama verifikasi dan pelunasan anggaran.
@@ -504,7 +504,7 @@ export function AttachmentViewer({
   // ==========================================================================
   if (dokumen.lampiran_dibersihkan_at) {
     return (
-      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 shadow-sm">
+      <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 shadow-sm">
         <h2 className="font-headline text-base font-bold tracking-tight text-zinc-950 sm:text-lg">Lampiran & Kelengkapan Wajib</h2>
         <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700">
           Data file sudah dibersihkan
@@ -513,7 +513,7 @@ export function AttachmentViewer({
           {lampiranUrls.map((lampiran, index) => (
             <li
               key={`${lampiran.kelengkapan_id}-${index}`}
-              className="flex items-center gap-2 rounded-xl border border-[#F1E5DA] bg-white/60 px-3 py-2 text-xs font-semibold text-zinc-500"
+              className="flex items-center gap-2 rounded-xl border border-brand-border bg-white/60 px-3 py-2 text-xs font-semibold text-zinc-500"
             >
               <FileText size={15} className="shrink-0 text-zinc-400" />
               <span className="min-w-0 flex-1 truncate">{lampiran.nama}</span>

@@ -573,7 +573,7 @@ function KinerjaHeader({ title, description }: { title: string; description: str
   return (
     <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-5">
-        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
           <ClipboardList size={22} />
         </div>
         <div className="min-w-0">
@@ -658,7 +658,7 @@ function PeriodeSelector({
             value={value.tahun ? String(value.tahun) : ''}
             onValueChange={(next) => onChange({ mode: 'TRIWULAN', tahun: Number(next), triwulan: value.triwulan ?? 1 })}
           >
-            <SelectTrigger className="min-h-10 w-fit min-w-[88px] shrink-0 rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
+            <SelectTrigger className="min-h-10 w-fit min-w-[88px] shrink-0 rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
               <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
             </SelectTrigger>
             <SelectContent>
@@ -675,7 +675,7 @@ function PeriodeSelector({
               triwulan: Number(next) as 1 | 2 | 3 | 4,
             })}
           >
-            <SelectTrigger className="min-h-10 w-fit min-w-[168px] shrink-0 rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
+            <SelectTrigger className="min-h-10 w-fit min-w-[168px] shrink-0 rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
               <SelectValue placeholder="Triwulan">
                 {selected => TRIWULAN_OPTIONS.find(option => String(option.value) === selected)?.label ?? 'Triwulan'}
               </SelectValue>
@@ -702,7 +702,7 @@ function PeriodeSelector({
           value={value.tahun ? String(value.tahun) : ''}
           onValueChange={(next) => onChange({ mode: 'TAHUNAN', tahun: Number(next) })}
         >
-          <SelectTrigger className="min-h-10 w-fit min-w-[104px] shrink-0 rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
+          <SelectTrigger className="min-h-10 w-fit min-w-[104px] shrink-0 rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
             <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
           </SelectTrigger>
           <SelectContent>
@@ -794,11 +794,11 @@ function SatkerSummaryBand({
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-money-border bg-money-surface px-3.5 py-2.5 shadow-[0_2px_0_rgba(16,185,129,0.18)]">
       <div className="flex items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#62C995] bg-white/70 text-money-icon shadow-sm shadow-emerald-900/5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-money-icon-border bg-white/70 text-money-icon shadow-sm shadow-emerald-900/5">
           <Banknote size={17} />
         </span>
         <div className="flex flex-col">
-          <span className="text-[9px] font-black uppercase tracking-[0.13em] text-[#00713A]">
+          <span className="text-[9px] font-black uppercase tracking-[0.13em] text-money-text">
             Total Realisasi Satker{periode ? ` · ${periode}` : ''}
           </span>
           <span className="font-mono text-[19px] font-extrabold leading-tight tracking-tight text-money-value sm:text-[21px]">
@@ -818,7 +818,7 @@ function SatkerSummaryBand({
 function MiniStat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0B6B3D]/75">{label}</span>
+      <span className="text-[9px] font-black uppercase tracking-[0.12em] text-money-text/75">{label}</span>
       <span className="font-headline text-[15px] font-bold tracking-tight text-money-value">{value}</span>
     </div>
   )
@@ -858,7 +858,7 @@ function SimpleReportToolbar({
         <label>
           <span className="sr-only">Urutkan daftar</span>
           <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortMode)}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
               <SelectValue placeholder="Terakhir diperbarui">
                 {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Terakhir diperbarui'}
               </SelectValue>
@@ -1713,7 +1713,7 @@ function KegiatanDetailToolbar({
           <label>
             <span className="sr-only">Urutkan dokumen kegiatan</span>
             <Select value={sortBy} onValueChange={(value) => onSortChange(value as DetailSortMode)}>
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => DETAIL_SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -1795,7 +1795,7 @@ function FilterSelect({
     <label className="space-y-2">
       <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">{label}</span>
       <Select value={value} onValueChange={(next) => onChange(next ?? '')}>
-        <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
+        <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
           <SelectValue placeholder={options[0]?.label}>
             {selected => options.find(option => option.value === selected)?.label ?? options[0]?.label}
           </SelectValue>
@@ -1925,7 +1925,7 @@ function KinerjaDocumentMetadataDialog({
 }) {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto border-brand-border bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
+      <DialogContent className="max-h-[88vh] overflow-y-auto border-brand-border bg-bg-surface shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <button
@@ -1945,7 +1945,7 @@ function KinerjaDocumentMetadataDialog({
           </div>
         </DialogHeader>
 
-        <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
+        <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 sm:p-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <ModalMetadataField label="Judul Dokumen" value={dokumen.judul} className="sm:col-span-2" />
             <ModalMetadataField label="Fungsi" value={dokumen.fungsi_nama ?? '-'} />
@@ -1997,24 +1997,24 @@ const SUMMARY_CARD_TONE_CLASS: Record<SummaryCardTone, {
   detail?: string
 }> = {
   neutral: {
-    card: 'border-[#E1D7CB] bg-bg-surface',
-    label: 'text-[#5F3B22]',
-    icon: 'border-[#D8CDC1] text-[#6D6258]',
+    card: 'border-brand-border bg-bg-surface',
+    label: 'text-brand-text-muted',
+    icon: 'border-brand-border-strong text-brand-text-muted',
   },
   gold: {
-    card: 'border-[#F1D38A] bg-[#FFF8E6]',
-    label: 'text-[#7A4A00]',
-    icon: 'border-[#E5BD55] text-[#B77900]',
+    card: 'border-warning-border bg-warning-surface',
+    label: 'text-[#B77900]',
+    icon: 'border-warning-border text-[#B77900]',
   },
   orange: {
-    card: 'border-[#FDBA91] bg-[#FFF1E8]',
-    label: 'text-[#B83200]',
-    icon: 'border-[#FF8A4C] text-[#FF5A14]',
+    card: 'border-brand-border-strong bg-brand-surface',
+    label: 'text-brand-solid-active',
+    icon: 'border-brand-gradient-to text-brand-solid',
   },
   money: {
     card: 'border-money-border bg-money-surface shadow-[0_2px_0_rgba(16,185,129,0.18)]',
     label: 'text-money-text',
-    icon: 'border-[#62C995] text-money-icon',
+    icon: 'border-money-icon-border text-money-icon',
     value: 'font-mono text-[24px] text-money-value',
     detail: 'text-money-text',
   },

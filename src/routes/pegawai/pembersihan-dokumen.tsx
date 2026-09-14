@@ -347,7 +347,7 @@ function PembersihanDokumenPage() {
           <>
             <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-start gap-5">
-                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
                   <Trash2 size={22} />
                 </div>
                 <div className="min-w-0">
@@ -568,7 +568,7 @@ function ReportToolbar({
           <label>
             <span className="sr-only">Urutkan dokumen</span>
             <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortMode)}>
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -593,7 +593,7 @@ function ReportToolbar({
                   value={filter.kegiatanId || '_all'}
                   onValueChange={(kegiatanId) => onFilterChange({ ...filter, kegiatanId: kegiatanId === '_all' ? undefined : kegiatanId })}
                 >
-                  <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
+                  <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
                     <SelectValue placeholder="Semua Kegiatan">
                       {selected => selected && selected !== '_all'
                         ? kegiatanOptions.find(option => option.id === selected)?.nama ?? 'Semua Kegiatan'

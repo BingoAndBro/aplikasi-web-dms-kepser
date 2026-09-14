@@ -34,7 +34,7 @@ export function ExportZipDialog({
     <Dialog open={open} onOpenChange={(nextOpen) => {
       if (!pending) onOpenChange(nextOpen)
     }}>
-      <DialogContent className="border-brand-border bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl">
+      <DialogContent className="border-brand-border bg-bg-surface shadow-2xl shadow-zinc-950/10 sm:max-w-md sm:rounded-3xl">
         <DialogHeader>
           <DialogTitle>Ekspor ZIP Dokumen</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -45,7 +45,7 @@ export function ExportZipDialog({
             Filter menghasilkan {documentCount} dokumen. Maksimal {EXPORT_ZIP_MAX_DOCUMENTS} per ekspor — persempit periode atau kegiatan.
           </p>
         ) : (
-          <p className="rounded-xl border border-[#F1E5DA] bg-bg-surface px-4 py-3 text-sm font-semibold text-zinc-700">
+          <p className="rounded-xl border border-brand-border bg-bg-surface px-4 py-3 text-sm font-semibold text-zinc-700">
             {documentCount} dokumen akan diunduh sebagai satu berkas ZIP.
           </p>
         )}

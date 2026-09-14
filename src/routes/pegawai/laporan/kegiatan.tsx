@@ -341,7 +341,7 @@ function LaporanKegiatanPage() {
           <>
             <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-start gap-5">
-                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
                   <Users size={22} />
                 </div>
                 <div className="min-w-0">
@@ -470,7 +470,7 @@ function ReportToolbar({
               value={sortBy}
               onValueChange={(value) => onSortChange(value as SortMode)}
             >
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -541,7 +541,7 @@ function KegiatanAdvancedFilter({
             value={value.fungsiId || '_all'}
             onValueChange={(fungsiId) => onChange({ ...value, fungsiId: fungsiId === '_all' ? undefined : fungsiId })}
           >
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
               <SelectValue placeholder="Semua Fungsi">
                 {selected => selected && selected !== '_all'
                   ? fungsis.find(fungsi => fungsi.id === selected)?.nama ?? 'Semua Fungsi'
@@ -601,7 +601,7 @@ function SummaryCard({
   return (
     <div className={['flex min-h-[140px] flex-col justify-between rounded-[22px] border p-5 shadow-sm', className ?? ''].join(' ')}>
       <div className="flex items-start justify-between gap-3">
-        <p className={['text-[10px] font-black uppercase tracking-[0.14em]', labelClassName ?? 'text-[#5F3B22]'].join(' ')}>{label}</p>
+        <p className={['text-[10px] font-black uppercase tracking-[0.14em]', labelClassName ?? 'text-brand-text-muted'].join(' ')}>{label}</p>
         <span className={['flex size-7 items-center justify-center rounded-full border bg-white/65 shadow-sm shadow-zinc-950/5', iconClassName ?? 'border-current/15 text-zinc-700'].join(' ')}>
           {icon}
         </span>
@@ -896,7 +896,7 @@ function KegiatanDetailToolbar({
               value={sortBy}
               onValueChange={(value) => onSortChange(value as DetailSortMode)}
             >
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => DETAIL_SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -1141,7 +1141,7 @@ function DetailSelect({
         onValueChange={(selected) => onChange(selected === '_all' ? undefined : selected)}
         disabled={disabled}
       >
-        <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong disabled:opacity-60">
+        <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong disabled:opacity-60">
           <SelectValue placeholder={allLabel}>
             {selected => selected && selected !== '_all'
               ? options.find(option => option.id === selected)?.nama ?? allLabel
@@ -1174,27 +1174,27 @@ function KegiatanDetailCards({
         value={kegiatan.nama}
         detail={`Ketua Tim: ${kegiatan.ketuaTimName}`}
         icon={<FolderOpen size={16} />}
-        className="border-[#E1D7CB] bg-bg-surface"
-        labelClassName="text-[#5F3B22]"
-        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+        className="border-brand-border bg-bg-surface"
+        labelClassName="text-brand-text-muted"
+        iconClassName="border-brand-border-strong text-brand-text-muted"
       />
       <SummaryCard
         label="Dokumen Material"
         value={materialCount.toLocaleString('id-ID')}
         detail="Total Dokumen Belanja"
         icon={<ClipboardIcon />}
-        className="border-[#F1D38A] bg-[#FFF8E6]"
-        labelClassName="text-[#7A4A00]"
-        iconClassName="border-[#E5BD55] text-[#B77900]"
+        className="border-warning-border bg-warning-surface"
+        labelClassName="text-[#B77900]"
+        iconClassName="border-warning-border text-[#B77900]"
       />
       <SummaryCard
         label="Dokumen Non-Material"
         value={nonMaterialCount.toLocaleString('id-ID')}
         detail="Total Dokumen Non-Belanja"
         icon={<FileText size={16} />}
-        className="border-[#FDBA91] bg-[#FFF1E8]"
-        labelClassName="text-[#B83200]"
-        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+        className="border-brand-border-strong bg-brand-surface"
+        labelClassName="text-brand-solid-active"
+        iconClassName="border-brand-gradient-to text-brand-solid"
       />
       <SummaryCard
         label="Total Nominal Realisasi"
@@ -1205,7 +1205,7 @@ function KegiatanDetailCards({
         labelClassName="text-money-text"
         valueClassName="font-mono text-[24px] text-money-value"
         detailClassName="text-money-text"
-        iconClassName="border-[#62C995] text-money-icon"
+        iconClassName="border-money-icon-border text-money-icon"
       />
     </div>
   )

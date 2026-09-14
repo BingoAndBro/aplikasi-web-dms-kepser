@@ -34,7 +34,7 @@ export function RoleDashboardHeader({
         <h1 className="font-headline text-3xl font-black leading-tight tracking-tight text-[#3D332A] sm:text-4xl">
           {title}
         </h1>
-        <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-[#7A622E]">
+        <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-brand-text-muted">
           {description}
         </p>
       </div>
@@ -173,7 +173,7 @@ export function DashboardSection({
 }: DashboardSectionProps) {
   return (
     <section className={cn('overflow-hidden rounded-[24px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]', className)}>
-      <div className="border-b border-zinc-100 bg-[#F7F3EF] px-5 py-4">
+      <div className="border-b border-zinc-100 bg-bg-sunken px-5 py-4">
         <h2 className="text-base font-black text-zinc-950">{title}</h2>
         {description && <p className="mt-1 text-xs font-medium leading-5 text-zinc-600">{description}</p>}
       </div>

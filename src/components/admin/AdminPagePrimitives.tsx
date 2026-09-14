@@ -29,29 +29,29 @@ export const adminContentWideClassName = 'mx-auto w-full max-w-[1480px]'
 export const adminTableToolbarClassName = ''
 export const adminTableBodyClassName = ''
 export const adminFormFieldClassName =
-  'h-11 rounded-[14px] border-[#E2E8F0] bg-white px-4 text-sm font-semibold text-text-strong shadow-none transition placeholder:text-[#8A8A8A] hover:border-brand-solid focus-visible:border-brand-solid focus-visible:ring-2 focus-visible:ring-brand-solid/20'
+  'h-11 rounded-[14px] border-border-default bg-white px-4 text-sm font-semibold text-text-strong shadow-none transition placeholder:text-text-muted hover:border-brand-solid focus-visible:border-brand-solid focus-visible:ring-2 focus-visible:ring-brand-solid/20'
 export const adminTextareaClassName =
-  'min-h-24 w-full resize-none rounded-[14px] border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-text-strong outline-none transition placeholder:text-[#8A8A8A] hover:border-brand-solid focus:border-brand-solid focus:ring-2 focus:ring-brand-solid/20'
+  'min-h-24 w-full resize-none rounded-[14px] border border-border-default bg-white px-4 py-3 text-sm font-semibold text-text-strong outline-none transition placeholder:text-text-muted hover:border-brand-solid focus:border-brand-solid focus:ring-2 focus:ring-brand-solid/20'
 export const adminPrimaryActionClassName =
-  'h-11 rounded-[20px] bg-brand-solid px-5 text-sm font-extrabold text-white shadow-[0_8px_14px_rgba(255,90,0,0.20),inset_0_-1px_0_rgba(132,37,0,0.20)] hover:bg-[#F04F00] focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 [&_svg]:size-[16px] [&_svg]:stroke-[2.4]'
+  'h-11 rounded-[20px] bg-brand-solid px-5 text-sm font-extrabold text-white shadow-[0_8px_14px_rgba(255,90,0,0.20),inset_0_-1px_0_rgba(132,37,0,0.20)] hover:bg-brand-text focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 [&_svg]:size-[16px] [&_svg]:stroke-[2.4]'
 export const adminDialogContentClassName =
-  'overflow-hidden rounded-[26px] border border-[#CAD4E2] bg-white p-0 text-text-strong shadow-2xl shadow-slate-950/20'
+  'overflow-hidden rounded-[26px] border border-border-default bg-white p-0 text-text-strong shadow-2xl shadow-slate-950/20'
 export const adminDialogHeaderClassName =
-  'border-b border-[#E8EEF5] bg-white px-7 py-6 pr-14'
+  'border-b border-border-default bg-white px-7 py-6 pr-14'
 export const adminDialogBodyClassName = 'space-y-6 px-7 py-6'
 export const adminDialogFooterClassName =
-  'gap-3 border-t border-[#E8EEF5] bg-[#F7FAFD] px-7 py-5'
+  'gap-3 border-t border-border-default bg-white px-7 py-5'
 export const adminDialogCancelButtonClassName =
-  'h-10 rounded-full border-[#DCE6F0] bg-white px-6 text-sm font-bold text-text-strong hover:bg-slate-50'
+  'h-10 rounded-full border-border-default bg-white px-6 text-sm font-bold text-text-strong hover:bg-slate-50'
 export const adminDialogSubmitButtonClassName =
-  'h-10 rounded-full bg-brand-solid px-6 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(255,90,0,0.18)] hover:bg-[#F04F00]'
+  'h-10 rounded-full bg-brand-solid px-6 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(255,90,0,0.18)] hover:bg-brand-text'
 export const adminDialogDestructiveButtonClassName =
-  'h-10 rounded-full bg-[#F00446] px-6 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(240,4,70,0.18)] hover:bg-[#D9043D]'
+  'h-10 rounded-full bg-danger-text px-6 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(240,4,70,0.18)] hover:bg-danger-text'
 export const adminFormLabelClassName =
-  'mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#35527A]'
+  'mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-muted'
 export const adminFormSectionTitleClassName =
-  'text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#5C5147]'
-export const adminFormSectionClassName = 'space-y-3 border-b border-[#E8EEF5] pb-4 last:border-b-0 last:pb-0'
+  'text-[11px] font-extrabold uppercase tracking-[0.08em] text-brand-text-muted'
+export const adminFormSectionClassName = 'space-y-3 border-b border-border-default pb-4 last:border-b-0 last:pb-0'
 export const adminFormGridClassName = 'grid gap-3 md:grid-cols-2'
 export const adminRoleCardClassName =
   'relative min-h-[72px] rounded-[14px] border px-3 py-3 text-left text-xs transition-colors'
@@ -82,7 +82,7 @@ export function AdminPageHeader({
     >
       <div className="flex min-w-0 items-start gap-5">
         {icon && (
-          <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)] [&_svg]:size-[22px]">
+          <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)] [&_svg]:size-[22px]">
             {icon}
           </div>
         )}
@@ -366,8 +366,8 @@ export function AdminRelationPill({
   tone?: 'warm' | 'blue' | 'orange'
 }) {
   const toneClassName = {
-    warm: 'border-[#F4D7A8] bg-[#FFF9F0] text-[#5B3A00]',
-    blue: 'border-[#D8E5F7] bg-[#F2F7FF] text-[#001A42]',
+    warm: 'border-warning-border bg-warning-surface text-warning-text',
+    blue: 'border-info-border bg-info-surface text-text-strong',
     orange: 'border-orange-200 bg-orange-50 text-brand-text',
   }[tone]
 

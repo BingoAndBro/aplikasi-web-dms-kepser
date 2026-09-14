@@ -273,7 +273,7 @@ export function FileUploadButton({
               <div className="min-h-48 flex-1 bg-stone-50">
                 {previewLoading ? (
                   <div className="flex h-48 items-center justify-center">
-                    <Loader2 size={22} className="animate-spin text-[#F97316]" />
+                    <Loader2 size={22} className="animate-spin text-brand-solid" />
                   </div>
                 ) : previewPdfOnly ? (
                   <div className="flex h-48 flex-col items-center justify-center gap-2 px-6 text-center">
@@ -303,7 +303,7 @@ export function FileUploadButton({
 
   if (state === 'uploading') {
     return (
-      <div className={cn('flex items-center gap-2 rounded-lg bg-[#FFF3D6] px-3 py-2', className)}>
+      <div className={cn('flex items-center gap-2 rounded-lg bg-warning-surface px-3 py-2', className)}>
         <Loader2 size={14} className="shrink-0 animate-spin text-warning-solid" />
         <p className="text-[10px] font-semibold text-stone-600">Mengunggah...</p>
       </div>
@@ -314,7 +314,7 @@ export function FileUploadButton({
     const validationUi = getDocumentUploadValidationUiMessage(errorMsg)
 
     return (
-      <div className={cn('flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-[#FFF8EA] p-2.5', className)}>
+      <div className={cn('flex min-w-0 items-start gap-2 rounded-xl border border-amber-200 bg-warning-surface p-2.5', className)}>
         <input
           ref={inputRef}
           type="file"
@@ -334,7 +334,7 @@ export function FileUploadButton({
           variant="outline"
           size="xs"
           onClick={() => inputRef.current?.click()}
-          className="h-7 shrink-0 border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#C55A00] hover:bg-[#FFF1D6] hover:text-[#A84800]"
+          className="h-7 shrink-0 border-amber-300 bg-white px-2.5 text-[11px] font-semibold text-[#B77900] hover:bg-warning-surface hover:text-[#B77900]"
         >
           {validationUi.actionLabel}
         </Button>
@@ -354,7 +354,7 @@ export function FileUploadButton({
       <Button
         type="button"
         size="sm"
-        className="h-10 w-full rounded-2xl bg-[#FFF0DD] px-5 text-[11px] font-bold text-brand-solid-hover hover:bg-[#FFE4BF] sm:w-auto"
+        className="h-10 w-full rounded-2xl bg-warning-surface px-5 text-[11px] font-bold text-brand-solid-hover hover:bg-brand-surface-strong sm:w-auto"
         onClick={() => inputRef.current?.click()}
       >
         <Upload size={12} />

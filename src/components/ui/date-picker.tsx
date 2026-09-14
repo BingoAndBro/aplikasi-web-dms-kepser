@@ -162,11 +162,11 @@ export function DatePicker({
           disabled={disabled}
           className={cn(
             "group flex min-h-10 w-full items-center gap-2 rounded-xl border px-3 py-2 text-left",
-            "border-brand-border bg-[#FFFAF6] text-zinc-950 transition",
-            "hover:border-[#FF5A14] hover:bg-[#FFF1E8]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB27A]/70",
+            "border-brand-border bg-bg-surface text-zinc-950 transition",
+            "hover:border-brand-solid hover:bg-brand-surface",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-border-strong/70",
             "cursor-pointer",
-            open && "border-[#FF5A14] bg-[#FFF1E8]",
+            open && "border-brand-solid bg-brand-surface",
             disabled && "cursor-not-allowed bg-zinc-50 text-zinc-500 opacity-70"
           )}
         >
@@ -174,9 +174,9 @@ export function DatePicker({
             className={cn(
               "flex size-7 shrink-0 items-center justify-center rounded-lg border transition",
               open
-                ? "border-[#FF5A14] bg-[#FF7A00] text-white"
-                : "border-brand-border bg-white text-[#8A6B58]",
-              "group-hover:border-[#FF5A14] group-hover:bg-[#FF7A00] group-hover:text-white"
+                ? "border-brand-solid bg-brand-solid text-white"
+                : "border-brand-border bg-white text-brand-text-muted",
+              "group-hover:border-brand-solid group-hover:bg-brand-solid group-hover:text-white"
             )}
           >
             <Calendar size={15} />
@@ -186,7 +186,7 @@ export function DatePicker({
               <span
                 className={cn(
                   "block text-[8px] font-black uppercase tracking-[0.1em] transition",
-                  open ? "text-[#FF5A14]" : "text-[#8A6B58]"
+                  open ? "text-brand-solid" : "text-brand-text-muted"
                 )}
               >
                 {requiredLabel}
@@ -202,7 +202,7 @@ export function DatePicker({
           <ChevronRight
             size={16}
             className={cn(
-              "shrink-0 text-[#8A6B58] transition-transform duration-200",
+              "shrink-0 text-brand-text-muted transition-transform duration-200",
               open && "-rotate-90"
             )}
           />
@@ -242,7 +242,7 @@ export function DatePicker({
         disabled={disabled}
         className={cn(
           "w-full flex items-center gap-2 px-4 py-2.5",
-          "bg-[#FFFAF6] border border-brand-border rounded-xl",
+          "bg-bg-surface border border-brand-border rounded-xl",
           "text-sm font-semibold text-zinc-950",
           "outline-none transition-all hover:border-brand-border-strong",
           "focus-visible:ring-2 focus-visible:ring-orange-200/70 focus-visible:border-orange-300",
@@ -339,8 +339,8 @@ function PrototypeCalendar({
   const yearStart = year - 5
 
   return (
-    <div className="w-[266px] overflow-hidden rounded-[14px] border border-[#F3D3C0] bg-bg-surface shadow-xl shadow-zinc-950/8">
-      <div className="grid h-9 grid-cols-3 bg-[#FFF4EE] p-1">
+    <div className="w-[266px] overflow-hidden rounded-[14px] border border-brand-border bg-bg-surface shadow-xl shadow-zinc-950/8">
+      <div className="grid h-9 grid-cols-3 bg-brand-surface p-1">
         <PickerTab active={view === "day"} onClick={() => onViewChange("day")}>Hari</PickerTab>
         <PickerTab active={view === "month"} onClick={() => onViewChange("month")}>Bulan</PickerTab>
         <PickerTab active={view === "year"} onClick={() => onViewChange("year")}>Tahun</PickerTab>
@@ -372,18 +372,18 @@ function PrototypeCalendar({
         />
       )}
 
-      <div className="flex items-center justify-between border-t border-[#F6ECE4] bg-[#FFFCF8] px-3 py-2">
+      <div className="flex items-center justify-between border-t border-bg-sunken bg-bg-surface px-3 py-2">
         <button
           type="button"
           onClick={onToday}
-          className="rounded-lg px-1 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#FF5A14] hover:bg-[#FFF1E8]"
+          className="rounded-lg px-1 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-brand-solid hover:bg-brand-surface"
         >
           Hari Ini
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg bg-white px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-900 shadow-sm shadow-zinc-950/5 hover:bg-[#FFF7F1]"
+          className="rounded-lg bg-white px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-900 shadow-sm shadow-zinc-950/5 hover:bg-brand-surface"
         >
           Tutup
         </button>
@@ -399,7 +399,7 @@ function PickerTab({ active, onClick, children }: { active: boolean; onClick: ()
       onClick={onClick}
       className={cn(
         "h-7 rounded-md text-[9px] font-bold uppercase tracking-[0.12em] transition",
-        active ? "bg-[#FF5A14] text-white shadow-sm" : "text-[#7B6A61] hover:bg-white/70 hover:text-zinc-900"
+        active ? "bg-brand-solid text-white shadow-sm" : "text-brand-text-muted hover:bg-white/70 hover:text-zinc-900"
       )}
     >
       {children}
@@ -432,14 +432,14 @@ function DayGrid({
           <button
             type="button"
             onClick={() => onMonthChange(new Date(year, monthIndex - 1, 1))}
-            className="flex size-6 items-center justify-center rounded-lg text-[#8F7E75] hover:bg-[#FFF1E8] hover:text-zinc-950"
+            className="flex size-6 items-center justify-center rounded-lg text-text-muted hover:bg-brand-surface hover:text-zinc-950"
           >
             <ChevronLeft size={14} />
           </button>
           <button
             type="button"
             onClick={() => onMonthChange(new Date(year, monthIndex + 1, 1))}
-            className="flex size-6 items-center justify-center rounded-lg text-[#8F7E75] hover:bg-[#FFF1E8] hover:text-zinc-950"
+            className="flex size-6 items-center justify-center rounded-lg text-text-muted hover:bg-brand-surface hover:text-zinc-950"
           >
             <ChevronRight size={14} />
           </button>
@@ -463,14 +463,14 @@ function DayGrid({
               onClick={() => onSelect(cell.date)}
               className={cn(
                 "relative mx-auto flex size-6 items-center justify-center rounded-md text-[11px] font-medium leading-none transition",
-                cell.currentMonth ? "text-zinc-950" : "text-[#DED8D4]",
-                (isToday || isSelected) && "text-[#FF5A14]",
-                !isSelected && "hover:bg-[#FFF1E8]"
+                cell.currentMonth ? "text-zinc-950" : "text-brand-border",
+                (isToday || isSelected) && "text-brand-solid",
+                !isSelected && "hover:bg-brand-surface"
               )}
             >
               {cell.date.getDate()}
               {(isToday || isSelected) && (
-                <span className="absolute bottom-0.5 left-1/2 size-0.5 -translate-x-1/2 rounded-full bg-[#FF5A14]" />
+                <span className="absolute bottom-0.5 left-1/2 size-0.5 -translate-x-1/2 rounded-full bg-brand-solid" />
               )}
             </button>
           )
@@ -490,7 +490,7 @@ function MonthGrid({ monthIndex, onSelect }: { monthIndex: number; onSelect: (mo
           onClick={() => onSelect(index)}
           className={cn(
             "h-9 rounded-xl text-xs font-medium transition",
-            index === monthIndex ? "bg-[#FF5A14] text-white shadow-sm" : "text-zinc-950 hover:bg-[#FFF1E8]"
+            index === monthIndex ? "bg-brand-solid text-white shadow-sm" : "text-zinc-950 hover:bg-brand-surface"
           )}
         >
           {label}
@@ -520,7 +520,7 @@ function YearGrid({
           onClick={() => onSelect(year)}
           className={cn(
             "h-9 rounded-xl text-xs font-medium transition",
-            year === selectedYear ? "bg-[#FF5A14] text-white shadow-sm" : "text-zinc-950 hover:bg-[#FFF1E8]"
+            year === selectedYear ? "bg-brand-solid text-white shadow-sm" : "text-zinc-950 hover:bg-brand-surface"
           )}
         >
           {year}

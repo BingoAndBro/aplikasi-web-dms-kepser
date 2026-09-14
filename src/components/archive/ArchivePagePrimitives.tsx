@@ -47,7 +47,7 @@ export function ArchivePageHeader({
       )}
     >
       <div className="flex min-w-0 items-start gap-5">
-        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-[#FFF6EA] text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
           <FolderOpen size={22} />
         </div>
         <div className="min-w-0">
@@ -356,7 +356,7 @@ export function ArchiveTabs<T extends string>({
   onChange,
 }: ArchiveTabsProps<T>) {
   return (
-    <div className="w-fit max-w-full overflow-x-auto rounded-xl border border-brand-border bg-[#F7F2EC] p-1 shadow-sm">
+    <div className="w-fit max-w-full overflow-x-auto rounded-xl border border-brand-border bg-bg-surface p-1 shadow-sm">
       <div className="flex min-w-max gap-1">
         {tabs.map((tab) => {
           const active = tab.id === activeTab
@@ -369,7 +369,7 @@ export function ArchiveTabs<T extends string>({
                 'cursor-pointer rounded-lg px-3 py-2 text-xs font-bold transition',
                 active
                   ? 'bg-bg-surface text-brand-solid shadow-sm'
-                  : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
+                  : 'text-zinc-500 hover:bg-bg-surface hover:text-zinc-950',
               )}
             >
               {tab.label}

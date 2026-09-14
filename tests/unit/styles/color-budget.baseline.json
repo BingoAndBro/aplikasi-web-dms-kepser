@@ -1,78 +1,42 @@
 {
   "src/components/admin/AdminPagePrimitives.tsx": {
-    "hex": 23,
+    "hex": 0,
     "orange": 12
   },
   "src/components/archive/ArchivePagePrimitives.tsx": {
-    "hex": 3,
+    "hex": 0,
     "orange": 14
   },
   "src/components/dashboard/RoleDashboardPrimitives.tsx": {
-    "hex": 3,
+    "hex": 1,
     "orange": 13
   },
   "src/components/dokumen/AttachmentEditor.tsx": {
-    "hex": 19,
+    "hex": 2,
     "orange": 18
   },
   "src/components/dokumen/AttachmentViewer.tsx": {
-    "hex": 11,
+    "hex": 2,
     "orange": 10
   },
   "src/components/dokumen/FileUploadButton.tsx": {
-    "hex": 8,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepDetailPermintaan.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepFungsiTanggal.tsx": {
-    "hex": 8,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepJenisPermintaan.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepKarakteristik.tsx": {
-    "hex": 12,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepKategoriPermintaan.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepKegiatan.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepKomponen.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepNamaDokumen.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/components/dokumen/form/StepperControls.tsx": {
-    "hex": 1,
+    "hex": 2,
     "orange": 0
   },
   "src/components/dokumen/form/StepUploadLampiran.tsx": {
-    "hex": 15,
+    "hex": 2,
     "orange": 0
   },
   "src/components/dokumen/KelengkapanChecklist.tsx": {
-    "hex": 10,
+    "hex": 1,
     "orange": 8
   },
   "src/components/dokumen/ReviewSummary.tsx": {
-    "hex": 12,
+    "hex": 1,
     "orange": 0
   },
   "src/components/dokumen/StepIndicator.tsx": {
-    "hex": 2,
+    "hex": 0,
     "orange": 1
   },
   "src/components/kinerja/KinerjaPagePrimitives.tsx": {
@@ -80,12 +44,8 @@
     "orange": 5
   },
   "src/components/kinerja/MonitoringRealisasiView.tsx": {
-    "hex": 27,
-    "orange": 32
-  },
-  "src/components/laporan/ExportZipDialog.tsx": {
     "hex": 2,
-    "orange": 0
+    "orange": 32
   },
   "src/components/layout/AppHeader.tsx": {
     "hex": 0,
@@ -104,16 +64,12 @@
     "orange": 8
   },
   "src/components/layout/UserDropdown.tsx": {
-    "hex": 7,
+    "hex": 0,
     "orange": 5
   },
   "src/components/pegawai/PegawaiPagePrimitives.tsx": {
     "hex": 0,
     "orange": 5
-  },
-  "src/components/ui/alert-dialog.tsx": {
-    "hex": 1,
-    "orange": 0
   },
   "src/components/ui/AppToast.tsx": {
     "hex": 0,
@@ -124,11 +80,11 @@
     "orange": 3
   },
   "src/components/ui/date-picker.tsx": {
-    "hex": 37,
+    "hex": 1,
     "orange": 2
   },
   "src/components/ui/dialog.tsx": {
-    "hex": 1,
+    "hex": 0,
     "orange": 2
   },
   "src/components/ui/EmptyState.tsx": {
@@ -140,23 +96,23 @@
     "orange": 6
   },
   "src/components/workflow/PpkPpspmPagePrimitives.tsx": {
-    "hex": 1,
+    "hex": 0,
     "orange": 25
   },
   "src/routes/admin.master-data.kelengkapan.tsx": {
-    "hex": 67,
+    "hex": 1,
     "orange": 0
   },
   "src/routes/admin.master-data.user.tsx": {
-    "hex": 19,
+    "hex": 0,
     "orange": 9
   },
   "src/routes/kasubag/berkas/$id.tsx": {
-    "hex": 26,
+    "hex": 0,
     "orange": 55
   },
   "src/routes/kasubag/berkas/-components/CloseBerkasDialog.tsx": {
-    "hex": 8,
+    "hex": 0,
     "orange": 5
   },
   "src/routes/kasubag/berkas/index.tsx": {
@@ -164,11 +120,11 @@
     "orange": 9
   },
   "src/routes/kasubag/dokumen/$id/index.tsx": {
-    "hex": 11,
+    "hex": 0,
     "orange": 12
   },
   "src/routes/kasubag/klasifikasi.tsx": {
-    "hex": 15,
+    "hex": 0,
     "orange": 26
   },
   "src/routes/kasubag/pembersihan/index.tsx": {
@@ -176,55 +132,51 @@
     "orange": 8
   },
   "src/routes/kasubag/penambahan-arsip.tsx": {
-    "hex": 30,
+    "hex": 2,
     "orange": 23
   },
   "src/routes/pegawai/dokumen/$id/index.tsx": {
-    "hex": 15,
+    "hex": 0,
     "orange": 6
   },
   "src/routes/pegawai/dokumen/$id/revisi.tsx": {
-    "hex": 22,
+    "hex": 0,
     "orange": 4
   },
-  "src/routes/pegawai/dokumen/aju.tsx": {
-    "hex": 14,
-    "orange": 0
-  },
   "src/routes/pegawai/dokumen/index.tsx": {
-    "hex": 1,
+    "hex": 0,
     "orange": 13
   },
   "src/routes/pegawai/laporan/kegiatan.tsx": {
-    "hex": 21,
+    "hex": 2,
     "orange": 35
   },
   "src/routes/pegawai/laporan/saya.tsx": {
-    "hex": 1,
+    "hex": 0,
     "orange": 13
   },
   "src/routes/pegawai/pembersihan-dokumen.tsx": {
-    "hex": 3,
+    "hex": 0,
     "orange": 8
   },
   "src/routes/pegawai/revisi.tsx": {
-    "hex": 1,
+    "hex": 0,
     "orange": 4
   },
   "src/routes/ppk/dokumen/$id/index.tsx": {
-    "hex": 16,
+    "hex": 0,
     "orange": 8
   },
   "src/routes/ppk/dokumen/$id/resubmit.tsx": {
-    "hex": 15,
+    "hex": 0,
     "orange": 7
   },
   "src/routes/ppspm/dokumen/$id.tsx": {
-    "hex": 16,
+    "hex": 0,
     "orange": 8
   },
   "src/routes/profile.tsx": {
-    "hex": 58,
+    "hex": 0,
     "orange": 1
   }
 }

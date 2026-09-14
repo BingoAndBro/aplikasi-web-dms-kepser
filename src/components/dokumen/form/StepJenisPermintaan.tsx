@@ -38,16 +38,16 @@ export function StepJenisPermintaan({
           Pilih Jenis Permintaan <span className="text-warning-solid">*</span>
         </label>
         {loadingJenis ? (
-          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-border bg-[#FFFAF6] px-3 text-xs text-zinc-500">
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-border bg-bg-surface px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : jenisList.length === 0 ? (
-          <p className="rounded-xl border border-brand-border bg-[#FFFAF6] p-3 text-xs text-zinc-500">
+          <p className="rounded-xl border border-brand-border bg-bg-surface p-3 text-xs text-zinc-500">
             Tidak ada jenis permintaan tersedia.
           </p>
         ) : (
           <Select value={jenisPermintaanId || null} onValueChange={v => onJenisChange(v ?? '')}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm hover:border-brand-border-strong">
               <SelectValue placeholder="-- Pilih Jenis Permintaan --">
                 {v => v ? (jenisList.find(j => j.id === v)?.nama ?? '') : '-- Pilih Jenis Permintaan --'}
               </SelectValue>

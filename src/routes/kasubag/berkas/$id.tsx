@@ -191,9 +191,9 @@ const DETAIL_SORT_OPTIONS = [
 
 const ARCHIVE_METADATA_FORM_LABEL_CLASS = 'block space-y-1.5 text-[11px] font-bold text-zinc-700'
 const ARCHIVE_METADATA_FORM_INPUT_CLASS =
-  'w-full rounded-xl border border-brand-border bg-[#FFFAF6] px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
+  'w-full rounded-xl border border-brand-border bg-bg-surface px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
 const ARCHIVE_METADATA_FORM_SELECT_TRIGGER_CLASS =
-  'min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold text-zinc-950 hover:border-brand-border-strong focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
+  'min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold text-zinc-950 hover:border-brand-border-strong focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
 const ARCHIVE_METADATA_FORM_SELECT_CONTENT_CLASS =
   'rounded-xl border border-brand-border bg-bg-surface text-zinc-950 shadow-xl shadow-zinc-950/10'
 const ARCHIVE_METADATA_FORM_SELECT_ITEM_CLASS =
@@ -411,7 +411,7 @@ function BerkasArsipDetailPage() {
   }, [id])
 
   return (
-    <PageLayout className="min-h-full bg-[#FFF9F4]">
+    <PageLayout className="min-h-full bg-bg-surface">
       <div className={ARCHIVE_DETAIL_CONTAINER_CLASS}>
         {loading ? (
           <LoadingState label="Memuat detail berkas" />
@@ -499,7 +499,7 @@ function BerkasArsipDetailPage() {
                       onChange={(tab) => setActiveTab(tab)}
                     />
                     <div className="min-w-0">
-                      <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+                      <div className="rounded-t-[1.5rem] bg-gradient-to-r from-brand-solid to-brand-gradient-to px-4 py-4 text-white sm:px-5">
                         <div className="flex items-center gap-3">
                           <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
                             {activeTab === 'metadata'
@@ -525,7 +525,7 @@ function BerkasArsipDetailPage() {
                         </div>
                       </div>
 
-                      <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
+                      <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-brand-border bg-bg-surface p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
                         {activeTab === 'metadata' && (
                           <FolderMetadataPanel detail={detail} />
                         )}
@@ -628,7 +628,7 @@ function EditActiveMetadataDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-brand-border bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-2xl sm:rounded-3xl">
+      <DialogContent className="border-brand-border bg-bg-surface shadow-2xl shadow-zinc-950/10 sm:max-w-2xl sm:rounded-3xl">
         <DialogHeader>
           <DialogTitle>Edit Metadata Tersimpan</DialogTitle>
           <DialogDescription>
@@ -700,7 +700,7 @@ function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
   const isOpenFolder = canShowCloseBerkasForm(detail)
 
   return (
-    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
+    <div className="rounded-[1.15rem] border border-brand-border bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
         <MetadataCell label="Cara Pembayaran" value={formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)} />
         <MetadataCell label="Status Berkas" value={formatBerkasStatusLabel(detail.status_berkas)} />
@@ -768,7 +768,7 @@ function FolderActionPanel({
   return (
     <aside className="min-w-0 space-y-3 xl:sticky xl:top-3">
       <div className="rounded-[1.45rem] border border-orange-200/70 bg-brand-surface p-5 shadow-sm shadow-orange-900/10">
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#B84412]">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active">
           <Wallet size={14} className="text-brand-solid" />
           Total Nominal Realisasi
         </div>
@@ -777,7 +777,7 @@ function FolderActionPanel({
         </p>
       </div>
 
-      <div className="rounded-[1.45rem] border border-[#F1E1CF] bg-[#FFF8EF] p-5 shadow-sm shadow-orange-900/10">
+      <div className="rounded-[1.45rem] border border-brand-border bg-brand-surface p-5 shadow-sm shadow-orange-900/10">
         <div className="flex items-center gap-2">
           <FolderOpen size={15} className="text-orange-900" />
           <p className="text-[13px] font-black uppercase tracking-[0.14em] text-orange-950">
@@ -810,7 +810,7 @@ function FolderActionPanel({
         )}
       </div>
 
-      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/5">
+      <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/5">
         <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">
           Aksi Kontrol Berkas
         </p>
@@ -1033,7 +1033,7 @@ function ExportBerkasZipDialog({
       pending={preparing}
       onConfirm={handleExport}
     >
-      <div className="space-y-1.5 rounded-xl border border-[#F1E5DA] bg-bg-surface px-4 py-3 text-sm">
+      <div className="space-y-1.5 rounded-xl border border-brand-border bg-bg-surface px-4 py-3 text-sm">
         <p><span className="font-bold text-zinc-700">Nomor SPM:</span> {detail.nomor_spm ?? '-'}</p>
         <p><span className="font-bold text-zinc-700">Klasifikasi:</span> {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}</p>
         <p><span className="font-bold text-zinc-700">Jumlah Dokumen:</span> {detail.item_count}</p>
@@ -1256,7 +1256,7 @@ function DocumentItemTable({
           <button
             key={item.item_key}
             type="button"
-            className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface p-4 text-left shadow-sm shadow-zinc-950/[0.035]"
+            className="rounded-[1.15rem] border border-brand-border bg-bg-surface p-4 text-left shadow-sm shadow-zinc-950/[0.035]"
             onClick={() => onSelectItem(item)}
           >
             <div className="flex items-start justify-between gap-3">
@@ -1296,7 +1296,7 @@ function DocumentMetadataDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto border-brand-border bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
+      <DialogContent className="max-h-[88vh] overflow-y-auto border-brand-border bg-bg-surface shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <button
@@ -1317,7 +1317,7 @@ function DocumentMetadataDialog({
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
+          <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 sm:p-5">
             <div className="grid gap-5 sm:grid-cols-2">
               <ModalMetadataField
                 label={item.source_type === 'MANUAL' ? 'Nama/Judul Dokumen' : 'Judul Dokumen'}
@@ -1482,7 +1482,7 @@ function ItemCard({
   const fileBlocked = statusArsip === 'DIMUSNAHKAN'
 
   return (
-    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]">
+    <div className="rounded-[1.15rem] border border-brand-border bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -1499,7 +1499,7 @@ function ItemCard({
             Pembuat: {item.source_created_by_display_name ?? '-'}
           </p>
         </div>
-        <div className="grid min-w-[220px] gap-1 rounded-xl border border-orange-100 bg-[#FFFAF6] p-3 text-xs text-zinc-600">
+        <div className="grid min-w-[220px] gap-1 rounded-xl border border-orange-100 bg-bg-surface p-3 text-xs text-zinc-600">
           <p>Tanggal sumber: <span className="font-semibold text-zinc-950">{formatNullableDateLabel(item.source_date)}</span></p>
           <p>Nominal: <span className="font-mono font-bold text-zinc-950">{formatNominalRupiah(item.source_nominal_realisasi)}</span></p>
           <p>Jumlah lampiran: <span className="font-semibold text-zinc-950">{formatAttachmentCount(item.attachment_count)}</span></p>
@@ -1590,7 +1590,7 @@ function ItemAttachmentActions({
         return (
           <div
             key={`${item.item_key}-lampiran-${lampiranIndex}`}
-            className="flex flex-col gap-3 rounded-xl border border-[#F1E5DA] bg-bg-surface px-3 py-2.5 sm:flex-row sm:items-center"
+            className="flex flex-col gap-3 rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 sm:flex-row sm:items-center"
           >
             <FileText size={15} className="shrink-0 text-orange-600" />
             <p className="min-w-0 flex-1 truncate text-xs font-semibold text-zinc-950">{title}</p>
@@ -1729,19 +1729,19 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
         </p>
       </div>
 
-      <div className="relative space-y-3 before:absolute before:left-[18px] before:top-5 before:h-[calc(100%-2.5rem)] before:w-px before:bg-[#F1D8C8]">
+      <div className="relative space-y-3 before:absolute before:left-[18px] before:top-5 before:h-[calc(100%-2.5rem)] before:w-px before:bg-brand-border">
         {historyItems.map((item, index) => (
           <div key={`${item.label}-${item.timestampLabel}-${index}`} className="relative grid grid-cols-[38px_1fr] gap-3">
             <div className={`z-10 mt-1 flex h-9 w-9 items-center justify-center rounded-full border-4 border-bg-surface shadow-sm ${item.iconTone}`}>
               {item.icon}
             </div>
-            <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFCF8] p-3.5 shadow-sm shadow-zinc-950/[0.025]">
+            <div className="rounded-2xl border border-brand-border bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/[0.025]">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-extrabold text-zinc-950">{item.label}</p>
                   <p className="mt-1 text-xs leading-relaxed text-zinc-600">{item.helper}</p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#F1E5DA] bg-bg-surface px-2.5 py-1 text-[11px] font-bold text-zinc-700 sm:ml-3">
+                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-brand-border bg-bg-surface px-2.5 py-1 text-[11px] font-bold text-zinc-700 sm:ml-3">
                   <Clock size={12} className="text-orange-600" />
                   <span>{item.timestampLabel}</span>
                 </div>
@@ -1796,7 +1796,7 @@ export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem
     date: detail.created_at,
     helper: 'Folder mulai menerima dokumen untuk Cara Pembayaran ini.',
     icon: <FolderOpen size={15} />,
-    iconTone: 'bg-[#FFF3E8] text-orange-700',
+    iconTone: 'bg-warning-surface text-orange-700',
     domainOrder: 10,
     originalIndex: originalIndex++,
   }))
@@ -1921,7 +1921,7 @@ function iconForBerkasActivityEvent(eventType: string): ReactNode {
 function iconToneForBerkasActivityEvent(eventType: string): string {
   switch (eventType) {
     case 'BERKAS_DIBUKA':
-      return 'bg-[#FFF3E8] text-orange-700'
+      return 'bg-warning-surface text-orange-700'
     case 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN':
       return 'bg-sky-50 text-sky-700'
     case 'DOKUMEN_MANUAL_DITAMBAHKAN':
@@ -2084,7 +2084,7 @@ function StatusArsipBadge({ statusArsip, statusBerkas }: { statusArsip: string |
 
 function LifecycleStatusBadge({ detail }: { detail: Pick<BerkasDetail, 'status_berkas' | 'status_arsip'> }) {
   return (
-    <span className="inline-flex w-fit items-center rounded-md border border-orange-200 bg-[#FFF3E8] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-orange-900 text-nowrap">
+    <span className="inline-flex w-fit items-center rounded-md border border-orange-200 bg-warning-surface px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-orange-900 text-nowrap">
       {formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)}
     </span>
   )

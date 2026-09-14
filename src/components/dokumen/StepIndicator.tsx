@@ -55,7 +55,7 @@ export function StepIndicator({
                 <span
                   className={cn(
                     'flex size-10 shrink-0 items-center justify-center rounded-full border bg-white text-xs font-bold transition-colors',
-                    isActive && 'border-[#F97316] bg-[#F97316] text-white shadow-sm shadow-orange-200',
+                    isActive && 'border-brand-solid bg-brand-solid text-white shadow-sm shadow-orange-200',
                     isCompleted && !isActive && 'border-emerald-500 bg-emerald-500 text-white',
                     !isActive && !isCompleted && 'border-zinc-200 bg-zinc-100 text-zinc-400',
                   )}

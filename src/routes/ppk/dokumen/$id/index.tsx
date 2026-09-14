@@ -225,7 +225,7 @@ function PpkDokumenDetailIndexPage() {
   if (actionResult) {
     const isApprove = actionResult.kind === 'approve'
     return (
-      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-6 sm:px-6 lg:px-8">
+      <PageLayout className="min-h-full bg-bg-surface px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto flex min-h-[calc(100vh-9rem)] max-w-3xl flex-col items-center justify-center px-2 py-8 text-center">
           <div className={cn(
             'flex size-20 items-center justify-center rounded-full border',
@@ -250,7 +250,7 @@ function PpkDokumenDetailIndexPage() {
 
           <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Link to="/ppk/inbox">
-              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto">
+              <Button size="lg" className="w-full bg-brand-solid text-white hover:bg-brand-solid-hover sm:w-auto">
                 Validasi Dokumen Lain
               </Button>
             </Link>
@@ -281,7 +281,7 @@ function PpkDokumenDetailIndexPage() {
     : getWorkflowIndex(dokumen.status)
 
   return (
-    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+    <PageLayout className="min-h-full bg-bg-surface px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
         <ConfirmDialog
           open={approveOpen}
@@ -342,7 +342,7 @@ function PpkDokumenDetailIndexPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 px-1 py-1 sm:px-2">
-            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-[#F7F2EC] p-1">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-bg-surface p-1">
               {DETAIL_TABS.map(tab => {
                 const selected = activeTab === tab.key
                 return (
@@ -354,7 +354,7 @@ function PpkDokumenDetailIndexPage() {
                       'flex min-h-8 min-w-28 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
                         ? 'bg-bg-surface text-brand-solid shadow-sm'
-                        : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
+                        : 'text-zinc-500 hover:bg-bg-surface hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
                   >
@@ -368,7 +368,7 @@ function PpkDokumenDetailIndexPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
           <WorkflowPanel className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none">
-            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-brand-solid to-brand-gradient-to px-4 py-4 text-white sm:px-5">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
                   {(() => {
@@ -391,7 +391,7 @@ function PpkDokumenDetailIndexPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-brand-border bg-bg-surface p-4 sm:p-5">
               <section className={cn(activeTab === 'metadata' ? 'block' : 'hidden')}>
                 <MetadataDetailCard dokumen={dokumen} isNonMaterial={isNonMaterial} />
               </section>
@@ -503,7 +503,7 @@ function MetadataDetailCard({ dokumen, isNonMaterial }: { dokumen: DokumenDetail
   ]
 
   return (
-    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
+    <div className="rounded-[1.15rem] border border-brand-border bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
         {metadataItems.map(item => (
           <div key={item.label} className="min-w-0">
@@ -540,12 +540,12 @@ function RevisionNoteCard({
   return (
     <WorkflowPanel className="border-rose-100 bg-rose-50/55 p-2.5 shadow-none">
       <div className="flex items-start gap-2">
-        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#FFFAF6] text-rose-600">
+        <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-bg-surface text-rose-600">
           <AlertTriangle size={11} />
         </span>
         <div className="min-w-0">
           <p className="text-[11px] font-bold text-rose-700">{title}</p>
-          <div className="mt-1 rounded-lg bg-[#FFFAF6] p-1.5">
+          <div className="mt-1 rounded-lg bg-bg-surface p-1.5">
             <p className="line-clamp-3 text-[10px] font-medium italic leading-relaxed text-rose-950">
               "{revisionNotes || 'Tidak ada catatan revisi tertulis.'}"
             </p>
@@ -580,7 +580,7 @@ function RoleStatusPanel({
   const statusTone = getStatusTone(status)
 
   return (
-    <WorkflowPanel className="rounded-[1.25rem] border-[#F1E5DA] bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/5">
+    <WorkflowPanel className="rounded-[1.25rem] border-brand-border bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/5">
       <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">
         Status Dokumen
       </p>
@@ -594,13 +594,13 @@ function RoleStatusPanel({
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#F1E5DA] bg-bg-surface p-2.5 shadow-sm shadow-zinc-950/5">
+        <div className="rounded-xl border border-brand-border bg-bg-surface p-2.5 shadow-sm shadow-zinc-950/5">
           <p className="text-[11px] font-medium leading-relaxed text-zinc-700">
             {getStatusDescription(status, isNonMaterial)}
           </p>
         </div>
 
-        <div className="border-y border-dashed border-[#F1E5DA] py-3.5">
+        <div className="border-y border-dashed border-brand-border py-3.5">
           <div className="flex items-center gap-0">
             {workflowSteps.map((step, i) => {
               const isCurrent = step.key === status
@@ -616,7 +616,7 @@ function RoleStatusPanel({
                     <div
                       className={cn(
                         'absolute top-2.5 -right-1/2 z-0 h-px w-full',
-                        isCompleteSegment ? 'bg-emerald-500' : isActiveSegment ? 'bg-brand-solid' : 'bg-[#F1E5DA]',
+                        isCompleteSegment ? 'bg-emerald-500' : isActiveSegment ? 'bg-brand-solid' : 'bg-brand-border',
                       )}
                     />
                   )}
@@ -627,7 +627,7 @@ function RoleStatusPanel({
                         ? 'border-emerald-500 bg-emerald-500 text-white'
                         : isAttentionStep
                           ? 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20'
-                          : 'border-[#F1E5DA] bg-bg-surface text-zinc-400',
+                          : 'border-brand-border bg-bg-surface text-zinc-400',
                     )}
                   >
                     {showAsRevision && !isTerminalSuccess ? <AlertTriangle size={10} /> : isSuccessStep && !isCurrent ? <CheckCircle2 size={10} /> : i + 1}

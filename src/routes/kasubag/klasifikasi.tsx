@@ -173,7 +173,7 @@ function TreeNode({
             ? 'border-brand-solid bg-brand-solid text-white shadow-md shadow-orange-500/20'
             : isInactive
               ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100'
-              : 'border-[#F1E5DA] bg-bg-surface text-zinc-950 hover:border-orange-200 hover:bg-brand-surface',
+              : 'border-brand-border bg-bg-surface text-zinc-950 hover:border-orange-200 hover:bg-brand-surface',
         )}
         style={{ paddingLeft: `${level * 16 + 10}px` }}
         onClick={() => onSelect(node)}
@@ -299,7 +299,7 @@ function KlasifikasiDetail({
 
   return (
     <div className="space-y-5 p-4 sm:p-6">
-      <div className="flex items-center gap-2.5 border-b border-[#F1E5DA] pb-4 text-left">
+      <div className="flex items-center gap-2.5 border-b border-brand-border pb-4 text-left">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/70 bg-orange-50 text-brand-solid">
           <Info size={16} />
         </div>
@@ -361,7 +361,7 @@ function KlasifikasiDetail({
         </div>
       </div>
 
-      <div className="border-t border-[#F1E5DA] pt-2.5 text-left">
+      <div className="border-t border-brand-border pt-2.5 text-left">
         <p className="text-[10.5px] font-semibold leading-relaxed text-zinc-500">
           Catatan: <span className="font-normal">Jika sebuah berkas Cara Pembayaran sudah ditutup, pilihan tersebut tidak ditampilkan lagi pada form Pengklasifikasian Dokumen dan Penambahan Dokumen.</span>
         </p>
@@ -372,7 +372,7 @@ function KlasifikasiDetail({
         )}
       </div>
 
-      <div className="flex flex-col gap-2.5 border-t border-[#F1E5DA] pt-4">
+      <div className="flex flex-col gap-2.5 border-t border-brand-border pt-4">
         <div className="flex flex-col gap-2 min-[520px]:flex-row">
           <Button
             type="button"
@@ -487,8 +487,8 @@ function AddKlasifikasiModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[#FFFAF6] shadow-2xl" role="dialog" aria-modal="true" aria-label="Tambah klasifikasi">
-        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-bg-surface px-5 py-4">
+      <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-bg-surface shadow-2xl" role="dialog" aria-modal="true" aria-label="Tambah klasifikasi">
+        <div className="flex items-start justify-between border-b border-brand-border bg-bg-surface px-5 py-4">
           <div>
             <p className="font-headline text-lg font-extrabold text-zinc-950">{parentNode ? 'Tambah Anak Klasifikasi' : 'Tambah Klasifikasi Induk'}</p>
             <p className="mt-1 text-xs font-medium text-zinc-600">
@@ -543,7 +543,7 @@ function AddKlasifikasiModal({
             </div>
             {error && <p className="text-xs font-semibold text-error">{error}</p>}
           </div>
-          <div className="flex gap-3 border-t border-[#F1E5DA] bg-bg-surface p-4">
+          <div className="flex gap-3 border-t border-brand-border bg-bg-surface p-4">
             <Button type="button" variant="outline" className="flex-1 border-brand-border bg-bg-surface" onClick={onClose} disabled={loading}>Batalkan</Button>
             <Button type="submit" className="flex-1 gap-1.5 bg-brand-solid text-white hover:bg-brand-solid-hover" disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
@@ -622,8 +622,8 @@ function EditKlasifikasiModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[#FFFAF6] shadow-2xl" role="dialog" aria-modal="true" aria-label="Edit klasifikasi">
-        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-bg-surface px-5 py-4">
+      <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-bg-surface shadow-2xl" role="dialog" aria-modal="true" aria-label="Edit klasifikasi">
+        <div className="flex items-start justify-between border-b border-brand-border bg-bg-surface px-5 py-4">
           <div>
             <p className="font-headline text-lg font-extrabold text-zinc-950">Edit Atribut Klasifikasi</p>
             <p className="mt-1 text-xs font-medium text-zinc-600">Ubah kode, nama, dan deskripsi klasifikasi.</p>
@@ -670,7 +670,7 @@ function EditKlasifikasiModal({
             </div>
             {error && <p className="text-xs font-semibold text-error">{error}</p>}
           </div>
-          <div className="flex gap-3 border-t border-[#F1E5DA] bg-bg-surface p-4">
+          <div className="flex gap-3 border-t border-brand-border bg-bg-surface p-4">
             <Button type="button" variant="outline" className="flex-1 border-brand-border bg-bg-surface" onClick={onClose} disabled={loading}>Batalkan</Button>
             <Button type="submit" className="flex-1 gap-1.5 bg-brand-solid text-white hover:bg-brand-solid-hover" disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
@@ -970,7 +970,7 @@ function KlasifikasiPage() {
   const breadcrumb = getBreadcrumb(selectedNode, items)
 
   return (
-    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+    <PageLayout className="min-h-full bg-bg-surface px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -1018,7 +1018,7 @@ function KlasifikasiPage() {
             <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#F1E5DA] bg-bg-surface py-20 text-center shadow-sm">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-brand-border bg-bg-surface py-20 text-center shadow-sm">
             <div className="flex size-14 items-center justify-center rounded-xl bg-orange-50 text-brand-solid">
               <Network size={24} />
             </div>
@@ -1037,8 +1037,8 @@ function KlasifikasiPage() {
           </div>
         ) : (
           <div className="grid min-h-[500px] grid-cols-1 gap-4 lg:grid-cols-12">
-            <div className="overflow-hidden rounded-xl border border-[#F1E5DA] bg-white shadow-sm lg:col-span-6">
-              <div className="flex items-center justify-between gap-3 border-b border-[#F1E5DA] px-3 py-2.5">
+            <div className="overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm lg:col-span-6">
+              <div className="flex items-center justify-between gap-3 border-b border-brand-border px-3 py-2.5">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <FolderOpen size={14} className="shrink-0 text-brand-solid" />
                   <h3 className="truncate text-[13px] font-bold text-zinc-950">Pohon Struktur Klasifikasi</h3>
@@ -1057,7 +1057,7 @@ function KlasifikasiPage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-[#F1E5DA] bg-white shadow-sm lg:col-span-6">
+            <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm lg:col-span-6">
               <KlasifikasiDetail
                 node={selectedNode}
                 onEdit={openEdit}

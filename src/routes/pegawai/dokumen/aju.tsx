@@ -694,7 +694,7 @@ function AjukanDokumenPage() {
           : 'Pantau pada detail dokumen'
 
     return (
-      <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-6 sm:px-6 lg:px-8">
+      <PageLayout className="min-h-full bg-bg-surface px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex min-h-[calc(100vh-9rem)] items-center justify-center">
           <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
             <div className="flex size-20 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-600">
@@ -733,7 +733,7 @@ function AjukanDokumenPage() {
                   type="button"
                   size="lg"
                   onClick={handleSubmitAnother}
-                  className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto"
+                  className="w-full gap-1.5 bg-brand-solid text-white hover:bg-brand-solid-hover sm:w-auto"
                 >
                   Ajukan Dokumen Lain <ArrowRight size={14} />
                 </Button>
@@ -768,7 +768,7 @@ function AjukanDokumenPage() {
   }
 
   return (
-    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+    <PageLayout className="min-h-full bg-bg-surface px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
         <div className="flex items-center gap-3">
           <Link
@@ -805,7 +805,7 @@ function AjukanDokumenPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
           <PegawaiPanel className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none">
-            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-brand-solid to-brand-gradient-to px-4 py-4 text-white sm:px-5">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
                   {step === 1 ? (
@@ -827,7 +827,7 @@ function AjukanDokumenPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-brand-border bg-bg-surface p-4 sm:p-5">
 
           {step === 1 && (
             <div className="space-y-4">
@@ -974,7 +974,7 @@ function AjukanDokumenPage() {
                   size="lg"
                   onClick={handleNextFromInformation}
                   disabled={!canAdvanceFromInformation}
-                  className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
+                  className="w-full gap-1.5 bg-brand-solid px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
                 >
                   Lanjut ke Kelengkapan <ChevronRight size={14} />
                 </Button>
@@ -1031,7 +1031,7 @@ function AjukanDokumenPage() {
                   size="lg"
                   onClick={handleNextFromDetails}
                   disabled={!canAdvanceFromStep6()}
-                  className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
+                  className="w-full gap-1.5 bg-brand-solid px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
                 >
                   Lanjut <ChevronRight size={14} />
                 </Button>
@@ -1065,7 +1065,7 @@ function AjukanDokumenPage() {
         </PegawaiPanel>
 
           <aside className="min-w-0 space-y-4 xl:sticky xl:top-6">
-            <PegawaiPanel className="hidden border-[#F1E5DA] bg-bg-surface p-5 shadow-none xl:block">
+            <PegawaiPanel className="hidden border-brand-border bg-bg-surface p-5 shadow-none xl:block">
               <p className="text-xs font-semibold text-zinc-600">
                 Progress Pengajuan
               </p>
@@ -1079,7 +1079,7 @@ function AjukanDokumenPage() {
               </div>
               <div className="mt-3 h-1 overflow-hidden rounded-full bg-zinc-100">
                 <div
-                  className="h-full rounded-full bg-[#F97316] transition-[width]"
+                  className="h-full rounded-full bg-brand-solid transition-[width]"
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
@@ -1100,7 +1100,7 @@ function AjukanDokumenPage() {
                     >
                       <span className={`flex size-6 shrink-0 items-center justify-center text-[10px] font-bold ${
                         isActive
-                          ? 'rounded-md bg-[#F97316] text-white'
+                          ? 'rounded-md bg-brand-solid text-white'
                           : isComplete
                             ? 'text-emerald-600'
                             : 'rounded-md bg-zinc-100 text-zinc-400'
@@ -1122,7 +1122,7 @@ function AjukanDokumenPage() {
               </div>
             </PegawaiPanel>
 
-            <PegawaiPanel className="border-[#FDBA8C] bg-[#FFF1E7] p-5 shadow-none">
+            <PegawaiPanel className="border-brand-border-strong bg-bg-surface p-5 shadow-none">
               <div className="flex items-start gap-3">
                 <div className="flex size-7 shrink-0 items-center justify-center text-brand-solid">
                   <Info size={17} />
@@ -1194,7 +1194,7 @@ function AjukanDokumenPage() {
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-xl bg-[#FFF3D6] p-4">
+          <div className="flex items-start gap-3 rounded-xl bg-warning-surface p-4">
             <Info size={17} className="mt-0.5 shrink-0 text-warning-solid" />
             <div>
               <p className="text-xs font-bold text-zinc-950">Konsekuensi pengajuan</p>

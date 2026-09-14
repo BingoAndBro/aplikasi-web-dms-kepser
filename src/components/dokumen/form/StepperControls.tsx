@@ -32,7 +32,7 @@ export function StepperControls({
           size="lg"
           onClick={onSubmit}
           disabled={submitDisabled}
-          className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
+          className="w-full gap-1.5 bg-brand-solid px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
         >
           {submitting ? (
             <>

@@ -85,13 +85,13 @@ export function StepUploadLampiran({
 
   return (
     <div className="space-y-4">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-brand-border bg-[#FFFAF6] px-3 py-2.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5">
         {contextParts.map((part, index) => (
           <div key={`${part}-${index}`} className="flex min-w-0 items-center gap-1.5">
             {index > 0 && <ChevronRight size={12} className="shrink-0 text-stone-300" />}
             <span className={index === 0
-              ? 'max-w-full truncate rounded-md bg-[#EEF7F1] px-2 py-1 text-[10px] font-semibold text-emerald-700'
-              : 'max-w-full truncate rounded-md bg-[#FFF3D6] px-2 py-1 text-[10px] font-semibold text-[#B45309]'
+              ? 'max-w-full truncate rounded-md bg-bg-sunken px-2 py-1 text-[10px] font-semibold text-emerald-700'
+              : 'max-w-full truncate rounded-md bg-warning-surface px-2 py-1 text-[10px] font-semibold text-[#B77900]'
             }>
               {part}
             </span>
@@ -99,8 +99,8 @@ export function StepUploadLampiran({
         ))}
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl border border-[#F6C768] bg-bg-surface p-3.5">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FFF3D6] text-warning-solid">
+      <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-bg-surface p-3.5">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning-surface text-warning-solid">
           {isChairmanLoading || !chairmanBadgeVisible
             ? <Loader2 size={16} className="animate-spin" />
             : isKetuaTim
@@ -115,7 +115,7 @@ export function StepUploadLampiran({
               : `Status kegiatan Anda: ${isKetuaTim ? 'Ketua Tim' : 'Anggota'}`}
             </p>
             {!isChairmanLoading && chairmanBadgeVisible && (
-              <span className="rounded-full border border-[#F6C768] bg-[#FFF8E8] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#B45309]">
+              <span className="rounded-full border border-warning-border bg-warning-surface px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-[#B77900]">
                 {isKetuaTim ? 'Ketua Tim' : 'Anggota'}
               </span>
             )}
@@ -151,7 +151,7 @@ export function StepUploadLampiran({
               onChange={(e) => onKeteranganDetailChange(e.target.value)}
               placeholder="Masukkan keterangan detail dokumen (opsional)..."
               rows={5}
-              className="min-h-32 w-full resize-none rounded-2xl border border-brand-border bg-[#FFFAF6] px-4 py-3.5 text-sm leading-relaxed text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-[#F97316] focus:ring-2 focus:ring-[#FFEDD5]"
+              className="min-h-32 w-full resize-none rounded-2xl border border-brand-border bg-bg-surface px-4 py-3.5 text-sm leading-relaxed text-stone-950 outline-none transition placeholder:text-stone-400 focus:border-brand-solid focus:ring-2 focus:ring-brand-surface-strong"
             />
             <p className="text-[10px] leading-relaxed text-stone-500">
               Jelaskan konteks singkat dokumen Non-Material (opsional).
@@ -159,7 +159,7 @@ export function StepUploadLampiran({
           </>
         ) : (
           <>
-            <div className="flex min-h-10 items-center rounded-xl border border-brand-border bg-[#FFFAF6] px-3.5 focus-within:border-[#F97316] focus-within:ring-2 focus-within:ring-[#FFEDD5]">
+            <div className="flex min-h-10 items-center rounded-xl border border-brand-border bg-bg-surface px-3.5 focus-within:border-brand-solid focus-within:ring-2 focus-within:ring-brand-surface-strong">
               <span className="mr-2 text-xs font-medium text-stone-400">Rp</span>
               <input
                 type="text"

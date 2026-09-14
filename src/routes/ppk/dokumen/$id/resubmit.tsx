@@ -436,7 +436,7 @@ function PpkResubmitPage() {
 
           <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Link to="/ppk/revisi" replace>
-              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto">
+              <Button size="lg" className="w-full bg-brand-solid text-white hover:bg-brand-solid-hover sm:w-auto">
                 Revisi Dokumen Lain
               </Button>
             </Link>
@@ -474,7 +474,7 @@ function PpkResubmitPage() {
   ]
 
   return (
-    <PageLayout className="min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
+    <PageLayout className="min-h-full bg-bg-surface px-4 py-4 sm:px-6 lg:px-7 lg:py-5">
       <div className="mx-auto max-w-[92rem] space-y-4">
         <div className="flex items-center gap-3">
           <Link
@@ -499,7 +499,7 @@ function PpkResubmitPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 px-1 py-1 sm:px-2">
-            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-[#F7F2EC] p-1">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-bg-surface p-1">
               {REVISION_TABS.map(tab => {
                 const selected = activeTab === tab.key
 
@@ -512,7 +512,7 @@ function PpkResubmitPage() {
                       'flex min-h-8 min-w-32 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
                         ? 'bg-bg-surface text-brand-solid shadow-sm'
-                        : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
+                        : 'text-zinc-500 hover:bg-bg-surface hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
                   >
@@ -526,7 +526,7 @@ function PpkResubmitPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
           <WorkflowPanel className="min-w-0 overflow-visible border-0 bg-transparent p-0 shadow-none">
-            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C] px-4 py-4 text-white sm:px-5">
+            <div className="rounded-t-[1.5rem] bg-gradient-to-r from-brand-solid to-brand-gradient-to px-4 py-4 text-white sm:px-5">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 text-white">
                   {activeTab === 'summary' ? (
@@ -552,7 +552,7 @@ function PpkResubmitPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-brand-border bg-bg-surface p-4 sm:p-5">
               <section className={cn(activeTab === 'summary' ? 'block' : 'hidden', 'space-y-3')}>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500">Alur Dokumen</p>
@@ -581,7 +581,7 @@ function PpkResubmitPage() {
                             {step.label}
                           </span>
                           {i < WORKFLOW_STEPS.length - 1 && (
-                            <ChevronRight size={12} className="text-[#D8C8BA]" />
+                            <ChevronRight size={12} className="text-brand-border-strong" />
                           )}
                         </div>
                       )
@@ -668,7 +668,7 @@ function PpkResubmitPage() {
               </div>
             </WorkflowPanel>
 
-            <WorkflowPanel className="border-[#FDBA8C] bg-[#FFF1E7] p-3 shadow-none">
+            <WorkflowPanel className="border-brand-border-strong bg-bg-surface p-3 shadow-none">
               <div className="flex items-start gap-2">
                 <span className="flex size-6 shrink-0 items-center justify-center text-brand-solid">
                   <Info size={13} />
@@ -695,7 +695,7 @@ function PpkResubmitPage() {
                 'flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.08em]',
                 attachmentDirty
                   ? 'border-amber-200 bg-amber-50 text-amber-700'
-                  : 'border-[#E8E2DC] bg-[#F7F2EC] text-zinc-500',
+                  : 'border-brand-border bg-bg-surface text-zinc-500',
               )}>
                 {attachmentDirty ? (
                   <>
@@ -728,7 +728,7 @@ function PpkResubmitPage() {
                   variant="outline"
                   onClick={() => setReturnConfirmationOpen(true)}
                   disabled={kembalikanLoading}
-                  className="h-10 w-full gap-2 rounded-xl border-orange-300 bg-transparent text-sm font-bold text-brand-solid-hover hover:bg-orange-50 hover:text-[#C2410C]"
+                  className="h-10 w-full gap-2 rounded-xl border-orange-300 bg-transparent text-sm font-bold text-brand-solid-hover hover:bg-orange-50 hover:text-brand-solid-active"
                 >
                   {kembalikanLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowLeft size={15} />}
                   Kembalikan ke Pegawai
@@ -741,7 +741,7 @@ function PpkResubmitPage() {
                     setActiveTab('edit')
                     setCancelRequestSignal(current => current + 1)
                   }}
-                  className="h-10 w-full gap-2 rounded-xl border-brand-border bg-bg-surface text-sm font-bold text-zinc-950 hover:bg-[#FFFAF6]"
+                  className="h-10 w-full gap-2 rounded-xl border-brand-border bg-bg-surface text-sm font-bold text-zinc-950 hover:bg-bg-surface"
                 >
                   <ChevronLeft size={15} />
                   Kembali
@@ -798,7 +798,7 @@ function PpkResubmitPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-xl bg-[#FFF3D6] p-4">
+          <div className="flex items-start gap-3 rounded-xl bg-warning-surface p-4">
             {submitInFlightRef.current ? (
               <Loader2 size={17} className="mt-0.5 shrink-0 animate-spin text-warning-solid" />
             ) : (

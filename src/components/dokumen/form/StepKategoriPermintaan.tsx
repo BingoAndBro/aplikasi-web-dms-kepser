@@ -43,16 +43,16 @@ export function StepKategoriPermintaan({
           <span className="text-[10px] font-medium text-zinc-500">{jenisPermintaanNama}</span>
         </div>
         {loadingKategori ? (
-          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-border bg-[#FFFAF6] px-3 text-xs text-zinc-500">
+          <div className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-border bg-bg-surface px-3 text-xs text-zinc-500">
             <Loader2 size={14} className="animate-spin" />Memuat...
           </div>
         ) : kategoriList.length === 0 ? (
-          <p className="rounded-xl border border-brand-border bg-[#FFFAF6] p-3 text-xs text-zinc-500">
+          <p className="rounded-xl border border-brand-border bg-bg-surface p-3 text-xs text-zinc-500">
             Tidak ada kategori untuk jenis yang dipilih.
           </p>
         ) : (
           <Select value={kategoriPermintaanId || null} onValueChange={v => onKategoriChange(v ?? '')}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm hover:border-brand-border-strong">
               <SelectValue placeholder="-- Pilih Kategori Permintaan --">
                 {v => v ? (kategoriList.find(k => k.id === v)?.nama ?? '') : '-- Pilih Kategori Permintaan --'}
               </SelectValue>

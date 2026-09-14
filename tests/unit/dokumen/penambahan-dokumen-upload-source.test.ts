@@ -20,7 +20,7 @@ describe('Phase 15L.7D.1 Penambahan Dokumen upload source guard', () => {
   it('uses warm inline validation presentation for normal file validation failures', () => {
     expect(source).toContain('function ManualAttachmentValidationInline')
     expect(source).toContain('getDocumentUploadValidationUiMessage')
-    expect(source).toContain('border border-amber-200 bg-[#FFF8EA]')
+    expect(source).toContain('border border-amber-200 bg-warning-surface')
     expect(source).toContain('validationUi.actionLabel')
     expect(source).toContain('htmlFor={inputId}')
     expect(source).not.toContain('text-[10px] text-error">{errors[attachmentFileErrorKey(row.id)]}</p>')

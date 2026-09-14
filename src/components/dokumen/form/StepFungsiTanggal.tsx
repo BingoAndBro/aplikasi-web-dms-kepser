@@ -54,11 +54,11 @@ export function StepFungsiTanggal({
             Pilih Fungsi <span className="text-warning-solid">*</span>
           </label>
           {loadingFungsi ? (
-            <div className="flex min-h-16 items-center justify-center gap-2 rounded-xl border border-brand-border bg-[#FFFAF6] text-xs text-zinc-500">
+            <div className="flex min-h-16 items-center justify-center gap-2 rounded-xl border border-brand-border bg-bg-surface text-xs text-zinc-500">
               <Loader2 size={14} className="animate-spin" />Memuat fungsi...
             </div>
           ) : fungsiList.length === 0 ? (
-            <p className="rounded-xl border border-brand-border bg-[#FFFAF6] p-3 text-xs text-zinc-500">
+            <p className="rounded-xl border border-brand-border bg-bg-surface p-3 text-xs text-zinc-500">
               Tidak ada fungsi tersedia.
             </p>
           ) : (
@@ -74,8 +74,8 @@ export function StepFungsiTanggal({
                     onClick={() => onFungsiChange(fungsi.id)}
                     className={`relative min-h-16 rounded-xl border p-3 pr-8 text-left transition ${
                       selected
-                        ? 'border-[#F97316] bg-[#FFF7ED] ring-1 ring-[#FDBA74]'
-                        : 'border-brand-border bg-[#FFFAF6] hover:border-brand-border-strong hover:bg-[#FFF4EA]'
+                        ? 'border-brand-solid bg-bg-surface ring-1 ring-brand-border-strong'
+                        : 'border-brand-border bg-bg-surface hover:border-brand-border-strong hover:bg-bg-surface'
                     }`}
                   >
                     <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold ${
@@ -89,7 +89,7 @@ export function StepFungsiTanggal({
                         : 'Fungsi tersedia'}
                     </span>
                     {selected && (
-                      <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-[#F97316] text-white">
+                      <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-brand-solid text-white">
                         <Check size={12} strokeWidth={3} />
                       </span>
                     )}

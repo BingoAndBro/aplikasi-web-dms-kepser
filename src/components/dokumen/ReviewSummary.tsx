@@ -40,9 +40,9 @@ type SummaryGroupProps = {
 
 function SummaryGroup({ icon, title, subtitle, children }: SummaryGroupProps) {
   return (
-    <section className="min-w-0 rounded-xl border border-brand-border bg-[#FFFAF6] p-3">
+    <section className="min-w-0 rounded-xl border border-brand-border bg-bg-surface p-3">
       <div className="mb-3 flex items-center gap-2.5">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#FFF3D6] text-warning-solid">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-warning-surface text-warning-solid">
           {icon}
         </div>
         <div className="min-w-0">
@@ -90,12 +90,12 @@ export function ReviewSummary({
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="text-[10px] font-semibold text-[#B45309]">Ringkasan Pengajuan</p>
+          <p className="text-[10px] font-semibold text-[#B77900]">Ringkasan Pengajuan</p>
           <h3 className="mt-0.5 font-headline text-base font-bold tracking-tight text-stone-950">
             Periksa data sebelum konfirmasi
           </h3>
         </div>
-        <span className="rounded-md bg-[#FFF3D6] px-2.5 py-1 text-[9px] font-semibold text-[#92400E]">
+        <span className="rounded-md bg-warning-surface px-2.5 py-1 text-[9px] font-semibold text-warning-text">
           {isNonMaterial ? 'Non-Material' : 'Material'}
         </span>
       </div>
@@ -150,7 +150,7 @@ export function ReviewSummary({
       <section className="rounded-xl border border-brand-border bg-bg-surface p-3">
         <div className="mb-2.5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-[#FFF3D6] text-warning-solid">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-warning-surface text-warning-solid">
               <FileCheck2 size={15} />
             </div>
             <div>
@@ -158,7 +158,7 @@ export function ReviewSummary({
               <p className="text-[9px] text-stone-500">Dokumen yang akan ikut diajukan</p>
             </div>
           </div>
-          <span className="rounded-md bg-[#FFF3D6] px-2 py-1 text-[9px] font-semibold text-[#92400E]">
+          <span className="rounded-md bg-warning-surface px-2 py-1 text-[9px] font-semibold text-warning-text">
             {lampiranUrls.length} dokumen
           </span>
         </div>
@@ -172,7 +172,7 @@ export function ReviewSummary({
             {lampiranUrls.map(lampiran => (
               <li
                 key={lampiran.kelengkapan_id}
-                className="flex min-w-0 items-center gap-2.5 rounded-lg border border-brand-border bg-[#FFFAF6] px-3 py-2.5"
+                className="flex min-w-0 items-center gap-2.5 rounded-lg border border-brand-border bg-bg-surface px-3 py-2.5"
               >
                 <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
                 <div className="min-w-0 flex-1">
@@ -187,10 +187,10 @@ export function ReviewSummary({
         )}
       </section>
 
-      <div className="flex items-start gap-3 rounded-xl border border-[#F6C768] bg-[#FFF8E8] p-3">
+      <div className="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-surface p-3">
         <Info size={14} className="mt-0.5 shrink-0 text-warning-solid" />
         <div>
-          <p className="text-[10px] font-semibold text-[#92400E]">
+          <p className="text-[10px] font-semibold text-warning-text">
             {isNonMaterial
               ? 'Dokumen akan disimpan sebagai Tersimpan tanpa proses persetujuan.'
               : 'Dokumen akan dikirim ke PPK untuk mengikuti alur validasi dan persetujuan.'}

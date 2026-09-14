@@ -406,7 +406,7 @@ function KelengkapanPage() {
   const anggotaItems = filteredByRole(false)
 
   return (
-    <PageLayout className="bg-[#FFF9F1] px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+    <PageLayout className="bg-brand-surface px-4 pb-10 pt-8 sm:px-6 lg:px-8">
       <div className="space-y-5">
         <AdminPageHeader
           className={adminContentWideClassName + ' pt-1'}
@@ -415,11 +415,11 @@ function KelengkapanPage() {
           description="Atur dokumen wajib/opsional berdasarkan fungsi, kegiatan, dan rantai permintaan untuk halaman Ajukan Dokumen."
         />
 
-        <section className={adminContentWideClassName + ' overflow-visible rounded-[18px] border border-[#E8C990] bg-white shadow-[0_3px_14px_rgba(120,70,20,0.05)]'}>
-          <div className="flex items-start justify-between gap-4 border-b border-[#E8C990] px-4 py-2.5">
+        <section className={adminContentWideClassName + ' overflow-visible rounded-[18px] border border-brand-border-strong bg-white shadow-[0_3px_14px_rgba(120,70,20,0.05)]'}>
+          <div className="flex items-start justify-between gap-4 border-b border-brand-border-strong px-4 py-2.5">
             <div>
-              <h2 className="text-sm font-extrabold text-[#2A1608]">Pilih Konteks Kelengkapan</h2>
-              <p className="mt-0.5 text-xs font-medium text-[#07346A]">
+              <h2 className="text-sm font-extrabold text-text-strong">Pilih Konteks Kelengkapan</h2>
+              <p className="mt-0.5 text-xs font-medium text-info-text">
                 Tentukan fungsi, kegiatan, dan rantai permintaan sampai pilihan terakhir.
               </p>
             </div>
@@ -427,7 +427,7 @@ function KelengkapanPage() {
               type="button"
               variant="outline"
               onClick={resetFilters}
-              className="h-8 rounded-md border-[#DCE6F0] bg-white px-4 text-xs font-bold text-[#173A68] shadow-[0_2px_6px_rgba(15,23,42,0.06)] hover:border-brand-solid hover:bg-[#FFF6EC] hover:text-brand-solid"
+              className="h-8 rounded-md border-info-border bg-white px-4 text-xs font-bold text-info-text shadow-[0_2px_6px_rgba(15,23,42,0.06)] hover:border-brand-solid hover:bg-brand-surface hover:text-brand-solid"
             >
               Reset
             </Button>
@@ -531,10 +531,10 @@ function KelengkapanPage() {
             <LoadingState variant="list" label="Memuat konfigurasi kelengkapan" />
           ) : (
             <div className={adminContentWideClassName + ' space-y-5'}>
-              <div className="flex flex-col gap-4 rounded-[18px] border border-[#EFE3D2] bg-white px-5 py-5 shadow-[0_2px_10px_rgba(80,54,20,0.04)] lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-4 rounded-[18px] border border-brand-border bg-white px-5 py-5 shadow-[0_2px_10px_rgba(80,54,20,0.04)] lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-sm font-extrabold text-text-strong">
-                    <Check size={15} className="text-[#00A88F]" />
+                    <Check size={15} className="text-team-member-icon-text" />
                     Konfigurasi Aktif
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm font-extrabold text-black">
@@ -545,7 +545,7 @@ function KelengkapanPage() {
                       </span>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs font-medium text-[#07346A]">
+                  <p className="mt-2 text-xs font-medium text-info-text">
                     Kelengkapan ini akan digunakan pada Ajukan Dokumen sesuai peran pengguna pada kegiatan.
                   </p>
                 </div>
@@ -610,12 +610,12 @@ function KelengkapanPage() {
           </DialogHeader>
           <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
-            <div className="rounded-[14px] border border-[#DDE7F2] bg-[#F8FBFF] px-4 py-4 shadow-[0_2px_8px_rgba(15,23,42,0.10)]">
+            <div className="rounded-[14px] border border-info-border bg-info-surface px-4 py-4 shadow-[0_2px_8px_rgba(15,23,42,0.10)]">
               <div className="grid gap-2 text-sm font-bold text-text-strong sm:grid-cols-[64px_1fr]">
-                <span className="text-[#35527A]">Konteks:</span>
+                <span className="text-text-muted">Konteks:</span>
                 <span>{activeChainLabel}</span>
-                <span className="text-[#35527A]">Untuk:</span>
-                <span className="text-[#FF4F00]">{formIsKetuaTim ? 'Ketua Tim' : 'Anggota'}</span>
+                <span className="text-text-muted">Untuk:</span>
+                <span className="text-brand-text">{formIsKetuaTim ? 'Ketua Tim' : 'Anggota'}</span>
               </div>
             </div>
             <div className="space-y-1.5">
@@ -702,8 +702,8 @@ function KelengkapanSelectField({ label, required, children }: {
 }) {
   return (
     <div className="block min-w-0">
-      <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#173A68]">
-        {label} {required && <span className="text-[#FF1F00]">*</span>}
+      <span className="mb-1 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-info-text">
+        {label} {required && <span className="text-danger-text">*</span>}
       </span>
       {children}
     </div>
@@ -712,8 +712,8 @@ function KelengkapanSelectField({ label, required, children }: {
 
 function KelengkapanGroupBadge({ number, label }: { number: number; label: string }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-md border border-[#FFD8B8] bg-[#FFF7EF] px-2 py-1 text-[11px] font-extrabold text-[#FF4F00]">
-      <span className="flex size-5 items-center justify-center rounded-md bg-[#FF6500] text-[11px] font-black text-white">
+    <div className="inline-flex items-center gap-2 rounded-md border border-brand-border-strong bg-brand-surface px-2 py-1 text-[11px] font-extrabold text-brand-text">
+      <span className="flex size-5 items-center justify-center rounded-md bg-brand-solid text-[11px] font-black text-white">
         {number}
       </span>
       {label}
@@ -723,7 +723,7 @@ function KelengkapanGroupBadge({ number, label }: { number: number; label: strin
 
 function KelengkapanMetric({ label }: { label: string }) {
   return (
-    <span className="rounded-md border border-[#E8EEF5] bg-[#F8FBFF] px-3 py-1.5 text-[11px] font-bold text-[#173A68]">
+    <span className="rounded-md border border-info-border bg-info-surface px-3 py-1.5 text-[11px] font-bold text-info-text">
       {label}
     </span>
   )
@@ -736,11 +736,11 @@ function RequirementCard({ selected, title, description, onClick }: {
   onClick: () => void
 }) {
   const selectedClassName = title === 'Opsional'
-    ? 'border-brand-solid bg-[#FFF7EF] text-[#FF4F00] shadow-[0_8px_20px_rgba(255,90,0,0.10)]'
-    : 'border-[#FF4F78] bg-[#FFF0F4] text-[#E80046] shadow-[0_8px_20px_rgba(255,79,120,0.10)]'
-  const selectedDescriptionClassName = title === 'Opsional' ? 'text-[#FF4F00]' : 'text-[#E80046]'
-  const selectedDotClassName = title === 'Opsional' ? 'border-brand-solid' : 'border-[#FF2F6D]'
-  const selectedInnerDotClassName = title === 'Opsional' ? 'bg-brand-solid' : 'bg-[#FF2F6D]'
+    ? 'border-brand-solid bg-brand-surface text-brand-text shadow-[0_8px_20px_rgba(255,90,0,0.10)]'
+    : 'border-danger-border bg-danger-surface text-danger-text shadow-[0_8px_20px_rgba(255,79,120,0.10)]'
+  const selectedDescriptionClassName = title === 'Opsional' ? 'text-brand-text' : 'text-danger-text'
+  const selectedDotClassName = title === 'Opsional' ? 'border-brand-solid' : 'border-danger-text'
+  const selectedInnerDotClassName = title === 'Opsional' ? 'bg-brand-solid' : 'bg-danger-text'
 
   return (
     <button
@@ -749,16 +749,16 @@ function RequirementCard({ selected, title, description, onClick }: {
       className={`flex min-h-[74px] items-center justify-between rounded-[18px] border px-4 py-3 text-left transition ${
         selected
           ? selectedClassName
-          : 'border-[#DCE6F0] bg-white text-text-strong hover:border-brand-solid'
+          : 'border-info-border bg-white text-text-strong hover:border-brand-solid'
       }`}
     >
       <span>
         <span className="block text-base font-extrabold">{title}</span>
-        <span className={`mt-0.5 block text-xs font-semibold ${selected ? selectedDescriptionClassName : 'text-[#35527A]'}`}>
+        <span className={`mt-0.5 block text-xs font-semibold ${selected ? selectedDescriptionClassName : 'text-text-muted'}`}>
           {description}
         </span>
       </span>
-      <span className={`flex size-5 items-center justify-center rounded-full border-2 ${selected ? selectedDotClassName : 'border-[#B9C9DC]'}`}>
+      <span className={`flex size-5 items-center justify-center rounded-full border-2 ${selected ? selectedDotClassName : 'border-info-border'}`}>
         {selected && <span className={`size-2.5 rounded-full ${selectedInnerDotClassName}`} />}
       </span>
     </button>
@@ -776,17 +776,17 @@ function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete
 }) {
   const isKetua = accent === 'orange'
   const iconClassName = isKetua
-    ? 'border-[#FFE0C6] bg-brand-surface text-brand-solid'
-    : 'border-[#C8F4ED] bg-[#F2FFFC] text-[#00A88F]'
+    ? 'border-brand-border-strong bg-brand-surface text-brand-solid'
+    : 'border-team-member-icon-border bg-team-member-icon-surface text-team-member-icon-text'
   const countClassName = isKetua
-    ? 'bg-[#FFF4EC] text-[#FF3D00]'
-    : 'bg-[#EFFFFB] text-[#008C78]'
-  const borderClassName = isKetua ? 'border-[#EFDCC3]' : 'border-[#CFE6DF]'
-  const topClassName = isKetua ? 'bg-[#FF7A00]' : 'bg-[#00B9A6]'
+    ? 'bg-brand-surface text-brand-text'
+    : 'bg-team-member-count-surface text-team-member-count-text'
+  const borderClassName = isKetua ? 'border-brand-border' : 'border-team-member-border'
+  const topClassName = isKetua ? 'bg-brand-solid' : 'bg-team-member-solid'
   const ItemIcon = isKetua ? FileText : ClipboardList
 
   return (
-    <div className={`overflow-hidden rounded-[20px] border bg-[#FFFEFB] shadow-[0_2px_10px_rgba(80,54,20,0.04)] ${borderClassName}`}>
+    <div className={`overflow-hidden rounded-[20px] border bg-bg-surface shadow-[0_2px_10px_rgba(80,54,20,0.04)] ${borderClassName}`}>
       <div className={`h-0.5 ${topClassName}`} />
       <div className="flex items-start justify-between gap-4 px-5 py-5">
         <div className="flex min-w-0 gap-3">
@@ -794,8 +794,8 @@ function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete
             {isKetua ? <ShieldCheck size={17} /> : <UsersRound size={17} />}
           </span>
           <div className="min-w-0">
-            <h3 className="text-lg font-extrabold text-[#2A1608]">{title}</h3>
-            <p className="mt-0.5 text-xs font-medium text-[#07346A]">{description}</p>
+            <h3 className="text-lg font-extrabold text-text-strong">{title}</h3>
+            <p className="mt-0.5 text-xs font-medium text-info-text">{description}</p>
           </div>
         </div>
         <span className={`rounded-md px-3 py-1.5 text-xs font-extrabold ${countClassName}`}>{items.length}</span>
@@ -805,25 +805,25 @@ function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete
         <Button
           onClick={onAdd}
           variant="outline"
-          className="h-10 w-full justify-center gap-2 rounded-[13px] border border-dashed border-[#E9C894] bg-[#FFFEFB] text-sm font-semibold text-[#8A4B00] hover:border-brand-solid hover:bg-[#FFF6EC] hover:text-brand-solid"
+          className="h-10 w-full justify-center gap-2 rounded-[13px] border border-dashed border-brand-border-strong bg-bg-surface text-sm font-semibold text-brand-text-muted hover:border-brand-solid hover:bg-brand-surface hover:text-brand-solid"
         >
           <Plus size={15} /> Tambah Dokumen {isKetua ? 'Ketua Tim' : 'Anggota'}
         </Button>
       </div>
 
       {items.length === 0 ? (
-        <div className="border-t border-[#EFEAE2] px-6 py-9 text-center">
-          <p className="text-xs font-medium text-[#6E7B8C]">Belum ada kelengkapan.</p>
+        <div className="border-t border-brand-border px-6 py-9 text-center">
+          <p className="text-xs font-medium text-text-muted">Belum ada kelengkapan.</p>
         </div>
       ) : (
-        <div className="divide-y divide-[#EFEAE2] border-t border-[#EFEAE2]">
+        <div className="divide-y divide-brand-border border-t border-brand-border">
           {items.map(item => (
             <div key={item.id} className="group flex items-center gap-4 px-5 py-5 transition-colors hover:bg-brand-surface">
-              <ItemIcon size={16} className={`shrink-0 ${isKetua ? 'text-brand-solid' : 'text-[#00A88F]'}`} />
+              <ItemIcon size={16} className={`shrink-0 ${isKetua ? 'text-brand-solid' : 'text-team-member-icon-text'}`} />
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-extrabold text-black">{item.nama_dokumen}</span>
               </div>
-              <span className={`shrink-0 rounded-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] ${item.required ? 'bg-[#FFEFF3] text-[#FF0050]' : 'border border-[#DCE6F0] bg-[#F8FBFF] text-[#5D7190]'}`}>
+              <span className={`shrink-0 rounded-md px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] ${item.required ? 'bg-danger-surface text-danger-text' : 'border border-info-border bg-info-surface text-text-muted'}`}>
                 {item.required ? 'Wajib' : 'Opsional'}
               </span>
               <div className="flex gap-1 shrink-0 transition-opacity">

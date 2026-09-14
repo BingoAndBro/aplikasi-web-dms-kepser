@@ -22,9 +22,9 @@ import { formatDate } from '#/lib/utils/format'
 
 const ARCHIVE_FORM_LABEL_CLASS = 'block space-y-1.5 text-[11px] font-bold text-zinc-700'
 const ARCHIVE_FORM_INPUT_CLASS =
-  'w-full rounded-xl border border-brand-border bg-[#FFFAF6] px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
+  'w-full rounded-xl border border-brand-border bg-bg-surface px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
 const ARCHIVE_FORM_SELECT_TRIGGER_CLASS =
-  'min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold text-zinc-950 hover:border-brand-border-strong focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
+  'min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold text-zinc-950 hover:border-brand-border-strong focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
 const ARCHIVE_FORM_SELECT_CONTENT_CLASS =
   'rounded-xl border border-brand-border bg-bg-surface text-zinc-950 shadow-xl shadow-zinc-950/10'
 const ARCHIVE_FORM_SELECT_ITEM_CLASS =
@@ -108,7 +108,7 @@ export function CloseBerkasDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-brand-border bg-[#FFFAF6] p-0 shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
+      <DialogContent className="border-brand-border bg-bg-surface p-0 shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
         <DialogHeader>
           <div className="px-5 pt-5 sm:px-7 sm:pt-7">
           <DialogTitle className="font-headline text-xl font-extrabold tracking-tight text-zinc-950 sm:text-2xl">
@@ -126,15 +126,15 @@ export function CloseBerkasDialog({
           </div>
         </DialogHeader>
 
-        <div className="space-y-5 border-t border-[#F1E5DA] px-5 py-5 sm:px-7">
-          <div className="rounded-2xl border border-[#F1E5DA] bg-bg-surface p-4 shadow-sm shadow-zinc-950/5">
+        <div className="space-y-5 border-t border-brand-border px-5 py-5 sm:px-7">
+          <div className="rounded-2xl border border-brand-border bg-bg-surface p-4 shadow-sm shadow-zinc-950/5">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
               Cara Pembayaran
             </p>
             <p className="mt-1 text-base font-extrabold tracking-tight text-zinc-950">
               {summary.klasifikasiLabel}
             </p>
-            <div className="mt-4 grid gap-4 border-t border-[#F1E5DA] pt-4 sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 border-t border-brand-border pt-4 sm:grid-cols-2">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">Jumlah Dokumen</p>
                 <p className="mt-1 flex items-center gap-2 text-sm font-bold text-zinc-950">
@@ -205,7 +205,7 @@ export function CloseBerkasDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-3 border-[#F1E5DA] bg-bg-surface px-5 py-4 sm:px-7">
+        <DialogFooter className="gap-3 border-brand-border bg-bg-surface px-5 py-4 sm:px-7">
           <Button
             type="button"
             variant="outline"
@@ -240,7 +240,7 @@ export function CloseBerkasDialog({
       pending={pending}
       onConfirm={onSubmit}
     >
-      <div className="rounded-2xl border border-[#F1E5DA] bg-bg-surface px-4 py-3 text-sm font-bold text-zinc-950">
+      <div className="rounded-2xl border border-brand-border bg-bg-surface px-4 py-3 text-sm font-bold text-zinc-950">
         <div className="flex items-center justify-between gap-3">
           <span>Status berkas:</span>
           <span className="rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-extrabold text-amber-700">Ditutup</span>

@@ -46,7 +46,7 @@
   --brand-border-strong: #FFBC80;      /* measured, 28x */
   --brand-ring: rgba(255, 95, 31, 0.45);
   --brand-gradient-from: #FF5F1F;
-  --brand-gradient-to: #FF7948;        /* matches existing .sunset-gradient stop */
+  --brand-gradient-to: #FB923C;        /* re-measured 2026-09-14: header gradient (9x live usage) beat the unused .sunset-gradient's old #FF7948 stop */
   --brand-glow: rgba(255, 95, 31, 0.35);
   --brand-glow-strong: rgba(255, 95, 31, 0.7); /* preserves original @keyframes breath peak */
 
@@ -98,7 +98,26 @@
   --money-text: #006B35;
   --money-value: #02170B;
   --money-icon: #16A35D;
+  --money-icon-border: #62C995;        /* deliberately distinct from --money-border for icon-chip contrast, see Fase 5 */
   --money-glow: rgba(16, 185, 129, 0.18);
+
+  /* --- Group 5: TEAM MEMBER ACCENT (Kelengkapan "Ketua Tim" vs "Anggota Tim"
+     distinction — fixed across se/sp/st like Group 3/4, this is an identity
+     accent not a brand color) --- */
+  --team-member-solid: #00B9A6;
+  --team-member-border: #CFE6DF;
+  --team-member-icon-border: #C8F4ED;
+  --team-member-icon-surface: #F2FFFC;
+  --team-member-icon-text: #00A88F;
+  --team-member-count-surface: #EFFFFB;
+  --team-member-count-text: #008C78;
+
+  /* --- Group 6: HIGH-STAKES INK ACTION (e.g. "Reset Password" — deliberately
+     near-black, never brand orange or any status color, so it reads as a
+     distinct, serious action. Fixed across se/sp/st like Group 3/4/5.) --- */
+  --ink-solid: #17233A;
+  --ink-solid-hover: #0F172A;
+  --ink-border: #030817;
 }
 
 [data-theme="sp"] {
@@ -151,6 +170,7 @@
   --money-border: #C9D6CE;
   --money-text: #3F4B44;
   --money-icon: #5E6E64;
+  --money-icon-border: #C9D6CE;
   /* --money-value stays #02170B — unchanged across all themes */
 }
 
@@ -217,6 +237,19 @@
   --color-money-text: var(--money-text);
   --color-money-value: var(--money-value);
   --color-money-icon: var(--money-icon);
+  --color-money-icon-border: var(--money-icon-border);
+
+  --color-team-member-solid: var(--team-member-solid);
+  --color-team-member-border: var(--team-member-border);
+  --color-team-member-icon-border: var(--team-member-icon-border);
+  --color-team-member-icon-surface: var(--team-member-icon-surface);
+  --color-team-member-icon-text: var(--team-member-icon-text);
+  --color-team-member-count-surface: var(--team-member-count-surface);
+  --color-team-member-count-text: var(--team-member-count-text);
+
+  --color-ink-solid: var(--ink-solid);
+  --color-ink-solid-hover: var(--ink-solid-hover);
+  --color-ink-border: var(--ink-border);
 
   /* Legacy Material-token remap (rencana.md §6.1 point 4) — the ~217 existing
      bg-primary / bg-background / bg-surface / etc. call sites pick up theming

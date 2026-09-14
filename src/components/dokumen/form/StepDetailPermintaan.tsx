@@ -41,7 +41,7 @@ export function StepDetailPermintaan({
           <span className="text-[10px] font-medium text-zinc-500">{kategoriPermintaanNama}</span>
         </div>
         <Select value={detailPermintaanId || null} onValueChange={v => onDetailChange(v ?? '')}>
-          <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm hover:border-brand-border-strong">
+          <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm hover:border-brand-border-strong">
             <SelectValue placeholder="-- Pilih Detail Permintaan --">
               {v => v ? (detailList.find(d => d.id === v)?.nama ?? '') : '-- Pilih Detail Permintaan --'}
             </SelectValue>
