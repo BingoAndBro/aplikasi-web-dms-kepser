@@ -195,7 +195,7 @@ function ArsiparisInboxPage() {
                   {displayedItems.map((dokumen, index) => (
                     <tr
                       key={dokumen.id}
-                      className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                      className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                       onClick={() => openDocument(dokumen)}
                       tabIndex={0}
                       onKeyDown={(event) => {
@@ -208,7 +208,7 @@ function ArsiparisInboxPage() {
                     >
                       <td className="px-6 py-5 text-center text-sm font-normal text-zinc-950">{index + 1}</td>
                       <td className="max-w-[460px] px-6 py-5">
-                        <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                        <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">
                           {dokumen.judul}
                         </p>
                         <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">

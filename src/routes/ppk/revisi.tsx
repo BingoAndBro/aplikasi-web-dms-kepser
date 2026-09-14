@@ -123,7 +123,7 @@ function PpkRevisiPage() {
                   {paginated.map((dok, i) => (
                     <TableRow
                       key={dok.id}
-                      className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                      className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                       onClick={() => openRevision(dok)}
                       tabIndex={0}
                       onKeyDown={(event) => {
@@ -139,7 +139,7 @@ function PpkRevisiPage() {
                       </TableCell>
                       <TableCell className="max-w-[420px] px-6 py-5">
                         <div>
-                          <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</p>
+                          <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</p>
                           <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">{dok.fungsi_nama ?? '-'}</p>
                         </div>
                       </TableCell>

@@ -85,7 +85,7 @@ function PegawaiLayout() {
       <DashboardShell role="PEGAWAI" showHero={false}>
         <RoleDashboardPage>
           <RoleDashboardHeader
-            title={<>Selamat Datang di <span className="text-[#FF4D00]">Beranda</span> Anda.</>}
+            title={<>Selamat Datang di <span className="text-brand-text">Beranda</span> Anda.</>}
             description="Pantau pengajuan, revisi, dan laporan dokumen Anda."
             actionHref={ROUTES.PEGAWAI.AJU_DOKUMEN}
             actionLabel="Ajukan Dokumen"

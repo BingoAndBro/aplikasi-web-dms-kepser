@@ -413,13 +413,13 @@ function PenambahanArsipPage() {
             </p>
 
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-zinc-600">
-              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-bg-surface px-3 py-1.5 shadow-sm ring-1 ring-brand-border">
                 Manual
               </span>
-              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-bg-surface px-3 py-1.5 shadow-sm ring-1 ring-brand-border">
                 {submittedManualArsip.komponenName || 'Komponen'}
               </span>
-              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-bg-surface px-3 py-1.5 shadow-sm ring-1 ring-brand-border">
                 {submittedManualArsip.attachmentCount} file lampiran
               </span>
             </div>
@@ -441,7 +441,7 @@ function PenambahanArsipPage() {
                 type="button"
                 size="lg"
                 onClick={() => navigate({ to: '/kasubag/berkas' })}
-                className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto"
+                className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto"
               >
                 Lihat Berkas Terbuka <ArrowRight size={14} />
               </Button>
@@ -450,7 +450,7 @@ function PenambahanArsipPage() {
                 variant="outline"
                 size="lg"
                 onClick={() => navigate({ to: '/kasubag' })}
-                className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+                className="w-full border-brand-border bg-white sm:w-auto"
               >
                 Kembali ke Dashboard
               </Button>
@@ -459,7 +459,7 @@ function PenambahanArsipPage() {
                 variant="outline"
                 size="lg"
                 onClick={handleCreateAnother}
-                className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+                className="w-full border-brand-border bg-white sm:w-auto"
               >
                 Tambah Dokumen Lain
               </Button>
@@ -618,7 +618,7 @@ function ManualArsipTable({
         />
       )}
 
-      <div className="overflow-hidden rounded-[1.35rem] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+      <div className="overflow-hidden rounded-[1.35rem] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -647,7 +647,7 @@ function ManualArsipTable({
                     <tr className={ARCHIVE_TABLE_ROW_CLASS}>
                       <td className="px-5 py-4 text-center text-sm font-normal text-zinc-950">{idx + 1}</td>
                       <td className="px-4 py-3">
-                        <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{item.nama}</p>
+                        <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{item.nama}</p>
                         <p className="text-[10px] text-outline mt-0.5">{shortId(item.id)}</p>
                       </td>
                       <td className="px-4 py-3 text-center text-on-surface-variant">{formatDate(item.tanggal)}</td>
@@ -717,7 +717,7 @@ function ManualArsipAttachmentPanel({
 }) {
   if (loading) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 py-3 text-xs text-zinc-600">
+      <div className="flex items-center gap-2 rounded-xl border border-orange-100 bg-bg-surface px-3 py-3 text-xs text-zinc-600">
         <Loader2 size={14} className="animate-spin text-primary" />
         Memuat detail lampiran...
       </div>
@@ -734,7 +734,7 @@ function ManualArsipAttachmentPanel({
 
   if (!detail) {
     return (
-      <div className="rounded-xl border border-orange-100 bg-[#FFFDF9] px-3 py-3 text-xs text-zinc-600">
+      <div className="rounded-xl border border-orange-100 bg-bg-surface px-3 py-3 text-xs text-zinc-600">
         Detail lampiran belum dimuat.
       </div>
     )
@@ -742,7 +742,7 @@ function ManualArsipAttachmentPanel({
 
   if (detail.attachments.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-orange-200 bg-[#FFFDF9] px-3 py-4 text-center text-xs text-zinc-600">
+      <div className="rounded-xl border border-dashed border-orange-200 bg-bg-surface px-3 py-4 text-center text-xs text-zinc-600">
         Tidak ada lampiran pada dokumen manual ini.
       </div>
     )
@@ -795,7 +795,7 @@ function ManualArsipAttachmentRow({
   onPreview: (manualArsipId: string, attachment: ManualArsipAttachmentMetadata) => void
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] px-3 py-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-xl border border-[#F1E5DA] bg-bg-surface px-3 py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <FileText size={15} />
@@ -1511,7 +1511,7 @@ function CreateManualArsipModal({
               </div>
             </div>
 
-            <div className="space-y-3 rounded-b-[1.25rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-3.5 sm:p-4">
+            <div className="space-y-3 rounded-b-[1.25rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-3.5 sm:p-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-snug text-amber-800">
             Dokumen manual ini belum final. Dokumen akan menjadi bagian berkas ketika berkas Cara Pembayaran ditutup.
           </div>
@@ -1654,12 +1654,12 @@ function CreateManualArsipModal({
 
           {step === 3 && (
           <div className="space-y-2.5">
-            <div className="rounded-xl border border-orange-200 bg-[#FFFDF9]">
+            <div className="rounded-xl border border-orange-200 bg-bg-surface">
               <div className="border-b border-orange-100 px-3 py-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="text-[13px] font-semibold text-[#FF5A00]">Dokumen Pendukung</h3>
-                    <p className="mt-0.5 text-[11px] text-[#FF5A00]">
+                    <h3 className="text-[13px] font-semibold text-brand-solid">Dokumen Pendukung</h3>
+                    <p className="mt-0.5 text-[11px] text-brand-solid">
                       Tambahkan dokumen pendukung untuk melengkapi
                     </p>
                   </div>
@@ -1670,7 +1670,7 @@ function CreateManualArsipModal({
                       size="sm"
                       onClick={openAttachmentTitleForm}
                       disabled={submitting || showAttachmentTitleForm || attachmentRows.length >= MANUAL_ARSIP_ATTACHMENT_MAX_FILES}
-                      className="h-8 shrink-0 cursor-pointer gap-1 text-[#FF5A00] hover:bg-[#FFF1E7] hover:text-[#EA580C]"
+                      className="h-8 shrink-0 cursor-pointer gap-1 text-brand-solid hover:bg-[#FFF1E7] hover:text-brand-solid-hover"
                     >
                       <Plus size={13} /> Tambah
                     </Button>
@@ -1689,7 +1689,7 @@ function CreateManualArsipModal({
                       <button
                         type="button"
                         onClick={openAttachmentTitleForm}
-                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-[#FF5A00] transition-colors hover:border-[#FF5A00] hover:bg-[#FFF1E7]"
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-[#FFFCF8] p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-[#FFF1E7]"
                       >
                         <Plus size={14} />
                         <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>
@@ -1721,7 +1721,7 @@ function CreateManualArsipModal({
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-2">
                             <p className="truncate text-[13px] font-semibold text-stone-900">{row.title}</p>
-                            <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">
+                            <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
                               Tambahan
                             </span>
                           </div>
@@ -1751,7 +1751,7 @@ function CreateManualArsipModal({
                             <Eye size={13} />
                           </Button>
                         )}
-                        <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#FF5A00] bg-white px-4 text-xs font-bold text-[#FF5A00] transition hover:bg-[#FFF1E7]">
+                        <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-brand-solid bg-white px-4 text-xs font-bold text-brand-solid transition hover:bg-[#FFF1E7]">
                           <Upload size={13} />
                           {row.file ? 'Ganti' : 'Unggah'}
                           <input
@@ -1796,7 +1796,7 @@ function CreateManualArsipModal({
                       }}
                       placeholder="Nama dokumen pendukung"
                       className={cn(
-                        'h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-stone-950 outline-none transition focus:border-[#FF5A00] focus:ring-2 focus:ring-orange-100',
+                        'h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-stone-950 outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-orange-100',
                         newAttachmentTitleError && 'border-error',
                       )}
                       onKeyDown={(event) => {
@@ -1814,7 +1814,7 @@ function CreateManualArsipModal({
                       <p className="mt-1 text-[10px] text-error">{newAttachmentTitleError}</p>
                     )}
                   </div>
-                  <Button type="button" onClick={saveAttachmentTitle} disabled={!newAttachmentTitle.trim()} className="h-10 bg-[#FF5A00] px-4 text-xs font-bold text-white hover:bg-[#EA580C]">
+                  <Button type="button" onClick={saveAttachmentTitle} disabled={!newAttachmentTitle.trim()} className="h-10 bg-brand-solid px-4 text-xs font-bold text-white hover:bg-brand-solid-hover">
                     Simpan
                   </Button>
                   <Button type="button" variant="ghost" onClick={cancelAttachmentTitleForm} className="h-10 px-3 text-xs">
@@ -1853,7 +1853,7 @@ function CreateManualArsipModal({
             </div>
           )}
 
-          <div className="sticky bottom-0 z-10 -mx-3.5 flex flex-col-reverse gap-2 border-t border-[#F0E1D5] bg-[#FFFDF9]/95 px-3.5 py-2.5 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0">
+          <div className="sticky bottom-0 z-10 -mx-3.5 flex flex-col-reverse gap-2 border-t border-brand-border bg-bg-surface/95 px-3.5 py-2.5 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0">
             <Button type="button" variant="outline" onClick={step === 1 ? handleRequestClose : handleBackStep} disabled={submitting}>
               {step === 1 ? 'Kembali' : 'Kembali'}
             </Button>
@@ -1877,7 +1877,7 @@ function CreateManualArsipModal({
           </div>
 
           <aside className="min-w-0 space-y-3 xl:sticky xl:top-3">
-            <ArchivePanel className="hidden border-[#F1E5DA] bg-[#FFFDF9] p-3.5 shadow-none xl:block">
+            <ArchivePanel className="hidden border-[#F1E5DA] bg-bg-surface p-3.5 shadow-none xl:block">
               <p className="text-[11px] font-semibold text-zinc-600">Progress Pengisian</p>
               <div className="mt-1.5 flex items-end justify-between gap-2">
                 <span className="font-headline text-2xl font-bold tracking-tight text-zinc-950">
@@ -1911,7 +1911,7 @@ function CreateManualArsipModal({
                     <span className="min-w-0 flex-1 text-[11px] font-semibold text-zinc-950">{label}</span>
                     <span className={cn(
                       'text-[9px] font-bold uppercase tracking-wide',
-                      isComplete ? 'text-emerald-600' : isActive ? 'text-[#D97706]' : 'text-zinc-400',
+                      isComplete ? 'text-emerald-600' : isActive ? 'text-warning-solid' : 'text-zinc-400',
                     )}>
                       {isComplete ? 'Selesai' : isActive ? 'Aktif' : 'Belum'}
                     </span>
@@ -1923,11 +1923,11 @@ function CreateManualArsipModal({
 
             <ArchivePanel className="border-[#FDBA8C] bg-[#FFF1E7] p-3 shadow-none">
               <div className="flex items-start gap-2.5">
-                <div className="flex size-5 shrink-0 items-center justify-center text-[#FF5A00]">
+                <div className="flex size-5 shrink-0 items-center justify-center text-brand-solid">
                   <AlertCircle size={14} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#FF5A00]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-solid">
                     Perhatian
                   </p>
                   <p className="mt-1 text-[10px] font-medium leading-snug text-zinc-700">
@@ -1998,8 +1998,8 @@ function KlasifikasiFormField({
           type="button"
           onClick={onToggle}
           className={cn(
-            'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-[#FFFAF6] px-4 py-2 text-left text-sm outline-none transition hover:border-[#FFBC80] focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
-            error ? 'border-error' : 'border-[#F0E1D5]',
+            'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-[#FFFAF6] px-4 py-2 text-left text-sm outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+            error ? 'border-error' : 'border-brand-border',
           )}
         >
           <div className="min-w-0">
@@ -2023,8 +2023,8 @@ function KlasifikasiFormField({
         </button>
 
         {dropdownOpen && (
-          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] shadow-lg">
-            <div className="border-b border-[#F0E1D5] p-3">
+          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-brand-border bg-[#FFFAF6] shadow-lg">
+            <div className="border-b border-brand-border p-3">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/50" />
                 <input
@@ -2032,7 +2032,7 @@ function KlasifikasiFormField({
                   value={searchQuery}
                   onChange={(event) => onSearchChange(event.target.value)}
                   placeholder="Cari nama atau kode jenis pembayaran"
-                  className="w-full rounded-xl border border-[#F0E1D5] bg-white py-2 pr-3 pl-9 text-xs outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                  className="w-full rounded-xl border border-brand-border bg-white py-2 pr-3 pl-9 text-xs outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
                 />
               </div>
 
@@ -2145,8 +2145,8 @@ function ManualCreateReview({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-[1rem] border border-orange-200 bg-[#FFF8F1] px-3 py-2.5">
-        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF4D00]">
+      <div className="rounded-[1rem] border border-orange-200 bg-brand-surface px-3 py-2.5">
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-text">
           Nama Dokumen Hasil Sistem (Final)
         </p>
         <p className="mt-1 text-sm font-extrabold uppercase tracking-tight text-zinc-950">
@@ -2177,7 +2177,7 @@ function ManualCreateReview({
         ) : (
           <div className="space-y-2">
             {attachmentRows.map((row, index) => (
-              <div key={row.id} className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-3 py-2">
+              <div key={row.id} className="rounded-xl border border-brand-border bg-[#FFFAF6] px-3 py-2">
                 <p className="text-xs font-extrabold text-zinc-950">{row.title || `Lampiran ${index + 1}`}</p>
                 <p className="mt-0.5 text-[10px] font-medium text-emerald-700">
                   {row.file ? `${row.file.name} (${formatFileSize(row.file.size)})` : 'File belum dipilih'}
@@ -2190,7 +2190,7 @@ function ManualCreateReview({
 
       <div className="rounded-[1rem] border border-amber-200 bg-amber-50 px-3 py-2.5">
         <div className="flex items-start gap-3">
-          <AlertCircle size={16} className="mt-0.5 shrink-0 text-[#FF5A00]" />
+          <AlertCircle size={16} className="mt-0.5 shrink-0 text-brand-solid" />
           <div>
             <p className="text-xs font-extrabold uppercase tracking-wide text-zinc-950">Pemberitahuan Konsekuensi</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-orange-800">
@@ -2211,7 +2211,7 @@ function ReviewSection({
   children: ReactNode
 }) {
   return (
-    <section className="space-y-2 border-t border-[#F0E1D5] pt-3">
+    <section className="space-y-2 border-t border-brand-border pt-3">
       <p className="text-[11px] font-black uppercase tracking-[0.24em] text-zinc-400">{title}</p>
       <div className="grid gap-2.5 sm:grid-cols-2">{children}</div>
     </section>
@@ -2232,7 +2232,7 @@ function ReviewItem({
       <p className="text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">{label}</p>
       <p className={cn(
         'mt-0.5 text-sm font-extrabold text-zinc-950',
-        emphasis && 'text-[#FF4D00]',
+        emphasis && 'text-brand-text',
       )}>
         {value}
       </p>
@@ -2647,7 +2647,7 @@ function isValidDateOnly(value: string): boolean {
 
 function inputClass(error?: string) {
   return cn(
-    'h-10 w-full rounded-xl border bg-[#FFFDF9] px-3 py-2 text-sm outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+    'h-10 w-full rounded-xl border bg-bg-surface px-3 py-2 text-sm outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
     error ? 'border-error' : 'border-orange-100',
   )
 }

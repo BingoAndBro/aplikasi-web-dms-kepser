@@ -711,13 +711,13 @@ function AjukanDokumenPage() {
             </p>
 
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-zinc-600">
-              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-bg-surface px-3 py-1.5 shadow-sm ring-1 ring-brand-border">
                 {submittedDocument.is_non_material ? 'Non-Material' : 'Material'}
               </span>
-              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-bg-surface px-3 py-1.5 shadow-sm ring-1 ring-brand-border">
                 {statusLabel}
               </span>
-              <span className="rounded-full bg-[#FFFDF9] px-3 py-1.5 shadow-sm ring-1 ring-[#F0E1D5]">
+              <span className="rounded-full bg-bg-surface px-3 py-1.5 shadow-sm ring-1 ring-brand-border">
                 {lampiranUrls.length} file lampiran
               </span>
             </div>
@@ -733,7 +733,7 @@ function AjukanDokumenPage() {
                   type="button"
                   size="lg"
                   onClick={handleSubmitAnother}
-                  className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto"
+                  className="w-full gap-1.5 bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto"
                 >
                   Ajukan Dokumen Lain <ArrowRight size={14} />
                 </Button>
@@ -746,7 +746,7 @@ function AjukanDokumenPage() {
                       to: '/pegawai/dokumen/$id',
                       params: { id: submittedDocument.id },
                     })}
-                    className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+                    className="w-full border-brand-border bg-white sm:w-auto"
                   >
                     Lihat Detail Dokumen
                   </Button>
@@ -827,7 +827,7 @@ function AjukanDokumenPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
 
           {step === 1 && (
             <div className="space-y-4">
@@ -968,13 +968,13 @@ function AjukanDokumenPage() {
                 />
               )}
 
-              <div className="flex border-t border-[#F0E1D5] pt-4 sm:justify-end">
+              <div className="flex border-t border-brand-border pt-4 sm:justify-end">
                 <Button
                   type="button"
                   size="lg"
                   onClick={handleNextFromInformation}
                   disabled={!canAdvanceFromInformation}
-                  className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-[#EA580C] sm:w-auto"
+                  className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
                 >
                   Lanjut ke Kelengkapan <ChevronRight size={14} />
                 </Button>
@@ -1016,13 +1016,13 @@ function AjukanDokumenPage() {
                 onNext={handleNextFromDetails}
               />
 
-              <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-[#F0E1D5] bg-[#FFFDF9]/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0">
+              <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-brand-border bg-bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0">
                 <Button
                   type="button"
                   variant="outline"
                   size="lg"
                   onClick={handleBack}
-                  className="w-full gap-1.5 border-[#F0E1D5] bg-white sm:w-auto"
+                  className="w-full gap-1.5 border-brand-border bg-white sm:w-auto"
                 >
                   <ChevronLeft size={14} /> Kembali
                 </Button>
@@ -1031,7 +1031,7 @@ function AjukanDokumenPage() {
                   size="lg"
                   onClick={handleNextFromDetails}
                   disabled={!canAdvanceFromStep6()}
-                  className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-[#EA580C] sm:w-auto"
+                  className="w-full gap-1.5 bg-[#F97316] px-5 text-white hover:bg-brand-solid-hover sm:w-auto"
                 >
                   Lanjut <ChevronRight size={14} />
                 </Button>
@@ -1065,7 +1065,7 @@ function AjukanDokumenPage() {
         </PegawaiPanel>
 
           <aside className="min-w-0 space-y-4 xl:sticky xl:top-6">
-            <PegawaiPanel className="hidden border-[#F1E5DA] bg-[#FFFDF9] p-5 shadow-none xl:block">
+            <PegawaiPanel className="hidden border-[#F1E5DA] bg-bg-surface p-5 shadow-none xl:block">
               <p className="text-xs font-semibold text-zinc-600">
                 Progress Pengajuan
               </p>
@@ -1114,7 +1114,7 @@ function AjukanDokumenPage() {
                         <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-600">Selesai</span>
                       )}
                       {isActive && (
-                        <span className="text-[9px] font-bold uppercase tracking-wide text-[#D97706]">Aktif</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-warning-solid">Aktif</span>
                       )}
                     </button>
                   )
@@ -1124,11 +1124,11 @@ function AjukanDokumenPage() {
 
             <PegawaiPanel className="border-[#FDBA8C] bg-[#FFF1E7] p-5 shadow-none">
               <div className="flex items-start gap-3">
-                <div className="flex size-7 shrink-0 items-center justify-center text-[#FF5A00]">
+                <div className="flex size-7 shrink-0 items-center justify-center text-brand-solid">
                   <Info size={17} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#FF5A00]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-solid">
                     Periksa Sebelum Mengajukan
                   </p>
                   <p className="mt-2 text-xs font-medium leading-relaxed text-zinc-700">
@@ -1176,7 +1176,7 @@ function AjukanDokumenPage() {
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] p-4">
+            <div className="rounded-xl border border-brand-border bg-bg-surface p-4">
               <p className="text-[10px] font-semibold text-zinc-500">
                 Karakteristik
               </p>
@@ -1184,7 +1184,7 @@ function AjukanDokumenPage() {
                 Dokumen {isNonMaterial ? 'Non-Material' : 'Material'}
               </p>
             </div>
-            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] p-4">
+            <div className="rounded-xl border border-brand-border bg-bg-surface p-4">
               <p className="text-[10px] font-semibold text-zinc-500">
                 Lampiran
               </p>
@@ -1195,7 +1195,7 @@ function AjukanDokumenPage() {
           </div>
 
           <div className="flex items-start gap-3 rounded-xl bg-[#FFF3D6] p-4">
-            <Info size={17} className="mt-0.5 shrink-0 text-[#D97706]" />
+            <Info size={17} className="mt-0.5 shrink-0 text-warning-solid" />
             <div>
               <p className="text-xs font-bold text-zinc-950">Konsekuensi pengajuan</p>
               <p className="mt-1 text-xs font-medium leading-relaxed text-zinc-700">

@@ -143,156 +143,88 @@
     "hex": 1,
     "orange": 25
   },
-  "src/routes/admin.master-data.detail.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/routes/admin.master-data.fungsi.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/routes/admin.master-data.jenis-dokumen.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/routes/admin.master-data.jenis.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/routes/admin.master-data.kategori.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/routes/admin.master-data.kegiatan.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
   "src/routes/admin.master-data.kelengkapan.tsx": {
-    "hex": 84,
-    "orange": 0
-  },
-  "src/routes/admin.master-data.komponen.tsx": {
-    "hex": 1,
+    "hex": 67,
     "orange": 0
   },
   "src/routes/admin.master-data.user.tsx": {
-    "hex": 35,
+    "hex": 19,
     "orange": 9
   },
   "src/routes/kasubag/berkas/$id.tsx": {
-    "hex": 70,
+    "hex": 26,
     "orange": 55
   },
   "src/routes/kasubag/berkas/-components/CloseBerkasDialog.tsx": {
-    "hex": 21,
+    "hex": 8,
     "orange": 5
   },
   "src/routes/kasubag/berkas/index.tsx": {
-    "hex": 2,
+    "hex": 0,
     "orange": 9
   },
-  "src/routes/kasubag/berkas/tertutup.tsx": {
-    "hex": 5,
-    "orange": 0
-  },
   "src/routes/kasubag/dokumen/$id/index.tsx": {
-    "hex": 33,
+    "hex": 11,
     "orange": 12
   },
-  "src/routes/kasubag/inbox.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
   "src/routes/kasubag/klasifikasi.tsx": {
-    "hex": 65,
+    "hex": 15,
     "orange": 26
   },
   "src/routes/kasubag/pembersihan/index.tsx": {
-    "hex": 8,
+    "hex": 0,
     "orange": 8
   },
   "src/routes/kasubag/penambahan-arsip.tsx": {
-    "hex": 77,
+    "hex": 30,
     "orange": 23
   },
   "src/routes/pegawai/dokumen/$id/index.tsx": {
-    "hex": 30,
+    "hex": 15,
     "orange": 6
   },
   "src/routes/pegawai/dokumen/$id/revisi.tsx": {
-    "hex": 42,
+    "hex": 22,
     "orange": 4
   },
   "src/routes/pegawai/dokumen/aju.tsx": {
-    "hex": 38,
+    "hex": 14,
     "orange": 0
   },
   "src/routes/pegawai/dokumen/index.tsx": {
-    "hex": 10,
+    "hex": 1,
     "orange": 13
   },
   "src/routes/pegawai/laporan/kegiatan.tsx": {
-    "hex": 66,
+    "hex": 21,
     "orange": 35
   },
   "src/routes/pegawai/laporan/saya.tsx": {
-    "hex": 21,
+    "hex": 1,
     "orange": 13
   },
   "src/routes/pegawai/pembersihan-dokumen.tsx": {
-    "hex": 23,
+    "hex": 3,
     "orange": 8
   },
   "src/routes/pegawai/revisi.tsx": {
-    "hex": 10,
+    "hex": 1,
     "orange": 4
   },
-  "src/routes/pegawai.tsx": {
-    "hex": 1,
-    "orange": 0
-  },
-  "src/routes/ppk/ditolak.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
   "src/routes/ppk/dokumen/$id/index.tsx": {
-    "hex": 36,
+    "hex": 16,
     "orange": 8
   },
   "src/routes/ppk/dokumen/$id/resubmit.tsx": {
-    "hex": 43,
+    "hex": 15,
     "orange": 7
   },
-  "src/routes/ppk/inbox.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/routes/ppk/revisi.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/routes/ppk/tervalidasi.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/routes/ppspm/ditolak.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
   "src/routes/ppspm/dokumen/$id.tsx": {
-    "hex": 36,
+    "hex": 16,
     "orange": 8
   },
-  "src/routes/ppspm/inbox.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
-  "src/routes/ppspm/selesai.tsx": {
-    "hex": 3,
-    "orange": 0
-  },
   "src/routes/profile.tsx": {
-    "hex": 59,
+    "hex": 58,
     "orange": 1
   }
 }

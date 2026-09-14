@@ -427,7 +427,7 @@ function KelengkapanPage() {
               type="button"
               variant="outline"
               onClick={resetFilters}
-              className="h-8 rounded-md border-[#DCE6F0] bg-white px-4 text-xs font-bold text-[#173A68] shadow-[0_2px_6px_rgba(15,23,42,0.06)] hover:border-[#FF5A00] hover:bg-[#FFF6EC] hover:text-[#FF5A00]"
+              className="h-8 rounded-md border-[#DCE6F0] bg-white px-4 text-xs font-bold text-[#173A68] shadow-[0_2px_6px_rgba(15,23,42,0.06)] hover:border-brand-solid hover:bg-[#FFF6EC] hover:text-brand-solid"
             >
               Reset
             </Button>
@@ -533,7 +533,7 @@ function KelengkapanPage() {
             <div className={adminContentWideClassName + ' space-y-5'}>
               <div className="flex flex-col gap-4 rounded-[18px] border border-[#EFE3D2] bg-white px-5 py-5 shadow-[0_2px_10px_rgba(80,54,20,0.04)] lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-extrabold text-[#071A3A]">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-text-strong">
                     <Check size={15} className="text-[#00A88F]" />
                     Konfigurasi Aktif
                   </div>
@@ -611,7 +611,7 @@ function KelengkapanPage() {
           <div className={adminDialogBodyClassName}>
             {error && <div className="bg-error/10 text-error text-xs px-3 py-2 rounded-lg font-medium">{error}</div>}
             <div className="rounded-[14px] border border-[#DDE7F2] bg-[#F8FBFF] px-4 py-4 shadow-[0_2px_8px_rgba(15,23,42,0.10)]">
-              <div className="grid gap-2 text-sm font-bold text-[#071A3A] sm:grid-cols-[64px_1fr]">
+              <div className="grid gap-2 text-sm font-bold text-text-strong sm:grid-cols-[64px_1fr]">
                 <span className="text-[#35527A]">Konteks:</span>
                 <span>{activeChainLabel}</span>
                 <span className="text-[#35527A]">Untuk:</span>
@@ -668,7 +668,7 @@ function KelengkapanPage() {
         onConfirm={handleDelete}
         loading={saving}
       >
-        Dokumen <strong className="text-[#071A3A]">{deleteTarget?.nama_dokumen}</strong> akan dihapus dari kelengkapan.
+        Dokumen <strong className="text-text-strong">{deleteTarget?.nama_dokumen}</strong> akan dihapus dari kelengkapan.
       </AdminConfirmationDialog>
     </PageLayout>
   )
@@ -736,11 +736,11 @@ function RequirementCard({ selected, title, description, onClick }: {
   onClick: () => void
 }) {
   const selectedClassName = title === 'Opsional'
-    ? 'border-[#FF5A00] bg-[#FFF7EF] text-[#FF4F00] shadow-[0_8px_20px_rgba(255,90,0,0.10)]'
+    ? 'border-brand-solid bg-[#FFF7EF] text-[#FF4F00] shadow-[0_8px_20px_rgba(255,90,0,0.10)]'
     : 'border-[#FF4F78] bg-[#FFF0F4] text-[#E80046] shadow-[0_8px_20px_rgba(255,79,120,0.10)]'
   const selectedDescriptionClassName = title === 'Opsional' ? 'text-[#FF4F00]' : 'text-[#E80046]'
-  const selectedDotClassName = title === 'Opsional' ? 'border-[#FF5A00]' : 'border-[#FF2F6D]'
-  const selectedInnerDotClassName = title === 'Opsional' ? 'bg-[#FF5A00]' : 'bg-[#FF2F6D]'
+  const selectedDotClassName = title === 'Opsional' ? 'border-brand-solid' : 'border-[#FF2F6D]'
+  const selectedInnerDotClassName = title === 'Opsional' ? 'bg-brand-solid' : 'bg-[#FF2F6D]'
 
   return (
     <button
@@ -749,7 +749,7 @@ function RequirementCard({ selected, title, description, onClick }: {
       className={`flex min-h-[74px] items-center justify-between rounded-[18px] border px-4 py-3 text-left transition ${
         selected
           ? selectedClassName
-          : 'border-[#DCE6F0] bg-white text-[#071A3A] hover:border-[#FF5A00]'
+          : 'border-[#DCE6F0] bg-white text-text-strong hover:border-brand-solid'
       }`}
     >
       <span>
@@ -776,7 +776,7 @@ function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete
 }) {
   const isKetua = accent === 'orange'
   const iconClassName = isKetua
-    ? 'border-[#FFE0C6] bg-[#FFF8F1] text-[#FF5A00]'
+    ? 'border-[#FFE0C6] bg-brand-surface text-brand-solid'
     : 'border-[#C8F4ED] bg-[#F2FFFC] text-[#00A88F]'
   const countClassName = isKetua
     ? 'bg-[#FFF4EC] text-[#FF3D00]'
@@ -805,7 +805,7 @@ function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete
         <Button
           onClick={onAdd}
           variant="outline"
-          className="h-10 w-full justify-center gap-2 rounded-[13px] border border-dashed border-[#E9C894] bg-[#FFFEFB] text-sm font-semibold text-[#8A4B00] hover:border-[#FF5A00] hover:bg-[#FFF6EC] hover:text-[#FF5A00]"
+          className="h-10 w-full justify-center gap-2 rounded-[13px] border border-dashed border-[#E9C894] bg-[#FFFEFB] text-sm font-semibold text-[#8A4B00] hover:border-brand-solid hover:bg-[#FFF6EC] hover:text-brand-solid"
         >
           <Plus size={15} /> Tambah Dokumen {isKetua ? 'Ketua Tim' : 'Anggota'}
         </Button>
@@ -818,8 +818,8 @@ function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete
       ) : (
         <div className="divide-y divide-[#EFEAE2] border-t border-[#EFEAE2]">
           {items.map(item => (
-            <div key={item.id} className="group flex items-center gap-4 px-5 py-5 transition-colors hover:bg-[#FFF8F1]">
-              <ItemIcon size={16} className={`shrink-0 ${isKetua ? 'text-[#FF5A00]' : 'text-[#00A88F]'}`} />
+            <div key={item.id} className="group flex items-center gap-4 px-5 py-5 transition-colors hover:bg-brand-surface">
+              <ItemIcon size={16} className={`shrink-0 ${isKetua ? 'text-brand-solid' : 'text-[#00A88F]'}`} />
               <div className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-extrabold text-black">{item.nama_dokumen}</span>
               </div>
@@ -827,7 +827,7 @@ function KelengkapanSection({ title, description, items, onAdd, onEdit, onDelete
                 {item.required ? 'Wajib' : 'Opsional'}
               </span>
               <div className="flex gap-1 shrink-0 transition-opacity">
-                <Button size="icon-xs" variant="ghost" onClick={() => onEdit(item)} className="text-black hover:text-[#FF5A00]" aria-label={`Edit kelengkapan ${item.nama_dokumen}`}><Edit2 size={14} /></Button>
+                <Button size="icon-xs" variant="ghost" onClick={() => onEdit(item)} className="text-black hover:text-brand-solid" aria-label={`Edit kelengkapan ${item.nama_dokumen}`}><Edit2 size={14} /></Button>
                 <Button size="icon-xs" variant="ghost" onClick={() => onDelete(item)} className="text-black hover:text-error" aria-label={`Hapus kelengkapan ${item.nama_dokumen}`}><Trash2 size={14} /></Button>
               </div>
             </div>

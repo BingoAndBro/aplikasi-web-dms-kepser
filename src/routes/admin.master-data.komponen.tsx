@@ -293,7 +293,7 @@ function KomponenPage() {
         onConfirm={handleDelete}
         loading={saving}
       >
-        Komponen <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus dari daftar komponen.
+        Komponen <strong className="text-text-strong">{deleteTarget?.nama}</strong> akan dihapus dari daftar komponen.
       </AdminConfirmationDialog>
     </PageLayout>
   )

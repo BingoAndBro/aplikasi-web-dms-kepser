@@ -416,7 +416,7 @@ function DetailPage() {
         onConfirm={handleDelete}
         loading={saving}
       >
-        Detail <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus.
+        Detail <strong className="text-text-strong">{deleteTarget?.nama}</strong> akan dihapus.
       </AdminConfirmationDialog>
     </PageLayout>
   )

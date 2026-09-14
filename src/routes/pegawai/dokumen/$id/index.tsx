@@ -206,7 +206,7 @@ function DokumenDetailPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 px-1 py-1 sm:px-2">
-            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-[#F7F2EC] p-1">
               {DETAIL_TABS.map(tab => {
                 const selected = activeTab === tab.key
                 return (
@@ -217,7 +217,7 @@ function DokumenDetailPage() {
                     className={cn(
                       'flex min-h-8 min-w-28 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
-                        ? 'bg-[#FFFAF6] text-[#FF5A00] shadow-sm'
+                        ? 'bg-[#FFFAF6] text-brand-solid shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
@@ -255,7 +255,7 @@ function DokumenDetailPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
               <section className={cn(activeTab === 'metadata' ? 'block' : 'hidden')}>
                 <MetadataDetailCard dok={dok} isNonMaterial={isNonMaterial} />
               </section>
@@ -289,7 +289,7 @@ function DokumenDetailPage() {
             <div className="space-y-1.5 px-0.5 pt-0.5">
               {isNonMaterial && (
                 <Link to="/pegawai/dokumen/$id/edit" params={{ id }} className="block">
-                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]">
+                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover">
                     <Pencil size={13} />
                     Edit Dokumen
                   </Button>
@@ -299,7 +299,7 @@ function DokumenDetailPage() {
                 type="button"
                 variant="outline"
                 size="lg"
-                className="h-9 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+                className="h-9 w-full gap-1.5 rounded-xl border-brand-border bg-bg-surface text-xs font-bold"
                 onClick={handleBack}
               >
                   <ChevronLeft size={13} />
@@ -330,7 +330,7 @@ function MetadataDetailCard({ dok, isNonMaterial }: { dok: DokumenDetail; isNonM
       value: (
         <span className="inline-flex flex-wrap items-center gap-2">
           <span>{jenisValue ?? '-'}</span>
-          <span className="rounded-md border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">
+          <span className="rounded-md border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
             {isNonMaterial ? 'Non-Material' : 'Material'}
           </span>
         </span>
@@ -372,7 +372,7 @@ function MetadataDetailCard({ dok, isNonMaterial }: { dok: DokumenDetail; isNonM
   ]
 
   return (
-    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
+    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
         {metadataItems.map(item => (
           <div key={item.label} className="min-w-0">
@@ -460,7 +460,7 @@ function WorkflowPanel({
   const statusTone = getStatusTone(status)
 
   return (
-    <PegawaiPanel className="rounded-[1.25rem] border-[#F1E5DA] bg-[#FFFDF9] p-3.5 shadow-sm shadow-zinc-950/5">
+    <PegawaiPanel className="rounded-[1.25rem] border-[#F1E5DA] bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/5">
       <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">
         Status Dokumen
       </p>
@@ -469,12 +469,12 @@ function WorkflowPanel({
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500">Status Saat Ini</p>
           <div className="mt-1.5 flex items-center gap-2">
-            <span className={cn('size-2.5 rounded-full', statusTone === 'success' ? 'bg-emerald-500' : 'bg-[#FF5A00]')} />
+            <span className={cn('size-2.5 rounded-full', statusTone === 'success' ? 'bg-emerald-500' : 'bg-brand-solid')} />
             <StatusBadge status={status} className="border-0 bg-transparent px-0 text-sm font-bold text-zinc-950 shadow-none hover:bg-transparent" />
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] p-2.5 shadow-sm shadow-zinc-950/5">
+        <div className="rounded-xl border border-[#F1E5DA] bg-bg-surface p-2.5 shadow-sm shadow-zinc-950/5">
           <p className="text-[11px] font-medium leading-relaxed text-zinc-700">
             {getStatusDescription(status, isNonMaterial)}
           </p>
@@ -495,7 +495,7 @@ function WorkflowPanel({
                     <div
                       className={cn(
                         'absolute top-2.5 -right-1/2 z-0 h-px w-full',
-                        isCompleteSegment ? 'bg-emerald-500' : isActiveSegment ? 'bg-[#FF5A00]' : 'bg-[#F1E5DA]',
+                        isCompleteSegment ? 'bg-emerald-500' : isActiveSegment ? 'bg-brand-solid' : 'bg-[#F1E5DA]',
                       )}
                     />
                   )}
@@ -506,7 +506,7 @@ function WorkflowPanel({
                       ? 'border-emerald-500 bg-emerald-500 text-white'
                       : isAttentionStep
                       ? 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20'
-                        : 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-400',
+                        : 'border-[#F1E5DA] bg-bg-surface text-zinc-400',
                   )}
                 >
                   {showAsRevision && !isTerminalSuccess ? <AlertTriangle size={10} /> : isSuccessStep && !isCurrent ? <CheckCircle2 size={10} /> : i + 1}
@@ -514,7 +514,7 @@ function WorkflowPanel({
                 <span
                   className={cn(
                     'mt-1.5 text-center text-[8px] font-black uppercase tracking-[0.08em]',
-                    isSuccessStep ? 'text-emerald-700' : isAttentionStep ? 'text-[#FF5A00]' : 'text-zinc-400',
+                    isSuccessStep ? 'text-emerald-700' : isAttentionStep ? 'text-brand-solid' : 'text-zinc-400',
                   )}
                 >
                   {step.label}

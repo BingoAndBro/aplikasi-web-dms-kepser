@@ -514,7 +514,7 @@ function ArsiparisDokumenDetailPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0 px-1 py-1 sm:px-2">
-            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-[#F7F2EC] p-1">
               {DETAIL_TABS.map(tab => {
                 const selected = activeTab === tab.key
                 return (
@@ -525,7 +525,7 @@ function ArsiparisDokumenDetailPage() {
                     className={cn(
                       'flex min-h-8 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
-                        ? 'bg-[#FFFDF9] text-[#FF5A00] shadow-sm'
+                        ? 'bg-bg-surface text-brand-solid shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
@@ -563,9 +563,9 @@ function ArsiparisDokumenDetailPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
         <section className={cn(activeTab === 'metadata' ? 'block' : 'hidden')}>
-        <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
           <div className="hidden">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">Informasi Dokumen</p>
@@ -630,14 +630,14 @@ function ArsiparisDokumenDetailPage() {
             </div>
           </div>
         ) : (
-          <ArchivePanel className="rounded-[1.35rem] border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-[0_6px_18px_rgba(15,23,42,0.07)]">
+          <ArchivePanel className="rounded-[1.35rem] border-[#F1E5DA] bg-bg-surface p-4 shadow-[0_6px_18px_rgba(15,23,42,0.07)]">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
               Formulir Pengindeksan
             </p>
             <h2 className="mt-1.5 font-headline text-xl font-extrabold tracking-tight text-zinc-950">
               Klasifikasi Dokumen
             </h2>
-            <div className="my-4 h-px bg-[#F0E1D5]" />
+            <div className="my-4 h-px bg-brand-border" />
             <div className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">1. Cara Pembayaran <span className="text-error">*</span></label>
@@ -654,8 +654,8 @@ function ArsiparisDokumenDetailPage() {
                       openKlasifikasiDropdown()
                     }}
                     className={cn(
-                      'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-[#FFFDF9] px-3 py-2.5 text-left text-sm text-zinc-950 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
-                      formErrors.klasifikasi ? 'border-error' : 'border-[#F0E1D5]',
+                      'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-bg-surface px-3 py-2.5 text-left text-sm text-zinc-950 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+                      formErrors.klasifikasi ? 'border-error' : 'border-brand-border',
                     )}
                   >
                     <div className="min-w-0">
@@ -679,7 +679,7 @@ function ArsiparisDokumenDetailPage() {
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute z-20 mt-2 w-full rounded-[1.05rem] border border-[#F0E1D5] bg-[#FFFDF9] shadow-lg">
+                    <div className="absolute z-20 mt-2 w-full rounded-[1.05rem] border border-brand-border bg-bg-surface shadow-lg">
                       <div className="border-b border-orange-100 p-3">
                         <div className="relative">
                           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/50" />
@@ -688,7 +688,7 @@ function ArsiparisDokumenDetailPage() {
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             placeholder="Cari nama atau kode jenis pembayaran"
-                            className="w-full rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] py-2 pr-3 pl-9 text-xs outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                            className="w-full rounded-xl border border-brand-border bg-bg-surface py-2 pr-3 pl-9 text-xs outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
                           />
                         </div>
 
@@ -773,7 +773,7 @@ function ArsiparisDokumenDetailPage() {
                   onChange={e => setCatatan(e.target.value)}
                   placeholder="Tambahkan penjelasan atau catatan klasifikasi jika diperlukan..."
                   rows={4}
-                  className="w-full resize-none rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                  className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
                 />
               </div>
 
@@ -784,12 +784,12 @@ function ArsiparisDokumenDetailPage() {
                 </div>
               )}
 
-              <div className="space-y-2.5 border-t border-[#F0E1D5] pt-4">
-                <Button className="h-11 w-full gap-2 rounded-xl bg-[#FF5A00] text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(255,90,0,0.18)] hover:bg-[#EA580C]" onClick={handleArchive} disabled={!!formLoading}>
+              <div className="space-y-2.5 border-t border-brand-border pt-4">
+                <Button className="h-11 w-full gap-2 rounded-xl bg-brand-solid text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(255,90,0,0.18)] hover:bg-brand-solid-hover" onClick={handleArchive} disabled={!!formLoading}>
                   {formLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                   Klasifikasikan Dokumen
                 </Button>
-                <Link to="/kasubag/inbox" className="flex h-11 w-full items-center justify-center rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] text-sm font-extrabold text-zinc-950 transition hover:bg-[#FFF8F1]">
+                <Link to="/kasubag/inbox" className="flex h-11 w-full items-center justify-center rounded-xl border border-brand-border bg-bg-surface text-sm font-extrabold text-zinc-950 transition hover:bg-brand-surface">
                   Kembali
                 </Link>
               </div>
@@ -815,7 +815,7 @@ function ArsiparisDokumenDetailPage() {
         pending={formLoading}
         onConfirm={submitArchive}
       >
-        <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] p-4">
+        <div className="rounded-2xl border border-[#F1E5DA] bg-bg-surface p-4">
           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
             <Banknote size={13} />
             Cara Pembayaran Terpilih

@@ -261,7 +261,7 @@ function JenisDokumenPage() {
         onConfirm={handleDelete}
         loading={saving}
       >
-        Jenis dokumen <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus.
+        Jenis dokumen <strong className="text-text-strong">{deleteTarget?.nama}</strong> akan dihapus.
       </AdminConfirmationDialog>
     </PageLayout>
   )

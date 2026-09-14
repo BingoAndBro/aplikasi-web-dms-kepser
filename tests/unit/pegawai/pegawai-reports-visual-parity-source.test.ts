@@ -16,7 +16,7 @@ describe('pegawai report visual parity source guard', () => {
     expect(source).toContain('Filter Lanjutan')
     expect(source).toContain('Tanggal terbaru')
     expect(source).toContain('Cari nama dokumen atau kegiatan...')
-    expect(source).toContain('rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9]')
+    expect(source).toContain('rounded-[26px] border border-zinc-200/80 bg-bg-surface')
     expect(source).toContain('to="/pegawai/dokumen/$id"')
     expect(source).toContain('Detail Dokumen')
     expect(source).not.toContain('/kasubag')

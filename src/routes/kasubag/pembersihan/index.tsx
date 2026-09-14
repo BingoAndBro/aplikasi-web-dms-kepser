@@ -199,7 +199,7 @@ function UsulMusnahPage() {
         >
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-zinc-700">Status:</span>
-            <div className="flex flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#FFF8F1] p-1">
+            <div className="flex flex-wrap gap-1 rounded-xl border border-brand-border bg-brand-surface p-1">
               {FINAL_ARCHIVE_FILTER_OPTIONS.map((option) => {
                 const selected = statusFilter === option.value
                 return (
@@ -208,8 +208,8 @@ function UsulMusnahPage() {
                     type="button"
                     className={`h-8 rounded-lg px-3 text-xs font-bold transition ${
                       selected
-                        ? 'border border-orange-200 bg-orange-50 text-[#FF4D00] shadow-sm'
-                        : 'border border-transparent text-zinc-600 hover:bg-[#FFFDF9] hover:text-zinc-950'
+                        ? 'border border-orange-200 bg-orange-50 text-brand-text shadow-sm'
+                        : 'border border-transparent text-zinc-600 hover:bg-bg-surface hover:text-zinc-950'
                     }`}
                     aria-pressed={selected}
                     onClick={() => setStatusFilter(option.value)}
@@ -305,7 +305,7 @@ function BerkasLifecycleTable({
                 onClick={() => onOpen(folder)}
               >
                 <td className="max-w-[440px] px-6 py-5 text-zinc-950">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-[#FF4D00]">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-brand-text">
                     {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
                   </p>
                 </td>
@@ -368,7 +368,7 @@ function BerkasLifecycleTable({
                 <Link
                   to="/kasubag/berkas/$id"
                   params={{ id: folder.berkas_id }}
-                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-bg-surface text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
                 >
                   <ChevronRight size={14} />
                   Buka Detail
@@ -400,7 +400,7 @@ function PembersihanRowActions({
         type="button"
         size="sm"
         variant="outline"
-        className="h-9 gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+        className="h-9 gap-1.5 rounded-xl border-brand-border bg-bg-surface text-xs font-bold"
         disabled={pending}
         onClick={() => setCancelOpen(true)}
       >

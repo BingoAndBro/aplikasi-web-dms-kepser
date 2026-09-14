@@ -191,11 +191,11 @@ const DETAIL_SORT_OPTIONS = [
 
 const ARCHIVE_METADATA_FORM_LABEL_CLASS = 'block space-y-1.5 text-[11px] font-bold text-zinc-700'
 const ARCHIVE_METADATA_FORM_INPUT_CLASS =
-  'w-full rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-[#FFBC80] focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
+  'w-full rounded-xl border border-brand-border bg-[#FFFAF6] px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
 const ARCHIVE_METADATA_FORM_SELECT_TRIGGER_CLASS =
-  'min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold text-zinc-950 hover:border-[#FFBC80] focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
+  'min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold text-zinc-950 hover:border-brand-border-strong focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
 const ARCHIVE_METADATA_FORM_SELECT_CONTENT_CLASS =
-  'rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] text-zinc-950 shadow-xl shadow-zinc-950/10'
+  'rounded-xl border border-brand-border bg-bg-surface text-zinc-950 shadow-xl shadow-zinc-950/10'
 const ARCHIVE_METADATA_FORM_SELECT_ITEM_CLASS =
   'rounded-lg px-3 py-2 text-sm font-medium text-zinc-950 focus:bg-orange-50 focus:text-zinc-950'
 
@@ -424,7 +424,7 @@ function BerkasArsipDetailPage() {
                 <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
                 <Link
                   to="/kasubag/berkas"
-                  className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                  className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-bg-surface px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
                 >
                   Kembali
                 </Link>
@@ -440,7 +440,7 @@ function BerkasArsipDetailPage() {
             action={
               <Link
                 to="/kasubag/berkas"
-                className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                className="inline-flex h-8 items-center justify-center rounded-xl border border-zinc-200/80 bg-bg-surface px-3 text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
               >
                 Kembali ke daftar
               </Link>
@@ -525,7 +525,7 @@ function BerkasArsipDetailPage() {
                         </div>
                       </div>
 
-                      <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
+                      <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 shadow-sm shadow-zinc-950/5 sm:p-5">
                         {activeTab === 'metadata' && (
                           <FolderMetadataPanel detail={detail} />
                         )}
@@ -628,7 +628,7 @@ function EditActiveMetadataDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-2xl sm:rounded-3xl">
+      <DialogContent className="border-brand-border bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-2xl sm:rounded-3xl">
         <DialogHeader>
           <DialogTitle>Edit Metadata Tersimpan</DialogTitle>
           <DialogDescription>
@@ -700,7 +700,7 @@ function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
   const isOpenFolder = canShowCloseBerkasForm(detail)
 
   return (
-    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
+    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
         <MetadataCell label="Cara Pembayaran" value={formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)} />
         <MetadataCell label="Status Berkas" value={formatBerkasStatusLabel(detail.status_berkas)} />
@@ -767,12 +767,12 @@ function FolderActionPanel({
 
   return (
     <aside className="min-w-0 space-y-3 xl:sticky xl:top-3">
-      <div className="rounded-[1.45rem] border border-orange-200/70 bg-[#FFF8F1] p-5 shadow-sm shadow-orange-900/10">
+      <div className="rounded-[1.45rem] border border-orange-200/70 bg-brand-surface p-5 shadow-sm shadow-orange-900/10">
         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-[#B84412]">
-          <Wallet size={14} className="text-[#FF5A00]" />
+          <Wallet size={14} className="text-brand-solid" />
           Total Nominal Realisasi
         </div>
-        <p className="mt-3 font-mono text-2xl font-black tracking-tight text-[#FF5A00]">
+        <p className="mt-3 font-mono text-2xl font-black tracking-tight text-brand-solid">
           {formatNominalRupiah(detail.total_nominal_realisasi)}
         </p>
       </div>
@@ -810,7 +810,7 @@ function FolderActionPanel({
         )}
       </div>
 
-      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-3.5 shadow-sm shadow-zinc-950/5">
+      <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/5">
         <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">
           Aksi Kontrol Berkas
         </p>
@@ -827,7 +827,7 @@ function FolderActionPanel({
               size="lg"
               variant={lifecycleAction.action === 'approve_destruction' ? 'destructive' : 'default'}
               className={`h-10 w-full gap-1.5 rounded-xl text-xs font-bold ${
-                lifecycleAction.action === 'approve_destruction' ? 'bg-error text-white hover:bg-error/90' : 'bg-[#FF5A00] text-white hover:bg-[#EA580C]'
+                lifecycleAction.action === 'approve_destruction' ? 'bg-error text-white hover:bg-error/90' : 'bg-brand-solid text-white hover:bg-brand-solid-hover'
               }`}
               disabled={pendingLifecycleAction}
               onClick={() => {
@@ -852,7 +852,7 @@ function FolderActionPanel({
               type="button"
               size="lg"
               variant="outline"
-              className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+              className="h-10 w-full gap-1.5 rounded-xl border-brand-border bg-bg-surface text-xs font-bold"
               disabled={pendingLifecycleAction}
               onClick={() => onSecondaryLifecycleConfirmOpenChange(true)}
             >
@@ -865,7 +865,7 @@ function FolderActionPanel({
               type="button"
               size="lg"
               variant="outline"
-              className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+              className="h-10 w-full gap-1.5 rounded-xl border-brand-border bg-bg-surface text-xs font-bold"
               disabled={pendingMetadataEdit}
               onClick={onOpenMetadataEditDialog}
             >
@@ -877,7 +877,7 @@ function FolderActionPanel({
             <Button
               type="button"
               size="lg"
-              className="h-10 w-full gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white hover:bg-[#EA580C]"
+              className="h-10 w-full gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white hover:bg-brand-solid-hover"
               disabled={pendingClose || closeBlockedByEmptyFolder}
               onClick={onOpenCloseDialog}
             >
@@ -889,7 +889,7 @@ function FolderActionPanel({
             type="button"
             size="lg"
             variant="outline"
-            className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold"
+            className="h-10 w-full gap-1.5 rounded-xl border-brand-border bg-bg-surface text-xs font-bold"
             disabled={!canExportZip}
             title={exportZipDisabledReason ?? undefined}
             onClick={() => setExportZipDialogOpen(true)}
@@ -898,7 +898,7 @@ function FolderActionPanel({
             Ekspor ZIP
           </Button>
           <Link to="/kasubag/berkas" className="block">
-            <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold">
+            <Button variant="outline" size="lg" className="h-10 w-full gap-1.5 rounded-xl border-brand-border bg-bg-surface text-xs font-bold">
               <ChevronLeft size={13} />
               Kembali ke Daftar
             </Button>
@@ -1033,7 +1033,7 @@ function ExportBerkasZipDialog({
       pending={preparing}
       onConfirm={handleExport}
     >
-      <div className="space-y-1.5 rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3 text-sm">
+      <div className="space-y-1.5 rounded-xl border border-[#F1E5DA] bg-bg-surface px-4 py-3 text-sm">
         <p><span className="font-bold text-zinc-700">Nomor SPM:</span> {detail.nomor_spm ?? '-'}</p>
         <p><span className="font-bold text-zinc-700">Klasifikasi:</span> {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}</p>
         <p><span className="font-bold text-zinc-700">Jumlah Dokumen:</span> {detail.item_count}</p>
@@ -1130,7 +1130,7 @@ function ItemList({
           sortOrder={sortOrder}
           onSortOrderChange={setSortOrder}
         />
-        <div className="flex flex-col items-center gap-3 rounded-[1.15rem] border border-dashed border-orange-200 bg-[#FFFDF9] py-12">
+        <div className="flex flex-col items-center gap-3 rounded-[1.15rem] border border-dashed border-orange-200 bg-bg-surface py-12">
           <FileText size={24} className="text-orange-500" />
           <p className="font-headline text-base font-bold text-zinc-950">Belum ada item dokumen</p>
           <p className="text-xs text-zinc-600">Dokumen persetujuan atau manual akan muncul setelah masuk ke berkas.</p>
@@ -1171,7 +1171,7 @@ function ItemList({
           onSortOrderChange={setSortOrder}
         />
         {filteredItems.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-[1.15rem] border border-dashed border-orange-200 bg-[#FFFDF9] py-12">
+          <div className="flex flex-col items-center gap-3 rounded-[1.15rem] border border-dashed border-orange-200 bg-bg-surface py-12">
             <FileText size={24} className="text-orange-500" />
             <p className="font-headline text-base font-bold text-zinc-950">{LOCAL_NO_MATCH_MESSAGE}</p>
             <p className="text-xs text-zinc-600">
@@ -1217,7 +1217,7 @@ function DocumentItemTable({
                 onClick={() => onSelectItem(item)}
               >
                 <td className="max-w-[420px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">
                     {item.source_title}
                   </p>
                   {item.has_attachments && (
@@ -1256,7 +1256,7 @@ function DocumentItemTable({
           <button
             key={item.item_key}
             type="button"
-            className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 text-left shadow-sm shadow-zinc-950/[0.035]"
+            className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface p-4 text-left shadow-sm shadow-zinc-950/[0.035]"
             onClick={() => onSelectItem(item)}
           >
             <div className="flex items-start justify-between gap-3">
@@ -1296,7 +1296,7 @@ function DocumentMetadataDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
+      <DialogContent className="max-h-[88vh] overflow-y-auto border-brand-border bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <button
@@ -1317,7 +1317,7 @@ function DocumentMetadataDialog({
         </DialogHeader>
 
         <div className="space-y-5">
-          <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
+          <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
             <div className="grid gap-5 sm:grid-cols-2">
               <ModalMetadataField
                 label={item.source_type === 'MANUAL' ? 'Nama/Judul Dokumen' : 'Judul Dokumen'}
@@ -1363,7 +1363,7 @@ function DocumentMetadataDialog({
               onPreview={onPreview}
             />
             {!item.has_attachments && (
-              <div className="rounded-xl border border-dashed border-[#F0E1D5] bg-[#FFFDF9] px-3 py-4 text-xs font-semibold text-zinc-500">
+              <div className="rounded-xl border border-dashed border-brand-border bg-bg-surface px-3 py-4 text-xs font-semibold text-zinc-500">
                 Tidak ada lampiran pendukung untuk dokumen {sourceLabel}.
               </div>
             )}
@@ -1482,7 +1482,7 @@ function ItemCard({
   const fileBlocked = statusArsip === 'DIMUSNAHKAN'
 
   return (
-    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 shadow-sm shadow-zinc-950/[0.035]">
+    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -1590,7 +1590,7 @@ function ItemAttachmentActions({
         return (
           <div
             key={`${item.item_key}-lampiran-${lampiranIndex}`}
-            className="flex flex-col gap-3 rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] px-3 py-2.5 sm:flex-row sm:items-center"
+            className="flex flex-col gap-3 rounded-xl border border-[#F1E5DA] bg-bg-surface px-3 py-2.5 sm:flex-row sm:items-center"
           >
             <FileText size={15} className="shrink-0 text-orange-600" />
             <p className="min-w-0 flex-1 truncate text-xs font-semibold text-zinc-950">{title}</p>
@@ -1599,7 +1599,7 @@ function ItemAttachmentActions({
                 size="icon-xs"
                 variant="ghost"
                 onClick={() => onPreview(previewHref, downloadHref, previewTitle)}
-                className="rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-zinc-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                className="rounded-xl border border-zinc-200/80 bg-bg-surface text-zinc-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
                 aria-label={`Pratinjau ${title}`}
               >
                 <Eye size={14} />
@@ -1611,7 +1611,7 @@ function ItemAttachmentActions({
                   description: 'Unduhan dimulai.',
                   variant: 'success',
                 })}
-                className="inline-flex size-7 items-center justify-center rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-zinc-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                className="inline-flex size-7 items-center justify-center rounded-xl border border-zinc-200/80 bg-bg-surface text-zinc-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
                 aria-label={`Unduh ${title}`}
               >
                 <Download size={14} />
@@ -1699,7 +1699,7 @@ function MetadataCell({ label, value, emphasis = false }: { label: string; value
   return (
     <div className="min-w-0">
       <p className="mb-1 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className={`break-words text-[13px] font-bold leading-snug sm:text-sm ${emphasis ? 'font-mono text-[#FF4D00]' : 'text-zinc-950'}`}>{value}</p>
+      <p className={`break-words text-[13px] font-bold leading-snug sm:text-sm ${emphasis ? 'font-mono text-brand-text' : 'text-zinc-950'}`}>{value}</p>
     </div>
   )
 }
@@ -1716,7 +1716,7 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
   const historyItems = buildBerkasHistoryItems(detail)
 
   return (
-    <ArchivePanel className="rounded-[1.35rem] bg-[#FFFDF9]">
+    <ArchivePanel className="rounded-[1.35rem] bg-bg-surface">
       <div className="mb-4">
         <div className="flex items-center gap-2">
           <History size={17} className="text-orange-600" />
@@ -1732,7 +1732,7 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
       <div className="relative space-y-3 before:absolute before:left-[18px] before:top-5 before:h-[calc(100%-2.5rem)] before:w-px before:bg-[#F1D8C8]">
         {historyItems.map((item, index) => (
           <div key={`${item.label}-${item.timestampLabel}-${index}`} className="relative grid grid-cols-[38px_1fr] gap-3">
-            <div className={`z-10 mt-1 flex h-9 w-9 items-center justify-center rounded-full border-4 border-[#FFFDF9] shadow-sm ${item.iconTone}`}>
+            <div className={`z-10 mt-1 flex h-9 w-9 items-center justify-center rounded-full border-4 border-bg-surface shadow-sm ${item.iconTone}`}>
               {item.icon}
             </div>
             <div className="rounded-2xl border border-[#F1E5DA] bg-[#FFFCF8] p-3.5 shadow-sm shadow-zinc-950/[0.025]">
@@ -1741,7 +1741,7 @@ function FolderHistoryPanel({ detail }: { detail: BerkasDetail }) {
                   <p className="text-sm font-extrabold text-zinc-950">{item.label}</p>
                   <p className="mt-1 text-xs leading-relaxed text-zinc-600">{item.helper}</p>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#F1E5DA] bg-[#FFFDF9] px-2.5 py-1 text-[11px] font-bold text-zinc-700 sm:ml-3">
+                <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#F1E5DA] bg-bg-surface px-2.5 py-1 text-[11px] font-bold text-zinc-700 sm:ml-3">
                   <Clock size={12} className="text-orange-600" />
                   <span>{item.timestampLabel}</span>
                 </div>

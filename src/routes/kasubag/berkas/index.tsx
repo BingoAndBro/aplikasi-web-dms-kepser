@@ -252,7 +252,7 @@ function BerkasTable({
               >
                 <td className="px-6 py-5 text-center text-sm font-normal text-zinc-950">{index + 1}</td>
                 <td className="max-w-[440px] px-6 py-5 text-zinc-950">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-[#FF4D00]">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-brand-text">
                     {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
                   </p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">
@@ -312,7 +312,7 @@ function BerkasTable({
               <Link
                 to="/kasubag/berkas/$id"
                 params={{ id: folder.berkas_id }}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-bg-surface text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
               >
                 <ChevronRight size={14} />
                 Buka Detail

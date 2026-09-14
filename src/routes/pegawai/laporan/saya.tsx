@@ -268,7 +268,7 @@ function ReportToolbar({
   onExportClick: () => void
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
       <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
         <label className="relative min-w-0 flex-1 lg:max-w-xl">
           <span className="sr-only">{searchLabel}</span>
@@ -278,7 +278,7 @@ function ReportToolbar({
             placeholder={placeholder}
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -288,15 +288,15 @@ function ReportToolbar({
             className={[
               'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
               filterOpen || activeFilters > 0
-                ? 'border-orange-200 bg-orange-50 text-[#FF4D00] hover:bg-orange-50'
-                : 'border-zinc-200 bg-[#FFFDF9] text-zinc-950 hover:bg-[#FFF8F1]',
+                ? 'border-orange-200 bg-orange-50 text-brand-text hover:bg-orange-50'
+                : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
             ].join(' ')}
             onClick={() => onFilterOpenChange(!filterOpen)}
           >
             <Filter size={16} />
             Filter Lanjutan
             {activeFilters > 0 && (
-              <span className="ml-1 rounded-full bg-[#FF4D00] px-1.5 py-0.5 text-[10px] leading-none text-white">
+              <span className="ml-1 rounded-full bg-brand-text px-1.5 py-0.5 text-[10px] leading-none text-white">
                 {activeFilters}
               </span>
             )}
@@ -306,7 +306,7 @@ function ReportToolbar({
               value={sortBy}
               onValueChange={(value) => onSortChange(value as SortMode)}
             >
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -322,8 +322,8 @@ function ReportToolbar({
       </div>
 
       {filterOpen && (
-        <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
-          <div className="[&>div]:border-zinc-200/80 [&>div]:bg-[#FFF8F1]/35 [&>div]:shadow-none [&_label]:text-[11px] [&_label]:font-black [&_label]:uppercase [&_label]:tracking-[0.14em] [&_label]:text-zinc-500 [&_input]:h-11 [&_input]:rounded-xl [&_input]:border-zinc-200 [&_input]:bg-[#FFFDF9]">
+        <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
+          <div className="[&>div]:border-zinc-200/80 [&>div]:bg-brand-surface/35 [&>div]:shadow-none [&_label]:text-[11px] [&_label]:font-black [&_label]:uppercase [&_label]:tracking-[0.14em] [&_label]:text-zinc-500 [&_input]:h-11 [&_input]:rounded-xl [&_input]:border-zinc-200 [&_input]:bg-bg-surface">
             <HierarchicalFilter value={filter} onChange={onFilterChange} />
           </div>
           <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
@@ -346,7 +346,7 @@ function ReportToolbar({
           type="button"
           variant="outline"
           size="sm"
-          className="gap-1.5 border-[#F0E1D5] bg-[#FFFDF9] font-bold"
+          className="gap-1.5 border-brand-border bg-bg-surface font-bold"
           disabled={exportCount === 0}
           onClick={onExportClick}
         >
@@ -369,7 +369,7 @@ function ReportDocumentList({
 }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -384,7 +384,7 @@ function ReportDocumentList({
             {dokumen.map((dok) => (
               <TableRow
                 key={dok.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onOpenDocument(dok.id)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -397,7 +397,7 @@ function ReportDocumentList({
               >
                 <TableCell className="max-w-[460px] px-6 py-5">
                   <div className="min-w-0">
-                    <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                    <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">
                       {dok.judul}
                     </p>
                     <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">{dok.fungsi_nama ?? '-'}</p>
@@ -434,14 +434,14 @@ function ReportDocumentList({
         {dokumen.map((dok, idx) => (
           <PegawaiPanel
             key={dok.id}
-            className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]"
+            className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
                   Dokumen #{idx + 1}
                 </p>
-                <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</h2>
+                <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</h2>
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
                 <ReportStatusBadge status={dok.status} />
@@ -500,7 +500,7 @@ function DateCell({ value, className }: { value: string; className?: string }) {
 
 function InfoTile({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
   return (
-    <div className={['rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5', className ?? ''].join(' ')}>
+    <div className={['rounded-xl border border-zinc-200/80 bg-bg-surface p-2.5', className ?? ''].join(' ')}>
       <p className="font-semibold text-zinc-500">{label}</p>
       <div className="mt-0.5 text-zinc-900">{value}</div>
     </div>

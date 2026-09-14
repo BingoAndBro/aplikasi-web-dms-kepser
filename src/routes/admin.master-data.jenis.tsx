@@ -346,7 +346,7 @@ function JenisPage() {
         onConfirm={handleDelete}
         loading={saving}
       >
-        Jenis permintaan <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus.
+        Jenis permintaan <strong className="text-text-strong">{deleteTarget?.nama}</strong> akan dihapus.
       </AdminConfirmationDialog>
     </PageLayout>
   )

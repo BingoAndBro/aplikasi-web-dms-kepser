@@ -284,7 +284,7 @@ function FungsiPage() {
         onConfirm={handleDelete}
         loading={saving}
       >
-        Fungsi <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus dari daftar fungsi.
+        Fungsi <strong className="text-text-strong">{deleteTarget?.nama}</strong> akan dihapus dari daftar fungsi.
       </AdminConfirmationDialog>
     </PageLayout>
   )

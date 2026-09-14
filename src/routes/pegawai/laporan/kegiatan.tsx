@@ -431,7 +431,7 @@ function ReportToolbar({
   onFilterChange: (value: KegiatanFilterValue) => void
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
       <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
         <label className="relative min-w-0 flex-1 lg:max-w-xl">
           <span className="sr-only">{searchLabel}</span>
@@ -441,7 +441,7 @@ function ReportToolbar({
             placeholder={placeholder}
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -451,15 +451,15 @@ function ReportToolbar({
             className={[
               'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
               filterOpen || activeFilters > 0
-                ? 'border-orange-200 bg-orange-50 text-[#FF4D00] hover:bg-orange-50'
-                : 'border-zinc-200 bg-[#FFFDF9] text-zinc-950 hover:bg-[#FFF8F1]',
+                ? 'border-orange-200 bg-orange-50 text-brand-text hover:bg-orange-50'
+                : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
             ].join(' ')}
             onClick={() => onFilterOpenChange(!filterOpen)}
           >
             <Filter size={16} />
             Filter Lanjutan
             {activeFilters > 0 && (
-              <span className="ml-1 rounded-full bg-[#FF4D00] px-1.5 py-0.5 text-[10px] leading-none text-white">
+              <span className="ml-1 rounded-full bg-brand-text px-1.5 py-0.5 text-[10px] leading-none text-white">
                 {activeFilters}
               </span>
             )}
@@ -470,7 +470,7 @@ function ReportToolbar({
               value={sortBy}
               onValueChange={(value) => onSortChange(value as SortMode)}
             >
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -486,7 +486,7 @@ function ReportToolbar({
       </div>
 
       {filterOpen && (
-        <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
+        <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
           <KegiatanAdvancedFilter value={filter} onChange={onFilterChange} />
           <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange({})}>
@@ -533,7 +533,7 @@ function KegiatanAdvancedFilter({
   }, [])
 
   return (
-    <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
+    <div className="rounded-[22px] border border-zinc-200/80 bg-brand-surface/35 p-4 shadow-none">
       <div className="grid gap-4 lg:grid-cols-3">
         <label className="space-y-2">
           <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Fungsi</span>
@@ -541,7 +541,7 @@ function KegiatanAdvancedFilter({
             value={value.fungsiId || '_all'}
             onValueChange={(fungsiId) => onChange({ ...value, fungsiId: fungsiId === '_all' ? undefined : fungsiId })}
           >
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
               <SelectValue placeholder="Semua Fungsi">
                 {selected => selected && selected !== '_all'
                   ? fungsis.find(fungsi => fungsi.id === selected)?.nama ?? 'Semua Fungsi'
@@ -617,7 +617,7 @@ function SummaryCard({
 function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: string) => void }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -633,7 +633,7 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
             {rows.map(row => (
               <TableRow
                 key={row.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onSelect(row.id)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -644,7 +644,7 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
                 }}
               >
                 <TableCell className="max-w-[420px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{row.nama}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">{row.pengajuCount} pegawai dalam daftar</p>
                 </TableCell>
                 <TableCell className="max-w-[220px] px-6 py-5">
@@ -762,7 +762,7 @@ function KegiatanDetailView({
             type="button"
             size="icon-lg"
             variant="ghost"
-            className="mt-1 size-10 shrink-0 rounded-xl border border-zinc-200 bg-[#FFFDF9] text-zinc-600 shadow-sm hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+            className="mt-1 size-10 shrink-0 rounded-xl border border-zinc-200 bg-bg-surface text-zinc-600 shadow-sm hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
             onClick={onBack}
             aria-label="Kembali ke daftar kegiatan"
           >
@@ -778,7 +778,7 @@ function KegiatanDetailView({
             </p>
           </div>
         </div>
-        <div className="rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+        <div className="rounded-[18px] border border-orange-100 bg-bg-surface px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
           Halaman ini menampilkan dokumen terkait kegiatan yang Anda pimpin.
         </div>
       </section>
@@ -857,7 +857,7 @@ function KegiatanDetailToolbar({
   onExportClick: () => void
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
       <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
         <label className="relative min-w-0 flex-1 lg:max-w-xl">
           <span className="sr-only">Cari dokumen kegiatan</span>
@@ -867,7 +867,7 @@ function KegiatanDetailToolbar({
             placeholder="Cari berdasarkan judul dokumen, jenis, atau kategori..."
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -877,15 +877,15 @@ function KegiatanDetailToolbar({
             className={[
               'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
               filterOpen || activeFilters > 0
-                ? 'border-orange-200 bg-orange-50 text-[#FF4D00] hover:bg-orange-50'
-                : 'border-zinc-200 bg-[#FFFDF9] text-zinc-950 hover:bg-[#FFF8F1]',
+                ? 'border-orange-200 bg-orange-50 text-brand-text hover:bg-orange-50'
+                : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
             ].join(' ')}
             onClick={() => onFilterOpenChange(!filterOpen)}
           >
             <Filter size={16} />
             Filter Lanjutan
             {activeFilters > 0 && (
-              <span className="ml-1 rounded-full bg-[#FF4D00] px-1.5 py-0.5 text-[10px] leading-none text-white">
+              <span className="ml-1 rounded-full bg-brand-text px-1.5 py-0.5 text-[10px] leading-none text-white">
                 {activeFilters}
               </span>
             )}
@@ -896,7 +896,7 @@ function KegiatanDetailToolbar({
               value={sortBy}
               onValueChange={(value) => onSortChange(value as DetailSortMode)}
             >
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => DETAIL_SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -912,7 +912,7 @@ function KegiatanDetailToolbar({
       </div>
 
       {filterOpen && (
-        <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
+        <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
           <KegiatanDetailAdvancedFilter
             kegiatanId={kegiatanId}
             value={filter}
@@ -939,7 +939,7 @@ function KegiatanDetailToolbar({
           type="button"
           variant="outline"
           size="sm"
-          className="gap-1.5 border-[#F0E1D5] bg-[#FFFDF9] font-bold"
+          className="gap-1.5 border-brand-border bg-bg-surface font-bold"
           disabled={exportCount === 0}
           onClick={onExportClick}
         >
@@ -1057,7 +1057,7 @@ function KegiatanDetailAdvancedFilter({
   }, [value.kategoriId])
 
   return (
-    <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
+    <div className="rounded-[22px] border border-zinc-200/80 bg-brand-surface/35 p-4 shadow-none">
       <div className="grid gap-4 lg:grid-cols-3">
         <DetailSelect
           label="Pembuat Dokumen"
@@ -1141,7 +1141,7 @@ function DetailSelect({
         onValueChange={(selected) => onChange(selected === '_all' ? undefined : selected)}
         disabled={disabled}
       >
-        <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] disabled:opacity-60">
+        <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong disabled:opacity-60">
           <SelectValue placeholder={allLabel}>
             {selected => selected && selected !== '_all'
               ? options.find(option => option.id === selected)?.nama ?? allLabel
@@ -1174,7 +1174,7 @@ function KegiatanDetailCards({
         value={kegiatan.nama}
         detail={`Ketua Tim: ${kegiatan.ketuaTimName}`}
         icon={<FolderOpen size={16} />}
-        className="border-[#E1D7CB] bg-[#FFFDF9]"
+        className="border-[#E1D7CB] bg-bg-surface"
         labelClassName="text-[#5F3B22]"
         iconClassName="border-[#D8CDC1] text-[#6D6258]"
       />
@@ -1201,11 +1201,11 @@ function KegiatanDetailCards({
         value={formatRupiah(kegiatan.totalNominal)}
         detail="Hanya Belanja Material"
         icon={<Banknote size={16} />}
-        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
-        labelClassName="text-[#006B35]"
-        valueClassName="font-mono text-[24px] text-[#02170B]"
-        detailClassName="text-[#006B35]"
-        iconClassName="border-[#62C995] text-[#16A35D]"
+        className="border-money-border bg-money-surface shadow-[0_2px_0_rgba(16,185,129,0.18)]"
+        labelClassName="text-money-text"
+        valueClassName="font-mono text-[24px] text-money-value"
+        detailClassName="text-money-text"
+        iconClassName="border-[#62C995] text-money-icon"
       />
     </div>
   )
@@ -1226,7 +1226,7 @@ function DocumentTable({
 }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -1242,7 +1242,7 @@ function DocumentTable({
             {dokumen.map(dok => (
               <TableRow
                 key={dok.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onOpenDocument(dok.id)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -1254,7 +1254,7 @@ function DocumentTable({
                 aria-label={`Detail Dokumen ${dok.judul}`}
               >
                 <TableCell className="max-w-[460px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</p>
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">
                     Pembuat: {(dok as any).pengaju_nama ?? 'Tidak diketahui'}
                     {isCurrentUser(dok) ? <Badge className="ml-2 border-orange-200 bg-orange-50 text-orange-700">Anda</Badge> : null}
@@ -1291,7 +1291,7 @@ function DocumentTable({
         {dokumen.map((dok, idx) => (
           <PegawaiPanel
             key={dok.id}
-            className="group cursor-pointer space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]"
+            className="group cursor-pointer space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface"
             onClick={() => onOpenDocument(dok.id)}
             tabIndex={0}
             role="button"
@@ -1365,7 +1365,7 @@ function DateCell({ value, className }: { value: string; className?: string }) {
 
 function InfoTile({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
   return (
-    <div className={['rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5', className ?? ''].join(' ')}>
+    <div className={['rounded-xl border border-zinc-200/80 bg-bg-surface p-2.5', className ?? ''].join(' ')}>
       <p className="font-semibold text-zinc-500">{label}</p>
       <div className="mt-0.5 text-zinc-900">{value}</div>
     </div>

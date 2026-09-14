@@ -23,7 +23,7 @@ describe('Phase 15L.3B cross-role document detail visual parity source guard', (
     expect(pegawaiDetail).toContain('function MetadataDetailCard')
     expect(pegawaiDetail).not.toContain('Data Pertanggungjawaban Anggaran & Metadata Dokumen')
     expect(pegawaiDetail).toContain("rounded-t-[1.5rem] bg-gradient-to-r from-[#F97316] to-[#FB923C]")
-    expect(pegawaiDetail).toContain("rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9]")
+    expect(pegawaiDetail).toContain("rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface")
     expect(pegawaiDetail).toContain("min-h-full bg-[#FFF9F4] px-4 py-4 sm:px-6 lg:px-7 lg:py-5")
     expect(pegawaiDetail).toContain("mx-auto max-w-[92rem] space-y-4")
     expect(pegawaiDetail).toContain('<WorkflowPanel')

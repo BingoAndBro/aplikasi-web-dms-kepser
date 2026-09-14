@@ -1182,10 +1182,10 @@ function MasterUserPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-[#FF4D00]" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-brand-text" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
                           <Edit2 size={20} strokeWidth={2.5} />
                         </Button>
-                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-[#FF4D00]" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-brand-text" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
                           <KeyRound size={20} strokeWidth={2.5} />
                         </Button>
                         {user.isActive ? (
@@ -1193,7 +1193,7 @@ function MasterUserPage() {
                             <UserX size={20} strokeWidth={2.5} />
                           </Button>
                         ) : (
-                          <Button size="icon-lg" variant="ghost" onClick={() => openActivate(user)} className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-[#FF4D00]" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
+                          <Button size="icon-lg" variant="ghost" onClick={() => openActivate(user)} className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-brand-text" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
                             <UserCheck size={20} strokeWidth={2.5} />
                           </Button>
                         )}
@@ -1204,7 +1204,7 @@ function MasterUserPage() {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between border-t border-orange-100 bg-[#FFFDF9] px-6 py-4">
+          <div className="flex items-center justify-between border-t border-orange-100 bg-bg-surface px-6 py-4">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
               Menampilkan {filteredUsers.length} dari {users.length} user
             </p>
@@ -1327,9 +1327,9 @@ function MasterUserPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {dialogChairmanAssignments.map((c) => (
-                  <span key={c.id} className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-[#FFF8F1] px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[#FF4D00]">
+                  <span key={c.id} className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-brand-surface px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-brand-text">
                     {c.kegiatan_nama}
-                    <button type="button" aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`} onClick={() => handleRemoveChairman(c.id, 'new-user')} className="ml-1 rounded-full p-0.5 text-[#FF4D00] hover:bg-[#FFE7D5] hover:text-[#B93800]">
+                    <button type="button" aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`} onClick={() => handleRemoveChairman(c.id, 'new-user')} className="ml-1 rounded-full p-0.5 text-brand-text hover:bg-[#FFE7D5] hover:text-[#B93800]">
                       <X size={12} />
                     </button>
                   </span>
@@ -1488,14 +1488,14 @@ function MasterUserPage() {
                 {dialogChairmanAssignments.map((c) => (
                   <span
                     key={c.id}
-                    className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-[#FFF8F1] px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[#FF4D00]"
+                    className="inline-flex h-8 items-center gap-1 rounded-[5px] border border-[#F2D4AC] bg-brand-surface px-3 text-[12px] font-extrabold uppercase tracking-[0.04em] text-brand-text"
                   >
                     {c.kegiatan_nama}
                     <button
                       type="button"
                       aria-label={`Hapus penugasan ketua tim ${c.kegiatan_nama}`}
                       onClick={() => selectedUser && handleRemoveChairman(c.id, selectedUser.id)}
-                      className="ml-1 cursor-pointer rounded-full p-0.5 text-[#FF4D00] hover:bg-[#FFE7D5] hover:text-[#B93800]"
+                      className="ml-1 cursor-pointer rounded-full p-0.5 text-brand-text hover:bg-[#FFE7D5] hover:text-[#B93800]"
                     >
                       <X size={12} />
                     </button>
@@ -1580,7 +1580,7 @@ function MasterUserPage() {
             <DialogTitle>Reset Password</DialogTitle>
           </DialogHeader>
           <div className={adminDialogBodyClassName}>
-            <p className="text-sm leading-6 text-[#071A3A]">
+            <p className="text-sm leading-6 text-text-strong">
               Reset password untuk user <strong>{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong>.
             </p>
             <div className={adminFormGridClassName}>
@@ -1606,7 +1606,7 @@ function MasterUserPage() {
                 />
               </div>
             </div>
-            <p className="rounded-[20px] border border-orange-200 bg-[#FFF9F2] px-4 py-4 text-sm leading-6 text-[#071A3A]">
+            <p className="rounded-[20px] border border-orange-200 bg-[#FFF9F2] px-4 py-4 text-sm leading-6 text-text-strong">
               Password akan langsung berlaku. User harus login dengan password baru.
             </p>
           </div>
@@ -1655,8 +1655,8 @@ function MasterUserPage() {
         }}
       >
         Apakah Anda yakin ingin menunjuk user ini sebagai ketua tim kegiatan{' '}
-        <strong className="text-[#071A3A]">{pendingChairmanReplace?.kegiatan_nama}</strong>?
-        Ini akan menggantikan <strong className="text-[#071A3A]">{pendingChairmanReplace?.old_user}</strong>.
+        <strong className="text-text-strong">{pendingChairmanReplace?.kegiatan_nama}</strong>?
+        Ini akan menggantikan <strong className="text-text-strong">{pendingChairmanReplace?.old_user}</strong>.
       </AdminConfirmationDialog>
 
       {/* Deactivate Dialog */}
@@ -1669,7 +1669,7 @@ function MasterUserPage() {
         onConfirm={handleDeactivate}
         loading={actionLoading}
       >
-        User <strong className="text-[#071A3A]">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan dinonaktifkan.
+        User <strong className="text-text-strong">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan dinonaktifkan.
         User tidak akan bisa login lagi. Role user tetap tersimpan.
       </AdminConfirmationDialog>
 
@@ -1684,7 +1684,7 @@ function MasterUserPage() {
         onConfirm={handleActivate}
         loading={actionLoading}
       >
-        User <strong className="text-[#071A3A]">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan diaktifkan kembali.
+        User <strong className="text-text-strong">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan diaktifkan kembali.
         User bisa login lagi.
       </AdminConfirmationDialog>
     </PageLayout>

@@ -164,7 +164,7 @@ function BerkasTertutupPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
-                className="h-9 gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white hover:bg-[#EA580C]"
+                className="h-9 gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white hover:bg-brand-solid-hover"
                 disabled={!canBatchPropose}
                 onClick={() => setBatchOpen(true)}
                 title={dueFolders.length > 0 ? 'Usulkan semua berkas yang jatuh tempo' : 'Tidak ada berkas jatuh tempo'}
@@ -268,7 +268,7 @@ function BerkasTertutupTable({
                 onClick={() => onOpen(folder)}
               >
                 <td className="max-w-[420px] px-6 py-5 text-zinc-950">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-[#FF4D00]">
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-brand-text">
                     {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
                   </p>
                 </td>
@@ -344,7 +344,7 @@ function UsulkanPembersihanButton({
       <Button
         type="button"
         size="sm"
-        className={`h-9 gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white hover:bg-[#EA580C] ${fullWidth ? 'w-full' : ''}`}
+        className={`h-9 gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white hover:bg-brand-solid-hover ${fullWidth ? 'w-full' : ''}`}
         disabled={pending}
         onClick={() => setConfirmOpen(true)}
       >

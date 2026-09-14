@@ -170,10 +170,10 @@ function TreeNode({
         className={cn(
           'group flex cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 py-1.5 transition-all',
           isSelected
-            ? 'border-[#FF5A00] bg-[#FF5A00] text-white shadow-md shadow-orange-500/20'
+            ? 'border-brand-solid bg-brand-solid text-white shadow-md shadow-orange-500/20'
             : isInactive
               ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100'
-              : 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-950 hover:border-orange-200 hover:bg-[#FFF8F1]',
+              : 'border-[#F1E5DA] bg-bg-surface text-zinc-950 hover:border-orange-200 hover:bg-brand-surface',
         )}
         style={{ paddingLeft: `${level * 16 + 10}px` }}
         onClick={() => onSelect(node)}
@@ -197,7 +197,7 @@ function TreeNode({
           )}
         </button>
 
-        <span className={cn('shrink-0', isSelected ? 'text-white' : isInactive ? 'text-zinc-400' : 'text-[#FF5A00]')}>
+        <span className={cn('shrink-0', isSelected ? 'text-white' : isInactive ? 'text-zinc-400' : 'text-brand-solid')}>
           {hasChildren ? (
             isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />
           ) : (
@@ -209,7 +209,7 @@ function TreeNode({
           {node.kode && (
             <span className={cn(
               'shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold',
-              isSelected ? 'border-white/10 bg-white/20 text-white' : 'border-orange-100/60 bg-orange-50 text-[#FF5A00]',
+              isSelected ? 'border-white/10 bg-white/20 text-white' : 'border-orange-100/60 bg-orange-50 text-brand-solid',
             )}>
               {node.kode}
             </span>
@@ -237,7 +237,7 @@ function TreeNode({
             'shrink-0 rounded-lg p-1 opacity-100 transition-colors',
             isSelected
               ? 'bg-white/20 text-white hover:bg-white/30'
-              : 'border border-orange-100 bg-orange-50 text-[#FF5A00] hover:bg-[#FF5A00] hover:text-white',
+              : 'border border-orange-100 bg-orange-50 text-brand-solid hover:bg-brand-solid hover:text-white',
           )}
           aria-label={`Tambah sub-klasifikasi untuk ${node.nama}`}
           title="Tambah anak klasifikasi"
@@ -282,7 +282,7 @@ function KlasifikasiDetail({
   if (!node) {
     return (
       <div className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center">
-        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-[#FF5A00]">
+        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-brand-solid">
           <Network size={24} />
         </div>
         <p className="text-sm font-semibold text-zinc-600">
@@ -300,7 +300,7 @@ function KlasifikasiDetail({
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div className="flex items-center gap-2.5 border-b border-[#F1E5DA] pb-4 text-left">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/70 bg-orange-50 text-[#FF5A00]">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/70 bg-orange-50 text-brand-solid">
           <Info size={16} />
         </div>
         <div className="min-w-0 flex-1">
@@ -316,7 +316,7 @@ function KlasifikasiDetail({
         <div className="grid grid-cols-1 gap-4 min-[520px]:grid-cols-2">
           <div>
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Kode Klasifikasi</span>
-            <span className="mt-0.5 block font-mono text-sm font-bold text-[#FF5A00]">{node.kode ?? '-'}</span>
+            <span className="mt-0.5 block font-mono text-sm font-bold text-brand-solid">{node.kode ?? '-'}</span>
           </div>
           <div>
             <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Tipe Klasifikasi</span>
@@ -338,7 +338,7 @@ function KlasifikasiDetail({
 
         <div>
           <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">Jalur Struktur (Hierarchy Path)</span>
-          <span className="mt-1 block rounded-xl bg-[#FFF8F1] px-3 py-2 font-mono text-xs font-semibold leading-snug text-zinc-700">
+          <span className="mt-1 block rounded-xl bg-brand-surface px-3 py-2 font-mono text-xs font-semibold leading-snug text-zinc-700">
             {pathText}
           </span>
         </div>
@@ -376,7 +376,7 @@ function KlasifikasiDetail({
         <div className="flex flex-col gap-2 min-[520px]:flex-row">
           <Button
             type="button"
-            className="min-h-11 flex-1 gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-black uppercase tracking-[0.12em] text-white hover:bg-[#EA580C]"
+            className="min-h-11 flex-1 gap-1.5 rounded-xl bg-brand-solid text-xs font-black uppercase tracking-[0.12em] text-white hover:bg-brand-solid-hover"
             onClick={() => onAddChild(node)}
           >
             <SquarePlus size={14} /> Tambah Anak
@@ -385,7 +385,7 @@ function KlasifikasiDetail({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 gap-1 rounded-xl border-[#F0E1D5] bg-white px-4 text-xs font-bold text-zinc-700 hover:border-orange-200 hover:text-[#FF5A00]"
+              className="min-h-11 gap-1 rounded-xl border-brand-border bg-white px-4 text-xs font-bold text-zinc-700 hover:border-orange-200 hover:text-brand-solid"
               onClick={() => onEdit(node)}
             >
               <Pencil size={14} /> Edit
@@ -488,7 +488,7 @@ function AddKlasifikasiModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[#FFFAF6] shadow-2xl" role="dialog" aria-modal="true" aria-label="Tambah klasifikasi">
-        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-[#FFFDF9] px-5 py-4">
+        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-bg-surface px-5 py-4">
           <div>
             <p className="font-headline text-lg font-extrabold text-zinc-950">{parentNode ? 'Tambah Anak Klasifikasi' : 'Tambah Klasifikasi Induk'}</p>
             <p className="mt-1 text-xs font-medium text-zinc-600">
@@ -502,8 +502,8 @@ function AddKlasifikasiModal({
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             {parentNode && (
-              <div className="rounded-xl border border-orange-100 bg-[#FFF8F1] p-3 text-sm">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#FF5A00]">Klasifikasi Induk</p>
+              <div className="rounded-xl border border-orange-100 bg-brand-surface p-3 text-sm">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-solid">Klasifikasi Induk</p>
                 <p className="mt-1 font-bold text-zinc-950">{classificationDisplay(parentNode)}</p>
               </div>
             )}
@@ -538,14 +538,14 @@ function AddKlasifikasiModal({
                 onChange={event => setDeskripsi(event.target.value)}
                 rows={4}
                 placeholder="Berikan ringkasan singkat cakupan belanja dari klasifikasi ini..."
-                className="w-full resize-none rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
               />
             </div>
             {error && <p className="text-xs font-semibold text-error">{error}</p>}
           </div>
-          <div className="flex gap-3 border-t border-[#F1E5DA] bg-[#FFFDF9] p-4">
-            <Button type="button" variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batalkan</Button>
-            <Button type="submit" className="flex-1 gap-1.5 bg-[#FF5A00] text-white hover:bg-[#EA580C]" disabled={loading}>
+          <div className="flex gap-3 border-t border-[#F1E5DA] bg-bg-surface p-4">
+            <Button type="button" variant="outline" className="flex-1 border-brand-border bg-bg-surface" onClick={onClose} disabled={loading}>Batalkan</Button>
+            <Button type="submit" className="flex-1 gap-1.5 bg-brand-solid text-white hover:bg-brand-solid-hover" disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
               Simpan Klasifikasi
             </Button>
@@ -623,7 +623,7 @@ function EditKlasifikasiModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div className="relative z-10 mx-4 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[#FFFAF6] shadow-2xl" role="dialog" aria-modal="true" aria-label="Edit klasifikasi">
-        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-[#FFFDF9] px-5 py-4">
+        <div className="flex items-start justify-between border-b border-[#F1E5DA] bg-bg-surface px-5 py-4">
           <div>
             <p className="font-headline text-lg font-extrabold text-zinc-950">Edit Atribut Klasifikasi</p>
             <p className="mt-1 text-xs font-medium text-zinc-600">Ubah kode, nama, dan deskripsi klasifikasi.</p>
@@ -665,14 +665,14 @@ function EditKlasifikasiModal({
                 onChange={event => setDeskripsi(event.target.value)}
                 rows={4}
                 placeholder="Deskripsi klasifikasi..."
-                className="w-full resize-none rounded-xl border border-[#F0E1D5] bg-[#FFFDF9] px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
               />
             </div>
             {error && <p className="text-xs font-semibold text-error">{error}</p>}
           </div>
-          <div className="flex gap-3 border-t border-[#F1E5DA] bg-[#FFFDF9] p-4">
-            <Button type="button" variant="outline" className="flex-1 border-[#F0E1D5] bg-[#FFFDF9]" onClick={onClose} disabled={loading}>Batalkan</Button>
-            <Button type="submit" className="flex-1 gap-1.5 bg-[#FF5A00] text-white hover:bg-[#EA580C]" disabled={loading}>
+          <div className="flex gap-3 border-t border-[#F1E5DA] bg-bg-surface p-4">
+            <Button type="button" variant="outline" className="flex-1 border-brand-border bg-bg-surface" onClick={onClose} disabled={loading}>Batalkan</Button>
+            <Button type="submit" className="flex-1 gap-1.5 bg-brand-solid text-white hover:bg-brand-solid-hover" disabled={loading}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
               Simpan Perubahan
             </Button>
@@ -831,7 +831,7 @@ function FormInput({
   return (
     <div>
       <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-zinc-600">
-        {label} {required && <span className="text-[#FF5A00]">*</span>}
+        {label} {required && <span className="text-brand-solid">*</span>}
       </label>
       <input
         type="text"
@@ -839,8 +839,8 @@ function FormInput({
         onChange={event => onChange(event.target.value)}
         placeholder={placeholder}
         className={cn(
-          'h-11 w-full rounded-xl border bg-[#FFFDF9] px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
-          error ? 'border-error' : 'border-[#F0E1D5]',
+          'h-11 w-full rounded-xl border bg-bg-surface px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+          error ? 'border-error' : 'border-brand-border',
         )}
       />
       {error && <p className="mt-1 text-[10px] font-semibold text-error">{error}</p>}
@@ -976,12 +976,12 @@ function KlasifikasiPage() {
           <div className="min-w-0">
             <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
               <Archive size={12} />
-              <Link to="/kasubag" className="hover:text-[#FF5A00]">Pemberkasan KSBU</Link>
+              <Link to="/kasubag" className="hover:text-brand-solid">Pemberkasan KSBU</Link>
               <ChevronRight size={10} />
-              <span className="text-[#FF5A00]">Klasifikasi Dokumen</span>
+              <span className="text-brand-solid">Klasifikasi Dokumen</span>
             </div>
             <h2 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
-              Master <span className="text-[#FF5A00]">Klasifikasi Dokumen</span>
+              Master <span className="text-brand-solid">Klasifikasi Dokumen</span>
             </h2>
             <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
               Kelola struktur klasifikasi yang digunakan sebagai Cara Pembayaran pada proses pemberkasan.
@@ -989,7 +989,7 @@ function KlasifikasiPage() {
           </div>
           <Button
             type="button"
-            className="w-full shrink-0 gap-1.5 rounded-xl bg-[#FF5A00] px-4 text-xs font-extrabold text-white hover:bg-[#EA580C] sm:w-auto"
+            className="w-full shrink-0 gap-1.5 rounded-xl bg-brand-solid px-4 text-xs font-extrabold text-white hover:bg-brand-solid-hover sm:w-auto"
             onClick={() => {
               setAddParentNode(null)
               setAddModalOpen(true)
@@ -1001,15 +1001,15 @@ function KlasifikasiPage() {
         </div>
 
         <div className="flex items-start gap-2.5 rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-orange-900 shadow-sm">
-          <Info size={15} className="mt-0.5 shrink-0 text-[#FF5A00]" />
+          <Info size={15} className="mt-0.5 shrink-0 text-brand-solid" />
           <p>
-            <span className="font-extrabold">Petunjuk Pemberkasan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-[#FF5A00]">Cara Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
+            <span className="font-extrabold">Petunjuk Pemberkasan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-brand-solid">Cara Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
           </p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="animate-spin text-[#FF5A00]" />
+            <Loader2 size={24} className="animate-spin text-brand-solid" />
           </div>
         ) : error ? (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-error/20 bg-error/5 py-20">
@@ -1018,15 +1018,15 @@ function KlasifikasiPage() {
             <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#F1E5DA] bg-[#FFFDF9] py-20 text-center shadow-sm">
-            <div className="flex size-14 items-center justify-center rounded-xl bg-orange-50 text-[#FF5A00]">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-[#F1E5DA] bg-bg-surface py-20 text-center shadow-sm">
+            <div className="flex size-14 items-center justify-center rounded-xl bg-orange-50 text-brand-solid">
               <Network size={24} />
             </div>
             <p className="font-headline text-lg font-bold text-zinc-950">Belum ada klasifikasi</p>
             <p className="max-w-sm text-xs font-medium leading-relaxed text-zinc-600">Tambahkan klasifikasi induk terlebih dahulu, lalu buat anak klasifikasi sampai Pilihan Akhir.</p>
             <Button
               size="sm"
-              className="gap-1.5 rounded-xl bg-[#FF5A00] text-white hover:bg-[#EA580C]"
+              className="gap-1.5 rounded-xl bg-brand-solid text-white hover:bg-brand-solid-hover"
               onClick={() => {
                 setAddParentNode(null)
                 setAddModalOpen(true)
@@ -1040,7 +1040,7 @@ function KlasifikasiPage() {
             <div className="overflow-hidden rounded-xl border border-[#F1E5DA] bg-white shadow-sm lg:col-span-6">
               <div className="flex items-center justify-between gap-3 border-b border-[#F1E5DA] px-3 py-2.5">
                 <div className="flex min-w-0 items-center gap-1.5">
-                  <FolderOpen size={14} className="shrink-0 text-[#FF5A00]" />
+                  <FolderOpen size={14} className="shrink-0 text-brand-solid" />
                   <h3 className="truncate text-[13px] font-bold text-zinc-950">Pohon Struktur Klasifikasi</h3>
                 </div>
                 <span className="shrink-0 rounded-md bg-orange-50 px-2 py-0.5 text-[9.5px] font-black text-zinc-700">

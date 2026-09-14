@@ -333,7 +333,7 @@ function KategoriPage() {
         onConfirm={handleDelete}
         loading={saving}
       >
-        Kategori <strong className="text-[#071A3A]">{deleteTarget?.nama}</strong> akan dihapus.
+        Kategori <strong className="text-text-strong">{deleteTarget?.nama}</strong> akan dihapus.
       </AdminConfirmationDialog>
     </PageLayout>
   )

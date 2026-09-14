@@ -388,7 +388,7 @@ function DokumenRevisiPage() {
           <div className="flex size-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <CheckCircle2 size={38} />
           </div>
-          <p className="mt-6 text-xs font-bold text-[#EA580C]">
+          <p className="mt-6 text-xs font-bold text-brand-solid-hover">
             Pengajuan ulang selesai
           </p>
           <h1 className="mt-2 font-headline text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">
@@ -398,7 +398,7 @@ function DokumenRevisiPage() {
             Dokumen <span className="font-bold text-zinc-950">{resubmitSuccess.title}</span> telah dikirim kembali ke {resubmitSuccess.targetLabel}.
           </p>
 
-          <div className="mt-6 grid w-full gap-3 rounded-2xl border border-[#F0E1D5] bg-[#FFFAF6] p-4 text-left shadow-sm sm:grid-cols-3">
+          <div className="mt-6 grid w-full gap-3 rounded-2xl border border-brand-border bg-[#FFFAF6] p-4 text-left shadow-sm sm:grid-cols-3">
             <div>
               <p className="text-[10px] font-semibold text-zinc-500">Jenis Dokumen</p>
               <p className="mt-1 text-sm font-bold text-zinc-950">
@@ -421,12 +421,12 @@ function DokumenRevisiPage() {
 
           <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Link to="/pegawai/revisi" replace>
-              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto">
                 Revisi Dokumen Lain
               </Button>
             </Link>
             <Link to="/pegawai/dokumen/$id" params={{ id: resubmitSuccess.documentId }} replace>
-              <Button variant="outline" size="lg" className="w-full border-[#F0E1D5] bg-white sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full border-brand-border bg-white sm:w-auto">
                 Lihat Detail Dokumen
               </Button>
             </Link>
@@ -485,7 +485,7 @@ function DokumenRevisiPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 px-1 py-1 sm:px-2">
-            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-[#F7F2EC] p-1">
               {REVISION_TABS.map(tab => {
                 const selected = activeTab === tab.key
 
@@ -497,7 +497,7 @@ function DokumenRevisiPage() {
                     className={cn(
                       'flex min-h-8 min-w-32 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
-                        ? 'bg-[#FFFAF6] text-[#FF5A00] shadow-sm'
+                        ? 'bg-[#FFFAF6] text-brand-solid shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
@@ -554,7 +554,7 @@ function DokumenRevisiPage() {
                         <span className={cn(
                           'inline-flex items-center gap-1 text-xs font-semibold',
                           showAsRevision ? 'text-rose-600' :
-                            isCurrent || showAsRevisionDraft ? 'text-[#FF5A00]' :
+                            isCurrent || showAsRevisionDraft ? 'text-brand-solid' :
                               isPast ? 'text-emerald-700' : 'text-zinc-500',
                         )}>
                           {showAsRevision ? (
@@ -588,11 +588,11 @@ function DokumenRevisiPage() {
                     >
                       <p className={cn(
                         'mb-1 text-[10px] font-black uppercase tracking-[0.14em]',
-                        label === 'Nominal Realisasi' ? 'text-[#FF5A00]' : 'text-zinc-500',
+                        label === 'Nominal Realisasi' ? 'text-brand-solid' : 'text-zinc-500',
                       )}>{label}</p>
                       <p className={cn(
                         'text-sm font-semibold leading-relaxed',
-                        label === 'Nominal Realisasi' ? 'font-mono font-bold text-[#FF5A00]' : 'text-zinc-950',
+                        label === 'Nominal Realisasi' ? 'font-mono font-bold text-brand-solid' : 'text-zinc-950',
                       )}>{value}</p>
                     </div>
                   ))}
@@ -656,12 +656,12 @@ function DokumenRevisiPage() {
 
             <PegawaiPanel className="border-[#FDBA8C] bg-[#FFF1E7] p-3 shadow-none">
               <div className="flex items-start gap-2">
-                <span className="flex size-6 shrink-0 items-center justify-center text-[#FF5A00]">
+                <span className="flex size-6 shrink-0 items-center justify-center text-brand-solid">
                   <Info size={13} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-[#FF5A00]">Aksi Revisi</p>
-                  <p className="mt-1 text-[11px] font-medium leading-relaxed text-[#FF5A00]">
+                  <p className="text-xs font-bold text-brand-solid">Aksi Revisi</p>
+                  <p className="mt-1 text-[11px] font-medium leading-relaxed text-brand-solid">
                     Anda dapat mengubah metadata atau lampiran jika diperlukan. Jika dokumen sudah sesuai, Anda dapat langsung mengajukan ulang.
                   </p>
                 </div>
@@ -703,7 +703,7 @@ function DokumenRevisiPage() {
                     setActiveTab('edit')
                     setSubmitRequestSignal(current => current + 1)
                   }}
-                  className="h-10 w-full gap-2 rounded-xl bg-[#FF5A00] text-sm font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]"
+                  className="h-10 w-full gap-2 rounded-xl bg-brand-solid text-sm font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover"
                 >
                   <Send size={15} />
                   Ajukan Ulang
@@ -716,7 +716,7 @@ function DokumenRevisiPage() {
                     setActiveTab('edit')
                     setCancelRequestSignal(current => current + 1)
                   }}
-                  className="h-10 w-full gap-2 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-sm font-bold text-zinc-950 hover:bg-[#FFFAF6]"
+                  className="h-10 w-full gap-2 rounded-xl border-brand-border bg-bg-surface text-sm font-bold text-zinc-950 hover:bg-[#FFFAF6]"
                 >
                   <ChevronLeft size={15} />
                   Kembali
@@ -760,13 +760,13 @@ function DokumenRevisiPage() {
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-4">
+            <div className="rounded-xl border border-brand-border bg-[#FFFAF6] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">Lampiran</p>
               <p className="mt-1 text-sm font-extrabold text-zinc-950">
                 {submitConfirmation?.lampiranUrls.length ?? 0} file akan diproses
               </p>
             </div>
-            <div className="rounded-xl border border-[#F0E1D5] bg-[#FFFAF6] p-4">
+            <div className="rounded-xl border border-brand-border bg-[#FFFAF6] p-4">
               <p className="text-[10px] font-semibold text-zinc-500">Nominal</p>
               <p className="mt-1 font-mono text-sm font-bold text-zinc-950">
                 {isNonMaterial ? '-' : formatCurrency(submitConfirmation?.nominalRealisasi)}
@@ -775,9 +775,9 @@ function DokumenRevisiPage() {
           </div>
           <div className="flex items-start gap-3 rounded-xl bg-[#FFF3D6] p-4">
             {submitInFlightRef.current ? (
-              <Loader2 size={17} className="mt-0.5 shrink-0 animate-spin text-[#D97706]" />
+              <Loader2 size={17} className="mt-0.5 shrink-0 animate-spin text-warning-solid" />
             ) : (
-              <Info size={17} className="mt-0.5 shrink-0 text-[#D97706]" />
+              <Info size={17} className="mt-0.5 shrink-0 text-warning-solid" />
             )}
             <div>
               <p className="text-xs font-bold text-zinc-950">Urutan proses tetap sama</p>

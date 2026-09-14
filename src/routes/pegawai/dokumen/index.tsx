@@ -192,7 +192,7 @@ function DokumenSayaPage() {
           />
         ) : (
           <>
-            <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+            <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
               <Table className="text-left">
                 <TableHeader>
                   <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -208,7 +208,7 @@ function DokumenSayaPage() {
                   {paginated.map((dok, i) => (
                     <TableRow
                       key={dok.id}
-                      className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                      className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                       onClick={() => openDocument(dok)}
                       tabIndex={0}
                       onKeyDown={(event) => {
@@ -224,7 +224,7 @@ function DokumenSayaPage() {
                       </TableCell>
                       <TableCell className="max-w-[420px] px-6 py-5">
                         <div className="min-w-0">
-                          <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">
+                          <p className="line-clamp-1 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">
                             {dok.judul}
                           </p>
                           <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">{dok.fungsi_nama ?? '-'}</p>
@@ -260,27 +260,27 @@ function DokumenSayaPage() {
                 return (
                   <PegawaiPanel
                     key={dok.id}
-                    className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]"
+                    className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
                           Dokumen #{page * PAGE_SIZE + i + 1}
                         </p>
-                        <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{dok.judul}</h2>
+                        <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</h2>
                       </div>
                       <PegawaiDocumentStatusBadge dok={dok} className="shrink-0" />
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
-                      <div className="rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
+                      <div className="rounded-xl border border-zinc-200/80 bg-bg-surface p-2.5">
                         <p className="font-semibold text-zinc-500">Fungsi</p>
                         <p className="mt-0.5 text-zinc-900">{dok.fungsi_nama ?? '-'}</p>
                       </div>
-                      <div className="rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
+                      <div className="rounded-xl border border-zinc-200/80 bg-bg-surface p-2.5">
                         <p className="font-semibold text-zinc-500">Tanggal</p>
                         <DateCell value={dok.tanggal} className="mt-1" />
                       </div>
-                      <div className="col-span-2 rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5">
+                      <div className="col-span-2 rounded-xl border border-zinc-200/80 bg-bg-surface p-2.5">
                         <p className="font-semibold text-zinc-500">Kegiatan</p>
                         <p className="mt-0.5 text-zinc-900">{dok.kegiatan_nama ?? '-'}</p>
                       </div>

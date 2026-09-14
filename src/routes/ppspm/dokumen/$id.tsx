@@ -210,11 +210,11 @@ function PpspmDokumenDetailPage() {
             'flex size-20 items-center justify-center rounded-full border',
             isApprove
               ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
-              : 'border-orange-200 bg-orange-50 text-[#EA580C]',
+              : 'border-orange-200 bg-orange-50 text-brand-solid-hover',
           )}>
             {isApprove ? <CheckCircle2 size={38} strokeWidth={2.4} /> : <AlertTriangle size={34} strokeWidth={2.2} />}
           </div>
-          <p className="mt-6 text-xs font-bold text-[#EA580C]">
+          <p className="mt-6 text-xs font-bold text-brand-solid-hover">
             {isApprove ? 'Persetujuan PPSPM selesai' : 'Penolakan PPSPM selesai'}
           </p>
           <h1 className="mt-2 font-headline text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">
@@ -229,14 +229,14 @@ function PpspmDokumenDetailPage() {
 
           <div className="mt-7 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Link to="/ppspm/inbox">
-              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-[#EA580C] sm:w-auto">
+              <Button size="lg" className="w-full bg-[#F97316] text-white hover:bg-brand-solid-hover sm:w-auto">
                 Setujui Dokumen Lain
               </Button>
             </Link>
             <Button
               variant="outline"
               size="lg"
-              className="w-full border-[#F0E1D5] bg-white sm:w-auto"
+              className="w-full border-brand-border bg-white sm:w-auto"
               onClick={() => { setActionResult(null); fetchData() }}
             >
               Lihat Detail Dokumen
@@ -321,7 +321,7 @@ function PpspmDokumenDetailPage() {
 
         <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 px-1 py-1 sm:px-2">
-            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-[#F0E1D5] bg-[#F7F2EC] p-1">
+            <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-brand-border bg-[#F7F2EC] p-1">
               {DETAIL_TABS.map(tab => {
                 const selected = activeTab === tab.key
                 return (
@@ -332,7 +332,7 @@ function PpspmDokumenDetailPage() {
                     className={cn(
                       'flex min-h-8 min-w-28 items-center justify-center rounded-lg px-3 text-[12px] font-bold transition',
                       selected
-                        ? 'bg-[#FFFDF9] text-[#FF5A00] shadow-sm'
+                        ? 'bg-bg-surface text-brand-solid shadow-sm'
                         : 'text-zinc-500 hover:bg-[#FFFAF6] hover:text-zinc-950',
                     )}
                     aria-pressed={selected}
@@ -370,7 +370,7 @@ function PpspmDokumenDetailPage() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
+            <div className="min-w-0 rounded-b-[1.5rem] border border-t-0 border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
               <section className={cn(activeTab === 'metadata' ? 'block' : 'hidden')}>
                 <MetadataDetailCard dokumen={dokumen} isNonMaterial={isNonMaterial} />
               </section>
@@ -403,7 +403,7 @@ function PpspmDokumenDetailPage() {
             <div className="space-y-1.5 px-0.5 pt-0.5">
               {dokumen.status === 'IN_PPSPM_APPROVAL' && (
                 <>
-                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-[#FF5A00] text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-[#EA580C]" onClick={() => setApproveOpen(true)} disabled={!!actionLoading}>
+                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover" onClick={() => setApproveOpen(true)} disabled={!!actionLoading}>
                     {actionLoading === 'approve' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
                     Setujui Dokumen
                   </Button>
@@ -413,7 +413,7 @@ function PpspmDokumenDetailPage() {
                   </Button>
                 </>
               )}
-              <Button variant="outline" size="lg" className="h-9 w-full gap-1.5 rounded-xl border-[#F0E1D5] bg-[#FFFDF9] text-xs font-bold" onClick={handleBack}>
+              <Button variant="outline" size="lg" className="h-9 w-full gap-1.5 rounded-xl border-brand-border bg-bg-surface text-xs font-bold" onClick={handleBack}>
                 <ChevronLeft size={13} />
                 Kembali
               </Button>
@@ -441,7 +441,7 @@ function MetadataDetailCard({ dokumen, isNonMaterial }: { dokumen: DokumenDetail
       value: (
         <span className="inline-flex flex-wrap items-center gap-2">
           <span>{jenisValue ?? '-'}</span>
-          <span className="rounded-md border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#FF5A00]">
+          <span className="rounded-md border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
             {isNonMaterial ? 'Non-Material' : 'Material'}
           </span>
         </span>
@@ -481,7 +481,7 @@ function MetadataDetailCard({ dokumen, isNonMaterial }: { dokumen: DokumenDetail
   ]
 
   return (
-    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-[#FFFDF9] px-4 py-3.5 sm:px-5 sm:py-4">
+    <div className="rounded-[1.15rem] border border-[#F1E5DA] bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
         {metadataItems.map(item => (
           <div key={item.label} className="min-w-0">
@@ -552,7 +552,7 @@ function RoleStatusPanel({
   const statusTone = getStatusTone(status)
 
   return (
-    <WorkflowPanel className="rounded-[1.25rem] border-[#F1E5DA] bg-[#FFFDF9] p-3.5 shadow-sm shadow-zinc-950/5">
+    <WorkflowPanel className="rounded-[1.25rem] border-[#F1E5DA] bg-bg-surface p-3.5 shadow-sm shadow-zinc-950/5">
       <p className="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-500">
         Status Dokumen
       </p>
@@ -561,12 +561,12 @@ function RoleStatusPanel({
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500">Status Saat Ini</p>
           <div className="mt-1.5 flex items-center gap-2">
-            <span className={cn('size-2.5 rounded-full', statusTone === 'success' ? 'bg-emerald-500' : 'bg-[#FF5A00]')} />
+            <span className={cn('size-2.5 rounded-full', statusTone === 'success' ? 'bg-emerald-500' : 'bg-brand-solid')} />
             <StatusBadge status={status} className="border-0 bg-transparent px-0 text-sm font-bold text-zinc-950 shadow-none hover:bg-transparent" />
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#F1E5DA] bg-[#FFFDF9] p-2.5 shadow-sm shadow-zinc-950/5">
+        <div className="rounded-xl border border-[#F1E5DA] bg-bg-surface p-2.5 shadow-sm shadow-zinc-950/5">
           <p className="text-[11px] font-medium leading-relaxed text-zinc-700">
             {getStatusDescription(status, isNonMaterial)}
           </p>
@@ -588,7 +588,7 @@ function RoleStatusPanel({
                     <div
                       className={cn(
                         'absolute top-2.5 -right-1/2 z-0 h-px w-full',
-                        isCompleteSegment ? 'bg-emerald-500' : isActiveSegment ? 'bg-[#FF5A00]' : 'bg-[#F1E5DA]',
+                        isCompleteSegment ? 'bg-emerald-500' : isActiveSegment ? 'bg-brand-solid' : 'bg-[#F1E5DA]',
                       )}
                     />
                   )}
@@ -599,7 +599,7 @@ function RoleStatusPanel({
                         ? 'border-emerald-500 bg-emerald-500 text-white'
                         : isAttentionStep
                           ? 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20'
-                          : 'border-[#F1E5DA] bg-[#FFFDF9] text-zinc-400',
+                          : 'border-[#F1E5DA] bg-bg-surface text-zinc-400',
                     )}
                   >
                     {showAsRevision && !isTerminalSuccess ? <AlertTriangle size={10} /> : isSuccessStep && !isCurrent ? <CheckCircle2 size={10} /> : i + 1}
@@ -607,7 +607,7 @@ function RoleStatusPanel({
                   <span
                     className={cn(
                       'mt-1.5 text-center text-[8px] font-black uppercase tracking-[0.08em]',
-                      isSuccessStep ? 'text-emerald-700' : isAttentionStep ? 'text-[#FF5A00]' : 'text-zinc-400',
+                      isSuccessStep ? 'text-emerald-700' : isAttentionStep ? 'text-brand-solid' : 'text-zinc-400',
                     )}
                   >
                     {step.label}

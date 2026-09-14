@@ -678,7 +678,7 @@ function ProfilePage() {
         title="Ganti Password Profil Saya"
         description="Masukkan password saat ini sebelum membuat password baru. Ini berbeda dari Reset Password Admin Sistem."
         size="md"
-        contentClassName="border-orange-100 bg-[#FFFDF9]"
+        contentClassName="border-orange-100 bg-bg-surface"
         footer={
           <>
             <Button
