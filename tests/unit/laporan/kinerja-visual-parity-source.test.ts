@@ -49,7 +49,7 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(source).toContain('Filter Lanjutan')
     expect(source).toContain('Mulai Dari Tanggal')
     expect(source).toContain('Sampai Tanggal')
-    expect(source).toContain('rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9]')
+    expect(source).toContain('rounded-[26px] border border-zinc-200/80 bg-bg-surface')
     expect(source).toContain('ChevronActionButton')
     expect(source).toContain('FungsiDetailCards')
     expect(source).toContain('Nama Fungsi')

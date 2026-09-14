@@ -585,7 +585,7 @@ function KinerjaHeader({ title, description }: { title: string; description: str
           </p>
         </div>
       </div>
-      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-bg-surface px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
         Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
       </div>
     </section>
@@ -629,7 +629,7 @@ function PeriodeSelector({
                 className={[
                   'whitespace-nowrap rounded-[7px] px-3 py-1 text-[13px] font-semibold transition',
                   active
-                    ? 'bg-white text-[#FF4D00] shadow-sm'
+                    ? 'bg-white text-brand-text shadow-sm'
                     : 'text-zinc-500 hover:text-zinc-800',
                 ].join(' ')}
               >
@@ -650,7 +650,7 @@ function PeriodeSelector({
             type="button"
             aria-label="Triwulan sebelumnya"
             onClick={() => onChange(shiftTriwulan(value, -1))}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-[#FFFDF9] text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
           >
             <ChevronLeft size={16} />
           </button>
@@ -658,7 +658,7 @@ function PeriodeSelector({
             value={value.tahun ? String(value.tahun) : ''}
             onValueChange={(next) => onChange({ mode: 'TRIWULAN', tahun: Number(next), triwulan: value.triwulan ?? 1 })}
           >
-            <SelectTrigger className="min-h-10 w-fit min-w-[88px] shrink-0 rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+            <SelectTrigger className="min-h-10 w-fit min-w-[88px] shrink-0 rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
               <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
             </SelectTrigger>
             <SelectContent>
@@ -675,7 +675,7 @@ function PeriodeSelector({
               triwulan: Number(next) as 1 | 2 | 3 | 4,
             })}
           >
-            <SelectTrigger className="min-h-10 w-fit min-w-[168px] shrink-0 rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+            <SelectTrigger className="min-h-10 w-fit min-w-[168px] shrink-0 rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
               <SelectValue placeholder="Triwulan">
                 {selected => TRIWULAN_OPTIONS.find(option => String(option.value) === selected)?.label ?? 'Triwulan'}
               </SelectValue>
@@ -690,7 +690,7 @@ function PeriodeSelector({
             type="button"
             aria-label="Triwulan berikutnya"
             onClick={() => onChange(shiftTriwulan(value, 1))}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-[#FFFDF9] text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
           >
             <ChevronRight size={16} />
           </button>
@@ -702,7 +702,7 @@ function PeriodeSelector({
           value={value.tahun ? String(value.tahun) : ''}
           onValueChange={(next) => onChange({ mode: 'TAHUNAN', tahun: Number(next) })}
         >
-          <SelectTrigger className="min-h-10 w-fit min-w-[104px] shrink-0 rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+          <SelectTrigger className="min-h-10 w-fit min-w-[104px] shrink-0 rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
             <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
           </SelectTrigger>
           <SelectContent>
@@ -765,7 +765,7 @@ function GroupByToggle({
               className={[
                 'rounded-[7px] px-3 py-1 text-[13px] font-semibold transition',
                 active
-                  ? 'bg-white text-[#FF4D00] shadow-sm'
+                  ? 'bg-white text-brand-text shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-800',
               ].join(' ')}
             >
@@ -792,21 +792,21 @@ function SatkerSummaryBand({
   periode: string | null
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-[#7DD7A9] bg-[#EAFBF2] px-3.5 py-2.5 shadow-[0_2px_0_rgba(16,185,129,0.18)]">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-money-border bg-money-surface px-3.5 py-2.5 shadow-[0_2px_0_rgba(16,185,129,0.18)]">
       <div className="flex items-center gap-2.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#62C995] bg-white/70 text-[#16A35D] shadow-sm shadow-emerald-900/5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#62C995] bg-white/70 text-money-icon shadow-sm shadow-emerald-900/5">
           <Banknote size={17} />
         </span>
         <div className="flex flex-col">
           <span className="text-[9px] font-black uppercase tracking-[0.13em] text-[#00713A]">
             Total Realisasi Satker{periode ? ` · ${periode}` : ''}
           </span>
-          <span className="font-mono text-[19px] font-extrabold leading-tight tracking-tight text-[#02170B] sm:text-[21px]">
+          <span className="font-mono text-[19px] font-extrabold leading-tight tracking-tight text-money-value sm:text-[21px]">
             {formatCurrency(totalRealisasi)}
           </span>
         </div>
       </div>
-      <span className="hidden h-9 w-px shrink-0 bg-[#7DD7A9]/70 sm:block" />
+      <span className="hidden h-9 w-px shrink-0 bg-money-border/70 sm:block" />
       <div className="flex items-center gap-5">
         <MiniStat label="Dokumen Final" value={dokumenCount.toLocaleString('id-ID')} />
         <MiniStat label={primaryCountLabel} value={primaryCountValue.toLocaleString('id-ID')} />
@@ -819,7 +819,7 @@ function MiniStat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex flex-col">
       <span className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0B6B3D]/75">{label}</span>
-      <span className="font-headline text-[15px] font-bold tracking-tight text-[#02170B]">{value}</span>
+      <span className="font-headline text-[15px] font-bold tracking-tight text-money-value">{value}</span>
     </div>
   )
 }
@@ -842,7 +842,7 @@ function SimpleReportToolbar({
   resultLabel: string
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
       <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
         <label className="relative min-w-0 flex-1 lg:max-w-xl">
           <span className="sr-only">{searchLabel}</span>
@@ -852,13 +852,13 @@ function SimpleReportToolbar({
             placeholder={placeholder}
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
           />
         </label>
         <label>
           <span className="sr-only">Urutkan daftar</span>
           <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortMode)}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
               <SelectValue placeholder="Terakhir diperbarui">
                 {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Terakhir diperbarui'}
               </SelectValue>
@@ -881,7 +881,7 @@ function SimpleReportToolbar({
 function PegawaiList({ rows, onSelect }: { rows: PegawaiRow[]; onSelect: (id: string) => void }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -898,7 +898,7 @@ function PegawaiList({ rows, onSelect }: { rows: PegawaiRow[]; onSelect: (id: st
             {rows.map(row => (
               <TableRow
                 key={row.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onSelect(row.id)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -909,7 +909,7 @@ function PegawaiList({ rows, onSelect }: { rows: PegawaiRow[]; onSelect: (id: st
                 }}
               >
                 <TableCell className="max-w-[420px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{row.nama}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">Pengaju Dokumen</p>
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -921,7 +921,7 @@ function PegawaiList({ rows, onSelect }: { rows: PegawaiRow[]; onSelect: (id: st
                 <TableCell className="px-6 py-5">
                   <CountPill>{row.dokumen.length} dokumen</CountPill>
                 </TableCell>
-                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-[#FF4D00]">
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-brand-text">
                   {formatCurrency(row.totalNominal)}
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -1030,38 +1030,28 @@ function PegawaiDetailCards({ pegawai }: { pegawai: PegawaiRow }) {
         value={pegawai.nama}
         detail="Pengaju Dokumen Final"
         icon={<Users size={16} />}
-        className="border-[#E1D7CB] bg-[#FFFDF9]"
-        labelClassName="text-[#5F3B22]"
-        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+        tone="neutral"
       />
       <SummaryCard
         label="Jumlah Fungsi"
         value={pegawai.fungsi.length.toLocaleString('id-ID')}
         detail={`${countKegiatan(pegawai.fungsi).toLocaleString('id-ID')} Kegiatan Terkait`}
         icon={<FolderOpen size={16} />}
-        className="border-[#F1D38A] bg-[#FFF8E6]"
-        labelClassName="text-[#7A4A00]"
-        iconClassName="border-[#E5BD55] text-[#B77900]"
+        tone="gold"
       />
       <SummaryCard
         label="Total Dokumen Final"
         value={pegawai.dokumen.length.toLocaleString('id-ID')}
         detail="Dokumen Terverifikasi"
         icon={<FileText size={16} />}
-        className="border-[#FDBA91] bg-[#FFF1E8]"
-        labelClassName="text-[#B83200]"
-        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+        tone="orange"
       />
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatCurrency(pegawai.totalNominal)}
         detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
-        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
-        labelClassName="text-[#006B35]"
-        valueClassName="font-mono text-[24px] text-[#02170B]"
-        detailClassName="text-[#006B35]"
-        iconClassName="border-[#62C995] text-[#16A35D]"
+        tone="money"
       />
     </div>
   )
@@ -1070,7 +1060,7 @@ function PegawaiDetailCards({ pegawai }: { pegawai: PegawaiRow }) {
 function FungsiList({ rows, onSelect }: { rows: FungsiRow[]; onSelect: (id: string) => void }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -1086,7 +1076,7 @@ function FungsiList({ rows, onSelect }: { rows: FungsiRow[]; onSelect: (id: stri
             {rows.map(row => (
               <TableRow
                 key={row.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onSelect(row.id)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -1097,7 +1087,7 @@ function FungsiList({ rows, onSelect }: { rows: FungsiRow[]; onSelect: (id: stri
                 }}
               >
                 <TableCell className="max-w-[420px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{row.nama}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">BPS Kabupaten / Kota</p>
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -1106,7 +1096,7 @@ function FungsiList({ rows, onSelect }: { rows: FungsiRow[]; onSelect: (id: stri
                 <TableCell className="px-6 py-5">
                   <CountPill>{row.dokumen.length} dokumen</CountPill>
                 </TableCell>
-                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-[#FF4D00]">
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-brand-text">
                   {formatCurrency(row.totalNominal)}
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -1215,38 +1205,28 @@ function FungsiDetailCards({ fungsi }: { fungsi: FungsiRow }) {
         value={fungsi.nama}
         detail="BPS Kabupaten / Kota"
         icon={<FolderOpen size={16} />}
-        className="border-[#E1D7CB] bg-[#FFFDF9]"
-        labelClassName="text-[#5F3B22]"
-        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+        tone="neutral"
       />
       <SummaryCard
         label="Jumlah Kegiatan"
         value={fungsi.kegiatan.length.toLocaleString('id-ID')}
         detail="Kegiatan Terdaftar"
         icon={<ClipboardList size={16} />}
-        className="border-[#F1D38A] bg-[#FFF8E6]"
-        labelClassName="text-[#7A4A00]"
-        iconClassName="border-[#E5BD55] text-[#B77900]"
+        tone="gold"
       />
       <SummaryCard
         label="Total Dokumen Final"
         value={fungsi.dokumen.length.toLocaleString('id-ID')}
         detail="Dokumen Terverifikasi"
         icon={<FileText size={16} />}
-        className="border-[#FDBA91] bg-[#FFF1E8]"
-        labelClassName="text-[#B83200]"
-        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+        tone="orange"
       />
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatCurrency(fungsi.totalNominal)}
         detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
-        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
-        labelClassName="text-[#006B35]"
-        valueClassName="font-mono text-[24px] text-[#02170B]"
-        detailClassName="text-[#006B35]"
-        iconClassName="border-[#62C995] text-[#16A35D]"
+        tone="money"
       />
     </div>
   )
@@ -1311,7 +1291,7 @@ function KomponenDetailView({
 function KomponenList({ rows, onSelect }: { rows: KomponenRow[]; onSelect: (id: string) => void }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -1327,7 +1307,7 @@ function KomponenList({ rows, onSelect }: { rows: KomponenRow[]; onSelect: (id: 
             {rows.map(row => (
               <TableRow
                 key={row.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onSelect(row.id)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -1338,7 +1318,7 @@ function KomponenList({ rows, onSelect }: { rows: KomponenRow[]; onSelect: (id: 
                 }}
               >
                 <TableCell className="max-w-[460px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{row.nama}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">{row.kegiatanNama}</p>
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -1397,7 +1377,7 @@ function KomponenList({ rows, onSelect }: { rows: KomponenRow[]; onSelect: (id: 
 function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: string) => void }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -1413,7 +1393,7 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
             {rows.map(row => (
               <TableRow
                 key={row.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onSelect(row.id)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -1424,7 +1404,7 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
                 }}
               >
                 <TableCell className="max-w-[460px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.nama}</p>
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{row.nama}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">{row.fungsiNama}</p>
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -1576,7 +1556,7 @@ function ReportBackHeader({
           type="button"
           size="icon-lg"
           variant="ghost"
-          className="mt-1 size-10 shrink-0 rounded-xl border border-zinc-200 bg-[#FFFDF9] text-zinc-600 shadow-sm hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+          className="mt-1 size-10 shrink-0 rounded-xl border border-zinc-200 bg-bg-surface text-zinc-600 shadow-sm hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
           onClick={onBack}
           aria-label={backLabel}
         >
@@ -1592,7 +1572,7 @@ function ReportBackHeader({
           </p>
         </div>
       </div>
-      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-[#FFFDF9] px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-bg-surface px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
         Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
       </div>
     </section>
@@ -1607,38 +1587,28 @@ function KegiatanDetailCards({ kegiatan }: { kegiatan: KegiatanRow }) {
         value={kegiatan.nama}
         detail={kegiatan.fungsiNama}
         icon={<FolderOpen size={16} />}
-        className="border-[#E1D7CB] bg-[#FFFDF9]"
-        labelClassName="text-[#5F3B22]"
-        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+        tone="neutral"
       />
       <SummaryCard
         label="Jumlah Komponen"
         value={kegiatan.komponen.length.toLocaleString('id-ID')}
         detail="Komponen Terdaftar"
         icon={<ClipboardList size={16} />}
-        className="border-[#F1D38A] bg-[#FFF8E6]"
-        labelClassName="text-[#7A4A00]"
-        iconClassName="border-[#E5BD55] text-[#B77900]"
+        tone="gold"
       />
       <SummaryCard
         label="Total Dokumen Final"
         value={kegiatan.dokumen.length.toLocaleString('id-ID')}
         detail="Dokumen Terverifikasi"
         icon={<FileText size={16} />}
-        className="border-[#FDBA91] bg-[#FFF1E8]"
-        labelClassName="text-[#B83200]"
-        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+        tone="orange"
       />
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatCurrency(kegiatan.totalNominal)}
         detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
-        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
-        labelClassName="text-[#006B35]"
-        valueClassName="font-mono text-[24px] text-[#02170B]"
-        detailClassName="text-[#006B35]"
-        iconClassName="border-[#62C995] text-[#16A35D]"
+        tone="money"
       />
     </div>
   )
@@ -1656,38 +1626,28 @@ function KomponenDetailCards({ komponen }: { komponen: KomponenRow }) {
         value={komponen.nama}
         detail={`${komponen.kegiatanNama} · ${komponen.fungsiNama}`}
         icon={<FolderOpen size={16} />}
-        className="border-[#E1D7CB] bg-[#FFFDF9]"
-        labelClassName="text-[#5F3B22]"
-        iconClassName="border-[#D8CDC1] text-[#6D6258]"
+        tone="neutral"
       />
       <SummaryCard
         label="Belum Diberkaskan"
         value={belumDiberkaskan.toLocaleString('id-ID')}
         detail="Menunggu Pemberkasan"
         icon={<ClipboardList size={16} />}
-        className="border-[#F1D38A] bg-[#FFF8E6]"
-        labelClassName="text-[#7A4A00]"
-        iconClassName="border-[#E5BD55] text-[#B77900]"
+        tone="gold"
       />
       <SummaryCard
         label="Sudah Diberkaskan"
         value={sudahDiberkaskan.toLocaleString('id-ID')}
         detail="Sudah Masuk Berkas"
         icon={<FileText size={16} />}
-        className="border-[#FDBA91] bg-[#FFF1E8]"
-        labelClassName="text-[#B83200]"
-        iconClassName="border-[#FF8A4C] text-[#FF5A14]"
+        tone="orange"
       />
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatCurrency(komponen.totalNominal)}
         detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
-        className="border-[#7DD7A9] bg-[#EAFBF2] shadow-[0_2px_0_rgba(16,185,129,0.18)]"
-        labelClassName="text-[#006B35]"
-        valueClassName="font-mono text-[24px] text-[#02170B]"
-        detailClassName="text-[#006B35]"
-        iconClassName="border-[#62C995] text-[#16A35D]"
+        tone="money"
       />
     </div>
   )
@@ -1717,7 +1677,7 @@ function KegiatanDetailToolbar({
   resultLabel: string
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
+    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
       <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
         <label className="relative min-w-0 flex-1 lg:max-w-xl">
           <span className="sr-only">Cari dokumen kegiatan</span>
@@ -1727,7 +1687,7 @@ function KegiatanDetailToolbar({
             placeholder="Cari berdasarkan judul dokumen, jenis, atau pengaju..."
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-[#FFFDF9] pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -1737,15 +1697,15 @@ function KegiatanDetailToolbar({
             className={[
               'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
               filterOpen || activeFilters > 0
-                ? 'border-orange-200 bg-orange-50 text-[#FF4D00] hover:bg-orange-50'
-                : 'border-zinc-200 bg-[#FFFDF9] text-zinc-950 hover:bg-[#FFF8F1]',
+                ? 'border-orange-200 bg-orange-50 text-brand-text hover:bg-orange-50'
+                : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
             ].join(' ')}
             onClick={() => onFilterOpenChange(!filterOpen)}
           >
             <Filter size={16} />
             Filter Lanjutan
             {activeFilters > 0 && (
-              <span className="ml-1 rounded-full bg-[#FF4D00] px-1.5 py-0.5 text-[10px] leading-none text-white">
+              <span className="ml-1 rounded-full bg-brand-text px-1.5 py-0.5 text-[10px] leading-none text-white">
                 {activeFilters}
               </span>
             )}
@@ -1753,7 +1713,7 @@ function KegiatanDetailToolbar({
           <label>
             <span className="sr-only">Urutkan dokumen kegiatan</span>
             <Select value={sortBy} onValueChange={(value) => onSortChange(value as DetailSortMode)}>
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80] sm:w-fit">
+              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
                 <SelectValue placeholder="Tanggal terbaru">
                   {selected => DETAIL_SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
                 </SelectValue>
@@ -1769,7 +1729,7 @@ function KegiatanDetailToolbar({
       </div>
 
       {filterOpen && (
-        <div className="border-b border-zinc-100 bg-[#FFFDF9] p-4 sm:p-5">
+        <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
           <KinerjaDetailAdvancedFilter
             value={filter}
             onChange={onFilterChange}
@@ -1803,7 +1763,7 @@ function KinerjaDetailAdvancedFilter({
   onChange: (value: DetailFilterValue) => void
 }) {
   return (
-    <div className="rounded-[22px] border border-zinc-200/80 bg-[#FFF8F1]/35 p-4 shadow-none">
+    <div className="rounded-[22px] border border-zinc-200/80 bg-brand-surface/35 p-4 shadow-none">
       <div className="max-w-xs">
         <FilterSelect
           label="Status"
@@ -1835,7 +1795,7 @@ function FilterSelect({
     <label className="space-y-2">
       <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">{label}</span>
       <Select value={value} onValueChange={(next) => onChange(next ?? '')}>
-        <SelectTrigger className="min-h-10 w-full rounded-xl border-[#F0E1D5] bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-[#FFBC80]">
+        <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-[#FFFAF6] px-4 text-sm font-semibold hover:border-brand-border-strong">
           <SelectValue placeholder={options[0]?.label}>
             {selected => options.find(option => option.value === selected)?.label ?? options[0]?.label}
           </SelectValue>
@@ -1861,7 +1821,7 @@ function DocumentTable({
 }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-[#FFFDF9] shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
+      <div className="hidden overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)] md:block">
         <Table className="text-left">
           <TableHeader>
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
@@ -1876,7 +1836,7 @@ function DocumentTable({
             {dokumen.map(row => (
               <TableRow
                 key={row.id}
-                className="group cursor-pointer border-zinc-100 bg-[#FFFDF9] transition-colors hover:bg-[#FFF8F1]/70"
+                className="group cursor-pointer border-zinc-100 bg-bg-surface transition-colors hover:bg-brand-surface/70"
                 onClick={() => onOpenDocument(row)}
                 tabIndex={0}
                 onKeyDown={(event) => {
@@ -1888,7 +1848,7 @@ function DocumentTable({
                 aria-label={`Metadata dokumen ${row.judul}`}
               >
                 <TableCell className="max-w-[460px] px-6 py-5">
-                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-[#FF4D00]">{row.judul}</p>
+                  <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{row.judul}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">
                     Pembuat: {row.pengaju_nama || 'Tidak diketahui'}
                   </p>
@@ -1918,7 +1878,7 @@ function DocumentTable({
         {dokumen.map((row, idx) => (
           <PegawaiPanel
             key={row.id}
-            className="group cursor-pointer space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-[#FFFDF9]"
+            className="group cursor-pointer space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface"
             onClick={() => onOpenDocument(row)}
             tabIndex={0}
             role="button"
@@ -1965,7 +1925,7 @@ function KinerjaDocumentMetadataDialog({
 }) {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto border-[#F0E1D5] bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
+      <DialogContent className="max-h-[88vh] overflow-y-auto border-brand-border bg-[#FFFAF6] shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <button
@@ -1985,7 +1945,7 @@ function KinerjaDocumentMetadataDialog({
           </div>
         </DialogHeader>
 
-        <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-[#FFFDF9] p-4 sm:p-5">
+        <div className="rounded-[1.25rem] border border-[#F1E5DA] bg-bg-surface p-4 sm:p-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <ModalMetadataField label="Judul Dokumen" value={dokumen.judul} className="sm:col-span-2" />
             <ModalMetadataField label="Fungsi" value={dokumen.fungsi_nama ?? '-'} />
@@ -2024,38 +1984,67 @@ function ModalMetadataField({
   )
 }
 
+type SummaryCardTone = 'neutral' | 'gold' | 'orange' | 'money'
+
+/** Fase 5: consolidates 4 palette clusters that PegawaiDetailCards, FungsiDetailCards,
+ * KegiatanDetailCards, and KomponenDetailCards each repeated byte-identical via 5 raw
+ * className props — see tema-global plan Fase 5. */
+const SUMMARY_CARD_TONE_CLASS: Record<SummaryCardTone, {
+  card: string
+  label: string
+  icon: string
+  value?: string
+  detail?: string
+}> = {
+  neutral: {
+    card: 'border-[#E1D7CB] bg-bg-surface',
+    label: 'text-[#5F3B22]',
+    icon: 'border-[#D8CDC1] text-[#6D6258]',
+  },
+  gold: {
+    card: 'border-[#F1D38A] bg-[#FFF8E6]',
+    label: 'text-[#7A4A00]',
+    icon: 'border-[#E5BD55] text-[#B77900]',
+  },
+  orange: {
+    card: 'border-[#FDBA91] bg-[#FFF1E8]',
+    label: 'text-[#B83200]',
+    icon: 'border-[#FF8A4C] text-[#FF5A14]',
+  },
+  money: {
+    card: 'border-money-border bg-money-surface shadow-[0_2px_0_rgba(16,185,129,0.18)]',
+    label: 'text-money-text',
+    icon: 'border-[#62C995] text-money-icon',
+    value: 'font-mono text-[24px] text-money-value',
+    detail: 'text-money-text',
+  },
+}
+
 function SummaryCard({
   label,
   value,
   detail,
   icon,
-  className,
-  labelClassName,
-  valueClassName,
-  detailClassName,
-  iconClassName,
+  tone,
 }: {
   label: string
   value: ReactNode
   detail: string
   icon: ReactNode
-  className?: string
-  labelClassName?: string
-  valueClassName?: string
-  detailClassName?: string
-  iconClassName?: string
+  tone: SummaryCardTone
 }) {
+  const t = SUMMARY_CARD_TONE_CLASS[tone]
   return (
-    <div className={['flex min-h-[140px] flex-col justify-between rounded-[22px] border p-5 shadow-sm', className ?? ''].join(' ')}>
+    <div className={['flex min-h-[140px] flex-col justify-between rounded-[22px] border p-5 shadow-sm', t.card].join(' ')}>
       <div className="flex items-start justify-between gap-3">
-        <p className={['text-[10px] font-black uppercase tracking-[0.14em]', labelClassName ?? 'text-[#5F3B22]'].join(' ')}>{label}</p>
-        <span className={['flex size-7 items-center justify-center rounded-full border bg-white/65 shadow-sm shadow-zinc-950/5', iconClassName ?? 'border-current/15 text-zinc-700'].join(' ')}>
+        <p className={['text-[10px] font-black uppercase tracking-[0.14em]', t.label].join(' ')}>{label}</p>
+        <span className={['flex size-7 items-center justify-center rounded-full border bg-white/65 shadow-sm shadow-zinc-950/5', t.icon].join(' ')}>
           {icon}
         </span>
       </div>
       <div>
-        <p className={['line-clamp-2 font-headline text-[18px] font-extrabold leading-tight tracking-tight text-zinc-950', valueClassName ?? ''].join(' ')}>{value}</p>
-        <p className={['mt-3 text-[10px] font-semibold uppercase tracking-[0.04em] text-zinc-500', detailClassName ?? ''].join(' ')}>{detail}</p>
+        <p className={['line-clamp-2 font-headline text-[18px] font-extrabold leading-tight tracking-tight text-zinc-950', t.value ?? ''].join(' ')}>{value}</p>
+        <p className={['mt-3 text-[10px] font-semibold uppercase tracking-[0.04em] text-zinc-500', t.detail ?? ''].join(' ')}>{detail}</p>
       </div>
     </div>
   )
@@ -2118,7 +2107,7 @@ function DateCell({ value, className }: { value: string; className?: string }) {
 
 function InfoTile({ label, value, className }: { label: string; value: ReactNode; className?: string }) {
   return (
-    <div className={['rounded-xl border border-zinc-200/80 bg-[#FFFDF9] p-2.5', className ?? ''].join(' ')}>
+    <div className={['rounded-xl border border-zinc-200/80 bg-bg-surface p-2.5', className ?? ''].join(' ')}>
       <p className="font-semibold text-zinc-500">{label}</p>
       <div className="mt-0.5 text-zinc-900">{value}</div>
     </div>
