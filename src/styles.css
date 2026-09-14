@@ -2,12 +2,244 @@
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
-@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   TEMA GLOBAL — token layer (docs/planning/tema-global/rencana.md §4, §6)
+
+   Architecture (verified by Fase 0 spike — build-inspected compiled CSS):
+   - Raw semantic tokens live as plain custom properties on :root / [data-theme].
+     These are UNLAYERED, so an override always beats the @theme layer below,
+     and [data-theme="sp"|"st"] always beats :root at equal specificity because
+     it is declared later in source order.
+   - `@theme inline { --color-x: var(--x) }` bridges a raw token into Tailwind's
+     utility generator WITHOUT baking in a literal value — the compiled utility
+     references the raw token directly (e.g. `.bg-brand-solid{background-color:
+     var(--brand-solid)}`), so swapping [data-theme] at runtime still works.
+   - Only Group 1 (BRAND) + the three --bg-* tokens vary by theme. Group 3
+     (status) is intentionally identical across all three themes (D1/D2).
+     Group 4 (money) is identical between se/sp; st gets a neutral override (D3).
+
+   SE values below are CANONICALIZED FROM MEASURED USAGE (see plan Fase 1
+   table), not redesigned — brand orange was previously written as 6 unsynced
+   hex values app-wide; this collapses them to one. A few low-traffic Material
+   leftover tokens further down keep their original literal values unchanged
+   (out of scope for this phase — not part of the plan's explicit remap list).
+
+   KNOWN, NOT FIXED HERE: --brand-text (#FF4D00 on white) is ~3.0:1 contrast,
+   below WCAG AA (4.5:1) for small text. This is the app's current behavior,
+   preserved as-is per this session's decision to canonicalize rather than
+   redesign SE. Tracked for Fase 7 (contrast pass) as a reported finding.
+   ============================================================================ */
+
+:root {
+  /* --- Group 1: BRAND (se — default theme) --- */
+  --brand-solid: #FF5F1F;              /* measured: existing --color-primary; supersedes #FF5A00/#F97316 */
+  --brand-solid-hover: #EA580C;        /* measured, 41x */
+  --brand-solid-active: #CC4A13;       /* derived: no existing pressed state; consistent darkening step */
+  --brand-on-solid: #FFFFFF;
+  --brand-text: #FF4D00;               /* measured, 71x — see contrast note above */
+  --brand-text-muted: #8A5A3C;         /* derived: eyebrow/meta text family */
+  --brand-icon: #EA580C;               /* reuses solid-hover value for icon tint */
+  --brand-surface: #FFF8F1;            /* measured, 59x */
+  --brand-surface-strong: #FFE1D2;     /* derived stronger tint step; also replaces old --color-accent #FFDBCB */
+  --brand-border: #F0E1D5;             /* measured, 134x — warm card/panel border */
+  --brand-border-strong: #FFBC80;      /* measured, 28x */
+  --brand-ring: rgba(255, 95, 31, 0.45);
+  --brand-gradient-from: #FF5F1F;
+  --brand-gradient-to: #FF7948;        /* matches existing .sunset-gradient stop */
+  --brand-glow: rgba(255, 95, 31, 0.35);
+  --brand-glow-strong: rgba(255, 95, 31, 0.7); /* preserves original @keyframes breath peak */
+
+  /* --- Group 2: SURFACE / NEUTRAL (--bg-* vary by theme, rest is theme-invariant) --- */
+  --bg-app: #FFFBF7;                   /* measured: existing --color-background */
+  --bg-surface: #FFFDF9;               /* measured, 266x — most common value in the app; supersedes old #FFF7F2 */
+  --bg-sunken: #F6F1EC;                /* derived: table/section header bg */
+  --border-default: #E4E4E7;           /* zinc-200 — neutral divider (distinct from warm --brand-border) */
+  --text-strong: #071A3A;              /* measured, 21x — heading/big-number navy */
+  --text-body: #3F3F46;                /* zinc-700 equivalent */
+  --text-muted: #71717A;               /* zinc-500 equivalent */
+  --text-disabled: #D4D4D8;            /* zinc-300 equivalent */
+  --shadow-card: rgba(15, 23, 42, 0.06);
+
+  /* --- Group 3: STATUS SEMANTIK (identical in all 3 themes — D1/D2) --- */
+  --success-surface: #ECFDF3;
+  --success-border: #A7E3C4;
+  --success-text: #05683B;
+  --success-solid: #059669;
+  --success-on-solid: #FFFFFF;
+
+  --warning-surface: #FFF8EB;
+  --warning-border: #F5D08A;
+  --warning-text: #92500E;
+  --warning-solid: #D97706;
+  --warning-on-solid: #FFFFFF;
+
+  --danger-surface: #FEF2F2;
+  --danger-border: #F3B4B4;
+  --danger-text: #B42318;
+  --danger-solid: #DC2626;
+  --danger-on-solid: #FFFFFF;
+
+  --info-surface: #EFF6FF;
+  --info-border: #AECBF5;
+  --info-text: #1E5BA8;
+  --info-solid: #2563EB;
+  --info-on-solid: #FFFFFF;
+
+  --neutral-status-surface: #F4F4F5;
+  --neutral-status-border: #D4D4D8;
+  --neutral-status-text: #3F3F46;
+  --neutral-status-solid: #71717A;
+  --neutral-status-on-solid: #FFFFFF;
+
+  /* --- Group 4: MONEY / NOMINAL REALISASI (fixed se/sp; st override below — D3) --- */
+  --money-surface: #EAFBF2;
+  --money-border: #7DD7A9;
+  --money-text: #006B35;
+  --money-value: #02170B;
+  --money-icon: #16A35D;
+  --money-glow: rgba(16, 185, 129, 0.18);
+}
+
+[data-theme="sp"] {
+  /* Sensus Penduduk — biru. Source: brand_data/bps_go_id_brand_guidelines.md (official BPS colors). */
+  --brand-solid: #0096D9;              /* BPS secondary/link blue */
+  --brand-solid-hover: #007BB5;
+  --brand-solid-active: #006494;
+  --brand-text: #003B73;               /* BPS primary navy — ~11:1 on white, well past AA */
+  --brand-text-muted: #4A5B78;
+  --brand-icon: #007BB5;
+  --brand-surface: #EAF4FB;
+  --brand-surface-strong: #D2E7F7;
+  --brand-border: #C5E1F2;
+  --brand-border-strong: #93B7E0;
+  --brand-ring: rgba(0, 150, 217, 0.40);
+  --brand-gradient-from: #0096D9;
+  --brand-gradient-to: #3EB4EC;
+  --brand-glow: rgba(0, 150, 217, 0.30);
+  --brand-glow-strong: rgba(0, 150, 217, 0.55);
+
+  --bg-app: #F9FBFD;
+  --bg-surface: #FFFFFF;
+  --bg-sunken: #EEF3F8;
+}
+
+[data-theme="st"] {
+  /* Sensus Pertanian — hijau. Source: brand_data/bps_go_id_brand_guidelines.md, darkened for AA on white text. */
+  --brand-solid: #5E9A2E;              /* BPS accent-green #7ABF3C darkened (~2.2:1 -> AA-safe) */
+  --brand-solid-hover: #4E8226;
+  --brand-solid-active: #40701F;
+  --brand-text: #3B6B18;
+  --brand-text-muted: #4A6152;
+  --brand-icon: #4E8226;
+  --brand-surface: #F0F7E8;
+  --brand-surface-strong: #DCEDC8;
+  --brand-border: #D3E8BB;
+  --brand-border-strong: #8CC5A0;
+  --brand-ring: rgba(94, 154, 46, 0.40);
+  --brand-gradient-from: #5E9A2E;
+  --brand-gradient-to: #7FB84E;
+  --brand-glow: rgba(94, 154, 46, 0.30);
+  --brand-glow-strong: rgba(94, 154, 46, 0.55);
+
+  --bg-app: #F8FBF9;
+  --bg-surface: #FFFFFF;
+  --bg-sunken: #EEF4F0;
+
+  /* D3: money/realisasi card goes neutral-tegas in ST, not green (avoids clashing with brand green) */
+  --money-surface: #F1F4F2;
+  --money-border: #C9D6CE;
+  --money-text: #3F4B44;
+  --money-icon: #5E6E64;
+  /* --money-value stays #02170B — unchanged across all themes */
+}
+
+@theme inline {
+  /* Bridge every raw token above into Tailwind's utility generator.
+     Each entry resolves to `var(--the-raw-token)` in the compiled CSS —
+     never a baked-in literal — so [data-theme] overrides keep working. */
+  --color-brand-solid: var(--brand-solid);
+  --color-brand-solid-hover: var(--brand-solid-hover);
+  --color-brand-solid-active: var(--brand-solid-active);
+  --color-brand-on-solid: var(--brand-on-solid);
+  --color-brand-text: var(--brand-text);
+  --color-brand-text-muted: var(--brand-text-muted);
+  --color-brand-icon: var(--brand-icon);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-surface-strong: var(--brand-surface-strong);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-strong: var(--brand-border-strong);
+  --color-brand-ring: var(--brand-ring);
+  --color-brand-gradient-from: var(--brand-gradient-from);
+  --color-brand-gradient-to: var(--brand-gradient-to);
+
+  --color-bg-app: var(--bg-app);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-sunken: var(--bg-sunken);
+  --color-border-default: var(--border-default);
+  --color-text-strong: var(--text-strong);
+  --color-text-body: var(--text-body);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  --color-success-surface: var(--success-surface);
+  --color-success-border: var(--success-border);
+  --color-success-text: var(--success-text);
+  --color-success-solid: var(--success-solid);
+  --color-success-on-solid: var(--success-on-solid);
+
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+  --color-warning-text: var(--warning-text);
+  --color-warning-solid: var(--warning-solid);
+  --color-warning-on-solid: var(--warning-on-solid);
+
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-border: var(--danger-border);
+  --color-danger-text: var(--danger-text);
+  --color-danger-solid: var(--danger-solid);
+  --color-danger-on-solid: var(--danger-on-solid);
+
+  --color-info-surface: var(--info-surface);
+  --color-info-border: var(--info-border);
+  --color-info-text: var(--info-text);
+  --color-info-solid: var(--info-solid);
+  --color-info-on-solid: var(--info-on-solid);
+
+  --color-neutral-status-surface: var(--neutral-status-surface);
+  --color-neutral-status-border: var(--neutral-status-border);
+  --color-neutral-status-text: var(--neutral-status-text);
+  --color-neutral-status-solid: var(--neutral-status-solid);
+  --color-neutral-status-on-solid: var(--neutral-status-on-solid);
+
+  --color-money-surface: var(--money-surface);
+  --color-money-border: var(--money-border);
+  --color-money-text: var(--money-text);
+  --color-money-value: var(--money-value);
+  --color-money-icon: var(--money-icon);
+
+  /* Legacy Material-token remap (rencana.md §6.1 point 4) — the ~217 existing
+     bg-primary / bg-background / bg-surface / etc. call sites pick up theming
+     for free, no component edits needed. Only the 7 tokens the plan names are
+     remapped; everything else in the plain @theme block below is untouched
+     on purpose (not measured as brand-tied, or too high-blast-radius to move
+     without a dedicated pass — see plan risk notes). */
+  --color-primary: var(--brand-solid);
+  --color-background: var(--bg-app);
+  --color-surface: var(--bg-surface);
+  --color-accent: var(--brand-surface-strong);
+  --color-tertiary: var(--brand-surface);
+  --color-surface-variant: var(--brand-border);
+  --color-ring: var(--brand-solid);
+
+  /* New (plan Fase 1 point 6) — previously only --color-error existed */
+  --color-success: var(--success-solid);
+  --color-warning: var(--warning-solid);
+  --color-info: var(--info-solid);
+}
 
 @theme {
-  /* === Prototype Design Tokens === */
-  --color-primary: #FF5F1F;
-  --color-primary-container: #FFDBCB;
+  /* === Prototype Design Tokens (Material-style leftovers, unchanged) === */
   --color-on-primary: #ffffff;
   --color-on-primary-container: #341100;
 
@@ -16,15 +248,11 @@
   --color-on-secondary: #ffffff;
   --color-on-secondary-container: #525252;
 
-  --color-tertiary: #FFF9F0;
   --color-tertiary-container: #fbe464;
 
-  --color-background: #FFFBF7;
   --color-on-background: #2e2f2f;
 
-  --color-surface: #FFF7F2;
   --color-on-surface: #2e2f2f;
-  --color-surface-variant: #f4e0d6;
   --color-on-surface-variant: #52443c;
 
   --color-surface-container: #f4e0d6;
@@ -41,7 +269,6 @@
   /* === shadcn/ui compatibility (remapped to prototype palette) === */
   --color-border: #e8ddd8;
   --color-input: #e8ddd8;
-  --color-ring: #FF5F1F;
 
   --color-primary-foreground: #ffffff;
   --color-secondary-foreground: #ffffff;
@@ -49,13 +276,14 @@
   --color-destructive-foreground: #ffffff;
   --color-muted: #f1f1f0;
   --color-muted-foreground: #85736b;
-  --color-accent: #FFDBCB;
   --color-accent-foreground: #341100;
   --color-popover: #ffffff;
   --color-popover-foreground: #2e2f2f;
   --color-card: #ffffff;
   --color-card-foreground: #2e2f2f;
   --color-foreground: #2e2f2f;
+
+  --color-primary-container: #FFDBCB;
 
   /* === Fonts === */
   --font-headline: "Manrope", sans-serif;
@@ -73,17 +301,14 @@
 /* === react-day-picker base reset (prevents rdp-* default styles) === */
 .rdp {
   --rdp-cell-size: 36px;
-  --rdp-accent-color: #FF5F1F;
-  --rdp-background-color: #FFDBCB;
+  --rdp-accent-color: var(--brand-solid);
+  --rdp-background-color: var(--brand-surface-strong);
   margin: 0;
 }
 
 /* === Date Input === */
 input[type="date"] {
   color-scheme: light;
-}
-.dark input[type="date"] {
-  color-scheme: dark;
 }
 input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.5;
@@ -110,8 +335,8 @@ input[type="date"]::-webkit-datetime-edit-placeholder {
 }
 
 @keyframes breath {
-  0%, 100% { box-shadow: 0 0 0px rgba(255, 95, 31, 0.4); }
-  50% { box-shadow: 0 0 25px rgba(255, 95, 31, 0.7); }
+  0%, 100% { box-shadow: 0 0 0px var(--brand-glow); }
+  50% { box-shadow: 0 0 25px var(--brand-glow-strong); }
 }
 
 @keyframes slow-glow {
@@ -152,13 +377,13 @@ input[type="date"]::-webkit-datetime-edit-placeholder {
 
 @layer components {
   .glass-panel {
-    background: rgba(255, 247, 242, 0.8);
+    background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(173, 173, 172, 0.15);
   }
 
   .sunset-gradient {
-    background: linear-gradient(135deg, #FF5F1F 0%, #ff7948 100%);
+    background: linear-gradient(135deg, var(--brand-gradient-from) 0%, var(--brand-gradient-to) 100%);
   }
 
   .dotted-grid {
@@ -171,17 +396,9 @@ input[type="date"]::-webkit-datetime-edit-placeholder {
     position: fixed;
     inset: 0;
     z-index: -10;
-    background-color: #FFFBF7;
+    background-color: var(--bg-app);
     overflow: hidden;
   }
-
-  .dark .mesh-bg {
-    background-color: #0a0a0f;
-  }
-
-  .dark .mesh-blob-1 { background: #2a1a0f; }
-  .dark .mesh-blob-2 { background: #1a0a05; opacity: 0.15; }
-  .dark .mesh-blob-3 { background: #1a1a2a; }
 
   .mesh-blob {
     position: absolute;
@@ -194,7 +411,7 @@ input[type="date"]::-webkit-datetime-edit-placeholder {
   .mesh-blob-1 {
     width: 600px;
     height: 600px;
-    background: #FFDBCB;
+    background: var(--brand-surface-strong);
     top: -100px;
     right: -100px;
   }
@@ -202,7 +419,7 @@ input[type="date"]::-webkit-datetime-edit-placeholder {
   .mesh-blob-2 {
     width: 500px;
     height: 500px;
-    background: #FF5F1F;
+    background: var(--brand-solid);
     bottom: -100px;
     left: -100px;
     animation-delay: -5s;
