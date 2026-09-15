@@ -15,8 +15,6 @@ import {
   adminPrimaryActionClassName,
   adminPageContainerClassName,
   adminTextareaClassName,
-  adminTableBodyClassName,
-  adminTableToolbarClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -186,7 +184,7 @@ function FungsiPage() {
         />
 
         <AdminSearchPanel
-          className={adminContentCompactClassName + ' ' + adminTableToolbarClassName}
+          className={adminContentCompactClassName}
           id="fungsi-search"
           label="Cari fungsi"
           value={search}
@@ -205,7 +203,7 @@ function FungsiPage() {
             action={<Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Fungsi</Button>}
           />
         ) : (
-          <AdminTableShell className={adminContentCompactClassName + ' ' + adminTableBodyClassName}>
+          <AdminTableShell className={adminContentCompactClassName}>
             <Table>
               <TableHeader>
                 <TableRow>

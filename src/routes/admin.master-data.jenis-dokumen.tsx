@@ -14,8 +14,6 @@ import {
   adminPrimaryActionClassName,
   adminPageContainerClassName,
   adminTextareaClassName,
-  adminTableBodyClassName,
-  adminTableToolbarClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -179,14 +177,14 @@ function JenisDokumenPage() {
           actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'}><Plus />Tambah Jenis</Button>}
         />
 
-        <AdminSearchPanel className={adminContentCompactClassName + ' ' + adminTableToolbarClassName} id="jenis-dokumen-search" label="Cari jenis dokumen" value={search} onChange={setSearch} placeholder="Cari jenis..." resultText={`Total ${filtered.length} Jenis`} />
+        <AdminSearchPanel className={adminContentCompactClassName} id="jenis-dokumen-search" label="Cari jenis dokumen" value={search} onChange={setSearch} placeholder="Cari jenis..." resultText={`Total ${filtered.length} Jenis`} />
 
         {loading ? (
           <LoadingState variant="list" label="Memuat jenis dokumen" />
         ) : filtered.length === 0 ? (
           <EmptyState title="Belum ada jenis dokumen" description="Tambahkan jenis dokumen pertama untuk dokumen Non-Material." icon={<Tag size={18} />} action={<Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Jenis</Button>} />
         ) : (
-          <AdminTableShell className={adminContentCompactClassName + ' ' + adminTableBodyClassName}>
+          <AdminTableShell className={adminContentCompactClassName}>
             <Table>
               <TableHeader>
                 <TableRow>

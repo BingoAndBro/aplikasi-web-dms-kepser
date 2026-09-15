@@ -17,8 +17,6 @@ import {
   adminContentStandardClassName,
   adminPageContainerClassName,
   adminTextareaClassName,
-  adminTableBodyClassName,
-  adminTableToolbarClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -174,7 +172,7 @@ function KegiatanPage() {
         />
 
         <AdminSearchPanel
-          className={adminContentStandardClassName + ' ' + adminTableToolbarClassName}
+          className={adminContentStandardClassName}
           id="kegiatan-search"
           label="Cari kegiatan"
           value={search}
@@ -203,7 +201,7 @@ function KegiatanPage() {
             action={fungsis.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kegiatan</Button>}
           />
         ) : (
-          <AdminTableShell className={adminContentStandardClassName + ' ' + adminTableBodyClassName}>
+          <AdminTableShell className={adminContentStandardClassName}>
             <Table>
               <TableHeader>
                 <TableRow>

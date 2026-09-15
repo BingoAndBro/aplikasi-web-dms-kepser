@@ -26,8 +26,6 @@ export const adminPageContainerClassName =
 export const adminContentCompactClassName = 'mx-auto w-full max-w-[980px]'
 export const adminContentStandardClassName = 'mx-auto w-full max-w-[1180px]'
 export const adminContentWideClassName = 'mx-auto w-full max-w-[1480px]'
-export const adminTableToolbarClassName = ''
-export const adminTableBodyClassName = ''
 export const adminFormFieldClassName =
   'h-11 rounded-[14px] border-border-default bg-white px-4 text-sm font-semibold text-text-strong shadow-none transition placeholder:text-text-muted hover:border-brand-solid focus-visible:border-brand-solid focus-visible:ring-2 focus-visible:ring-brand-solid/20'
 export const adminTextareaClassName =

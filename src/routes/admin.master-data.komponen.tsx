@@ -17,8 +17,6 @@ import {
   adminContentStandardClassName,
   adminPageContainerClassName,
   adminTextareaClassName,
-  adminTableBodyClassName,
-  adminTableToolbarClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -174,7 +172,7 @@ function KomponenPage() {
         />
 
         <AdminSearchPanel
-          className={adminContentStandardClassName + ' ' + adminTableToolbarClassName}
+          className={adminContentStandardClassName}
           id="komponen-search"
           label="Cari komponen"
           value={search}
@@ -203,7 +201,7 @@ function KomponenPage() {
             action={kegiatans.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Komponen</Button>}
           />
         ) : (
-          <AdminTableShell className={adminContentStandardClassName + ' ' + adminTableBodyClassName}>
+          <AdminTableShell className={adminContentStandardClassName}>
             <Table>
               <TableHeader>
                 <TableRow>

@@ -18,8 +18,6 @@ import {
   adminContentStandardClassName,
   adminPageContainerClassName,
   adminTextareaClassName,
-  adminTableBodyClassName,
-  adminTableToolbarClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -222,7 +220,7 @@ function KategoriPage() {
           actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'} disabled={jenisList.length === 0}><Plus />Tambah Kategori</Button>}
         />
 
-        <AdminSearchPanel className={adminContentStandardClassName + ' ' + adminTableToolbarClassName} id="kategori-search" label="Cari kategori permintaan" value={search} onChange={setSearch} placeholder="Cari kategori..." resultText={`Total ${filtered.length} Kategori`}>
+        <AdminSearchPanel className={adminContentStandardClassName} id="kategori-search" label="Cari kategori permintaan" value={search} onChange={setSearch} placeholder="Cari kategori..." resultText={`Total ${filtered.length} Kategori`}>
           <AdminFilterSelect
             value={filterJenis}
             onChange={setFilterJenis}
@@ -239,7 +237,7 @@ function KategoriPage() {
         ) : filtered.length === 0 ? (
           <EmptyState title="Belum ada kategori" description="Pilih jenis dan tambahkan kategori pertama." icon={<Tag size={18} />} action={jenisList.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Kategori</Button>} />
         ) : (
-          <AdminTableShell className={adminContentStandardClassName + ' ' + adminTableBodyClassName}>
+          <AdminTableShell className={adminContentStandardClassName}>
             <Table>
               <TableHeader>
                 <TableRow>

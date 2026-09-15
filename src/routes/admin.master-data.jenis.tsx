@@ -17,8 +17,6 @@ import {
   adminPrimaryActionClassName,
   adminPageContainerClassName,
   adminTextareaClassName,
-  adminTableBodyClassName,
-  adminTableToolbarClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -221,7 +219,7 @@ function JenisPage() {
         />
 
         <AdminSearchPanel
-          className={adminContentCompactClassName + ' ' + adminTableToolbarClassName}
+          className={adminContentCompactClassName}
           id="jenis-search"
           label="Cari jenis permintaan"
           value={search}
@@ -256,7 +254,7 @@ function JenisPage() {
             <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5" disabled={komponenList.length === 0}><Plus size={14} />Tambah Jenis</Button>
           </div>
         ) : (
-          <AdminTableShell className={adminContentCompactClassName + ' ' + adminTableBodyClassName}>
+          <AdminTableShell className={adminContentCompactClassName}>
             <Table>
               <TableHeader>
                 <TableRow>

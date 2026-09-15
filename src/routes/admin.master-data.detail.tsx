@@ -17,8 +17,6 @@ import {
   adminContentStandardClassName,
   adminPageContainerClassName,
   adminTextareaClassName,
-  adminTableBodyClassName,
-  adminTableToolbarClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -267,7 +265,7 @@ function DetailPage() {
         </div>
 
         <AdminSearchPanel
-          className={adminContentStandardClassName + ' ' + adminTableToolbarClassName}
+          className={adminContentStandardClassName}
           id="detail-search"
           label="Cari detail permintaan"
           value={search}
@@ -308,7 +306,7 @@ function DetailPage() {
             {jenisList.length > 0 && kategoriList.length > 0 && <Button onClick={openCreate} size="sm" variant="outline" className="gap-1.5"><Plus size={14} />Tambah Detail</Button>}
           </div>
         ) : (
-          <AdminTableShell className={adminContentStandardClassName + ' ' + adminTableBodyClassName}>
+          <AdminTableShell className={adminContentStandardClassName}>
             <Table>
               <TableHeader>
                 <TableRow>

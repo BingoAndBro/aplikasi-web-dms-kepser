@@ -20,7 +20,6 @@ import {
   adminContentWideClassName,
   adminPageContainerClassName,
   adminPrimaryActionClassName,
-  adminTableBodyClassName,
   AdminConfirmationDialog,
   AdminPageHeader,
   AdminSearchPanel,
@@ -1107,7 +1106,7 @@ function MasterUserPage() {
             action={<Button onClick={openCreate} size="sm" variant="outline">Tambah User</Button>}
           />
         ) : (
-        <AdminTableShell className={adminContentWideClassName + ' ' + adminTableBodyClassName}>
+        <AdminTableShell className={adminContentWideClassName}>
           <Table>
             <TableHeader>
               <TableRow>
