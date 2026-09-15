@@ -597,7 +597,7 @@ function PpkResubmitPage() {
                         key={label}
                         className={cn(
                           'rounded-xl border bg-bg-surface px-3 py-2.5',
-                          label === 'Nominal Realisasi' ? 'border-orange-200 bg-orange-50/35' : 'border-orange-100',
+                          label === 'Nominal Realisasi' ? 'border-brand-border-strong bg-brand-surface/35' : 'border-brand-border',
                         )}
                       >
                         <p className={cn(
@@ -717,7 +717,7 @@ function PpkResubmitPage() {
                     setActiveTab('edit')
                     setSubmitRequestSignal(current => current + 1)
                   }}
-                  className="h-10 w-full gap-2 rounded-xl bg-brand-solid text-sm font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover"
+                  className="h-10 w-full gap-2 rounded-xl bg-brand-solid text-sm font-bold text-white shadow-sm shadow-brand-solid/20 hover:bg-brand-solid-hover"
                 >
                   <Send size={15} />
                   Ajukan Ulang
@@ -728,7 +728,7 @@ function PpkResubmitPage() {
                   variant="outline"
                   onClick={() => setReturnConfirmationOpen(true)}
                   disabled={kembalikanLoading}
-                  className="h-10 w-full gap-2 rounded-xl border-orange-300 bg-transparent text-sm font-bold text-brand-solid-hover hover:bg-orange-50 hover:text-brand-solid-active"
+                  className="h-10 w-full gap-2 rounded-xl border-brand-solid bg-transparent text-sm font-bold text-brand-solid-hover hover:bg-brand-surface hover:text-brand-solid-active"
                 >
                   {kembalikanLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowLeft size={15} />}
                   Kembalikan ke Pegawai
@@ -830,7 +830,7 @@ function PpkResubmitPage() {
           void handleKembalikan()
         }}
       >
-        <div className="rounded-xl border border-orange-100 bg-bg-surface p-4">
+        <div className="rounded-xl border border-brand-border bg-bg-surface p-4">
           <p className="text-xs font-bold text-zinc-950">Perubahan editor yang belum diajukan tidak ikut disimpan.</p>
           <p className="mt-1 text-xs font-medium leading-relaxed text-zinc-600">
             Gunakan aksi ini hanya jika dokumen memang perlu dikembalikan kepada Pegawai.

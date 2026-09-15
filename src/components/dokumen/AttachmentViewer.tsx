@@ -349,8 +349,8 @@ export function AttachmentViewer({
   const fileActionButtonClassName = [
     'h-8 rounded-xl border border-zinc-200/70 bg-bg-surface px-2.5',
     'text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500 shadow-sm shadow-zinc-950/[0.025]',
-    'transition hover:border-orange-300 hover:bg-orange-50 hover:text-brand-solid hover:shadow-orange-500/10',
-    'focus-visible:border-orange-300 focus-visible:ring-orange-100',
+    'transition hover:border-brand-solid hover:bg-brand-surface hover:text-brand-solid hover:shadow-brand-solid/10',
+    'focus-visible:border-brand-solid focus-visible:ring-brand-border',
   ].join(' ')
 
   // Helper function to render a single lampiran item
@@ -380,7 +380,7 @@ export function AttachmentViewer({
             'flex size-10 shrink-0 items-center justify-center rounded-2xl border',
             labelColor === 'blue'
               ? 'border-brand-border bg-bg-surface text-zinc-800'
-              : 'border-orange-100 bg-orange-50 text-brand-solid',
+              : 'border-brand-border bg-brand-surface text-brand-solid',
           )}>
             <FileText size={18} />
           </span>
@@ -391,7 +391,7 @@ export function AttachmentViewer({
                 {lamp.nama || 'Tanpa Nama'}
               </p>
               {showBadge && (
-                <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">Tambahan</span>
+                <span className="rounded bg-brand-surface px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">Tambahan</span>
               )}
             </div>
             <p className="mt-1 text-[11px] font-medium text-zinc-500">
@@ -450,7 +450,7 @@ export function AttachmentViewer({
                   onChange={e => handleFileChange(globalIdx, e)}
                   accept={DOCUMENT_UPLOAD_ACCEPT}
                 />
-                <span className="inline-flex h-8 items-center gap-1 rounded-xl border border-orange-200 bg-bg-surface px-2 text-xs font-bold text-brand-solid hover:bg-orange-50">
+                <span className="inline-flex h-8 items-center gap-1 rounded-xl border border-brand-border-strong bg-bg-surface px-2 text-xs font-bold text-brand-solid hover:bg-brand-surface">
                   <Upload size={12} />
                   {hasFile ? 'Ganti' : 'Unggah'}
                 </span>

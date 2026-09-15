@@ -245,7 +245,7 @@ export function DatePicker({
           "bg-bg-surface border border-brand-border rounded-xl",
           "text-sm font-semibold text-zinc-950",
           "outline-none transition-all hover:border-brand-border-strong",
-          "focus-visible:ring-2 focus-visible:ring-orange-200/70 focus-visible:border-orange-300",
+          "focus-visible:ring-2 focus-visible:ring-brand-border-strong/70 focus-visible:border-brand-solid",
           "cursor-pointer",
           disabled && "cursor-not-allowed bg-zinc-50 text-zinc-500 opacity-70",
           !value && "text-zinc-500"

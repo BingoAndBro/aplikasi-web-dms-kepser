@@ -170,10 +170,10 @@ function TreeNode({
         className={cn(
           'group flex cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 py-1.5 transition-all',
           isSelected
-            ? 'border-brand-solid bg-brand-solid text-white shadow-md shadow-orange-500/20'
+            ? 'border-brand-solid bg-brand-solid text-white shadow-md shadow-brand-solid/20'
             : isInactive
               ? 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100'
-              : 'border-brand-border bg-bg-surface text-zinc-950 hover:border-orange-200 hover:bg-brand-surface',
+              : 'border-brand-border bg-bg-surface text-zinc-950 hover:border-brand-border-strong hover:bg-brand-surface',
         )}
         style={{ paddingLeft: `${level * 16 + 10}px` }}
         onClick={() => onSelect(node)}
@@ -186,7 +186,7 @@ function TreeNode({
           }}
           className={cn(
             'shrink-0 rounded-md p-0.5 transition-colors',
-            isSelected ? 'text-white/80 hover:bg-white/15' : 'text-zinc-500 hover:bg-orange-100/60',
+            isSelected ? 'text-white/80 hover:bg-white/15' : 'text-zinc-500 hover:bg-brand-border/60',
           )}
           aria-label={`${isExpanded ? 'Tutup' : 'Buka'} klasifikasi ${node.nama}`}
         >
@@ -209,7 +209,7 @@ function TreeNode({
           {node.kode && (
             <span className={cn(
               'shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold',
-              isSelected ? 'border-white/10 bg-white/20 text-white' : 'border-orange-100/60 bg-orange-50 text-brand-solid',
+              isSelected ? 'border-white/10 bg-white/20 text-white' : 'border-brand-border/60 bg-brand-surface text-brand-solid',
             )}>
               {node.kode}
             </span>
@@ -237,7 +237,7 @@ function TreeNode({
             'shrink-0 rounded-lg p-1 opacity-100 transition-colors',
             isSelected
               ? 'bg-white/20 text-white hover:bg-white/30'
-              : 'border border-orange-100 bg-orange-50 text-brand-solid hover:bg-brand-solid hover:text-white',
+              : 'border border-brand-border bg-brand-surface text-brand-solid hover:bg-brand-solid hover:text-white',
           )}
           aria-label={`Tambah sub-klasifikasi untuk ${node.nama}`}
           title="Tambah anak klasifikasi"
@@ -247,7 +247,7 @@ function TreeNode({
       </div>
 
       {hasChildren && isExpanded && (
-        <div className="mt-1.5 space-y-1.5 border-l border-orange-100/60 pl-1.5" style={{ marginLeft: `${level * 16 + 18}px` }}>
+        <div className="mt-1.5 space-y-1.5 border-l border-brand-border/60 pl-1.5" style={{ marginLeft: `${level * 16 + 18}px` }}>
           {node.children.map(child => (
             <TreeNode
               key={child.id}
@@ -282,7 +282,7 @@ function KlasifikasiDetail({
   if (!node) {
     return (
       <div className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center">
-        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-brand-solid">
+        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl border border-brand-border bg-brand-surface text-brand-solid">
           <Network size={24} />
         </div>
         <p className="text-sm font-semibold text-zinc-600">
@@ -300,7 +300,7 @@ function KlasifikasiDetail({
   return (
     <div className="space-y-5 p-4 sm:p-6">
       <div className="flex items-center gap-2.5 border-b border-brand-border pb-4 text-left">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-orange-100/70 bg-orange-50 text-brand-solid">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-brand-border/70 bg-brand-surface text-brand-solid">
           <Info size={16} />
         </div>
         <div className="min-w-0 flex-1">
@@ -385,7 +385,7 @@ function KlasifikasiDetail({
             <Button
               type="button"
               variant="outline"
-              className="min-h-11 gap-1 rounded-xl border-brand-border bg-white px-4 text-xs font-bold text-zinc-700 hover:border-orange-200 hover:text-brand-solid"
+              className="min-h-11 gap-1 rounded-xl border-brand-border bg-white px-4 text-xs font-bold text-zinc-700 hover:border-brand-border-strong hover:text-brand-solid"
               onClick={() => onEdit(node)}
             >
               <Pencil size={14} /> Edit
@@ -502,7 +502,7 @@ function AddKlasifikasiModal({
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             {parentNode && (
-              <div className="rounded-xl border border-orange-100 bg-brand-surface p-3 text-sm">
+              <div className="rounded-xl border border-brand-border bg-brand-surface p-3 text-sm">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-solid">Klasifikasi Induk</p>
                 <p className="mt-1 font-bold text-zinc-950">{classificationDisplay(parentNode)}</p>
               </div>
@@ -538,7 +538,7 @@ function AddKlasifikasiModal({
                 onChange={event => setDeskripsi(event.target.value)}
                 rows={4}
                 placeholder="Berikan ringkasan singkat cakupan belanja dari klasifikasi ini..."
-                className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70"
               />
             </div>
             {error && <p className="text-xs font-semibold text-error">{error}</p>}
@@ -665,7 +665,7 @@ function EditKlasifikasiModal({
                 onChange={event => setDeskripsi(event.target.value)}
                 rows={4}
                 placeholder="Deskripsi klasifikasi..."
-                className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70"
               />
             </div>
             {error && <p className="text-xs font-semibold text-error">{error}</p>}
@@ -839,7 +839,7 @@ function FormInput({
         onChange={event => onChange(event.target.value)}
         placeholder={placeholder}
         className={cn(
-          'h-11 w-full rounded-xl border bg-bg-surface px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+          'h-11 w-full rounded-xl border bg-bg-surface px-3 py-2 text-sm font-semibold text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70',
           error ? 'border-error' : 'border-brand-border',
         )}
       />
@@ -974,7 +974,7 @@ function KlasifikasiPage() {
       <div className="mx-auto max-w-[92rem] space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
+            <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">
               <Archive size={12} />
               <Link to="/kasubag" className="hover:text-brand-solid">Pemberkasan KSBU</Link>
               <ChevronRight size={10} />
@@ -1000,7 +1000,7 @@ function KlasifikasiPage() {
           </Button>
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-xl border border-orange-100 bg-orange-50/70 px-4 py-3 text-xs font-medium leading-relaxed text-orange-900 shadow-sm">
+        <div className="flex items-start gap-2.5 rounded-xl border border-brand-border bg-brand-surface/70 px-4 py-3 text-xs font-medium leading-relaxed text-brand-text shadow-sm">
           <Info size={15} className="mt-0.5 shrink-0 text-brand-solid" />
           <p>
             <span className="font-extrabold">Petunjuk Pemberkasan:</span> Klasifikasi tingkat akhir bertindak sebagai <span className="font-extrabold text-brand-solid">Cara Pembayaran</span> aktif. Klasifikasi Induk bersifat struktural dan Nonaktif tidak selectable secara operasional.
@@ -1019,7 +1019,7 @@ function KlasifikasiPage() {
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-brand-border bg-bg-surface py-20 text-center shadow-sm">
-            <div className="flex size-14 items-center justify-center rounded-xl bg-orange-50 text-brand-solid">
+            <div className="flex size-14 items-center justify-center rounded-xl bg-brand-surface text-brand-solid">
               <Network size={24} />
             </div>
             <p className="font-headline text-lg font-bold text-zinc-950">Belum ada klasifikasi</p>
@@ -1043,7 +1043,7 @@ function KlasifikasiPage() {
                   <FolderOpen size={14} className="shrink-0 text-brand-solid" />
                   <h3 className="truncate text-[13px] font-bold text-zinc-950">Pohon Struktur Klasifikasi</h3>
                 </div>
-                <span className="shrink-0 rounded-md bg-orange-50 px-2 py-0.5 text-[9.5px] font-black text-zinc-700">
+                <span className="shrink-0 rounded-md bg-brand-surface px-2 py-0.5 text-[9.5px] font-black text-zinc-700">
                   Total: {totalCount} Node
                 </span>
               </div>

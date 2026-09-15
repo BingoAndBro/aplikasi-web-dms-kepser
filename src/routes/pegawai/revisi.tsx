@@ -93,7 +93,7 @@ function PegawaiRevisiPage() {
       <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
         <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-5">
-            <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+            <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-brand-border bg-bg-surface text-brand-solid shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
               <FileText size={22} />
             </div>
             <div className="min-w-0">
@@ -184,10 +184,10 @@ function PegawaiRevisiPage() {
 
             <div className="space-y-3 md:hidden">
               {paginated.map((dok, i) => (
-                <PegawaiPanel key={dok.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface">
+                <PegawaiPanel key={dok.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-brand-border hover:bg-bg-surface">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">
                         Revisi #{page * PAGE_SIZE + i + 1}
                       </p>
                       <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</h2>

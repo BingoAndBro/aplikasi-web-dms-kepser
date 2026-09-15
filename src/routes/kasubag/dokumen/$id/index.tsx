@@ -505,7 +505,7 @@ function ArsiparisDokumenDetailPage() {
           <div className="hidden shrink-0 items-center gap-2 sm:flex">
             <StatusBadge status="COMPLETED" className="text-xs font-semibold" />
             {isArchived && (
-              <Badge className="border-orange-200 bg-orange-100 text-xs text-orange-700">
+              <Badge className="border-brand-border-strong bg-brand-border text-xs text-brand-solid-active">
                 Sudah Diklasifikasikan
               </Badge>
             )}
@@ -654,7 +654,7 @@ function ArsiparisDokumenDetailPage() {
                       openKlasifikasiDropdown()
                     }}
                     className={cn(
-                      'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-bg-surface px-3 py-2.5 text-left text-sm text-zinc-950 outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+                      'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-bg-surface px-3 py-2.5 text-left text-sm text-zinc-950 outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70',
                       formErrors.klasifikasi ? 'border-error' : 'border-brand-border',
                     )}
                   >
@@ -680,7 +680,7 @@ function ArsiparisDokumenDetailPage() {
 
                   {dropdownOpen && (
                     <div className="absolute z-20 mt-2 w-full rounded-[1.05rem] border border-brand-border bg-bg-surface shadow-lg">
-                      <div className="border-b border-orange-100 p-3">
+                      <div className="border-b border-brand-border p-3">
                         <div className="relative">
                           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline/50" />
                           <input
@@ -688,7 +688,7 @@ function ArsiparisDokumenDetailPage() {
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             placeholder="Cari nama atau kode jenis pembayaran"
-                            className="w-full rounded-xl border border-brand-border bg-bg-surface py-2 pr-3 pl-9 text-xs outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                            className="w-full rounded-xl border border-brand-border bg-bg-surface py-2 pr-3 pl-9 text-xs outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70"
                           />
                         </div>
 
@@ -724,7 +724,7 @@ function ArsiparisDokumenDetailPage() {
                                 key={option.id}
                                 type="button"
                                 onClick={() => handleKlasifikasiNodeClick(option.node)}
-                                className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-orange-50/70"
+                                className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-brand-surface/70"
                               >
                                 <div className="min-w-0">
                                   <p className="truncate text-sm font-medium text-on-surface">{option.nama}</p>
@@ -746,7 +746,7 @@ function ArsiparisDokumenDetailPage() {
                                 key={node.id}
                                 type="button"
                                 onClick={() => handleKlasifikasiNodeClick(node)}
-                                className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-orange-50/70"
+                                className="flex w-full cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-brand-surface/70"
                               >
                                 <div className="min-w-0">
                                   <p className="truncate text-sm font-medium text-on-surface">{node.nama}</p>
@@ -773,7 +773,7 @@ function ArsiparisDokumenDetailPage() {
                   onChange={e => setCatatan(e.target.value)}
                   placeholder="Tambahkan penjelasan atau catatan klasifikasi jika diperlukan..."
                   rows={4}
-                  className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                  className="w-full resize-none rounded-xl border border-brand-border bg-bg-surface px-3 py-2.5 text-sm leading-relaxed text-zinc-950 outline-none transition placeholder:text-zinc-500 focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70"
                 />
               </div>
 

@@ -52,7 +52,7 @@ export function WorkflowPageHeader({
     return (
       <section className={cn('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}>
         <div className="flex min-w-0 items-start gap-5">
-          <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+          <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-brand-border bg-bg-surface text-brand-solid shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
             {eyebrow}
           </div>
           <div className="min-w-0">
@@ -81,7 +81,7 @@ export function WorkflowPageHeader({
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-orange-700/70">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-brand-solid-active/70">
             {eyebrow}
           </div>
           <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
@@ -108,7 +108,7 @@ export function WorkflowPanel({ children, className }: WorkflowPanelProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100/80 bg-bg-surface p-4 shadow-sm',
+        'rounded-2xl border border-brand-border/80 bg-bg-surface p-4 shadow-sm',
         className,
       )}
     >
@@ -267,7 +267,7 @@ export function WorkflowMobileCard({
   action,
 }: WorkflowMobileCardProps) {
   return (
-    <div className="group rounded-[22px] border border-zinc-200/80 bg-bg-surface p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-brand-surface">
+    <div className="group rounded-[22px] border border-zinc-200/80 bg-bg-surface p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-brand-border hover:bg-brand-surface">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">{title}</h3>
@@ -350,7 +350,7 @@ export function WorkflowActionButton({ label }: { label: string }) {
     <Button
       size="icon-lg"
       variant="ghost"
-      className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
+      className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
       aria-label={label}
     >
       <ChevronRight strokeWidth={2.35} />
@@ -370,7 +370,7 @@ export function WorkflowFieldCard({
   className,
 }: WorkflowFieldCardProps) {
   return (
-    <div className={cn('rounded-xl border border-orange-100 bg-bg-surface p-3', className)}>
+    <div className={cn('rounded-xl border border-brand-border bg-bg-surface p-3', className)}>
       <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </p>
@@ -407,7 +407,7 @@ export function WorkflowPagination({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="rounded-full border border-orange-100 bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
+      <span className="rounded-full border border-brand-border bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
         Halaman {page + 1} dari {totalPages}
       </span>
       <Button
@@ -460,7 +460,7 @@ export function WorkflowTimeline({
                 <div
                   className={cn(
                     'absolute right-[-50%] top-4 z-0 h-0.5 w-full',
-                    isPast ? 'bg-orange-500' : 'bg-orange-100',
+                    isPast ? 'bg-brand-solid' : 'bg-brand-border',
                   )}
                 />
               )}
@@ -468,8 +468,8 @@ export function WorkflowTimeline({
                 className={cn(
                   'relative z-10 flex size-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors',
                   isCurrent || showAsRevision || isPast
-                    ? 'border-orange-500 bg-orange-500 text-white'
-                    : 'border-orange-100 bg-bg-surface text-zinc-400',
+                    ? 'border-brand-solid bg-brand-solid text-white'
+                    : 'border-brand-border bg-bg-surface text-zinc-400',
                 )}
               >
                 {showAsRevision ? revisionIcon : index + 1}
@@ -477,7 +477,7 @@ export function WorkflowTimeline({
               <span
                 className={cn(
                   'mt-2 text-center text-[10px] font-semibold',
-                  isCurrent || showAsRevision || isPast ? 'text-orange-700' : 'text-zinc-400',
+                  isCurrent || showAsRevision || isPast ? 'text-brand-solid-active' : 'text-zinc-400',
                 )}
               >
                 {step.label}
@@ -522,14 +522,14 @@ export function WorkflowDashboardCard({
   return (
     <a
       href={href}
-      className="group cursor-pointer rounded-2xl border border-orange-100 bg-bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+      className="group cursor-pointer rounded-2xl border border-brand-border bg-bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-border-strong hover:shadow-md"
     >
-      <div className="mb-4 flex size-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-700 transition group-hover:bg-orange-600 group-hover:text-white">
+      <div className="mb-4 flex size-11 items-center justify-center rounded-2xl bg-brand-surface text-brand-solid-active transition group-hover:bg-brand-solid group-hover:text-white">
         {icon}
       </div>
       <h2 className="font-headline text-lg font-extrabold text-zinc-950">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-zinc-600">{description}</p>
-      <p className="mt-4 text-xs font-black uppercase tracking-[0.16em] text-orange-700">
+      <p className="mt-4 text-xs font-black uppercase tracking-[0.16em] text-brand-solid-active">
         Buka halaman
       </p>
     </a>

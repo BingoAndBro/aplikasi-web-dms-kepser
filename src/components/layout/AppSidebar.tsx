@@ -138,14 +138,14 @@ export function AppSidebar({
         <button
           type="button"
           aria-label="Tutup navigasi"
-          className="fixed inset-0 z-40 bg-orange-950/30 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
           onClick={() => onMobileOpenChange(false)}
         />
       )}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[82vw] shrink-0 flex-col gap-5 border-r border-orange-100/80 bg-bg-surface px-4 py-5 shadow-2xl shadow-orange-950/10 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none',
+          'fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[82vw] shrink-0 flex-col gap-5 border-r border-brand-border/80 bg-bg-surface px-4 py-5 shadow-2xl shadow-black/10 transition-transform duration-300 lg:static lg:z-auto lg:max-w-none lg:translate-x-0 lg:shadow-none',
           useCompactDesktopWidth ? 'lg:w-56 xl:w-60' : 'lg:w-60 xl:w-60',
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
@@ -153,7 +153,7 @@ export function AppSidebar({
         <div className="flex items-start justify-between gap-2 px-1">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm shadow-orange-950/10 ring-1 ring-orange-100">
+              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm shadow-black/10 ring-1 ring-brand-border">
                 <img src="/bps-logo.png" alt="BPS" className="size-6 object-contain" />
               </div>
               <div className="min-w-0">
@@ -171,7 +171,7 @@ export function AppSidebar({
             type="button"
             aria-label="Tutup navigasi"
             onClick={() => onMobileOpenChange(false)}
-            className="inline-flex size-8 items-center justify-center rounded-xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:bg-orange-50 hover:text-primary lg:hidden"
+            className="inline-flex size-8 items-center justify-center rounded-xl border border-brand-border bg-white text-outline shadow-sm transition-all hover:bg-brand-surface hover:text-primary lg:hidden"
           >
             <X size={16} />
           </button>
@@ -203,7 +203,7 @@ export function AppSidebar({
                             </span>
                             <span className="truncate text-[13px] font-semibold">{item.label}</span>
                           </div>
-                          <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-outline">
+                          <span className="rounded-full bg-brand-surface px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-outline">
                             Soon
                           </span>
                         </div>
@@ -218,8 +218,8 @@ export function AppSidebar({
                         className={cn(
                           'group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-200',
                           isActive
-                            ? 'bg-primary text-white shadow-md shadow-orange-600/15'
-                            : 'text-on-surface-variant hover:bg-orange-50 hover:text-orange-950',
+                            ? 'bg-primary text-white shadow-md shadow-brand-solid/15'
+                            : 'text-on-surface-variant hover:bg-brand-surface hover:text-brand-text',
                         )}
                       >
                         <div className="flex min-w-0 items-center gap-2.5">
@@ -239,7 +239,7 @@ export function AppSidebar({
                           <span
                             className={cn(
                               'rounded-full px-2 py-0.5 text-[9px] font-black',
-                              isActive ? 'bg-white/20 text-white' : 'bg-orange-100 text-primary',
+                              isActive ? 'bg-white/20 text-white' : 'bg-brand-border text-primary',
                             )}
                           >
                             {item.badge}
@@ -254,10 +254,10 @@ export function AppSidebar({
           </div>
         </div>
 
-        <div className="space-y-1 border-t border-orange-100/80 pt-4">
+        <div className="space-y-1 border-t border-brand-border/80 pt-4">
           <button
             type="button"
-            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-bold text-outline transition-all hover:bg-orange-50 hover:text-primary"
+            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-bold text-outline transition-all hover:bg-brand-surface hover:text-primary"
           >
             <HelpCircle size={15} />
             Bantuan

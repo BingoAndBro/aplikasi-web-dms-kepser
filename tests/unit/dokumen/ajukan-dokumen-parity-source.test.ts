@@ -109,7 +109,7 @@ describe('Phase 15L.1 Ajukan Dokumen parity source guard', () => {
     expect(kelengkapanSource).toContain('Dokumen Pendukung')
     expect(kelengkapanSource).toContain('Tambahkan dokumen pendukung untuk melengkapi')
     expect(kelengkapanSource).toContain('Tambah Dokumen Pendukung')
-    expect(kelengkapanSource).toContain('border border-dashed border-orange-300')
+    expect(kelengkapanSource).toContain('border border-dashed border-brand-solid')
     expect(kelengkapanSource).toContain('DOCUMENT_UPLOAD_HELPER_TEXT')
     expect(kelengkapanSource).not.toContain('Dokumen Opsional')
     expect(kelengkapanSource).not.toContain('Dokumen Tambahan')

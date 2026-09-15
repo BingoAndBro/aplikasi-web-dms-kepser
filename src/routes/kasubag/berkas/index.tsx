@@ -280,7 +280,7 @@ function BerkasTable({
                     params={{ id: folder.berkas_id }}
                     aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
                     onClick={(event) => event.stopPropagation()}
-                    className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)]"
+                    className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)]"
                   >
                     <ChevronRight size={20} strokeWidth={2.35} />
                   </Link>
@@ -312,7 +312,7 @@ function BerkasTable({
               <Link
                 to="/kasubag/berkas/$id"
                 params={{ id: folder.berkas_id }}
-                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-bg-surface text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-bg-surface text-xs font-bold text-zinc-700 transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid-active"
               >
                 <ChevronRight size={14} />
                 Buka Detail

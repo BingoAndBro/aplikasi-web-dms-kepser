@@ -289,7 +289,7 @@ function DokumenDetailPage() {
             <div className="space-y-1.5 px-0.5 pt-0.5">
               {isNonMaterial && (
                 <Link to="/pegawai/dokumen/$id/edit" params={{ id }} className="block">
-                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover">
+                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white shadow-sm shadow-brand-solid/20 hover:bg-brand-solid-hover">
                     <Pencil size={13} />
                     Edit Dokumen
                   </Button>
@@ -330,7 +330,7 @@ function MetadataDetailCard({ dok, isNonMaterial }: { dok: DokumenDetail; isNonM
       value: (
         <span className="inline-flex flex-wrap items-center gap-2">
           <span>{jenisValue ?? '-'}</span>
-          <span className="rounded-md border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
+          <span className="rounded-md border border-brand-border bg-brand-surface px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
             {isNonMaterial ? 'Non-Material' : 'Material'}
           </span>
         </span>
@@ -505,7 +505,7 @@ function WorkflowPanel({
                     isSuccessStep
                       ? 'border-emerald-500 bg-emerald-500 text-white'
                       : isAttentionStep
-                      ? 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20'
+                      ? 'border-brand-solid bg-brand-solid text-white shadow-sm shadow-brand-solid/20'
                         : 'border-brand-border bg-bg-surface text-zinc-400',
                   )}
                 >

@@ -21,7 +21,7 @@ describe('Phase 15L.2C PPK resubmit visual parity source guard', () => {
     expect(source).toContain('border-rose-100 bg-rose-50/55 p-3')
     expect(source).toContain('space-y-2.5 px-0.5 py-1')
     expect(source).toContain('h-10 w-full gap-2 rounded-xl bg-brand-solid text-sm font-bold')
-    expect(source).toContain("label === 'Nominal Realisasi' ? 'border-orange-200 bg-orange-50/35' : 'border-orange-100'")
+    expect(source).toContain("label === 'Nominal Realisasi' ? 'border-brand-border-strong bg-brand-surface/35' : 'border-brand-border'")
     expect(source).toContain("label === 'Nominal Realisasi' ? 'text-brand-solid' : 'text-zinc-500'")
     expect(source).toContain("label === 'Nominal Realisasi' ? 'font-mono font-bold text-brand-solid' : 'text-zinc-950'")
     expect(source).toContain('showAsRevision ? \'text-rose-600\'')

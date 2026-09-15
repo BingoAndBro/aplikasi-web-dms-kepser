@@ -346,8 +346,8 @@ export function KelengkapanChecklist({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-orange-200 bg-bg-surface">
-        <div className="border-b border-orange-100 px-3.5 py-2.5">
+      <div className="overflow-hidden rounded-xl border border-brand-border-strong bg-bg-surface">
+        <div className="border-b border-brand-border px-3.5 py-2.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-[13px] font-semibold text-brand-solid">Dokumen Pendukung</h3>
@@ -382,12 +382,12 @@ export function KelengkapanChecklist({
                 key={doc.id}
                 className={cn(
                   'flex min-w-0 flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
-                  uploaded ? 'border-orange-100 bg-bg-surface' : 'border-brand-border bg-bg-surface',
+                  uploaded ? 'border-brand-border bg-bg-surface' : 'border-brand-border bg-bg-surface',
                 )}
               >
                 <div className={cn(
                   'flex size-8 shrink-0 items-center justify-center rounded-lg',
-                  uploaded ? 'bg-emerald-500 text-white' : 'bg-orange-50 text-orange-300',
+                  uploaded ? 'bg-emerald-500 text-white' : 'bg-brand-surface text-brand-solid',
                 )}>
                   {uploaded ? <CheckCircle2 size={14} /> : <FileText size={14} />}
                 </div>
@@ -428,7 +428,7 @@ export function KelengkapanChecklist({
           })}
 
           {showAddForm ? (
-            <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-bg-surface p-2.5 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 rounded-xl border border-brand-border bg-bg-surface p-2.5 sm:flex-row sm:items-center">
               <Input
                 value={newDocTitle}
                 onChange={(e) => {
@@ -436,7 +436,7 @@ export function KelengkapanChecklist({
                   setUserDocError('')
                 }}
                 placeholder="Nama dokumen (misal: Bukti Transfer)"
-                className="h-8 flex-1 border-orange-200 bg-white text-sm focus:ring-brand-solid"
+                className="h-8 flex-1 border-brand-border-strong bg-white text-sm focus:ring-brand-solid"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
@@ -469,7 +469,7 @@ export function KelengkapanChecklist({
             <button
               type="button"
               onClick={() => setShowAddForm(true)}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-brand-solid bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
             >
               <Plus size={14} />
               <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>

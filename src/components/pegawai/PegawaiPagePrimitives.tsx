@@ -23,13 +23,13 @@ export function PegawaiPageHeader({
   return (
     <div
       className={cn(
-        'rounded-3xl border border-orange-100 bg-brand-surface p-5 shadow-sm sm:p-6',
+        'rounded-3xl border border-brand-border bg-brand-surface p-5 shadow-sm sm:p-6',
         className,
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-orange-700/70">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-brand-solid-active/70">
             {eyebrow}
           </div>
           <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
@@ -55,7 +55,7 @@ export function PegawaiPanel({ children, className, ...props }: PegawaiPanelProp
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100/80 bg-bg-surface p-4 shadow-sm',
+        'rounded-2xl border border-brand-border/80 bg-bg-surface p-4 shadow-sm',
         className,
       )}
       {...props}
@@ -123,7 +123,7 @@ export function PegawaiFieldCard({
   className,
 }: PegawaiFieldCardProps) {
   return (
-    <div className={cn('rounded-xl border border-orange-100 bg-bg-surface p-3', className)}>
+    <div className={cn('rounded-xl border border-brand-border bg-bg-surface p-3', className)}>
       <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </p>
@@ -160,7 +160,7 @@ export function PegawaiPagination({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="rounded-full border border-orange-100 bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
+      <span className="rounded-full border border-brand-border bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
         Halaman {page + 1} dari {totalPages}
       </span>
       <Button

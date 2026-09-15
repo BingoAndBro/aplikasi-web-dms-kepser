@@ -42,7 +42,7 @@ export function RoleDashboardHeader({
         <Button
           nativeButton={false}
           render={<a href={actionHref} />}
-          className="h-11 w-full gap-2 rounded-xl bg-brand-solid px-5 text-sm font-extrabold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover sm:w-auto"
+          className="h-11 w-full gap-2 rounded-xl bg-brand-solid px-5 text-sm font-extrabold text-white shadow-sm shadow-brand-solid/20 hover:bg-brand-solid-hover sm:w-auto"
         >
           {actionIcon}
           {actionLabel}
@@ -205,7 +205,7 @@ export function DashboardActionRow({
       className="group flex cursor-pointer flex-col gap-4 border-b border-zinc-100 px-5 py-4 transition last:border-b-0 hover:bg-brand-surface sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex min-w-0 items-start gap-4">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-700">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-brand-border bg-brand-surface text-brand-solid-active">
           {icon}
         </div>
         <div className="min-w-0">
@@ -216,7 +216,7 @@ export function DashboardActionRow({
           {meta && <div className="mt-2 text-[11px] font-semibold text-zinc-500">{meta}</div>}
         </div>
       </div>
-      <span className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-orange-100 bg-orange-50 px-4 text-xs font-extrabold text-brand-text shadow-sm transition group-hover:border-orange-200 group-hover:bg-orange-100 sm:w-auto">
+      <span className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-brand-surface px-4 text-xs font-extrabold text-brand-text shadow-sm transition group-hover:border-brand-border-strong group-hover:bg-brand-border sm:w-auto">
         {actionLabel}
         <ArrowRight size={14} />
       </span>
@@ -246,10 +246,10 @@ export function DashboardQuickActions({
           <a
             key={action.href}
             href={action.href}
-            className="group flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-bg-surface px-3 py-2.5 text-sm font-extrabold text-zinc-900 transition hover:border-orange-200 hover:bg-orange-50 hover:text-brand-text"
+            className="group flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-bg-surface px-3 py-2.5 text-sm font-extrabold text-zinc-900 transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-text"
           >
             <span className="flex min-w-0 items-center gap-3">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-700 transition group-hover:bg-orange-600 group-hover:text-white">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-brand-surface text-brand-solid-active transition group-hover:bg-brand-solid group-hover:text-white">
                 {action.icon}
               </span>
               <span className="line-clamp-1">{action.label}</span>

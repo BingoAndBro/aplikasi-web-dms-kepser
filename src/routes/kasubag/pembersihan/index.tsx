@@ -208,7 +208,7 @@ function UsulMusnahPage() {
                     type="button"
                     className={`h-8 rounded-lg px-3 text-xs font-bold transition ${
                       selected
-                        ? 'border border-orange-200 bg-orange-50 text-brand-text shadow-sm'
+                        ? 'border border-brand-border-strong bg-brand-surface text-brand-text shadow-sm'
                         : 'border border-transparent text-zinc-600 hover:bg-bg-surface hover:text-zinc-950'
                     }`}
                     aria-pressed={selected}
@@ -329,7 +329,7 @@ function BerkasLifecycleTable({
                       to="/kasubag/berkas/$id"
                       params={{ id: folder.berkas_id }}
                       aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
-                      className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                      className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid"
                     >
                       <ChevronRight size={20} strokeWidth={2.35} />
                     </Link>
@@ -368,7 +368,7 @@ function BerkasLifecycleTable({
                 <Link
                   to="/kasubag/berkas/$id"
                   params={{ id: folder.berkas_id }}
-                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-bg-surface text-xs font-bold text-zinc-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                  className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-zinc-200/80 bg-bg-surface text-xs font-bold text-zinc-700 transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid-active"
                 >
                   <ChevronRight size={14} />
                   Buka Detail

@@ -77,7 +77,7 @@ function ResetActionButton({
       type="button"
       onClick={() => { void onClick() }}
       className={cn(
-        'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-orange-100 px-2.5 text-[11px] font-semibold text-brand-solid-hover transition-colors hover:bg-orange-200',
+        'inline-flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-brand-border px-2.5 text-[11px] font-semibold text-brand-solid-hover transition-colors hover:bg-brand-border-strong',
         className,
       )}
     >
@@ -101,7 +101,7 @@ function FileActionButton({
       type="button"
       onClick={() => { void onClick() }}
       aria-label={ariaLabel}
-      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-brand-border bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-orange-200 hover:bg-bg-surface hover:text-brand-solid"
+      className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-brand-border bg-white text-zinc-700 shadow-sm shadow-zinc-950/5 transition-colors hover:border-brand-border-strong hover:bg-bg-surface hover:text-brand-solid"
     >
       {children}
     </button>
@@ -949,7 +949,7 @@ export function AttachmentEditor({
         {!isNonMaterial && (
           <div className={cn(
             'rounded-xl border bg-bg-surface p-3 transition-colors',
-            hasNominalChanged ? 'border-orange-300 bg-orange-50/20' : 'border-brand-border'
+            hasNominalChanged ? 'border-brand-solid bg-brand-surface/20' : 'border-brand-border'
           )}>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
               <div className="flex-1">
@@ -965,7 +965,7 @@ export function AttachmentEditor({
                     'w-full rounded-lg border bg-surface px-3 py-1.5 text-sm text-on-surface',
                     'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary',
                     'placeholder:text-outline',
-                    hasNominalChanged ? 'border-orange-300' : 'border-border'
+                    hasNominalChanged ? 'border-brand-solid' : 'border-border'
                   )}
                 />
                 {nominalError && (
@@ -1004,7 +1004,7 @@ export function AttachmentEditor({
                   <div key={kel.id} className="space-y-1.5">
                     <div className={cn(
                       'flex flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
-                      isPending ? 'border-orange-200 bg-orange-50/30' : 'border-brand-border bg-bg-surface'
+                      isPending ? 'border-brand-border-strong bg-brand-surface/30' : 'border-brand-border bg-bg-surface'
                     )}>
                       {/* Status icon */}
                       {isPending ? (
@@ -1068,8 +1068,8 @@ export function AttachmentEditor({
         )}
 
         {/* ========== DOKUMEN PENDUKUNG ========== */}
-        <div className="overflow-hidden rounded-xl border border-orange-200 bg-bg-surface">
-          <div className="border-b border-orange-100 px-3.5 py-2.5">
+        <div className="overflow-hidden rounded-xl border border-brand-border-strong bg-bg-surface">
+          <div className="border-b border-brand-border px-3.5 py-2.5">
             <h3 className="text-[13px] font-semibold text-brand-solid">Dokumen Pendukung</h3>
             <p className="mt-0.5 text-[11px] text-brand-solid">
               Tambahkan dokumen pendukung untuk melengkapi
@@ -1092,7 +1092,7 @@ export function AttachmentEditor({
                 <div key={doc.id} className="space-y-1.5">
                   <div className={cn(
                     'flex flex-col gap-2 rounded-xl border px-2.5 py-2 transition-colors sm:flex-row sm:items-center',
-                    isPending ? 'border-orange-200 bg-orange-50/30' : hasFile ? 'border-orange-100 bg-bg-surface' : 'border-brand-border bg-bg-surface'
+                    isPending ? 'border-brand-border-strong bg-brand-surface/30' : hasFile ? 'border-brand-border bg-bg-surface' : 'border-brand-border bg-bg-surface'
                   )}>
                     {/* Status icon */}
                     {isPending ? (
@@ -1100,13 +1100,13 @@ export function AttachmentEditor({
                     ) : hasFile ? (
                       <CheckCircle2 size={14} className="text-green-600 shrink-0" />
                     ) : (
-                      <div className="size-3.5 shrink-0 rounded-full border-2 border-orange-200" />
+                      <div className="size-3.5 shrink-0 rounded-full border-2 border-brand-border-strong" />
                     )}
 
                     {/* Info */}
                     <div className="min-w-0 flex-1">
                       <span className="text-[13px] font-medium">{doc.nama}</span>
-                      <span className="ml-2 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-brand-solid-hover">TAMBAHAN</span>
+                      <span className="ml-2 rounded bg-brand-border px-1.5 py-0.5 text-[10px] font-medium text-brand-solid-hover">TAMBAHAN</span>
                     </div>
 
                     {/* Actions */}
@@ -1164,7 +1164,7 @@ export function AttachmentEditor({
 
             {/* Add form */}
             {showAddForm ? (
-              <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-bg-surface p-2.5 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-2 rounded-xl border border-brand-border bg-bg-surface p-2.5 sm:flex-row sm:items-center">
                 <input
                   type="text"
                   value={newDocTitle}
@@ -1173,7 +1173,7 @@ export function AttachmentEditor({
                     setUserDocError('')
                   }}
                   placeholder="Nama dokumen (misal: Bukti Transfer)"
-                  className="h-8 flex-1 rounded-lg border border-orange-200 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand-solid"
+                  className="h-8 flex-1 rounded-lg border border-brand-border-strong px-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand-solid"
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleAddUserDoc()
                     if (e.key === 'Escape') { setShowAddForm(false); setNewDocTitle('') }
@@ -1187,7 +1187,7 @@ export function AttachmentEditor({
               <button
                 type="button"
                 onClick={() => setShowAddForm(true)}
-                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-brand-solid bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
               >
                 <Plus size={14} />
                 <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>

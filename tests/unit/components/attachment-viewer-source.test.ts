@@ -56,7 +56,7 @@ describe('AttachmentViewer destroyed-file UX wiring', () => {
     expect(source).toContain('const fileActionButtonClassName = [')
     expect(source).toContain('rounded-xl border border-zinc-200/70 bg-bg-surface')
     expect(source).toContain('text-zinc-500 shadow-sm shadow-zinc-950/[0.025]')
-    expect(source).toContain('hover:border-orange-300 hover:bg-orange-50 hover:text-brand-solid')
+    expect(source).toContain('hover:border-brand-solid hover:bg-brand-surface hover:text-brand-solid')
     expect(source).toContain("className={cn(fileActionButtonClassName, 'gap-1.5')}")
     expect(source).toContain('Preview')
     expect(source).toContain('Unduh')

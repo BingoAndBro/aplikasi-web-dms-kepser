@@ -278,7 +278,7 @@ function ReportToolbar({
             placeholder={placeholder}
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -288,7 +288,7 @@ function ReportToolbar({
             className={[
               'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
               filterOpen || activeFilters > 0
-                ? 'border-orange-200 bg-orange-50 text-brand-text hover:bg-orange-50'
+                ? 'border-brand-border-strong bg-brand-surface text-brand-text hover:bg-brand-surface'
                 : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
             ].join(' ')}
             onClick={() => onFilterOpenChange(!filterOpen)}
@@ -434,11 +434,11 @@ function ReportDocumentList({
         {dokumen.map((dok, idx) => (
           <PegawaiPanel
             key={dok.id}
-            className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface"
+            className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-brand-border hover:bg-bg-surface"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">
                   Dokumen #{idx + 1}
                 </p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</h2>
@@ -479,7 +479,7 @@ function ReportDetailButton({ dok, mobile = false }: { dok: DokumenLaporanRow; m
         variant={mobile ? 'outline' : 'ghost'}
         className={mobile
           ? 'w-full gap-1.5'
-          : 'size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5'}
+          : 'size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5'}
         aria-label={`Detail Dokumen ${dok.judul}`}
       >
         <ChevronRight strokeWidth={2.35} />

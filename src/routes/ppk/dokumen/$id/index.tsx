@@ -231,7 +231,7 @@ function PpkDokumenDetailIndexPage() {
             'flex size-20 items-center justify-center rounded-full border',
             isApprove
               ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
-              : 'border-orange-200 bg-orange-50 text-brand-solid-hover',
+              : 'border-brand-border-strong bg-brand-surface text-brand-solid-hover',
           )}>
             {isApprove ? <CheckCircle2 size={38} strokeWidth={2.4} /> : <AlertTriangle size={34} strokeWidth={2.2} />}
           </div>
@@ -425,7 +425,7 @@ function PpkDokumenDetailIndexPage() {
             <div className="space-y-1.5 px-0.5 pt-0.5">
               {dokumen.status === 'IN_PPK_VALIDATION' && (
                 <>
-                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white shadow-sm shadow-orange-500/20 hover:bg-brand-solid-hover" onClick={() => setApproveOpen(true)} disabled={!!actionLoading}>
+                  <Button size="lg" className="h-9 w-full gap-1.5 rounded-xl bg-brand-solid text-xs font-bold text-white shadow-sm shadow-brand-solid/20 hover:bg-brand-solid-hover" onClick={() => setApproveOpen(true)} disabled={!!actionLoading}>
                     {actionLoading === 'approve' ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
                     Validasi ke PPSPM
                   </Button>
@@ -463,7 +463,7 @@ function MetadataDetailCard({ dokumen, isNonMaterial }: { dokumen: DokumenDetail
       value: (
         <span className="inline-flex flex-wrap items-center gap-2">
           <span>{jenisValue ?? '-'}</span>
-          <span className="rounded-md border border-orange-100 bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
+          <span className="rounded-md border border-brand-border bg-brand-surface px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
             {isNonMaterial ? 'Non-Material' : 'Material'}
           </span>
         </span>
@@ -626,7 +626,7 @@ function RoleStatusPanel({
                       isSuccessStep
                         ? 'border-emerald-500 bg-emerald-500 text-white'
                         : isAttentionStep
-                          ? 'border-orange-500 bg-orange-500 text-white shadow-sm shadow-orange-500/20'
+                          ? 'border-brand-solid bg-brand-solid text-white shadow-sm shadow-brand-solid/20'
                           : 'border-brand-border bg-bg-surface text-zinc-400',
                     )}
                   >

@@ -130,7 +130,7 @@ function DokumenSayaPage() {
       <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
         <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-5">
-            <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+            <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-brand-border bg-bg-surface text-brand-solid shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
               <FileText size={22} />
             </div>
             <div className="min-w-0">
@@ -243,7 +243,7 @@ function DokumenSayaPage() {
                         <Button
                           size="icon-lg"
                           variant="ghost"
-                          className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
+                          className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
                           aria-label={`Buka dokumen ${dok.judul}`}
                         >
                           <ChevronRight strokeWidth={2.35} />
@@ -260,11 +260,11 @@ function DokumenSayaPage() {
                 return (
                   <PegawaiPanel
                     key={dok.id}
-                    className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface"
+                    className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-brand-border hover:bg-bg-surface"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">
                           Dokumen #{page * PAGE_SIZE + i + 1}
                         </p>
                         <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</h2>
@@ -331,7 +331,7 @@ function getPegawaiStatusPresentation(dok: DokumenRow) {
   if (dok.status === 'NEED_REVISION' && dok.revision_target === 'PPK') {
     return {
       label: 'Dikembalikan ke PPK',
-      className: 'border-orange-200/80 bg-orange-50/80 text-orange-700',
+      className: 'border-brand-border-strong/80 bg-brand-surface/80 text-brand-solid-active',
     }
   }
 

@@ -22,13 +22,13 @@ import { formatDate } from '#/lib/utils/format'
 
 const ARCHIVE_FORM_LABEL_CLASS = 'block space-y-1.5 text-[11px] font-bold text-zinc-700'
 const ARCHIVE_FORM_INPUT_CLASS =
-  'w-full rounded-xl border border-brand-border bg-bg-surface px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
+  'w-full rounded-xl border border-brand-border bg-bg-surface px-4 py-2.5 text-sm font-semibold text-zinc-950 outline-none transition hover:border-brand-border-strong focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:opacity-70'
 const ARCHIVE_FORM_SELECT_TRIGGER_CLASS =
-  'min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold text-zinc-950 hover:border-brand-border-strong focus-visible:border-orange-300 focus-visible:ring-2 focus-visible:ring-orange-200/70'
+  'min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold text-zinc-950 hover:border-brand-border-strong focus-visible:border-brand-solid focus-visible:ring-2 focus-visible:ring-brand-border-strong/70'
 const ARCHIVE_FORM_SELECT_CONTENT_CLASS =
   'rounded-xl border border-brand-border bg-bg-surface text-zinc-950 shadow-xl shadow-zinc-950/10'
 const ARCHIVE_FORM_SELECT_ITEM_CLASS =
-  'rounded-lg px-3 py-2 text-sm font-medium text-zinc-950 focus:bg-orange-50 focus:text-zinc-950'
+  'rounded-lg px-3 py-2 text-sm font-medium text-zinc-950 focus:bg-brand-surface focus:text-zinc-950'
 
 export type CloseBerkasFormState = {
   nomor_spm: string

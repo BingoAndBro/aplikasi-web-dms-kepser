@@ -47,11 +47,11 @@ export function ArchivePageHeader({
       )}
     >
       <div className="flex min-w-0 items-start gap-5">
-        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-brand-border bg-bg-surface text-brand-solid shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
           <FolderOpen size={22} />
         </div>
         <div className="min-w-0">
-          <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">
             {eyebrow}
           </div>
           <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
@@ -78,7 +78,7 @@ export function ArchivePanel({ children, className }: ArchivePanelProps) {
   return (
     <div
       className={cn(
-        'rounded-[1.15rem] border border-orange-100/80 bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]',
+        'rounded-[1.15rem] border border-brand-border/80 bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]',
         className,
       )}
     >
@@ -162,7 +162,7 @@ export function ArchiveExportButton({
       type="button"
       variant="outline"
       size="sm"
-      className="h-10 w-fit gap-1.5 rounded-xl border-orange-200/80 bg-brand-surface px-3 text-xs font-extrabold text-brand-text shadow-sm shadow-orange-500/10 transition hover:border-orange-300 hover:bg-orange-50 hover:text-brand-solid-hover disabled:opacity-50"
+      className="h-10 w-fit gap-1.5 rounded-xl border-brand-border-strong/80 bg-brand-surface px-3 text-xs font-extrabold text-brand-text shadow-sm shadow-brand-solid/10 transition hover:border-brand-solid hover:bg-brand-surface hover:text-brand-solid-hover disabled:opacity-50"
       disabled={disabled}
       title={title}
       onClick={onClick}
@@ -191,7 +191,7 @@ export function ArchiveSummaryCard({
   return (
     <div
       className={cn(
-        'rounded-[1.15rem] border border-orange-100 bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]',
+        'rounded-[1.15rem] border border-brand-border bg-bg-surface p-4 shadow-sm shadow-zinc-950/[0.035]',
         className,
       )}
     >
@@ -205,7 +205,7 @@ export function ArchiveSummaryCard({
           </div>
         </div>
         {icon && (
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-700">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand-surface text-brand-solid-active">
             {icon}
           </div>
         )}
@@ -254,7 +254,7 @@ export function ArchiveMobileCard({
   action,
 }: ArchiveMobileCardProps) {
   return (
-    <div className="group rounded-[22px] border border-zinc-200/80 bg-bg-surface p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-brand-surface">
+    <div className="group rounded-[22px] border border-zinc-200/80 bg-bg-surface p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-brand-border hover:bg-brand-surface">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-semibold text-zinc-950 transition-colors group-hover:text-brand-text">
@@ -291,7 +291,7 @@ export function ArchiveFieldCard({
   className,
 }: ArchiveFieldCardProps) {
   return (
-    <div className={cn('rounded-xl border border-orange-100 bg-bg-surface p-3 shadow-sm shadow-zinc-950/[0.025]', className)}>
+    <div className={cn('rounded-xl border border-brand-border bg-bg-surface p-3 shadow-sm shadow-zinc-950/[0.025]', className)}>
       <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </p>
@@ -328,7 +328,7 @@ export function ArchivePagination({
       >
         <ChevronLeft size={14} />
       </Button>
-      <span className="rounded-full border border-orange-100 bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
+      <span className="rounded-full border border-brand-border bg-bg-surface px-3 py-1 text-xs font-semibold text-zinc-600">
         Halaman {page + 1} dari {totalPages}
       </span>
       <Button

@@ -33,7 +33,7 @@ export const adminFormFieldClassName =
 export const adminTextareaClassName =
   'min-h-24 w-full resize-none rounded-[14px] border border-border-default bg-white px-4 py-3 text-sm font-semibold text-text-strong outline-none transition placeholder:text-text-muted hover:border-brand-solid focus:border-brand-solid focus:ring-2 focus:ring-brand-solid/20'
 export const adminPrimaryActionClassName =
-  'h-11 rounded-[20px] bg-brand-solid px-5 text-sm font-extrabold text-white shadow-[0_8px_14px_rgba(255,90,0,0.20),inset_0_-1px_0_rgba(132,37,0,0.20)] hover:bg-brand-text focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 [&_svg]:size-[16px] [&_svg]:stroke-[2.4]'
+  'h-11 rounded-[20px] bg-brand-solid px-5 text-sm font-extrabold text-white shadow-[0_8px_14px_rgba(255,90,0,0.20),inset_0_-1px_0_rgba(132,37,0,0.20)] hover:bg-brand-text focus-visible:ring-2 focus-visible:ring-brand-solid focus-visible:ring-offset-2 [&_svg]:size-[16px] [&_svg]:stroke-[2.4]'
 export const adminDialogContentClassName =
   'overflow-hidden rounded-[26px] border border-border-default bg-white p-0 text-text-strong shadow-2xl shadow-slate-950/20'
 export const adminDialogHeaderClassName =
@@ -82,12 +82,12 @@ export function AdminPageHeader({
     >
       <div className="flex min-w-0 items-start gap-5">
         {icon && (
-          <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)] [&_svg]:size-[22px]">
+          <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-brand-border bg-bg-surface text-brand-solid shadow-[0_2px_8px_rgba(251,146,60,0.14)] [&_svg]:size-[22px]">
             {icon}
           </div>
         )}
         <div className="min-w-0">
-          <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-orange-900/70">
+          <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-text/70">
             {eyebrow}
           </div>
           <div className="min-w-0">
@@ -368,7 +368,7 @@ export function AdminRelationPill({
   const toneClassName = {
     warm: 'border-warning-border bg-warning-surface text-warning-text',
     blue: 'border-info-border bg-info-surface text-text-strong',
-    orange: 'border-orange-200 bg-orange-50 text-brand-text',
+    orange: 'border-brand-border-strong bg-brand-surface text-brand-text',
   }[tone]
 
   return (
@@ -404,7 +404,7 @@ export function AdminActionButtons({
         variant="ghost"
         onClick={onEdit}
         aria-label={editLabel}
-        className="size-9 rounded-xl text-black transition hover:bg-orange-50 hover:text-brand-text"
+        className="size-9 rounded-xl text-black transition hover:bg-brand-surface hover:text-brand-text"
       >
         <Edit2 size={20} strokeWidth={2.5} />
       </Button>
@@ -458,7 +458,7 @@ export function AdminStepCard({
     <AdminPanel
       className={cn(
         'space-y-4',
-        active && 'border-orange-200 bg-orange-50/40',
+        active && 'border-brand-border-strong bg-brand-surface/40',
         complete && 'border-emerald-200 bg-emerald-50/40',
         className,
       )}
@@ -470,8 +470,8 @@ export function AdminStepCard({
             complete
               ? 'bg-emerald-600 text-white'
               : active
-                ? 'bg-orange-600 text-white'
-                : 'bg-orange-50 text-orange-700',
+                ? 'bg-brand-solid text-white'
+                : 'bg-brand-surface text-brand-solid-active',
           )}
         >
           {step}

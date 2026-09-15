@@ -27,13 +27,13 @@ export function KinerjaPageHeader({
   return (
     <div
       className={cn(
-        'rounded-3xl border border-orange-100 bg-gradient-to-br from-brand-surface via-bg-surface to-orange-50/70 p-5 shadow-sm sm:p-6',
+        'rounded-3xl border border-brand-border bg-gradient-to-br from-brand-surface via-bg-surface to-brand-surface/70 p-5 shadow-sm sm:p-6',
         className,
       )}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-orange-700/70">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-brand-solid-active/70">
             {eyebrow}
           </div>
           <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
@@ -60,7 +60,7 @@ export function KinerjaPanel({ children, className }: KinerjaPanelProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-orange-100/80 bg-bg-surface p-4 shadow-sm',
+        'rounded-2xl border border-brand-border/80 bg-bg-surface p-4 shadow-sm',
         className,
       )}
     >
@@ -165,7 +165,7 @@ export function KinerjaMobileCard({
   meta = [],
 }: KinerjaMobileCardProps) {
   return (
-    <div className="rounded-2xl border border-orange-100 bg-bg-surface p-4 shadow-sm">
+    <div className="rounded-2xl border border-brand-border bg-bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-bold text-zinc-950">{title}</h3>

@@ -166,7 +166,7 @@ export function AppToastViewport({
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                className="-mr-1 -mt-1 text-zinc-400 hover:bg-orange-50 hover:text-zinc-950"
+                className="-mr-1 -mt-1 text-zinc-400 hover:bg-brand-surface hover:text-zinc-950"
                 onClick={() => onDismiss(toast.id)}
               >
                 <X aria-hidden="true" />

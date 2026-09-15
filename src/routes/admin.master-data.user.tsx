@@ -1182,10 +1182,10 @@ function MasterUserPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-brand-text" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
                           <Edit2 size={20} strokeWidth={2.5} />
                         </Button>
-                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-brand-text" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
                           <KeyRound size={20} strokeWidth={2.5} />
                         </Button>
                         {user.isActive ? (
@@ -1193,7 +1193,7 @@ function MasterUserPage() {
                             <UserX size={20} strokeWidth={2.5} />
                           </Button>
                         ) : (
-                          <Button size="icon-lg" variant="ghost" onClick={() => openActivate(user)} className="size-9 rounded-xl text-black hover:bg-orange-50 hover:text-brand-text" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
+                          <Button size="icon-lg" variant="ghost" onClick={() => openActivate(user)} className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
                             <UserCheck size={20} strokeWidth={2.5} />
                           </Button>
                         )}
@@ -1204,7 +1204,7 @@ function MasterUserPage() {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between border-t border-orange-100 bg-bg-surface px-6 py-4">
+          <div className="flex items-center justify-between border-t border-brand-border bg-bg-surface px-6 py-4">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
               Menampilkan {filteredUsers.length} dari {users.length} user
             </p>
@@ -1307,7 +1307,7 @@ function MasterUserPage() {
                     className={`${adminRoleCardClassName} ${
                       createForm.roles.includes(role)
                         ? `${toneClasses(ROLE_TONE[role], 'notice')} border-current shadow-sm ring-1 ring-current/10`
-                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-orange-200 hover:bg-orange-50'
+                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-brand-border-strong hover:bg-brand-surface'
                     } ${isRoleButtonDisabled(role, createForm.roles, 'create') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     <span className="block font-extrabold text-slate-900">{getAdminRoleLabel(role)}</span>
@@ -1455,7 +1455,7 @@ function MasterUserPage() {
                     className={`${adminRoleCardClassName} ${
                       editForm.roles.includes(role)
                         ? `${toneClasses(ROLE_TONE[role], 'notice')} border-current shadow-sm ring-1 ring-current/10`
-                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-orange-200 hover:bg-orange-50'
+                        : 'bg-white border-zinc-200 text-zinc-600 hover:border-brand-border-strong hover:bg-brand-surface'
                     } ${isRoleButtonDisabled(role, editForm.roles, 'edit') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     <span className="block font-extrabold text-slate-900">{getAdminRoleLabel(role)}</span>
@@ -1606,7 +1606,7 @@ function MasterUserPage() {
                 />
               </div>
             </div>
-            <p className="rounded-[20px] border border-orange-200 bg-brand-surface px-4 py-4 text-sm leading-6 text-text-strong">
+            <p className="rounded-[20px] border border-brand-border-strong bg-brand-surface px-4 py-4 text-sm leading-6 text-text-strong">
               Password akan langsung berlaku. User harus login dengan password baru.
             </p>
           </div>

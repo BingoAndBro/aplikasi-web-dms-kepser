@@ -48,13 +48,13 @@ export function AppHeader({
   const [notificationOpen, setNotificationOpen] = React.useState(false)
 
   return (
-    <header className="z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-orange-100/70 bg-brand-surface/90 px-4 shadow-sm shadow-orange-950/5 backdrop-blur-xl md:h-20 md:px-8">
+    <header className="z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-brand-border/70 bg-brand-surface/90 px-4 shadow-sm shadow-black/5 backdrop-blur-xl md:h-20 md:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-5">
         <button
           type="button"
           aria-label="Buka navigasi"
           onClick={onOpenMobileSidebar}
-          className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl border border-orange-100 bg-white text-on-surface-variant shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 lg:hidden"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl border border-brand-border bg-white text-on-surface-variant shadow-sm transition-all hover:border-brand-border-strong hover:bg-brand-surface hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 lg:hidden"
         >
           <Menu size={20} />
         </button>
@@ -81,7 +81,7 @@ export function AppHeader({
             aria-haspopup="dialog"
             title="Notifikasi visual saja; belum terhubung ke sumber backend"
             onClick={() => setNotificationOpen((open) => !open)}
-            className="relative inline-flex size-10 items-center justify-center rounded-2xl border border-orange-100 bg-white text-outline shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="relative inline-flex size-10 items-center justify-center rounded-2xl border border-brand-border bg-white text-outline shadow-sm transition-all hover:border-brand-border-strong hover:bg-brand-surface hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             <Bell size={19} />
           </button>
@@ -97,7 +97,7 @@ export function AppHeader({
               <div
                 role="dialog"
                 aria-label="Notifikasi"
-                className="fixed left-3 right-3 top-20 z-50 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-xl shadow-orange-950/10 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-96"
+                className="fixed left-3 right-3 top-20 z-50 overflow-hidden rounded-3xl border border-brand-border bg-white shadow-xl shadow-black/10 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-96"
               >
                 <div className="bg-brand-surface px-4 py-4">
                   <p className="text-sm font-black text-on-surface">Notifikasi</p>
@@ -106,7 +106,7 @@ export function AppHeader({
                   </p>
                 </div>
                 <div className="p-4">
-                  <div className="rounded-2xl border border-dashed border-orange-200 bg-bg-surface px-4 py-6 text-center">
+                  <div className="rounded-2xl border border-dashed border-brand-border-strong bg-bg-surface px-4 py-6 text-center">
                     <p className="text-sm font-bold text-on-surface">Belum ada notifikasi aktif</p>
                     <p className="mt-1 text-xs leading-5 text-outline">
                       Tidak ada hitungan unread atau status operasional yang ditampilkan tanpa API resmi.
@@ -118,7 +118,7 @@ export function AppHeader({
           )}
         </div>
 
-        <div className="flex items-center gap-3 rounded-full border border-orange-100/80 bg-bg-surface py-1 pl-2 pr-1 shadow-sm shadow-orange-950/5 md:gap-4 md:pl-4">
+        <div className="flex items-center gap-3 rounded-full border border-brand-border/80 bg-bg-surface py-1 pl-2 pr-1 shadow-sm shadow-black/5 md:gap-4 md:pl-4">
           {canSwitchRole && (
             <RoleDropdown
               currentRole={activeRole}

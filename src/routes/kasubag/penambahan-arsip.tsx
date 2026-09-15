@@ -622,7 +622,7 @@ function ManualArsipTable({
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-orange-50/60 text-left">
+              <tr className="bg-brand-surface/60 text-left">
                 <th className={`w-10 text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>No</th>
                 <th className={`min-w-52 ${ARCHIVE_TABLE_HEAD_CLASS}`}>Nama Dokumen</th>
                 <th className={`text-center ${ARCHIVE_TABLE_HEAD_CLASS}`}>Tanggal</th>
@@ -717,7 +717,7 @@ function ManualArsipAttachmentPanel({
 }) {
   if (loading) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border border-orange-100 bg-bg-surface px-3 py-3 text-xs text-zinc-600">
+      <div className="flex items-center gap-2 rounded-xl border border-brand-border bg-bg-surface px-3 py-3 text-xs text-zinc-600">
         <Loader2 size={14} className="animate-spin text-primary" />
         Memuat detail lampiran...
       </div>
@@ -734,7 +734,7 @@ function ManualArsipAttachmentPanel({
 
   if (!detail) {
     return (
-      <div className="rounded-xl border border-orange-100 bg-bg-surface px-3 py-3 text-xs text-zinc-600">
+      <div className="rounded-xl border border-brand-border bg-bg-surface px-3 py-3 text-xs text-zinc-600">
         Detail lampiran belum dimuat.
       </div>
     )
@@ -742,7 +742,7 @@ function ManualArsipAttachmentPanel({
 
   if (detail.attachments.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-orange-200 bg-bg-surface px-3 py-4 text-center text-xs text-zinc-600">
+      <div className="rounded-xl border border-dashed border-brand-border-strong bg-bg-surface px-3 py-4 text-center text-xs text-zinc-600">
         Tidak ada lampiran pada dokumen manual ini.
       </div>
     )
@@ -1654,8 +1654,8 @@ function CreateManualArsipModal({
 
           {step === 3 && (
           <div className="space-y-2.5">
-            <div className="rounded-xl border border-orange-200 bg-bg-surface">
-              <div className="border-b border-orange-100 px-3 py-2">
+            <div className="rounded-xl border border-brand-border-strong bg-bg-surface">
+              <div className="border-b border-brand-border px-3 py-2">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="text-[13px] font-semibold text-brand-solid">Dokumen Pendukung</h3>
@@ -1689,7 +1689,7 @@ function CreateManualArsipModal({
                       <button
                         type="button"
                         onClick={openAttachmentTitleForm}
-                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-orange-300 bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
+                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-brand-solid bg-bg-surface p-3 text-brand-solid transition-colors hover:border-brand-solid hover:bg-bg-surface"
                       >
                         <Plus size={14} />
                         <span className="text-[13px] font-semibold">Tambah Dokumen Pendukung</span>
@@ -1708,20 +1708,20 @@ function CreateManualArsipModal({
                       key={row.id}
                       className={cn(
                         'flex min-w-0 flex-col gap-1.5 rounded-xl border px-2.5 py-1.5 transition-colors',
-                        row.file ? 'border-orange-100 bg-bg-surface' : 'border-brand-border bg-bg-surface',
+                        row.file ? 'border-brand-border bg-bg-surface' : 'border-brand-border bg-bg-surface',
                       )}
                     >
                       <div className="flex min-w-0 items-start gap-2.5">
                         <div className={cn(
                           'mt-1 flex size-4 shrink-0 items-center justify-center rounded-full border',
-                          row.file ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-orange-300 bg-white text-orange-300',
+                          row.file ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-brand-solid bg-white text-brand-solid',
                         )}>
                           {row.file && <CheckCircle2 size={11} strokeWidth={2.5} />}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex min-w-0 items-center gap-2">
                             <p className="truncate text-[13px] font-semibold text-stone-900">{row.title}</p>
-                            <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
+                            <span className="rounded-md bg-brand-surface px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-brand-solid">
                               Tambahan
                             </span>
                           </div>
@@ -1786,7 +1786,7 @@ function CreateManualArsipModal({
               )}
 
               {showAttachmentTitleForm && (
-                <div className="flex flex-col gap-2 rounded-xl border border-orange-100 bg-bg-surface p-2.5 sm:flex-row sm:items-start">
+                <div className="flex flex-col gap-2 rounded-xl border border-brand-border bg-bg-surface p-2.5 sm:flex-row sm:items-start">
                   <div className="min-w-0 flex-1">
                     <input
                       value={newAttachmentTitle}
@@ -1796,7 +1796,7 @@ function CreateManualArsipModal({
                       }}
                       placeholder="Nama dokumen pendukung"
                       className={cn(
-                        'h-10 w-full rounded-xl border border-orange-200 bg-white px-3 text-sm text-stone-950 outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-orange-100',
+                        'h-10 w-full rounded-xl border border-brand-border-strong bg-white px-3 text-sm text-stone-950 outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-brand-border',
                         newAttachmentTitleError && 'border-error',
                       )}
                       onKeyDown={(event) => {
@@ -1998,7 +1998,7 @@ function KlasifikasiFormField({
           type="button"
           onClick={onToggle}
           className={cn(
-            'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-bg-surface px-4 py-2 text-left text-sm outline-none transition hover:border-brand-border-strong focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
+            'flex min-h-10 w-full items-center justify-between gap-3 rounded-xl border bg-bg-surface px-4 py-2 text-left text-sm outline-none transition hover:border-brand-border-strong focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70',
             error ? 'border-error' : 'border-brand-border',
           )}
         >
@@ -2032,7 +2032,7 @@ function KlasifikasiFormField({
                   value={searchQuery}
                   onChange={(event) => onSearchChange(event.target.value)}
                   placeholder="Cari nama atau kode jenis pembayaran"
-                  className="w-full rounded-xl border border-brand-border bg-white py-2 pr-3 pl-9 text-xs outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70"
+                  className="w-full rounded-xl border border-brand-border bg-white py-2 pr-3 pl-9 text-xs outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70"
                 />
               </div>
 
@@ -2145,7 +2145,7 @@ function ManualCreateReview({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-[1rem] border border-orange-200 bg-brand-surface px-3 py-2.5">
+      <div className="rounded-[1rem] border border-brand-border-strong bg-brand-surface px-3 py-2.5">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-text">
           Nama Dokumen Hasil Sistem (Final)
         </p>
@@ -2193,7 +2193,7 @@ function ManualCreateReview({
           <AlertCircle size={16} className="mt-0.5 shrink-0 text-brand-solid" />
           <div>
             <p className="text-xs font-extrabold uppercase tracking-wide text-zinc-950">Pemberitahuan Konsekuensi</p>
-            <p className="mt-1 text-xs font-semibold leading-relaxed text-orange-800">
+            <p className="mt-1 text-xs font-semibold leading-relaxed text-brand-text">
               Dokumen akan masuk ke folder Cara Pembayaran yang dipilih. Metadata baru diisi ketika berkas ditutup.
             </p>
           </div>
@@ -2647,8 +2647,8 @@ function isValidDateOnly(value: string): boolean {
 
 function inputClass(error?: string) {
   return cn(
-    'h-10 w-full rounded-xl border bg-bg-surface px-3 py-2 text-sm outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-200/70',
-    error ? 'border-error' : 'border-orange-100',
+    'h-10 w-full rounded-xl border bg-bg-surface px-3 py-2 text-sm outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70',
+    error ? 'border-error' : 'border-brand-border',
   )
 }
 

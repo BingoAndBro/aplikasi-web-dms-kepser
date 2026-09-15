@@ -573,7 +573,7 @@ function KinerjaHeader({ title, description }: { title: string; description: str
   return (
     <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-5">
-        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+        <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-brand-border bg-bg-surface text-brand-solid shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
           <ClipboardList size={22} />
         </div>
         <div className="min-w-0">
@@ -585,7 +585,7 @@ function KinerjaHeader({ title, description }: { title: string; description: str
           </p>
         </div>
       </div>
-      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-bg-surface px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+      <div className="max-w-xs rounded-[18px] border border-brand-border bg-bg-surface px-4 py-3 text-xs font-bold text-brand-text shadow-sm">
         Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
       </div>
     </section>
@@ -650,7 +650,7 @@ function PeriodeSelector({
             type="button"
             aria-label="Triwulan sebelumnya"
             onClick={() => onChange(shiftTriwulan(value, -1))}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-brand-border-strong hover:text-brand-solid"
           >
             <ChevronLeft size={16} />
           </button>
@@ -690,7 +690,7 @@ function PeriodeSelector({
             type="button"
             aria-label="Triwulan berikutnya"
             onClick={() => onChange(shiftTriwulan(value, 1))}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-orange-200 hover:text-orange-600"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-brand-border-strong hover:text-brand-solid"
           >
             <ChevronRight size={16} />
           </button>
@@ -852,7 +852,7 @@ function SimpleReportToolbar({
             placeholder={placeholder}
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
           />
         </label>
         <label>
@@ -941,7 +941,7 @@ function PegawaiList({ rows, onSelect }: { rows: PegawaiRow[]; onSelect: (id: st
           <PegawaiPanel key={row.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Pegawai</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">Pegawai</p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.nama}</h2>
               </div>
               <CountPill>{row.dokumen.length}</CountPill>
@@ -1116,7 +1116,7 @@ function FungsiList({ rows, onSelect }: { rows: FungsiRow[]; onSelect: (id: stri
           <PegawaiPanel key={row.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Fungsi</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">Fungsi</p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.nama}</h2>
               </div>
               <CountPill>{row.dokumen.length}</CountPill>
@@ -1347,7 +1347,7 @@ function KomponenList({ rows, onSelect }: { rows: KomponenRow[]; onSelect: (id: 
           <PegawaiPanel key={row.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Komponen</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">Komponen</p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.nama}</h2>
               </div>
               <CountPill>{row.dokumen.length}</CountPill>
@@ -1433,7 +1433,7 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
           <PegawaiPanel key={row.id} className="group space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Kegiatan</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">Kegiatan</p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.nama}</h2>
               </div>
               <CountPill>{row.dokumen.length}</CountPill>
@@ -1556,7 +1556,7 @@ function ReportBackHeader({
           type="button"
           size="icon-lg"
           variant="ghost"
-          className="mt-1 size-10 shrink-0 rounded-xl border border-zinc-200 bg-bg-surface text-zinc-600 shadow-sm hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+          className="mt-1 size-10 shrink-0 rounded-xl border border-zinc-200 bg-bg-surface text-zinc-600 shadow-sm hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid"
           onClick={onBack}
           aria-label={backLabel}
         >
@@ -1572,7 +1572,7 @@ function ReportBackHeader({
           </p>
         </div>
       </div>
-      <div className="max-w-xs rounded-[18px] border border-orange-100 bg-bg-surface px-4 py-3 text-xs font-bold text-orange-800 shadow-sm">
+      <div className="max-w-xs rounded-[18px] border border-brand-border bg-bg-surface px-4 py-3 text-xs font-bold text-brand-text shadow-sm">
         Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
       </div>
     </section>
@@ -1687,7 +1687,7 @@ function KegiatanDetailToolbar({
             placeholder="Cari berdasarkan judul dokumen, jenis, atau pengaju..."
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -1697,7 +1697,7 @@ function KegiatanDetailToolbar({
             className={[
               'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
               filterOpen || activeFilters > 0
-                ? 'border-orange-200 bg-orange-50 text-brand-text hover:bg-orange-50'
+                ? 'border-brand-border-strong bg-brand-surface text-brand-text hover:bg-brand-surface'
                 : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
             ].join(' ')}
             onClick={() => onFilterOpenChange(!filterOpen)}
@@ -1878,7 +1878,7 @@ function DocumentTable({
         {dokumen.map((row, idx) => (
           <PegawaiPanel
             key={row.id}
-            className="group cursor-pointer space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-orange-100 hover:bg-bg-surface"
+            className="group cursor-pointer space-y-3 border-zinc-200/80 p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] transition hover:border-brand-border hover:bg-bg-surface"
             onClick={() => onOpenDocument(row)}
             tabIndex={0}
             role="button"
@@ -1892,7 +1892,7 @@ function DocumentTable({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Dokumen #{idx + 1}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">Dokumen #{idx + 1}</p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.judul}</h2>
               </div>
               <StatusBadge status={row.status} />
@@ -2055,7 +2055,7 @@ function ChevronActionButton({ label }: { label: string }) {
     <Button
       size="icon-lg"
       variant="ghost"
-      className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 hover:text-orange-600 hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
+      className="size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5"
       aria-label={label}
     >
       <ChevronRight strokeWidth={2.35} />

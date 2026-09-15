@@ -29,7 +29,7 @@ export function RoleDropdown({
         aria-expanded={roleSwitcherOpen}
         aria-haspopup="menu"
         onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-        className="flex max-w-28 items-center gap-1.5 rounded-full border border-orange-100 bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-on-surface shadow-sm outline-none transition-all hover:border-orange-200 hover:bg-orange-50 focus:ring-2 focus:ring-primary/30 md:max-w-none"
+        className="flex max-w-28 items-center gap-1.5 rounded-full border border-brand-border bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-on-surface shadow-sm outline-none transition-all hover:border-brand-border-strong hover:bg-brand-surface focus:ring-2 focus:ring-primary/30 md:max-w-none"
       >
         <span className="min-w-0 truncate">{ROLE_DISPLAY[currentRole]}</span>
         <ChevronDown size={12} className={cn('shrink-0 text-outline transition-transform', roleSwitcherOpen && 'rotate-180 text-primary')} />
@@ -42,7 +42,7 @@ export function RoleDropdown({
             className="fixed inset-0 z-40 cursor-default"
             onClick={() => setRoleSwitcherOpen(false)}
           />
-          <div className="absolute right-0 top-full z-50 mt-2 min-w-64 rounded-2xl border border-orange-100 bg-white p-2 shadow-xl shadow-orange-950/10" role="menu">
+          <div className="absolute right-0 top-full z-50 mt-2 min-w-64 rounded-2xl border border-brand-border bg-white p-2 shadow-xl shadow-brand-text/10" role="menu">
             <p className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-outline">
               Pilih role kerja
             </p>
@@ -61,7 +61,7 @@ export function RoleDropdown({
                     }}
                     className={cn(
                       'flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors',
-                      isCurrent ? 'bg-orange-50 text-primary' : 'text-on-surface-variant hover:bg-orange-50 hover:text-orange-950',
+                      isCurrent ? 'bg-brand-surface text-primary' : 'text-on-surface-variant hover:bg-brand-surface hover:text-brand-text',
                     )}
                   >
                     <RoleBadge role={role} className="max-w-48 truncate rounded-full text-[10px]" />

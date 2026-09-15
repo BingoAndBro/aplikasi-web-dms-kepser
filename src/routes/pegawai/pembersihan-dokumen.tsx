@@ -347,7 +347,7 @@ function PembersihanDokumenPage() {
           <>
             <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 items-start gap-5">
-                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-bg-surface text-orange-600 shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
+                <div className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-brand-border bg-bg-surface text-brand-solid shadow-[0_2px_8px_rgba(251,146,60,0.14)]">
                   <Trash2 size={22} />
                 </div>
                 <div className="min-w-0">
@@ -542,7 +542,7 @@ function ReportToolbar({
             placeholder="Cari nama dokumen, pembuat, atau kegiatan..."
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-200 focus:ring-4 focus:ring-orange-100/60"
+            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -552,7 +552,7 @@ function ReportToolbar({
             className={[
               'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
               filterOpen || activeFilters > 0
-                ? 'border-orange-200 bg-orange-50 text-brand-text hover:bg-orange-50'
+                ? 'border-brand-border-strong bg-brand-surface text-brand-text hover:bg-brand-surface'
                 : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
             ].join(' ')}
             onClick={() => onFilterOpenChange(!filterOpen)}
@@ -839,7 +839,7 @@ function MobileCard({
             className="mt-1"
           />
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-700/70">Dokumen #{index + 1}</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">Dokumen #{index + 1}</p>
             <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{displayDocumentName(row)}</h2>
           </div>
         </div>
