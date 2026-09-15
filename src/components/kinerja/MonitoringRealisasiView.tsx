@@ -1984,7 +1984,7 @@ function ModalMetadataField({
   )
 }
 
-type SummaryCardTone = 'neutral' | 'gold' | 'orange' | 'money'
+export type SummaryCardTone = 'neutral' | 'gold' | 'orange' | 'money'
 
 /** Fase 5: consolidates 4 palette clusters that PegawaiDetailCards, FungsiDetailCards,
  * KegiatanDetailCards, and KomponenDetailCards each repeated byte-identical via 5 raw
@@ -2020,7 +2020,7 @@ const SUMMARY_CARD_TONE_CLASS: Record<SummaryCardTone, {
   },
 }
 
-function SummaryCard({
+export function SummaryCard({
   label,
   value,
   detail,

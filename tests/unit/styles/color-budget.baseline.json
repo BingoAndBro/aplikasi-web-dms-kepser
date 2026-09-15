@@ -46,9 +46,5 @@
   "src/routes/kasubag/penambahan-arsip.tsx": {
     "hex": 2,
     "orange": 0
-  },
-  "src/routes/pegawai/laporan/kegiatan.tsx": {
-    "hex": 2,
-    "orange": 0
   }
 }

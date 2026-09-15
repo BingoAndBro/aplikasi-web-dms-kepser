@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
+import { SummaryCard } from '#/components/kinerja/MonitoringRealisasiView'
 import {
   Table,
   TableBody,
@@ -577,43 +578,6 @@ function KegiatanAdvancedFilter({
   )
 }
 
-function SummaryCard({
-  label,
-  value,
-  detail,
-  icon,
-  className,
-  labelClassName,
-  valueClassName,
-  detailClassName,
-  iconClassName,
-}: {
-  label: string
-  value: string
-  detail: string
-  icon: React.ReactNode
-  className?: string
-  labelClassName?: string
-  valueClassName?: string
-  detailClassName?: string
-  iconClassName?: string
-}) {
-  return (
-    <div className={['flex min-h-[140px] flex-col justify-between rounded-[22px] border p-5 shadow-sm', className ?? ''].join(' ')}>
-      <div className="flex items-start justify-between gap-3">
-        <p className={['text-[10px] font-black uppercase tracking-[0.14em]', labelClassName ?? 'text-brand-text-muted'].join(' ')}>{label}</p>
-        <span className={['flex size-7 items-center justify-center rounded-full border bg-white/65 shadow-sm shadow-zinc-950/5', iconClassName ?? 'border-current/15 text-zinc-700'].join(' ')}>
-          {icon}
-        </span>
-      </div>
-      <div>
-        <p className={['line-clamp-2 font-headline text-[18px] font-extrabold leading-tight tracking-tight text-zinc-950', valueClassName ?? ''].join(' ')}>{value}</p>
-        <p className={['mt-3 text-[10px] font-semibold uppercase tracking-[0.04em] text-zinc-500', detailClassName ?? ''].join(' ')}>{detail}</p>
-      </div>
-    </div>
-  )
-}
-
 function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: string) => void }) {
   return (
     <>
@@ -1174,38 +1138,28 @@ function KegiatanDetailCards({
         value={kegiatan.nama}
         detail={`Ketua Tim: ${kegiatan.ketuaTimName}`}
         icon={<FolderOpen size={16} />}
-        className="border-brand-border bg-bg-surface"
-        labelClassName="text-brand-text-muted"
-        iconClassName="border-brand-border-strong text-brand-text-muted"
+        tone="neutral"
       />
       <SummaryCard
         label="Dokumen Material"
         value={materialCount.toLocaleString('id-ID')}
         detail="Total Dokumen Belanja"
         icon={<ClipboardIcon />}
-        className="border-warning-border bg-warning-surface"
-        labelClassName="text-[#B77900]"
-        iconClassName="border-warning-border text-[#B77900]"
+        tone="gold"
       />
       <SummaryCard
         label="Dokumen Non-Material"
         value={nonMaterialCount.toLocaleString('id-ID')}
         detail="Total Dokumen Non-Belanja"
         icon={<FileText size={16} />}
-        className="border-brand-border-strong bg-brand-surface"
-        labelClassName="text-brand-solid-active"
-        iconClassName="border-brand-gradient-to text-brand-solid"
+        tone="orange"
       />
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatRupiah(kegiatan.totalNominal)}
         detail="Hanya Belanja Material"
         icon={<Banknote size={16} />}
-        className="border-money-border bg-money-surface shadow-[0_2px_0_rgba(16,185,129,0.18)]"
-        labelClassName="text-money-text"
-        valueClassName="font-mono text-[24px] text-money-value"
-        detailClassName="text-money-text"
-        iconClassName="border-money-icon-border text-money-icon"
+        tone="money"
       />
     </div>
   )
