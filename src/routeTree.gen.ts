@@ -29,18 +29,23 @@ import { Route as PpspmSelesaiRouteImport } from './routes/ppspm/selesai'
 import { Route as PpspmMonitoringRealisasiRouteImport } from './routes/ppspm/monitoring-realisasi'
 import { Route as PpspmInboxRouteImport } from './routes/ppspm/inbox'
 import { Route as PpspmDitolakRouteImport } from './routes/ppspm/ditolak'
+import { Route as PpspmActivityLogRouteImport } from './routes/ppspm/activity-log'
 import { Route as PpkTervalidasiRouteImport } from './routes/ppk/tervalidasi'
 import { Route as PpkRevisiRouteImport } from './routes/ppk/revisi'
 import { Route as PpkMonitoringRealisasiRouteImport } from './routes/ppk/monitoring-realisasi'
 import { Route as PpkInboxRouteImport } from './routes/ppk/inbox'
 import { Route as PpkDitolakRouteImport } from './routes/ppk/ditolak'
+import { Route as PpkActivityLogRouteImport } from './routes/ppk/activity-log'
 import { Route as PenanggungJawabKinerjaLaporanKinerjaRouteImport } from './routes/penanggung-jawab-kinerja/laporan-kinerja'
+import { Route as PenanggungJawabKinerjaActivityLogRouteImport } from './routes/penanggung-jawab-kinerja/activity-log'
 import { Route as PegawaiRevisiRouteImport } from './routes/pegawai/revisi'
 import { Route as PegawaiPembersihanDokumenRouteImport } from './routes/pegawai/pembersihan-dokumen'
 import { Route as PegawaiDokumenRouteImport } from './routes/pegawai/dokumen'
+import { Route as PegawaiActivityLogRouteImport } from './routes/pegawai/activity-log'
 import { Route as KasubagPenambahanArsipRouteImport } from './routes/kasubag/penambahan-arsip'
 import { Route as KasubagKlasifikasiRouteImport } from './routes/kasubag/klasifikasi'
 import { Route as KasubagInboxRouteImport } from './routes/kasubag/inbox'
+import { Route as KasubagActivityLogRouteImport } from './routes/kasubag/activity-log'
 import { Route as DokumenSayaRouteImport } from './routes/dokumen/saya'
 import { Route as DokumenAjuRouteImport } from './routes/dokumen/aju'
 import { Route as DokumenAjiRouteImport } from './routes/dokumen/aji'
@@ -55,7 +60,9 @@ import { Route as ApiMasterJenisDokumenRouteImport } from './routes/api/master-j
 import { Route as ApiMasterJenisRouteImport } from './routes/api/master-jenis'
 import { Route as ApiMasterFungsiRouteImport } from './routes/api/master-fungsi'
 import { Route as ApiMasterDetailRouteImport } from './routes/api/master-detail'
+import { Route as ApiActivityLogRouteImport } from './routes/api/activity-log'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminActivityLogRouteImport } from './routes/admin.activity-log'
 import { Route as PegawaiDokumenIndexRouteImport } from './routes/pegawai/dokumen/index'
 import { Route as KasubagPembersihanIndexRouteImport } from './routes/kasubag/pembersihan/index'
 import { Route as KasubagBerkasIndexRouteImport } from './routes/kasubag/berkas/index'
@@ -275,6 +282,11 @@ const PpspmDitolakRoute = PpspmDitolakRouteImport.update({
   path: '/ditolak',
   getParentRoute: () => PpspmRoute,
 } as any)
+const PpspmActivityLogRoute = PpspmActivityLogRouteImport.update({
+  id: '/activity-log',
+  path: '/activity-log',
+  getParentRoute: () => PpspmRoute,
+} as any)
 const PpkTervalidasiRoute = PpkTervalidasiRouteImport.update({
   id: '/tervalidasi',
   path: '/tervalidasi',
@@ -300,10 +312,21 @@ const PpkDitolakRoute = PpkDitolakRouteImport.update({
   path: '/ditolak',
   getParentRoute: () => PpkRoute,
 } as any)
+const PpkActivityLogRoute = PpkActivityLogRouteImport.update({
+  id: '/activity-log',
+  path: '/activity-log',
+  getParentRoute: () => PpkRoute,
+} as any)
 const PenanggungJawabKinerjaLaporanKinerjaRoute =
   PenanggungJawabKinerjaLaporanKinerjaRouteImport.update({
     id: '/laporan-kinerja',
     path: '/laporan-kinerja',
+    getParentRoute: () => PenanggungJawabKinerjaRoute,
+  } as any)
+const PenanggungJawabKinerjaActivityLogRoute =
+  PenanggungJawabKinerjaActivityLogRouteImport.update({
+    id: '/activity-log',
+    path: '/activity-log',
     getParentRoute: () => PenanggungJawabKinerjaRoute,
   } as any)
 const PegawaiRevisiRoute = PegawaiRevisiRouteImport.update({
@@ -322,6 +345,11 @@ const PegawaiDokumenRoute = PegawaiDokumenRouteImport.update({
   path: '/dokumen',
   getParentRoute: () => PegawaiRoute,
 } as any)
+const PegawaiActivityLogRoute = PegawaiActivityLogRouteImport.update({
+  id: '/activity-log',
+  path: '/activity-log',
+  getParentRoute: () => PegawaiRoute,
+} as any)
 const KasubagPenambahanArsipRoute = KasubagPenambahanArsipRouteImport.update({
   id: '/penambahan-arsip',
   path: '/penambahan-arsip',
@@ -335,6 +363,11 @@ const KasubagKlasifikasiRoute = KasubagKlasifikasiRouteImport.update({
 const KasubagInboxRoute = KasubagInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => KasubagRoute,
+} as any)
+const KasubagActivityLogRoute = KasubagActivityLogRouteImport.update({
+  id: '/activity-log',
+  path: '/activity-log',
   getParentRoute: () => KasubagRoute,
 } as any)
 const DokumenSayaRoute = DokumenSayaRouteImport.update({
@@ -407,9 +440,19 @@ const ApiMasterDetailRoute = ApiMasterDetailRouteImport.update({
   path: '/api/master-detail',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiActivityLogRoute = ApiActivityLogRouteImport.update({
+  id: '/api/activity-log',
+  path: '/api/activity-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminActivityLogRoute = AdminActivityLogRouteImport.update({
+  id: '/activity-log',
+  path: '/activity-log',
   getParentRoute: () => AdminRoute,
 } as any)
 const PegawaiDokumenIndexRoute = PegawaiDokumenIndexRouteImport.update({
@@ -1030,7 +1073,9 @@ export interface FileRoutesByFullPath {
   '/ppk': typeof PpkRouteWithChildren
   '/ppspm': typeof PpspmRouteWithChildren
   '/profile': typeof ProfileRoute
+  '/admin/activity-log': typeof AdminActivityLogRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/api/activity-log': typeof ApiActivityLogRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -1045,18 +1090,23 @@ export interface FileRoutesByFullPath {
   '/dokumen/aji': typeof DokumenAjiRoute
   '/dokumen/aju': typeof DokumenAjuRoute
   '/dokumen/saya': typeof DokumenSayaRoute
+  '/kasubag/activity-log': typeof KasubagActivityLogRoute
   '/kasubag/inbox': typeof KasubagInboxRoute
   '/kasubag/klasifikasi': typeof KasubagKlasifikasiRoute
   '/kasubag/penambahan-arsip': typeof KasubagPenambahanArsipRoute
+  '/pegawai/activity-log': typeof PegawaiActivityLogRoute
   '/pegawai/dokumen': typeof PegawaiDokumenRouteWithChildren
   '/pegawai/pembersihan-dokumen': typeof PegawaiPembersihanDokumenRoute
   '/pegawai/revisi': typeof PegawaiRevisiRoute
+  '/penanggung-jawab-kinerja/activity-log': typeof PenanggungJawabKinerjaActivityLogRoute
   '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
+  '/ppk/activity-log': typeof PpkActivityLogRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
   '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
+  '/ppspm/activity-log': typeof PpspmActivityLogRoute
   '/ppspm/ditolak': typeof PpspmDitolakRoute
   '/ppspm/inbox': typeof PpspmInboxRoute
   '/ppspm/monitoring-realisasi': typeof PpspmMonitoringRealisasiRoute
@@ -1190,7 +1240,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
   '/profile': typeof ProfileRoute
+  '/admin/activity-log': typeof AdminActivityLogRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/api/activity-log': typeof ApiActivityLogRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -1204,17 +1256,22 @@ export interface FileRoutesByTo {
   '/dokumen/aji': typeof DokumenAjiRoute
   '/dokumen/aju': typeof DokumenAjuRoute
   '/dokumen/saya': typeof DokumenSayaRoute
+  '/kasubag/activity-log': typeof KasubagActivityLogRoute
   '/kasubag/inbox': typeof KasubagInboxRoute
   '/kasubag/klasifikasi': typeof KasubagKlasifikasiRoute
   '/kasubag/penambahan-arsip': typeof KasubagPenambahanArsipRoute
+  '/pegawai/activity-log': typeof PegawaiActivityLogRoute
   '/pegawai/pembersihan-dokumen': typeof PegawaiPembersihanDokumenRoute
   '/pegawai/revisi': typeof PegawaiRevisiRoute
+  '/penanggung-jawab-kinerja/activity-log': typeof PenanggungJawabKinerjaActivityLogRoute
   '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
+  '/ppk/activity-log': typeof PpkActivityLogRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
   '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
+  '/ppspm/activity-log': typeof PpspmActivityLogRoute
   '/ppspm/ditolak': typeof PpspmDitolakRoute
   '/ppspm/inbox': typeof PpspmInboxRoute
   '/ppspm/monitoring-realisasi': typeof PpspmMonitoringRealisasiRoute
@@ -1352,7 +1409,9 @@ export interface FileRoutesById {
   '/ppk': typeof PpkRouteWithChildren
   '/ppspm': typeof PpspmRouteWithChildren
   '/profile': typeof ProfileRoute
+  '/admin/activity-log': typeof AdminActivityLogRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/api/activity-log': typeof ApiActivityLogRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -1367,18 +1426,23 @@ export interface FileRoutesById {
   '/dokumen/aji': typeof DokumenAjiRoute
   '/dokumen/aju': typeof DokumenAjuRoute
   '/dokumen/saya': typeof DokumenSayaRoute
+  '/kasubag/activity-log': typeof KasubagActivityLogRoute
   '/kasubag/inbox': typeof KasubagInboxRoute
   '/kasubag/klasifikasi': typeof KasubagKlasifikasiRoute
   '/kasubag/penambahan-arsip': typeof KasubagPenambahanArsipRoute
+  '/pegawai/activity-log': typeof PegawaiActivityLogRoute
   '/pegawai/dokumen': typeof PegawaiDokumenRouteWithChildren
   '/pegawai/pembersihan-dokumen': typeof PegawaiPembersihanDokumenRoute
   '/pegawai/revisi': typeof PegawaiRevisiRoute
+  '/penanggung-jawab-kinerja/activity-log': typeof PenanggungJawabKinerjaActivityLogRoute
   '/penanggung-jawab-kinerja/laporan-kinerja': typeof PenanggungJawabKinerjaLaporanKinerjaRoute
+  '/ppk/activity-log': typeof PpkActivityLogRoute
   '/ppk/ditolak': typeof PpkDitolakRoute
   '/ppk/inbox': typeof PpkInboxRoute
   '/ppk/monitoring-realisasi': typeof PpkMonitoringRealisasiRoute
   '/ppk/revisi': typeof PpkRevisiRoute
   '/ppk/tervalidasi': typeof PpkTervalidasiRoute
+  '/ppspm/activity-log': typeof PpspmActivityLogRoute
   '/ppspm/ditolak': typeof PpspmDitolakRoute
   '/ppspm/inbox': typeof PpspmInboxRoute
   '/ppspm/monitoring-realisasi': typeof PpspmMonitoringRealisasiRoute
@@ -1519,7 +1583,9 @@ export interface FileRouteTypes {
     | '/ppk'
     | '/ppspm'
     | '/profile'
+    | '/admin/activity-log'
     | '/admin/settings'
+    | '/api/activity-log'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1534,18 +1600,23 @@ export interface FileRouteTypes {
     | '/dokumen/aji'
     | '/dokumen/aju'
     | '/dokumen/saya'
+    | '/kasubag/activity-log'
     | '/kasubag/inbox'
     | '/kasubag/klasifikasi'
     | '/kasubag/penambahan-arsip'
+    | '/pegawai/activity-log'
     | '/pegawai/dokumen'
     | '/pegawai/pembersihan-dokumen'
     | '/pegawai/revisi'
+    | '/penanggung-jawab-kinerja/activity-log'
     | '/penanggung-jawab-kinerja/laporan-kinerja'
+    | '/ppk/activity-log'
     | '/ppk/ditolak'
     | '/ppk/inbox'
     | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
+    | '/ppspm/activity-log'
     | '/ppspm/ditolak'
     | '/ppspm/inbox'
     | '/ppspm/monitoring-realisasi'
@@ -1679,7 +1750,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/pegawai'
     | '/profile'
+    | '/admin/activity-log'
     | '/admin/settings'
+    | '/api/activity-log'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1693,17 +1766,22 @@ export interface FileRouteTypes {
     | '/dokumen/aji'
     | '/dokumen/aju'
     | '/dokumen/saya'
+    | '/kasubag/activity-log'
     | '/kasubag/inbox'
     | '/kasubag/klasifikasi'
     | '/kasubag/penambahan-arsip'
+    | '/pegawai/activity-log'
     | '/pegawai/pembersihan-dokumen'
     | '/pegawai/revisi'
+    | '/penanggung-jawab-kinerja/activity-log'
     | '/penanggung-jawab-kinerja/laporan-kinerja'
+    | '/ppk/activity-log'
     | '/ppk/ditolak'
     | '/ppk/inbox'
     | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
+    | '/ppspm/activity-log'
     | '/ppspm/ditolak'
     | '/ppspm/inbox'
     | '/ppspm/monitoring-realisasi'
@@ -1840,7 +1918,9 @@ export interface FileRouteTypes {
     | '/ppk'
     | '/ppspm'
     | '/profile'
+    | '/admin/activity-log'
     | '/admin/settings'
+    | '/api/activity-log'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1855,18 +1935,23 @@ export interface FileRouteTypes {
     | '/dokumen/aji'
     | '/dokumen/aju'
     | '/dokumen/saya'
+    | '/kasubag/activity-log'
     | '/kasubag/inbox'
     | '/kasubag/klasifikasi'
     | '/kasubag/penambahan-arsip'
+    | '/pegawai/activity-log'
     | '/pegawai/dokumen'
     | '/pegawai/pembersihan-dokumen'
     | '/pegawai/revisi'
+    | '/penanggung-jawab-kinerja/activity-log'
     | '/penanggung-jawab-kinerja/laporan-kinerja'
+    | '/ppk/activity-log'
     | '/ppk/ditolak'
     | '/ppk/inbox'
     | '/ppk/monitoring-realisasi'
     | '/ppk/revisi'
     | '/ppk/tervalidasi'
+    | '/ppspm/activity-log'
     | '/ppspm/ditolak'
     | '/ppspm/inbox'
     | '/ppspm/monitoring-realisasi'
@@ -2006,6 +2091,7 @@ export interface RootRouteChildren {
   PpkRoute: typeof PpkRouteWithChildren
   PpspmRoute: typeof PpspmRouteWithChildren
   ProfileRoute: typeof ProfileRoute
+  ApiActivityLogRoute: typeof ApiActivityLogRoute
   ApiMasterDetailRoute: typeof ApiMasterDetailRouteWithChildren
   ApiMasterFungsiRoute: typeof ApiMasterFungsiRouteWithChildren
   ApiMasterJenisRoute: typeof ApiMasterJenisRouteWithChildren
@@ -2207,6 +2293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PpspmDitolakRouteImport
       parentRoute: typeof PpspmRoute
     }
+    '/ppspm/activity-log': {
+      id: '/ppspm/activity-log'
+      path: '/activity-log'
+      fullPath: '/ppspm/activity-log'
+      preLoaderRoute: typeof PpspmActivityLogRouteImport
+      parentRoute: typeof PpspmRoute
+    }
     '/ppk/tervalidasi': {
       id: '/ppk/tervalidasi'
       path: '/tervalidasi'
@@ -2242,11 +2335,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PpkDitolakRouteImport
       parentRoute: typeof PpkRoute
     }
+    '/ppk/activity-log': {
+      id: '/ppk/activity-log'
+      path: '/activity-log'
+      fullPath: '/ppk/activity-log'
+      preLoaderRoute: typeof PpkActivityLogRouteImport
+      parentRoute: typeof PpkRoute
+    }
     '/penanggung-jawab-kinerja/laporan-kinerja': {
       id: '/penanggung-jawab-kinerja/laporan-kinerja'
       path: '/laporan-kinerja'
       fullPath: '/penanggung-jawab-kinerja/laporan-kinerja'
       preLoaderRoute: typeof PenanggungJawabKinerjaLaporanKinerjaRouteImport
+      parentRoute: typeof PenanggungJawabKinerjaRoute
+    }
+    '/penanggung-jawab-kinerja/activity-log': {
+      id: '/penanggung-jawab-kinerja/activity-log'
+      path: '/activity-log'
+      fullPath: '/penanggung-jawab-kinerja/activity-log'
+      preLoaderRoute: typeof PenanggungJawabKinerjaActivityLogRouteImport
       parentRoute: typeof PenanggungJawabKinerjaRoute
     }
     '/pegawai/revisi': {
@@ -2270,6 +2377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PegawaiDokumenRouteImport
       parentRoute: typeof PegawaiRoute
     }
+    '/pegawai/activity-log': {
+      id: '/pegawai/activity-log'
+      path: '/activity-log'
+      fullPath: '/pegawai/activity-log'
+      preLoaderRoute: typeof PegawaiActivityLogRouteImport
+      parentRoute: typeof PegawaiRoute
+    }
     '/kasubag/penambahan-arsip': {
       id: '/kasubag/penambahan-arsip'
       path: '/penambahan-arsip'
@@ -2289,6 +2403,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/kasubag/inbox'
       preLoaderRoute: typeof KasubagInboxRouteImport
+      parentRoute: typeof KasubagRoute
+    }
+    '/kasubag/activity-log': {
+      id: '/kasubag/activity-log'
+      path: '/activity-log'
+      fullPath: '/kasubag/activity-log'
+      preLoaderRoute: typeof KasubagActivityLogRouteImport
       parentRoute: typeof KasubagRoute
     }
     '/dokumen/saya': {
@@ -2389,11 +2510,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMasterDetailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/activity-log': {
+      id: '/api/activity-log'
+      path: '/api/activity-log'
+      fullPath: '/api/activity-log'
+      preLoaderRoute: typeof ApiActivityLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
       fullPath: '/admin/settings'
       preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/activity-log': {
+      id: '/admin/activity-log'
+      path: '/activity-log'
+      fullPath: '/admin/activity-log'
+      preLoaderRoute: typeof AdminActivityLogRouteImport
       parentRoute: typeof AdminRoute
     }
     '/pegawai/dokumen/': {
@@ -3212,6 +3347,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminActivityLogRoute: typeof AdminActivityLogRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminMasterDataDetailRoute: typeof AdminMasterDataDetailRoute
@@ -3227,6 +3363,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminActivityLogRoute: AdminActivityLogRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminMasterDataDetailRoute: AdminMasterDataDetailRoute,
@@ -3275,6 +3412,7 @@ const DokumenRouteWithChildren =
   DokumenRoute._addFileChildren(DokumenRouteChildren)
 
 interface KasubagRouteChildren {
+  KasubagActivityLogRoute: typeof KasubagActivityLogRoute
   KasubagInboxRoute: typeof KasubagInboxRoute
   KasubagKlasifikasiRoute: typeof KasubagKlasifikasiRoute
   KasubagPenambahanArsipRoute: typeof KasubagPenambahanArsipRoute
@@ -3287,6 +3425,7 @@ interface KasubagRouteChildren {
 }
 
 const KasubagRouteChildren: KasubagRouteChildren = {
+  KasubagActivityLogRoute: KasubagActivityLogRoute,
   KasubagInboxRoute: KasubagInboxRoute,
   KasubagKlasifikasiRoute: KasubagKlasifikasiRoute,
   KasubagPenambahanArsipRoute: KasubagPenambahanArsipRoute,
@@ -3333,6 +3472,7 @@ const PegawaiDokumenRouteWithChildren = PegawaiDokumenRoute._addFileChildren(
 )
 
 interface PegawaiRouteChildren {
+  PegawaiActivityLogRoute: typeof PegawaiActivityLogRoute
   PegawaiDokumenRoute: typeof PegawaiDokumenRouteWithChildren
   PegawaiPembersihanDokumenRoute: typeof PegawaiPembersihanDokumenRoute
   PegawaiRevisiRoute: typeof PegawaiRevisiRoute
@@ -3341,6 +3481,7 @@ interface PegawaiRouteChildren {
 }
 
 const PegawaiRouteChildren: PegawaiRouteChildren = {
+  PegawaiActivityLogRoute: PegawaiActivityLogRoute,
   PegawaiDokumenRoute: PegawaiDokumenRouteWithChildren,
   PegawaiPembersihanDokumenRoute: PegawaiPembersihanDokumenRoute,
   PegawaiRevisiRoute: PegawaiRevisiRoute,
@@ -3352,12 +3493,15 @@ const PegawaiRouteWithChildren =
   PegawaiRoute._addFileChildren(PegawaiRouteChildren)
 
 interface PenanggungJawabKinerjaRouteChildren {
+  PenanggungJawabKinerjaActivityLogRoute: typeof PenanggungJawabKinerjaActivityLogRoute
   PenanggungJawabKinerjaLaporanKinerjaRoute: typeof PenanggungJawabKinerjaLaporanKinerjaRoute
   PenanggungJawabKinerjaIndexRoute: typeof PenanggungJawabKinerjaIndexRoute
 }
 
 const PenanggungJawabKinerjaRouteChildren: PenanggungJawabKinerjaRouteChildren =
   {
+    PenanggungJawabKinerjaActivityLogRoute:
+      PenanggungJawabKinerjaActivityLogRoute,
     PenanggungJawabKinerjaLaporanKinerjaRoute:
       PenanggungJawabKinerjaLaporanKinerjaRoute,
     PenanggungJawabKinerjaIndexRoute: PenanggungJawabKinerjaIndexRoute,
@@ -3383,6 +3527,7 @@ const PpkDokumenIdRouteWithChildren = PpkDokumenIdRoute._addFileChildren(
 )
 
 interface PpkRouteChildren {
+  PpkActivityLogRoute: typeof PpkActivityLogRoute
   PpkDitolakRoute: typeof PpkDitolakRoute
   PpkInboxRoute: typeof PpkInboxRoute
   PpkMonitoringRealisasiRoute: typeof PpkMonitoringRealisasiRoute
@@ -3393,6 +3538,7 @@ interface PpkRouteChildren {
 }
 
 const PpkRouteChildren: PpkRouteChildren = {
+  PpkActivityLogRoute: PpkActivityLogRoute,
   PpkDitolakRoute: PpkDitolakRoute,
   PpkInboxRoute: PpkInboxRoute,
   PpkMonitoringRealisasiRoute: PpkMonitoringRealisasiRoute,
@@ -3405,6 +3551,7 @@ const PpkRouteChildren: PpkRouteChildren = {
 const PpkRouteWithChildren = PpkRoute._addFileChildren(PpkRouteChildren)
 
 interface PpspmRouteChildren {
+  PpspmActivityLogRoute: typeof PpspmActivityLogRoute
   PpspmDitolakRoute: typeof PpspmDitolakRoute
   PpspmInboxRoute: typeof PpspmInboxRoute
   PpspmMonitoringRealisasiRoute: typeof PpspmMonitoringRealisasiRoute
@@ -3414,6 +3561,7 @@ interface PpspmRouteChildren {
 }
 
 const PpspmRouteChildren: PpspmRouteChildren = {
+  PpspmActivityLogRoute: PpspmActivityLogRoute,
   PpspmDitolakRoute: PpspmDitolakRoute,
   PpspmInboxRoute: PpspmInboxRoute,
   PpspmMonitoringRealisasiRoute: PpspmMonitoringRealisasiRoute,
@@ -3736,6 +3884,7 @@ const rootRouteChildren: RootRouteChildren = {
   PpkRoute: PpkRouteWithChildren,
   PpspmRoute: PpspmRouteWithChildren,
   ProfileRoute: ProfileRoute,
+  ApiActivityLogRoute: ApiActivityLogRoute,
   ApiMasterDetailRoute: ApiMasterDetailRouteWithChildren,
   ApiMasterFungsiRoute: ApiMasterFungsiRouteWithChildren,
   ApiMasterJenisRoute: ApiMasterJenisRouteWithChildren,

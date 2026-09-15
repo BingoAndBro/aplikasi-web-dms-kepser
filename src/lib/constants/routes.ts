@@ -14,6 +14,7 @@ export const ROUTES = {
     LAPORAN_SAYA: '/pegawai/laporan/saya',
     LAPORAN_KEGIATAN: '/pegawai/laporan/kegiatan',
     PEMBERSIHAN_DOKUMEN: '/pegawai/pembersihan-dokumen',
+    ACTIVITY_LOG: '/pegawai/activity-log',
   },
   PPK: {
     ROOT: '/ppk',
@@ -22,6 +23,7 @@ export const ROUTES = {
     DITOLAK: '/ppk/ditolak',
     REVISI: '/ppk/revisi',
     MONITORING_REALISASI: '/ppk/monitoring-realisasi',
+    ACTIVITY_LOG: '/ppk/activity-log',
   },
   PPSPM: {
     ROOT: '/ppspm',
@@ -29,6 +31,7 @@ export const ROUTES = {
     DITOLAK: '/ppspm/ditolak',
     SELESAI: '/ppspm/selesai',
     MONITORING_REALISASI: '/ppspm/monitoring-realisasi',
+    ACTIVITY_LOG: '/ppspm/activity-log',
   },
   KEPALA_SUB_BAGIAN_UMUM: {
     ROOT: '/kasubag',
@@ -38,10 +41,12 @@ export const ROUTES = {
     PEMBERSIHAN: '/kasubag/pembersihan',
     PENAMBAHAN_ARSIP: '/kasubag/penambahan-arsip',
     KLASIFIKASI: '/kasubag/klasifikasi',
+    ACTIVITY_LOG: '/kasubag/activity-log',
   },
   PENANGGUNG_JAWAB_KINERJA: {
     ROOT: '/penanggung-jawab-kinerja',
     LAPORAN_KINERJA: '/penanggung-jawab-kinerja/laporan-kinerja',
+    ACTIVITY_LOG: '/penanggung-jawab-kinerja/activity-log',
   },
   ADMIN: {
     ROOT: '/admin',
@@ -55,6 +60,7 @@ export const ROUTES = {
     MASTER_DETAIL: '/admin/master-data/detail',
     MASTER_KELENGKAPAN: '/admin/master-data/kelengkapan',
     SETTINGS: '/admin/settings',
+    ACTIVITY_LOG: '/admin/activity-log',
   },
   LEGACY_DOKUMEN: {
     ROOT: '/dokumen',

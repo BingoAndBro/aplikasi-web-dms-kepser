@@ -50,8 +50,10 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
       .find((group) => group.title === 'SYSTEM')
       ?.items.find((item) => item.id === 'history')
 
-    expect(activityLogItem).toEqual(expect.objectContaining({ label: 'Activity Log' }))
-    expect(activityLogItem).not.toHaveProperty('to')
+    expect(activityLogItem).toEqual(expect.objectContaining({
+      label: 'Activity Log',
+      to: ROUTES.PENANGGUNG_JAWAB_KINERJA.ACTIVITY_LOG,
+    }))
   })
 
   it('keeps ADMIN as a separate dedicated role', () => {
