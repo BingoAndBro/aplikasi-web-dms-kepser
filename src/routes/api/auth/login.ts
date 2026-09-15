@@ -14,7 +14,6 @@ import {
   createSessionCookieHeader,
 } from '#/lib/auth/session-cookies'
 
-const GENERIC_CREDENTIAL_ERROR = 'Email atau password salah'
 const INVALID_CREDENTIALS_CODE = 'invalid_credentials'
 
 export const Route = createFileRoute('/api/auth/login')({
@@ -58,15 +57,17 @@ export const Route = createFileRoute('/api/auth/login')({
         })
 
         if (!loginResult.ok) {
-          const failedAttempt = recordFailedLoginAttempt(rateLimitKey)
-          if (!failedAttempt.allowed) {
-            return rateLimitedResponse(failedAttempt.retryAfterSeconds)
+          if (loginResult.status === 401) {
+            const failedAttempt = recordFailedLoginAttempt(rateLimitKey)
+            if (!failedAttempt.allowed) {
+              return rateLimitedResponse(failedAttempt.retryAfterSeconds)
+            }
           }
 
           return Response.json({
-            error: GENERIC_CREDENTIAL_ERROR,
+            error: loginResult.error,
             code: loginResult.code ?? INVALID_CREDENTIALS_CODE,
-          }, { status: 401 })
+          }, { status: loginResult.status })
         }
 
         clearLoginRateLimit(rateLimitKey)
