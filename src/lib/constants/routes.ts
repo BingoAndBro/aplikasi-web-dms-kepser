@@ -54,6 +54,7 @@ export const ROUTES = {
     MASTER_KATEGORI: '/admin/master-data/kategori',
     MASTER_DETAIL: '/admin/master-data/detail',
     MASTER_KELENGKAPAN: '/admin/master-data/kelengkapan',
+    SETTINGS: '/admin/settings',
   },
   LEGACY_DOKUMEN: {
     ROOT: '/dokumen',

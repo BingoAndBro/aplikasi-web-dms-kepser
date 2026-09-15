@@ -55,6 +55,7 @@ import { Route as ApiMasterJenisDokumenRouteImport } from './routes/api/master-j
 import { Route as ApiMasterJenisRouteImport } from './routes/api/master-jenis'
 import { Route as ApiMasterFungsiRouteImport } from './routes/api/master-fungsi'
 import { Route as ApiMasterDetailRouteImport } from './routes/api/master-detail'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as PegawaiDokumenIndexRouteImport } from './routes/pegawai/dokumen/index'
 import { Route as KasubagPembersihanIndexRouteImport } from './routes/kasubag/pembersihan/index'
 import { Route as KasubagBerkasIndexRouteImport } from './routes/kasubag/berkas/index'
@@ -74,6 +75,7 @@ import { Route as KasubagBerkasIdRouteImport } from './routes/kasubag/berkas/$id
 import { Route as DokumenIdEditRouteImport } from './routes/dokumen/$id/edit'
 import { Route as ApiUsersMeRouteImport } from './routes/api/users/me'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
+import { Route as ApiSettingsThemeRouteImport } from './routes/api/settings/theme'
 import { Route as ApiPpspmSelesaiRouteImport } from './routes/api/ppspm/selesai'
 import { Route as ApiPpspmInboxRouteImport } from './routes/api/ppspm/inbox'
 import { Route as ApiPpspmDitolakRouteImport } from './routes/api/ppspm/ditolak'
@@ -403,6 +405,11 @@ const ApiMasterDetailRoute = ApiMasterDetailRouteImport.update({
   path: '/api/master-detail',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const PegawaiDokumenIndexRoute = PegawaiDokumenIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -496,6 +503,11 @@ const ApiUsersMeRoute = ApiUsersMeRouteImport.update({
 const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
   id: '/api/users/$id',
   path: '/api/users/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSettingsThemeRoute = ApiSettingsThemeRouteImport.update({
+  id: '/api/settings/theme',
+  path: '/api/settings/theme',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPpspmSelesaiRoute = ApiPpspmSelesaiRouteImport.update({
@@ -1006,6 +1018,7 @@ export interface FileRoutesByFullPath {
   '/ppk': typeof PpkRouteWithChildren
   '/ppspm': typeof PpspmRouteWithChildren
   '/profile': typeof ProfileRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -1084,6 +1097,7 @@ export interface FileRoutesByFullPath {
   '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
   '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
   '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
+  '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
@@ -1162,6 +1176,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
   '/profile': typeof ProfileRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -1238,6 +1253,7 @@ export interface FileRoutesByTo {
   '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
   '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
   '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
+  '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
@@ -1320,6 +1336,7 @@ export interface FileRoutesById {
   '/ppk': typeof PpkRouteWithChildren
   '/ppspm': typeof PpspmRouteWithChildren
   '/profile': typeof ProfileRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
@@ -1398,6 +1415,7 @@ export interface FileRoutesById {
   '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
   '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
   '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
+  '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
   '/dokumen/$id/edit': typeof DokumenIdEditRoute
@@ -1483,6 +1501,7 @@ export interface FileRouteTypes {
     | '/ppk'
     | '/ppspm'
     | '/profile'
+    | '/admin/settings'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1561,6 +1580,7 @@ export interface FileRouteTypes {
     | '/api/ppspm/ditolak'
     | '/api/ppspm/inbox'
     | '/api/ppspm/selesai'
+    | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
     | '/dokumen/$id/edit'
@@ -1639,6 +1659,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pegawai'
     | '/profile'
+    | '/admin/settings'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1715,6 +1736,7 @@ export interface FileRouteTypes {
     | '/api/ppspm/ditolak'
     | '/api/ppspm/inbox'
     | '/api/ppspm/selesai'
+    | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
     | '/dokumen/$id/edit'
@@ -1796,6 +1818,7 @@ export interface FileRouteTypes {
     | '/ppk'
     | '/ppspm'
     | '/profile'
+    | '/admin/settings'
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
@@ -1874,6 +1897,7 @@ export interface FileRouteTypes {
     | '/api/ppspm/ditolak'
     | '/api/ppspm/inbox'
     | '/api/ppspm/selesai'
+    | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
     | '/dokumen/$id/edit'
@@ -1993,6 +2017,7 @@ export interface RootRouteChildren {
   ApiPpspmDitolakRoute: typeof ApiPpspmDitolakRoute
   ApiPpspmInboxRoute: typeof ApiPpspmInboxRoute
   ApiPpspmSelesaiRoute: typeof ApiPpspmSelesaiRoute
+  ApiSettingsThemeRoute: typeof ApiSettingsThemeRoute
   ApiUsersIdRoute: typeof ApiUsersIdRouteWithChildren
   ApiUsersMeRoute: typeof ApiUsersMeRouteWithChildren
   ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
@@ -2338,6 +2363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMasterDetailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/pegawai/dokumen/': {
       id: '/pegawai/dokumen/'
       path: '/'
@@ -2469,6 +2501,13 @@ declare module '@tanstack/react-router' {
       path: '/api/users/$id'
       fullPath: '/api/users/$id'
       preLoaderRoute: typeof ApiUsersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/settings/theme': {
+      id: '/api/settings/theme'
+      path: '/api/settings/theme'
+      fullPath: '/api/settings/theme'
+      preLoaderRoute: typeof ApiSettingsThemeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ppspm/selesai': {
@@ -3133,6 +3172,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminMasterDataDetailRoute: typeof AdminMasterDataDetailRoute
   AdminMasterDataFungsiRoute: typeof AdminMasterDataFungsiRoute
@@ -3147,6 +3187,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminMasterDataDetailRoute: AdminMasterDataDetailRoute,
   AdminMasterDataFungsiRoute: AdminMasterDataFungsiRoute,
@@ -3690,6 +3731,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpspmDitolakRoute: ApiPpspmDitolakRoute,
   ApiPpspmInboxRoute: ApiPpspmInboxRoute,
   ApiPpspmSelesaiRoute: ApiPpspmSelesaiRoute,
+  ApiSettingsThemeRoute: ApiSettingsThemeRoute,
   ApiUsersIdRoute: ApiUsersIdRouteWithChildren,
   ApiUsersMeRoute: ApiUsersMeRouteWithChildren,
   ApiDokumenIndexRoute: ApiDokumenIndexRoute,

@@ -7,17 +7,22 @@ import { ConfirmProvider } from '../components/ui/confirm/ConfirmProvider'
 import { PUBLIC_PATHS } from '../lib/constants/routes'
 import appCss from '../styles.css?url'
 
-// Fase 0 dev-only theme switch (docs/planning/tema-global): append ?theme=sp or ?theme=st
-// to any URL to preview that theme locally via [data-theme]. No persistence, no UI, no DB —
-// superseded by the real GLOBAL admin-controlled setting in a later phase.
+// Fase 6 (docs/planning/tema-global/rencana.md §6.2): first paint uses the theme
+// last known on this device (localStorage), so there is no server round-trip
+// blocking paint. AppLayout reconciles against GET /api/settings/theme (the
+// GLOBAL source of truth) once the app mounts and updates localStorage/cookie
+// if they differ. ?theme=sp|st still works as a manual devtools override.
 const THEME_INIT_SCRIPT = `(function(){try{
   var root=document.documentElement;
   root.classList.remove('light','dark');
   root.classList.add('light');
   root.style.colorScheme='light';
+  var VALID=['se','sp','st'];
   var params=new URLSearchParams(window.location.search);
-  var theme=params.get('theme');
-  if(theme==='sp'||theme==='st'){root.dataset.theme=theme;}else{delete root.dataset.theme;}
+  var qsTheme=params.get('theme');
+  var theme=VALID.indexOf(qsTheme)!==-1?qsTheme:localStorage.getItem('app-theme');
+  if(VALID.indexOf(theme)===-1){theme='se';}
+  if(theme==='se'){delete root.dataset.theme;}else{root.dataset.theme=theme;}
 }catch(e){}})();`
 
 export const Route = createRootRoute({

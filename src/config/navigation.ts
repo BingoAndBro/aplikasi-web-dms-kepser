@@ -220,7 +220,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
         { id: 'history', label: 'Activity Log', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'settings', label: 'Settings', icon: Settings, to: ROUTES.ADMIN.SETTINGS },
       ],
     },
   ],

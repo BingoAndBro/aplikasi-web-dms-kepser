@@ -15,6 +15,22 @@ import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
 
 const ACTIVE_ROLE_COOKIE = 'dms_active_role'
+const APP_THEME_STORAGE_KEY = 'app-theme'
+const APP_THEME_COOKIE = 'app-theme'
+const VALID_THEMES = ['se', 'sp', 'st'] as const
+type AppTheme = (typeof VALID_THEMES)[number]
+
+function applyTheme(theme: AppTheme) {
+  if (theme === 'se') {
+    delete document.documentElement.dataset.theme
+  } else {
+    document.documentElement.dataset.theme = theme
+  }
+  try {
+    localStorage.setItem(APP_THEME_STORAGE_KEY, theme)
+  } catch { /* private mode / storage disabled */ }
+  document.cookie = `${APP_THEME_COOKIE}=${theme}; path=/; max-age=31536000`
+}
 
 function clearAppState() {
   document.cookie = `${ACTIVE_ROLE_COOKIE}=; path=/; max-age=0`
@@ -179,6 +195,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     fetchSession()
   }, [fetchSession])
+
+  React.useEffect(() => {
+    if (!hasSession) return
+    let cancelled = false
+    apiFetch<{ theme: AppTheme }>('/settings/theme')
+      .then((data) => {
+        if (cancelled) return
+        if (VALID_THEMES.includes(data.theme)) applyTheme(data.theme)
+      })
+      .catch((err) => {
+        if (!(err instanceof ApiError)) {
+          console.error('Failed to fetch theme setting:', err)
+        }
+      })
+    return () => { cancelled = true }
+  }, [hasSession])
 
   React.useEffect(() => {
     const handleProfileAvatarChanged = () => {

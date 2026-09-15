@@ -120,6 +120,33 @@
   --ink-border: #030817;
 }
 
+[data-theme="se"] {
+  /* Explicit SE re-declaration of Group 1 (identical to :root's defaults).
+     Needed so a scoped [data-theme="se"] element (e.g. the SE swatch on
+     /admin/settings) stays orange even when nested under an ancestor whose
+     [data-theme="sp"|"st"] would otherwise cascade its brand vars down via
+     custom-property inheritance. */
+  --brand-solid: #FF5F1F;
+  --brand-solid-hover: #EA580C;
+  --brand-solid-active: #CC4A13;
+  --brand-text: #FF4D00;
+  --brand-text-muted: #8A5A3C;
+  --brand-icon: #EA580C;
+  --brand-surface: #FFF8F1;
+  --brand-surface-strong: #FFE1D2;
+  --brand-border: #F0E1D5;
+  --brand-border-strong: #FFBC80;
+  --brand-ring: rgba(255, 95, 31, 0.45);
+  --brand-gradient-from: #FF5F1F;
+  --brand-gradient-to: #FB923C;
+  --brand-glow: rgba(255, 95, 31, 0.35);
+  --brand-glow-strong: rgba(255, 95, 31, 0.7);
+
+  --bg-app: #FFFBF7;
+  --bg-surface: #FFFDF9;
+  --bg-sunken: #F6F1EC;
+}
+
 [data-theme="sp"] {
   /* Sensus Penduduk — biru. Source: brand_data/bps_go_id_brand_guidelines.md (official BPS colors). */
   --brand-solid: #0096D9;              /* BPS secondary/link blue */
