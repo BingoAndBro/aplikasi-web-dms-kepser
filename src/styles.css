@@ -49,6 +49,7 @@
   --brand-gradient-to: #FB923C;        /* re-measured 2026-09-14: header gradient (9x live usage) beat the unused .sunset-gradient's old #FF7948 stop */
   --brand-glow: rgba(255, 95, 31, 0.35);
   --brand-glow-strong: rgba(255, 95, 31, 0.7); /* preserves original @keyframes breath peak */
+  --nominal-table: #B23A0B;            /* Fase 7: AA-safe stand-in for --brand-text (3.2:1) on nominal-value table cells (D4). 5.7-5.9:1 on bg-surface/bg-app/brand-surface. */
 
   /* --- Group 2: SURFACE / NEUTRAL (--bg-* vary by theme, rest is theme-invariant) --- */
   --bg-app: #FFFBF7;                   /* measured: existing --color-background */
@@ -141,6 +142,7 @@
   --brand-gradient-to: #FB923C;
   --brand-glow: rgba(255, 95, 31, 0.35);
   --brand-glow-strong: rgba(255, 95, 31, 0.7);
+  --nominal-table: #B23A0B;
 
   --bg-app: #FFFBF7;
   --bg-surface: #FFFDF9;
@@ -164,6 +166,7 @@
   --brand-gradient-to: #3EB4EC;
   --brand-glow: rgba(0, 150, 217, 0.30);
   --brand-glow-strong: rgba(0, 150, 217, 0.55);
+  --nominal-table: #003B73;            /* same as --brand-text — already AA-safe (11.2:1) */
 
   --bg-app: #F9FBFD;
   --bg-surface: #FFFFFF;
@@ -187,6 +190,7 @@
   --brand-gradient-to: #7FB84E;
   --brand-glow: rgba(94, 154, 46, 0.30);
   --brand-glow-strong: rgba(94, 154, 46, 0.55);
+  --nominal-table: #3B6B18;            /* same as --brand-text — already AA-safe (6.4:1) */
 
   --bg-app: #F8FBF9;
   --bg-surface: #FFFFFF;
@@ -211,6 +215,7 @@
   --color-brand-on-solid: var(--brand-on-solid);
   --color-brand-text: var(--brand-text);
   --color-brand-text-muted: var(--brand-text-muted);
+  --color-nominal-table: var(--nominal-table);
   --color-brand-icon: var(--brand-icon);
   --color-brand-surface: var(--brand-surface);
   --color-brand-surface-strong: var(--brand-surface-strong);

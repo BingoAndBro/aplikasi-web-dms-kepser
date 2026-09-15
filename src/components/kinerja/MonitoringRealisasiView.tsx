@@ -921,7 +921,7 @@ function PegawaiList({ rows, onSelect }: { rows: PegawaiRow[]; onSelect: (id: st
                 <TableCell className="px-6 py-5">
                   <CountPill>{row.dokumen.length} dokumen</CountPill>
                 </TableCell>
-                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-brand-text">
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-nominal-table">
                   {formatCurrency(row.totalNominal)}
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -1096,7 +1096,7 @@ function FungsiList({ rows, onSelect }: { rows: FungsiRow[]; onSelect: (id: stri
                 <TableCell className="px-6 py-5">
                   <CountPill>{row.dokumen.length} dokumen</CountPill>
                 </TableCell>
-                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-brand-text">
+                <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-nominal-table">
                   {formatCurrency(row.totalNominal)}
                 </TableCell>
                 <TableCell className="px-6 py-5">
