@@ -76,6 +76,8 @@ import { Route as DokumenIdEditRouteImport } from './routes/dokumen/$id/edit'
 import { Route as ApiUsersMeRouteImport } from './routes/api/users/me'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
 import { Route as ApiSettingsThemeRouteImport } from './routes/api/settings/theme'
+import { Route as ApiSettingsGeneralRouteImport } from './routes/api/settings/general'
+import { Route as ApiSettingsEpochRouteImport } from './routes/api/settings/epoch'
 import { Route as ApiPpspmSelesaiRouteImport } from './routes/api/ppspm/selesai'
 import { Route as ApiPpspmInboxRouteImport } from './routes/api/ppspm/inbox'
 import { Route as ApiPpspmDitolakRouteImport } from './routes/api/ppspm/ditolak'
@@ -508,6 +510,16 @@ const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
 const ApiSettingsThemeRoute = ApiSettingsThemeRouteImport.update({
   id: '/api/settings/theme',
   path: '/api/settings/theme',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSettingsGeneralRoute = ApiSettingsGeneralRouteImport.update({
+  id: '/api/settings/general',
+  path: '/api/settings/general',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSettingsEpochRoute = ApiSettingsEpochRouteImport.update({
+  id: '/api/settings/epoch',
+  path: '/api/settings/epoch',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPpspmSelesaiRoute = ApiPpspmSelesaiRouteImport.update({
@@ -1097,6 +1109,8 @@ export interface FileRoutesByFullPath {
   '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
   '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
   '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
+  '/api/settings/epoch': typeof ApiSettingsEpochRoute
+  '/api/settings/general': typeof ApiSettingsGeneralRoute
   '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
@@ -1253,6 +1267,8 @@ export interface FileRoutesByTo {
   '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
   '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
   '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
+  '/api/settings/epoch': typeof ApiSettingsEpochRoute
+  '/api/settings/general': typeof ApiSettingsGeneralRoute
   '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
@@ -1415,6 +1431,8 @@ export interface FileRoutesById {
   '/api/ppspm/ditolak': typeof ApiPpspmDitolakRoute
   '/api/ppspm/inbox': typeof ApiPpspmInboxRoute
   '/api/ppspm/selesai': typeof ApiPpspmSelesaiRoute
+  '/api/settings/epoch': typeof ApiSettingsEpochRoute
+  '/api/settings/general': typeof ApiSettingsGeneralRoute
   '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
@@ -1580,6 +1598,8 @@ export interface FileRouteTypes {
     | '/api/ppspm/ditolak'
     | '/api/ppspm/inbox'
     | '/api/ppspm/selesai'
+    | '/api/settings/epoch'
+    | '/api/settings/general'
     | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
@@ -1736,6 +1756,8 @@ export interface FileRouteTypes {
     | '/api/ppspm/ditolak'
     | '/api/ppspm/inbox'
     | '/api/ppspm/selesai'
+    | '/api/settings/epoch'
+    | '/api/settings/general'
     | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
@@ -1897,6 +1919,8 @@ export interface FileRouteTypes {
     | '/api/ppspm/ditolak'
     | '/api/ppspm/inbox'
     | '/api/ppspm/selesai'
+    | '/api/settings/epoch'
+    | '/api/settings/general'
     | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
@@ -2017,6 +2041,8 @@ export interface RootRouteChildren {
   ApiPpspmDitolakRoute: typeof ApiPpspmDitolakRoute
   ApiPpspmInboxRoute: typeof ApiPpspmInboxRoute
   ApiPpspmSelesaiRoute: typeof ApiPpspmSelesaiRoute
+  ApiSettingsEpochRoute: typeof ApiSettingsEpochRoute
+  ApiSettingsGeneralRoute: typeof ApiSettingsGeneralRoute
   ApiSettingsThemeRoute: typeof ApiSettingsThemeRoute
   ApiUsersIdRoute: typeof ApiUsersIdRouteWithChildren
   ApiUsersMeRoute: typeof ApiUsersMeRouteWithChildren
@@ -2508,6 +2534,20 @@ declare module '@tanstack/react-router' {
       path: '/api/settings/theme'
       fullPath: '/api/settings/theme'
       preLoaderRoute: typeof ApiSettingsThemeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/settings/general': {
+      id: '/api/settings/general'
+      path: '/api/settings/general'
+      fullPath: '/api/settings/general'
+      preLoaderRoute: typeof ApiSettingsGeneralRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/settings/epoch': {
+      id: '/api/settings/epoch'
+      path: '/api/settings/epoch'
+      fullPath: '/api/settings/epoch'
+      preLoaderRoute: typeof ApiSettingsEpochRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ppspm/selesai': {
@@ -3731,6 +3771,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpspmDitolakRoute: ApiPpspmDitolakRoute,
   ApiPpspmInboxRoute: ApiPpspmInboxRoute,
   ApiPpspmSelesaiRoute: ApiPpspmSelesaiRoute,
+  ApiSettingsEpochRoute: ApiSettingsEpochRoute,
+  ApiSettingsGeneralRoute: ApiSettingsGeneralRoute,
   ApiSettingsThemeRoute: ApiSettingsThemeRoute,
   ApiUsersIdRoute: ApiUsersIdRouteWithChildren,
   ApiUsersMeRoute: ApiUsersMeRouteWithChildren,

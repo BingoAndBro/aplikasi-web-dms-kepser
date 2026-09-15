@@ -14,13 +14,15 @@ export const ROLE_BADGE_LABELS = {
 
 // Organizational identity, not a status — deliberately kept as its own
 // role -> tone assignment table rather than folded into semantic Tone
-// (see plan Fase 2, "Sengaja tidak digeneralisasi"). Mapping matches
-// rencana.md §4 Group 5 exactly (PJ Kinerja and Admin share "neutral" —
-// that's the plan's own taxonomy, not an accidental collision).
+// (see plan Fase 2, "Sengaja tidak digeneralisasi"). PJ Kinerja and Admin
+// share "neutral" — that's the plan's own taxonomy, not an accidental
+// collision. PPSPM uses the fixed "brand-fixed" tone (Fase 8), not "brand" —
+// role-identity colors are pinned so Pegawai/PPK/PPSPM read as
+// green/blue/orange regardless of which theme (se/sp/st) is active.
 export const ROLE_TONE: Record<RoleName, Tone> = {
   PEGAWAI: "success",
   PPK: "info",
-  PPSPM: "brand",
+  PPSPM: "brand-fixed",
   KEPALA_SUB_BAGIAN_UMUM: "warning",
   PENANGGUNG_JAWAB_KINERJA: "neutral",
   ADMIN: "neutral",

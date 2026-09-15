@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 
 import { RoleBadge } from '#/components/ui/RoleBadge'
+import { getWorkspaceLabelFallback } from '#/lib/workspace-label'
 import { ROLE_DISPLAY } from '#/lib/types/auth'
 
 import type { RoleName } from '#/lib/types/auth'
@@ -13,6 +14,8 @@ import { UserDropdown } from './UserDropdown'
 
 export function AppHeader({
   activeRole,
+  appSubtitle,
+  appTitle,
   avatarUrl,
   canSwitchRole,
   displayName,
@@ -29,6 +32,12 @@ export function AppHeader({
   userRoles,
 }: {
   activeRole: RoleName
+  /** Admin-configurable (Settings): the small, theme-colored line above the
+   * title — the name of the latest/active census. Falls back to a role-based
+   * workspace label until an admin sets one. */
+  appSubtitle?: string
+  /** Admin-configurable (Settings): the app's name — the big title. */
+  appTitle?: string
   avatarUrl?: string | null
   canSwitchRole: boolean
   displayName: string
@@ -45,6 +54,7 @@ export function AppHeader({
   userRoles: RoleName[]
 }) {
   const roleTitle = isAdmin ? 'Admin Sistem' : ROLE_DISPLAY[activeRole]
+  const eyebrow = appSubtitle || getWorkspaceLabelFallback(isAdmin, ROLE_DISPLAY[activeRole])
   const [notificationOpen, setNotificationOpen] = React.useState(false)
 
   return (
@@ -60,12 +70,12 @@ export function AppHeader({
         </button>
 
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
-            DMS Workspace
+          <p className="truncate text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+            {eyebrow}
           </p>
           <div className="mt-1 flex min-w-0 items-center gap-2">
             <h1 className="truncate font-headline text-xl font-black tracking-tight text-on-surface md:text-2xl">
-              {roleTitle}
+              {appTitle || 'DMS Kepser'}
             </h1>
             <RoleBadge role={activeRole} className="hidden shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold md:inline-flex" />
           </div>

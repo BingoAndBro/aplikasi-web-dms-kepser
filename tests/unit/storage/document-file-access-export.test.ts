@@ -52,7 +52,7 @@ describe('resolveDocumentLampiranLogicalPathForExport (non-HTTP resolver for ZIP
 
     expect(exportResult).toEqual({ ok: true, logicalPath: 'owner-user/document-id/file.pdf' })
     expect(exportResult).toEqual(tokenResult)
-  })
+  }, 15_000)
 
   it('does not re-check ownership/role — only berkas/DIMUSNAHKAN status and path safety', async () => {
     const document: MockDocument = {

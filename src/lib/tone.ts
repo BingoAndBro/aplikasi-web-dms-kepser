@@ -20,7 +20,7 @@
  * would silently generate no CSS at all.
  */
 
-export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'brand'
+export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'brand' | 'brand-fixed'
 
 export type ToneSurface = 'badge' | 'notice' | 'solid' | 'icon'
 
@@ -66,6 +66,17 @@ const TONE_CLASSES: Record<Tone, Record<ToneSurface, string>> = {
     notice: 'border-brand-border bg-brand-surface text-brand-text',
     icon: 'bg-brand-surface text-brand-text',
     solid: 'bg-brand-solid text-brand-on-solid hover:bg-brand-solid-hover',
+  },
+  // Fixed (theme-invariant) — see src/styles.css Group 7. A frozen snapshot
+  // of SE's `brand` values, deliberately NOT theme-following. Used for
+  // PPSPM's role-identity badge and the handful of statuses that need to
+  // stay visually distinct across all 3 themes ("Menunggu PPSPM", "Usul
+  // Pembersihan", "Manual") — Fase 8.
+  'brand-fixed': {
+    badge: 'border-brand-fixed-border bg-brand-fixed-surface text-brand-fixed-text hover:bg-brand-fixed-surface',
+    notice: 'border-brand-fixed-border bg-brand-fixed-surface text-brand-fixed-text',
+    icon: 'bg-brand-fixed-surface text-brand-fixed-text',
+    solid: 'bg-brand-fixed-solid text-brand-fixed-on-solid hover:bg-brand-fixed-solid/90',
   },
 }
 

@@ -119,6 +119,20 @@
   --ink-solid: #17233A;
   --ink-solid-hover: #0F172A;
   --ink-border: #030817;
+
+  /* --- Group 7: FIXED BRAND ACCENT (Fase 8) — a frozen snapshot of SE's
+     --brand-* values, not a live alias, so it stays orange even when the
+     active theme is sp/st. Used wherever a color must stay visually
+     distinct across all 3 themes rather than follow the active one:
+     PPSPM's role-identity badge (Pegawai=green/PPK=blue/PPSPM=orange stays
+     recognizable no matter which census theme is active) and the document/
+     archive/source statuses that previously rode the theme-following
+     "brand" tone ("Menunggu PPSPM", "Usul Pembersihan", "Manual"). --- */
+  --brand-fixed-solid: #FF5F1F;
+  --brand-fixed-text: #FF4D00;
+  --brand-fixed-surface: #FFF8F1;
+  --brand-fixed-border: #F0E1D5;
+  --brand-fixed-on-solid: #FFFFFF;
 }
 
 [data-theme="se"] {
@@ -282,6 +296,12 @@
   --color-ink-solid: var(--ink-solid);
   --color-ink-solid-hover: var(--ink-solid-hover);
   --color-ink-border: var(--ink-border);
+
+  --color-brand-fixed-solid: var(--brand-fixed-solid);
+  --color-brand-fixed-text: var(--brand-fixed-text);
+  --color-brand-fixed-surface: var(--brand-fixed-surface);
+  --color-brand-fixed-border: var(--brand-fixed-border);
+  --color-brand-fixed-on-solid: var(--brand-fixed-on-solid);
 
   /* Legacy Material-token remap (rencana.md §6.1 point 4) — the ~217 existing
      bg-primary / bg-background / bg-surface / etc. call sites pick up theming

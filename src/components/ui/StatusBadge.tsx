@@ -35,7 +35,7 @@ export type StatusConfig = {
 export const DOCUMENT_STATUS_BADGE_CONFIG = {
   DRAFT: { label: "Draft", tone: "neutral" },
   IN_PPK_VALIDATION: { label: "Menunggu PPK", tone: "info" },
-  IN_PPSPM_APPROVAL: { label: "Menunggu PPSPM", tone: "brand" },
+  IN_PPSPM_APPROVAL: { label: "Menunggu PPSPM", tone: "brand-fixed" },
   NEED_REVISION: { label: "Perlu Revisi", tone: "warning" },
   COMPLETED: { label: "Selesai", tone: "success" },
   TERSIMPAN: { label: "Tersimpan", tone: "success" },
@@ -48,13 +48,13 @@ export const FOLDER_STATUS_BADGE_CONFIG = {
 
 export const ARCHIVE_STATUS_BADGE_CONFIG = {
   AKTIF: { label: "Tersimpan", tone: "success" },
-  USUL_MUSNAH: { label: "Usul Pembersihan", tone: "brand" },
+  USUL_MUSNAH: { label: "Usul Pembersihan", tone: "brand-fixed" },
   DIMUSNAHKAN: { label: "File Dibersihkan", tone: "danger" },
 } as const satisfies Record<ArchiveLifecycleStatus, StatusConfig>
 
 export const SOURCE_TYPE_BADGE_CONFIG = {
   WORKFLOW: { label: "Persetujuan", tone: "info" },
-  MANUAL: { label: "Manual", tone: "brand" },
+  MANUAL: { label: "Manual", tone: "brand-fixed" },
 } as const satisfies Record<SourceType, StatusConfig>
 
 const statusConfigByKind = {

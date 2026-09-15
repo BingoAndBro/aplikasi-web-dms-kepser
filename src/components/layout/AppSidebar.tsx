@@ -8,6 +8,7 @@ import {
 
 import { NAV_CONFIG } from '#/config/navigation'
 import { ROLE_DISPLAY, ROLES } from '#/lib/constants/roles'
+import { getWorkspaceLabelFallback } from '#/lib/workspace-label'
 import { cn } from '#/lib/utils'
 
 import type { RoleName } from '#/lib/types/auth'
@@ -52,6 +53,8 @@ const KETUA_TIM_ONLY_NAV_IDS = new Set(['laporan_kegiatan', 'pembersihan_dokumen
 
 export function AppSidebar({
   activeRole,
+  appSubtitle,
+  appTitle,
   pathname,
   searchStr,
   hasKetuaTimAssignment,
@@ -61,6 +64,11 @@ export function AppSidebar({
   onLogout,
 }: {
   activeRole: RoleName
+  /** Admin-configurable (Settings): the name of the latest/active census.
+   * Falls back to a role-based workspace label until an admin sets one. */
+  appSubtitle?: string
+  /** Admin-configurable (Settings): the app's name — the big title. */
+  appTitle?: string
   pathname: string
   searchStr?: string
   hasKetuaTimAssignment?: boolean
@@ -86,7 +94,10 @@ export function AppSidebar({
       .map((group) => ({
         ...group,
         items: group.items
-          .filter((item) => item.id !== 'settings')
+          // 'settings' had no route and was hidden outright; now that
+          // /admin/settings (Fase 6) exists, only hide it while unbuilt
+          // (no `to`) — same "Soon" treatment as any other stub nav item.
+          .filter((item) => item.id !== 'settings' || !!item.to)
           .map((item) => item.id === 'pembersihan_dokumen' && staleNonMaterialCount
             ? { ...item, badge: staleNonMaterialCount }
             : item),
@@ -129,7 +140,7 @@ export function AppSidebar({
   const activeItemId = directActiveId ?? stickyActiveId
 
   const isAdmin = activeRole === ROLES.ADMIN
-  const workspaceLabel = isAdmin ? 'Manajemen Sistem' : `${ROLE_DISPLAY[activeRole]} Workspace`
+  const workspaceLabel = appSubtitle || getWorkspaceLabelFallback(isAdmin, ROLE_DISPLAY[activeRole])
   const useCompactDesktopWidth = pathname === '/pegawai/dokumen/aju'
 
   return (
@@ -158,7 +169,7 @@ export function AppSidebar({
               </div>
               <div className="min-w-0">
                 <p className="truncate font-headline text-[17px] font-black tracking-tight text-on-surface">
-                  {isAdmin ? 'Admin Sistem' : 'DMS Kepser'}
+                  {appTitle || 'DMS Kepser'}
                 </p>
                 <p className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-primary">
                   {workspaceLabel}

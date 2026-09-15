@@ -13,6 +13,9 @@ import { AppToastProvider } from '#/components/ui/AppToast'
 import type { RoleName } from '#/lib/types/auth'
 import { AppSidebar } from './AppSidebar'
 import { AppHeader } from './AppHeader'
+import { SettingsChangedOverlay } from './SettingsChangedOverlay'
+
+const SETTINGS_EPOCH_POLL_MS = 20_000
 
 const ACTIVE_ROLE_COOKIE = 'dms_active_role'
 const APP_THEME_STORAGE_KEY = 'app-theme'
@@ -90,6 +93,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [chairmanKegiatan, setChairmanKegiatan] = React.useState<{ id: string; nama: string }[]>([])
   const [staleNonMaterialCount, setStaleNonMaterialCount] = React.useState(0)
+
+  const [appTitle, setAppTitle] = React.useState<string>('DMS Kepser')
+  const [appSubtitle, setAppSubtitle] = React.useState<string>('')
+
+  const [settingsChanged, setSettingsChanged] = React.useState(false)
+  const [forcingLogout, setForcingLogout] = React.useState(false)
+  const settingsEpochBaselineRef = React.useRef<number | null>(null)
 
   const [hasSession, setHasSession] = React.useState(false)
   const [roleSwitcherOpen, setRoleSwitcherOpen] = React.useState(false)
@@ -213,6 +223,82 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [hasSession])
 
   React.useEffect(() => {
+    if (!hasSession) return
+    let cancelled = false
+    apiFetch<{ appTitle: string; appSubtitle: string }>('/settings/general')
+      .then((data) => {
+        if (cancelled) return
+        setAppTitle(data.appTitle)
+        setAppSubtitle(data.appSubtitle)
+      })
+      .catch((err) => {
+        if (!(err instanceof ApiError)) {
+          console.error('Failed to fetch general settings:', err)
+        }
+      })
+    return () => { cancelled = true }
+  }, [hasSession])
+
+  React.useEffect(() => {
+    if (!hasSession) return
+
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval> | undefined
+
+    const checkEpoch = async () => {
+      try {
+        const data = await apiFetch<{ epoch: number }>('/settings/epoch')
+        if (cancelled) return
+        if (settingsEpochBaselineRef.current === null) {
+          settingsEpochBaselineRef.current = data.epoch
+          return
+        }
+        if (data.epoch > settingsEpochBaselineRef.current) {
+          setSettingsChanged(true)
+          if (intervalId) clearInterval(intervalId)
+        }
+      } catch (err) {
+        if (!(err instanceof ApiError)) {
+          console.error('Failed to poll settings epoch:', err)
+        }
+      }
+    }
+
+    checkEpoch()
+    intervalId = setInterval(checkEpoch, SETTINGS_EPOCH_POLL_MS)
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [hasSession])
+
+  const handleForcedLogout = React.useCallback(async () => {
+    setForcingLogout(true)
+    try {
+      // Pick up the theme the admin just switched to *before* logging out —
+      // the session is still valid here, and the login page (THEME_INIT_SCRIPT)
+      // only ever reads localStorage, so without this it would render the
+      // previous theme until the user reaches a page past login.
+      const themeData = await apiFetch<{ theme: AppTheme }>('/settings/theme')
+      if (VALID_THEMES.includes(themeData.theme)) applyTheme(themeData.theme)
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        console.error('Failed to refresh theme before forced logout:', err)
+      }
+    }
+    try {
+      await apiMutation('/auth/logout')
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        console.error('Failed to logout after settings change:', err)
+      }
+    } finally {
+      clearAppState()
+      window.location.href = ROUTES.LOGIN
+    }
+  }, [])
+
+  React.useEffect(() => {
     const handleProfileAvatarChanged = () => {
       void refreshCurrentUserProfile()
     }
@@ -313,6 +399,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      {settingsChanged && (
+        <SettingsChangedOverlay onConfirm={handleForcedLogout} loading={forcingLogout} />
+      )}
+
       {isMeshPage && (
         <div className="mesh-bg">
           <div className="mesh-blob mesh-blob-1" />
@@ -325,6 +415,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="relative flex h-screen overflow-hidden bg-brand-surface selection:bg-primary-container selection:text-on-primary-container">
         <AppSidebar
           activeRole={activeRole}
+          appSubtitle={appSubtitle}
+          appTitle={appTitle}
           hasKetuaTimAssignment={chairmanKegiatan.length > 0}
           staleNonMaterialCount={staleNonMaterialCount}
           mobileOpen={mobileSidebarOpen}
@@ -337,6 +429,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader
             activeRole={activeRole}
+            appSubtitle={appSubtitle}
+            appTitle={appTitle}
             avatarUrl={avatarUrl}
             canSwitchRole={canSwitchRole}
             displayName={displayName}
