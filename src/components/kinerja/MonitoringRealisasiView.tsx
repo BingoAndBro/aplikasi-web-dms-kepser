@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { DokumenDetailDialog } from '#/components/dokumen/DokumenDetailDialog'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import { Button } from '#/components/ui/button'
 import { DatePicker } from '#/components/ui/date-picker'
@@ -557,12 +558,20 @@ export function MonitoringRealisasiView({
           />
         )}
 
-        {selectedDocument && (
-          <KinerjaDocumentMetadataDialog
-            dokumen={selectedDocument}
-            title={title}
-            onClose={() => setSelectedDocument(null)}
+        {scope === 'laporan_kinerja' ? (
+          <DokumenDetailDialog
+            dokumenId={selectedDocument?.id ?? null}
+            open={selectedDocument !== null}
+            onOpenChange={(open) => { if (!open) setSelectedDocument(null) }}
           />
+        ) : (
+          selectedDocument && (
+            <KinerjaDocumentMetadataDialog
+              dokumen={selectedDocument}
+              title={title}
+              onClose={() => setSelectedDocument(null)}
+            />
+          )
         )}
       </div>
     </PageLayout>

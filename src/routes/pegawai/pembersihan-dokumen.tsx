@@ -1,6 +1,7 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { DokumenDetailDialog } from '#/components/dokumen/DokumenDetailDialog'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import {
   Table,
@@ -149,8 +150,8 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 
 function PembersihanDokumenPage() {
   const { showToast } = useAppToast()
-  const navigate = useNavigate()
 
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -279,7 +280,7 @@ function PembersihanDokumenPage() {
   }
 
   function openDetail(row: PembersihanDokumenRow) {
-    navigate({ to: '/pegawai/dokumen/$id', params: { id: row.id } })
+    setDetailId(row.id)
   }
 
   async function handleConfirmBersihkan() {
@@ -488,6 +489,12 @@ function PembersihanDokumenPage() {
       >
         <BersihkanSummary rows={pendingCleanupRows} staleDays={staleDays} />
       </ConfirmDialog>
+
+      <DokumenDetailDialog
+        dokumenId={detailId}
+        open={detailId !== null}
+        onOpenChange={(open) => { if (!open) setDetailId(null) }}
+      />
     </PageLayout>
   )
 }

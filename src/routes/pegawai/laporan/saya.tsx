@@ -1,6 +1,7 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { DokumenDetailDialog } from '#/components/dokumen/DokumenDetailDialog'
 import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import {
@@ -59,7 +60,7 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 ]
 
 function LaporanSayaPage() {
-  const navigate = useNavigate()
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [dokumen, setDokumen] = useState<DokumenLaporanRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -228,9 +229,15 @@ function LaporanSayaPage() {
           <ReportDocumentList
             dokumen={filtered}
             total={dokumen.length}
-            onOpenDocument={(id) => navigate({ to: '/pegawai/dokumen/$id', params: { id } })}
+            onOpenDocument={(id) => setDetailId(id)}
           />
         )}
+
+        <DokumenDetailDialog
+          dokumenId={detailId}
+          open={detailId !== null}
+          onOpenChange={(open) => { if (!open) setDetailId(null) }}
+        />
       </div>
     </PageLayout>
   )
@@ -419,7 +426,7 @@ function ReportDocumentList({
                   <DateCell value={dok.tanggal} />
                 </TableCell>
                 <TableCell className="px-6 py-5 text-right">
-                  <ReportDetailButton dok={dok} />
+                  <ReportDetailButton dok={dok} onOpenDocument={onOpenDocument} />
                 </TableCell>
               </TableRow>
             ))}
@@ -457,7 +464,7 @@ function ReportDocumentList({
               <InfoTile label="Kegiatan" value={dok.kegiatan_nama ?? '-'} className="col-span-2" />
             </div>
             <div className="space-y-3 border-t border-zinc-100 pt-3">
-              <ReportDetailButton dok={dok} mobile />
+              <ReportDetailButton dok={dok} onOpenDocument={onOpenDocument} mobile />
             </div>
           </PegawaiPanel>
         ))}
@@ -466,26 +473,32 @@ function ReportDocumentList({
   )
 }
 
-function ReportDetailButton({ dok, mobile = false }: { dok: DokumenLaporanRow; mobile?: boolean }) {
+function ReportDetailButton({
+  dok,
+  onOpenDocument,
+  mobile = false,
+}: {
+  dok: DokumenLaporanRow
+  onOpenDocument: (id: string) => void
+  mobile?: boolean
+}) {
   return (
-    <Link
-      to="/pegawai/dokumen/$id"
-      params={{ id: dok.id }}
-      className={mobile ? 'block w-full' : undefined}
-      onClick={(event) => event.stopPropagation()}
+    <Button
+      type="button"
+      size={mobile ? 'sm' : 'icon-lg'}
+      variant={mobile ? 'outline' : 'ghost'}
+      className={mobile
+        ? 'w-full gap-1.5'
+        : 'size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5'}
+      aria-label={`Detail Dokumen ${dok.judul}`}
+      onClick={(event) => {
+        event.stopPropagation()
+        onOpenDocument(dok.id)
+      }}
     >
-      <Button
-        size={mobile ? 'sm' : 'icon-lg'}
-        variant={mobile ? 'outline' : 'ghost'}
-        className={mobile
-          ? 'w-full gap-1.5'
-          : 'size-10 rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 opacity-100 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] [&_svg]:!size-5'}
-        aria-label={`Detail Dokumen ${dok.judul}`}
-      >
-        <ChevronRight strokeWidth={2.35} />
-        {mobile ? 'Detail Dokumen' : null}
-      </Button>
-    </Link>
+      <ChevronRight strokeWidth={2.35} />
+      {mobile ? 'Detail Dokumen' : null}
+    </Button>
   )
 }
 
