@@ -209,7 +209,6 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'REFERENSI DOKUMEN',
       items: [
         { id: 'master_jenis', label: 'Jenis Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_JENIS },
-        { id: 'master_jenis_dokumen', label: 'Jenis Dokumen', icon: Tag, to: ROUTES.ADMIN.MASTER_JENIS_DOKUMEN },
         { id: 'master_kategori', label: 'Kategori Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_KATEGORI },
         { id: 'master_detail', label: 'Detail Permintaan', icon: Tag, to: ROUTES.ADMIN.MASTER_DETAIL },
         { id: 'master_kelengkapan', label: 'Kelengkapan Dokumen', icon: FileCheck, to: ROUTES.ADMIN.MASTER_KELENGKAPAN },

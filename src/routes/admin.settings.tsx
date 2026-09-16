@@ -29,17 +29,17 @@ const THEME_OPTIONS = [
   {
     value: 'se' as const,
     name: 'Sensus Ekonomi (SE)',
-    hint: 'Tema oranye — identitas aplikasi saat ini.',
+    hint: 'Akhiran Tahun 06 - Tema Oranye',
   },
   {
     value: 'sp' as const,
     name: 'Sensus Penduduk (SP)',
-    hint: 'Tema biru.',
+    hint: 'Akhiran Tahun 00 - Tema Biru',
   },
   {
     value: 'st' as const,
     name: 'Sensus Pertanian (ST)',
-    hint: 'Tema hijau.',
+    hint: 'Akhiran Tahun 03 - Tema Hijau',
   },
 ]
 
