@@ -18,9 +18,13 @@ const THEME_INIT_SCRIPT = `(function(){try{
   root.classList.add('light');
   root.style.colorScheme='light';
   var VALID=['se','sp','st'];
+  function readCookieTheme(){
+    var match=document.cookie.match(/(?:^|; )app-theme=([^;]*)/);
+    return match?decodeURIComponent(match[1]):null;
+  }
   var params=new URLSearchParams(window.location.search);
   var qsTheme=params.get('theme');
-  var theme=VALID.indexOf(qsTheme)!==-1?qsTheme:localStorage.getItem('app-theme');
+  var theme=VALID.indexOf(qsTheme)!==-1?qsTheme:(localStorage.getItem('app-theme')||readCookieTheme());
   if(VALID.indexOf(theme)===-1){theme='se';}
   if(theme==='se'){delete root.dataset.theme;}else{root.dataset.theme=theme;}
 }catch(e){}})();`
