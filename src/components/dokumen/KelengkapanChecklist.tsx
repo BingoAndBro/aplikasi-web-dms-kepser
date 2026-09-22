@@ -54,7 +54,9 @@ interface KelengkapanChecklistProps {
   isNonMaterial?: boolean  // NEW: jika true, skip admin kelengkapan
 }
 
-function matchesCurrentChain(
+// Kelengkapan is unique per exact combination of Kegiatan (already filtered by
+// the API), Komponen, Jenis, Kategori and Detail (null when the Kategori is the leaf).
+function matchesCurrentSelection(
   item: KelengkapanApiItem,
   filters: {
     komponenId?: string
@@ -63,36 +65,10 @@ function matchesCurrentChain(
     detailPermintaanId?: string
   },
 ): boolean {
-  const {
-    komponenId,
-    jenisPermintaanId,
-    kategoriPermintaanId,
-    detailPermintaanId,
-  } = filters
-
-  if (detailPermintaanId) {
-    return item.detail_permintaan_id === detailPermintaanId
-  }
-
-  if (kategoriPermintaanId) {
-    return item.kategori_permintaan_id === kategoriPermintaanId
-      && item.detail_permintaan_id == null
-  }
-
-  if (jenisPermintaanId) {
-    return item.jenis_permintaan_id === jenisPermintaanId
-      && item.kategori_permintaan_id == null
-      && item.detail_permintaan_id == null
-  }
-
-  if (komponenId) {
-    return item.komponen_permintaan_id === komponenId
-      && item.jenis_permintaan_id == null
-      && item.kategori_permintaan_id == null
-      && item.detail_permintaan_id == null
-  }
-
-  return true
+  return (item.komponen_permintaan_id ?? null) === (filters.komponenId || null)
+    && (item.jenis_permintaan_id ?? null) === (filters.jenisPermintaanId || null)
+    && (item.kategori_permintaan_id ?? null) === (filters.kategoriPermintaanId || null)
+    && (item.detail_permintaan_id ?? null) === (filters.detailPermintaanId || null)
 }
 
 export function KelengkapanChecklist({
@@ -151,7 +127,7 @@ export function KelengkapanChecklist({
         })
 
         const filtered = data
-          .filter(item => matchesCurrentChain(item, {
+          .filter(item => matchesCurrentSelection(item, {
             komponenId,
             jenisPermintaanId,
             kategoriPermintaanId,

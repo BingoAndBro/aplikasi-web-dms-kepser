@@ -34,7 +34,6 @@ export type KomponenRow = {
   created_at: string
   kegiatan_id: string
   kegiatan_nama?: string
-  jumlah_jenis?: number
 }
 
 export type KelengkapanRow = {
@@ -58,8 +57,6 @@ export type JenisRow = {
   deskripsi: string | null
   is_active: boolean
   created_at: string
-  komponen_id: string
-  komponen_nama?: string
   jumlah_kategori?: number
 }
 

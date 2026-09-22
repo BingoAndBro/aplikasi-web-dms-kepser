@@ -167,7 +167,7 @@ function KomponenPage() {
           icon={<ClipboardList />}
           eyebrow={<><span>Admin Sistem</span><span>/</span><span>Master Data</span></>}
           title="Master Komponen"
-          description="Kelola komponen di bawah kegiatan; komponen menjadi dasar Jenis Permintaan pada dokumen Material."
+          description="Kelola komponen di bawah kegiatan untuk kelengkapan dokumen Material."
           actions={<Button onClick={openCreate} className={adminPrimaryActionClassName + ' gap-2'} disabled={kegiatans.length === 0}><Plus />Tambah Komponen</Button>}
         />
 

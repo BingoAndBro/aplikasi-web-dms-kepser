@@ -259,15 +259,13 @@ function AjukanDokumenPage() {
     load()
   }, [kegiatanId, isNonMaterial])
 
-  // Load jenis permintaan when komponen is selected
+  // Load jenis permintaan (independent of komponen)
   useEffect(() => {
-    if (!komponenId || isNonMaterial) { setJenisList([]); return }
+    if (isNonMaterial) { setJenisList([]); return }
     async function load() {
       setLoadingJenis(true)
       try {
-        const data = await apiFetch<JenisRow[]>('/master-jenis', {
-          query: { komponen_id: komponenId },
-        })
+        const data = await apiFetch<JenisRow[]>('/master-jenis')
         setJenisList(data)
       } catch (err) {
         console.error('Failed to load jenis permintaan:', err)
@@ -277,7 +275,7 @@ function AjukanDokumenPage() {
       }
     }
     load()
-  }, [komponenId, isNonMaterial])
+  }, [isNonMaterial])
 
   // Load kategori when jenis changes (Material only)
   useEffect(() => {
@@ -354,10 +352,6 @@ function AjukanDokumenPage() {
     setKomponenId(id)
     const kn = komponenList.find(k => k.id === id)
     setKomponenNama(kn?.nama ?? '')
-    setJenisPermintaanId(''); setJenisPermintaanNama('')
-    setKategoriPermintaanId(''); setKategoriPermintaanNama('')
-    setDetailPermintaanId(''); setDetailPermintaanNama('')
-    setKategoriHasDetail(false)
   }
 
   function handleJenisChange(id: string) {
@@ -908,18 +902,20 @@ function AjukanDokumenPage() {
                 </div>
               )}
 
-              {kegiatanId && !isNonMaterial && komponenId && (
-                <StepJenisPermintaan
-                  grouped
-                  kegiatanId={kegiatanId}
-                  jenisPermintaanId={jenisPermintaanId}
-                  jenisList={jenisList}
-                  loadingJenis={loadingJenis}
-                  canAdvanceFromStep3={canAdvanceFromStep3}
-                  onJenisChange={handleJenisChange}
-                  onBack={handleBack}
-                  onNext={handleNextFromInformation}
-                />
+              {kegiatanId && (
+                <div hidden={isNonMaterial}>
+                  <StepJenisPermintaan
+                    grouped
+                    kegiatanId={kegiatanId}
+                    jenisPermintaanId={jenisPermintaanId}
+                    jenisList={jenisList}
+                    loadingJenis={loadingJenis}
+                    canAdvanceFromStep3={canAdvanceFromStep3}
+                    onJenisChange={handleJenisChange}
+                    onBack={handleBack}
+                    onNext={handleNextFromInformation}
+                  />
+                </div>
               )}
 
               {!isNonMaterial && jenisPermintaanId && (

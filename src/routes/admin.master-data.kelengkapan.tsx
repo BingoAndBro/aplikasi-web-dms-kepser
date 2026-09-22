@@ -45,20 +45,19 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return err instanceof ApiError ? err.message : fallback
 }
 
+// Kelengkapan is unique per exact combination, so only rows scoped to exactly
+// the selected Komponen + Jenis + Kategori + Detail (or no Detail) belong here.
 function matchesSelectedChain(
   row: KelengkapanRow,
-  komponenId?: string,
-  jenisId?: string,
-  kategoriId?: string,
-  detailId?: string,
+  komponenId: string,
+  jenisId: string,
+  kategoriId: string,
+  detailId: string | null,
 ): boolean {
-  const isLegacy = !row.komponen_permintaan_id && !row.jenis_permintaan_id && !row.kategori_permintaan_id && !row.detail_permintaan_id
-  if (isLegacy) return true
-  if (komponenId && row.komponen_permintaan_id && row.komponen_permintaan_id !== komponenId) return false
-  if (jenisId && row.jenis_permintaan_id && row.jenis_permintaan_id !== jenisId) return false
-  if (kategoriId && row.kategori_permintaan_id && row.kategori_permintaan_id !== kategoriId) return false
-  if (detailId && row.detail_permintaan_id && row.detail_permintaan_id !== detailId) return false
-  return true
+  return row.komponen_permintaan_id === komponenId
+    && row.jenis_permintaan_id === jenisId
+    && row.kategori_permintaan_id === kategoriId
+    && (row.detail_permintaan_id ?? null) === detailId
 }
 
 function hasLoadedDuplicateKelengkapan(
@@ -98,6 +97,7 @@ function KelengkapanPage() {
   const [jenisList, setJenisList] = useState<JenisRow[]>([])
   const [kategoriList, setKategoriList] = useState<KategoriRow[]>([])
   const [detailList, setDetailList] = useState<DetailRow[]>([])
+  const [detailLoadedFor, setDetailLoadedFor] = useState('')
   const [items, setItems] = useState<KelengkapanRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filterFungsi, setFilterFungsi] = useState('')
@@ -121,15 +121,7 @@ function KelengkapanPage() {
   const [formInitialSnapshot, setFormInitialSnapshot] = useState<string | null>(null)
   const [unsavedConfirmOpen, setUnsavedConfirmOpen] = useState(false)
 
-  // Chain complete (leaf node) when:
-  // - Kategori selected + kategori tidak punya Detail children (leaf node), OR
-  // - Detail selected (leaf node)
-  // Jangan tampilkan kelengkapan jika belum sampai leaf node.
-  const chainComplete =
-    (filterKomponen && filterJenis && filterKategori && detailList.length === 0) ||
-    (filterKomponen && filterJenis && filterKategori && filterDetail)
-
-  useEffect(() => { fetchFungsis() }, [])
+  useEffect(() => { fetchFungsis(); fetchJenisList() }, [])
 
   useEffect(() => {
     if (filterFungsi) { fetchKegiatans(filterFungsi) } else { setKegiatans([]); setFilterKegiatan(''); setItems([]) }
@@ -140,21 +132,31 @@ function KelengkapanPage() {
   }, [filterKegiatan])
 
   useEffect(() => {
-    if (filterKomponen) { fetchJenis(filterKomponen) } else { setJenisList([]); setFilterJenis('') }
-  }, [filterKomponen])
-
-  useEffect(() => {
     if (filterJenis) { fetchKategori(filterJenis) } else { setKategoriList([]); setFilterKategori(''); setFilterDetail(''); setDetailList([]) }
   }, [filterJenis])
 
   useEffect(() => {
+    setDetailLoadedFor('')
     if (filterKategori) { fetchDetail(filterKategori) } else { setDetailList([]); setFilterDetail('') }
   }, [filterKategori])
 
+  // Leaf Rantai Permintaan: Kategori tanpa Detail, atau Detail sudah dipilih.
+  const detailReady = Boolean(filterKategori) && detailLoadedFor === filterKategori
+  const leafReached = Boolean(filterJenis && detailReady && (detailList.length === 0 || filterDetail))
+  const contextComplete = Boolean(filterFungsi && filterKegiatan && filterKomponen && leafReached)
+  const missingContext = [
+    !filterFungsi && 'Fungsi',
+    !filterKegiatan && 'Kegiatan',
+    !filterKomponen && 'Komponen',
+    !filterJenis && 'Jenis Permintaan',
+    !filterKategori && 'Kategori Permintaan',
+    detailReady && detailList.length > 0 && !filterDetail && 'Detail Permintaan',
+  ].filter((label): label is string => Boolean(label))
+
   useEffect(() => {
-    if (chainComplete && filterFungsi && filterKegiatan) fetchKelengkapan()
-    else if (!filterFungsi || !filterKegiatan) setItems([])
-  }, [filterFungsi, filterKegiatan, filterKomponen, filterJenis, filterKategori, filterDetail, chainComplete])
+    if (contextComplete) fetchKelengkapan()
+    else setItems([])
+  }, [contextComplete, filterKegiatan, filterKomponen, filterJenis, filterKategori, filterDetail])
 
   async function fetchFungsis() {
     try {
@@ -170,18 +172,13 @@ function KelengkapanPage() {
       })
       setKomponenList(data)
       setFilterKomponen('')
-      // reset chain
-      setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
     } catch { /* silent */ }
   }
 
-  async function fetchJenis(komponenId: string) {
+  async function fetchJenisList() {
     try {
-      const data = await apiFetch<JenisRow[]>('/master-jenis', {
-        query: { komponen_id: komponenId },
-      })
+      const data = await apiFetch<JenisRow[]>('/master-jenis')
       setJenisList(data)
-      setFilterJenis(''); setFilterKategori(''); setFilterDetail(''); setDetailList([])
     } catch { /* silent */ }
   }
 
@@ -191,9 +188,7 @@ function KelengkapanPage() {
         query: { fungsi_id: fungsiId },
       })
       setKegiatans(data)
-      setFilterKegiatan(''); setItems([])
-      // reset chain
-      setFilterKomponen(''); setFilterJenis(''); setFilterKategori(''); setFilterDetail('')
+      setFilterKegiatan(''); setFilterKomponen('')
     } catch { /* silent */ }
   }
 
@@ -214,6 +209,7 @@ function KelengkapanPage() {
       })
       setDetailList(data)
       setFilterDetail('')
+      setDetailLoadedFor(kategoriId)
     } catch { /* silent */ }
   }
 
@@ -225,10 +221,10 @@ function KelengkapanPage() {
       })
       setItems(data.filter(row => matchesSelectedChain(
         row,
-        filterKomponen || undefined,
-        filterJenis || undefined,
-        filterKategori || undefined,
-        filterDetail || undefined,
+        filterKomponen,
+        filterJenis,
+        filterKategori,
+        filterDetail || null,
       )))
     } catch { /* silent */ } finally { setLoading(false) }
   }
@@ -395,7 +391,6 @@ function KelengkapanPage() {
     setFilterDetail('')
     setKegiatans([])
     setKomponenList([])
-    setJenisList([])
     setKategoriList([])
     setDetailList([])
     setItems([])
@@ -439,7 +434,7 @@ function KelengkapanPage() {
               <KelengkapanSelectField label="Fungsi" required>
                 <AdminFilterSelect
                   value={filterFungsi}
-                  onChange={value => { setFilterFungsi(value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+                  onChange={setFilterFungsi}
                   ariaLabel="Pilih fungsi untuk kelengkapan"
                   className={compactKelengkapanSelectClassName}
                   options={[
@@ -452,7 +447,7 @@ function KelengkapanPage() {
               <KelengkapanSelectField label="Kegiatan" required>
                 <AdminFilterSelect
                   value={filterKegiatan}
-                  onChange={value => { setFilterKegiatan(value); setFilterKomponen(''); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+                  onChange={value => { setFilterKegiatan(value); setFilterKomponen('') }}
                   ariaLabel="Pilih kegiatan untuk kelengkapan"
                   disabled={!filterFungsi}
                   className={compactKelengkapanSelectClassName}
@@ -466,7 +461,7 @@ function KelengkapanPage() {
               <KelengkapanSelectField label="Komponen" required>
                 <AdminFilterSelect
                   value={filterKomponen}
-                  onChange={value => { setFilterKomponen(value); setFilterJenis(''); setFilterKategori(''); setFilterDetail('') }}
+                  onChange={setFilterKomponen}
                   ariaLabel="Pilih komponen untuk kelengkapan"
                   disabled={!filterKegiatan}
                   className={compactKelengkapanSelectClassName}
@@ -485,10 +480,9 @@ function KelengkapanPage() {
                   value={filterJenis}
                   onChange={value => { setFilterJenis(value); setFilterKategori(''); setFilterDetail('') }}
                   ariaLabel="Pilih jenis permintaan untuk kelengkapan"
-                  disabled={!filterKomponen}
                   className={compactKelengkapanSelectClassName}
                   options={[
-                    { value: '', label: filterKomponen ? 'Pilih Jenis Permintaan' : 'Pilih Komponen dulu' },
+                    { value: '', label: 'Pilih Jenis Permintaan' },
                     ...jenisList.map(j => ({ value: j.id, label: j.nama })),
                   ]}
                 />
@@ -508,7 +502,7 @@ function KelengkapanPage() {
                 />
               </KelengkapanSelectField>
 
-              <KelengkapanSelectField label="Detail Permintaan" required>
+              <KelengkapanSelectField label="Detail Permintaan" required={detailList.length > 0}>
                 <AdminFilterSelect
                   value={filterDetail}
                   onChange={setFilterDetail}
@@ -516,7 +510,7 @@ function KelengkapanPage() {
                   disabled={!filterKategori || detailList.length === 0}
                   className={compactKelengkapanSelectClassName}
                   options={[
-                    { value: '', label: filterKategori && detailList.length === 0 ? 'Kategori ini menjadi leaf' : filterKategori ? 'Pilih Detail Permintaan' : 'Pilih Kategori dulu' },
+                    { value: '', label: detailReady && detailList.length === 0 ? 'Kategori ini menjadi leaf' : filterKategori ? 'Pilih Detail Permintaan' : 'Pilih Kategori dulu' },
                     ...detailList.map(d => ({ value: d.id, label: d.nama })),
                   ]}
                 />
@@ -525,8 +519,23 @@ function KelengkapanPage() {
           </div>
         </section>
 
-        {/* Kelengkapan section - hanya tampil kalau chain complete */}
-        {filterKegiatan && chainComplete && (
+        {/* Placeholder tetap tampil sampai seluruh konteks lengkap; baru diganti isian kelengkapan. */}
+        {!contextComplete ? (
+          <EmptyState
+            title="Lengkapi konteks sampai leaf node"
+            icon={<FileCheck size={18} />}
+            description={(
+              <>
+                Kelengkapan dokumen berlaku untuk satu kombinasi Fungsi, Kegiatan, Komponen, Jenis, Kategori,
+                dan Detail Permintaan. Pilih semuanya sampai leaf (Kategori tanpa Detail, atau Detail Permintaan)
+                sebelum menambahkan kelengkapan.
+                <span className="mt-2 block font-semibold text-text-strong">
+                  Belum dipilih: {missingContext.join(', ')}
+                </span>
+              </>
+            )}
+          />
+        ) : (
           loading ? (
             <LoadingState variant="list" label="Memuat konfigurasi kelengkapan" />
           ) : (
@@ -578,28 +587,6 @@ function KelengkapanPage() {
               </div>
             </div>
           )
-        )}
-
-        {/* Empty state - belum sampai leaf */}
-        {filterKegiatan && !chainComplete && !loading && (
-          <EmptyState
-            title="Selesaikan chain untuk melihat kelengkapan"
-            icon={<FileCheck size={18} />}
-            description={(
-              <>
-              Pilih Jenis Permintaan, Kategori Permintaan, dan Detail Permintaan secara berurutan.
-              {filterKategori && detailList.length === 0 ? ' Kategori yang dipilih tidak memiliki detail, sehingga sudah menjadi leaf.' : ''}
-              </>
-            )}
-          />
-        )}
-
-        {!filterFungsi && !loading && (
-          <EmptyState
-            title="Pilih fungsi dan kegiatan"
-            description="Mulai dari konteks kerja sebelum memilih chain Jenis Permintaan, Kategori, dan Detail."
-            icon={<FileCheck size={18} />}
-          />
         )}
       </div>
 

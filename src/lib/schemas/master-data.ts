@@ -77,13 +77,11 @@ export const updateKelengkapanSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const createJenisSchema = z.object({
-  komponenId: z.string().uuid('ID komponen tidak valid'),
   nama: z.string().min(1, 'Nama tidak boleh kosong').max(255),
   deskripsi: z.string().max(500).optional(),
 })
 
 export const updateJenisSchema = z.object({
-  komponenId: z.string().uuid().optional(),
   nama: z.string().min(1).max(255).optional(),
   deskripsi: z.string().max(500).optional(),
   isActive: z.boolean().optional(),

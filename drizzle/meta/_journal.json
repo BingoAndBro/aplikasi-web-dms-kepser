@@ -113,6 +113,13 @@
       "when": 1781307600000,
       "tag": "0015_app_settings_theme",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790057034780,
+      "tag": "0016_decouple_jenis_permintaan_from_komponen",
+      "breakpoints": true
     }
   ]
 }

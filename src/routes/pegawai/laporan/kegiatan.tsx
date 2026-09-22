@@ -962,16 +962,7 @@ function KegiatanDetailAdvancedFilter({
 
   useEffect(() => {
     let active = true
-    if (!value.komponenId) {
-      setJenisOptions([])
-      setKategoriOptions([])
-      setDetailOptions([])
-      return () => {
-        active = false
-      }
-    }
-
-    apiFetch<MasterOption[]>('/master-jenis', { query: { komponen_id: value.komponenId } })
+    apiFetch<MasterOption[]>('/master-jenis')
       .then(data => {
         if (active) setJenisOptions(data)
       })
@@ -981,7 +972,7 @@ function KegiatanDetailAdvancedFilter({
     return () => {
       active = false
     }
-  }, [value.komponenId])
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -1043,14 +1034,13 @@ function KegiatanDetailAdvancedFilter({
           value={value.komponenId}
           allLabel="Semua Komponen"
           options={komponenOptions}
-          onChange={(komponenId) => onChange({ ...value, komponenId, jenisId: undefined, kategoriId: undefined, detailId: undefined })}
+          onChange={(komponenId) => onChange({ ...value, komponenId })}
         />
         <DetailSelect
           label="Jenis Permintaan"
           value={value.jenisId}
           allLabel="Semua Jenis"
           options={jenisOptions}
-          disabled={!value.komponenId}
           onChange={(jenisId) => onChange({ ...value, jenisId, kategoriId: undefined, detailId: undefined })}
         />
         <DetailSelect

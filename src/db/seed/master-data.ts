@@ -59,7 +59,6 @@ export async function seedMasterData(database: SeedDb) {
     .insert(masterJenisPermintaan)
     .values({
       id: SEED_MASTER_IDS.jenisPermintaan,
-      komponenId,
       nama: 'Dev Material',
       deskripsi: 'Minimal material request type for development',
       isActive: true,

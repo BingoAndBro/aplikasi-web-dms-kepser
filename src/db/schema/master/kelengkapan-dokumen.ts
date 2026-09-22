@@ -49,10 +49,6 @@ export const masterKelengkapanDokumen = masterSchema.table(
       table.detailPermintaanId,
     ),
     check(
-      'master_kelengkapan_jenis_requires_komponen_check',
-      sql`${table.jenisPermintaanId} is null or ${table.komponenId} is not null`,
-    ),
-    check(
       'master_kelengkapan_kategori_requires_jenis_check',
       sql`${table.kategoriPermintaanId} is null or ${table.jenisPermintaanId} is not null`,
     ),

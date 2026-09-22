@@ -117,7 +117,7 @@ export function ReviewSummary({
         <SummaryGroup
           icon={<Tags size={15} />}
           title="Karakteristik Dokumen"
-          subtitle={isNonMaterial ? 'Nama dan keterangan dokumen' : 'Komponen, jenis, kategori, detail, dan nominal'}
+          subtitle={isNonMaterial ? 'Nama dan keterangan dokumen' : 'Komponen, klasifikasi permintaan, dan nominal'}
         >
           <div className="grid min-w-0 gap-2 sm:grid-cols-2">
             {!isNonMaterial && (
