@@ -249,7 +249,7 @@ export function AdminFilterSelect({
         <ChevronDown size={16} className={cn('justify-self-center text-brand-text transition-transform', open && 'rotate-180')} />
       </button>
       {open && !disabled && (
-        <div className={cn('absolute left-0 top-[calc(100%+8px)] z-40 min-w-full overflow-hidden rounded-[20px] border py-1 shadow-xl shadow-brand-glow', DATA_FILTER_SELECT_MENU_TONE_CLASS)}>
+        <div className={cn('absolute left-0 top-[calc(100%+8px)] z-40 w-max min-w-full max-w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-[20px] border py-1 shadow-xl shadow-brand-glow', DATA_FILTER_SELECT_MENU_TONE_CLASS)}>
           {options.map(option => {
             const isSelected = option.value === value
             return (
@@ -268,7 +268,7 @@ export function AdminFilterSelect({
                   option.disabled && 'cursor-not-allowed text-text-disabled hover:bg-surface',
                 )}
               >
-                <span className="min-w-0 truncate">{option.label}</span>
+                <span className="min-w-0 whitespace-normal break-words">{option.label}</span>
                 {isSelected && <Check size={15} className="shrink-0 text-brand-text" />}
               </button>
             )

@@ -35,7 +35,7 @@ function forbiddenSameOriginResponse(): Response {
 
 function getAllowedOrigins(request: Request): Set<string> {
   const origins = new Set<string>()
-  addUrlOrigin(origins, request.url)
+  addUrlOriginBothSchemes(origins, request.url)
   addUrlOrigin(origins, process.env[APP_URL_ENV])
   addForwardedOrigin(origins, request)
   addHostOrigin(origins, request)
@@ -52,22 +52,42 @@ function addUrlOrigin(origins: Set<string>, value: string | undefined): void {
   }
 }
 
+// Some dev servers (Vite + plugin-basic-ssl) terminate TLS in front of the
+// request handler but report request.url/Host with the wrong scheme, so we
+// accept either scheme for a host we already trust rather than mismatching
+// on a scheme we cannot reliably detect.
+function addUrlOriginBothSchemes(origins: Set<string>, value: string | undefined): void {
+  if (!value) return
+
+  try {
+    const host = new URL(value).host
+    origins.add(`http://${host}`)
+    origins.add(`https://${host}`)
+  } catch {
+    // Invalid runtime configuration must not leak into responses.
+  }
+}
+
 function addForwardedOrigin(origins: Set<string>, request: Request): void {
   const host = getFirstHeaderValue(request.headers.get('x-forwarded-host'))
   if (!host) return
 
-  const proto =
-    getFirstHeaderValue(request.headers.get('x-forwarded-proto'))
-    ?? inferProtocol(request.url)
+  const explicitProto = getFirstHeaderValue(request.headers.get('x-forwarded-proto'))
+  if (explicitProto) {
+    addUrlOrigin(origins, `${explicitProto}://${host}`)
+    return
+  }
 
-  addUrlOrigin(origins, `${proto}://${host}`)
+  origins.add(`http://${host}`)
+  origins.add(`https://${host}`)
 }
 
 function addHostOrigin(origins: Set<string>, request: Request): void {
   const host = getFirstHeaderValue(request.headers.get('host'))
   if (!host) return
 
-  addUrlOrigin(origins, `${inferProtocol(request.url)}://${host}`)
+  origins.add(`http://${host}`)
+  origins.add(`https://${host}`)
 }
 
 function parseOriginHeader(value: string | null): string | null {
@@ -96,12 +116,4 @@ function parseRefererOrigin(value: string | null): string | null {
 
 function getFirstHeaderValue(value: string | null): string | null {
   return value?.split(',')[0]?.trim() || null
-}
-
-function inferProtocol(requestUrl: string): 'http' | 'https' {
-  try {
-    return new URL(requestUrl).protocol === 'https:' ? 'https' : 'http'
-  } catch {
-    return 'http'
-  }
 }

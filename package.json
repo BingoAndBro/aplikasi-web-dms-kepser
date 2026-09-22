@@ -17,6 +17,7 @@
     "db:seed": "tsx src/db/seed/index.ts",
     "db:local:generate": "dotenv -e .env.migration --override -- drizzle-kit generate",
     "db:local:migrate": "dotenv -e .env.migration --override -- drizzle-kit migrate",
+    "db:local:studio": "dotenv -e .env.migration --override -- drizzle-kit studio",
     "db:local:seed": "dotenv -e .env.migration --override --no-expand -- tsx src/db/seed/index.ts"
   },
   "dependencies": {
