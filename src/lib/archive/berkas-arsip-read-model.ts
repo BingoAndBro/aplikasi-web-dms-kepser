@@ -208,7 +208,7 @@ export type ActorDisplayReadRow = {
   id: string
   display_name: string | null
   nama_lengkap: string | null
-  email: string | null
+  username: string | null
 }
 
 export type ManualAttachmentNameReadRow = {
@@ -442,7 +442,7 @@ const defaultBerkasArsipReadModelRepository: BerkasArsipReadModelRepository = {
         id: users.id,
         display_name: users.displayName,
         nama_lengkap: users.namaLengkap,
-        email: users.email,
+        username: users.username,
       })
       .from(users)
       .where(inArray(users.id, uniqueIds))
@@ -896,7 +896,7 @@ function groupManualAttachmentsByManualArsipId(
 function resolveActorDisplayName(row: ActorDisplayReadRow): string | null {
   return trimToNull(row.display_name)
     ?? trimToNull(row.nama_lengkap)
-    ?? trimToNull(row.email)
+    ?? trimToNull(row.username)
 }
 
 function escapeIlikePattern(value: string): string {

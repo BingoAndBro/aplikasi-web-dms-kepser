@@ -60,10 +60,9 @@ describe('/api/dokumen/rename-pending local move route implementation', () => {
     mocks.getLocalServerSession.mockResolvedValue({
       user: {
         id: OWNER_ID,
-        email: 'pegawai@example.test',
+        username: 'pegawai',
       },
       userId: OWNER_ID,
-      email: 'pegawai@example.test',
       roles: ['PEGAWAI'],
       activeRole: 'PEGAWAI',
       sessionId: 'test-session-id',

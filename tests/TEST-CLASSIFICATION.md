@@ -46,6 +46,8 @@ Catatan umum:
 
 | File | Jenis Test | White/Black-box | Deskripsi Singkat |
 |---|---|---|---|
+| tests/unit/auth/login-form-identifier.test.ts | Unit test (static source guard) | White-box | Memastikan form login tidak lagi memakai input `type="email"` dan menampilkan label "Username atau NIP". |
+| tests/unit/auth/login-identifier-resolution.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji `loginWithLocalCredentials`: resolusi identifier via username atau NIP, akun nonaktif, dan kesamaan pesan error generik. |
 | tests/unit/auth/login-rate-limit.test.ts | Unit test | White-box | Menguji helper pembatasan rate percobaan login. |
 | tests/unit/auth/login-route-rate-limit.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji perilaku pembatasan rate pada route login dengan dependency di-mock. |
 | tests/unit/auth/role-assignment.test.ts | Unit test | White-box | Menguji normalisasi penetapan role user oleh admin. |
@@ -74,6 +76,7 @@ Catatan umum:
 | File | Jenis Test | White/Black-box | Deskripsi Singkat |
 |---|---|---|---|
 | tests/unit/db/seed-users.test.ts | Unit test | White-box | Menguji fungsi seeding user development. |
+| tests/unit/db/username-migration-source.test.ts | Unit test (static source guard) | White-box | Memastikan migrasi `0017_username_login_identity.sql` terdaftar di journal dan CHECK constraint username-nya identik dengan `isValidUsername()`. |
 
 ## dokumen
 
@@ -175,6 +178,13 @@ Catatan umum:
 | File | Jenis Test | White/Black-box | Deskripsi Singkat |
 |---|---|---|---|
 | tests/unit/styles/color-budget.test.ts | Unit test (static source guard) | White-box | Membatasi/menghitung jumlah warna arbitrary/hardcoded pada source untuk menjaga konsolidasi Tema Global (Fase 0). |
+
+## users
+
+| File | Jenis Test | White/Black-box | Deskripsi Singkat |
+|---|---|---|---|
+| tests/unit/users/create-user-unique-violation.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji pemetaan error unique-violation Postgres (username, NIP) dan check-violation format username ke pesan 409/400 berbahasa Indonesia. |
+| tests/unit/users/username-validation.test.ts | Unit test | White-box | Menguji `isValidUsername()`: panjang, karakter diizinkan, dan aturan wajib-mengandung-huruf yang menjaga namespace username tetap terpisah dari NIP. |
 
 ## utils
 

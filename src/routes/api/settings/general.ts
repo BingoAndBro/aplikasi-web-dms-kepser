@@ -84,7 +84,7 @@ export const Route = createFileRoute('/api/settings/general')({
               set: { value: appSubtitle, updatedAt: new Date(), updatedBy: session.userId },
             })
 
-          console.log(`[settings-general] ${session.email} mengubah judul aplikasi menjadi "${appTitle}" / sub-judul "${appSubtitle}"`)
+          console.log(`[settings-general] ${session.userId} mengubah judul aplikasi menjadi "${appTitle}" / sub-judul "${appSubtitle}"`)
 
           return Response.json({ appTitle, appSubtitle })
         } catch (err) {

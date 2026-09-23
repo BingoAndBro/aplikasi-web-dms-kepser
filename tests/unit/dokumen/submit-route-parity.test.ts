@@ -715,11 +715,10 @@ function createLocalSession(overrides: {
   return {
     user: {
       id: OWNER_ID,
-      email: 'pegawai@example.test',
-      userName: 'Pegawai Test',
+      username: 'pegawai.test',
+      displayName: 'Pegawai Test',
     },
     userId: OWNER_ID,
-    email: 'pegawai@example.test',
     roles: overrides.roles,
     activeRole: overrides.activeRole,
     sessionId: 'local-session-id',

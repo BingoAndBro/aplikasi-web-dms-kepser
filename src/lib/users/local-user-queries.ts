@@ -9,7 +9,8 @@ import { parseUserMetadata } from '#/lib/user-metadata'
 
 type LocalUserRow = {
   id: string
-  email: string
+  username: string
+  email: string | null
   displayName: string | null
   namaLengkap: string | null
   nipNrp: string | null
@@ -28,7 +29,7 @@ type LocalUserWithRolesRow = {
 
 export async function getLocalUsersWithRoles(): Promise<UserWithRoles[]> {
   const rows = await baseLocalUserQuery()
-    .orderBy(asc(users.createdAt), asc(users.email), asc(rolesTable.nama))
+    .orderBy(asc(users.createdAt), asc(users.username), asc(rolesTable.nama))
 
   return groupLocalUserRows(rows)
 }
@@ -46,6 +47,7 @@ function baseLocalUserQuery() {
     .select({
       user: {
         id: users.id,
+        username: users.username,
         email: users.email,
         displayName: users.displayName,
         namaLengkap: users.namaLengkap,
@@ -82,6 +84,7 @@ function groupLocalUserRows(rows: LocalUserWithRolesRow[]): UserWithRoles[] {
 
   return [...grouped.values()].map(({ user, roles }) => ({
     id: user.id,
+    username: user.username,
     email: user.email,
     metadata: toUserMetadata(user),
     roles: sortRoles(roles),

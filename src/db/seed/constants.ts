@@ -69,7 +69,9 @@ export const DEV_SEED_USERS = [
   {
     key: 'admin',
     id: SEED_USER_IDS.admin,
+    username: 'dev.admin',
     email: 'dev.admin@local.test',
+    nipNrp: '19900101000000001',
     displayName: 'Dev Admin',
     namaLengkap: 'Development Admin',
     roles: [ROLES.ADMIN],
@@ -80,7 +82,9 @@ export const DEV_SEED_USERS = [
     // helpers (requireSeededUserId, seedKetuaTimFixture) still resolve.
     key: 'ppk',
     id: SEED_USER_IDS.ppk,
+    username: 'dev.multirole',
     email: 'dev.multirole@local.test',
+    nipNrp: '19900101000000002',
     displayName: 'Dev Multirole',
     namaLengkap: 'Development Multirole',
     roles: [

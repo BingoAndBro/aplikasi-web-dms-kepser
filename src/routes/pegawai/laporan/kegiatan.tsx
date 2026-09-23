@@ -57,7 +57,7 @@ export const Route = createFileRoute('/pegawai/laporan/kegiatan')({
 type CurrentUserResponse = {
   user: {
     id: string
-    email?: string
+    username?: string
     metadata?: {
       nama_lengkap?: string
     }
@@ -1428,7 +1428,7 @@ function getSubmitterName(dok: DokumenLaporanRow) {
 
 function displayCurrentUserName(response: CurrentUserResponse) {
   return response.user.metadata?.nama_lengkap
-    ?? response.user.email?.split('@')[0]
+    ?? response.user.username
     ?? 'Ketua Tim'
 }
 

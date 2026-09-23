@@ -26,11 +26,11 @@ function normalizeNumericValue(value: string | number | null): number | null {
 function displayUserName(user: {
   displayName: string | null
   namaLengkap: string | null
-  email: string | null
+  username: string | null
 } | null): string {
   return user?.displayName
     ?? user?.namaLengkap
-    ?? user?.email?.split('@')[0]
+    ?? user?.username
     ?? 'Unknown'
 }
 
@@ -97,7 +97,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan')({
               detail_permintaan_nama: masterDetailPermintaan.nama,
               pengaju_display_name: users.displayName,
               pengaju_nama_lengkap: users.namaLengkap,
-              pengaju_email: users.email,
+              pengaju_username: users.username,
             })
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
@@ -158,7 +158,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan')({
               pengaju_nama: displayUserName({
                 displayName: row.pengaju_display_name,
                 namaLengkap: row.pengaju_nama_lengkap,
-                email: row.pengaju_email,
+                username: row.pengaju_username,
               }),
             })),
             isKetuaTim: true,

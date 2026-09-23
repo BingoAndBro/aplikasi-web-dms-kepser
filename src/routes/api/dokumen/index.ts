@@ -118,8 +118,8 @@ export const Route = createFileRoute('/api/dokumen/')({
 
         // Fetch user display name
         const userName =
-          session.user.userName
-          || session.user.email.split('@')[0]
+          session.user.displayName
+          || session.user.username
           || 'Unknown'
 
         // Judul: [Kegiatan] [Tahun] [Nama Pegawai]

@@ -13,7 +13,7 @@ type LogEntry = {
   createdAt: string
   userId: string
   userNama: string
-  userEmail: string
+  userUsername: string
 }
 
 const AKSI_CONFIG: Record<string, { label: string; icon: typeof FileText; color: string }> = {

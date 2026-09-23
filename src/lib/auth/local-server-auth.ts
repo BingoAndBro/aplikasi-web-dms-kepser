@@ -15,11 +15,10 @@ import {
 export type LocalServerSession = {
   user: {
     id: string
-    email: string
-    userName?: string
+    username: string
+    displayName?: string
   }
   userId: string
-  email: string
   roles: RoleName[]
   activeRole: RoleName
   sessionId: string
@@ -132,7 +131,7 @@ function toLocalServerSession(
   currentSession: SessionWithUserAndRoles,
   activeRole: RoleName,
 ): LocalServerSession {
-  const userName =
+  const displayName =
     currentSession.user.displayName
     ?? currentSession.user.namaLengkap
     ?? undefined
@@ -140,11 +139,10 @@ function toLocalServerSession(
   return {
     user: {
       id: currentSession.user.id,
-      email: currentSession.user.email,
-      userName,
+      username: currentSession.user.username,
+      displayName,
     },
     userId: currentSession.user.id,
-    email: currentSession.user.email,
     roles: currentSession.roles,
     activeRole,
     sessionId: currentSession.session.id,

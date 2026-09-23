@@ -11,6 +11,7 @@ import {
   updateLocalUserWithRoles,
 } from '#/lib/users/local-user-mutations'
 import { updateUserRequestBoundarySchema } from '#/lib/schemas/user'
+import { isValidEmail, isValidNip, isValidUsername } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
 // ---------------------------------------------------------------------------
@@ -83,17 +84,24 @@ export const Route = createFileRoute('/api/users/$id')({
           return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
         }
 
-        const { nama_lengkap, nip_nrp, departemen, roles } = parsedBody.data as any
+        const { username, email, nama_lengkap, nip_nrp, departemen, roles } = parsedBody.data as any
 
         // Validation
+        if (username !== undefined && (typeof username !== 'string' || !isValidUsername(username.trim().toLowerCase()))) {
+          return Response.json({
+            error: 'Username harus 3-30 karakter, huruf kecil/angka/./_/- dan mengandung minimal satu huruf',
+          }, { status: 400 })
+        }
+        if (email !== undefined && email !== '' && (typeof email !== 'string' || !isValidEmail(email))) {
+          return Response.json({ error: 'Email tidak valid' }, { status: 400 })
+        }
         if (nama_lengkap !== undefined && (
           typeof nama_lengkap !== 'string' || nama_lengkap.trim().length < 2
         )) {
           return Response.json({ error: 'Nama lengkap minimal 2 karakter' }, { status: 400 })
         }
         if (nip_nrp !== undefined) {
-          const nipRegex = /^\d{8,20}$/
-          if (typeof nip_nrp !== 'string' || !nipRegex.test(nip_nrp.trim())) {
+          if (typeof nip_nrp !== 'string' || !isValidNip(nip_nrp.trim())) {
             return Response.json({ error: 'NIP/NRP harus numerik 8-20 karakter' }, { status: 400 })
           }
         }
@@ -119,6 +127,8 @@ export const Route = createFileRoute('/api/users/$id')({
             ? undefined
             : normalizeAdminRolePayload(roles as RoleName[])
           const result = await updateLocalUserWithRoles(id, {
+            username: username?.trim().toLowerCase(),
+            email: email === '' ? '' : email,
             nama_lengkap: nama_lengkap?.trim(),
             nip_nrp: nip_nrp?.trim(),
             departemen: departemen?.trim(),

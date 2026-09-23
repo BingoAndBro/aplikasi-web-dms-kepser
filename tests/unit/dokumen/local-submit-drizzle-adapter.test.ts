@@ -332,7 +332,7 @@ function writePlan(): LocalSubmitWritePlan {
   return {
     actor: {
       userId: ACTOR_ID,
-      email: 'pegawai@example.test',
+      username: 'pegawai.local',
       displayName: 'Pegawai Local',
       roles: ['PEGAWAI'],
       activeRole: 'PEGAWAI',

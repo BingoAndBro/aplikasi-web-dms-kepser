@@ -14,7 +14,7 @@ import type { LampiranUrl } from './types'
 
 export type LocalSubmitActor = {
   userId: string
-  email: string
+  username: string
   displayName: string
   roles: RoleName[]
   activeRole: RoleName
@@ -255,7 +255,7 @@ export function createLocalSubmitActorFromSession(
     ok: true,
     actor: {
       userId: session.userId,
-      email: session.email,
+      username: session.user.username,
       displayName: deriveLocalSubmitDisplayName(session),
       roles: session.roles,
       activeRole: session.activeRole,
@@ -524,8 +524,8 @@ function shouldReadRequiredKelengkapan(payload: LocalSubmitPayload): boolean {
 }
 
 export function deriveLocalSubmitDisplayName(session: LocalServerSession): string {
-  return session.user.userName
-    ?? session.email.split('@')[0]
+  return session.user.displayName
+    ?? session.user.username
     ?? 'Unknown'
 }
 

@@ -79,7 +79,7 @@ export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
               created_at: ketuaTimAssignments.createdAt,
               user_name: users.namaLengkap,
               user_display_name: users.displayName,
-              user_email: users.email,
+              user_username: users.username,
             })
             .from(ketuaTimAssignments)
             .leftJoin(users, eq(ketuaTimAssignments.userId, users.id))
@@ -97,7 +97,7 @@ export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
               kegiatan_id: row.kegiatan_id,
               created_at: row.created_at,
               user_name: row.user_name ?? row.user_display_name ?? null,
-              user_email: row.user_email ?? null,
+              user_username: row.user_username ?? null,
             },
           })
         } catch (err) {

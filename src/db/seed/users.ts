@@ -32,13 +32,15 @@ export async function seedDevelopmentUsers(database: SeedDb) {
   const userIdsByKey: Partial<Record<keyof typeof SEED_USER_IDS, string>> = {}
 
   for (const user of DEV_SEED_USERS) {
-    validateSeedUserRoles(user.email, user.roles)
+    validateSeedUserRoles(user.username, user.roles)
 
     await database
       .insert(users)
       .values({
         id: user.id,
+        username: user.username,
         email: user.email,
+        nipNrp: user.nipNrp,
         passwordHash,
         passwordHashAlgorithm: 'argon2id',
         displayName: user.displayName,
@@ -47,8 +49,10 @@ export async function seedDevelopmentUsers(database: SeedDb) {
         isActive: true,
       })
       .onConflictDoUpdate({
-        target: users.email,
+        target: users.username,
         set: {
+          email: user.email,
+          nipNrp: user.nipNrp,
           displayName: user.displayName,
           namaLengkap: user.namaLengkap,
           metadata: { seed: true, developmentOnly: true },
@@ -59,11 +63,11 @@ export async function seedDevelopmentUsers(database: SeedDb) {
     const [seededUser] = await database
       .select({ id: users.id })
       .from(users)
-      .where(eq(users.email, user.email))
+      .where(eq(users.username, user.username))
       .limit(1)
 
     if (!seededUser) {
-      throw new Error(`Failed to verify seeded user: ${user.email}`)
+      throw new Error(`Failed to verify seeded user: ${user.username}`)
     }
 
     userIdsByKey[user.key] = seededUser.id
@@ -71,7 +75,7 @@ export async function seedDevelopmentUsers(database: SeedDb) {
     for (const roleName of user.roles) {
       const roleId = roleIdByName.get(roleName)
       if (!roleId) {
-        throw new Error(`Missing role ${roleName} for seeded user ${user.email}`)
+        throw new Error(`Missing role ${roleName} for seeded user ${user.username}`)
       }
 
       await database
@@ -91,7 +95,7 @@ export async function seedDevelopmentUsers(database: SeedDb) {
         .where(and(eq(userRoles.userId, seededUser.id), inArray(roles.nama, ['PEGAWAI', 'PPK', 'PPSPM', 'KEPALA_SUB_BAGIAN_UMUM', 'PENANGGUNG_JAWAB_KINERJA'])))
 
       if (nonAdminRoleRows.length > 0) {
-        throw new Error(`Seed user ${user.email} violates ADMIN dedicated-role rule`)
+        throw new Error(`Seed user ${user.username} violates ADMIN dedicated-role rule`)
       }
     }
   }
@@ -111,9 +115,9 @@ function validateDevSeedPasswordHash(passwordHash: string) {
   }
 }
 
-function validateSeedUserRoles(email: string, roleNames: readonly string[]) {
+function validateSeedUserRoles(username: string, roleNames: readonly string[]) {
   if (hasRole(roleNames, 'ADMIN') && roleNames.length > 1) {
-    throw new Error(`Seed user ${email} cannot combine ADMIN with other roles`)
+    throw new Error(`Seed user ${username} cannot combine ADMIN with other roles`)
   }
 }
 

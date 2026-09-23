@@ -35,7 +35,8 @@ const ACTIVE_ROLE_COOKIE = 'dms_active_role'
 
 interface ProfileUser {
   id: string
-  email: string
+  username: string
+  email: string | null
   metadata: {
     nama_lengkap?: string
     nip_nrp?: string
@@ -71,8 +72,8 @@ const PROFILE_AVATAR_MAX_BYTES = 2 * 1024 * 1024
 const PROFILE_AVATAR_ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const PROFILE_AVATAR_CHANGED_EVENT = 'dms:profile-avatar-changed'
 
-function getInitials(name?: string, email?: string): string {
-  const source = name || email || 'User'
+function getInitials(name?: string, username?: string): string {
+  const source = name || username || 'User'
   const parts = source.trim().split(/\s+/).filter(Boolean)
 
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
@@ -411,7 +412,7 @@ function ProfilePage() {
   }
 
   const displayName = user.metadata.nama_lengkap || 'Nama belum tersedia'
-  const initials = getInitials(user.metadata.nama_lengkap, user.email)
+  const initials = getInitials(user.metadata.nama_lengkap, user.username)
   const activeRole = user.activeRole ?? user.roles[0]
   const activeRoleLabel = activeRole ? getRoleBadgeLabel(activeRole) : '-'
   return (
@@ -439,7 +440,7 @@ function ProfilePage() {
                 />
 
                 <h2 className="mt-7 truncate text-[24px] font-black leading-tight text-text-strong">{displayName}</h2>
-                <p className="mt-2 truncate text-[15px] font-medium text-text-muted">{user.email}</p>
+                <p className="mt-2 truncate text-[15px] font-medium text-text-muted">@{user.username}</p>
                 <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">
                   <span className="size-1.5 rounded-full bg-emerald-500" />
                   Akun Aktif
@@ -524,7 +525,8 @@ function ProfilePage() {
 
               <dl className="mt-5 grid gap-x-16 gap-y-5 sm:grid-cols-2">
                 <InfoField label="Nama Lengkap" value={displayName} />
-                <InfoField label="Email" value={user.email} />
+                <InfoField label="Username" value={user.username} />
+                <InfoField label="Email" value={user.email ?? '-'} />
                 <InfoField label="NIP/NRP" value={user.metadata.nip_nrp || '-'} />
                 <InfoField label="Fungsi/Departemen" value={user.metadata.departemen || '-'} />
               </dl>

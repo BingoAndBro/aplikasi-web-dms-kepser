@@ -374,7 +374,7 @@ function createFakeRepository(options: {
       return new Map(
         actorRows
           .filter((row) => actorIds.includes(row.id))
-          .map((row) => [row.id, row.display_name ?? row.nama_lengkap ?? row.email ?? '']),
+          .map((row) => [row.id, row.display_name ?? row.nama_lengkap ?? row.username ?? '']),
       )
     },
   }
@@ -535,7 +535,7 @@ function actorRow(id: string, displayName: string): ActorDisplayReadRow {
     id,
     display_name: displayName,
     nama_lengkap: null,
-    email: null,
+    username: null,
   }
 }
 

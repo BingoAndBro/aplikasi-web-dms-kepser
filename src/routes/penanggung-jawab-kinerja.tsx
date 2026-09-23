@@ -7,7 +7,7 @@ import { ROUTES } from '#/lib/constants/routes'
 import { guardRole } from '#/lib/guards'
 
 type AuthSessionResponse = {
-  session: { userId: string; email: string; userName?: string | null } | null
+  session: { userId: string; username: string; displayName?: string | null } | null
   roles: string[]
   activeRole: string | null
 }

@@ -29,7 +29,7 @@ describe('/api/auth/login rate-limit behavior', () => {
   it('preserves successful login response and compatibility cookies', async () => {
     const response = await loginHandler({
       request: loginRequest({
-        email: 'User@Example.TEST',
+        identifier: 'Budi.Santoso',
         password: 'correct-password',
       }),
     })
@@ -40,8 +40,8 @@ describe('/api/auth/login rate-limit behavior', () => {
     expect(body).toEqual({
       user: {
         id: '11111111-1111-4111-8111-111111111111',
-        email: 'user@example.test',
-        userName: 'Test User',
+        username: 'budi.santoso',
+        displayName: 'Test User',
       },
       roles: [ROLES.PEGAWAI],
       activeRole: ROLES.PEGAWAI,
@@ -50,7 +50,7 @@ describe('/api/auth/login rate-limit behavior', () => {
     expect(setCookie.some((cookie) => cookie.includes('HttpOnly'))).toBe(true)
     expect(setCookie.some((cookie) => cookie.includes('dms_active_role=PEGAWAI'))).toBe(true)
     expect(mocks.loginWithLocalCredentials).toHaveBeenCalledWith(expect.objectContaining({
-      email: 'User@Example.TEST',
+      identifier: 'Budi.Santoso',
       password: 'correct-password',
       ipAddress: '192.0.2.10',
     }))
@@ -72,7 +72,7 @@ describe('/api/auth/login rate-limit behavior', () => {
     mocks.loginWithLocalCredentials.mockResolvedValueOnce(invalidCredentials())
     const wrongPassword = await loginHandler({
       request: loginRequest({
-        email: 'user@example.test',
+        identifier: 'budi.santoso',
         password: 'wrong-password',
       }),
     })
@@ -80,7 +80,7 @@ describe('/api/auth/login rate-limit behavior', () => {
     mocks.loginWithLocalCredentials.mockResolvedValueOnce(invalidCredentials())
     const missingUser = await loginHandler({
       request: loginRequest({
-        email: 'missing@example.test',
+        identifier: 'missing.user',
         password: 'wrong-password',
       }),
     })
@@ -88,11 +88,11 @@ describe('/api/auth/login rate-limit behavior', () => {
     expect(wrongPassword.status).toBe(401)
     expect(missingUser.status).toBe(401)
     expect(await wrongPassword.json()).toEqual({
-      error: 'Email atau password salah',
+      error: 'Username/NIP atau password salah',
       code: 'invalid_credentials',
     })
     expect(await missingUser.json()).toEqual({
-      error: 'Email atau password salah',
+      error: 'Username/NIP atau password salah',
       code: 'invalid_credentials',
     })
   })
@@ -156,7 +156,7 @@ describe('/api/auth/login rate-limit behavior', () => {
   })
 })
 
-function loginRequest(input: Partial<{ email: string, password: string, origin: string }> = {}): Request {
+function loginRequest(input: Partial<{ identifier: string, password: string, origin: string }> = {}): Request {
   return new Request('http://localhost/api/auth/login', {
     method: 'POST',
     headers: {
@@ -165,7 +165,7 @@ function loginRequest(input: Partial<{ email: string, password: string, origin: 
       'x-forwarded-for': '192.0.2.10',
     },
     body: JSON.stringify({
-      email: input.email ?? 'user@example.test',
+      identifier: input.identifier ?? 'budi.santoso',
       password: input.password ?? 'wrong-password',
     }),
   })
@@ -176,8 +176,8 @@ function successfulLogin() {
     ok: true,
     user: {
       id: '11111111-1111-4111-8111-111111111111',
-      email: 'user@example.test',
-      userName: 'Test User',
+      username: 'budi.santoso',
+      displayName: 'Test User',
     },
     roles: [ROLES.PEGAWAI],
     activeRole: ROLES.PEGAWAI,
@@ -190,7 +190,7 @@ function invalidCredentials() {
   return {
     ok: false,
     status: 401,
-    error: 'Email atau password salah',
+    error: 'Username/NIP atau password salah',
     code: 'invalid_credentials',
   }
 }

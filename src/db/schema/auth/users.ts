@@ -17,7 +17,8 @@ export const users = authSchema.table(
   'users',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    email: text('email').notNull(),
+    username: text('username').notNull(),
+    email: text('email'),
     passwordHash: text('password_hash').notNull(),
     passwordHashAlgorithm: text('password_hash_algorithm').notNull().default('argon2id'),
     displayName: text('display_name'),
@@ -39,7 +40,8 @@ export const users = authSchema.table(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex('auth_users_email_unique').on(table.email),
+    uniqueIndex('auth_users_username_unique').on(table.username),
+    uniqueIndex('auth_users_nip_nrp_unique').on(table.nipNrp),
     index('idx_auth_users_is_active').on(table.isActive),
     index('idx_auth_users_deactivated_by').on(table.deactivatedBy),
   ],

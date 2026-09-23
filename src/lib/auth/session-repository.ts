@@ -30,7 +30,7 @@ export type CreatedSessionRecord = {
 
 export type SessionUser = {
   id: string
-  email: string
+  username: string
   displayName: string | null
   namaLengkap: string | null
   nipNrp: string | null
@@ -80,7 +80,7 @@ export async function findSessionByTokenHash(
       session: sessions,
       user: {
         id: users.id,
-        email: users.email,
+        username: users.username,
         displayName: users.displayName,
         namaLengkap: users.namaLengkap,
         nipNrp: users.nipNrp,

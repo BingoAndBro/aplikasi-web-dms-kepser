@@ -8,7 +8,7 @@ type ClientAuthStatus = 'unknown' | 'authenticated' | 'unauthenticated'
 export type ClientAuthState = {
   status: ClientAuthStatus
   userId?: string
-  email?: string
+  username?: string
   roles: RoleName[]
   activeRole?: RoleName
   isReady: boolean
@@ -45,7 +45,7 @@ function readStoredAuthState(): ClientAuthState | null {
     return {
       status: 'authenticated',
       userId: typeof parsed.userId === 'string' ? parsed.userId : undefined,
-      email: typeof parsed.email === 'string' ? parsed.email : undefined,
+      username: typeof parsed.username === 'string' ? parsed.username : undefined,
       roles,
       activeRole: isRoleName(parsed.activeRole) ? parsed.activeRole : undefined,
       isReady: true,

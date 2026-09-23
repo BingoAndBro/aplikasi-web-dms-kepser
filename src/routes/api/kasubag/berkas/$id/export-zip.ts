@@ -84,7 +84,7 @@ export const Route = createFileRoute('/api/kasubag/berkas/$id/export-zip')({
 
         try {
           const response = await streamDocumentZip(entries, {
-            requesterLabel: sessionOrResponse.user.userName ?? sessionOrResponse.user.email,
+            requesterLabel: sessionOrResponse.user.displayName ?? sessionOrResponse.user.username,
             requesterRole: 'KEPALA_SUB_BAGIAN_UMUM',
             sourceDescription: `Nomor SPM ${detail.nomor_spm ?? '(tanpa nomor SPM)'}`,
             filename: buildBerkasExportZipFilename(detail.nomor_spm),

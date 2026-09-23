@@ -12,7 +12,8 @@ export interface UserMetadata {
 // User dengan roles — response type untuk API
 export interface UserWithRoles {
   id: string
-  email: string
+  username: string
+  email: string | null
   metadata: UserMetadata
   roles: RoleName[]
   isActive: boolean
@@ -23,7 +24,8 @@ export interface UserWithRoles {
 
 // Request types untuk API
 export interface CreateUserRequest {
-  email: string
+  username: string
+  email?: string
   password: string
   nama_lengkap: string
   nip_nrp: string
@@ -32,6 +34,8 @@ export interface CreateUserRequest {
 }
 
 export interface UpdateUserRequest {
+  username?: string
+  email?: string
   nama_lengkap?: string
   nip_nrp?: string
   departemen?: string
@@ -55,7 +59,8 @@ export interface UserResponse {
 export interface UserProfileResponse {
   user: {
     id: string
-    email: string
+    username: string
+    email: string | null
     metadata: UserMetadata
     roles: RoleName[]
   }
@@ -70,6 +75,16 @@ export interface ChangePasswordRequest {
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
+}
+
+// Keep in sync with the auth_users_username_format_check CHECK constraint
+// added in drizzle/0017_username_login_identity.sql. The "at least one
+// letter" rule guarantees a username can never collide with the nip_nrp
+// namespace (which is numeric-only, see isValidNip below), so login
+// resolution by identifier never needs to disambiguate.
+export function isValidUsername(username: string): boolean {
+  const usernameRegex = /^[a-z0-9._-]{3,30}$/
+  return usernameRegex.test(username) && /[a-z]/.test(username)
 }
 
 export function isValidPassword(password: string): boolean {

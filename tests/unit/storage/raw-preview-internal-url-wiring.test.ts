@@ -57,9 +57,8 @@ function extractToken(internalUrl: string): string {
 
 function session(userId = 'owner-user', roles: RoleName[] = [ROLES.PEGAWAI]) {
   return {
-    user: { id: userId, email: `${userId}@example.test` },
+    user: { id: userId, username: userId },
     userId,
-    email: `${userId}@example.test`,
     roles,
     activeRole: roles[0],
     sessionId: 'unit-test-session',

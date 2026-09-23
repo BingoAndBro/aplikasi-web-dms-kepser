@@ -3,11 +3,11 @@ import { ROLE_DISPLAY } from '#/lib/types/auth'
 
 interface UserMenuProps {
   userName?: string
-  email?: string
+  username?: string
   activeRole: RoleName
 }
 
-function getInitials(name?: string, email?: string): string {
+function getInitials(name?: string, username?: string): string {
   if (name) {
     const parts = name.split(' ')
     if (parts.length >= 2) {
@@ -15,20 +15,20 @@ function getInitials(name?: string, email?: string): string {
     }
     return name.substring(0, 2).toUpperCase()
   }
-  if (email) {
-    return email.substring(0, 2).toUpperCase()
+  if (username) {
+    return username.substring(0, 2).toUpperCase()
   }
   return '??'
 }
 
-export function UserMenu({ userName, email, activeRole }: UserMenuProps) {
-  const initials = getInitials(userName, email)
+export function UserMenu({ userName, username, activeRole }: UserMenuProps) {
+  const initials = getInitials(userName, username)
 
   return (
     <div className="flex items-center gap-3">
       <div className="hidden sm:flex flex-col items-end">
         <span className="text-sm font-medium text-white/90 leading-tight">
-          {userName || email?.split('@')[0] || 'User'}
+          {userName || username || 'User'}
         </span>
         <span className="text-xs text-white/60 leading-tight">
           {ROLE_DISPLAY[activeRole]}

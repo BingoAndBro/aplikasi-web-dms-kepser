@@ -9,7 +9,8 @@ export const userMetadataSchema = z.object({
 
 export const userProfilePayloadSchema = z.object({
   id: z.string(),
-  email: z.string(),
+  username: z.string(),
+  email: z.string().nullable(),
   metadata: userMetadataSchema,
   roles: roleArraySchema,
   activeRole: roleSchema.optional(),
@@ -40,7 +41,8 @@ export const userListResponseSchema = z.object({
 })
 
 export const createUserRequestBoundarySchema = z.object({
-  email: z.unknown(),
+  username: z.unknown(),
+  email: z.unknown().optional(),
   password: z.unknown(),
   nama_lengkap: z.unknown(),
   nip_nrp: z.unknown(),
@@ -49,6 +51,8 @@ export const createUserRequestBoundarySchema = z.object({
 })
 
 export const updateUserRequestBoundarySchema = z.object({
+  username: z.unknown().optional(),
+  email: z.unknown().optional(),
   nama_lengkap: z.unknown().optional(),
   nip_nrp: z.unknown().optional(),
   departemen: z.unknown().optional(),

@@ -401,9 +401,8 @@ describe('Ekspor Semua File (ZIP) buttons + dialog (/pegawai/laporan/saya, /pega
 
 function session() {
   return {
-    user: { id: USER_ID, email: 'user@example.test', userName: 'Pegawai Satu' },
+    user: { id: USER_ID, username: 'pegawai.satu', displayName: 'Pegawai Satu' },
     userId: USER_ID,
-    email: 'user@example.test',
     roles: ['PEGAWAI'],
     activeRole: 'PEGAWAI',
     sessionId: 'unit-test-session',

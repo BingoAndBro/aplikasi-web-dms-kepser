@@ -18,7 +18,7 @@ export function AppHeader({
   avatarUrl,
   canSwitchRole,
   displayName,
-  email,
+  username,
   handleLogout,
   handleRoleSwitch,
   initials,
@@ -40,7 +40,7 @@ export function AppHeader({
   avatarUrl?: string | null
   canSwitchRole: boolean
   displayName: string
-  email?: string
+  username?: string
   handleLogout: () => void | Promise<void>
   handleRoleSwitch: (role: RoleName) => void
   initials: string
@@ -103,7 +103,7 @@ export function AppHeader({
         <UserDropdown
           avatarUrl={avatarUrl}
           displayName={displayName}
-          email={email}
+          username={username}
           handleLogout={handleLogout}
           initials={initials}
           setUserDropdownOpen={setUserDropdownOpen}

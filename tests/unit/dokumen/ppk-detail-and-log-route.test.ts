@@ -216,10 +216,9 @@ function createSession(userId: string, roles: string[], activeRole: string) {
   return {
     user: {
       id: userId,
-      email: `${activeRole.toLowerCase()}@example.test`,
+      username: activeRole.toLowerCase(),
     },
     userId,
-    email: `${activeRole.toLowerCase()}@example.test`,
     roles,
     activeRole,
     sessionId: 'test-session-id',

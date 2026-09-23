@@ -7,7 +7,7 @@ import { UserAvatar } from '#/components/ui/UserAvatar'
 export function UserDropdown({
   avatarUrl,
   displayName,
-  email,
+  username,
   handleLogout,
   initials,
   setUserDropdownOpen,
@@ -15,7 +15,7 @@ export function UserDropdown({
 }: {
   avatarUrl?: string | null
   displayName: string
-  email?: string
+  username?: string
   handleLogout: () => void | Promise<void>
   initials: string
   setUserDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>
@@ -57,7 +57,9 @@ export function UserDropdown({
                 />
                 <div className="min-w-0">
                   <p className="truncate text-[17px] font-bold leading-5 text-text-strong">{displayName}</p>
-                  <p className="mt-1 truncate text-[14px] font-normal leading-4 text-brand-text-muted">{email}</p>
+                  {username && (
+                    <p className="mt-1 truncate text-[14px] font-normal leading-4 text-brand-text-muted">@{username}</p>
+                  )}
                 </div>
               </div>
             </div>

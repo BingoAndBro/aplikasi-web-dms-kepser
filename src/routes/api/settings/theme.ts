@@ -73,7 +73,7 @@ export const Route = createFileRoute('/api/settings/theme')({
               },
             })
 
-          console.log(`[settings-theme] ${session.email} mengubah tema aplikasi menjadi ${result.data.theme}`)
+          console.log(`[settings-theme] ${session.userId} mengubah tema aplikasi menjadi ${result.data.theme}`)
 
           return Response.json({ theme: result.data.theme })
         } catch (err) {

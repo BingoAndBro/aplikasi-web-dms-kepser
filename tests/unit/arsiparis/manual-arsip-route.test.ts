@@ -1994,10 +1994,9 @@ function createSession(roles: string[], userId: string) {
   return {
     user: {
       id: userId,
-      email: 'user@example.test',
+      username: 'user',
     },
     userId,
-    email: 'user@example.test',
     roles,
     activeRole: roles[0],
     sessionId: 'test-session-id',

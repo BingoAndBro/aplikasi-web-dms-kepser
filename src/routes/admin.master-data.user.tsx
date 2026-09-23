@@ -182,6 +182,7 @@ const userDialogBodyClassName =
 // ---------------------------------------------------------------------------
 
 interface CreateUserForm {
+  username: string
   email: string
   password: string
   confirmPassword: string
@@ -193,6 +194,8 @@ interface CreateUserForm {
 }
 
 interface EditUserForm {
+  username: string
+  email: string
   nama_lengkap: string
   nip_nrp: string
   departemen: string
@@ -201,6 +204,7 @@ interface EditUserForm {
 }
 
 const INITIAL_CREATE_FORM: CreateUserForm = {
+  username: '',
   email: '',
   password: '',
   confirmPassword: '',
@@ -212,6 +216,8 @@ const INITIAL_CREATE_FORM: CreateUserForm = {
 }
 
 const INITIAL_EDIT_FORM: EditUserForm = {
+  username: '',
+  email: '',
   nama_lengkap: '',
   nip_nrp: '',
   departemen: '',
@@ -272,6 +278,8 @@ function sameAssignments(a: ChairmanAssignment[], b: ChairmanAssignment[]) {
 
 function sameEditForm(a: EditUserForm, b: EditUserForm) {
   return (
+    a.username === b.username &&
+    a.email === b.email &&
     a.nama_lengkap === b.nama_lengkap &&
     a.nip_nrp === b.nip_nrp &&
     a.departemen === b.departemen &&
@@ -282,6 +290,7 @@ function sameEditForm(a: EditUserForm, b: EditUserForm) {
 
 function sameCreateForm(a: CreateUserForm, b: CreateUserForm) {
   return (
+    a.username === b.username &&
     a.email === b.email &&
     a.password === b.password &&
     a.confirmPassword === b.confirmPassword &&
@@ -435,7 +444,8 @@ function MasterUserPage() {
 
   const filteredUsers = users.filter(user => {
     const matchSearch = !search ||
-      user.email.toLowerCase().includes(search.toLowerCase()) ||
+      user.username.toLowerCase().includes(search.toLowerCase()) ||
+      (user.email?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
       user.metadata.nama_lengkap?.toLowerCase().includes(search.toLowerCase()) ||
       user.metadata.nip_nrp?.includes(search)
 
@@ -531,7 +541,7 @@ function MasterUserPage() {
 
   const getUserDisplayName = (userId: string) => {
     const user = users.find(item => item.id === userId)
-    return user?.metadata.nama_lengkap || user?.email || 'Ketua tim sebelumnya'
+    return user?.metadata.nama_lengkap || user?.username || 'Ketua tim sebelumnya'
   }
 
   const handleAddChairman = async (kegiatanId: string, userId: string) => {
@@ -589,6 +599,8 @@ function MasterUserPage() {
 
   const openEdit = async (user: UserWithRoles) => {
     const initialForm = {
+      username: user.username,
+      email: user.email || '',
       nama_lengkap: user.metadata.nama_lengkap || '',
       nip_nrp: user.metadata.nip_nrp || '',
       departemen: user.metadata.departemen || '',
@@ -787,7 +799,7 @@ function MasterUserPage() {
   // ---------------------------------------------------------------------------
 
   const handleCreate = async () => {
-    if (!createForm.email || !createForm.password || !createForm.nama_lengkap || !createForm.nip_nrp) {
+    if (!createForm.username || !createForm.password || !createForm.nama_lengkap || !createForm.nip_nrp) {
       notifyWarning('Harap lengkapi semua data yang diperlukan.')
       return
     }
@@ -805,7 +817,8 @@ function MasterUserPage() {
       const created = await apiMutation<{ user?: UserWithRoles }>('/api/users/', {
         method: 'POST',
         body: {
-          email: createForm.email,
+          username: createForm.username,
+          email: createForm.email || undefined,
           password: createForm.password,
           nama_lengkap: createForm.nama_lengkap,
           nip_nrp: createForm.nip_nrp,
@@ -854,7 +867,7 @@ function MasterUserPage() {
 
   const handleEdit = async () => {
     if (!selectedUser) return
-    if (!editForm.nama_lengkap || !editForm.nip_nrp) {
+    if (!editForm.username || !editForm.nama_lengkap || !editForm.nip_nrp) {
       notifyWarning('Harap lengkapi semua data yang diperlukan.')
       return
     }
@@ -864,6 +877,8 @@ function MasterUserPage() {
       await apiMutation(`/api/users/${selectedUser.id}`, {
         method: 'PATCH',
         body: {
+          username: editForm.username,
+          email: editForm.email,
           nama_lengkap: editForm.nama_lengkap,
           nip_nrp: editForm.nip_nrp,
           departemen: editForm.departemen || undefined,
@@ -1055,7 +1070,7 @@ function MasterUserPage() {
           label="Cari user"
           value={search}
           onChange={setSearch}
-          placeholder="Cari nama, email, atau NIP..."
+          placeholder="Cari nama, username, atau NIP..."
           resultText={`Total ${filteredUsers.length} User`}
         >
           <AdminFilterSelect
@@ -1126,12 +1141,12 @@ function MasterUserPage() {
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border border-outline-variant/20 shrink-0">
                           <span className="text-xs font-extrabold text-primary">
-                            {(user.metadata.nama_lengkap || user.email).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                            {(user.metadata.nama_lengkap || user.username).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                           </span>
                         </div>
                         <div>
                           <p className="text-sm font-bold text-on-surface">{user.metadata.nama_lengkap || '-'}</p>
-                          <p className="text-[10px] text-outline font-medium">{user.email}</p>
+                          <p className="text-[10px] text-outline font-medium">@{user.username}</p>
                           {user.metadata.nip_nrp && (
                             <p className="text-[10px] text-on-surface-variant font-medium">NIP: {user.metadata.nip_nrp}</p>
                           )}
@@ -1181,18 +1196,18 @@ function MasterUserPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1 transition-opacity">
-                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.email}`}>
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" onClick={() => openEdit(user)} aria-label={`Edit user ${user.metadata.nama_lengkap || user.username}`}>
                           <Edit2 size={20} strokeWidth={2.5} />
                         </Button>
-                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.email}`}>
+                        <Button size="icon-lg" variant="ghost" className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" onClick={() => openResetPassword(user)} aria-label={`Reset password user ${user.metadata.nama_lengkap || user.username}`}>
                           <KeyRound size={20} strokeWidth={2.5} />
                         </Button>
                         {user.isActive ? (
-                          <Button size="icon-lg" variant="ghost" onClick={() => openDeactivate(user)} className="size-9 rounded-xl text-black hover:bg-red-50 hover:text-red-600" aria-label={`Nonaktifkan user ${user.metadata.nama_lengkap || user.email}`}>
+                          <Button size="icon-lg" variant="ghost" onClick={() => openDeactivate(user)} className="size-9 rounded-xl text-black hover:bg-red-50 hover:text-red-600" aria-label={`Nonaktifkan user ${user.metadata.nama_lengkap || user.username}`}>
                             <UserX size={20} strokeWidth={2.5} />
                           </Button>
                         ) : (
-                          <Button size="icon-lg" variant="ghost" onClick={() => openActivate(user)} className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.email}`}>
+                          <Button size="icon-lg" variant="ghost" onClick={() => openActivate(user)} className="size-9 rounded-xl text-black hover:bg-brand-surface hover:text-brand-text" aria-label={`Aktifkan user ${user.metadata.nama_lengkap || user.username}`}>
                             <UserCheck size={20} strokeWidth={2.5} />
                           </Button>
                         )}
@@ -1235,7 +1250,19 @@ function MasterUserPage() {
               <h3 className={adminFormSectionTitleClassName}>Identitas User</h3>
               <div className={adminFormGridClassName}>
                 <div className="md:col-span-2">
-                  <label className={adminFormLabelClassName}>Email *</label>
+                  <label className={adminFormLabelClassName}>Username *</label>
+                  <Input
+                    value={createForm.username}
+                    onChange={e => setCreateForm(p => ({ ...p, username: e.target.value }))}
+                    placeholder="budi.santoso"
+                    className={adminFormFieldClassName}
+                  />
+                  <p className="mt-1 text-[11px] text-outline">
+                    3-30 karakter, huruf kecil/angka/./_/-, wajib mengandung minimal satu huruf.
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className={adminFormLabelClassName}>Email (opsional)</label>
                   <Input
                     type="email"
                     value={createForm.email}
@@ -1358,7 +1385,7 @@ function MasterUserPage() {
                   onChange={nextActive => requestAccountStatusChange('create', nextActive)}
                 />
                 <p className="text-sm font-semibold text-text-muted">
-                  User aktif dapat login menggunakan email BPS mereka.
+                  User aktif dapat login menggunakan username atau NIP mereka.
                 </p>
               </div>
             </section>
@@ -1409,8 +1436,26 @@ function MasterUserPage() {
               <h3 className={adminFormSectionTitleClassName}>Identitas User</h3>
               <div className={adminFormGridClassName}>
                 <div className="md:col-span-2">
-                  <label className={adminFormLabelClassName}>Email</label>
-                  <Input value={selectedUser?.email || ''} disabled className={adminFormFieldClassName + ' bg-slate-50 text-slate-500'} />
+                  <label className={adminFormLabelClassName}>Username *</label>
+                  <Input
+                    value={editForm.username}
+                    onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))}
+                    placeholder="budi.santoso"
+                    className={adminFormFieldClassName}
+                  />
+                  <p className="mt-1 text-[11px] text-outline">
+                    3-30 karakter, huruf kecil/angka/./_/-, wajib mengandung minimal satu huruf.
+                  </p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className={adminFormLabelClassName}>Email (opsional)</label>
+                  <Input
+                    type="email"
+                    value={editForm.email}
+                    onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
+                    placeholder="nama@bps.go.id"
+                    className={adminFormFieldClassName}
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <label className={adminFormLabelClassName}>Nama Lengkap *</label>
@@ -1533,7 +1578,7 @@ function MasterUserPage() {
                   onChange={nextActive => requestAccountStatusChange('edit', nextActive)}
                 />
                 <p className="text-sm font-semibold text-text-muted">
-                  User aktif dapat login menggunakan email BPS mereka.
+                  User aktif dapat login menggunakan username atau NIP mereka.
                 </p>
               </div>
             </section>
@@ -1580,7 +1625,7 @@ function MasterUserPage() {
           </DialogHeader>
           <div className={adminDialogBodyClassName}>
             <p className="text-sm leading-6 text-text-strong">
-              Reset password untuk user <strong>{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong>.
+              Reset password untuk user <strong>{selectedUser?.metadata.nama_lengkap || selectedUser?.username}</strong>.
             </p>
             <div className={adminFormGridClassName}>
               <div>
@@ -1668,7 +1713,7 @@ function MasterUserPage() {
         onConfirm={handleDeactivate}
         loading={actionLoading}
       >
-        User <strong className="text-text-strong">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan dinonaktifkan.
+        User <strong className="text-text-strong">{selectedUser?.metadata.nama_lengkap || selectedUser?.username}</strong> akan dinonaktifkan.
         User tidak akan bisa login lagi. Role user tetap tersimpan.
       </AdminConfirmationDialog>
 
@@ -1683,7 +1728,7 @@ function MasterUserPage() {
         onConfirm={handleActivate}
         loading={actionLoading}
       >
-        User <strong className="text-text-strong">{selectedUser?.metadata.nama_lengkap || selectedUser?.email}</strong> akan diaktifkan kembali.
+        User <strong className="text-text-strong">{selectedUser?.metadata.nama_lengkap || selectedUser?.username}</strong> akan diaktifkan kembali.
         User bisa login lagi.
       </AdminConfirmationDialog>
     </PageLayout>

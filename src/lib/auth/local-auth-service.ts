@@ -1,5 +1,5 @@
 // Server-only module. Do not import from client components.
-import { eq } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 
 import { db } from '#/db/client'
 import { roles as rolesTable, userRoles, users } from '#/db/schema/auth'
@@ -15,8 +15,8 @@ import { generateSessionToken, hashSessionToken } from './session-token'
 
 export type LocalAuthUser = {
   id: string
-  email: string
-  userName?: string
+  username: string
+  displayName?: string
 }
 
 export type LocalLoginResult =
@@ -36,7 +36,7 @@ export type LocalLoginResult =
   }
 
 type LoginOptions = {
-  email: string
+  identifier: string
   password: string
   rememberMe?: boolean
   userAgent?: string | null
@@ -46,7 +46,7 @@ type LoginOptions = {
 type UserWithRoles = {
   user: {
     id: string
-    email: string
+    username: string
     passwordHash: string
     displayName: string | null
     namaLengkap: string | null
@@ -55,13 +55,13 @@ type UserWithRoles = {
   roles: RoleName[]
 }
 
-const GENERIC_CREDENTIAL_ERROR = 'Email atau password salah'
+const GENERIC_CREDENTIAL_ERROR = 'Username/NIP atau password salah'
 
 export async function loginWithLocalCredentials(
   options: LoginOptions,
 ): Promise<LocalLoginResult> {
-  const email = normalizeEmail(options.email)
-  const found = await findUserWithRolesByEmail(email)
+  const identifier = normalizeIdentifier(options.identifier)
+  const found = await findUserWithRolesByIdentifier(identifier)
 
   if (!found) {
     return invalidCredentials()
@@ -117,27 +117,31 @@ export async function loginWithLocalCredentials(
 
 export function toLocalAuthUser(user: {
   id: string
-  email: string
+  username: string
   displayName?: string | null
   namaLengkap?: string | null
 }): LocalAuthUser {
   return {
     id: user.id,
-    email: user.email,
-    userName: user.displayName ?? user.namaLengkap ?? undefined,
+    username: user.username,
+    displayName: user.displayName ?? user.namaLengkap ?? undefined,
   }
 }
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase()
+function normalizeIdentifier(identifier: string): string {
+  return identifier.trim().toLowerCase()
 }
 
-async function findUserWithRolesByEmail(email: string): Promise<UserWithRoles | null> {
+// A single OR query is safe here because username and nip_nrp are each
+// unique-indexed and their namespaces are disjoint by construction
+// (isValidUsername requires at least one letter; NIP is numeric-only), so
+// this can never match more than one row.
+async function findUserWithRolesByIdentifier(identifier: string): Promise<UserWithRoles | null> {
   const rows = await db
     .select({
       user: {
         id: users.id,
-        email: users.email,
+        username: users.username,
         passwordHash: users.passwordHash,
         displayName: users.displayName,
         namaLengkap: users.namaLengkap,
@@ -148,7 +152,7 @@ async function findUserWithRolesByEmail(email: string): Promise<UserWithRoles | 
     .from(users)
     .leftJoin(userRoles, eq(users.id, userRoles.userId))
     .leftJoin(rolesTable, eq(userRoles.roleId, rolesTable.id))
-    .where(eq(users.email, email))
+    .where(or(eq(users.username, identifier), eq(users.nipNrp, identifier)))
 
   if (rows.length === 0) return null
 

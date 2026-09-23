@@ -37,10 +37,10 @@ export const Route = createFileRoute('/api/auth/login')({
           }, { status: 400 })
         }
 
-        const { email, password } = result.data
+        const { identifier, password } = result.data
         const ipAddress = getRequestIpAddress(request)
         const rateLimitKey = createLoginRateLimitKey({
-          identifier: email,
+          identifier,
           ipAddress,
         })
         const rateLimit = checkLoginRateLimit(rateLimitKey)
@@ -50,7 +50,7 @@ export const Route = createFileRoute('/api/auth/login')({
         }
 
         const loginResult = await loginWithLocalCredentials({
-          email,
+          identifier,
           password,
           userAgent: request.headers.get('user-agent'),
           ipAddress,

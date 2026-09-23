@@ -376,10 +376,9 @@ function createSession(roles: string[], activeRole: string) {
   return {
     user: {
       id: '11111111-1111-4111-8111-111111111111',
-      email: 'user@example.test',
+      username: 'user',
     },
     userId: '11111111-1111-4111-8111-111111111111',
-    email: 'user@example.test',
     roles,
     activeRole,
     sessionId: 'test-session-id',
@@ -449,7 +448,7 @@ function createRow(overrides: Partial<Record<string, unknown>> = {}) {
     nominal_realisasi: '1000.00',
     pengaju_display_name: 'Pegawai Test',
     pengaju_nama_lengkap: 'Pegawai Test Lengkap',
-    pengaju_email: 'pegawai@example.test',
+    pengaju_username: 'pegawai.test',
     ...overrides,
   }
 }

@@ -64,7 +64,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
           // not leaked through a different status code.
           if (assignments.length === 0) {
             const response = await streamDocumentZip([], {
-              requesterLabel: session.user.userName ?? session.user.email,
+              requesterLabel: session.user.displayName ?? session.user.username,
               requesterRole: 'PEGAWAI',
               sourceDescription: 'Laporan Kegiatan (filter aktif klien)',
               filename: buildLaporanExportZipFilename('Laporan_Kegiatan', 'Kegiatan'),
@@ -141,7 +141,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
           const entries = await buildLaporanZipEntries(rows)
 
           const response = await streamDocumentZip(entries, {
-            requesterLabel: session.user.userName ?? session.user.email,
+            requesterLabel: session.user.displayName ?? session.user.username,
             requesterRole: 'PEGAWAI',
             sourceDescription: 'Laporan Kegiatan (filter aktif klien)',
             filename: buildLaporanExportZipFilename('Laporan_Kegiatan', resolveKegiatanFilenamePart(rows)),

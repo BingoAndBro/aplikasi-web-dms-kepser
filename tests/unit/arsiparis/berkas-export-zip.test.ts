@@ -276,9 +276,8 @@ describe('Ekspor ZIP button + dialog (/kasubag/berkas/$id)', () => {
 
 function session(roles: string[] = ['KEPALA_SUB_BAGIAN_UMUM']) {
   return {
-    user: { id: 'actor-id', email: 'actor@example.test', userName: 'Actor' },
+    user: { id: 'actor-id', username: 'actor', displayName: 'Actor' },
     userId: 'actor-id',
-    email: 'actor@example.test',
     roles,
     activeRole: roles[0],
     sessionId: 'unit-test-session',

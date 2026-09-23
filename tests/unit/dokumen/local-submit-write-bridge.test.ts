@@ -67,7 +67,7 @@ describe('local submit write bridge helper foundation', () => {
       ok: true,
       actor: {
         userId: ACTOR_ID,
-        email: 'pegawai@example.test',
+        username: 'pegawai.local',
         displayName: 'Pegawai Lokal',
         roles: ['PEGAWAI', 'PPK'],
         activeRole: 'PEGAWAI',
@@ -402,16 +402,15 @@ function lampiran(kelengkapanId: string): LampiranUrl {
 }
 
 function session(overrides: Partial<LocalServerSession & { userName?: string }> = {}): LocalServerSession {
-  const userName = overrides.userName ?? 'Pegawai Local'
+  const displayName = overrides.userName ?? 'Pegawai Local'
 
   return {
     user: {
       id: ACTOR_ID,
-      email: 'pegawai@example.test',
-      userName,
+      username: 'pegawai.local',
+      displayName,
     },
     userId: ACTOR_ID,
-    email: 'pegawai@example.test',
     roles: ['PEGAWAI'],
     activeRole: 'PEGAWAI',
     sessionId: SESSION_ID,

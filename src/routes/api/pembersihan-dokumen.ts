@@ -10,11 +10,11 @@ import { computeDokumenAging, NON_MATERIAL_STALE_DAYS } from '#/lib/dokumen/pemb
 function displayUserName(user: {
   displayName: string | null
   namaLengkap: string | null
-  email: string | null
+  username: string | null
 } | null): string {
   return user?.displayName
     ?? user?.namaLengkap
-    ?? user?.email?.split('@')[0]
+    ?? user?.username
     ?? 'Unknown'
 }
 
@@ -65,7 +65,7 @@ export const Route = createFileRoute('/api/pembersihan-dokumen')({
               lampiran_urls: dokumenTransaksi.lampiranUrls,
               pengaju_display_name: users.displayName,
               pengaju_nama_lengkap: users.namaLengkap,
-              pengaju_email: users.email,
+              pengaju_username: users.username,
             })
             .from(dokumenTransaksi)
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
@@ -101,7 +101,7 @@ export const Route = createFileRoute('/api/pembersihan-dokumen')({
               pengaju_nama: displayUserName({
                 displayName: row.pengaju_display_name,
                 namaLengkap: row.pengaju_nama_lengkap,
-                email: row.pengaju_email,
+                username: row.pengaju_username,
               }),
               kegiatan_jenis_id: row.kegiatan_jenis_id,
               kegiatan_nama: row.kegiatan_nama ?? undefined,

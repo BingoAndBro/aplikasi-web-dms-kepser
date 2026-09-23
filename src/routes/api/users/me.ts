@@ -33,6 +33,7 @@ export const Route = createFileRoute('/api/users/me')({
 
         const [profile] = await db
           .select({
+            email: users.email,
             namaLengkap: users.namaLengkap,
             nipNrp: users.nipNrp,
             departemen: users.departemen,
@@ -68,7 +69,8 @@ export const Route = createFileRoute('/api/users/me')({
         return Response.json(parseUserProfileResponse({
           user: {
             id: session.user.id,
-            email: session.user.email,
+            username: session.user.username,
+            email: profile.email,
             metadata: parseUserMetadata({
               nama_lengkap: profile.namaLengkap,
               nip_nrp: profile.nipNrp,

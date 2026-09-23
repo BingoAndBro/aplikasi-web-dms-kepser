@@ -10,7 +10,7 @@ import {
   normalizeAdminRolePayload,
 } from '#/lib/users/local-user-mutations'
 import { createUserRequestBoundarySchema } from '#/lib/schemas/user'
-import { isValidEmail, isValidPassword, isValidNip } from '#/lib/types/user'
+import { isValidEmail, isValidPassword, isValidNip, isValidUsername } from '#/lib/types/user'
 import type { RoleName } from '#/lib/types/auth'
 
 // ---------------------------------------------------------------------------
@@ -70,10 +70,15 @@ export const Route = createFileRoute('/api/users/')({
           return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
         }
 
-        const { email, password, nama_lengkap, nip_nrp, departemen, roles } = parsedBody.data as any
+        const { username, email, password, nama_lengkap, nip_nrp, departemen, roles } = parsedBody.data as any
 
         // Validation
-        if (typeof email !== 'string' || !email || !isValidEmail(email)) {
+        if (typeof username !== 'string' || !isValidUsername(username.trim().toLowerCase())) {
+          return Response.json({
+            error: 'Username harus 3-30 karakter, huruf kecil/angka/./_/- dan mengandung minimal satu huruf',
+          }, { status: 400 })
+        }
+        if (email !== undefined && email !== '' && (typeof email !== 'string' || !isValidEmail(email))) {
           return Response.json({ error: 'Email tidak valid' }, { status: 400 })
         }
         if (typeof password !== 'string' || !password || !isValidPassword(password)) {
@@ -106,7 +111,8 @@ export const Route = createFileRoute('/api/users/')({
 
         try {
           const result = await createLocalUserWithRoles({
-            email,
+            username: username.trim().toLowerCase(),
+            email: email && email !== '' ? email : undefined,
             password,
             nama_lengkap: nama_lengkap.trim(),
             nip_nrp: nip_nrp.trim(),

@@ -3,19 +3,14 @@ import { useState, useEffect } from 'react'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { setClientAuthState } from '#/lib/auth-state'
 import { getDefaultRouteForRoles } from '#/lib/constants/routes'
-import { z } from 'zod'
+import { loginSchema } from '#/lib/schemas/auth'
 import type { RoleName } from '#/lib/types/auth'
-
-const loginSchema = z.object({
-  email: z.string().email('Format email tidak valid'),
-  password: z.string().min(1, 'Password wajib diisi'),
-})
 
 type LoginResponse = {
   user: {
     id: string
-    email: string
-    userName?: string
+    username: string
+    displayName?: string
   }
   roles: RoleName[]
   activeRole: RoleName
@@ -31,7 +26,7 @@ function LoginPage() {
   const inactiveReason = searchParams.get('reason') === 'inactive'
   const passwordChanged = searchParams.get('password_changed') === '1'
 
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,7 +60,7 @@ function LoginPage() {
     setError(null)
     setSuccessMessage(null)
 
-    const result = loginSchema.safeParse({ email, password })
+    const result = loginSchema.safeParse({ identifier, password })
     if (!result.success) {
       setError(result.error.issues[0].message)
       return
@@ -75,7 +70,7 @@ function LoginPage() {
     try {
       const data = await apiMutation<LoginResponse>('/auth/login', {
         body: {
-          email: result.data.email,
+          identifier: result.data.identifier,
           password: result.data.password,
         },
       })
@@ -83,7 +78,7 @@ function LoginPage() {
       setClientAuthState({
         status: 'authenticated',
         userId: data.user.id,
-        email: data.user.email,
+        username: data.user.username,
         roles: data.roles,
         activeRole: data.activeRole,
         isReady: true,
@@ -93,7 +88,7 @@ function LoginPage() {
 
     } catch (error) {
       if (error instanceof ApiError) {
-        setError(error.status === 401 ? 'Email atau password salah' : error.message)
+        setError(error.status === 401 ? 'Username/NIP atau password salah' : error.message)
         return
       }
 
@@ -128,7 +123,7 @@ function LoginPage() {
                 Masuk ke Sistem
               </h1>
               <p className="text-on-surface-variant text-xs mt-1 text-center">
-                Gunakan akun BPS Anda untuk mengakses DMS
+                Masuk dengan username atau NIP Anda
               </p>
             </div>
 
@@ -148,15 +143,15 @@ function LoginPage() {
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-extrabold text-outline uppercase tracking-widest">
-                  Email
+                  Username atau NIP
                 </label>
                 <input
-                  type="email"
-                  placeholder="nama@bps.go.id"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="Masukkan username/NIP"
+                  value={identifier}
+                  onChange={e => setIdentifier(e.target.value)}
                   disabled={isLoading}
-                  autoComplete="email"
+                  autoComplete="username"
                   className="w-full px-4 py-3 bg-surface-container/40 border border-outline-variant/30 rounded-xl text-sm text-on-surface placeholder:text-outline/40 focus:ring-2 focus:ring-primary/40 focus:border-primary/40 outline-none transition-all"
                 />
               </div>

@@ -62,8 +62,8 @@ export const Route = createFileRoute('/api/auth/session')({
         return Response.json({
           session: {
             userId: currentSession.user.id,
-            email: currentSession.user.email,
-            userName: toLocalAuthUser(currentSession.user).userName,
+            username: currentSession.user.username,
+            displayName: toLocalAuthUser(currentSession.user).displayName,
           },
           roles: currentSession.roles,
           activeRole,

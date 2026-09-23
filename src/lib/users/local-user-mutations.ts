@@ -22,7 +22,8 @@ export {
 } from './role-assignment'
 
 export type CreateLocalUserPayload = {
-  email: string
+  username: string
+  email?: string
   password: string
   nama_lengkap: string
   nip_nrp: string
@@ -31,6 +32,8 @@ export type CreateLocalUserPayload = {
 }
 
 export type UpdateLocalUserPayload = {
+  username?: string
+  email?: string
   nama_lengkap?: string
   nip_nrp?: string
   departemen?: string
@@ -64,6 +67,7 @@ export async function createLocalUserWithRoles(
     return { error: 'ADMIN tidak boleh digabung dengan role lain', status: 400 }
   }
 
+  const username = normalizeIdentifier(payload.username)
   const email = normalizeEmail(payload.email)
   const passwordHash = await hashPassword(payload.password)
   const now = new Date()
@@ -74,12 +78,13 @@ export async function createLocalUserWithRoles(
       const [created] = await tx
         .insert(users)
         .values({
+          username,
           email,
           passwordHash,
           passwordHashAlgorithm: PASSWORD_HASH_ALGORITHM,
           displayName: payload.nama_lengkap,
           namaLengkap: payload.nama_lengkap,
-          nipNrp: payload.nip_nrp,
+          nipNrp: normalizeNip(payload.nip_nrp) ?? null,
           departemen: payload.departemen ?? null,
           metadata: toProfileMetadata(payload),
           isActive: true,
@@ -106,8 +111,9 @@ export async function createLocalUserWithRoles(
       return { error: (error as Error).message, status: 400 }
     }
 
-    if (isUniqueEmailError(error)) {
-      return { error: 'Email sudah terdaftar', status: 409 }
+    const uniqueViolation = mapUniqueViolation(error)
+    if (uniqueViolation) {
+      return uniqueViolation
     }
 
     console.error('[local-user-mutations] createLocalUserWithRoles error:', toSafeErrorLog(error))
@@ -140,6 +146,8 @@ export async function updateLocalUserWithRoles(
       const [existing] = await tx
         .select({
           id: users.id,
+          username: users.username,
+          email: users.email,
           namaLengkap: users.namaLengkap,
           nipNrp: users.nipNrp,
           departemen: users.departemen,
@@ -172,9 +180,19 @@ export async function updateLocalUserWithRoles(
         }
       }
 
+      const nextNipNrp = payload.nip_nrp !== undefined
+        ? normalizeNip(payload.nip_nrp)
+        : existing.nipNrp
+      const nextUsername = payload.username !== undefined
+        ? normalizeIdentifier(payload.username)
+        : existing.username
+      const nextEmail = payload.email !== undefined
+        ? normalizeEmail(payload.email)
+        : existing.email
+
       const nextProfile = {
         nama_lengkap: payload.nama_lengkap ?? existing.namaLengkap ?? undefined,
-        nip_nrp: payload.nip_nrp ?? existing.nipNrp ?? undefined,
+        nip_nrp: nextNipNrp ?? undefined,
         departemen: payload.departemen ?? existing.departemen ?? undefined,
       }
       const nextMetadata = mergeProfileMetadata(existing.metadata, nextProfile)
@@ -182,9 +200,11 @@ export async function updateLocalUserWithRoles(
       await tx
         .update(users)
         .set({
+          username: nextUsername,
+          email: nextEmail,
           displayName: payload.nama_lengkap ?? existing.namaLengkap,
           namaLengkap: payload.nama_lengkap ?? existing.namaLengkap,
-          nipNrp: payload.nip_nrp ?? existing.nipNrp,
+          nipNrp: nextNipNrp,
           departemen: payload.departemen ?? existing.departemen,
           metadata: nextMetadata,
           updatedAt: new Date(),
@@ -212,7 +232,12 @@ export async function updateLocalUserWithRoles(
       return { error: (error as Error).message, status: 400 }
     }
 
-    console.error('[local-user-mutations] updateLocalUserWithRoles error:', error)
+    const uniqueViolation = mapUniqueViolation(error)
+    if (uniqueViolation) {
+      return uniqueViolation
+    }
+
+    console.error('[local-user-mutations] updateLocalUserWithRoles error:', toSafeErrorLog(error))
     return { error: 'Gagal mengupdate user', status: 500 }
   }
 }
@@ -305,8 +330,20 @@ export async function deactivateLocalUser(
   return {}
 }
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase()
+function normalizeIdentifier(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function normalizeEmail(email: string | undefined): string | null {
+  if (email === undefined) return null
+  const trimmed = email.trim().toLowerCase()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function normalizeNip(nip: string | undefined): string | null {
+  if (nip === undefined) return null
+  const trimmed = nip.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 function toProfileMetadata(profile: {
@@ -428,14 +465,27 @@ async function replaceUserRoles(
   )
 }
 
-function isUniqueEmailError(error: unknown): boolean {
-  return Boolean(
-    error
-    && typeof error === 'object'
-    && 'code' in error
-    && (error as { code?: string }).code === '23505'
-    && String((error as { constraint?: string }).constraint ?? '').includes('auth_users_email_unique'),
-  )
+function mapUniqueViolation(error: unknown): { error: string; status: number } | null {
+  if (!error || typeof error !== 'object' || !('code' in error)) {
+    return null
+  }
+
+  const code = (error as { code?: string }).code
+  const constraint = String((error as { constraint?: string }).constraint ?? '')
+
+  if (code === '23505' && constraint.includes('auth_users_username_unique')) {
+    return { error: 'Username sudah digunakan', status: 409 }
+  }
+
+  if (code === '23505' && constraint.includes('auth_users_nip_nrp_unique')) {
+    return { error: 'NIP/NRP sudah terdaftar', status: 409 }
+  }
+
+  if (code === '23514' && constraint.includes('auth_users_username_format_check')) {
+    return { error: 'Format username tidak valid', status: 400 }
+  }
+
+  return null
 }
 
 function isInvalidRoleError(error: unknown): boolean {

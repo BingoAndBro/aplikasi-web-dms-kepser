@@ -97,7 +97,7 @@ export const Route = createFileRoute('/api/dokumen/$id/log')({
               user_id: logAktivitas.userId,
               user_display_name: users.displayName,
               user_nama_lengkap: users.namaLengkap,
-              user_email: users.email,
+              user_username: users.username,
             })
             .from(logAktivitas)
             .leftJoin(users, eq(logAktivitas.userId, users.id))
@@ -111,8 +111,8 @@ export const Route = createFileRoute('/api/dokumen/$id/log')({
             stepUrutan: log.step_urutan,
             createdAt: log.timestamp,
             userId: log.user_id,
-            userNama: log.user_display_name ?? log.user_nama_lengkap ?? log.user_email ?? 'Unknown',
-            userEmail: log.user_email ?? '',
+            userNama: log.user_display_name ?? log.user_nama_lengkap ?? log.user_username ?? 'Unknown',
+            userUsername: log.user_username ?? '',
           }))
 
           return Response.json({ logs: formattedLogs })

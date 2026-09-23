@@ -39,10 +39,9 @@ describe('/api/upload local route implementation', () => {
     mocks.getLocalServerSession.mockResolvedValue({
       user: {
         id: OWNER_ID,
-        email: 'pegawai@example.test',
+        username: 'pegawai',
       },
       userId: OWNER_ID,
-      email: 'pegawai@example.test',
       roles: ['PEGAWAI'],
       activeRole: 'PEGAWAI',
       sessionId: 'test-session-id',

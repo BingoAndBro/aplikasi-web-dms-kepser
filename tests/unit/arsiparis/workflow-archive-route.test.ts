@@ -354,10 +354,9 @@ function createSession(roles: string[]) {
   return {
     user: {
       id: SESSION_USER_ID,
-      email: 'kasubag@example.test',
+      username: 'kasubag',
     },
     userId: SESSION_USER_ID,
-    email: 'kasubag@example.test',
     roles,
     activeRole: roles[0],
     sessionId: 'test-session-id',

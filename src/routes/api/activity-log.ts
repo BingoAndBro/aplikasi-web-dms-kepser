@@ -29,11 +29,11 @@ type ActivityLogEntry = {
 function displayUserName(user: {
   displayName: string | null
   namaLengkap: string | null
-  email: string | null
+  username: string | null
 } | null): string {
   return user?.displayName
     ?? user?.namaLengkap
-    ?? user?.email?.split('@')[0]
+    ?? user?.username
     ?? 'Unknown'
 }
 
@@ -83,7 +83,7 @@ export const Route = createFileRoute('/api/activity-log')({
               user_id: logAktivitas.userId,
               user_display_name: users.displayName,
               user_nama_lengkap: users.namaLengkap,
-              user_email: users.email,
+              user_username: users.username,
             })
             .from(logAktivitas)
             .innerJoin(dokumenTransaksi, eq(logAktivitas.dokumenId, dokumenTransaksi.id))
@@ -103,7 +103,7 @@ export const Route = createFileRoute('/api/activity-log')({
             userNama: displayUserName({
               displayName: row.user_display_name,
               namaLengkap: row.user_nama_lengkap,
-              email: row.user_email,
+              username: row.user_username,
             }),
             role: resolveAksiRole(row.aksi, {
               actorId: row.user_id,
@@ -128,7 +128,7 @@ export const Route = createFileRoute('/api/activity-log')({
               user_id: berkasArsipActivity.actorUserId,
               user_display_name: users.displayName,
               user_nama_lengkap: users.namaLengkap,
-              user_email: users.email,
+              user_username: users.username,
             })
             .from(berkasArsipActivity)
             .innerJoin(berkasArsip, eq(berkasArsipActivity.berkasId, berkasArsip.id))
@@ -153,7 +153,7 @@ export const Route = createFileRoute('/api/activity-log')({
               ? displayUserName({
                 displayName: row.user_display_name,
                 namaLengkap: row.user_nama_lengkap,
-                email: row.user_email,
+                username: row.user_username,
               })
               : 'Sistem',
             // Every berkas_arsip_activity write path is Kasubag-gated — see

@@ -3,7 +3,7 @@ import { ROLE_NAMES } from '../constants/roles'
 
 // Login
 export const loginSchema = z.object({
-  email: z.string().email('Format email tidak valid'),
+  identifier: z.string().trim().min(1, 'Username atau NIP wajib diisi'),
   password: z.string().min(1, 'Password wajib diisi'),
 })
 export type LoginInput = z.infer<typeof loginSchema>
@@ -21,8 +21,8 @@ export const roleArraySchema = z.array(roleSchema)
 export const sessionResponseSchema = z.object({
   session: z.object({
     userId: z.string(),
-    email: z.string(),
-    userName: z.string().optional(),
+    username: z.string(),
+    displayName: z.string().optional(),
   }).nullable(),
   roles: roleArraySchema,
   activeRole: z.string().nullable(),

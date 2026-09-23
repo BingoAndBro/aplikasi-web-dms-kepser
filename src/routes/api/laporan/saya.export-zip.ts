@@ -118,10 +118,10 @@ export const Route = createFileRoute('/api/laporan/saya/export-zip')({
           const entries = await buildLaporanZipEntries(rows)
 
           const response = await streamDocumentZip(entries, {
-            requesterLabel: session.user.userName ?? session.user.email,
+            requesterLabel: session.user.displayName ?? session.user.username,
             requesterRole: 'PEGAWAI',
             sourceDescription: 'Laporan Saya (filter aktif klien)',
-            filename: buildLaporanExportZipFilename('Laporan_Saya', session.user.userName ?? session.user.id),
+            filename: buildLaporanExportZipFilename('Laporan_Saya', session.user.displayName ?? session.user.username),
           })
 
           console.info('[laporan/saya.export-zip] export completed', {

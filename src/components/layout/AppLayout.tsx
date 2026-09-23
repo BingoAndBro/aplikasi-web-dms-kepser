@@ -40,13 +40,13 @@ function clearAppState() {
   clearClientAuthState('unauthenticated', true)
 }
 
-function getInitials(name?: string, email?: string): string {
+function getInitials(name?: string, username?: string): string {
   if (name) {
     const parts = name.split(' ')
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
     return name.substring(0, 2).toUpperCase()
   }
-  if (email) return email.substring(0, 2).toUpperCase()
+  if (username) return username.substring(0, 2).toUpperCase()
   return '??'
 }
 
@@ -58,8 +58,8 @@ type ChairmanStatusResponse = {
 type AuthSessionResponse = {
   session: {
     userId: string
-    email: string
-    userName?: string
+    username: string
+    displayName?: string
   } | null
   roles: RoleName[]
   activeRole: RoleName | null
@@ -67,7 +67,7 @@ type AuthSessionResponse = {
 
 type CurrentUserProfileResponse = {
   user: {
-    email: string
+    username: string
     metadata: {
       nama_lengkap?: string
     }
@@ -88,7 +88,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [userRoles, setUserRoles] = React.useState<RoleName[]>([])
   const [activeRole, setActiveRole] = React.useState<RoleName>(ROLES.PEGAWAI)
   const [userName, setUserName] = React.useState<string | undefined>()
-  const [email, setEmail] = React.useState<string | undefined>()
+  const [username, setUsername] = React.useState<string | undefined>()
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [chairmanKegiatan, setChairmanKegiatan] = React.useState<{ id: string; nama: string }[]>([])
@@ -114,7 +114,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     try {
       const profileData = await apiFetch<CurrentUserProfileResponse>('/users/me/')
       setUserName(profileData.user.metadata.nama_lengkap)
-      setEmail(profileData.user.email)
+      setUsername(profileData.user.username)
       setAvatarUrl(profileData.user.avatar_url ?? null)
     } catch (err) {
       setAvatarUrl(null)
@@ -136,7 +136,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       setUserRoles([])
       setActiveRole(ROLES.PEGAWAI)
       setUserName(undefined)
-      setEmail(undefined)
+      setUsername(undefined)
       setAvatarUrl(null)
       setHasSession(false)
       setChairmanKegiatan([])
@@ -149,7 +149,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       setUserRoles([])
       setActiveRole(ROLES.PEGAWAI)
       setUserName(undefined)
-      setEmail(undefined)
+      setUsername(undefined)
       setAvatarUrl(null)
       setHasSession(false)
       setChairmanKegiatan([])
@@ -158,8 +158,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     setHasSession(true)
-    setUserName(data.session.userName)
-    setEmail(data.session.email)
+    setUserName(data.session.displayName)
+    setUsername(data.session.username)
     setAvatarUrl(null)
     setChairmanKegiatan([])
     setStaleNonMaterialCount(0)
@@ -183,7 +183,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     const nextAuthState = {
       status: 'authenticated',
       userId: data.session.userId,
-      email: data.session.email,
+      username: data.session.username,
       roles: data.roles,
       activeRole: data.activeRole,
       isReady: true,
@@ -361,14 +361,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     setUserRoles([]); setActiveRole(ROLES.PEGAWAI)
-    setUserName(undefined); setEmail(undefined); setAvatarUrl(null)
+    setUserName(undefined); setUsername(undefined); setAvatarUrl(null)
     setHasSession(false); clearAppState()
     window.location.href = ROUTES.LOGIN
   }
 
   const isAdmin = activeRole === ROLES.ADMIN
-  const initials = getInitials(userName, email)
-  const displayName = userName || email?.split('@')[0] || 'User'
+  const initials = getInitials(userName, username)
+  const displayName = userName || username || 'User'
   const canSwitchRole = userRoles.length > 1 && !isAdmin
 
   if (isLoading) {
@@ -434,7 +434,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             avatarUrl={avatarUrl}
             canSwitchRole={canSwitchRole}
             displayName={displayName}
-            email={email}
+            username={username}
             handleLogout={handleLogout}
             handleRoleSwitch={handleRoleSwitch}
             initials={initials}

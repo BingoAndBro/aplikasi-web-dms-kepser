@@ -69,7 +69,7 @@ const laporanKinerjaResponseSchema = z.object({
 type UserDisplayFields = {
   displayName: string | null
   namaLengkap: string | null
-  email: string | null
+  username: string | null
 }
 
 function normalizeNumericValue(value: string | number | null): number | null {
@@ -83,7 +83,7 @@ function normalizeNumericValue(value: string | number | null): number | null {
 function displayUserName(user: UserDisplayFields): string {
   return user.displayName
     ?? user.namaLengkap
-    ?? user.email?.split('@')[0]
+    ?? user.username
     ?? 'Unknown'
 }
 
@@ -197,7 +197,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
               pengaju_display_name: users.displayName,
               pengaju_nama_lengkap: users.namaLengkap,
-              pengaju_email: users.email,
+              pengaju_username: users.username,
             })
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
@@ -233,7 +233,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
               pengaju_nama: displayUserName({
                 displayName: row.pengaju_display_name,
                 namaLengkap: row.pengaju_nama_lengkap,
-                email: row.pengaju_email,
+                username: row.pengaju_username,
               }),
               created_at: isoDateString(row.created_at),
               updated_at: isoDateString(row.updated_at),
