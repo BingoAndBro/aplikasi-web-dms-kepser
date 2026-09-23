@@ -141,6 +141,7 @@ import { Route as ApiUsersMeKetuaTimRouteImport } from './routes/api/users/me/ke
 import { Route as ApiUsersMeChangePasswordRouteImport } from './routes/api/users/me/change-password'
 import { Route as ApiUsersIdResetPasswordRouteImport } from './routes/api/users/$id/reset-password'
 import { Route as ApiUsersIdDeactivateRouteImport } from './routes/api/users/$id/deactivate'
+import { Route as ApiUsersIdAvatarRouteImport } from './routes/api/users/$id/avatar'
 import { Route as ApiUsersIdActivateRouteImport } from './routes/api/users/$id/activate'
 import { Route as ApiPpspmDokumenIdRouteImport } from './routes/api/ppspm/dokumen/$id'
 import { Route as ApiPpkResubmitIdRouteImport } from './routes/api/ppk/resubmit/$id'
@@ -852,6 +853,11 @@ const ApiUsersIdDeactivateRoute = ApiUsersIdDeactivateRouteImport.update({
   path: '/deactivate',
   getParentRoute: () => ApiUsersIdRoute,
 } as any)
+const ApiUsersIdAvatarRoute = ApiUsersIdAvatarRouteImport.update({
+  id: '/avatar',
+  path: '/avatar',
+  getParentRoute: () => ApiUsersIdRoute,
+} as any)
 const ApiUsersIdActivateRoute = ApiUsersIdActivateRouteImport.update({
   id: '/activate',
   path: '/activate',
@@ -1198,6 +1204,7 @@ export interface FileRoutesByFullPath {
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
   '/api/ppspm/dokumen/$id': typeof ApiPpspmDokumenIdRouteWithChildren
   '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
+  '/api/users/$id/avatar': typeof ApiUsersIdAvatarRoute
   '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
   '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
   '/api/users/me/change-password': typeof ApiUsersMeChangePasswordRoute
@@ -1361,6 +1368,7 @@ export interface FileRoutesByTo {
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
   '/api/ppspm/dokumen/$id': typeof ApiPpspmDokumenIdRouteWithChildren
   '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
+  '/api/users/$id/avatar': typeof ApiUsersIdAvatarRoute
   '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
   '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
   '/api/users/me/change-password': typeof ApiUsersMeChangePasswordRoute
@@ -1534,6 +1542,7 @@ export interface FileRoutesById {
   '/api/ppk/resubmit/$id': typeof ApiPpkResubmitIdRoute
   '/api/ppspm/dokumen/$id': typeof ApiPpspmDokumenIdRouteWithChildren
   '/api/users/$id/activate': typeof ApiUsersIdActivateRoute
+  '/api/users/$id/avatar': typeof ApiUsersIdAvatarRoute
   '/api/users/$id/deactivate': typeof ApiUsersIdDeactivateRoute
   '/api/users/$id/reset-password': typeof ApiUsersIdResetPasswordRoute
   '/api/users/me/change-password': typeof ApiUsersMeChangePasswordRoute
@@ -1708,6 +1717,7 @@ export interface FileRouteTypes {
     | '/api/ppk/resubmit/$id'
     | '/api/ppspm/dokumen/$id'
     | '/api/users/$id/activate'
+    | '/api/users/$id/avatar'
     | '/api/users/$id/deactivate'
     | '/api/users/$id/reset-password'
     | '/api/users/me/change-password'
@@ -1871,6 +1881,7 @@ export interface FileRouteTypes {
     | '/api/ppk/resubmit/$id'
     | '/api/ppspm/dokumen/$id'
     | '/api/users/$id/activate'
+    | '/api/users/$id/avatar'
     | '/api/users/$id/deactivate'
     | '/api/users/$id/reset-password'
     | '/api/users/me/change-password'
@@ -2043,6 +2054,7 @@ export interface FileRouteTypes {
     | '/api/ppk/resubmit/$id'
     | '/api/ppspm/dokumen/$id'
     | '/api/users/$id/activate'
+    | '/api/users/$id/avatar'
     | '/api/users/$id/deactivate'
     | '/api/users/$id/reset-password'
     | '/api/users/me/change-password'
@@ -3077,6 +3089,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersIdDeactivateRouteImport
       parentRoute: typeof ApiUsersIdRoute
     }
+    '/api/users/$id/avatar': {
+      id: '/api/users/$id/avatar'
+      path: '/avatar'
+      fullPath: '/api/users/$id/avatar'
+      preLoaderRoute: typeof ApiUsersIdAvatarRouteImport
+      parentRoute: typeof ApiUsersIdRoute
+    }
     '/api/users/$id/activate': {
       id: '/api/users/$id/activate'
       path: '/activate'
@@ -3724,12 +3743,14 @@ const ApiLaporanSayaRouteWithChildren = ApiLaporanSayaRoute._addFileChildren(
 
 interface ApiUsersIdRouteChildren {
   ApiUsersIdActivateRoute: typeof ApiUsersIdActivateRoute
+  ApiUsersIdAvatarRoute: typeof ApiUsersIdAvatarRoute
   ApiUsersIdDeactivateRoute: typeof ApiUsersIdDeactivateRoute
   ApiUsersIdResetPasswordRoute: typeof ApiUsersIdResetPasswordRoute
 }
 
 const ApiUsersIdRouteChildren: ApiUsersIdRouteChildren = {
   ApiUsersIdActivateRoute: ApiUsersIdActivateRoute,
+  ApiUsersIdAvatarRoute: ApiUsersIdAvatarRoute,
   ApiUsersIdDeactivateRoute: ApiUsersIdDeactivateRoute,
   ApiUsersIdResetPasswordRoute: ApiUsersIdResetPasswordRoute,
 }

@@ -84,6 +84,29 @@ export function createProfileAvatarUrl(avatarUpdatedAt?: Date | string | null): 
   return `/api/users/me?avatar=1&v=${encodeURIComponent(updatedAt)}`
 }
 
+/**
+ * Cache-busted avatar URL for an arbitrary user, used by admin surfaces
+ * (e.g. the user management table) via the admin-only avatar endpoint.
+ */
+export function createUserAvatarUrl(
+  userId: string,
+  avatarUpdatedAt?: Date | string | null,
+): string | null {
+  if (!avatarUpdatedAt) return null
+
+  const updatedAt = avatarUpdatedAt instanceof Date
+    ? avatarUpdatedAt.toISOString()
+    : avatarUpdatedAt
+
+  return `/api/users/${encodeURIComponent(userId)}/avatar?v=${encodeURIComponent(updatedAt)}`
+}
+
+export function isAllowedProfileAvatarResponseMimeType(
+  value: string | null | undefined,
+): value is ProfileAvatarMimeType {
+  return typeof value === 'string' && isAllowedProfileAvatarMimeType(value)
+}
+
 export function validateProfileAvatarFileMetadata(
   file: ProfileAvatarFileMetadata,
 ): ValidatedProfileAvatar {

@@ -4,6 +4,7 @@ import { asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { roles as rolesTable, userRoles, users } from '#/db/schema/auth'
 import { ROLE_NAMES, type RoleName } from '#/lib/constants/roles'
+import { createUserAvatarUrl, isAllowedProfileAvatarResponseMimeType } from '#/lib/storage/profile-avatar'
 import type { UserMetadata, UserWithRoles } from '#/lib/types/user'
 import { parseUserMetadata } from '#/lib/user-metadata'
 
@@ -20,6 +21,10 @@ type LocalUserRow = {
   deactivatedAt: Date | null
   createdAt: Date
   updatedAt: Date
+  avatarStorageKey: string | null
+  avatarMimeType: string | null
+  avatarSizeBytes: number | null
+  avatarUpdatedAt: Date | null
 }
 
 type LocalUserWithRolesRow = {
@@ -58,6 +63,10 @@ function baseLocalUserQuery() {
         deactivatedAt: users.deactivatedAt,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
+        avatarStorageKey: users.avatarStorageKey,
+        avatarMimeType: users.avatarMimeType,
+        avatarSizeBytes: users.avatarSizeBytes,
+        avatarUpdatedAt: users.avatarUpdatedAt,
       },
       roleName: rolesTable.nama,
     })
@@ -82,17 +91,31 @@ function groupLocalUserRows(rows: LocalUserWithRolesRow[]): UserWithRoles[] {
     }
   }
 
-  return [...grouped.values()].map(({ user, roles }) => ({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    metadata: toUserMetadata(user),
-    roles: sortRoles(roles),
-    isActive: user.isActive,
-    disabledAt: user.deactivatedAt ? user.deactivatedAt.toISOString() : null,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
-  }))
+  return [...grouped.values()].map(({ user, roles }) => {
+    const avatarMimeType = isAllowedProfileAvatarResponseMimeType(user.avatarMimeType)
+      ? user.avatarMimeType
+      : null
+    const hasDisplayableAvatar =
+      Boolean(user.avatarStorageKey)
+      && Boolean(user.avatarUpdatedAt)
+      && avatarMimeType !== null
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      metadata: toUserMetadata(user),
+      roles: sortRoles(roles),
+      isActive: user.isActive,
+      disabledAt: user.deactivatedAt ? user.deactivatedAt.toISOString() : null,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+      avatar_url: hasDisplayableAvatar ? createUserAvatarUrl(user.id, user.avatarUpdatedAt) : null,
+      avatar_mime_type: hasDisplayableAvatar ? avatarMimeType : null,
+      avatar_size_bytes: hasDisplayableAvatar ? user.avatarSizeBytes : null,
+      avatar_updated_at: hasDisplayableAvatar ? user.avatarUpdatedAt?.toISOString() ?? null : null,
+    }
+  })
 }
 
 function toUserMetadata(user: LocalUserRow): UserMetadata {

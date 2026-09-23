@@ -46,6 +46,7 @@ import {
   DialogFooter,
 } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
+import { UserAvatar } from '#/components/ui/UserAvatar'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
@@ -1139,11 +1140,12 @@ function MasterUserPage() {
                     <TableCell className="text-center text-xs text-outline">{i + 1}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border border-outline-variant/20 shrink-0">
-                          <span className="text-xs font-extrabold text-primary">
-                            {(user.metadata.nama_lengkap || user.username).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                          </span>
-                        </div>
+                        <UserAvatar
+                          src={user.avatar_url}
+                          alt={`Foto profil ${user.metadata.nama_lengkap || user.username}`}
+                          initials={(user.metadata.nama_lengkap || user.username).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                          className="w-9 h-9 border border-outline-variant/20 text-xs"
+                        />
                         <div>
                           <p className="text-sm font-bold text-on-surface">{user.metadata.nama_lengkap || '-'}</p>
                           <p className="text-[10px] text-outline font-medium">@{user.username}</p>

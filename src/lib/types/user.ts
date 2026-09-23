@@ -20,6 +20,10 @@ export interface UserWithRoles {
   disabledAt: string | null
   createdAt: string
   updatedAt?: string
+  avatar_url?: string | null
+  avatar_mime_type?: 'image/jpeg' | 'image/png' | 'image/webp' | null
+  avatar_size_bytes?: number | null
+  avatar_updated_at?: string | null
 }
 
 // Request types untuk API
