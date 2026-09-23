@@ -46,6 +46,7 @@ export type CloseBerkasRequestBody = {
 
 export type CloseBerkasSummary = {
   klasifikasiLabel: string
+  tahunAnggaran: number
   itemCount: number
   totalNominalRealisasi: number | null
 }
@@ -115,11 +116,11 @@ export function CloseBerkasDialog({
             Tutup berkas dan lengkapi metadata
           </DialogTitle>
           <DialogDescription className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-zinc-700">
-            Setelah berkas ditutup, dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini.
+            Setelah berkas ditutup, dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini untuk TA {summary.tahunAnggaran}; tahun berikutnya dapat digunakan kembali.
           </DialogDescription>
           <div className="sr-only">
             <p>Berkas akan difinalisasi menjadi Tersimpan.</p>
-            <p>Setelah ditutup, Cara Pembayaran ini tidak bisa menerima dokumen baru.</p>
+            <p>Setelah ditutup, Cara Pembayaran ini tidak bisa menerima dokumen baru untuk TA {summary.tahunAnggaran}; tahun berikutnya dapat digunakan kembali.</p>
             <p>Dokumen dan file fisik tidak dihapus.</p>
             <p>Status berkas menjadi Ditutup dan statusnya menjadi Tersimpan.</p>
           </div>
@@ -234,7 +235,7 @@ export function CloseBerkasDialog({
       tone="success"
       icon={<Archive className="size-6" />}
       title="Tutup berkas?"
-      description="Berkas akan ditutup dan berstatus Tersimpan. Dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini."
+      description={`Berkas akan ditutup dan berstatus Tersimpan. Dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini untuk TA ${summary.tahunAnggaran}; tahun berikutnya dapat digunakan kembali.`}
       confirmLabel="Tutup Berkas"
       cancelLabel="Batalkan"
       pending={pending}

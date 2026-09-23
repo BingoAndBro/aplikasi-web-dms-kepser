@@ -46,6 +46,9 @@ function parseFolderListQuery(request: Request): ListBerkasArsipFolderQuery | Re
   const klasifikasiId = url.searchParams.get('klasifikasi_id')
   if (klasifikasiId) query.klasifikasi_id = klasifikasiId
 
+  const tahunAnggaran = url.searchParams.get('tahun_anggaran')
+  if (tahunAnggaran) query.tahun_anggaran = Number(tahunAnggaran)
+
   const search = url.searchParams.get('search')
   if (search) query.search = search
 
@@ -74,6 +77,7 @@ function safeFolderListRow(row: BerkasArsipFolderListItemDto) {
   return {
     berkas_id: row.berkas_id,
     klasifikasi_id: row.klasifikasi_id,
+    tahun_anggaran: row.tahun_anggaran,
     klasifikasi_kode_snapshot: row.klasifikasi_kode_snapshot,
     klasifikasi_nama_snapshot: row.klasifikasi_nama_snapshot,
     status_berkas: row.status_berkas,

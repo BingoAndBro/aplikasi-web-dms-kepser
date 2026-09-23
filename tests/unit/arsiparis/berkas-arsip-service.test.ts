@@ -18,6 +18,7 @@ const BERKAS_ID = 'berkas-belanja-barang-open'
 const CLOSED_BERKAS_ID = 'berkas-belanja-barang-closed'
 const DOKUMEN_ID = 'dokumen-workflow'
 const MANUAL_ARSIP_ID = 'manual-dokumen'
+const TAHUN_ANGGARAN = 2026
 type TestBerkasArchiveStatus = typeof BERKAS_ARCHIVE_STATUS[keyof typeof BERKAS_ARCHIVE_STATUS]
 
 describe('berkas arsip service foundation', () => {
@@ -26,6 +27,7 @@ describe('berkas arsip service foundation', () => {
 
     const created = await getOrCreateOpenBerkasForKlasifikasi({
       klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
       actorUserId: ACTOR_ID,
     }, { repository })
 
@@ -37,8 +39,8 @@ describe('berkas arsip service foundation', () => {
       created_by: ACTOR_ID,
     })
     expect(repository.calls).toContainEqual(['findKlasifikasiForOperationalSelection', KLASIFIKASI_ID])
-    expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID])
-    expect(repository.calls).toContainEqual(['insertOpenBerkas', KLASIFIKASI_ID, 'BB', 'Belanja Barang'])
+    expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID, TAHUN_ANGGARAN])
+    expect(repository.calls).toContainEqual(['insertOpenBerkas', KLASIFIKASI_ID, 'BB', 'Belanja Barang', TAHUN_ANGGARAN])
     expect(repository.calls).toContainEqual([
       'appendBerkasActivity',
       'berkas-created',
@@ -57,12 +59,13 @@ describe('berkas arsip service foundation', () => {
 
     const berkas = await getOrCreateOpenBerkasForKlasifikasi({
       klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
       actorUserId: ACTOR_ID,
     }, { repository })
 
     expect(berkas.id).toBe(BERKAS_ID)
     expect(repository.calls).toContainEqual(['findKlasifikasiForOperationalSelection', KLASIFIKASI_ID])
-    expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID])
+    expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID, TAHUN_ANGGARAN])
     expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
   })
 
@@ -74,6 +77,7 @@ describe('berkas arsip service foundation', () => {
 
     await expect(getOrCreateOpenBerkasForKlasifikasi({
       klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
       actorUserId: ACTOR_ID,
     }, { repository })).rejects.toMatchObject({
       code: 'KLASIFIKASI_PARENT',
@@ -92,13 +96,30 @@ describe('berkas arsip service foundation', () => {
 
     await expect(getOrCreateOpenBerkasForKlasifikasi({
       klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
       actorUserId: ACTOR_ID,
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_KLASIFIKASI_CLOSED',
-      message: 'Berkas untuk Cara Pembayaran ini sudah ditutup',
+      message: `Berkas untuk Cara Pembayaran ini TA ${TAHUN_ANGGARAN} sudah ditutup`,
     })
 
     expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
+  })
+
+  it('allows opening a berkas for a klasifikasi whose only existing berkas is CLOSED in a different tahun anggaran', async () => {
+    const repository = createFakeRepository({
+      existingBerkasRows: [],
+    })
+
+    const berkas = await getOrCreateOpenBerkasForKlasifikasi({
+      klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN + 1,
+      actorUserId: ACTOR_ID,
+    }, { repository })
+
+    expect(berkas.tahun_anggaran).toBe(TAHUN_ANGGARAN + 1)
+    expect(repository.calls).toContainEqual(['findBerkasByKlasifikasiId', KLASIFIKASI_ID, TAHUN_ANGGARAN + 1])
+    expect(repository.calls).toContainEqual(['insertOpenBerkas', KLASIFIKASI_ID, 'BB', 'Belanja Barang', TAHUN_ANGGARAN + 1])
   })
 
   it('rejects anomalous multiple OPEN berkas rows for one jenis pembayaran', async () => {
@@ -108,6 +129,7 @@ describe('berkas arsip service foundation', () => {
 
     await expect(getOrCreateOpenBerkasForKlasifikasi({
       klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
       actorUserId: ACTOR_ID,
     }, { repository })).rejects.toMatchObject({
       code: 'BERKAS_KLASIFIKASI_CONFLICT',
@@ -124,6 +146,7 @@ describe('berkas arsip service foundation', () => {
 
     const berkas = await getOrCreateOpenBerkasForKlasifikasi({
       klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
       actorUserId: ACTOR_ID,
     }, { repository })
 
@@ -647,16 +670,16 @@ function createFakeRepository(options: {
         hasChildren: options.klasifikasiHasChildren ?? false,
       }
     },
-    async findOpenBerkasByKlasifikasiId(klasifikasiId) {
-      calls.push(['findOpenBerkasByKlasifikasiId', klasifikasiId])
+    async findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
+      calls.push(['findOpenBerkasByKlasifikasiId', klasifikasiId, tahunAnggaran])
       openLookupCount += 1
       if (options.openAfterConflict && openLookupCount > 1) {
         return openBerkas()
       }
       return null
     },
-    async findBerkasByKlasifikasiId(klasifikasiId) {
-      calls.push(['findBerkasByKlasifikasiId', klasifikasiId])
+    async findBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
+      calls.push(['findBerkasByKlasifikasiId', klasifikasiId, tahunAnggaran])
       openLookupCount += 1
       if (options.existingBerkasRows) return options.existingBerkasRows
       if (options.openAfterConflict && openLookupCount > 1) return [openBerkas()]
@@ -668,10 +691,12 @@ function createFakeRepository(options: {
         input.klasifikasi.id,
         input.klasifikasi.kode,
         input.klasifikasi.nama,
+        input.tahunAnggaran,
       ])
       if (options.insertOpenBerkasError) throw options.insertOpenBerkasError
       return openBerkas({
         id: 'berkas-created',
+        tahunAnggaran: input.tahunAnggaran,
         createdBy: input.actorUserId,
         klasifikasiKodeSnapshot: input.klasifikasi.kode,
         klasifikasiNamaSnapshot: input.klasifikasi.nama,
@@ -811,6 +836,7 @@ function baseBerkas() {
   return {
     id: BERKAS_ID,
     klasifikasiId: KLASIFIKASI_ID,
+    tahunAnggaran: TAHUN_ANGGARAN,
     klasifikasiKodeSnapshot: 'BB',
     klasifikasiNamaSnapshot: 'Belanja Barang',
     statusBerkas: 'OPEN' as const,

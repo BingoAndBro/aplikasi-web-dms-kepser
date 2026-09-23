@@ -96,17 +96,17 @@ describe('buildZipPlan (pure, no filesystem)', () => {
     expect(name).toBe('[Manual] Judul_Manual_zzzzzzzz')
   })
 
-  it('builds the RP-02 parent folder name as "<nomor spm> - <klasifikasi>"', () => {
-    const name = buildBerkasParentFolderName({ nomorSpm: 'SPM-001', klasifikasiNama: 'Klasifikasi A' })
+  it('builds the RP-02 parent folder name as "<nomor spm> - <klasifikasi> - TA <tahun>"', () => {
+    const name = buildBerkasParentFolderName({ nomorSpm: 'SPM-001', klasifikasiNama: 'Klasifikasi A', tahunAnggaran: 2026 })
 
-    expect(name).toBe('SPM-001 - Klasifikasi_A')
+    expect(name).toBe('SPM-001 - Klasifikasi_A - TA 2026')
   })
 
   it('falls back to "[Tanpa Nomor SPM]" when nomorSpm is null or empty', () => {
-    expect(buildBerkasParentFolderName({ nomorSpm: null, klasifikasiNama: 'Klasifikasi A' }))
-      .toBe('[Tanpa Nomor SPM] - Klasifikasi_A')
-    expect(buildBerkasParentFolderName({ nomorSpm: '  ', klasifikasiNama: 'Klasifikasi A' }))
-      .toBe('[Tanpa Nomor SPM] - Klasifikasi_A')
+    expect(buildBerkasParentFolderName({ nomorSpm: null, klasifikasiNama: 'Klasifikasi A', tahunAnggaran: 2026 }))
+      .toBe('[Tanpa Nomor SPM] - Klasifikasi_A - TA 2026')
+    expect(buildBerkasParentFolderName({ nomorSpm: '  ', klasifikasiNama: 'Klasifikasi A', tahunAnggaran: 2026 }))
+      .toBe('[Tanpa Nomor SPM] - Klasifikasi_A - TA 2026')
   })
 
   it('adds " (2)", " (3)" suffixes for duplicate namaAman within the same folder, in array order', () => {

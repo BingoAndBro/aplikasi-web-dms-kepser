@@ -384,6 +384,7 @@ function openBerkas(): BerkasFolderReadRow {
   return {
     berkas_id: BERKAS_OPEN_ID,
     klasifikasi_id: KLASIFIKASI_ID,
+    tahun_anggaran: 2026,
     klasifikasi_kode_snapshot: 'BB',
     klasifikasi_nama_snapshot: 'Belanja Barang',
     status_berkas: 'OPEN',

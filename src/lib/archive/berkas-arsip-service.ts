@@ -38,6 +38,7 @@ type KlasifikasiSnapshot = {
 export type BerkasArsipDto = {
   id: string
   klasifikasi_id: string
+  tahun_anggaran: number
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: BerkasStatus
@@ -64,6 +65,7 @@ export type BerkasArsipItemDto = {
 type BerkasRow = {
   id: string
   klasifikasiId: string
+  tahunAnggaran: number
   klasifikasiKodeSnapshot: string | null
   klasifikasiNamaSnapshot: string
   statusBerkas: BerkasStatus
@@ -107,6 +109,7 @@ export type AppendBerkasActivityInput = {
 
 export type CreateOpenBerkasInput = {
   klasifikasiId: string
+  tahunAnggaran: number
   actorUserId: string
 }
 
@@ -168,10 +171,11 @@ export type ActiveBerkasMetadataPlan = {
 }
 
 export type BerkasArsipRepository = OperationalKlasifikasiSelectionRepository & {
-  findBerkasByKlasifikasiId(klasifikasiId: string): Promise<BerkasRow[]>
-  findOpenBerkasByKlasifikasiId(klasifikasiId: string): Promise<BerkasRow | null>
+  findBerkasByKlasifikasiId(klasifikasiId: string, tahunAnggaran: number): Promise<BerkasRow[]>
+  findOpenBerkasByKlasifikasiId(klasifikasiId: string, tahunAnggaran: number): Promise<BerkasRow | null>
   insertOpenBerkas(input: {
     klasifikasi: KlasifikasiSnapshot
+    tahunAnggaran: number
     actorUserId: string
   }): Promise<BerkasRow>
   findBerkasById(id: string): Promise<BerkasRow | null>
@@ -238,12 +242,13 @@ export class BerkasArsipServiceError extends Error {
 
 export async function findOpenBerkasForKlasifikasi(
   klasifikasiId: string,
+  tahunAnggaran: number,
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto | null> {
   const repository = getRepository(deps)
   await validateKlasifikasiForOperationalSelection(klasifikasiId, repository)
 
-  const row = await repository.findOpenBerkasByKlasifikasiId(klasifikasiId)
+  const row = await repository.findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran)
   return row ? toBerkasDto(row) : null
 }
 
@@ -253,11 +258,12 @@ export async function createOpenBerkasForKlasifikasi(
 ): Promise<BerkasArsipDto> {
   const repository = getRepository(deps)
   const klasifikasi = await validateKlasifikasiForOperationalSelection(input.klasifikasiId, repository)
-  const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
+  const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId, input.tahunAnggaran)
   if (existing) return toBerkasDto(existing)
 
   return toBerkasDto(await insertOpenBerkasWithActivity(repository, {
     klasifikasi,
+    tahunAnggaran: input.tahunAnggaran,
     actorUserId: input.actorUserId,
   }))
 }
@@ -268,18 +274,19 @@ export async function getOrCreateOpenBerkasForKlasifikasi(
 ): Promise<BerkasArsipDto> {
   const repository = getRepository(deps)
   const klasifikasi = await validateKlasifikasiForOperationalSelection(input.klasifikasiId, repository)
-  const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
+  const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId, input.tahunAnggaran)
   if (existing) return toBerkasDto(existing)
 
   try {
     return toBerkasDto(await insertOpenBerkasWithActivity(repository, {
       klasifikasi,
+      tahunAnggaran: input.tahunAnggaran,
       actorUserId: input.actorUserId,
     }))
   } catch (error) {
     if (!isUniqueConflict(error)) throw error
 
-    const racedExisting = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId)
+    const racedExisting = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId, input.tahunAnggaran)
     if (racedExisting) return toBerkasDto(racedExisting)
 
     throw new BerkasArsipServiceError('CONFLICT', 'Gagal membuka berkas karena konflik data')
@@ -403,6 +410,7 @@ export async function closeBerkasArsip(
     metadataSnapshot: {
       status_berkas: BERKAS_STATUS.CLOSED,
       status_arsip: BERKAS_ARCHIVE_STATUS.AKTIF,
+      tahun_anggaran: String(closed.tahunAnggaran),
       nomor_spm: closed.nomorSpm,
       retensi_aktif: closed.retensiAktif,
       retensi_inaktif: closed.retensiInaktif,
@@ -588,13 +596,14 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
     }
   },
 
-  async findOpenBerkasByKlasifikasiId(klasifikasiId) {
+  async findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
     const database = await getDatabase()
     const [row] = await database
       .select()
       .from(berkasArsip)
       .where(and(
         eq(berkasArsip.klasifikasiId, klasifikasiId),
+        eq(berkasArsip.tahunAnggaran, tahunAnggaran),
         eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
       ))
       .limit(1)
@@ -602,12 +611,15 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
     return row ?? null
   },
 
-  async findBerkasByKlasifikasiId(klasifikasiId) {
+  async findBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
     const database = await getDatabase()
     return database
       .select()
       .from(berkasArsip)
-      .where(eq(berkasArsip.klasifikasiId, klasifikasiId)) as Promise<BerkasRow[]>
+      .where(and(
+        eq(berkasArsip.klasifikasiId, klasifikasiId),
+        eq(berkasArsip.tahunAnggaran, tahunAnggaran),
+      )) as Promise<BerkasRow[]>
   },
 
   async insertOpenBerkas(input) {
@@ -616,6 +628,7 @@ const defaultBerkasArsipRepository: BerkasArsipRepository = {
       .insert(berkasArsip)
       .values({
         klasifikasiId: input.klasifikasi.id,
+        tahunAnggaran: input.tahunAnggaran,
         klasifikasiKodeSnapshot: input.klasifikasi.kode,
         klasifikasiNamaSnapshot: input.klasifikasi.nama,
         statusBerkas: BERKAS_STATUS.OPEN,
@@ -823,8 +836,9 @@ function assertSourceMatchesBerkas(
 async function resolveExistingBerkasForKlasifikasi(
   repository: BerkasArsipRepository,
   klasifikasiId: string,
+  tahunAnggaran: number,
 ): Promise<BerkasRow | null> {
-  const rows = await repository.findBerkasByKlasifikasiId(klasifikasiId)
+  const rows = await repository.findBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran)
   const openRows = rows.filter((row) => row.statusBerkas === BERKAS_STATUS.OPEN)
 
   if (openRows.length === 1) return openRows[0] ?? null
@@ -839,7 +853,7 @@ async function resolveExistingBerkasForKlasifikasi(
   if (rows.length > 0) {
     throw new BerkasArsipServiceError(
       'BERKAS_KLASIFIKASI_CLOSED',
-      'Berkas untuk Cara Pembayaran ini sudah ditutup',
+      `Berkas untuk Cara Pembayaran ini TA ${tahunAnggaran} sudah ditutup`,
     )
   }
 
@@ -850,6 +864,7 @@ async function insertOpenBerkasWithActivity(
   repository: BerkasArsipRepository,
   input: {
     klasifikasi: KlasifikasiSnapshot
+    tahunAnggaran: number
     actorUserId: string
   },
 ): Promise<BerkasRow> {
@@ -861,6 +876,7 @@ async function insertOpenBerkasWithActivity(
     metadataSnapshot: {
       status_berkas: BERKAS_STATUS.OPEN,
       status_arsip: null,
+      tahun_anggaran: String(row.tahunAnggaran),
       klasifikasi_kode_snapshot: row.klasifikasiKodeSnapshot,
       klasifikasi_nama_snapshot: row.klasifikasiNamaSnapshot,
     },
@@ -917,6 +933,7 @@ function toBerkasDto(row: BerkasRow): BerkasArsipDto {
   return {
     id: row.id,
     klasifikasi_id: row.klasifikasiId,
+    tahun_anggaran: row.tahunAnggaran,
     klasifikasi_kode_snapshot: row.klasifikasiKodeSnapshot,
     klasifikasi_nama_snapshot: row.klasifikasiNamaSnapshot,
     status_berkas: row.statusBerkas,

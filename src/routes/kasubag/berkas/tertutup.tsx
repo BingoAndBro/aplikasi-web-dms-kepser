@@ -22,7 +22,7 @@ import { StatusBadge } from '#/components/ui/StatusBadge'
 import { useAppToast } from '#/components/ui/AppToast'
 import {
   formatBerkasArchiveStatusLabel,
-  formatKlasifikasiLabel,
+  formatBerkasLabel,
   formatNominalRupiah,
   formatNullableDateLabel,
 } from '#/lib/archive/berkas-arsip-page-format'
@@ -38,6 +38,7 @@ export const Route = createFileRoute('/kasubag/berkas/tertutup')({ component: Be
 type BerkasFolder = {
   berkas_id: string
   klasifikasi_id: string
+  tahun_anggaran: number
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: string
@@ -269,7 +270,7 @@ function BerkasTertutupTable({
               >
                 <td className="max-w-[420px] px-6 py-5 text-zinc-950">
                   <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-brand-text">
-                    {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+                    {formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}
                   </p>
                 </td>
                 <td className="px-6 py-5 text-sm font-semibold text-zinc-900">{folder.nomor_spm ?? '-'}</td>
@@ -298,7 +299,7 @@ function BerkasTertutupTable({
         {folders.map((folder) => (
           <ArchiveMobileCard
             key={folder.berkas_id}
-            title={formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+            title={formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}
             subtitle={`Nomor SPM: ${folder.nomor_spm ?? '-'}`}
             status={<StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />}
             meta={[
@@ -359,7 +360,7 @@ function UsulkanPembersihanButton({
         title="Usulkan Pembersihan?"
         description={
           <>
-            Berkas <span className="font-semibold text-zinc-950">{formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}</span>
+            Berkas <span className="font-semibold text-zinc-950">{formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}</span>
             {folder.nomor_spm ? ` (Nomor SPM: ${folder.nomor_spm})` : ''} akan masuk daftar Usul Pembersihan. Tidak ada file yang dihapus pada tahap ini; usulan masih dapat dibatalkan.
           </>
         }
@@ -424,7 +425,8 @@ function buildBerkasFolderSearchText(folder: BerkasFolder): string {
   return [
     folder.klasifikasi_kode_snapshot,
     folder.klasifikasi_nama_snapshot,
-    formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot),
+    formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran),
+    String(folder.tahun_anggaran),
     folder.nomor_spm,
     formatNullableDateLabel(folder.closed_at),
     String(folder.item_count),

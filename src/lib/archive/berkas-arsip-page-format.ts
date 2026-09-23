@@ -117,6 +117,14 @@ export function formatKlasifikasiLabel(kode: string | null, nama: string | null)
   return kode ?? nama ?? '-'
 }
 
+export function formatBerkasLabel(
+  kode: string | null,
+  nama: string | null,
+  tahunAnggaran: number,
+): string {
+  return `${formatKlasifikasiLabel(kode, nama)} · TA ${tahunAnggaran}`
+}
+
 export function formatNullableDateLabel(value: string | null | undefined): string {
   return value ? formatDate(value) : '-'
 }

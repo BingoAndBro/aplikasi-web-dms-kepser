@@ -54,6 +54,7 @@ export const listBerkasArsipFolderQuerySchema = z
     status_arsip: z.enum(BERKAS_ARCHIVE_STATUS_VALUES).nullable().optional(),
     status_berkas: z.enum(BERKAS_STATUS_VALUES).optional(),
     klasifikasi_id: z.uuid().optional(),
+    tahun_anggaran: z.number().int().min(2000).max(2100).optional(),
     search: z.string().trim().max(100).optional(),
     // RP-01: filter "hanya yang jatuh tempo" (dihitung dari closed_at + masa simpan).
     due_only: z.boolean().optional(),
@@ -67,6 +68,7 @@ export type ListBerkasArsipFolderQuery = z.infer<typeof listBerkasArsipFolderQue
 export type BerkasArsipFolderListItemDto = {
   berkas_id: string
   klasifikasi_id: string
+  tahun_anggaran: number
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: BerkasStatus
@@ -159,6 +161,7 @@ export type BerkasArsipDetailResult =
 export type BerkasFolderReadRow = {
   berkas_id: string
   klasifikasi_id: string
+  tahun_anggaran: number
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: BerkasStatus
@@ -247,6 +250,7 @@ type NormalizedListBerkasArsipFolderQuery = {
   status_arsip: BerkasArchiveStatus | null | undefined
   status_berkas: BerkasStatus | null
   klasifikasi_id: string | null
+  tahun_anggaran: number | null
   search: string | null
   due_only: boolean
   limit: number
@@ -469,6 +473,7 @@ function folderProjection() {
   return {
     berkas_id: berkasArsip.id,
     klasifikasi_id: berkasArsip.klasifikasiId,
+    tahun_anggaran: berkasArsip.tahunAnggaran,
     klasifikasi_kode_snapshot: berkasArsip.klasifikasiKodeSnapshot,
     klasifikasi_nama_snapshot: berkasArsip.klasifikasiNamaSnapshot,
     status_berkas: berkasArsip.statusBerkas,
@@ -495,6 +500,7 @@ function buildFolderFilters(options: NormalizedListBerkasArsipFolderQuery): SQL[
   }
   if (options.status_berkas) filters.push(eq(berkasArsip.statusBerkas, options.status_berkas))
   if (options.klasifikasi_id) filters.push(eq(berkasArsip.klasifikasiId, options.klasifikasi_id))
+  if (options.tahun_anggaran !== null) filters.push(eq(berkasArsip.tahunAnggaran, options.tahun_anggaran))
   if (options.search) {
     const pattern = `%${escapeIlikePattern(options.search)}%`
     const searchFilter = or(
@@ -571,6 +577,7 @@ function mapFolderRowToListDto(
   return {
     berkas_id: row.berkas_id,
     klasifikasi_id: row.klasifikasi_id,
+    tahun_anggaran: row.tahun_anggaran,
     klasifikasi_kode_snapshot: trimToNull(row.klasifikasi_kode_snapshot),
     klasifikasi_nama_snapshot: row.klasifikasi_nama_snapshot,
     status_berkas: row.status_berkas,
@@ -678,6 +685,7 @@ function normalizeListQuery(query: ListBerkasArsipFolderQuery): NormalizedListBe
       : undefined,
     status_berkas: data.status_berkas ?? null,
     klasifikasi_id: trimToNull(data.klasifikasi_id),
+    tahun_anggaran: data.tahun_anggaran ?? null,
     search: trimToNull(data.search),
     due_only: data.due_only ?? false,
     limit: data.limit ?? BERKAS_ARSIP_READ_MODEL_DEFAULT_LIMIT,

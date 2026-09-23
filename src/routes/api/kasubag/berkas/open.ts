@@ -29,6 +29,7 @@ export const Route = createFileRoute('/api/kasubag/berkas/open')({
         try {
           const berkas = await getOrCreateOpenBerkasForKlasifikasi({
             klasifikasiId: parsed.data.klasifikasi_id,
+            tahunAnggaran: parsed.data.tahun_anggaran,
             actorUserId: sessionOrResponse.user.id,
           })
 

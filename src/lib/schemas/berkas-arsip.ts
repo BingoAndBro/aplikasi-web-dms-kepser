@@ -20,6 +20,7 @@ export const berkasItemSourceTypeSchema = z.enum(ARCHIVE_SOURCE_TYPE_VALUES)
 export const openBerkasRequestSchema = z
   .object({
     klasifikasi_id: z.uuid('Cara pembayaran tidak valid'),
+    tahun_anggaran: z.number({ error: 'Tahun anggaran wajib dipilih' }).int().min(2000).max(2100),
   })
   .strict()
 

@@ -29,7 +29,7 @@ import { useAppToast } from '#/components/ui/AppToast'
 import {
   BERKAS_DESTRUCTION_CONFIRMATION_PHRASE,
   formatBerkasArchiveStatusLabel,
-  formatKlasifikasiLabel,
+  formatBerkasLabel,
   formatNominalRupiah,
   formatNullableDateLabel,
 } from '#/lib/archive/berkas-arsip-page-format'
@@ -45,6 +45,7 @@ export const Route = createFileRoute('/kasubag/pembersihan/')({ component: UsulM
 type BerkasFolder = {
   berkas_id: string
   klasifikasi_id: string
+  tahun_anggaran: number
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: string
@@ -306,7 +307,7 @@ function BerkasLifecycleTable({
               >
                 <td className="max-w-[440px] px-6 py-5 text-zinc-950">
                   <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-brand-text">
-                    {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+                    {formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}
                   </p>
                 </td>
                 <td className="px-6 py-5 text-sm font-semibold text-zinc-900">{folder.nomor_spm ?? '-'}</td>
@@ -328,7 +329,7 @@ function BerkasLifecycleTable({
                     <Link
                       to="/kasubag/berkas/$id"
                       params={{ id: folder.berkas_id }}
-                      aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
+                      aria-label={`Buka detail ${formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}`}
                       className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid"
                     >
                       <ChevronRight size={20} strokeWidth={2.35} />
@@ -344,7 +345,7 @@ function BerkasLifecycleTable({
         {folders.map((folder) => (
           <ArchiveMobileCard
             key={folder.berkas_id}
-            title={formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+            title={formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}
             subtitle={`Nomor SPM: ${folder.nomor_spm ?? '-'}`}
             status={<StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />}
             meta={[
@@ -495,7 +496,8 @@ function buildBerkasFolderSearchText(folder: BerkasFolder): string {
   return [
     folder.klasifikasi_kode_snapshot,
     folder.klasifikasi_nama_snapshot,
-    formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot),
+    formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran),
+    String(folder.tahun_anggaran),
     folder.nomor_spm,
     formatNullableDateLabel(folder.closed_at),
     formatNullableDateLabel(folder.updated_at),

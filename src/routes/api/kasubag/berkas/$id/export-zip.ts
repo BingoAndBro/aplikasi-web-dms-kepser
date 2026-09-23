@@ -64,6 +64,7 @@ export const Route = createFileRoute('/api/kasubag/berkas/$id/export-zip')({
         const parentFolderName = buildBerkasParentFolderName({
           nomorSpm: detail.nomor_spm,
           klasifikasiNama: detail.klasifikasi_nama_snapshot,
+          tahunAnggaran: detail.tahun_anggaran,
         })
 
         const entries: DocumentZipEntry[] = []
@@ -87,7 +88,7 @@ export const Route = createFileRoute('/api/kasubag/berkas/$id/export-zip')({
             requesterLabel: sessionOrResponse.user.displayName ?? sessionOrResponse.user.username,
             requesterRole: 'KEPALA_SUB_BAGIAN_UMUM',
             sourceDescription: `Nomor SPM ${detail.nomor_spm ?? '(tanpa nomor SPM)'}`,
-            filename: buildBerkasExportZipFilename(detail.nomor_spm),
+            filename: buildBerkasExportZipFilename(detail.nomor_spm, detail.tahun_anggaran),
           })
 
           console.info('[arsiparis/berkas/:id/export-zip] export completed', {
@@ -122,11 +123,11 @@ function buildItemDocumentFolderName(item: BerkasArsipDetailItemDto): string {
   return buildManualDocumentFolderName({ id: item.item_id, judul: item.source_title })
 }
 
-function buildBerkasExportZipFilename(nomorSpm: string | null): string {
+function buildBerkasExportZipFilename(nomorSpm: string | null, tahunAnggaran: number): string {
   const nomorPart = nomorSpm?.trim() ? safeSegment(nomorSpm) : 'Tanpa_Nomor_SPM'
   const datePart = new Date().toISOString().slice(0, 10)
 
-  return `Berkas_${nomorPart}_${datePart}.zip`
+  return `Berkas_${nomorPart}_TA${tahunAnggaran}_${datePart}.zip`
 }
 
 function safeSegment(value: string): string {

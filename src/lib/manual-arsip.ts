@@ -264,6 +264,7 @@ export async function createManualArsipRecord(
       const berkasRepository = createManualArchiveBerkasRepository(tx)
       const openBerkas = await getOrCreateOpenBerkasForKlasifikasi({
         klasifikasiId: klasifikasi.id,
+        tahunAnggaran: input.tahun_anggaran,
         actorUserId: createdBy,
       }, { repository: berkasRepository })
 
@@ -323,12 +324,13 @@ function createManualArchiveBerkasRepository(
       }
     },
 
-    async findOpenBerkasByKlasifikasiId(klasifikasiId) {
+    async findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
       const [row] = await tx
         .select()
         .from(berkasArsip)
         .where(and(
           eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.tahunAnggaran, tahunAnggaran),
           eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
         ))
         .limit(1)
@@ -336,11 +338,14 @@ function createManualArchiveBerkasRepository(
       return row ?? null
     },
 
-    async findBerkasByKlasifikasiId(klasifikasiId) {
+    async findBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
       return tx
         .select()
         .from(berkasArsip)
-        .where(eq(berkasArsip.klasifikasiId, klasifikasiId))
+        .where(and(
+          eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.tahunAnggaran, tahunAnggaran),
+        ))
     },
 
     async insertOpenBerkas(input) {
@@ -348,6 +353,7 @@ function createManualArchiveBerkasRepository(
         .insert(berkasArsip)
         .values({
           klasifikasiId: input.klasifikasi.id,
+          tahunAnggaran: input.tahunAnggaran,
           klasifikasiKodeSnapshot: input.klasifikasi.kode,
           klasifikasiNamaSnapshot: input.klasifikasi.nama,
           statusBerkas: BERKAS_STATUS.OPEN,

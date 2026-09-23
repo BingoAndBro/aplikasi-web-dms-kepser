@@ -119,14 +119,17 @@ describe('berkas arsip schema foundation', () => {
     expect(parsed.success).toBe(false)
   })
 
-  it('validates open-folder request by classification id', () => {
+  it('validates open-folder request by classification id and tahun anggaran', () => {
     expect(openBerkasRequestSchema.parse({
       klasifikasi_id: '11111111-1111-4111-8111-111111111111',
+      tahun_anggaran: 2026,
     })).toEqual({
       klasifikasi_id: '11111111-1111-4111-8111-111111111111',
+      tahun_anggaran: 2026,
     })
 
-    expect(openBerkasRequestSchema.safeParse({ klasifikasi_id: 'not-a-uuid' }).success).toBe(false)
+    expect(openBerkasRequestSchema.safeParse({ klasifikasi_id: 'not-a-uuid', tahun_anggaran: 2026 }).success).toBe(false)
+    expect(openBerkasRequestSchema.safeParse({ klasifikasi_id: '11111111-1111-4111-8111-111111111111' }).success).toBe(false)
   })
 
   it('validates source-specific add-item bodies strictly', () => {

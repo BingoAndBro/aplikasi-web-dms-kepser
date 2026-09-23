@@ -3,6 +3,7 @@ import {
   check,
   date,
   index,
+  integer,
   jsonb,
   pgSchema,
   text,
@@ -31,6 +32,7 @@ export const berkasArsip = arsipSchema.table(
     klasifikasiId: uuid('klasifikasi_id')
       .notNull()
       .references(() => masterKlasifikasiArsip.id, { onDelete: 'restrict', onUpdate: 'no action' }),
+    tahunAnggaran: integer('tahun_anggaran').notNull(),
     klasifikasiKodeSnapshot: text('klasifikasi_kode_snapshot'),
     klasifikasiNamaSnapshot: text('klasifikasi_nama_snapshot').notNull(),
     statusBerkas: text('status_berkas').$type<BerkasStatus>().notNull().default('OPEN'),
@@ -54,10 +56,11 @@ export const berkasArsip = arsipSchema.table(
     index('idx_berkas_arsip_status_berkas').on(table.statusBerkas),
     index('idx_berkas_arsip_closed_at').on(table.closedAt),
     index('idx_berkas_arsip_created_by').on(table.createdBy),
-    uniqueIndex('berkas_arsip_open_klasifikasi_unique')
-      .on(table.klasifikasiId)
-      .where(sql`${table.statusBerkas} = 'OPEN'`),
+    index('idx_berkas_arsip_tahun_anggaran').on(table.tahunAnggaran),
+    uniqueIndex('berkas_arsip_klasifikasi_tahun_unique')
+      .on(table.klasifikasiId, table.tahunAnggaran),
     check('berkas_arsip_status_berkas_check', sql`${table.statusBerkas} in ('OPEN', 'CLOSED')`),
+    check('berkas_arsip_tahun_anggaran_check', sql`${table.tahunAnggaran} between 2000 and 2100`),
     check(
       'berkas_arsip_status_arsip_check',
       sql`${table.statusArsip} is null or ${table.statusArsip} in ('AKTIF', 'INAKTIF', 'USUL_MUSNAH', 'DIMUSNAHKAN')`,

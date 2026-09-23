@@ -75,6 +75,7 @@ describe('workflow classification to berkas route', () => {
 
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
       klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: 2026,
       klasifikasiKodeSnapshot: 'KA.01',
       klasifikasiNamaSnapshot: 'Keuangan',
       statusBerkas: 'OPEN',
@@ -228,7 +229,7 @@ describe('workflow classification to berkas route', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({
-      error: 'Berkas untuk Cara Pembayaran ini sudah ditutup',
+      error: 'Berkas untuk Cara Pembayaran ini TA 2026 sudah ditutup',
     })
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
@@ -270,6 +271,21 @@ describe('workflow classification to berkas route', () => {
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: 'Jenis pembayaran wajib dipilih' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects missing tahun_anggaran before DB writes', async () => {
+    const body = validArchiveBody() as Record<string, unknown>
+    delete body.tahun_anggaran
+
+    const response = await postHandler({
+      request: createPostRequest(body),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Tahun anggaran wajib dipilih' })
     expect(mocks.dbSelect).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
@@ -367,6 +383,7 @@ function validArchiveBody() {
   return {
     nomor_surat: 'B-123',
     klasifikasi_id: KLASIFIKASI_ID,
+    tahun_anggaran: 2026,
     retensi_aktif: '1 Tahun',
     retensi_inaktif: '3 Tahun',
     masa_aktif_berakhir: '2027-05-01',
@@ -495,6 +512,7 @@ function openBerkasRow() {
   return {
     id: BERKAS_ID,
     klasifikasiId: KLASIFIKASI_ID,
+    tahunAnggaran: 2026,
     klasifikasiKodeSnapshot: 'KA.01',
     klasifikasiNamaSnapshot: 'Keuangan',
     statusBerkas: 'OPEN',

@@ -113,14 +113,16 @@ export function buildManualDocumentFolderName({
 export function buildBerkasParentFolderName({
   nomorSpm,
   klasifikasiNama,
+  tahunAnggaran,
 }: {
   nomorSpm: string | null | undefined
   klasifikasiNama: string
+  tahunAnggaran: number
 }): string {
   const nomorPart = nomorSpm && nomorSpm.trim() ? safeFolderSegment(nomorSpm, '') : ''
   const klasifikasiPart = safeFolderSegment(klasifikasiNama, 'Tanpa Klasifikasi')
 
-  return `${nomorPart || '[Tanpa Nomor SPM]'} - ${klasifikasiPart}`
+  return `${nomorPart || '[Tanpa Nomor SPM]'} - ${klasifikasiPart} - TA ${tahunAnggaran}`
 }
 
 /**

@@ -21,6 +21,7 @@ import { cn } from '#/lib/utils'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { apiMutation } from '#/lib/api-mutation'
+import { getTahunOptions } from '#/lib/utils/tahun'
 
 export const Route = createFileRoute('/kasubag/dokumen/$id/')({
   component: ArsiparisDokumenDetailPage,
@@ -32,6 +33,7 @@ type Klasifikasi = {
   kode?: string | null
   is_root?: boolean
   children?: Klasifikasi[]
+  has_open_berkas?: boolean
 }
 
 type FlatKlasifikasiOption = {
@@ -184,6 +186,7 @@ type DetailTab = typeof DETAIL_TABS[number]['key']
 type ClassificationDraftState = {
   klasifikasi: string
   catatan: string
+  tahunAnggaran: string
 }
 
 const CLASSIFICATION_DRAFT_STORAGE_PREFIX = 'dms:arsiparis:pengklasifikasian-dokumen:draft:'
@@ -203,6 +206,7 @@ function readClassificationDraft(id: string): ClassificationDraftState | null {
     return {
       klasifikasi: typeof parsed.klasifikasi === 'string' ? parsed.klasifikasi : '',
       catatan: typeof parsed.catatan === 'string' ? parsed.catatan : '',
+      tahunAnggaran: typeof parsed.tahunAnggaran === 'string' ? parsed.tahunAnggaran : '',
     }
   } catch {
     return null
@@ -238,6 +242,7 @@ function ArsiparisDokumenDetailPage() {
 
   const [klasifikasiList, setKlasifikasiList] = useState<Klasifikasi[]>([])
   const [klasifikasi, setKlasifikasi] = useState(() => initialDraftRef.current?.klasifikasi ?? '')
+  const [tahunAnggaran, setTahunAnggaran] = useState(() => initialDraftRef.current?.tahunAnggaran ?? '')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [currentNodes, setCurrentNodes] = useState<Klasifikasi[]>([])
   const [selectedNode, setSelectedNode] = useState<Klasifikasi | null>(null)
@@ -284,6 +289,7 @@ function ArsiparisDokumenDetailPage() {
     initialDraftRef.current = draft
     setKlasifikasi(draft?.klasifikasi ?? '')
     setCatatan(draft?.catatan ?? '')
+    setTahunAnggaran(draft?.tahunAnggaran ?? '')
     setFormErrors({})
     setFormSubmitError(null)
   }, [id])
@@ -293,6 +299,7 @@ function ArsiparisDokumenDetailPage() {
     try {
       const json = await apiFetch<{ dokumen: DokumenDetail }>(`/kasubag/dokumen/${id}`)
       setDokumen(json.dokumen)
+      setTahunAnggaran((current) => current || String(json.dokumen.tahun))
     } catch (err) {
       if (err instanceof ApiError) {
         const payload = err.payload
@@ -308,12 +315,14 @@ function ArsiparisDokumenDetailPage() {
   }
 
   useEffect(() => {
+    if (!tahunAnggaran) return
+
     apiFetch<{ klasifikasi?: Klasifikasi[] }>('/kasubag/klasifikasi', {
-      query: { eligible_for_berkas: 'true' },
+      query: { eligible_for_berkas: 'true', tahun_anggaran: tahunAnggaran },
     })
       .then(json => setKlasifikasiList(json.klasifikasi ?? []))
       .catch(() => {})
-  }, [])
+  }, [tahunAnggaran])
 
   useEffect(() => {
     const initialNodes = buildInitialKlasifikasiNodes(klasifikasiList)
@@ -335,8 +344,9 @@ function ArsiparisDokumenDetailPage() {
     writeClassificationDraft(id, {
       klasifikasi,
       catatan,
+      tahunAnggaran,
     })
-  }, [catatan, id, isDirty, klasifikasi])
+  }, [catatan, id, isDirty, klasifikasi, tahunAnggaran])
 
   useEffect(() => {
     if (isDirty || formLoading) return
@@ -378,15 +388,19 @@ function ArsiparisDokumenDetailPage() {
   async function handleArchive() {
     const errors: Record<string, string> = {}
     if (!klasifikasi) errors.klasifikasi = 'Jenis pembayaran wajib dipilih'
+    if (!tahunAnggaran) errors.tahunAnggaran = 'Tahun anggaran wajib dipilih'
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
 
     setClassificationConfirmOpen(true)
   }
 
   async function submitArchive() {
-    if (!klasifikasi) {
+    if (!klasifikasi || !tahunAnggaran) {
       setClassificationConfirmOpen(false)
-      setFormErrors({ klasifikasi: 'Jenis pembayaran wajib dipilih' })
+      setFormErrors({
+        ...(!klasifikasi ? { klasifikasi: 'Jenis pembayaran wajib dipilih' } : {}),
+        ...(!tahunAnggaran ? { tahunAnggaran: 'Tahun anggaran wajib dipilih' } : {}),
+      })
       return
     }
 
@@ -396,6 +410,7 @@ function ArsiparisDokumenDetailPage() {
         method: 'POST',
         body: {
           klasifikasi_id: klasifikasi,
+          tahun_anggaran: Number(tahunAnggaran),
           catatan_arsiparis: catatan.trim() || undefined,
         },
       })
@@ -640,7 +655,29 @@ function ArsiparisDokumenDetailPage() {
             <div className="my-4 h-px bg-brand-border" />
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">1. Cara Pembayaran <span className="text-error">*</span></label>
+                <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">1. Tahun Anggaran <span className="text-error">*</span></label>
+                <select
+                  value={tahunAnggaran}
+                  onChange={(e) => {
+                    setTahunAnggaran(e.target.value)
+                    setKlasifikasi('')
+                    setSelectedNode(null)
+                  }}
+                  className={cn(
+                    'flex h-10 w-full items-center rounded-xl border bg-bg-surface px-3 text-sm text-zinc-950 outline-none transition focus:border-brand-solid focus:ring-2 focus:ring-brand-border-strong/70',
+                    formErrors.tahunAnggaran ? 'border-error' : 'border-brand-border',
+                  )}
+                >
+                  <option value="" disabled>Pilih tahun anggaran</option>
+                  {getTahunOptions().map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                {formErrors.tahunAnggaran && <p className="mt-1 text-[10px] text-error">{formErrors.tahunAnggaran}</p>}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">2. Cara Pembayaran <span className="text-error">*</span></label>
                 <div ref={dropdownRef} className="relative">
                   <button
                     type="button"
@@ -730,6 +767,9 @@ function ArsiparisDokumenDetailPage() {
                                   <p className="truncate text-sm font-medium text-on-surface">{option.nama}</p>
                                   <p className="truncate text-[10px] text-on-surface-variant">{option.kode ?? 'Tanpa kode'}</p>
                                 </div>
+                                {option.node.has_open_berkas && (
+                                  <span className="shrink-0 rounded-full bg-brand-surface px-2 py-0.5 text-[9px] font-bold text-brand-text">Sedang terbuka</span>
+                                )}
                               </button>
                             ))
                           )
@@ -752,6 +792,9 @@ function ArsiparisDokumenDetailPage() {
                                   <p className="truncate text-sm font-medium text-on-surface">{node.nama}</p>
                                   <p className="truncate text-[10px] text-on-surface-variant">{node.kode ?? 'Tanpa kode'}</p>
                                 </div>
+                                {!hasChildren && node.has_open_berkas && (
+                                  <span className="shrink-0 rounded-full bg-brand-surface px-2 py-0.5 text-[9px] font-bold text-brand-text">Sedang terbuka</span>
+                                )}
                                 {hasChildren && (
                                   <ChevronRight size={14} className="mt-0.5 shrink-0 text-outline" />
                                 )}
@@ -767,7 +810,7 @@ function ArsiparisDokumenDetailPage() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">2. Catatan Klasifikasi <span className="font-semibold text-zinc-500">(Opsional)</span></label>
+                <label className="mb-1.5 block text-xs font-extrabold text-zinc-950">3. Catatan Klasifikasi <span className="font-semibold text-zinc-500">(Opsional)</span></label>
                 <textarea
                   value={catatan}
                   onChange={e => setCatatan(e.target.value)}

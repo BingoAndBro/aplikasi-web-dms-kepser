@@ -19,6 +19,7 @@ export type KlasifikasiNode = {
   is_active: boolean
   is_root: boolean
   children: KlasifikasiNode[]
+  has_open_berkas?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -107,12 +108,12 @@ function buildTree(items: Omit<KlasifikasiNode, 'children'>[]): KlasifikasiNode[
     }
   }
 
-  // Sort children by kode or nama
+  // Sort children by kode or nama. Numeric mode keeps "UP-2" before "UP-10".
   const sortNodes = (nodes: KlasifikasiNode[]) => {
     nodes.sort((a, b) => {
       const aKey = a.kode || a.nama
       const bKey = b.kode || b.nama
-      return aKey.localeCompare(bKey)
+      return aKey.localeCompare(bKey, 'id', { numeric: true })
     })
     for (const node of nodes) {
       sortNodes(node.children)
@@ -130,6 +131,10 @@ export const Route = createFileRoute('/api/kasubag/klasifikasi/')({
         try {
           const url = new URL(request.url)
           const eligibleForBerkas = url.searchParams.get('eligible_for_berkas') === 'true'
+          const tahunAnggaranParam = Number(url.searchParams.get('tahun_anggaran'))
+          const tahunAnggaran = Number.isInteger(tahunAnggaranParam) && tahunAnggaranParam >= 2000 && tahunAnggaranParam <= 2100
+            ? tahunAnggaranParam
+            : new Date().getFullYear()
           const baseQuery = db
             .select({
               id: masterKlasifikasiArsip.id,
@@ -164,6 +169,7 @@ export const Route = createFileRoute('/api/kasubag/klasifikasi/')({
               status_arsip: berkasArsip.statusArsip,
             })
             .from(berkasArsip)
+            .where(eq(berkasArsip.tahunAnggaran, tahunAnggaran))
 
           return Response.json({
             klasifikasi: filterKlasifikasiTreeForBerkasSelection(tree, berkasRows),

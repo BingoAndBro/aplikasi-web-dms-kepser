@@ -549,7 +549,7 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(409)
     expect(await response.json()).toEqual({
-      error: 'Berkas untuk Cara Pembayaran ini sudah ditutup',
+      error: 'Berkas untuk Cara Pembayaran ini TA 2026 sudah ditutup',
     })
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
@@ -2012,6 +2012,7 @@ function validCreateBody() {
     kegiatan_id: KEGIATAN_ID,
     komponen_id: KOMPONEN_ID,
     klasifikasi_id: KLASIFIKASI_ID,
+    tahun_anggaran: 2026,
     nominal_realisasi: 1000,
     metadata: { sumber: 'manual' },
   }

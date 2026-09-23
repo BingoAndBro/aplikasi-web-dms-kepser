@@ -97,8 +97,8 @@ describe('GET /api/kasubag/berkas/$id/export-zip', () => {
     expect(mocks.streamDocumentZip).toHaveBeenCalledTimes(1)
     const [entries] = mocks.streamDocumentZip.mock.calls[0] as [DocumentZipEntry[], unknown]
     expect(entries).toHaveLength(2)
-    expect(entries[0].folderPath).toBe('SPM-001 - Keuangan/2026-05-29_Dokumen_Satu_aaaaaaaa')
-    expect(entries[1].folderPath).toBe('SPM-001 - Keuangan/[Manual] Dokumen_Dua_bbbbbbbb')
+    expect(entries[0].folderPath).toBe('SPM-001 - Keuangan - TA 2026/2026-05-29_Dokumen_Satu_aaaaaaaa')
+    expect(entries[1].folderPath).toBe('SPM-001 - Keuangan - TA 2026/[Manual] Dokumen_Dua_bbbbbbbb')
   })
 
   it('falls back to "[Tanpa Nomor SPM]" in the parent folder when nomor_spm is null', async () => {
@@ -113,7 +113,7 @@ describe('GET /api/kasubag/berkas/$id/export-zip', () => {
     await getHandler({ request: new Request('http://localhost/api/kasubag/berkas/x/export-zip'), params: { id: BERKAS_ID } })
 
     const [entries] = mocks.streamDocumentZip.mock.calls[0] as [DocumentZipEntry[], unknown]
-    expect(entries[0].folderPath).toContain('[Tanpa Nomor SPM] - Keuangan/')
+    expect(entries[0].folderPath).toContain('[Tanpa Nomor SPM] - Keuangan - TA 2026/')
   })
 
   it('produces only a DAFTAR_ISI.txt manifest (via document-zip.ts) for a berkas with 0 items', async () => {
@@ -328,6 +328,7 @@ function detailResult(overrides: Partial<BerkasArsipDetailDto> = {}): BerkasArsi
     detail: {
       berkas_id: BERKAS_ID,
       klasifikasi_id: 'klasifikasi-id',
+      tahun_anggaran: 2026,
       klasifikasi_kode_snapshot: 'KA.01',
       klasifikasi_nama_snapshot: 'Keuangan',
       status_berkas: 'CLOSED',

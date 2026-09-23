@@ -61,6 +61,7 @@ export const Route = createFileRoute('/api/kasubag/dokumen/$id/archive')({
         const schema = z.object({
           nomor_surat: z.string().trim().optional(),
           klasifikasi_id: z.string({ error: 'Jenis pembayaran wajib dipilih' }).uuid('Jenis pembayaran tidak valid'),
+          tahun_anggaran: z.number({ error: 'Tahun anggaran wajib dipilih' }).int().min(2000).max(2100),
           klasifikasi: z.string().optional(),
           retensi_aktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi aktif tidak valid' }).optional(),
           retensi_inaktif: z.enum(RETENSI_OPTIONS, { message: 'Retensi inaktif tidak valid' }).optional(),
@@ -105,6 +106,7 @@ export const Route = createFileRoute('/api/kasubag/dokumen/$id/archive')({
             const berkasRepository = createWorkflowArchiveBerkasRepository(tx, data.klasifikasi_id)
             const openBerkas = await getOrCreateOpenBerkasForKlasifikasi({
               klasifikasiId: data.klasifikasi_id,
+              tahunAnggaran: data.tahun_anggaran,
               actorUserId: session.user.id,
             }, { repository: berkasRepository })
 
@@ -165,12 +167,13 @@ function createWorkflowArchiveBerkasRepository(
       }
     },
 
-    async findOpenBerkasByKlasifikasiId(klasifikasiId) {
+    async findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
       const [row] = await tx
         .select()
         .from(berkasArsip)
         .where(and(
           eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.tahunAnggaran, tahunAnggaran),
           eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
         ))
         .limit(1)
@@ -178,11 +181,14 @@ function createWorkflowArchiveBerkasRepository(
       return row ?? null
     },
 
-    async findBerkasByKlasifikasiId(klasifikasiId) {
+    async findBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
       return tx
         .select()
         .from(berkasArsip)
-        .where(eq(berkasArsip.klasifikasiId, klasifikasiId))
+        .where(and(
+          eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.tahunAnggaran, tahunAnggaran),
+        ))
     },
 
     async insertOpenBerkas(input) {
@@ -190,6 +196,7 @@ function createWorkflowArchiveBerkasRepository(
         .insert(berkasArsip)
         .values({
           klasifikasiId: input.klasifikasi.id,
+          tahunAnggaran: input.tahunAnggaran,
           klasifikasiKodeSnapshot: input.klasifikasi.kode,
           klasifikasiNamaSnapshot: input.klasifikasi.nama,
           statusBerkas: BERKAS_STATUS.OPEN,

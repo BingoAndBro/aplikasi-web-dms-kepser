@@ -46,6 +46,7 @@ describe('folder-first berkas CSV helper', () => {
         folders: [{
           berkas_id: BERKAS_ID,
           klasifikasi_id: DOKUMEN_ID,
+          tahun_anggaran: 2026,
           klasifikasi_kode_snapshot: 'BB',
           klasifikasi_nama_snapshot: 'Belanja Barang',
           status_berkas: 'OPEN',
@@ -66,6 +67,7 @@ describe('folder-first berkas CSV helper', () => {
         folders: [{
           berkas_id: '77777777-7777-4777-8777-777777777777',
           klasifikasi_id: '88888888-8888-4888-8888-888888888888',
+          tahun_anggaran: 2026,
           klasifikasi_kode_snapshot: 'RM',
           klasifikasi_nama_snapshot: 'Rapat Mingguan',
           status_berkas: 'CLOSED',
@@ -83,7 +85,7 @@ describe('folder-first berkas CSV helper', () => {
     ])
 
     // RP-01: header "Jenis Pembayaran" -> "Cara Pembayaran"; kolom "Umur Berkas" ditambahkan.
-    expect(csv).toContain('No,Kategori / Section,Cara Pembayaran,Status Berkas,Status,Umur Berkas,Jumlah Dokumen,Dokumen Workflow,Dokumen Manual,Total Nominal,Nomor SPM,Tanggal Ditutup,Terakhir Diperbarui')
+    expect(csv).toContain('No,Kategori / Section,Cara Pembayaran,Tahun Anggaran,Status Berkas,Status,Umur Berkas,Jumlah Dokumen,Dokumen Workflow,Dokumen Manual,Total Nominal,Nomor SPM,Tanggal Ditutup,Terakhir Diperbarui')
     expect(csv).toContain('Berkas Terbuka')
     expect(csv).toContain('Berkas Tertutup')
     expect(csv).toContain('42 hari')

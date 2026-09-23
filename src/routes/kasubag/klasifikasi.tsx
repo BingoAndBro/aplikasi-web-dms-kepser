@@ -363,7 +363,7 @@ function KlasifikasiDetail({
 
       <div className="border-t border-brand-border pt-2.5 text-left">
         <p className="text-[10.5px] font-semibold leading-relaxed text-zinc-500">
-          Catatan: <span className="font-normal">Jika sebuah berkas Cara Pembayaran sudah ditutup, pilihan tersebut tidak ditampilkan lagi pada form Pengklasifikasian Dokumen dan Penambahan Dokumen.</span>
+          Catatan: <span className="font-normal">Jika berkas Cara Pembayaran ini sudah ditutup untuk suatu Tahun Anggaran, pilihan tersebut tidak ditampilkan lagi pada form Pengklasifikasian Dokumen dan Penambahan Dokumen untuk tahun itu saja. Tahun anggaran berikutnya, Cara Pembayaran ini dapat dipilih kembali.</span>
         </p>
         {isParent && (
           <p className="mt-1.5 text-[10.5px] font-semibold leading-relaxed text-amber-700">

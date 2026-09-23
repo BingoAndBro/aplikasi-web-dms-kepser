@@ -60,6 +60,7 @@ import {
   type BerkasLifecycleActionView,
   formatAttachmentCount,
   formatBerkasArchiveStatusLabel,
+  formatBerkasLabel,
   formatBerkasStatusLabel,
   formatFolderWarningLabel,
   formatItemWarningLabel,
@@ -142,6 +143,7 @@ type BerkasActivityEvent = {
 type BerkasDetail = {
   berkas_id: string
   klasifikasi_id: string
+  tahun_anggaran: number
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: string
@@ -474,7 +476,7 @@ function BerkasArsipDetailPage() {
                   </Link>
                   <div className="min-w-0 flex-1">
                     <h1 className="line-clamp-2 font-headline text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl">
-                      {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}
+                      {formatBerkasLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot, detail.tahun_anggaran)}
                     </h1>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                       <FolderOpen size={13} className="text-zinc-500" />
@@ -579,7 +581,8 @@ function BerkasArsipDetailPage() {
             form={closeForm}
             pending={pendingClose}
             summary={{
-              klasifikasiLabel: formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot),
+              klasifikasiLabel: formatBerkasLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot, detail.tahun_anggaran),
+              tahunAnggaran: detail.tahun_anggaran,
               itemCount: detail.item_count,
               totalNominalRealisasi: detail.total_nominal_realisasi,
             }}
@@ -703,6 +706,7 @@ function FolderMetadataPanel({ detail }: { detail: BerkasDetail }) {
     <div className="rounded-[1.15rem] border border-brand-border bg-bg-surface px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="grid gap-x-10 gap-y-4 md:grid-cols-2">
         <MetadataCell label="Cara Pembayaran" value={formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)} />
+        <MetadataCell label="Tahun Anggaran" value={String(detail.tahun_anggaran)} />
         <MetadataCell label="Status Berkas" value={formatBerkasStatusLabel(detail.status_berkas)} />
         <MetadataCell label="Status" value={formatBerkasArchiveStatusLabel(detail.status_arsip, detail.status_berkas)} />
         <MetadataCell label="Jumlah Dokumen" value={String(detail.item_count)} />
@@ -1036,6 +1040,7 @@ function ExportBerkasZipDialog({
       <div className="space-y-1.5 rounded-xl border border-brand-border bg-bg-surface px-4 py-3 text-sm">
         <p><span className="font-bold text-zinc-700">Nomor SPM:</span> {detail.nomor_spm ?? '-'}</p>
         <p><span className="font-bold text-zinc-700">Klasifikasi:</span> {formatKlasifikasiLabel(detail.klasifikasi_kode_snapshot, detail.klasifikasi_nama_snapshot)}</p>
+        <p><span className="font-bold text-zinc-700">Tahun Anggaran:</span> {detail.tahun_anggaran}</p>
         <p><span className="font-bold text-zinc-700">Jumlah Dokumen:</span> {detail.item_count}</p>
       </div>
     </ConfirmDialog>

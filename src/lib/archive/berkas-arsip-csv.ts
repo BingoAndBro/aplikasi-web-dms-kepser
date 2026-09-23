@@ -22,6 +22,7 @@ type CsvCell = string | number | boolean | null | undefined
 export type BerkasFolderCsvRow = {
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
+  tahun_anggaran: number
   status_berkas: string
   status_arsip: string | null
   nomor_spm: string | null
@@ -62,6 +63,7 @@ const FOLDER_LIST_HEADERS = [
   'No',
   'Kategori / Section',
   'Cara Pembayaran',
+  'Tahun Anggaran',
   'Status Berkas',
   'Status',
   'Umur Berkas',
@@ -95,6 +97,7 @@ export function createBerkasFolderListCsv(sections: readonly BerkasFolderCsvSect
       rowNumber,
       safeCsvText(section.label),
       safeCsvText(formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)),
+      folder.tahun_anggaran,
       safeCsvText(formatBerkasStatusLabel(folder.status_berkas)),
       safeCsvText(formatBerkasArchiveStatusLabel(folder.status_arsip, folder.status_berkas)),
       folder.umur_berkas === null || folder.umur_berkas === undefined ? '-' : `${folder.umur_berkas} hari`,

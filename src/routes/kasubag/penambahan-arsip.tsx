@@ -51,6 +51,7 @@ import {
 } from '#/lib/upload/document-upload-policy'
 import { cn } from '#/lib/utils'
 import { formatDate, formatDateTime } from '#/lib/utils/format'
+import { getTahunOptions } from '#/lib/utils/tahun'
 
 export const Route = createFileRoute('/kasubag/penambahan-arsip')({
   component: PenambahanArsipPage,
@@ -73,6 +74,7 @@ type KlasifikasiNode = {
   kode?: string | null
   is_root?: boolean
   children?: KlasifikasiNode[]
+  has_open_berkas?: boolean
 }
 
 type FlatKlasifikasiOption = {
@@ -148,6 +150,7 @@ type ManualArsipFormState = {
   kegiatan_id: string
   komponen_id: string
   klasifikasi_id: string
+  tahun_anggaran: string
   nominal_realisasi: string
 }
 
@@ -222,6 +225,7 @@ const emptyForm = (): ManualArsipFormState => ({
   kegiatan_id: '',
   komponen_id: '',
   klasifikasi_id: '',
+  tahun_anggaran: String(new Date().getFullYear()),
   nominal_realisasi: '',
 })
 
@@ -246,6 +250,7 @@ function readManualCreateDraft(): ManualCreateDraftState | null {
         kegiatan_id: typeof form.kegiatan_id === 'string' ? form.kegiatan_id : '',
         komponen_id: typeof form.komponen_id === 'string' ? form.komponen_id : '',
         klasifikasi_id: typeof form.klasifikasi_id === 'string' ? form.klasifikasi_id : '',
+        tahun_anggaran: typeof form.tahun_anggaran === 'string' ? form.tahun_anggaran : emptyForm().tahun_anggaran,
         nominal_realisasi: typeof form.nominal_realisasi === 'string' ? form.nominal_realisasi : '',
       },
       attachmentTitles: Array.isArray(parsed.attachmentTitles)
@@ -304,6 +309,7 @@ function isManualCreateDraftDirty(
     || form.klasifikasi_id
     || form.nominal_realisasi
     || form.tanggal !== baseline.tanggal
+    || form.tahun_anggaran !== baseline.tahun_anggaran
     || attachmentRows.some((row) => row.title.trim() || row.file)
     || newAttachmentTitle.trim()
     || step > 1
@@ -944,6 +950,7 @@ function CreateManualArsipModal({
   const [newAttachmentTitle, setNewAttachmentTitle] = useState('')
   const [newAttachmentTitleError, setNewAttachmentTitleError] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [klasifikasiNodes, setKlasifikasiNodes] = useState<KlasifikasiNode[]>(klasifikasiList)
   const [currentNodes, setCurrentNodes] = useState<KlasifikasiNode[]>([])
   const [selectedNode, setSelectedNode] = useState<KlasifikasiNode | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -953,9 +960,9 @@ function CreateManualArsipModal({
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const skipBeforeUnloadRef = useRef(false)
   const allKlasifikasiOptions = useMemo(() => {
-    const rootNode = findRootKlasifikasiNode(klasifikasiList)
-    return flattenKlasifikasiTree(rootNode?.children ?? klasifikasiList)
-  }, [klasifikasiList])
+    const rootNode = findRootKlasifikasiNode(klasifikasiNodes)
+    return flattenKlasifikasiTree(rootNode?.children ?? klasifikasiNodes)
+  }, [klasifikasiNodes])
   const filteredSearchResults = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
     if (!normalizedQuery) return []
@@ -992,8 +999,22 @@ function CreateManualArsipModal({
     setSelectedNode(null)
     setSearchQuery('')
     setCurrentPath([])
-    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiNodes))
   }, [isOpen])
+
+  // Cara Pembayaran ditutup per-klasifikasi per-tahun, jadi daftar yang
+  // eligible harus di-refetch setiap kali Tahun Anggaran berubah.
+  useEffect(() => {
+    if (!isOpen || !form.tahun_anggaran) return
+
+    let active = true
+    apiFetch<KlasifikasiResponse>('/kasubag/klasifikasi', {
+      query: { eligible_for_berkas: 'true', tahun_anggaran: form.tahun_anggaran },
+    })
+      .then((json) => { if (active) setKlasifikasiNodes(json.klasifikasi ?? []) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [isOpen, form.tahun_anggaran])
 
   // Kegiatan: muncul setelah Fungsi dipilih
   useEffect(() => {
@@ -1063,7 +1084,7 @@ function CreateManualArsipModal({
   useEffect(() => {
     if (!isOpen) return
 
-    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiNodes))
     setCurrentPath([])
 
     if (!form.klasifikasi_id) {
@@ -1071,8 +1092,8 @@ function CreateManualArsipModal({
       return
     }
 
-    setSelectedNode(findKlasifikasiNodeById(klasifikasiList, form.klasifikasi_id))
-  }, [isOpen, klasifikasiList])
+    setSelectedNode(findKlasifikasiNodeById(klasifikasiNodes, form.klasifikasi_id))
+  }, [isOpen, klasifikasiNodes])
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -1110,18 +1131,18 @@ function CreateManualArsipModal({
     setSearchQuery('')
 
     if (selectedNode) {
-      const path = findKlasifikasiPathToNode(klasifikasiList, selectedNode.id)
+      const path = findKlasifikasiPathToNode(klasifikasiNodes, selectedNode.id)
       if (path.length > 0) {
         const parentPath = path.slice(0, -1)
         const parentNode = parentPath[parentPath.length - 1] ?? null
         setCurrentPath(parentPath)
-        setCurrentNodes(sortKlasifikasiByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiList)))
+        setCurrentNodes(sortKlasifikasiByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiNodes)))
         return
       }
     }
 
     setCurrentPath([])
-    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+    setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiNodes))
   }
 
   function handleKlasifikasiNodeClick(node: KlasifikasiNode) {
@@ -1142,14 +1163,14 @@ function CreateManualArsipModal({
 
   function handleKlasifikasiBack() {
     if (currentPath.length === 0) {
-      setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiList))
+      setCurrentNodes(buildInitialKlasifikasiNodes(klasifikasiNodes))
       return
     }
 
     const nextPath = currentPath.slice(0, -1)
     const parentNode = nextPath[nextPath.length - 1] ?? null
     setCurrentPath(nextPath)
-    setCurrentNodes(sortKlasifikasiByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiList)))
+    setCurrentNodes(sortKlasifikasiByKode(parentNode?.children ?? buildInitialKlasifikasiNodes(klasifikasiNodes)))
   }
 
   function handleNominalRealisasiChange(value: string) {
@@ -1257,6 +1278,7 @@ function CreateManualArsipModal({
 
     if (step === 2) {
       const rawNominal = form.nominal_realisasi.replace(/[^\d]/g, '')
+      if (!form.tahun_anggaran) nextErrors.tahun_anggaran = 'Tahun anggaran wajib dipilih'
       if (!form.klasifikasi_id) nextErrors.klasifikasi_id = 'Jenis pembayaran wajib dipilih'
       if (!rawNominal) {
         nextErrors.nominal_realisasi = 'Nominal realisasi wajib diisi'
@@ -1369,6 +1391,7 @@ function CreateManualArsipModal({
           kegiatan_id: form.kegiatan_id,
           komponen_id: form.komponen_id,
           klasifikasi_id: form.klasifikasi_id,
+          tahun_anggaran: Number(form.tahun_anggaran),
           nominal_realisasi: validation.nominal,
         },
       })
@@ -1607,6 +1630,24 @@ function CreateManualArsipModal({
 
           {step === 2 && (
             <>
+          <div className="grid gap-3">
+            <FormField label="Tahun Anggaran" required error={errors.tahun_anggaran}>
+              <select
+                value={form.tahun_anggaran}
+                onChange={(event) => {
+                  setField('tahun_anggaran', event.target.value)
+                  setField('klasifikasi_id', '')
+                  setSelectedNode(null)
+                }}
+                className={inputClass(errors.tahun_anggaran)}
+              >
+                {getTahunOptions().map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+
           <div className="grid gap-3">
             <KlasifikasiFormField
               error={errors.klasifikasi_id}
@@ -1861,13 +1902,13 @@ function CreateManualArsipModal({
               <Button
                 type="button"
                 onClick={handleNextStep}
-                disabled={submitting || fungsis.length === 0 || klasifikasiList.length === 0}
+                disabled={submitting || fungsis.length === 0 || klasifikasiNodes.length === 0}
               >
                 Lanjutkan
                 <ChevronRight size={14} />
               </Button>
             ) : (
-              <Button type="button" onClick={handleFinalSubmit} disabled={submitting || fungsis.length === 0 || klasifikasiList.length === 0}>
+              <Button type="button" onClick={handleFinalSubmit} disabled={submitting || fungsis.length === 0 || klasifikasiNodes.length === 0}>
                 {submitting && <Loader2 size={14} className="animate-spin" />}
                 Simpan Dokumen
               </Button>
@@ -2104,6 +2145,9 @@ function KlasifikasiFormField({
                           {hasChildren ? 'Buka sub-klasifikasi' : 'Pilih klasifikasi ini'}
                         </p>
                       </div>
+                      {!hasChildren && node.has_open_berkas && (
+                        <span className="shrink-0 rounded-full bg-brand-surface px-2 py-0.5 text-[9px] font-bold text-brand-text">Sedang terbuka</span>
+                      )}
                       {hasChildren && (
                         <ChevronRight size={14} className="mt-0.5 shrink-0 text-outline" />
                       )}
@@ -2542,6 +2586,7 @@ function validateForm(form: ManualArsipFormState): {
   if (!form.fungsi_id) errors.fungsi_id = 'Fungsi wajib dipilih'
   if (!form.kegiatan_id) errors.kegiatan_id = 'Kegiatan wajib dipilih'
   if (!form.komponen_id) errors.komponen_id = 'Komponen wajib dipilih'
+  if (!form.tahun_anggaran) errors.tahun_anggaran = 'Tahun anggaran wajib dipilih'
   if (!form.klasifikasi_id) errors.klasifikasi_id = 'Jenis pembayaran wajib dipilih'
 
   if (!rawNominal) {

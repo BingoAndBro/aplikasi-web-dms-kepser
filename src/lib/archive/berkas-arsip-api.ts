@@ -39,6 +39,7 @@ export function safeBerkasDto(berkas: BerkasArsipDto): BerkasArsipDto {
   return {
     id: berkas.id,
     klasifikasi_id: berkas.klasifikasi_id,
+    tahun_anggaran: berkas.tahun_anggaran,
     klasifikasi_kode_snapshot: berkas.klasifikasi_kode_snapshot,
     klasifikasi_nama_snapshot: berkas.klasifikasi_nama_snapshot,
     status_berkas: berkas.status_berkas,

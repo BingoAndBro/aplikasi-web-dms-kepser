@@ -24,8 +24,8 @@ import { LoadingState } from '#/components/ui/LoadingState'
 import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
   formatBerkasArchiveStatusLabel,
+  formatBerkasLabel,
   formatBerkasStatusLabel,
-  formatKlasifikasiLabel,
   formatNominalRupiah,
   formatNullableDateLabel,
 } from '#/lib/archive/berkas-arsip-page-format'
@@ -41,6 +41,7 @@ export const Route = createFileRoute('/kasubag/berkas/')({ component: BerkasArsi
 type BerkasFolder = {
   berkas_id: string
   klasifikasi_id: string
+  tahun_anggaran: number
   klasifikasi_kode_snapshot: string | null
   klasifikasi_nama_snapshot: string
   status_berkas: string
@@ -253,7 +254,7 @@ function BerkasTable({
                 <td className="px-6 py-5 text-center text-sm font-normal text-zinc-950">{index + 1}</td>
                 <td className="max-w-[440px] px-6 py-5 text-zinc-950">
                   <p className="line-clamp-2 text-[15px] font-semibold tracking-tight transition-colors group-hover:text-brand-text">
-                    {formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+                    {formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}
                   </p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">
                     Persetujuan {folder.workflow_item_count} / Manual {folder.manual_item_count}
@@ -278,7 +279,7 @@ function BerkasTable({
                   <Link
                     to="/kasubag/berkas/$id"
                     params={{ id: folder.berkas_id }}
-                    aria-label={`Buka detail ${formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}`}
+                    aria-label={`Buka detail ${formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}`}
                     onClick={(event) => event.stopPropagation()}
                     className="inline-flex size-10 items-center justify-center rounded-xl border border-zinc-200/80 bg-zinc-50 text-zinc-600 shadow-sm transition hover:border-brand-border-strong hover:bg-brand-surface hover:text-brand-solid hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)] group-hover:border-brand-border-strong group-hover:bg-brand-surface group-hover:text-brand-solid group-hover:shadow-[0_0_0_4px_rgba(251,146,60,0.12)]"
                   >
@@ -294,7 +295,7 @@ function BerkasTable({
         {folders.map((folder) => (
           <ArchiveMobileCard
             key={folder.berkas_id}
-            title={formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot)}
+            title={formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran)}
             subtitle={isOpenFolder(folder) ? 'Berkas terbuka' : `Nomor SPM: ${folder.nomor_spm ?? '-'}`}
             status={<StatusArsipBadge statusArsip={folder.status_arsip} statusBerkas={folder.status_berkas} />}
             meta={[
@@ -382,7 +383,8 @@ function buildBerkasFolderSearchText(folder: BerkasFolder): string {
   return [
     folder.klasifikasi_kode_snapshot,
     folder.klasifikasi_nama_snapshot,
-    formatKlasifikasiLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot),
+    formatBerkasLabel(folder.klasifikasi_kode_snapshot, folder.klasifikasi_nama_snapshot, folder.tahun_anggaran),
+    String(folder.tahun_anggaran),
     folder.nomor_spm,
     folder.status_berkas,
     formatBerkasStatusLabel(folder.status_berkas),

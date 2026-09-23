@@ -18,6 +18,7 @@ export type OperationalKlasifikasiSelectionRepository = {
 export type KlasifikasiEligibilityNode = {
   id: string
   children?: KlasifikasiEligibilityNode[]
+  has_open_berkas?: boolean
 }
 
 export type KlasifikasiBerkasEligibilityRow = {
@@ -141,13 +142,30 @@ function filterNodes<TNode extends KlasifikasiEligibilityNode>(
   const filtered: TNode[] = []
 
   for (const node of nodes) {
+    const hasSourceChildren = Boolean(node.children && node.children.length > 0)
     const children = filterNodes(node.children as readonly TNode[] | undefined ?? [], rowsByKlasifikasi)
+
+    if (hasSourceChildren) {
+      // This node is a parent in the master data. A parent can never be
+      // selected directly (validateOperationalKlasifikasiSelection rejects it
+      // with KLASIFIKASI_PARENT), so its own eligibility is irrelevant here —
+      // only keep it when at least one child survived filtering. Without this
+      // check, a parent whose every child has a closed berkas this year would
+      // fall through to the default "no rows -> is_selectable: true" branch
+      // below and be shown as a pickable leaf.
+      if (children.length > 0) {
+        filtered.push({ ...node, children } as TNode)
+      }
+      continue
+    }
+
     const eligibility = getKlasifikasiBerkasEligibility(rowsByKlasifikasi.get(node.id) ?? [])
 
-    if (eligibility.is_selectable || children.length > 0) {
+    if (eligibility.is_selectable) {
       filtered.push({
         ...node,
         children,
+        has_open_berkas: eligibility.has_open_berkas,
       } as TNode)
     }
   }

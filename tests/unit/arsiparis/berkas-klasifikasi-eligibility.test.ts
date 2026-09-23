@@ -151,11 +151,33 @@ describe('berkas klasifikasi eligibility helper', () => {
         id: 'root',
         nama: 'Root',
         children: [
-          { id: 'open-leaf', nama: 'Open Leaf', children: [] },
-          { id: 'new-leaf', nama: 'New Leaf', children: [] },
+          { id: 'open-leaf', nama: 'Open Leaf', children: [], has_open_berkas: true },
+          { id: 'new-leaf', nama: 'New Leaf', children: [], has_open_berkas: false },
         ],
       },
     ])
+  })
+
+  it('drops a parent whose every child has a closed berkas, instead of showing it as a pickable leaf', () => {
+    const filtered = filterKlasifikasiTreeForBerkasSelection([
+      {
+        id: 'root',
+        nama: 'Root',
+        children: [
+          {
+            id: 'up',
+            nama: 'UP',
+            children: [
+              { id: 'up-1', nama: 'UP-1', children: [] },
+            ],
+          },
+        ],
+      },
+    ], [
+      eligibilityRow('up-1', 'CLOSED', 'AKTIF'),
+    ])
+
+    expect(filtered).toEqual([])
   })
 })
 
