@@ -1,20 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
-import { masterKelengkapanDokumen } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
-import { parseLampiranUrls } from '#/lib/dokumen'
-import type { StatusDokumen, TransitionResult } from '#/lib/types/fsm'
+import type { StatusDokumen } from '#/lib/types/fsm'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 // ---------------------------------------------------------------------------
-// POST /api/dokumen/[id]/submit - Submit or Resubmit dokumen
+// POST /api/dokumen/[id]/submit - Resubmit dokumen after PPK rejection (revision_target=USER)
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/dokumen/$id/submit')({
@@ -43,13 +41,10 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           created_by: string
           status: string
           revision_target: string | null
-          lampiran_urls: unknown
           is_non_material: boolean | null
           jenis_permintaan_id: string | null
           kategori_permintaan_id: string | null
           detail_permintaan_id: string | null
-          kegiatan_jenis_id: string
-          is_ketua_tim: boolean
         }>
 
         try {
@@ -59,13 +54,10 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
               created_by: dokumenTransaksi.createdBy,
               status: dokumenTransaksi.status,
               revision_target: dokumenTransaksi.revisionTarget,
-              lampiran_urls: dokumenTransaksi.lampiranUrls,
               is_non_material: dokumenTransaksi.isNonMaterial,
               jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
               kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
-              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
-              is_ketua_tim: dokumenTransaksi.isKetuaTim,
             })
             .from(dokumenTransaksi)
             .where(eq(dokumenTransaksi.id, params.id))
@@ -86,72 +78,22 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
 
         const isNonMaterial = dok.is_non_material === true ||
           (dok.is_non_material == null && !dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
-        const lampiranUrls = parseLampiranUrls(dok.lampiran_urls)
 
-        let transitionResult: TransitionResult
-        let aksi: string
-
-        if (dok.status === 'DRAFT') {
-          if (!isNonMaterial) {
-            let requiredItems: Array<{ id: string; nama_dokumen: string; required: boolean }>
-            try {
-              requiredItems = await db
-                .select({
-                  id: masterKelengkapanDokumen.id,
-                  nama_dokumen: masterKelengkapanDokumen.namaDokumen,
-                  required: masterKelengkapanDokumen.required,
-                })
-                .from(masterKelengkapanDokumen)
-                .where(and(
-                  eq(masterKelengkapanDokumen.kegiatanId, dok.kegiatan_jenis_id),
-                  eq(masterKelengkapanDokumen.isKetuaTim, dok.is_ketua_tim),
-                ))
-            } catch (err) {
-              console.error('[API/dokumen/:id/submit] local kelengkapan lookup error:', err)
-              return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
-            }
-
-            const uploadedIds = lampiranUrls.map(l => l.kelengkapan_id)
-            const missing = requiredItems.filter(r => r.required && !uploadedIds.includes(r.id))
-
-            if (missing.length > 0) {
-              return Response.json({
-                error: `Lampiran wajib belum lengkap: ${missing.map(m => m.nama_dokumen).join(', ')}`,
-              }, { status: 400 })
-            }
-          }
-
-          if (lampiranUrls.length === 0) {
-            return Response.json({
-              error: 'Minimal upload satu lampiran sebelum mengajukan dokumen',
-            }, { status: 400 })
-          }
-
-          if (isNonMaterial) {
-            transitionResult = {
-              success: true,
-              newStatus: 'COMPLETED',
-              newCurrentStep: null,
-              newRevisionTarget: null,
-              stepUrutan: 1,
-            }
-          } else {
-            transitionResult = transition(dok.status as StatusDokumen, 'SUBMIT', 'PEGAWAI')
-          }
-          aksi = 'SUBMIT'
-        } else if (dok.status === 'NEED_REVISION' && dok.revision_target === 'USER') {
-          if (isNonMaterial) {
-            return Response.json({
-              error: 'Dokumen Non-Material tidak memerlukan revisi',
-            }, { status: 400 })
-          }
-          transitionResult = transition(dok.status as StatusDokumen, 'RESUBMIT', 'PEGAWAI', dok.revision_target)
-          aksi = 'RESUBMIT'
-        } else {
+        // Only the revision path lives here; new submissions go through
+        // POST /api/dokumen/submit (combined create + submit).
+        if (dok.status !== 'NEED_REVISION' || dok.revision_target !== 'USER') {
           return Response.json({
             error: 'Dokumen tidak bisa disubmit dalam status ini',
           }, { status: 400 })
         }
+
+        if (isNonMaterial) {
+          return Response.json({
+            error: 'Dokumen Non-Material tidak memerlukan revisi',
+          }, { status: 400 })
+        }
+
+        const transitionResult = transition(dok.status as StatusDokumen, 'RESUBMIT', 'PEGAWAI', dok.revision_target)
 
         if (!transitionResult.success) {
           return Response.json({ error: transitionResult.error || 'Transisi status gagal' }, { status: 400 })
@@ -178,7 +120,7 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
             await tx.insert(logAktivitas).values({
               dokumenId: params.id,
               userId: session.user.id,
-              aksi,
+              aksi: 'RESUBMIT',
               stepUrutan: transitionResult.stepUrutan,
             })
           })

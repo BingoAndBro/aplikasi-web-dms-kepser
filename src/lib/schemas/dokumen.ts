@@ -37,31 +37,6 @@ export function getDokumenValidationErrorMessage(error: z.ZodError): string {
 }
 
 // ---------------------------------------------------------------------------
-// Create dokumen
-// ---------------------------------------------------------------------------
-
-export const createDokumenSchema = z.object({
-  fungsiId: z.string().uuid('ID fungsi tidak valid'),
-  kegiatanJenisId: z.string().uuid('ID kegiatan tidak valid'),
-  isKetuaTim: z.boolean(),
-  tahun: z.number().int().min(2000).max(2100, 'Tahun tidak valid'),
-  tanggal: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal tidak valid. Gunakan YYYY-MM-DD')
-    .refine(val => {
-      const [y, m, d] = val.split('-').map(Number)
-      const selected = new Date(y, m - 1, d)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      return selected <= today
-    }, { message: 'Tanggal tidak boleh melewati hari ini' }),
-  lampiranUrls: requestLampiranUrlsSchema.default([]),
-  jenisPermintaanId: z.string().uuid().optional(),
-  kategoriPermintaanId: z.string().uuid().optional(),
-  detailPermintaanId: z.string().uuid().optional(),
-})
-
-// ---------------------------------------------------------------------------
 // Update dokumen (lampiran + optional metadata)
 // ---------------------------------------------------------------------------
 
