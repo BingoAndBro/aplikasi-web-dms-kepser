@@ -9,7 +9,7 @@ services:
       TZ: Asia/Jakarta
       PGTZ: Asia/Jakarta
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - kepser_postgres_data:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d:ro
