@@ -63,21 +63,6 @@ export const updateDokumenSchema = z.object({
 export const submitDokumenSchema = z.object({}).strict()
 
 // ---------------------------------------------------------------------------
-// Update nominal_realisasi
-// ---------------------------------------------------------------------------
-
-export const updateNominalSchema = z.object({
-  nominal_realisasi: z.number()
-    .min(0, 'Nominal tidak boleh negatif')
-    .max(999999999999, 'Nominal terlalu besar')
-    .nullable()
-    .optional(),
-  is_non_material: z.boolean().optional(),
-})
-
-export type UpdateNominal = z.infer<typeof updateNominalSchema>
-
-// ---------------------------------------------------------------------------
 // Submit dokumen (combined create + submit in one call)
 // ---------------------------------------------------------------------------
 

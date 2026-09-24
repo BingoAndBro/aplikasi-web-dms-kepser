@@ -55,9 +55,9 @@ const AKSI_ROLE: Record<string, RoleName> = {
 }
 
 /**
- * Resolves the role that performed a logged aksi. `UPDATE_NOMINAL` is the one
- * aksi shared by two roles (PATCH /api/dokumen/:id/nominal allows either the
- * document's own creator, always PEGAWAI, or a KEPALA_SUB_BAGIAN_UMUM user) —
+ * Resolves the role that performed a logged aksi. `UPDATE_NOMINAL` only exists
+ * in historical logs (its endpoint was removed); it was written either by the
+ * document's own creator, always PEGAWAI, or by a KEPALA_SUB_BAGIAN_UMUM user —
  * disambiguated by comparing the log's actor against the document's creator.
  * Returns null for any aksi with no known role (defensive default).
  */

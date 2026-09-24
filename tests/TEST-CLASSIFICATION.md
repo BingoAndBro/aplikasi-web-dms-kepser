@@ -90,7 +90,6 @@ Catatan umum:
 | tests/unit/dokumen/local-submit-drizzle-adapter.test.ts | Unit test | White-box | Menguji fondasi adapter Drizzle untuk submit dokumen lokal. |
 | tests/unit/dokumen/local-submit-repository.test.ts | Unit test | White-box | Menguji fondasi repository submit dokumen lokal. |
 | tests/unit/dokumen/local-submit-write-bridge.test.ts | Unit test | White-box | Menguji fondasi helper write-bridge submit dokumen lokal. |
-| tests/unit/dokumen/nominal-route-uuid-guard.test.ts | Unit/Component test + static source guard (gabungan) | White-box | Menguji guard UUID pada route nominal dokumen (mocked) sekaligus pola validasi di source. |
 | tests/unit/dokumen/pembersihan-aging.test.ts | Unit test | White-box | Menguji perhitungan usia (aging) dokumen untuk proses pembersihan. |
 | tests/unit/dokumen/pembersihan-plan.test.ts | Unit test | White-box | Menguji pembentukan rencana pembersihan dokumen. |
 | tests/unit/dokumen/pembersihan-route.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji route eksekusi pembersihan dokumen dengan dependency di-mock. |

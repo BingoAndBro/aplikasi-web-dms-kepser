@@ -157,7 +157,6 @@ import { Route as ApiKasubagDokumenIdRouteImport } from './routes/api/kasubag/do
 import { Route as ApiKasubagBerkasOpenRouteImport } from './routes/api/kasubag/berkas/open'
 import { Route as ApiKasubagBerkasIdRouteImport } from './routes/api/kasubag/berkas/$id'
 import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id.submit'
-import { Route as ApiDokumenIdNominalRouteImport } from './routes/api/dokumen/$id.nominal'
 import { Route as ApiDokumenIdLogRouteImport } from './routes/api/dokumen.$id.log'
 import { Route as ApiUsersMeIsKetuaTimKegiatanIdRouteImport } from './routes/api/users/me/is-ketua-tim/$kegiatanId'
 import { Route as ApiPpspmDokumenIdRejectRouteImport } from './routes/api/ppspm/dokumen/$id/reject'
@@ -935,11 +934,6 @@ const ApiDokumenIdSubmitRoute = ApiDokumenIdSubmitRouteImport.update({
   path: '/submit',
   getParentRoute: () => ApiDokumenIdRoute,
 } as any)
-const ApiDokumenIdNominalRoute = ApiDokumenIdNominalRouteImport.update({
-  id: '/nominal',
-  path: '/nominal',
-  getParentRoute: () => ApiDokumenIdRoute,
-} as any)
 const ApiDokumenIdLogRoute = ApiDokumenIdLogRouteImport.update({
   id: '/log',
   path: '/log',
@@ -1188,7 +1182,6 @@ export interface FileRoutesByFullPath {
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
-  '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/kasubag/berkas/$id': typeof ApiKasubagBerkasIdRouteWithChildren
   '/api/kasubag/berkas/open': typeof ApiKasubagBerkasOpenRoute
@@ -1352,7 +1345,6 @@ export interface FileRoutesByTo {
   '/kasubag/pembersihan': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen': typeof PegawaiDokumenIndexRoute
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
-  '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/kasubag/berkas/$id': typeof ApiKasubagBerkasIdRouteWithChildren
   '/api/kasubag/berkas/open': typeof ApiKasubagBerkasOpenRoute
@@ -1526,7 +1518,6 @@ export interface FileRoutesById {
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
-  '/api/dokumen/$id/nominal': typeof ApiDokumenIdNominalRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/kasubag/berkas/$id': typeof ApiKasubagBerkasIdRouteWithChildren
   '/api/kasubag/berkas/open': typeof ApiKasubagBerkasOpenRoute
@@ -1701,7 +1692,6 @@ export interface FileRouteTypes {
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
     | '/api/dokumen/$id/log'
-    | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
     | '/api/kasubag/berkas/$id'
     | '/api/kasubag/berkas/open'
@@ -1865,7 +1855,6 @@ export interface FileRouteTypes {
     | '/kasubag/pembersihan'
     | '/pegawai/dokumen'
     | '/api/dokumen/$id/log'
-    | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
     | '/api/kasubag/berkas/$id'
     | '/api/kasubag/berkas/open'
@@ -2038,7 +2027,6 @@ export interface FileRouteTypes {
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
     | '/api/dokumen/$id/log'
-    | '/api/dokumen/$id/nominal'
     | '/api/dokumen/$id/submit'
     | '/api/kasubag/berkas/$id'
     | '/api/kasubag/berkas/open'
@@ -3201,13 +3189,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDokumenIdSubmitRouteImport
       parentRoute: typeof ApiDokumenIdRoute
     }
-    '/api/dokumen/$id/nominal': {
-      id: '/api/dokumen/$id/nominal'
-      path: '/nominal'
-      fullPath: '/api/dokumen/$id/nominal'
-      preLoaderRoute: typeof ApiDokumenIdNominalRouteImport
-      parentRoute: typeof ApiDokumenIdRoute
-    }
     '/api/dokumen/$id/log': {
       id: '/api/dokumen/$id/log'
       path: '/log'
@@ -3699,7 +3680,6 @@ const ApiPembersihanDokumenRouteWithChildren =
 
 interface ApiDokumenIdRouteChildren {
   ApiDokumenIdLogRoute: typeof ApiDokumenIdLogRoute
-  ApiDokumenIdNominalRoute: typeof ApiDokumenIdNominalRoute
   ApiDokumenIdSubmitRoute: typeof ApiDokumenIdSubmitRoute
   ApiDokumenIdDownloadLampiranIndexRoute: typeof ApiDokumenIdDownloadLampiranIndexRoute
   ApiDokumenIdPreviewLampiranIndexRoute: typeof ApiDokumenIdPreviewLampiranIndexRoute
@@ -3707,7 +3687,6 @@ interface ApiDokumenIdRouteChildren {
 
 const ApiDokumenIdRouteChildren: ApiDokumenIdRouteChildren = {
   ApiDokumenIdLogRoute: ApiDokumenIdLogRoute,
-  ApiDokumenIdNominalRoute: ApiDokumenIdNominalRoute,
   ApiDokumenIdSubmitRoute: ApiDokumenIdSubmitRoute,
   ApiDokumenIdDownloadLampiranIndexRoute:
     ApiDokumenIdDownloadLampiranIndexRoute,
