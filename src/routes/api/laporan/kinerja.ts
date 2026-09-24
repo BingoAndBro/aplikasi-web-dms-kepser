@@ -14,6 +14,7 @@ import {
 import {
   getLocalServerSession,
   hasAnyLocalRole,
+  hasLocalRole,
 } from '#/lib/auth/local-server-auth'
 import { ARCHIVE_SOURCE_TYPE, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 import { DOC_STATUS } from '#/lib/constants/document-status'
@@ -25,9 +26,9 @@ import { ROLES } from '#/lib/constants/roles'
 // yatim, bukan realisasi yang bisa dipertanggungjawabkan, jadi ikut dibuang
 // (lihat isNotNull(komponenId) di bawah). Dokumen non-material (TERSIMPAN)
 // tidak pernah punya nominal realisasi — hanya disertakan saat
-// ?scope=laporan_kinerja diminta secara eksplisit oleh halaman Laporan
-// Kinerja (PJK); Monitoring Realisasi (PPK/Ppspm) tidak mengirim scope
-// itu sehingga tetap hanya melihat dokumen material COMPLETED, seperti semula.
+// ?scope=laporan_kinerja diminta oleh halaman Laporan Kinerja, dan scope itu
+// hanya diizinkan untuk PJ Kinerja (403 untuk PPK/PPSPM). Monitoring
+// Realisasi (PPK/PPSPM) hanya melihat dokumen material COMPLETED.
 const ALL_LAPORAN_KINERJA_STATUSES = [
   DOC_STATUS.COMPLETED,
   DOC_STATUS.TERSIMPAN,
@@ -118,6 +119,12 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
         const startDateParam = url.searchParams.get('start_date')
         const endDateParam = url.searchParams.get('end_date')
         const includeNonMaterial = url.searchParams.get('scope') === 'laporan_kinerja'
+
+        // Laporan Kinerja (material + non-material) belongs to PJ Kinerja;
+        // PPK/PPSPM only get the material-only Monitoring Realisasi view.
+        if (includeNonMaterial && !hasLocalRole(session, ROLES.PENANGGUNG_JAWAB_KINERJA)) {
+          return Response.json({ error: 'Forbidden' }, { status: 403 })
+        }
 
         if (startDateParam && !ISO_DATE_PATTERN.test(startDateParam)) {
           return Response.json({ error: 'Parameter periode tidak valid' }, { status: 400 })

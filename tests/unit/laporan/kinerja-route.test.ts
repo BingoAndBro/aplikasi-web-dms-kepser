@@ -170,6 +170,33 @@ describe('Laporan Kinerja API route', () => {
     expect(mocks.isNull).toHaveBeenCalledWith(expect.anything())
   })
 
+  it.each(['PPK', 'PPSPM'])('rejects %s requesting scope=laporan_kinerja with 403', async (role) => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PEGAWAI', role], role))
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja?scope=laporan_kinerja'),
+    })
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'Forbidden' })
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it('allows scope=laporan_kinerja for a user who holds PJ Kinerja alongside PPK', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(
+      ['PEGAWAI', 'PPK', 'PENANGGUNG_JAWAB_KINERJA'],
+      'PPK',
+    ))
+    setupDbSelect([])
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja?scope=laporan_kinerja'),
+    })
+
+    expect(response.status).toBe(200)
+    expect((await response.json()).meta.final_statuses).toEqual(BROAD_FINAL_STATUSES)
+  })
+
   it('does not broaden scope for Monitoring Realisasi requests without the scope param', async () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
     setupDbSelect([])
