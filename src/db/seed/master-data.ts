@@ -5,7 +5,6 @@ import {
   ketuaTimAssignments,
   masterDetailPermintaan,
   masterFungsi,
-  masterJenisDokumen,
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
@@ -104,16 +103,6 @@ export async function seedMasterData(database: SeedDb) {
     masterDetailPermintaan.nama,
     'Dev Detail',
   )
-
-  await database
-    .insert(masterJenisDokumen)
-    .values({
-      id: SEED_MASTER_IDS.jenisDokumen,
-      nama: 'Dev Non-Material',
-      deskripsi: 'Minimal non-material document type for development',
-      isActive: true,
-    })
-    .onConflictDoNothing()
 
   await database
     .insert(masterKelengkapanDokumen)

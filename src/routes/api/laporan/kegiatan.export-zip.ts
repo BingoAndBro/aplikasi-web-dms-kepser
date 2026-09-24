@@ -6,7 +6,6 @@ import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
   ketuaTimAssignments,
   masterDetailPermintaan,
-  masterJenisDokumen,
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
@@ -92,7 +91,6 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
               created_by: dokumenTransaksi.createdBy,
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
               is_non_material: dokumenTransaksi.isNonMaterial,
-              jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
               nama_dokumen: dokumenTransaksi.namaDokumen,
               keterangan_detail: dokumenTransaksi.keteranganDetail,
               created_at: dokumenTransaksi.createdAt,
@@ -106,7 +104,6 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
               jenis_permintaan_nama: masterJenisPermintaan.nama,
               kategori_permintaan_nama: masterKategoriPermintaan.nama,
               detail_permintaan_nama: masterDetailPermintaan.nama,
-              jenis_dokumen_nama: masterJenisDokumen.nama,
             })
             .from(dokumenTransaksi)
             .leftJoin(masterKegiatan, eq(dokumenTransaksi.kegiatanJenisId, masterKegiatan.id))
@@ -114,7 +111,6 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
             .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
             .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
-            .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
             .where(and(
               inArray(dokumenTransaksi.id, parsed.data.dokumen_ids),
               inArray(dokumenTransaksi.kegiatanJenisId, kegiatanIds),
@@ -126,7 +122,6 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             lampiran_urls: parseLampiranUrls(row.lampiran_urls),
             nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
             is_non_material: row.is_non_material ?? false,
-            jenis_dokumen_id: row.jenis_dokumen_id ?? null,
             nama_dokumen: row.nama_dokumen ?? null,
             keterangan_detail: row.keterangan_detail ?? null,
             kegiatan_nama: row.kegiatan_nama ?? undefined,
@@ -135,7 +130,6 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             jenis_permintaan_nama: row.jenis_permintaan_nama ?? undefined,
             kategori_permintaan_nama: row.kategori_permintaan_nama ?? undefined,
             detail_permintaan_nama: row.detail_permintaan_nama ?? undefined,
-            jenis_dokumen_nama: row.jenis_dokumen_nama ?? undefined,
           }))
 
           const entries = await buildLaporanZipEntries(rows)

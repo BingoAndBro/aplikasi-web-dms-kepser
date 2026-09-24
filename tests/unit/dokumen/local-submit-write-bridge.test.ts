@@ -22,7 +22,6 @@ const KEGIATAN_ID = '44444444-4444-4444-8444-444444444444'
 const JENIS_ID = '55555555-5555-4555-8555-555555555555'
 const KATEGORI_ID = '66666666-6666-4666-8666-666666666666'
 const DETAIL_ID = '77777777-7777-4777-8777-777777777777'
-const JENIS_DOKUMEN_ID = '88888888-8888-4888-8888-888888888888'
 const DOKUMEN_ID = '99999999-9999-4999-8999-999999999999'
 const REQUIRED_A_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const REQUIRED_B_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
@@ -163,7 +162,6 @@ describe('local submit write bridge helper foundation', () => {
         isKetuaTim: false,
         is_non_material: true,
         nominal_realisasi: null,
-        jenisDokumenId: JENIS_DOKUMEN_ID,
         namaDokumen: 'Dev Non-Material',
         keteranganDetail: 'Catatan non-material',
         komponenId: undefined,
@@ -186,7 +184,6 @@ describe('local submit write bridge helper foundation', () => {
       judul: 'Dev Non-Material 2026 Pegawai Local',
       nominalRealisasi: 0,
       isNonMaterial: true,
-      jenisDokumenId: JENIS_DOKUMEN_ID,
       namaDokumen: 'Dev Non-Material',
       keteranganDetail: 'Catatan non-material',
       komponenId: null,
@@ -467,10 +464,6 @@ function createRepository(options: {
         { id: REQUIRED_B_ID, namaDokumen: 'Form Permintaan', required: true },
       ]
     },
-    async getJenisDokumenById(id) {
-      calls.push(['getJenisDokumenById', id])
-      return { id, nama: 'Dev Non-Material' }
-    },
     async getKomponenById(id) {
       calls.push(['getKomponenById', id])
       return options.komponenName === null ? null : { id, nama: options.komponenName ?? 'Dev Komponen' }
@@ -526,7 +519,6 @@ function createdDocumentFromPayload(
     created_by: payload.createdBy,
     nominal_realisasi: payload.nominalRealisasi,
     is_non_material: payload.isNonMaterial,
-    jenis_dokumen_id: payload.jenisDokumenId,
     nama_dokumen: payload.namaDokumen,
     keterangan_detail: payload.keteranganDetail,
     komponen_id: payload.komponenId,

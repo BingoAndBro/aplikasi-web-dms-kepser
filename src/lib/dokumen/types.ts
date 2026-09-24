@@ -21,7 +21,6 @@ export type DokumenRow = {
   created_by: string
   nominal_realisasi: number | null
   is_non_material: boolean
-  jenis_dokumen_id: string | null
   keterangan_detail: string | null
   created_at: string
   updated_at: string
@@ -43,7 +42,6 @@ export type DokumenRow = {
   jenis_permintaan_nama?: string
   kategori_permintaan_nama?: string
   detail_permintaan_nama?: string
-  jenis_dokumen_nama?: string
 }
 
 export type LogRow = {

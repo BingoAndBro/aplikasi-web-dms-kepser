@@ -254,7 +254,6 @@ function toDokumenRow(document: WorkflowAttachmentNamingDocument): DokumenRow {
     created_by: '',
     nominal_realisasi: null,
     is_non_material: document.is_non_material === true,
-    jenis_dokumen_id: null,
     keterangan_detail: null,
     created_at: '',
     updated_at: '',

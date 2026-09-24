@@ -40,7 +40,6 @@ describe('local submit repository foundation', () => {
       kegiatan: 'master.master_kegiatan',
       komponen: 'master.master_komponen',
       kelengkapan: 'master.master_kelengkapan_dokumen',
-      jenisDokumen: 'master.master_jenis_dokumen',
       jenisPermintaan: 'master.master_jenis_permintaan',
       kategoriPermintaan: 'master.master_kategori_permintaan',
       detailPermintaan: 'master.master_detail_permintaan',
@@ -66,7 +65,6 @@ describe('local submit repository foundation', () => {
       createdBy: ACTOR_ID,
       nominalRealisasi: '125000.5',
       isNonMaterial: false,
-      jenisDokumenId: null,
       namaDokumen: null,
       keteranganDetail: null,
       komponenId: KOMPONEN_ID,
@@ -133,7 +131,6 @@ describe('local submit repository foundation', () => {
       created_by: ACTOR_ID,
       nominal_realisasi: 125000.5,
       is_non_material: false,
-      jenis_dokumen_id: null,
       keterangan_detail: null,
       jenis_permintaan_id: JENIS_ID,
       kategori_permintaan_id: KATEGORI_ID,
@@ -245,10 +242,6 @@ function createAdapter(): LocalSubmitRepositoryAdapter & { calls: unknown[] } {
       calls.push(['selectRequiredKelengkapan', input])
       return [{ id: LAMPIRAN_ID, namaDokumen: 'Surat Tugas', required: true }]
     },
-    async selectJenisDokumenById(id) {
-      calls.push(['selectJenisDokumenById', id])
-      return { id, nama: 'Dev Non-Material' }
-    },
     async selectKomponenById(id) {
       calls.push(['selectKomponenById', id])
       return { id, nama: 'Dev Komponen' }
@@ -340,7 +333,6 @@ function documentCreatePayload(): LocalSubmitDocumentCreatePayload {
     revisionNotes: null,
     nominalRealisasi: 125000.5,
     isNonMaterial: false,
-    jenisDokumenId: null,
     namaDokumen: null,
     keteranganDetail: null,
     komponenId: KOMPONEN_ID,
@@ -367,7 +359,6 @@ function dokumenRow(overrides: Partial<LocalSubmitDokumenRow> = {}): LocalSubmit
     createdBy: ACTOR_ID,
     nominalRealisasi: '125000.5',
     isNonMaterial: false,
-    jenisDokumenId: null,
     namaDokumen: null,
     keteranganDetail: null,
     komponenId: KOMPONEN_ID,

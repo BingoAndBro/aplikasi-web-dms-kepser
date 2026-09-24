@@ -50,7 +50,6 @@ function baseDokumenRow(overrides: Partial<Record<string, unknown>> = {}) {
     created_by: OWNER_ID,
     nominal_realisasi: null,
     is_non_material: true,
-    jenis_dokumen_id: null,
     keterangan_detail: null,
     created_at: new Date(),
     updated_at: new Date(),
@@ -67,7 +66,6 @@ function baseDokumenRow(overrides: Partial<Record<string, unknown>> = {}) {
     jenis_permintaan_nama: undefined,
     kategori_permintaan_nama: undefined,
     detail_permintaan_nama: undefined,
-    jenis_dokumen_nama: undefined,
     ...overrides,
   }
 }

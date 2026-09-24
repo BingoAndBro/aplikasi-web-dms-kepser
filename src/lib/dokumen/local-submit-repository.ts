@@ -20,7 +20,6 @@ export const LOCAL_SUBMIT_SCHEMA_TABLES = {
   kegiatan: 'master.master_kegiatan',
   komponen: 'master.master_komponen',
   kelengkapan: 'master.master_kelengkapan_dokumen',
-  jenisDokumen: 'master.master_jenis_dokumen',
   jenisPermintaan: 'master.master_jenis_permintaan',
   kategoriPermintaan: 'master.master_kategori_permintaan',
   detailPermintaan: 'master.master_detail_permintaan',
@@ -61,7 +60,6 @@ export type LocalSubmitDokumenInsert = {
   createdBy: string
   nominalRealisasi: string
   isNonMaterial: boolean
-  jenisDokumenId: string | null
   namaDokumen: string | null
   keteranganDetail: string | null
   komponenId: string | null
@@ -102,7 +100,6 @@ export type LocalSubmitDokumenRow = {
   createdBy: string
   nominalRealisasi: string | number | null
   isNonMaterial: boolean
-  jenisDokumenId: string | null
   namaDokumen: string | null
   keteranganDetail: string | null
   komponenId: string | null
@@ -114,7 +111,6 @@ export type LocalSubmitDokumenRow = {
   fungsiNama?: string
   kegiatanNama?: string
   komponenNama?: string
-  jenisDokumenNama?: string
 }
 
 export type LocalSubmitRepositoryTransactionAdapter = {
@@ -131,7 +127,6 @@ export type LocalSubmitRepositoryAdapter = {
   selectRequiredKelengkapan(
     input: LocalSubmitRequiredKelengkapanRead,
   ): Promise<LocalSubmitKelengkapanRow[]>
-  selectJenisDokumenById(id: string): Promise<LocalSubmitNameLookupRow | null>
   selectKomponenById(id: string): Promise<LocalSubmitNameLookupRow | null>
   selectJenisPermintaanById(id: string): Promise<LocalSubmitNameLookupRow | null>
   selectKategoriPermintaanById(id: string): Promise<LocalSubmitNameLookupRow | null>
@@ -152,9 +147,6 @@ export function createLocalSubmitBridgeRepository(
     async getRequiredKelengkapan(input) {
       const rows = await adapter.selectRequiredKelengkapan(input)
       return rows.map(mapLocalSubmitKelengkapanRow)
-    },
-    async getJenisDokumenById(id) {
-      return mapLocalSubmitNameRow(await adapter.selectJenisDokumenById(id))
     },
     async getKomponenById(id) {
       return mapLocalSubmitNameRow(await adapter.selectKomponenById(id))
@@ -195,7 +187,6 @@ export function mapLocalSubmitDocumentCreateToInsert(
     createdBy: payload.createdBy,
     nominalRealisasi: payload.nominalRealisasi.toString(),
     isNonMaterial: payload.isNonMaterial,
-    jenisDokumenId: payload.jenisDokumenId,
     namaDokumen: payload.namaDokumen,
     keteranganDetail: payload.keteranganDetail,
     komponenId: payload.komponenId,
@@ -254,7 +245,6 @@ export function mapLocalSubmitDokumenRowToCreatedDocument(
     created_by: row.createdBy,
     nominal_realisasi: normalizeNumericValue(row.nominalRealisasi),
     is_non_material: row.isNonMaterial,
-    jenis_dokumen_id: row.jenisDokumenId,
     nama_dokumen: row.namaDokumen,
     keterangan_detail: row.keteranganDetail,
     komponen_id: row.komponenId,
@@ -266,7 +256,6 @@ export function mapLocalSubmitDokumenRowToCreatedDocument(
     fungsi_nama: row.fungsiNama,
     kegiatan_nama: row.kegiatanNama,
     komponen_nama: row.komponenNama,
-    jenis_dokumen_nama: row.jenisDokumenNama,
   }
 }
 

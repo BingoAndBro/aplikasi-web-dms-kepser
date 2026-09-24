@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const OWNER_ID = '11111111-1111-4111-8111-111111111111'
 const FUNGSI_ID = '22222222-2222-4222-8222-222222222222'
 const KEGIATAN_ID = '33333333-3333-4333-8333-333333333333'
-const JENIS_DOKUMEN_ID = '44444444-4444-4444-8444-444444444444'
 const DOKUMEN_ID = '55555555-5555-4555-8555-555555555555'
 const KELENGKAPAN_ID = '66666666-6666-4666-8666-666666666666'
 const KOMPONEN_ID = '77777777-7777-4777-8777-777777777777'
@@ -662,7 +661,6 @@ function createValidNonMaterialSubmitPayload(
     ...createBaseSubmitPayload(),
     nominal_realisasi: null,
     is_non_material: true,
-    jenisDokumenId: JENIS_DOKUMEN_ID,
     namaDokumen: 'Notulen Rapat',
     ...overrides,
   }
@@ -682,7 +680,6 @@ function createBaseSubmitPayload() {
 type SubmitPayloadFixture = ReturnType<typeof createBaseSubmitPayload> & {
   nominal_realisasi?: number | null
   is_non_material?: boolean
-  jenisDokumenId?: string
   namaDokumen?: string
   keteranganDetail?: string
   komponenId?: string
@@ -765,10 +762,6 @@ function createLocalSubmitAdapter(options: {
       localSubmitAdapterCalls.push(['selectRequiredKelengkapan', input])
       return [{ id: KELENGKAPAN_ID, namaDokumen: 'Laporan', required: true }]
     },
-    async selectJenisDokumenById(id: string) {
-      localSubmitAdapterCalls.push(['selectJenisDokumenById', id])
-      return { id, nama: 'Dokumen Non Material' }
-    },
     async selectKomponenById(id: string) {
       localSubmitAdapterCalls.push(['selectKomponenById', id])
       return { id, nama: 'Komponen Pengujian' }
@@ -844,7 +837,6 @@ function createLocalDokumenRow(values: Record<string, unknown>) {
     createdBy: values.createdBy,
     nominalRealisasi: values.nominalRealisasi,
     isNonMaterial: values.isNonMaterial,
-    jenisDokumenId: values.jenisDokumenId,
     namaDokumen: values.namaDokumen,
     keteranganDetail: values.keteranganDetail,
     komponenId: values.komponenId,
@@ -855,6 +847,5 @@ function createLocalDokumenRow(values: Record<string, unknown>) {
     updatedAt: '2024-01-15T00:00:00.000Z',
     fungsiNama: 'Fungsi Pengujian',
     kegiatanNama: 'Kegiatan Pengujian',
-    jenisDokumenNama: values.jenisDokumenId ? 'Dokumen Non Material' : undefined,
   }
 }

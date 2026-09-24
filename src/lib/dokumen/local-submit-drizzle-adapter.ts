@@ -13,7 +13,6 @@ import {
   logAktivitas,
   masterFungsi,
   masterDetailPermintaan,
-  masterJenisDokumen,
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
@@ -114,10 +113,6 @@ function createAdapterForDatabase(
 
     async selectRequiredKelengkapan(input) {
       return selectRequiredKelengkapan(database, input)
-    },
-
-    async selectJenisDokumenById(id) {
-      return selectNameById(database, masterJenisDokumen, id)
     },
 
     async selectKomponenById(id) {
@@ -269,16 +264,6 @@ async function enrichInsertedDokumenRow(
     .where(eq(masterKegiatan.id, row.kegiatanJenisId))
     .limit(1)
 
-  let jenisDokumenNama: string | undefined
-  if (row.jenisDokumenId) {
-    const [jenisDokumen] = await tx
-      .select({ nama: masterJenisDokumen.nama })
-      .from(masterJenisDokumen)
-      .where(eq(masterJenisDokumen.id, row.jenisDokumenId))
-      .limit(1)
-    jenisDokumenNama = (jenisDokumen as { nama?: string } | undefined)?.nama
-  }
-
   let komponenNama: string | undefined
   if (row.komponenId) {
     const [komponen] = await tx
@@ -305,7 +290,6 @@ async function enrichInsertedDokumenRow(
     createdBy: row.createdBy,
     nominalRealisasi: row.nominalRealisasi,
     isNonMaterial: Boolean(row.isNonMaterial),
-    jenisDokumenId: row.jenisDokumenId,
     namaDokumen: row.namaDokumen,
     keteranganDetail: row.keteranganDetail,
     komponenId: row.komponenId,
@@ -317,13 +301,12 @@ async function enrichInsertedDokumenRow(
     fungsiNama: (fungsi as { nama?: string } | undefined)?.nama,
     kegiatanNama: (kegiatan as { nama?: string } | undefined)?.nama,
     komponenNama,
-    jenisDokumenNama,
   }
 }
 
 type DrizzleDokumenRow = Omit<
   LocalSubmitDokumenRow,
-  'fungsiNama' | 'kegiatanNama' | 'komponenNama' | 'jenisDokumenNama' | 'isNonMaterial'
+  'fungsiNama' | 'kegiatanNama' | 'komponenNama' | 'isNonMaterial'
 > & {
   lampiranUrls: LampiranUrl[]
   isNonMaterial: boolean | null

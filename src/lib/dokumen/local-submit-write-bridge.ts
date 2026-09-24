@@ -53,7 +53,6 @@ export type LocalSubmitPayload = {
   lampiranUrls: LampiranUrl[]
   nominal_realisasi?: number | null
   is_non_material?: boolean
-  jenisDokumenId?: string
   namaDokumen?: string
   keteranganDetail?: string
   komponenId?: string
@@ -98,7 +97,6 @@ export type LocalSubmitBridgeRepository = {
   getRequiredKelengkapan(
     input: LocalSubmitRequiredKelengkapanRead,
   ): Promise<LocalSubmitRequiredKelengkapan[]>
-  getJenisDokumenById(id: string): Promise<LocalSubmitNameRow | null>
   getKomponenById(id: string): Promise<LocalSubmitNameRow | null>
   getJenisPermintaanById(id: string): Promise<LocalSubmitNameRow | null>
   getKategoriPermintaanById(id: string): Promise<LocalSubmitNameRow | null>
@@ -124,7 +122,6 @@ export type LocalSubmitDocumentCreatePayload = {
   revisionNotes: null
   nominalRealisasi: number
   isNonMaterial: boolean
-  jenisDokumenId: string | null
   namaDokumen: string | null
   keteranganDetail: string | null
   komponenId: string | null
@@ -166,7 +163,6 @@ export type LocalSubmitCreatedDocument = {
   created_by: string
   nominal_realisasi: number | null
   is_non_material: boolean
-  jenis_dokumen_id: string | null
   nama_dokumen: string | null
   keterangan_detail: string | null
   komponen_id: string | null
@@ -178,7 +174,6 @@ export type LocalSubmitCreatedDocument = {
   fungsi_nama?: string
   kegiatan_nama?: string
   komponen_nama?: string
-  jenis_dokumen_nama?: string
 }
 
 export type LocalSubmitBridgeTransaction = {
@@ -429,7 +424,6 @@ export function buildLocalSubmitDocumentCreatePayload({
     revisionNotes: null,
     nominalRealisasi: payload.nominal_realisasi ?? 0,
     isNonMaterial: Boolean(payload.is_non_material),
-    jenisDokumenId: payload.jenisDokumenId ?? null,
     namaDokumen: payload.namaDokumen ?? null,
     keteranganDetail: payload.keteranganDetail ?? null,
     komponenId: payload.komponenId ?? null,
@@ -472,7 +466,6 @@ export async function resolveLocalSubmitLeafName(
   payload: Pick<
     LocalSubmitPayload,
     | 'is_non_material'
-    | 'jenisDokumenId'
     | 'namaDokumen'
     | 'komponenId'
     | 'detailPermintaanId'

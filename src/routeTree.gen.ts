@@ -56,7 +56,6 @@ import { Route as ApiMasterKomponenRouteImport } from './routes/api/master-kompo
 import { Route as ApiMasterKelengkapanRouteImport } from './routes/api/master-kelengkapan'
 import { Route as ApiMasterKegiatanRouteImport } from './routes/api/master-kegiatan'
 import { Route as ApiMasterKategoriRouteImport } from './routes/api/master-kategori'
-import { Route as ApiMasterJenisDokumenRouteImport } from './routes/api/master-jenis-dokumen'
 import { Route as ApiMasterJenisRouteImport } from './routes/api/master-jenis'
 import { Route as ApiMasterFungsiRouteImport } from './routes/api/master-fungsi'
 import { Route as ApiMasterDetailRouteImport } from './routes/api/master-detail'
@@ -99,7 +98,6 @@ import { Route as ApiMasterKelengkapanIdRouteImport } from './routes/api/master-
 import { Route as ApiMasterKegiatanIdRouteImport } from './routes/api/master-kegiatan.$id'
 import { Route as ApiMasterKategoriIdRouteImport } from './routes/api/master-kategori.$id'
 import { Route as ApiMasterJenisIdRouteImport } from './routes/api/master-jenis.$id'
-import { Route as ApiMasterJenisDokumenIdRouteImport } from './routes/api/master-jenis-dokumen.$id'
 import { Route as ApiMasterFungsiIdRouteImport } from './routes/api/master-fungsi.$id'
 import { Route as ApiMasterDetailIdRouteImport } from './routes/api/master-detail.$id'
 import { Route as ApiLaporanSayaRouteImport } from './routes/api/laporan/saya'
@@ -124,7 +122,6 @@ import { Route as AdminMasterDataKomponenRouteImport } from './routes/admin.mast
 import { Route as AdminMasterDataKelengkapanRouteImport } from './routes/admin.master-data.kelengkapan'
 import { Route as AdminMasterDataKegiatanRouteImport } from './routes/admin.master-data.kegiatan'
 import { Route as AdminMasterDataKategoriRouteImport } from './routes/admin.master-data.kategori'
-import { Route as AdminMasterDataJenisDokumenRouteImport } from './routes/admin.master-data.jenis-dokumen'
 import { Route as AdminMasterDataJenisRouteImport } from './routes/admin.master-data.jenis'
 import { Route as AdminMasterDataFungsiRouteImport } from './routes/admin.master-data.fungsi'
 import { Route as AdminMasterDataDetailRouteImport } from './routes/admin.master-data.detail'
@@ -420,11 +417,6 @@ const ApiMasterKategoriRoute = ApiMasterKategoriRouteImport.update({
   path: '/api/master-kategori',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiMasterJenisDokumenRoute = ApiMasterJenisDokumenRouteImport.update({
-  id: '/api/master-jenis-dokumen',
-  path: '/api/master-jenis-dokumen',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiMasterJenisRoute = ApiMasterJenisRouteImport.update({
   id: '/api/master-jenis',
   path: '/api/master-jenis',
@@ -636,11 +628,6 @@ const ApiMasterJenisIdRoute = ApiMasterJenisIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiMasterJenisRoute,
 } as any)
-const ApiMasterJenisDokumenIdRoute = ApiMasterJenisDokumenIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiMasterJenisDokumenRoute,
-} as any)
 const ApiMasterFungsiIdRoute = ApiMasterFungsiIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -763,12 +750,6 @@ const AdminMasterDataKategoriRoute = AdminMasterDataKategoriRouteImport.update({
   path: '/master-data/kategori',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminMasterDataJenisDokumenRoute =
-  AdminMasterDataJenisDokumenRouteImport.update({
-    id: '/master-data/jenis-dokumen',
-    path: '/master-data/jenis-dokumen',
-    getParentRoute: () => AdminRoute,
-  } as any)
 const AdminMasterDataJenisRoute = AdminMasterDataJenisRouteImport.update({
   id: '/master-data/jenis',
   path: '/master-data/jenis',
@@ -1079,7 +1060,6 @@ export interface FileRoutesByFullPath {
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
-  '/api/master-jenis-dokumen': typeof ApiMasterJenisDokumenRouteWithChildren
   '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
@@ -1119,7 +1099,6 @@ export interface FileRoutesByFullPath {
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
   '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
-  '/admin/master-data/jenis-dokumen': typeof AdminMasterDataJenisDokumenRoute
   '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
@@ -1144,7 +1123,6 @@ export interface FileRoutesByFullPath {
   '/api/laporan/saya': typeof ApiLaporanSayaRouteWithChildren
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
-  '/api/master-jenis-dokumen/$id': typeof ApiMasterJenisDokumenIdRoute
   '/api/master-jenis/$id': typeof ApiMasterJenisIdRoute
   '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
@@ -1246,7 +1224,6 @@ export interface FileRoutesByTo {
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
-  '/api/master-jenis-dokumen': typeof ApiMasterJenisDokumenRouteWithChildren
   '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
@@ -1284,7 +1261,6 @@ export interface FileRoutesByTo {
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
   '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
-  '/admin/master-data/jenis-dokumen': typeof AdminMasterDataJenisDokumenRoute
   '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
@@ -1309,7 +1285,6 @@ export interface FileRoutesByTo {
   '/api/laporan/saya': typeof ApiLaporanSayaRouteWithChildren
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
-  '/api/master-jenis-dokumen/$id': typeof ApiMasterJenisDokumenIdRoute
   '/api/master-jenis/$id': typeof ApiMasterJenisIdRoute
   '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
@@ -1415,7 +1390,6 @@ export interface FileRoutesById {
   '/api/master-detail': typeof ApiMasterDetailRouteWithChildren
   '/api/master-fungsi': typeof ApiMasterFungsiRouteWithChildren
   '/api/master-jenis': typeof ApiMasterJenisRouteWithChildren
-  '/api/master-jenis-dokumen': typeof ApiMasterJenisDokumenRouteWithChildren
   '/api/master-kategori': typeof ApiMasterKategoriRouteWithChildren
   '/api/master-kegiatan': typeof ApiMasterKegiatanRouteWithChildren
   '/api/master-kelengkapan': typeof ApiMasterKelengkapanRouteWithChildren
@@ -1455,7 +1429,6 @@ export interface FileRoutesById {
   '/admin/master-data/detail': typeof AdminMasterDataDetailRoute
   '/admin/master-data/fungsi': typeof AdminMasterDataFungsiRoute
   '/admin/master-data/jenis': typeof AdminMasterDataJenisRoute
-  '/admin/master-data/jenis-dokumen': typeof AdminMasterDataJenisDokumenRoute
   '/admin/master-data/kategori': typeof AdminMasterDataKategoriRoute
   '/admin/master-data/kegiatan': typeof AdminMasterDataKegiatanRoute
   '/admin/master-data/kelengkapan': typeof AdminMasterDataKelengkapanRoute
@@ -1480,7 +1453,6 @@ export interface FileRoutesById {
   '/api/laporan/saya': typeof ApiLaporanSayaRouteWithChildren
   '/api/master-detail/$id': typeof ApiMasterDetailIdRoute
   '/api/master-fungsi/$id': typeof ApiMasterFungsiIdRoute
-  '/api/master-jenis-dokumen/$id': typeof ApiMasterJenisDokumenIdRoute
   '/api/master-jenis/$id': typeof ApiMasterJenisIdRoute
   '/api/master-kategori/$id': typeof ApiMasterKategoriIdRoute
   '/api/master-kegiatan/$id': typeof ApiMasterKegiatanIdRoute
@@ -1589,7 +1561,6 @@ export interface FileRouteTypes {
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
-    | '/api/master-jenis-dokumen'
     | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
@@ -1629,7 +1600,6 @@ export interface FileRouteTypes {
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
     | '/admin/master-data/jenis'
-    | '/admin/master-data/jenis-dokumen'
     | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
@@ -1654,7 +1624,6 @@ export interface FileRouteTypes {
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
-    | '/api/master-jenis-dokumen/$id'
     | '/api/master-jenis/$id'
     | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
@@ -1756,7 +1725,6 @@ export interface FileRouteTypes {
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
-    | '/api/master-jenis-dokumen'
     | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
@@ -1794,7 +1762,6 @@ export interface FileRouteTypes {
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
     | '/admin/master-data/jenis'
-    | '/admin/master-data/jenis-dokumen'
     | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
@@ -1819,7 +1786,6 @@ export interface FileRouteTypes {
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
-    | '/api/master-jenis-dokumen/$id'
     | '/api/master-jenis/$id'
     | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
@@ -1924,7 +1890,6 @@ export interface FileRouteTypes {
     | '/api/master-detail'
     | '/api/master-fungsi'
     | '/api/master-jenis'
-    | '/api/master-jenis-dokumen'
     | '/api/master-kategori'
     | '/api/master-kegiatan'
     | '/api/master-kelengkapan'
@@ -1964,7 +1929,6 @@ export interface FileRouteTypes {
     | '/admin/master-data/detail'
     | '/admin/master-data/fungsi'
     | '/admin/master-data/jenis'
-    | '/admin/master-data/jenis-dokumen'
     | '/admin/master-data/kategori'
     | '/admin/master-data/kegiatan'
     | '/admin/master-data/kelengkapan'
@@ -1989,7 +1953,6 @@ export interface FileRouteTypes {
     | '/api/laporan/saya'
     | '/api/master-detail/$id'
     | '/api/master-fungsi/$id'
-    | '/api/master-jenis-dokumen/$id'
     | '/api/master-jenis/$id'
     | '/api/master-kategori/$id'
     | '/api/master-kegiatan/$id'
@@ -2095,7 +2058,6 @@ export interface RootRouteChildren {
   ApiMasterDetailRoute: typeof ApiMasterDetailRouteWithChildren
   ApiMasterFungsiRoute: typeof ApiMasterFungsiRouteWithChildren
   ApiMasterJenisRoute: typeof ApiMasterJenisRouteWithChildren
-  ApiMasterJenisDokumenRoute: typeof ApiMasterJenisDokumenRouteWithChildren
   ApiMasterKategoriRoute: typeof ApiMasterKategoriRouteWithChildren
   ApiMasterKegiatanRoute: typeof ApiMasterKegiatanRouteWithChildren
   ApiMasterKelengkapanRoute: typeof ApiMasterKelengkapanRouteWithChildren
@@ -2482,13 +2444,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMasterKategoriRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/master-jenis-dokumen': {
-      id: '/api/master-jenis-dokumen'
-      path: '/api/master-jenis-dokumen'
-      fullPath: '/api/master-jenis-dokumen'
-      preLoaderRoute: typeof ApiMasterJenisDokumenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/master-jenis': {
       id: '/api/master-jenis'
       path: '/api/master-jenis'
@@ -2783,13 +2738,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMasterJenisIdRouteImport
       parentRoute: typeof ApiMasterJenisRoute
     }
-    '/api/master-jenis-dokumen/$id': {
-      id: '/api/master-jenis-dokumen/$id'
-      path: '/$id'
-      fullPath: '/api/master-jenis-dokumen/$id'
-      preLoaderRoute: typeof ApiMasterJenisDokumenIdRouteImport
-      parentRoute: typeof ApiMasterJenisDokumenRoute
-    }
     '/api/master-fungsi/$id': {
       id: '/api/master-fungsi/$id'
       path: '/$id'
@@ -2956,13 +2904,6 @@ declare module '@tanstack/react-router' {
       path: '/master-data/kategori'
       fullPath: '/admin/master-data/kategori'
       preLoaderRoute: typeof AdminMasterDataKategoriRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/master-data/jenis-dokumen': {
-      id: '/admin/master-data/jenis-dokumen'
-      path: '/master-data/jenis-dokumen'
-      fullPath: '/admin/master-data/jenis-dokumen'
-      preLoaderRoute: typeof AdminMasterDataJenisDokumenRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/master-data/jenis': {
@@ -3353,7 +3294,6 @@ interface AdminRouteChildren {
   AdminMasterDataDetailRoute: typeof AdminMasterDataDetailRoute
   AdminMasterDataFungsiRoute: typeof AdminMasterDataFungsiRoute
   AdminMasterDataJenisRoute: typeof AdminMasterDataJenisRoute
-  AdminMasterDataJenisDokumenRoute: typeof AdminMasterDataJenisDokumenRoute
   AdminMasterDataKategoriRoute: typeof AdminMasterDataKategoriRoute
   AdminMasterDataKegiatanRoute: typeof AdminMasterDataKegiatanRoute
   AdminMasterDataKelengkapanRoute: typeof AdminMasterDataKelengkapanRoute
@@ -3369,7 +3309,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMasterDataDetailRoute: AdminMasterDataDetailRoute,
   AdminMasterDataFungsiRoute: AdminMasterDataFungsiRoute,
   AdminMasterDataJenisRoute: AdminMasterDataJenisRoute,
-  AdminMasterDataJenisDokumenRoute: AdminMasterDataJenisDokumenRoute,
   AdminMasterDataKategoriRoute: AdminMasterDataKategoriRoute,
   AdminMasterDataKegiatanRoute: AdminMasterDataKegiatanRoute,
   AdminMasterDataKelengkapanRoute: AdminMasterDataKelengkapanRoute,
@@ -3607,19 +3546,6 @@ const ApiMasterJenisRouteChildren: ApiMasterJenisRouteChildren = {
 const ApiMasterJenisRouteWithChildren = ApiMasterJenisRoute._addFileChildren(
   ApiMasterJenisRouteChildren,
 )
-
-interface ApiMasterJenisDokumenRouteChildren {
-  ApiMasterJenisDokumenIdRoute: typeof ApiMasterJenisDokumenIdRoute
-}
-
-const ApiMasterJenisDokumenRouteChildren: ApiMasterJenisDokumenRouteChildren = {
-  ApiMasterJenisDokumenIdRoute: ApiMasterJenisDokumenIdRoute,
-}
-
-const ApiMasterJenisDokumenRouteWithChildren =
-  ApiMasterJenisDokumenRoute._addFileChildren(
-    ApiMasterJenisDokumenRouteChildren,
-  )
 
 interface ApiMasterKategoriRouteChildren {
   ApiMasterKategoriIdRoute: typeof ApiMasterKategoriIdRoute
@@ -3888,7 +3814,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMasterDetailRoute: ApiMasterDetailRouteWithChildren,
   ApiMasterFungsiRoute: ApiMasterFungsiRouteWithChildren,
   ApiMasterJenisRoute: ApiMasterJenisRouteWithChildren,
-  ApiMasterJenisDokumenRoute: ApiMasterJenisDokumenRouteWithChildren,
   ApiMasterKategoriRoute: ApiMasterKategoriRouteWithChildren,
   ApiMasterKegiatanRoute: ApiMasterKegiatanRouteWithChildren,
   ApiMasterKelengkapanRoute: ApiMasterKelengkapanRouteWithChildren,

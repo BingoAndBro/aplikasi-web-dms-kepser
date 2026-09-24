@@ -134,6 +134,13 @@
       "when": 1790229834780,
       "tag": "0018_berkas_tahun_anggaran",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790316234780,
+      "tag": "0019_drop_master_jenis_dokumen",
+      "breakpoints": true
     }
   ]
 }

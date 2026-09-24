@@ -89,7 +89,6 @@ export const createAndSubmitDokumenSchema = z.object({
     .optional(),
   is_non_material: z.boolean().default(false),
   // For Non-Material documents
-  jenisDokumenId: z.string().uuid().optional(),
   namaDokumen: z.string().trim().min(1, 'Nama dokumen tidak boleh kosong').max(255, 'Nama dokumen maksimal 255 karakter').optional(),
   keteranganDetail: z.string().max(500, 'Keterangan maksimal 500 karakter').optional(),
   // For Material documents

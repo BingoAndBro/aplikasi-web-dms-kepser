@@ -406,7 +406,6 @@ function createPostRequest(body: Record<string, unknown>, origin = 'http://local
 function dokumenRow(overrides: Partial<{
   judul: string | null
   status: string
-  jenis_dokumen_nama: string | null
   kegiatan_nama: string | null
   nominal_realisasi: string | null
   lampiran_urls: unknown
@@ -415,7 +414,6 @@ function dokumenRow(overrides: Partial<{
     id: DOCUMENT_ID,
     judul: overrides.judul ?? 'Realisasi Triwulan I',
     status: overrides.status ?? 'COMPLETED',
-    jenis_dokumen_nama: overrides.jenis_dokumen_nama ?? 'Laporan Kinerja',
     kegiatan_nama: overrides.kegiatan_nama ?? 'Penyusunan Publikasi',
     nominal_realisasi: overrides.nominal_realisasi ?? '1500000.00',
     lampiran_urls: overrides.lampiran_urls ?? [{

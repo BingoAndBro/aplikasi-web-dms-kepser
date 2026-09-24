@@ -33,7 +33,6 @@ export function parseDokumen(raw: any): DokumenRow {
     created_by: raw.created_by,
     nominal_realisasi: raw.nominal_realisasi ?? null,
     is_non_material: raw.is_non_material ?? false,
-    jenis_dokumen_id: raw.jenis_dokumen_id ?? null,
     keterangan_detail: raw.keterangan_detail ?? null,
     created_at: raw.created_at,
     updated_at: raw.updated_at,
@@ -50,7 +49,6 @@ export function parseDokumen(raw: any): DokumenRow {
     jenis_permintaan_nama: raw.jenis_permintaan_nama,
     kategori_permintaan_nama: raw.kategori_permintaan_nama,
     detail_permintaan_nama: raw.detail_permintaan_nama,
-    jenis_dokumen_nama: raw.jenis_dokumen_nama,
   }
 }
 
@@ -75,7 +73,6 @@ export function parseDokumenWithNames(
     created_by: raw.created_by,
     nominal_realisasi: raw.nominal_realisasi ?? null,
     is_non_material: raw.is_non_material ?? false,
-    jenis_dokumen_id: raw.jenis_dokumen_id ?? null,
     keterangan_detail: raw.keterangan_detail ?? null,
     created_at: raw.created_at,
     updated_at: raw.updated_at,
@@ -86,6 +83,5 @@ export function parseDokumenWithNames(
     komponen_id: raw.komponen_id ?? null,
     komponen_nama: raw.komponen_nama,
     nama_dokumen: raw.nama_dokumen ?? null,
-    jenis_dokumen_nama: raw.jenis_dokumen_nama,
   }
 }

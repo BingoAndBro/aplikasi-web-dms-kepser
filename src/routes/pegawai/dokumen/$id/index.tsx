@@ -56,8 +56,6 @@ type DokumenDetail = {
   jenis_permintaan_nama?: string
   kategori_permintaan_nama?: string
   detail_permintaan_nama?: string
-  jenis_dokumen_nama?: string
-  jenis_dokumen_id?: string | null
   nama_dokumen?: string | null
 }
 

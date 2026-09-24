@@ -95,7 +95,6 @@ function documentRow(overrides: Record<string, unknown> = {}) {
     created_by: USER_ID,
     nominal_realisasi: '1000000.00',
     is_non_material: false,
-    jenis_dokumen_id: null,
     keterangan_detail: null,
     created_at: '2026-05-29T00:00:00.000Z',
     updated_at: '2026-05-29T00:00:00.000Z',
@@ -106,7 +105,6 @@ function documentRow(overrides: Record<string, unknown> = {}) {
     jenis_permintaan_nama: null,
     kategori_permintaan_nama: null,
     detail_permintaan_nama: null,
-    jenis_dokumen_nama: null,
     ...overrides,
   }
 }

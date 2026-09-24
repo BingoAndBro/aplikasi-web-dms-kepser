@@ -42,7 +42,6 @@ export const Route = createFileRoute('/api/dokumen/')({
               created_by: dokumenTransaksi.createdBy,
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
               is_non_material: dokumenTransaksi.isNonMaterial,
-              jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
               keterangan_detail: dokumenTransaksi.keteranganDetail,
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,

@@ -81,11 +81,3 @@ export type DetailRow = {
   kategori_nama?: string
   jenis_nama?: string
 }
-
-export type JenisDokumenRow = {
-  id: string
-  nama: string
-  deskripsi: string | null
-  is_active: boolean
-  created_at: string
-}

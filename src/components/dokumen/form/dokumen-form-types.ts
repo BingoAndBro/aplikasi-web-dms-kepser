@@ -6,7 +6,6 @@ export type {
   JenisRow,
   KategoriRow,
   DetailRow,
-  JenisDokumenRow,
 } from '#/lib/master-data'
 
 export interface FormState {

@@ -88,21 +88,6 @@ export const updateJenisSchema = z.object({
 })
 
 // ---------------------------------------------------------------------------
-// Jenis Dokumen Schemas
-// ---------------------------------------------------------------------------
-
-export const createMasterJenisDokumenSchema = z.object({
-  nama: z.string().trim().min(1, 'Nama tidak boleh kosong').max(255),
-  deskripsi: z.string().max(500).optional().nullable(),
-})
-
-export const updateMasterJenisDokumenSchema = z.object({
-  nama: z.string().trim().min(1).max(255).optional(),
-  deskripsi: z.string().max(500).optional().nullable(),
-  isActive: z.boolean().optional(),
-})
-
-// ---------------------------------------------------------------------------
 // Kategori Permintaan Schemas
 // ---------------------------------------------------------------------------
 

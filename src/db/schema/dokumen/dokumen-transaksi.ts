@@ -14,7 +14,6 @@ import {
 import { users } from '../auth/users'
 import {
   masterFungsi,
-  masterJenisDokumen,
   masterKegiatan,
   masterKomponen,
 } from '../master'
@@ -62,8 +61,6 @@ export const dokumenTransaksi = dokumenSchema.table(
     nominalRealisasi: numeric('nominal_realisasi', { precision: 15, scale: 2 }).default('0'),
     isNonMaterial: boolean('is_non_material').default(false),
     keteranganDetail: text('keterangan_detail'),
-    jenisDokumenId: uuid('jenis_dokumen_id')
-      .references(() => masterJenisDokumen.id, { onDelete: 'no action', onUpdate: 'no action' }),
     komponenId: uuid('komponen_id')
       .references(() => masterKomponen.id, { onDelete: 'restrict', onUpdate: 'no action' }),
     namaDokumen: text('nama_dokumen'),

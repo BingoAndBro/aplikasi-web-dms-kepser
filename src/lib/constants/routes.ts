@@ -55,7 +55,6 @@ export const ROUTES = {
     MASTER_KEGIATAN: '/admin/master-data/kegiatan',
     MASTER_KOMPONEN: '/admin/master-data/komponen',
     MASTER_JENIS: '/admin/master-data/jenis',
-    MASTER_JENIS_DOKUMEN: '/admin/master-data/jenis-dokumen',
     MASTER_KATEGORI: '/admin/master-data/kategori',
     MASTER_DETAIL: '/admin/master-data/detail',
     MASTER_KELENGKAPAN: '/admin/master-data/kelengkapan',

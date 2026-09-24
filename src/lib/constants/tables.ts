@@ -9,7 +9,6 @@ export const TABLES = {
   MASTER_JENIS_PERMINTAAN: 'master_jenis_permintaan',
   MASTER_KATEGORI_PERMINTAAN: 'master_kategori_permintaan',
   MASTER_DETAIL_PERMINTAAN: 'master_detail_permintaan',
-  MASTER_JENIS_DOKUMEN: 'master_jenis_dokumen',
   MASTER_KLASIFIKASI_ARSIP: 'master_klasifikasi_arsip',
   KETUA_TIM_ASSIGNMENTS: 'ketua_tim_assignments',
   DOKUMEN_TRANSAKSI: 'dokumen_transaksi',

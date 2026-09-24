@@ -168,8 +168,6 @@ type DokumenDetail = {
   kategori_permintaan_nama?: string
   detail_permintaan_id?: string | null
   detail_permintaan_nama?: string
-  jenis_dokumen_nama?: string
-  jenis_dokumen_id?: string | null
   komponen_id?: string | null
   komponen_nama?: string
   nama_dokumen?: string | null

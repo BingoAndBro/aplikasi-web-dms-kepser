@@ -24,7 +24,6 @@ export const SEED_MASTER_IDS = {
   jenisPermintaan: '30303030-3030-4030-8030-303030303030',
   kategoriPermintaan: '40404040-4040-4040-8040-404040404040',
   detailPermintaan: '50505050-5050-4050-8050-505050505050',
-  jenisDokumen: '60606060-6060-4060-8060-606060606060',
   kelengkapanSuratTugasAnggota: '70707070-7070-4070-8070-707070707071',
   kelengkapanFormPermintaanAnggota: '70707070-7070-4070-8070-707070707072',
   kelengkapanSuratTugasKetua: '70707070-7070-4070-8070-707070707073',

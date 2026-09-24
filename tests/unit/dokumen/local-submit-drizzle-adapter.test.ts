@@ -8,7 +8,6 @@ import {
   logAktivitas,
   masterDetailPermintaan,
   masterFungsi,
-  masterJenisDokumen,
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
@@ -70,10 +69,6 @@ describe('local submit Drizzle adapter foundation', () => {
     })).resolves.toEqual([
       { id: LAMPIRAN_ID, namaDokumen: 'Surat Tugas', required: true },
     ])
-    await expect(adapter.selectJenisDokumenById(JENIS_ID)).resolves.toEqual({
-      id: JENIS_ID,
-      nama: 'Dev Jenis Dokumen',
-    })
     await expect(adapter.selectKomponenById(KOMPONEN_ID)).resolves.toEqual({
       id: KOMPONEN_ID,
       nama: 'Dev Komponen',
@@ -98,7 +93,6 @@ describe('local submit Drizzle adapter foundation', () => {
     expect(database.calls).toEqual([
       ['select', 'masterKegiatan', ['fungsiId', 'id', 'nama'], 1],
       ['select', 'masterKelengkapanDokumen', ['id', 'namaDokumen', 'required'], 1000],
-      ['select', 'masterJenisDokumen', ['id', 'nama'], 1],
       ['select', 'masterKomponen', ['id', 'nama'], 1],
       ['select', 'masterJenisPermintaan', ['id', 'nama'], 1],
       ['select', 'masterKategoriPermintaan', ['id', 'nama'], 1],
@@ -452,7 +446,6 @@ function selectRowsFor(table: unknown, projection: Record<string, unknown>): unk
   if (table === masterKelengkapanDokumen) {
     return [{ id: LAMPIRAN_ID, namaDokumen: 'Surat Tugas', required: true }]
   }
-  if (table === masterJenisDokumen) return [{ id: JENIS_ID, nama: 'Dev Jenis Dokumen' }]
   if (table === masterKomponen) return [{ id: KOMPONEN_ID, nama: 'Dev Komponen' }]
   if (table === masterJenisPermintaan) return [{ id: JENIS_ID, nama: 'Dev Jenis Permintaan' }]
   if (table === masterKategoriPermintaan) return [{ id: KATEGORI_ID, nama: 'Dev Kategori' }]
@@ -467,7 +460,6 @@ function tableName(table: unknown): string {
   if (table === masterFungsi) return 'masterFungsi'
   if (table === masterKegiatan) return 'masterKegiatan'
   if (table === masterKelengkapanDokumen) return 'masterKelengkapanDokumen'
-  if (table === masterJenisDokumen) return 'masterJenisDokumen'
   if (table === masterKomponen) return 'masterKomponen'
   if (table === masterJenisPermintaan) return 'masterJenisPermintaan'
   if (table === masterKategoriPermintaan) return 'masterKategoriPermintaan'
@@ -533,7 +525,6 @@ function documentCreatePayload(): LocalSubmitDocumentCreatePayload {
     revisionNotes: null,
     nominalRealisasi: 125000.5,
     isNonMaterial: false,
-    jenisDokumenId: null,
     namaDokumen: null,
     keteranganDetail: null,
     komponenId: KOMPONEN_ID,
@@ -560,7 +551,6 @@ function dokumenRow(values: ReturnType<typeof mapLocalSubmitDocumentCreateToInse
     createdBy: values.createdBy,
     nominalRealisasi: values.nominalRealisasi,
     isNonMaterial: values.isNonMaterial,
-    jenisDokumenId: values.jenisDokumenId,
     namaDokumen: values.namaDokumen,
     keteranganDetail: values.keteranganDetail,
     komponenId: values.komponenId,

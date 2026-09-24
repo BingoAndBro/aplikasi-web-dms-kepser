@@ -11,7 +11,6 @@ import {
   ketuaTimAssignments,
   masterDetailPermintaan,
   masterFungsi,
-  masterJenisDokumen,
   masterJenisPermintaan,
   masterKategoriPermintaan,
   masterKegiatan,
@@ -357,7 +356,6 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               created_by: dokumenTransaksi.createdBy,
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
               is_non_material: dokumenTransaksi.isNonMaterial,
-              jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
               keterangan_detail: dokumenTransaksi.keteranganDetail,
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,
@@ -374,7 +372,6 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               jenis_permintaan_nama: masterJenisPermintaan.nama,
               kategori_permintaan_nama: masterKategoriPermintaan.nama,
               detail_permintaan_nama: masterDetailPermintaan.nama,
-              jenis_dokumen_nama: masterJenisDokumen.nama,
             })
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
@@ -383,7 +380,6 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
             .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
             .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
-            .leftJoin(masterJenisDokumen, eq(dokumenTransaksi.jenisDokumenId, masterJenisDokumen.id))
             .where(eq(dokumenTransaksi.id, params.id))
             .limit(1)
 
@@ -640,7 +636,6 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               created_by: dokumenTransaksi.createdBy,
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
               is_non_material: dokumenTransaksi.isNonMaterial,
-              jenis_dokumen_id: dokumenTransaksi.jenisDokumenId,
               keterangan_detail: dokumenTransaksi.keteranganDetail,
               komponen_id: dokumenTransaksi.komponenId,
               nama_dokumen: dokumenTransaksi.namaDokumen,
