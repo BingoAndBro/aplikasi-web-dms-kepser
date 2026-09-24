@@ -59,8 +59,7 @@ export const masterKelengkapanDokumen = masterSchema.table(
   ],
 )
 
-// Parent/child chain consistency across rows mirrors the current trigger in
-// supabase/migrations/018_validate_kelengkapan_chain.sql and remains a later
-// migration/service validation concern.
+// Parent/child chain consistency across rows is a service-level validation
+// concern (no DB trigger enforces it).
 export type MasterKelengkapanDokumen = typeof masterKelengkapanDokumen.$inferSelect
 export type NewMasterKelengkapanDokumen = typeof masterKelengkapanDokumen.$inferInsert

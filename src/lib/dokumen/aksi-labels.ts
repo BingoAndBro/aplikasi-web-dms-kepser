@@ -7,7 +7,7 @@ import type { RoleName } from '#/lib/constants/roles'
 // through one function. Kept independent from `ActivityLog.tsx`'s
 // AKSI_CONFIG (which also carries icon/color per aksi) so this mapping can
 // change without touching the tested per-document activity widget.
-export const AKSI_LABELS: Record<string, string> = {
+const AKSI_LABELS: Record<string, string> = {
   SUBMIT: 'Diajukan ke PPK',
   APPROVE: 'Disetujui',
   REJECT: 'Ditolak',

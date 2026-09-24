@@ -1,6 +1,6 @@
 import { ROLES, type RoleName } from '../../lib/constants/roles'
 
-export const SEED_ROLE_IDS: Record<RoleName, string> = {
+const SEED_ROLE_IDS: Record<RoleName, string> = {
   PEGAWAI: '11111111-1111-4111-8111-111111111111',
   PPK: '22222222-2222-4222-8222-222222222222',
   PPSPM: '33333333-3333-4333-8333-333333333333',

@@ -24,14 +24,14 @@ export const openBerkasRequestSchema = z
   })
   .strict()
 
-export const addWorkflowBerkasItemRequestSchema = z
+const addWorkflowBerkasItemRequestSchema = z
   .object({
     source_type: z.literal('WORKFLOW'),
     dokumen_id: z.uuid('Dokumen workflow tidak valid'),
   })
   .strict()
 
-export const addManualBerkasItemRequestSchema = z
+const addManualBerkasItemRequestSchema = z
   .object({
     source_type: z.literal('MANUAL'),
     manual_arsip_id: z.uuid('Dokumen manual tidak valid'),

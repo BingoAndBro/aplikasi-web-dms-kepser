@@ -1,10 +1,9 @@
 import { redirect } from '@tanstack/react-router'
 import type { RoleName } from './types/auth'
-import type { ServerEventContext } from './supabase-server'
 import { getClientAuthState, type ClientAuthState } from './auth-state'
 import { logDev, warnDev } from './dev-logger'
 
-type GuardContext = Partial<ServerEventContext> | null | undefined
+type GuardContext = { request?: Request } | null | undefined
 
 function shouldDeferToAppLayout(event: GuardContext) {
   return !!event?.request
@@ -14,7 +13,7 @@ function shouldDeferToAppLayout(event: GuardContext) {
  * Route guard: require authenticated user.
  * Throw redirect ke /login jika tidak ada session.
  */
-export function requireAuth(
+function requireAuth(
   event?: GuardContext,
   currentAuthState?: ClientAuthState | null,
 ): ClientAuthState | null {
@@ -74,20 +73,5 @@ export function guardRole(role: RoleName) {
     if (!authenticatedState.roles?.includes(role)) {
       throw redirect({ to: '/forbidden' })
     }
-  }
-}
-
-/**
- * Route guard: require any of the specified roles.
- * Throw redirect ke /forbidden jika tidak punya satupun role.
- */
-export function guardAnyRole(event: GuardContext, roles: RoleName[]): void {
-  const authState = requireAuth(event)
-  if (!authState) return
-
-  if (!authState.isReady) return
-
-  if (!roles.some((role) => authState.roles.includes(role))) {
-    throw redirect({ to: '/forbidden' })
   }
 }

@@ -11,7 +11,7 @@ import {
 // Valid kelengkapan_id: standard UUID or "user-custom-{uuid}"
 const kelengkapanIdRegex = /^(user-custom-)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export const lampiranUrlSchema = z.object({
+const lampiranUrlSchema = z.object({
   kelengkapan_id: z.string().regex(kelengkapanIdRegex, 'ID kelengkapan tidak valid'),
   nama: z.string().min(1, 'Nama tidak boleh kosong'),
   url: z.string().min(1, 'URL tidak boleh kosong'),
@@ -20,7 +20,7 @@ export const lampiranUrlSchema = z.object({
 
 export const lampiranUrlsSchema = z.array(lampiranUrlSchema)
 
-export const requestLampiranUrlsSchema = z.array(lampiranUrlSchema).superRefine((lampiranUrls, ctx) => {
+const requestLampiranUrlsSchema = z.array(lampiranUrlSchema).superRefine((lampiranUrls, ctx) => {
   const duplicateName = findDuplicateAdditionalKelengkapanName(lampiranUrls)
   if (!duplicateName) return
 
@@ -55,12 +55,6 @@ export const updateDokumenSchema = z.object({
   keteranganDetail: z.string().max(5000).optional().nullable(),
   namaDokumen: z.string().trim().min(1, 'Nama dokumen tidak boleh kosong').max(255, 'Nama dokumen maksimal 255 karakter').optional().nullable(),
 })
-
-// ---------------------------------------------------------------------------
-// Submit/resubmit dokumen — no body needed
-// ---------------------------------------------------------------------------
-
-export const submitDokumenSchema = z.object({}).strict()
 
 // ---------------------------------------------------------------------------
 // Submit dokumen (combined create + submit in one call)

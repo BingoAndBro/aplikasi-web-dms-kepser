@@ -24,11 +24,6 @@ export function requireSameOrigin(request: Request): Response | null {
   return forbiddenSameOriginResponse()
 }
 
-export function assertSameOriginRequest(request: Request): void {
-  const response = requireSameOrigin(request)
-  if (response) throw response
-}
-
 function forbiddenSameOriginResponse(): Response {
   return Response.json(FORBIDDEN_BODY, { status: 403 })
 }

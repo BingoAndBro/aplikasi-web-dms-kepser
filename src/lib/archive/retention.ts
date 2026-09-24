@@ -8,7 +8,7 @@ export const MANUAL_ARCHIVE_RETENTION_LABELS = [
 
 export type RetensiLabel = typeof MANUAL_ARCHIVE_RETENTION_LABELS[number]
 
-export const PERMANENT_RETENTION_SENTINEL_DATE = '9999-12-31'
+const PERMANENT_RETENTION_SENTINEL_DATE = '9999-12-31'
 
 const RETENTION_YEARS_BY_LABEL: Record<Exclude<RetensiLabel, 'Permanen'>, number> = {
   '1 Tahun': 1,

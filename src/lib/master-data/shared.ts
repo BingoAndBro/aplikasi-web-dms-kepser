@@ -1,11 +1,5 @@
-import type { MasterFungsi } from '../db/schema'
-
-export type FungsiWithKegiatanCount = MasterFungsi & {
-  jumlah_kegiatan?: number
-}
-
-// Supabase returns snake_case DB column names (fungsi_id, is_active, created_at).
-// These types match what Supabase actually returns from .select('*').
+// API routes return snake_case DB column names (fungsi_id, is_active, created_at).
+// These types match the JSON shape of the master-data endpoints.
 export type FungsiRow = {
   id: string
   nama: string

@@ -1,13 +1,6 @@
 import { sanitizeFilename, extractExtension, extractFilenameFromPath, isPendingFile } from '../utils/file'
 import type { DokumenRow, LampiranUrl } from './types'
 
-export { isPendingFile as isStoragePathPending } from '../utils/file'
-
-export function storagePathBelongsToUser(path: string, userId: string): boolean {
-  const ownerId = path.split('/').filter(Boolean)[0]
-  return ownerId === userId
-}
-
 /**
  * Membangun nama file formal berdasarkan metadata dokumen.
  *
@@ -18,7 +11,7 @@ export function storagePathBelongsToUser(path: string, userId: string): boolean 
  * Contoh Material: "Daftar_Nilai_Translok>8_Jam_SAKERNAS_2026-05-05.pdf"
  * Contoh Non-Material: "Notulen_Rapat_Service_2026-05-05.pdf"
  */
-export function buildDokumenFilename(dok: DokumenRow, lamp: LampiranUrl): string {
+function buildDokumenFilename(dok: DokumenRow, lamp: LampiranUrl): string {
   const kelengkapanNama = lamp.nama || 'Dokumen'
   const kegiatanNama = dok.kegiatan_nama || 'TanpaKegiatan'
   const tanggal = dok.tanggal || ''

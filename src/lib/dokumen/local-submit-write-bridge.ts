@@ -396,7 +396,7 @@ export async function executeLocalSubmitWritePlan(
   })
 }
 
-export function buildLocalSubmitDocumentCreatePayload({
+function buildLocalSubmitDocumentCreatePayload({
   actor,
   payload,
   kegiatan,
@@ -433,7 +433,7 @@ export function buildLocalSubmitDocumentCreatePayload({
   }
 }
 
-export function buildLocalSubmitTransitionPlan(
+function buildLocalSubmitTransitionPlan(
   isNonMaterial: boolean,
 ): LocalSubmitTransitionPlan {
   if (isNonMaterial) {
@@ -501,7 +501,7 @@ export async function resolveLocalSubmitLeafName(
   return fallback
 }
 
-export function getMissingRequiredKelengkapanNames(
+function getMissingRequiredKelengkapanNames(
   requiredItems: LocalSubmitRequiredKelengkapan[],
   lampiranUrls: LampiranUrl[],
 ): string[] {

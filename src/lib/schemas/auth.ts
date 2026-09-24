@@ -18,7 +18,7 @@ export const roleSchema = z.enum(ROLE_NAMES)
 export const roleArraySchema = z.array(roleSchema)
 
 // Session response
-export const sessionResponseSchema = z.object({
+const sessionResponseSchema = z.object({
   session: z.object({
     userId: z.string(),
     username: z.string(),

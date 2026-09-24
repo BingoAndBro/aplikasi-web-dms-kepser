@@ -7,7 +7,7 @@ export const userMetadataSchema = z.object({
   departemen: z.string().min(1).optional(),
 })
 
-export const userProfilePayloadSchema = z.object({
+const userProfilePayloadSchema = z.object({
   id: z.string(),
   username: z.string(),
   email: z.string().nullable(),
@@ -20,7 +20,7 @@ export const userProfilePayloadSchema = z.object({
   avatar_updated_at: z.string().nullable().optional(),
 })
 
-export const userPayloadSchema = userProfilePayloadSchema.extend({
+const userPayloadSchema = userProfilePayloadSchema.extend({
   isActive: z.boolean(),
   disabledAt: z.string().nullable(),
   createdAt: z.string(),

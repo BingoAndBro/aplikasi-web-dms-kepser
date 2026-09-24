@@ -12,9 +12,4 @@ export {
   parseLampiranUrls,
 } from './parse'
 
-export {
-  buildDokumenFilename,
-  buildStorageFilename,
-  isStoragePathPending,
-  storagePathBelongsToUser,
-} from './storage'
+export { buildStorageFilename } from './storage'

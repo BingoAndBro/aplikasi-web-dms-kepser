@@ -55,17 +55,6 @@ export async function getLocalServerSession(
   return toLocalServerSession(currentSession, activeRole)
 }
 
-export async function requireLocalServerSession(
-  request: Request,
-): Promise<LocalServerSession> {
-  const session = await getLocalServerSession(request)
-  if (!session) {
-    throw createUnauthorizedResponse()
-  }
-
-  return session
-}
-
 export function hasLocalRole(
   session: LocalServerSession,
   role: RoleName,
@@ -81,50 +70,10 @@ export function hasAnyLocalRole(
   return roles.some((role) => session.roles.includes(role))
 }
 
-export async function requireLocalRole(
-  request: Request,
-  role: RoleName,
-): Promise<LocalServerSession> {
-  const session = await requireLocalServerSession(request)
-  if (!hasLocalRole(session, role)) {
-    throw createForbiddenResponse()
-  }
-
-  return session
-}
-
-export async function requireAnyLocalRole(
-  request: Request,
-  roles: RoleName[],
-): Promise<LocalServerSession> {
-  const session = await requireLocalServerSession(request)
-  if (!hasAnyLocalRole(session, roles)) {
-    throw createForbiddenResponse()
-  }
-
-  return session
-}
-
-export function getLocalActiveRole(
-  request: Request,
-  session: LocalServerSession,
-): RoleName | null {
-  return resolveActiveRole(
-    session.roles,
-    getActiveRoleCookieValue(request.headers.get('cookie')),
-  )
-}
-
 export function createUnauthorizedResponse(
   message = 'Not authenticated',
 ): Response {
   return Response.json({ error: message }, { status: 401 })
-}
-
-export function createForbiddenResponse(
-  message = 'Forbidden',
-): Response {
-  return Response.json({ error: message }, { status: 403 })
 }
 
 function toLocalServerSession(

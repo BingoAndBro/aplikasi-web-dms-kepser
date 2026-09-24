@@ -23,8 +23,6 @@ export const DATA_SEARCH_ICON_TONE_CLASS = 'text-brand-icon/70'
 export const DATA_TABLE_SHELL_TONE_CLASS =
   'border-border-default bg-surface shadow-[0_3px_14px_var(--shadow-card)]'
 
-export const DATA_TABLE_HEADER_ROW_TONE_CLASS = 'border-border-default bg-sunken hover:bg-sunken'
-
 export const DATA_TABLE_BODY_ROW_TONE_CLASS =
   'border-border-default bg-surface transition-colors hover:bg-brand-surface/70'
 

@@ -240,34 +240,6 @@ export class BerkasArsipServiceError extends Error {
   }
 }
 
-export async function findOpenBerkasForKlasifikasi(
-  klasifikasiId: string,
-  tahunAnggaran: number,
-  deps: BerkasArsipServiceDeps = {},
-): Promise<BerkasArsipDto | null> {
-  const repository = getRepository(deps)
-  await validateKlasifikasiForOperationalSelection(klasifikasiId, repository)
-
-  const row = await repository.findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran)
-  return row ? toBerkasDto(row) : null
-}
-
-export async function createOpenBerkasForKlasifikasi(
-  input: CreateOpenBerkasInput,
-  deps: BerkasArsipServiceDeps = {},
-): Promise<BerkasArsipDto> {
-  const repository = getRepository(deps)
-  const klasifikasi = await validateKlasifikasiForOperationalSelection(input.klasifikasiId, repository)
-  const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId, input.tahunAnggaran)
-  if (existing) return toBerkasDto(existing)
-
-  return toBerkasDto(await insertOpenBerkasWithActivity(repository, {
-    klasifikasi,
-    tahunAnggaran: input.tahunAnggaran,
-    actorUserId: input.actorUserId,
-  }))
-}
-
 export async function getOrCreateOpenBerkasForKlasifikasi(
   input: CreateOpenBerkasInput,
   deps: BerkasArsipServiceDeps = {},
@@ -293,7 +265,7 @@ export async function getOrCreateOpenBerkasForKlasifikasi(
   }
 }
 
-export async function assertBerkasCanAcceptItems(
+async function assertBerkasCanAcceptItems(
   berkasId: string,
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto> {
@@ -519,7 +491,7 @@ export async function updateActiveBerkasMetadata(
   return toBerkasDto(updated)
 }
 
-export function buildActiveBerkasMetadataPlan(
+function buildActiveBerkasMetadataPlan(
   metadata: unknown,
   existingClosedAt: Date | string | null,
 ): ActiveBerkasMetadataPlan {

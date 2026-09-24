@@ -1,6 +1,5 @@
 let lastLogKey: string | null = null
 let lastWarnKey: string | null = null
-let lastErrorKey: string | null = null
 
 function safeStringify(data: unknown): string {
   try {
@@ -28,14 +27,4 @@ export function warnDev(key: string, data: unknown, dedupKey?: string) {
 
   lastWarnKey = currentKey
   console.warn(key, data)
-}
-
-export function errorDev(key: string, data: unknown, dedupKey?: string) {
-  if (!import.meta.env.DEV) return
-
-  const currentKey = dedupKey ?? `${key}:${safeStringify(data)}`
-  if (currentKey === lastErrorKey) return
-
-  lastErrorKey = currentKey
-  console.error(key, data)
 }

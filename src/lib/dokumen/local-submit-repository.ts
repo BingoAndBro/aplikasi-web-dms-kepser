@@ -259,7 +259,7 @@ export function mapLocalSubmitDokumenRowToCreatedDocument(
   }
 }
 
-export function mapLocalSubmitKegiatanRow(
+function mapLocalSubmitKegiatanRow(
   row: LocalSubmitKegiatanRow | null,
 ): LocalSubmitKegiatan | null {
   if (!row) return null
@@ -270,7 +270,7 @@ export function mapLocalSubmitKegiatanRow(
   }
 }
 
-export function mapLocalSubmitKelengkapanRow(
+function mapLocalSubmitKelengkapanRow(
   row: LocalSubmitKelengkapanRow,
 ): LocalSubmitRequiredKelengkapan {
   return {
@@ -280,7 +280,7 @@ export function mapLocalSubmitKelengkapanRow(
   }
 }
 
-export function mapLocalSubmitNameRow(
+function mapLocalSubmitNameRow(
   row: LocalSubmitNameLookupRow | null,
 ): LocalSubmitNameRow | null {
   if (!row) return null

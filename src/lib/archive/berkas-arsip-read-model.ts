@@ -45,9 +45,9 @@ import { computeBerkasAging } from '#/lib/archive/retention'
 const workflowKomponen = alias(masterKomponen, 'workflow_komponen')
 const manualKomponen = alias(masterKomponen, 'manual_komponen')
 
-export const BERKAS_ARSIP_READ_MODEL_DEFAULT_LIMIT = 100
-export const BERKAS_ARSIP_READ_MODEL_MAX_LIMIT = 500
-export const BERKAS_ARSIP_READ_MODEL_MAX_OFFSET = 10_000
+const BERKAS_ARSIP_READ_MODEL_DEFAULT_LIMIT = 100
+const BERKAS_ARSIP_READ_MODEL_MAX_LIMIT = 500
+const BERKAS_ARSIP_READ_MODEL_MAX_OFFSET = 10_000
 
 export const listBerkasArsipFolderQuerySchema = z
   .object({

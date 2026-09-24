@@ -62,7 +62,6 @@ const SENSITIVE_CLAIM_KEYS = new Set([
   'signedUrl',
   'signingSecret',
   'storageRoot',
-  'supabaseSignedUrl',
   'tokenHash',
 ])
 

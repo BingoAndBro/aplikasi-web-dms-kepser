@@ -1,5 +1,5 @@
 // Server-only module. Do not import from client components.
-import { and, eq, isNotNull, isNull, lte, or } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 
 import { db } from '#/db/client'
 import { roles, sessions, userRoles, users } from '#/db/schema/auth'
@@ -142,32 +142,6 @@ export async function revokeAllUserSessions(userId: string): Promise<void> {
       eq(sessions.userId, userId),
       isNull(sessions.revokedAt),
     ))
-}
-
-export async function touchSessionLastUsedAt(sessionId: string): Promise<void> {
-  if (!isNonEmptyString(sessionId)) {
-    return
-  }
-
-  await db
-    .update(sessions)
-    .set({ lastUsedAt: new Date() })
-    .where(and(
-      eq(sessions.id, sessionId),
-      isNull(sessions.revokedAt),
-    ))
-}
-
-export async function deleteExpiredOrRevokedSessions(now = new Date()): Promise<number> {
-  const deleted = await db
-    .delete(sessions)
-    .where(or(
-      lte(sessions.expiresAt, now),
-      isNotNull(sessions.revokedAt),
-    ))
-    .returning({ id: sessions.id })
-
-  return deleted.length
 }
 
 function assertLikelyTokenHash(tokenHash: string): void {

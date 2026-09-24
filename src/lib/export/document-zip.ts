@@ -68,8 +68,8 @@ export type DocumentZipDeps = {
   createArchive?: () => DocumentZipArchiveHandle
 }
 
-export const DOCUMENT_ZIP_MAX_ENTRIES = 500
-export const DOCUMENT_ZIP_MAX_FILE_SIZE_BYTES = 250 * 1024 * 1024
+const DOCUMENT_ZIP_MAX_ENTRIES = 500
+const DOCUMENT_ZIP_MAX_FILE_SIZE_BYTES = 250 * 1024 * 1024
 
 export class DocumentZipTooManyEntriesError extends Error {
   readonly count: number

@@ -56,7 +56,7 @@ export async function getSignedUrlDirectResult(url: string): Promise<SignedUrlRe
   )
 }
 
-export async function getSignedUrlDirect(url: string): Promise<string | null> {
+export async function getSignedUrl(url: string): Promise<string | null> {
   try {
     const result = await getSignedUrlDirectResult(url)
     return result.signedUrl ?? null
@@ -64,8 +64,6 @@ export async function getSignedUrlDirect(url: string): Promise<string | null> {
     return null
   }
 }
-
-export const getSignedUrl = getSignedUrlDirect
 
 export async function fetchFileBlobWithSignedUrl(
   signedUrl: string,

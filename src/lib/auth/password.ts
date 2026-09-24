@@ -6,7 +6,7 @@ const ARGON2ID_PREFIX = '$argon2id$'
 export const PASSWORD_HASH_ALGORITHM = 'argon2id' as const
 
 // Centralized Argon2id work factors for auth.users.password_hash.
-export const PASSWORD_HASH_OPTIONS = {
+const PASSWORD_HASH_OPTIONS = {
   type: argon2.argon2id,
   memoryCost: 65_536,
   timeCost: 3,
@@ -34,11 +34,11 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
   }
 }
 
-export function isArgon2idHash(hash: string): boolean {
+function isArgon2idHash(hash: string): boolean {
   return typeof hash === 'string' && hash.startsWith(ARGON2ID_PREFIX)
 }
 
-export function assertArgon2idHash(hash: string): void {
+function assertArgon2idHash(hash: string): void {
   if (!isArgon2idHash(hash)) {
     throw new Error('Expected an Argon2id encoded password hash.')
   }

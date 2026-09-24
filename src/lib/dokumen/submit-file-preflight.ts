@@ -87,7 +87,7 @@ export type SubmitFilePreflightResult =
     }
   }
 
-export const SUBMIT_FILE_PREFLIGHT_CLIENT_CATEGORIES: Record<
+const SUBMIT_FILE_PREFLIGHT_CLIENT_CATEGORIES: Record<
   SubmitFilePreflightIssueCode,
   SubmitFilePreflightClientCategory
 > = {

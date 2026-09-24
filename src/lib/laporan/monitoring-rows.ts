@@ -180,7 +180,7 @@ export function totalNominal(rows: LaporanKinerjaRow[]) {
   }, 0)
 }
 
-export function latestDate(rows: LaporanKinerjaRow[]) {
+function latestDate(rows: LaporanKinerjaRow[]) {
   return rows.reduce<string | null>((latest, row) => {
     const value = row.updated_at || row.tanggal
     if (!value) return latest
@@ -189,7 +189,7 @@ export function latestDate(rows: LaporanKinerjaRow[]) {
   }, null)
 }
 
-export function stableKey(prefix: string, value: string) {
+function stableKey(prefix: string, value: string) {
   return `${prefix}-${value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') || 'unknown'}`
 }
 
