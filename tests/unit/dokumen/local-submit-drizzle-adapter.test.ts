@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm'
+import { PgDialect } from 'drizzle-orm/pg-core'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
@@ -14,6 +16,7 @@ import {
   masterKomponen,
 } from '#/db/schema'
 import {
+  buildRequiredKelengkapanCondition,
   createLiveLocalSubmitDrizzleAdapter,
   createLocalSubmitDrizzleAdapter,
   LocalSubmitDrizzleAdapterError,
@@ -219,6 +222,151 @@ describe('local submit Drizzle adapter foundation', () => {
     expectNoSensitiveOrPhysicalData(error)
   })
 })
+
+describe('required kelengkapan exact-match (six columns, same rule as the client checklist)', () => {
+  const KOMPONEN_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+  const rows: KelengkapanFixtureRow[] = [
+    kelengkapanRow('k-komponen-a-detail', { komponen_id: KOMPONEN_ID, jenis_permintaan_id: JENIS_ID, kategori_permintaan_id: KATEGORI_ID, detail_permintaan_id: DETAIL_ID }),
+    kelengkapanRow('k-komponen-b-detail', { komponen_id: KOMPONEN_B, jenis_permintaan_id: JENIS_ID, kategori_permintaan_id: KATEGORI_ID, detail_permintaan_id: DETAIL_ID }),
+    kelengkapanRow('k-komponen-a-kategori-leaf', { komponen_id: KOMPONEN_ID, jenis_permintaan_id: JENIS_ID, kategori_permintaan_id: KATEGORI_ID }),
+    kelengkapanRow('k-komponen-a-only', { komponen_id: KOMPONEN_ID }),
+    kelengkapanRow('k-anggota-komponen-a-detail', { is_ketua_tim: false, komponen_id: KOMPONEN_ID, jenis_permintaan_id: JENIS_ID, kategori_permintaan_id: KATEGORI_ID, detail_permintaan_id: DETAIL_ID }),
+  ]
+
+  it('returns only the kelengkapan of the selected komponen when two komponen share the same permintaan chain', async () => {
+    const adapter = createLocalSubmitDrizzleAdapter(createKelengkapanDatabase(rows))
+    const chain = { jenisPermintaanId: JENIS_ID, kategoriPermintaanId: KATEGORI_ID, detailPermintaanId: DETAIL_ID }
+
+    const forKomponenA = await adapter.selectRequiredKelengkapan({ kegiatanId: KEGIATAN_ID, isKetuaTim: true, komponenId: KOMPONEN_ID, ...chain })
+    const forKomponenB = await adapter.selectRequiredKelengkapan({ kegiatanId: KEGIATAN_ID, isKetuaTim: true, komponenId: KOMPONEN_B, ...chain })
+
+    expect(forKomponenA.map((row) => row.id)).toEqual(['k-komponen-a-detail'])
+    expect(forKomponenB.map((row) => row.id)).toEqual(['k-komponen-b-detail'])
+  })
+
+  it('treats an unselected level as NULL instead of ignoring it', async () => {
+    const adapter = createLocalSubmitDrizzleAdapter(createKelengkapanDatabase(rows))
+
+    const kategoriLeaf = await adapter.selectRequiredKelengkapan({
+      kegiatanId: KEGIATAN_ID,
+      isKetuaTim: true,
+      komponenId: KOMPONEN_ID,
+      jenisPermintaanId: JENIS_ID,
+      kategoriPermintaanId: KATEGORI_ID,
+    })
+    const komponenOnly = await adapter.selectRequiredKelengkapan({
+      kegiatanId: KEGIATAN_ID,
+      isKetuaTim: true,
+      komponenId: KOMPONEN_ID,
+    })
+
+    expect(kategoriLeaf.map((row) => row.id)).toEqual(['k-komponen-a-kategori-leaf'])
+    expect(komponenOnly.map((row) => row.id)).toEqual(['k-komponen-a-only'])
+  })
+
+  it('still separates ketua tim and anggota kelengkapan', async () => {
+    const adapter = createLocalSubmitDrizzleAdapter(createKelengkapanDatabase(rows))
+
+    const anggota = await adapter.selectRequiredKelengkapan({
+      kegiatanId: KEGIATAN_ID,
+      isKetuaTim: false,
+      komponenId: KOMPONEN_ID,
+      jenisPermintaanId: JENIS_ID,
+      kategoriPermintaanId: KATEGORI_ID,
+      detailPermintaanId: DETAIL_ID,
+    })
+
+    expect(anggota.map((row) => row.id)).toEqual(['k-anggota-komponen-a-detail'])
+  })
+
+  it('constrains all six columns in the generated SQL', () => {
+    const { sql, params } = new PgDialect().sqlToQuery(buildRequiredKelengkapanCondition({
+      kegiatanId: KEGIATAN_ID,
+      isKetuaTim: true,
+      komponenId: KOMPONEN_ID,
+      jenisPermintaanId: JENIS_ID,
+      kategoriPermintaanId: KATEGORI_ID,
+    }))
+
+    expect(sql).toMatch(/"kegiatan_id" = \$\d/)
+    expect(sql).toMatch(/"is_ketua_tim" = \$\d/)
+    expect(sql).toMatch(/"komponen_id" = \$\d/)
+    expect(sql).toMatch(/"jenis_permintaan_id" = \$\d/)
+    expect(sql).toMatch(/"kategori_permintaan_id" = \$\d/)
+    expect(sql).toMatch(/"detail_permintaan_id" is null/)
+    expect(params).toEqual([KEGIATAN_ID, true, KOMPONEN_ID, JENIS_ID, KATEGORI_ID])
+  })
+})
+
+type KelengkapanFixtureRow = {
+  id: string
+  nama_dokumen: string
+  required: boolean
+  kegiatan_id: string
+  is_ketua_tim: boolean
+  komponen_id: string | null
+  jenis_permintaan_id: string | null
+  kategori_permintaan_id: string | null
+  detail_permintaan_id: string | null
+}
+
+function kelengkapanRow(id: string, overrides: Partial<KelengkapanFixtureRow>): KelengkapanFixtureRow {
+  return {
+    id,
+    nama_dokumen: id,
+    required: true,
+    kegiatan_id: KEGIATAN_ID,
+    is_ketua_tim: true,
+    komponen_id: null,
+    jenis_permintaan_id: null,
+    kategori_permintaan_id: null,
+    detail_permintaan_id: null,
+    ...overrides,
+  }
+}
+
+// Evaluates the adapter's rendered WHERE clause (a conjunction of `"col" = $n`
+// and `"col" is null`) against in-memory rows, so the test exercises the real
+// condition the adapter sends to PostgreSQL.
+function createKelengkapanDatabase(rows: KelengkapanFixtureRow[]): LocalSubmitDrizzleDatabase {
+  const dialect = new PgDialect()
+  const unsupported = () => { throw new Error('not used in kelengkapan tests') }
+
+  return {
+    select() {
+      return {
+        from(table) {
+          expect(table).toBe(masterKelengkapanDokumen)
+          return {
+            where(condition) {
+              const { sql, params } = dialect.sqlToQuery(condition as SQL)
+              const clauses = sql.replace(/^\(|\)$/g, '').split(' and ')
+              return {
+                limit() {
+                  const matches = rows.filter((row) => clauses.every((clause) => {
+                    const equals = /"(\w+)" = \$(\d+)/.exec(clause)
+                    if (equals) return row[equals[1] as keyof KelengkapanFixtureRow] === params[Number(equals[2]) - 1]
+                    const nullCheck = /"(\w+)" is null/.exec(clause)
+                    if (nullCheck) return row[nullCheck[1] as keyof KelengkapanFixtureRow] === null
+                    throw new Error(`Unexpected clause: ${clause}`)
+                  }))
+                  return Promise.resolve(matches.map((row) => ({
+                    id: row.id,
+                    namaDokumen: row.nama_dokumen,
+                    required: row.required,
+                  })))
+                },
+              }
+            },
+          }
+        },
+      }
+    },
+    insert: unsupported,
+    update: unsupported,
+    transaction: unsupported,
+  }
+}
 
 type FakeDatabase = LocalSubmitDrizzleDatabase & {
   calls: unknown[]

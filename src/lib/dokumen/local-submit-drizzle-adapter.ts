@@ -5,7 +5,7 @@
 // - Do not execute database work at module import time.
 // - Keep filesystem movement, storage helpers, HTTP responses, and Supabase calls out of this adapter.
 // - Preserve append-only log_aktivitas behavior by exposing insert-only audit behavior.
-import { and, eq, isNull, type SQL } from 'drizzle-orm'
+import { and, eq, isNull, type Column, type SQL } from 'drizzle-orm'
 
 import {
   dokumenTransaksi,
@@ -158,37 +158,29 @@ function createAdapterForDatabase(
   }
 }
 
+// Same rule as the client checklist (KelengkapanChecklist.matchesCurrentSelection):
+// a kelengkapan row applies only to its exact six-column combination, and an
+// unselected level must match a NULL column.
+export function buildRequiredKelengkapanCondition(
+  input: LocalSubmitRequiredKelengkapanRead,
+): SQL {
+  const matchesNullable = (column: Column, value: string | null | undefined) =>
+    value ? eq(column, value) : isNull(column)
+
+  return and(
+    eq(masterKelengkapanDokumen.kegiatanId, input.kegiatanId),
+    eq(masterKelengkapanDokumen.isKetuaTim, input.isKetuaTim),
+    matchesNullable(masterKelengkapanDokumen.komponenId, input.komponenId),
+    matchesNullable(masterKelengkapanDokumen.jenisPermintaanId, input.jenisPermintaanId),
+    matchesNullable(masterKelengkapanDokumen.kategoriPermintaanId, input.kategoriPermintaanId),
+    matchesNullable(masterKelengkapanDokumen.detailPermintaanId, input.detailPermintaanId),
+  ) as SQL
+}
+
 async function selectRequiredKelengkapan(
   database: LocalSubmitDrizzleDatabase,
   input: LocalSubmitRequiredKelengkapanRead,
 ): Promise<LocalSubmitKelengkapanRow[]> {
-  const conditions: SQL[] = [
-    eq(masterKelengkapanDokumen.kegiatanId, input.kegiatanId),
-    eq(masterKelengkapanDokumen.isKetuaTim, input.isKetuaTim),
-  ]
-
-  if (input.detailPermintaanId) {
-    conditions.push(eq(masterKelengkapanDokumen.detailPermintaanId, input.detailPermintaanId))
-  } else if (input.kategoriPermintaanId) {
-    conditions.push(
-      eq(masterKelengkapanDokumen.kategoriPermintaanId, input.kategoriPermintaanId),
-      isNull(masterKelengkapanDokumen.detailPermintaanId),
-    )
-  } else if (input.jenisPermintaanId) {
-    conditions.push(
-      eq(masterKelengkapanDokumen.jenisPermintaanId, input.jenisPermintaanId),
-      isNull(masterKelengkapanDokumen.kategoriPermintaanId),
-      isNull(masterKelengkapanDokumen.detailPermintaanId),
-    )
-  } else if (input.komponenId) {
-    conditions.push(
-      eq(masterKelengkapanDokumen.komponenId, input.komponenId),
-      isNull(masterKelengkapanDokumen.jenisPermintaanId),
-      isNull(masterKelengkapanDokumen.kategoriPermintaanId),
-      isNull(masterKelengkapanDokumen.detailPermintaanId),
-    )
-  }
-
   const rows = await database
     .select({
       id: masterKelengkapanDokumen.id,
@@ -196,7 +188,7 @@ async function selectRequiredKelengkapan(
       required: masterKelengkapanDokumen.required,
     })
     .from(masterKelengkapanDokumen)
-    .where(and(...conditions))
+    .where(buildRequiredKelengkapanCondition(input))
     .limit(1000)
 
   return rows as LocalSubmitKelengkapanRow[]
