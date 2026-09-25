@@ -2130,7 +2130,7 @@ function openBerkasRow() {
     klasifikasiKodeSnapshot: '001.02',
     klasifikasiNamaSnapshot: 'Klasifikasi A',
     statusBerkas: 'OPEN',
-    statusArsip: null,
+    statusArsip: null as string | null,
     nomorSpm: null,
     retensiAktif: null,
     retensiInaktif: null,
@@ -2355,7 +2355,7 @@ function queueTransactionInsertResult(result: unknown[]) {
 }
 
 function queueManualArchiveCreateTransaction(options: {
-  source?: ReturnType<typeof manualArsipRow>
+  source?: { [K in keyof ReturnType<typeof manualArsipRow>]: ReturnType<typeof manualArsipRow>[K] | null }
   existingOpenBerkas?: ReturnType<typeof openBerkasRow> | null
   openBerkas?: ReturnType<typeof openBerkasRow> | null
   manualSource?: ReturnType<typeof manualSourceRow> | null

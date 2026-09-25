@@ -57,7 +57,7 @@ type DashboardMetricCardProps = {
   value: ReactNode
   badge?: ReactNode
   icon: ReactNode
-  tone?: Tone
+  tone?: MetricTone
   valueClassName?: string
 }
 
@@ -68,7 +68,10 @@ type DashboardMetricCardProps = {
 // (sky/rose/emerald/amber/orange/zinc) to semantic Tone — "zinc" was
 // confirmed unused at every one of the 23 call sites, "orange" was the
 // unused default; both are now folded into "neutral"/"brand" respectively.
-const metricToneExtra: Record<Tone, { glow: string; accent: string }> = {
+// "brand-fixed" (PPSPM identity, Fase 8) has no dashboard-card styling.
+type MetricTone = Exclude<Tone, 'brand-fixed'>
+
+const metricToneExtra: Record<MetricTone, { glow: string; accent: string }> = {
   info: {
     glow: 'hover:border-info-border hover:shadow-[0_18px_42px_rgba(14,165,233,0.18)]',
     accent: 'from-info-surface/80 via-white/40 to-transparent',
@@ -95,7 +98,7 @@ const metricToneExtra: Record<Tone, { glow: string; accent: string }> = {
   },
 }
 
-const metricToneClassName: Record<Tone, {
+const metricToneClassName: Record<MetricTone, {
   border: string
   icon: string
   badge: string

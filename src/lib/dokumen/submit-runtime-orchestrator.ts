@@ -521,7 +521,7 @@ function getFirstBlockingIssue(
     })
   }
 
-  if (!input.actor || input.actor.reason === 'unauthenticated') {
+  if (!input.actor || (!input.actor.ok && input.actor.reason === 'unauthenticated')) {
     return createIssue({
       code: 'actor-missing',
       stage: 'auth-and-role',

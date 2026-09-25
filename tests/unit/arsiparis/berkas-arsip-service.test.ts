@@ -20,6 +20,7 @@ const DOKUMEN_ID = 'dokumen-workflow'
 const MANUAL_ARSIP_ID = 'manual-dokumen'
 const TAHUN_ANGGARAN = 2026
 type TestBerkasArchiveStatus = typeof BERKAS_ARCHIVE_STATUS[keyof typeof BERKAS_ARCHIVE_STATUS]
+type TestBerkasRow = NonNullable<Awaited<ReturnType<BerkasArsipRepository['findBerkasById']>>>
 
 describe('berkas arsip service foundation', () => {
   it('creates an OPEN berkas from active master classification snapshots', async () => {
@@ -832,7 +833,7 @@ function closedBerkas(
   }
 }
 
-function baseBerkas() {
+function baseBerkas(): TestBerkasRow {
   return {
     id: BERKAS_ID,
     klasifikasiId: KLASIFIKASI_ID,

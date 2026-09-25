@@ -96,8 +96,9 @@ function documentRow(overrides: Record<string, unknown> = {}) {
     nominal_realisasi: '1000000.00',
     is_non_material: false,
     keterangan_detail: null,
-    created_at: '2026-05-29T00:00:00.000Z',
-    updated_at: '2026-05-29T00:00:00.000Z',
+    // Drizzle returns timestamp columns as Date objects.
+    created_at: new Date('2026-05-29T00:00:00.000Z'),
+    updated_at: new Date('2026-05-29T00:00:00.000Z'),
     jenis_permintaan_id: null,
     kategori_permintaan_id: null,
     detail_permintaan_id: null,

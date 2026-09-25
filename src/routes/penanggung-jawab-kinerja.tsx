@@ -13,8 +13,8 @@ type AuthSessionResponse = {
 }
 
 export const Route = createFileRoute('/penanggung-jawab-kinerja')({
-  beforeLoad: ({ event }) => {
-    guardRole(ROLES.PENANGGUNG_JAWAB_KINERJA)(event)
+  beforeLoad: () => {
+    guardRole(ROLES.PENANGGUNG_JAWAB_KINERJA)()
   },
   component: PenanggungJawabKinerjaLayout,
 })

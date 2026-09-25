@@ -312,7 +312,10 @@ async function createWorkflowItemAttachmentFileResponse({
   headers.set('Content-Disposition', buildBerkasContentDisposition(reference.downloadFilename, purpose))
   headers.set('Content-Length', String(fileContent.byteLength || fileSize))
 
-  return new Response(fileContent, {
+  // View over the same memory (no copy); readFile never returns a SharedArrayBuffer.
+  const body = new Uint8Array(fileContent.buffer as ArrayBuffer, fileContent.byteOffset, fileContent.byteLength)
+
+  return new Response(body, {
     status: 200,
     headers,
   })

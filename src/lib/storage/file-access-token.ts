@@ -259,7 +259,7 @@ function assertPurposeDispositionConsistency(payload: FileAccessTokenPayload): v
 }
 
 function assertTimestamp(value: unknown, label: string): number {
-  if (!Number.isSafeInteger(value) || value < 0) {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
     throw new Error(`File access token ${label} must be a non-negative integer timestamp.`)
   }
 
@@ -267,7 +267,7 @@ function assertTimestamp(value: unknown, label: string): number {
 }
 
 function assertNonNegativeInteger(value: unknown, label: string): number {
-  if (!Number.isSafeInteger(value) || value < 0) {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
     throw new Error(`File access token ${label} must be a non-negative integer.`)
   }
 

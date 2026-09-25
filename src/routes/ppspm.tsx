@@ -10,8 +10,8 @@ type AuthSessionResponse = {
 }
 
 export const Route = createFileRoute('/ppspm')({
-  beforeLoad: ({ event }) => {
-    guardRole('PPSPM')(event)
+  beforeLoad: () => {
+    guardRole('PPSPM')()
   },
   component: PpspmLayout,
 })

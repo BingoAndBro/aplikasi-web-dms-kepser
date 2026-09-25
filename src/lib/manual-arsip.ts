@@ -30,6 +30,7 @@ import {
   OperationalKlasifikasiSelectionError,
   validateOperationalKlasifikasiSelection,
 } from '#/lib/archive/berkas-klasifikasi-eligibility'
+import { statusForBerkasServiceError } from '#/lib/archive/berkas-arsip-api'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import { buildManualArsipAttachmentFilename } from '#/lib/archive/manual-arsip-attachment-filename'
 import type {
@@ -465,27 +466,6 @@ function createManualArchiveBerkasRepository(
   }
 }
 
-function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
-  switch (error.code) {
-    case 'KLASIFIKASI_NOT_FOUND':
-    case 'KLASIFIKASI_INACTIVE':
-    case 'KLASIFIKASI_PARENT':
-    case 'SOURCE_KLASIFIKASI_MISMATCH':
-    case 'INVALID_CLOSE_METADATA':
-      return 400
-    case 'BERKAS_NOT_FOUND':
-    case 'SOURCE_NOT_FOUND':
-      return 404
-    case 'BERKAS_CLOSED':
-    case 'BERKAS_KLASIFIKASI_CLOSED':
-    case 'BERKAS_KLASIFIKASI_CONFLICT':
-    case 'BERKAS_NOT_OPEN':
-    case 'BERKAS_EMPTY':
-    case 'CONFLICT':
-      return 409
-  }
-}
-
 export async function listManualArsipRecords(
   query: ListManualArsipQuery,
 ): Promise<ManualArsipListItemResponse[]> {
@@ -907,7 +887,10 @@ export async function createManualArsipAttachmentFileResponse({
   headers.set('Content-Disposition', buildManualArsipAttachmentContentDisposition(reference, purpose))
   headers.set('Content-Length', String(fileContent.byteLength || fileSize))
 
-  return new Response(fileContent, {
+  // View over the same memory (no copy); readFile never returns a SharedArrayBuffer.
+  const body = new Uint8Array(fileContent.buffer as ArrayBuffer, fileContent.byteOffset, fileContent.byteLength)
+
+  return new Response(body, {
     status: 200,
     headers,
   })

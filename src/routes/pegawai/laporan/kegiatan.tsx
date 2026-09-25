@@ -548,7 +548,7 @@ function KegiatanAdvancedFilter({
           <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Fungsi</span>
           <Select
             value={value.fungsiId || '_all'}
-            onValueChange={(fungsiId) => onChange({ ...value, fungsiId: fungsiId === '_all' ? undefined : fungsiId })}
+            onValueChange={(fungsiId) => onChange({ ...value, fungsiId: fungsiId === '_all' ? undefined : fungsiId ?? undefined })}
           >
             <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
               <SelectValue placeholder="Semua Fungsi">
@@ -1100,7 +1100,7 @@ function DetailSelect({
       <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">{label}</span>
       <Select
         value={value || '_all'}
-        onValueChange={(selected) => onChange(selected === '_all' ? undefined : selected)}
+        onValueChange={(selected) => onChange(selected === '_all' ? undefined : selected ?? undefined)}
         disabled={disabled}
       >
         <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong disabled:opacity-60">

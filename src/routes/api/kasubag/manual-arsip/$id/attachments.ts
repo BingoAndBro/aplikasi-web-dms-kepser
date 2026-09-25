@@ -55,7 +55,8 @@ export const Route = createFileRoute('/api/kasubag/manual-arsip/$id/attachments'
           return Response.json({ error: 'Judul lampiran wajib diisi' }, { status: 400 })
         }
 
-        const titles = titleEntries.map((value) => value.trim())
+        // Every entry is a string — checked just above.
+        const titles = (titleEntries as string[]).map((value) => value.trim())
 
         if (titles.length !== files.length) {
           return Response.json({ error: 'Jumlah judul lampiran harus sesuai dengan jumlah file' }, { status: 400 })

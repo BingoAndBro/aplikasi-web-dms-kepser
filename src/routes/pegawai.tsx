@@ -22,8 +22,8 @@ import { AlertTriangle, Archive, BarChart3, CheckCircle2, FileText, FolderOpen, 
 
 export const Route = createFileRoute('/pegawai')({
   ssr: false,
-  beforeLoad: ({ event }) => {
-    guardRole(ROLES.PEGAWAI)(event)
+  beforeLoad: () => {
+    guardRole(ROLES.PEGAWAI)()
   },
   component: PegawaiLayout,
 })

@@ -592,7 +592,7 @@ export function AttachmentEditor({
       logDev('[AttachmentEditor] Upload success', { docId })
 
       trackSessionPendingUrl(json.url)
-      updatePendingFiles(prev => new Map(prev).set(docId, { url: json.url, filename: file.name }))
+      updatePendingFiles(prev => new Map(prev).set(docId, { url: newLamp.url, filename: file.name }))
       const nextLampirans = replaceLampiranByKelengkapanId(lampiranUrlsRef.current, newLamp)
       setTrackedLampiranUrls(nextLampirans)
 

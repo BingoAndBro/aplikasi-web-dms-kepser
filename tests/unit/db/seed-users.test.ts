@@ -80,7 +80,7 @@ function createSeedDatabaseMock() {
     { id: '66666666-6666-4666-8666-666666666666', nama: 'PENANGGUNG_JAWAB_KINERJA' },
   ]
 
-  const selectResults = [roleRows]
+  const selectResults: unknown[][] = [roleRows]
 
   for (const user of DEV_SEED_USERS) {
     selectResults.push([{ id: user.id }])

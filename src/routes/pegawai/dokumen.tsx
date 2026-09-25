@@ -9,8 +9,8 @@ import { guardRole } from '#/lib/guards'
 // Layout wrapper for /pegawai/dokumen/* routes.
 // The actual index page is in dokumen/index.tsx.
 export const Route = createFileRoute('/pegawai/dokumen')({
-  beforeLoad: ({ event }) => {
-    guardRole(ROLES.PEGAWAI)(event)
+  beforeLoad: () => {
+    guardRole(ROLES.PEGAWAI)()
   },
   component: PegawaiDokumenLayout,
 })

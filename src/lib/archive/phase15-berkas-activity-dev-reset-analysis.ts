@@ -260,7 +260,7 @@ async function countWorkflowArchiveItemRows(database: ArchiveResetDatabase): Pro
   return Number(row?.count ?? 0)
 }
 
-async function getDatabase(): Promise<ArchiveResetDatabase> {
+async function getDatabase(): Promise<Required<ArchiveResetDatabase>> {
   const client = await import('#/db/client')
-  return client.db as ArchiveResetDatabase
+  return client.db as Required<ArchiveResetDatabase>
 }

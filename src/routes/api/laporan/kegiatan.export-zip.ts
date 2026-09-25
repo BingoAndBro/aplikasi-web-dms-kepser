@@ -119,6 +119,8 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
 
           const rows: DokumenRow[] = rawRows.map(row => ({
             ...row,
+            created_at: row.created_at.toISOString(),
+            updated_at: row.updated_at.toISOString(),
             lampiran_urls: parseLampiranUrls(row.lampiran_urls),
             nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
             is_non_material: row.is_non_material ?? false,

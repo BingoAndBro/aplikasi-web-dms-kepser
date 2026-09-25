@@ -11,6 +11,7 @@
     "start": "dotenv -e .env -- node .output/server/index.mjs",
     "preview": "vite preview",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "auth:hash-password": "tsx src/scripts/generate-password-hash.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

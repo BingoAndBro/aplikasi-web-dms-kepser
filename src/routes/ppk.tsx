@@ -10,8 +10,8 @@ type AuthSessionResponse = {
 }
 
 export const Route = createFileRoute('/ppk')({
-  beforeLoad: ({ event }) => {
-    guardRole('PPK')(event)
+  beforeLoad: () => {
+    guardRole('PPK')()
   },
   component: PpkLayout,
 })

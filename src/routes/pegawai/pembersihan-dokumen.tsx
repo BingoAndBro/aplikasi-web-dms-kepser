@@ -598,7 +598,7 @@ function ReportToolbar({
                 <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Kegiatan</span>
                 <Select
                   value={filter.kegiatanId || '_all'}
-                  onValueChange={(kegiatanId) => onFilterChange({ ...filter, kegiatanId: kegiatanId === '_all' ? undefined : kegiatanId })}
+                  onValueChange={(kegiatanId) => onFilterChange({ ...filter, kegiatanId: kegiatanId === '_all' ? undefined : kegiatanId ?? undefined })}
                 >
                   <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
                     <SelectValue placeholder="Semua Kegiatan">

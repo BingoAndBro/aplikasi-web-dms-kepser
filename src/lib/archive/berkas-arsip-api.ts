@@ -70,7 +70,7 @@ export function berkasArsipErrorResponse(error: unknown): Response {
   if (error instanceof BerkasArsipServiceError) {
     return Response.json(
       { error: error.message },
-      { status: statusForServiceError(error) },
+      { status: statusForBerkasServiceError(error) },
     )
   }
 
@@ -78,7 +78,7 @@ export function berkasArsipErrorResponse(error: unknown): Response {
   return Response.json({ error: 'Gagal memproses berkas' }, { status: 500 })
 }
 
-function statusForServiceError(error: BerkasArsipServiceError): number {
+export function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
   switch (error.code) {
     case 'KLASIFIKASI_NOT_FOUND':
     case 'KLASIFIKASI_INACTIVE':

@@ -17,6 +17,7 @@ import {
   getOrCreateOpenBerkasForKlasifikasi,
   type BerkasArsipRepository,
 } from '#/lib/archive/berkas-arsip-service'
+import { statusForBerkasServiceError } from '#/lib/archive/berkas-arsip-api'
 import { BERKAS_STATUS } from '#/lib/constants/archive-status'
 import { ROLES } from '#/lib/constants/roles'
 
@@ -305,27 +306,5 @@ function createWorkflowArchiveBerkasRepository(
           metadataSnapshot: input.metadataSnapshot ?? null,
         })
     },
-  }
-}
-
-function statusForBerkasServiceError(error: BerkasArsipServiceError): number {
-  switch (error.code) {
-    case 'KLASIFIKASI_NOT_FOUND':
-    case 'KLASIFIKASI_INACTIVE':
-    case 'KLASIFIKASI_PARENT':
-    case 'SOURCE_KLASIFIKASI_MISMATCH':
-    case 'INVALID_CLOSE_METADATA':
-      return 400
-    case 'BERKAS_NOT_FOUND':
-    case 'SOURCE_NOT_FOUND':
-      return 404
-    case 'SOURCE_KLASIFIKASI_UNAVAILABLE':
-    case 'BERKAS_CLOSED':
-    case 'BERKAS_KLASIFIKASI_CLOSED':
-    case 'BERKAS_KLASIFIKASI_CONFLICT':
-    case 'BERKAS_NOT_OPEN':
-    case 'BERKAS_EMPTY':
-    case 'CONFLICT':
-      return 409
   }
 }

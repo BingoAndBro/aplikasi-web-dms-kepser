@@ -3,22 +3,13 @@ import type { RoleName } from './types/auth'
 import { getClientAuthState, type ClientAuthState } from './auth-state'
 import { logDev, warnDev } from './dev-logger'
 
-type GuardContext = { request?: Request } | null | undefined
-
-function shouldDeferToAppLayout(event: GuardContext) {
-  return !!event?.request
-}
-
 /**
  * Route guard: require authenticated user.
  * Throw redirect ke /login jika tidak ada session.
  */
 function requireAuth(
-  event?: GuardContext,
   currentAuthState?: ClientAuthState | null,
 ): ClientAuthState | null {
-  if (shouldDeferToAppLayout(event)) return null
-
   const authState = currentAuthState ?? getClientAuthState()
   logDev('[GUARD] requireAuth', {
     userId: authState?.userId,
@@ -47,9 +38,7 @@ function requireAuth(
  * Throw 403 jika tidak punya role.
  */
 export function guardRole(role: RoleName) {
-  return (event?: GuardContext): void => {
-    if (shouldDeferToAppLayout(event)) return
-
+  return (): void => {
     const authState = getClientAuthState()
 
     if (!authState || !authState.isReady) {
@@ -60,7 +49,7 @@ export function guardRole(role: RoleName) {
       return
     }
 
-    const authenticatedState = requireAuth(event, authState)
+    const authenticatedState = requireAuth(authState)
     if (!authenticatedState) return
 
     logDev('[GUARD] guardRole', {

@@ -24,7 +24,7 @@ function createClientIdValue(cryptoSource: ClientIdCrypto | undefined): string {
 
   if (typeof cryptoSource?.getRandomValues === 'function') {
     try {
-      return createUuidLikeValue(cryptoSource)
+      return createUuidLikeValue(cryptoSource as Required<Pick<ClientIdCrypto, 'getRandomValues'>>)
     } catch {
       // Fall through to the non-security last resort below.
     }

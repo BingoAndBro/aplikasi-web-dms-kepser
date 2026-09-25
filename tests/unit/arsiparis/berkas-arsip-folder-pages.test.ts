@@ -188,7 +188,7 @@ describe('folder-first berkas archive read API routes', () => {
     ['INAKTIF', 'Arsip Inaktif'],
     ['USUL_MUSNAH', 'Usul Musnah'],
     ['DIMUSNAHKAN', 'Dimusnahkan'],
-  ] as const)('passes CLOSED %s filters for folder-first visibility', async (statusArsip) => {
+  ] as const)('passes CLOSED %s filters for folder-first visibility', async (statusArsip, _label) => {
     readModelMocks.listBerkasArsipFolders.mockResolvedValueOnce(listResult({
       row: folderRow({ status_arsip: statusArsip }),
       summary: listSummary({ status_arsip_counts: { [statusArsip]: 1 } }),
