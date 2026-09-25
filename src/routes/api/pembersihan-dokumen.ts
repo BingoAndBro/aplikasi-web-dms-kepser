@@ -21,7 +21,7 @@ function displayUserName(user: {
 // ---------------------------------------------------------------------------
 // GET /api/pembersihan-dokumen - Dokumen non-material (TERSIMPAN) dari
 // kegiatan yang dipimpin caller sebagai ketua tim. Lihat
-// docs/planning/pembersihan-non-material/rencana.md.
+// arsip/docs-2026-09-25:docs/planning/pembersihan-non-material/rencana.md.
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/pembersihan-dokumen')({

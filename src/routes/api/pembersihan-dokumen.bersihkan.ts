@@ -22,7 +22,7 @@ const bodySchema = z
 // POST /api/pembersihan-dokumen/bersihkan - Ketua tim membersihkan LAMPIRAN
 // FISIK sekumpulan dokumen non-material (metadata/baris tetap ada). Otorisasi
 // per dokumen divalidasi ulang di server (lihat buildPembersihanPlan) --
-// filter di UI TIDAK dipercaya. Lihat docs/planning/pembersihan-non-material/rencana.md.
+// filter di UI TIDAK dipercaya. Lihat arsip/docs-2026-09-25:docs/planning/pembersihan-non-material/rencana.md.
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/pembersihan-dokumen/bersihkan')({

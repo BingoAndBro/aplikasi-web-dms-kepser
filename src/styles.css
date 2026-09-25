@@ -4,7 +4,7 @@
 @plugin "tailwindcss-animate";
 
 /* ============================================================================
-   TEMA GLOBAL — token layer (docs/planning/tema-global/rencana.md §4, §6)
+   TEMA GLOBAL — token layer (arsip/docs-2026-09-25:docs/planning/tema-global/rencana.md §4, §6)
 
    Architecture (verified by Fase 0 spike — build-inspected compiled CSS):
    - Raw semantic tokens live as plain custom properties on :root / [data-theme].

@@ -27,7 +27,7 @@ function collectFiles(dir: string, out: string[] = []): string[] {
 /**
  * Counts raw hardcoded hex colors and `orange-*` Tailwind palette classes
  * per file under `rootDir`. Scope matches the Tema Global consolidation plan
- * (docs/planning/tema-global/rencana.md) — this is a budget for the brand
+ * (arsip/docs-2026-09-25:docs/planning/tema-global/rencana.md) — this is a budget for the brand
  * color specifically, not a general hardcoded-color linter.
  */
 export function scanColorBudget(rootDir = 'src'): ColorBudget {

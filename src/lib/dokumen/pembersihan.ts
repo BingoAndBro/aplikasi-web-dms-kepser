@@ -1,5 +1,5 @@
 // Konstanta & helper murni untuk fitur "Pembersihan Dokumen" (non-material,
-// oleh ketua tim). Lihat docs/planning/pembersihan-non-material/rencana.md.
+// oleh ketua tim). Lihat arsip/docs-2026-09-25:docs/planning/pembersihan-non-material/rencana.md.
 
 /**
  * Ambang umur (hari, berbasis `dokumen.tanggal`) untuk menandai dokumen

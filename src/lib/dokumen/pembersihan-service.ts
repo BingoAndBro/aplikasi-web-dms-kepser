@@ -1,7 +1,7 @@
 // Server-only module. Do not import from client components.
 //
 // Pembersihan LAMPIRAN FISIK dokumen non-material oleh ketua tim. `status`
-// dan `lampiran_urls` TIDAK diubah -- lihat docs/planning/pembersihan-non-material/rencana.md.
+// dan `lampiran_urls` TIDAK diubah -- lihat arsip/docs-2026-09-25:docs/planning/pembersihan-non-material/rencana.md.
 // Pola injeksi repository meniru `berkas-arsip-physical-destruction.ts`
 // (default lazy `await import('#/db/client')`) agar unit test murni tanpa DB.
 import { and, eq, inArray, notInArray } from 'drizzle-orm'

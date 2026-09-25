@@ -1,6 +1,6 @@
 /**
  * Shared color/tone classes for the table + filter + search shells (Tema
- * Global Fase 3 — docs/planning/tema-global, plan Fase 3). Five near-duplicate
+ * Global Fase 3 — arsip/docs-2026-09-25:docs/planning/tema-global, plan Fase 3). Five near-duplicate
  * implementations (AdminPagePrimitives, ArchivePagePrimitives,
  * PpkPpspmPagePrimitives, KinerjaPagePrimitives, PegawaiPagePrimitives) each
  * hardcoded their own mix of arbitrary hex and Tailwind palette classes for

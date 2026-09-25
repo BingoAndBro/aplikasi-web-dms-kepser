@@ -7,7 +7,7 @@ import { ConfirmProvider } from '../components/ui/confirm/ConfirmProvider'
 import { PUBLIC_PATHS } from '../lib/constants/routes'
 import appCss from '../styles.css?url'
 
-// Fase 6 (docs/planning/tema-global/rencana.md §6.2): first paint uses the theme
+// Fase 6 (arsip/docs-2026-09-25:docs/planning/tema-global/rencana.md §6.2): first paint uses the theme
 // last known on this device (localStorage), so there is no server round-trip
 // blocking paint. AppLayout reconciles against GET /api/settings/theme (the
 // GLOBAL source of truth) once the app mounts and updates localStorage/cookie
