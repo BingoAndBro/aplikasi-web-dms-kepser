@@ -4,6 +4,7 @@ import { desc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { ketuaTimAssignments, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { assignKetuaTimSchema } from '#/lib/schemas/ketua-tim'
 
 async function requireLocalAdmin(request: Request) {
   const session = await getLocalServerSession(request)
@@ -108,10 +109,11 @@ export const Route = createFileRoute('/api/ketua-tim/')({
           return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
         }
 
-        const { user_id, kegiatan_id } = body as { user_id?: unknown; kegiatan_id?: unknown }
-        if (!isUuid(user_id) || !isUuid(kegiatan_id)) {
-          return Response.json({ error: 'user_id dan kegiatan_id wajib UUID valid' }, { status: 400 })
+        const parsed = assignKetuaTimSchema.safeParse(body)
+        if (!parsed.success) {
+          return Response.json({ error: parsed.error.issues[0].message }, { status: 400 })
         }
+        const { user_id, kegiatan_id } = parsed.data
 
         try {
           const [saved] = await db

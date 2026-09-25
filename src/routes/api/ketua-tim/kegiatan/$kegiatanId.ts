@@ -5,6 +5,7 @@ import { db } from '#/db/client'
 import { users } from '#/db/schema/auth'
 import { ketuaTimAssignments, masterKegiatan } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { updateKetuaTimSchema } from '#/lib/schemas/ketua-tim'
 
 async function requireLocalAdmin(request: Request) {
   const session = await getLocalServerSession(request)
@@ -124,10 +125,11 @@ export const Route = createFileRoute('/api/ketua-tim/kegiatan/$kegiatanId')({
           return Response.json({ error: 'Invalid JSON body' }, { status: 400 })
         }
 
-        const { user_id } = body as { user_id?: unknown }
-        if (typeof user_id !== 'string' || !uuidRegex.test(user_id)) {
-          return Response.json({ error: 'user_id wajib UUID valid' }, { status: 400 })
+        const parsed = updateKetuaTimSchema.safeParse(body)
+        if (!parsed.success) {
+          return Response.json({ error: parsed.error.issues[0].message }, { status: 400 })
         }
+        const { user_id } = parsed.data
 
         try {
           const [saved] = await db.transaction(async (tx) => {
