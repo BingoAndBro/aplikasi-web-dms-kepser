@@ -10,3 +10,12 @@ export const exportZipRequestSchema = z
   .strict()
 
 export type ExportZipRequest = z.infer<typeof exportZipRequestSchema>
+
+// Laporan Kegiatan & Monitoring Dokumen Tim berbagi endpoint ekspor yang sama;
+// `scope` menentukan status mana yang boleh ikut (lihat kegiatan-scope.ts).
+export const kegiatanExportZipRequestSchema = z
+  .object({
+    dokumen_ids: z.array(z.uuid()).min(1).max(2000),
+    scope: z.enum(['final', 'monitoring']).optional(),
+  })
+  .strict()

@@ -39,7 +39,9 @@ async function canSessionReadDokumenLog(
   }
 
   // Ketua tim kegiatan ini boleh membaca log dokumen di kegiatannya,
-  // konsisten dengan akses baca metadata dokumennya.
+  // konsisten dengan akses baca metadata dokumennya (DRAFT tidak termasuk).
+  if (dokumen.status === 'DRAFT') return false
+
   const assignment = await db
     .select({ id: ketuaTimAssignments.id })
     .from(ketuaTimAssignments)

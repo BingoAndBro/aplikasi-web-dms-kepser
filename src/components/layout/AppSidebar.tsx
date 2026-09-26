@@ -50,7 +50,7 @@ function matchesNavItem(
 // Nav items visible only to a PEGAWAI who leads at least one kegiatan
 // (Ketua Tim -- not a role, only an assignment; see AppLayout's
 // /users/me/ketua-tim fetch).
-const KETUA_TIM_ONLY_NAV_IDS = new Set(['laporan_kegiatan', 'pembersihan_dokumen'])
+const KETUA_TIM_ONLY_NAV_IDS = new Set(['monitoring_dokumen_tim', 'laporan_kegiatan', 'pembersihan_dokumen'])
 
 export function AppSidebar({
   activeRole,

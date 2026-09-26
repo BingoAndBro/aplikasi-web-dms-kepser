@@ -173,6 +173,9 @@ function PegawaiLayout() {
                 { href: ROUTES.PEGAWAI.DOKUMEN, label: 'Dokumen Diajukan', icon: <FileText size={16} /> },
                 { href: ROUTES.PEGAWAI.REVISI, label: 'Revisi Dokumen', icon: <ListChecks size={16} /> },
                 { href: ROUTES.PEGAWAI.LAPORAN_SAYA, label: 'Laporan Saya', icon: <Archive size={16} /> },
+                ...(ketuaTim.isKetuaTim
+                  ? [{ href: ROUTES.PEGAWAI.MONITORING_DOKUMEN_TIM, label: 'Monitoring Dokumen Tim', icon: <ListChecks size={16} /> }]
+                  : []),
                 { href: ROUTES.PEGAWAI.LAPORAN_KEGIATAN, label: 'Laporan Kegiatan', icon: <BarChart3 size={16} /> },
               ]}
             />

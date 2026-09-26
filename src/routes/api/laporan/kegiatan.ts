@@ -14,6 +14,10 @@ import {
 } from '#/db/schema/master'
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
 import { parseLampiranUrls } from '#/lib/dokumen'
+import {
+  LAPORAN_KEGIATAN_SCOPE_STATUSES,
+  parseLaporanKegiatanScope,
+} from '#/lib/laporan/kegiatan-scope'
 
 function normalizeNumericValue(value: string | number | null): number | null {
   if (value === null) return null
@@ -36,6 +40,8 @@ function displayUserName(user: {
 
 // ---------------------------------------------------------------------------
 // GET /api/laporan/kegiatan - Semua dokumen dari kegiatan yang dipimpin user
+//   ?scope=final  (default) dokumen final -> Laporan Kegiatan
+//   ?scope=monitoring semua dokumen yang sudah diajukan -> Monitoring Dokumen Tim
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/laporan/kegiatan')({
@@ -60,6 +66,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan')({
           }
 
           const kegiatanIds = assignments.map((assignment) => assignment.kegiatan_id)
+          const scope = parseLaporanKegiatanScope(new URL(request.url).searchParams.get('scope'))
 
           const rows = await db
             .select({
@@ -108,7 +115,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan')({
             .leftJoin(users, eq(dokumenTransaksi.createdBy, users.id))
             .where(and(
               inArray(dokumenTransaksi.kegiatanJenisId, kegiatanIds),
-              inArray(dokumenTransaksi.status, ['COMPLETED', 'TERSIMPAN']),
+              inArray(dokumenTransaksi.status, [...LAPORAN_KEGIATAN_SCOPE_STATUSES[scope]]),
             ))
 
           return Response.json({

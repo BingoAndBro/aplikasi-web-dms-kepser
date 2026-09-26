@@ -16,6 +16,7 @@ import {
   FolderOpen,
   History,
   LayoutDashboard,
+  ListChecks,
   Network,
   Settings,
   Shield,
@@ -61,6 +62,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
     {
       title: 'PJ Kegiatan',
       items: [
+        { id: 'monitoring_dokumen_tim', label: 'Monitoring Dokumen Tim', icon: ListChecks, to: ROUTES.PEGAWAI.MONITORING_DOKUMEN_TIM },
         { id: 'laporan_kegiatan', label: 'Laporan Kegiatan', icon: BarChart3, to: ROUTES.PEGAWAI.LAPORAN_KEGIATAN },
         { id: 'pembersihan_dokumen', label: 'Pembersihan Dokumen', icon: Trash2, to: ROUTES.PEGAWAI.PEMBERSIHAN_DOKUMEN },
       ],

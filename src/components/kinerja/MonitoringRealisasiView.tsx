@@ -2,18 +2,26 @@ import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
+  ArrowRight,
   Banknote,
   ChevronLeft,
   ChevronRight,
   Clock3,
   ClipboardList,
   FileText,
-  Filter,
   FolderOpen,
   Inbox,
   Search,
   Users,
+  X,
 } from 'lucide-react'
+import {
+  FilterToolbar,
+  PembuatFilterSelect,
+  ToolbarFilterField,
+  ToolbarSelectField,
+  buildPersonOptions,
+} from '#/components/laporan/FilterToolbar'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { DokumenDetailDialog } from '#/components/dokumen/DokumenDetailDialog'
@@ -90,6 +98,7 @@ type StatusFilter = 'ALL' | LaporanKinerjaRow['status']
 
 type DetailFilterValue = {
   status: StatusFilter
+  pengajuId?: string
 }
 
 export type MonitoringRealisasiViewProps = {
@@ -135,6 +144,11 @@ const DETAIL_SORT_OPTIONS: { value: DetailSortMode; label: string }[] = [
   { value: 'title_asc', label: 'Judul A-Z' },
   { value: 'submitter_asc', label: 'Pembuat A-Z' },
   { value: 'nominal_desc', label: 'Nominal terbesar' },
+]
+
+const STATUS_FILTER_OPTIONS = [
+  { id: 'COMPLETED', nama: 'Selesai' },
+  { id: 'TERSIMPAN', nama: 'Tersimpan' },
 ]
 
 const EMPTY_DETAIL_FILTER: DetailFilterValue = {
@@ -187,7 +201,6 @@ export function MonitoringRealisasiView({
   const [detailSearch, setDetailSearch] = useState('')
   const [detailSortBy, setDetailSortBy] = useState<DetailSortMode>('newest')
   const [detailFilter, setDetailFilter] = useState<DetailFilterValue>(EMPTY_DETAIL_FILTER)
-  const [detailFilterOpen, setDetailFilterOpen] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<LaporanKinerjaRow | null>(null)
 
   const periodeRange = useMemo(() => resolvePeriodeRange(periode), [periode])
@@ -341,6 +354,7 @@ export function MonitoringRealisasiView({
     return selectedKomponen.dokumen
       .filter(row => {
         if (detailFilter.status !== 'ALL' && row.status !== detailFilter.status) return false
+        if (detailFilter.pengajuId && row.pengaju_id !== detailFilter.pengajuId) return false
         if (!query) return true
 
         return [
@@ -549,8 +563,6 @@ export function MonitoringRealisasiView({
             onSearchChange={setDetailSearch}
             filter={detailFilter}
             onFilterChange={setDetailFilter}
-            filterOpen={detailFilterOpen}
-            onFilterOpenChange={setDetailFilterOpen}
             sortBy={detailSortBy}
             onSortChange={setDetailSortBy}
             onBack={() => onSelectKomponen(selectedFungsi.id, selectedKegiatan.id, null)}
@@ -851,39 +863,19 @@ function SimpleReportToolbar({
   resultLabel: string
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative min-w-0 flex-1 lg:max-w-xl">
-          <span className="sr-only">{searchLabel}</span>
-          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-          <input
-            type="search"
-            placeholder={placeholder}
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
-          />
-        </label>
-        <label>
-          <span className="sr-only">Urutkan daftar</span>
-          <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortMode)}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
-              <SelectValue placeholder="Terakhir diperbarui">
-                {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Terakhir diperbarui'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-      </div>
-      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
-        {resultLabel}
-      </div>
-    </div>
+    <FilterToolbar
+      search={{ value: search, onChange: onSearchChange, placeholder, label: searchLabel }}
+      fields={(
+        <ToolbarSelectField
+          label="Urutkan"
+          srLabel="daftar"
+          value={sortBy}
+          options={SORT_OPTIONS.map(option => ({ id: option.value, nama: option.label }))}
+          onChange={(value) => onSortChange(value as SortMode)}
+        />
+      )}
+      resultLabel={resultLabel}
+    />
   )
 }
 
@@ -1480,8 +1472,6 @@ function KegiatanDocumentView({
   onSearchChange,
   filter,
   onFilterChange,
-  filterOpen,
-  onFilterOpenChange,
   sortBy,
   onSortChange,
   onBack,
@@ -1497,14 +1487,15 @@ function KegiatanDocumentView({
   onSearchChange: (value: string) => void
   filter: DetailFilterValue
   onFilterChange: (value: DetailFilterValue) => void
-  filterOpen: boolean
-  onFilterOpenChange: (value: boolean) => void
   sortBy: DetailSortMode
   onSortChange: (value: DetailSortMode) => void
   onBack: () => void
   onOpenDocument: (dokumen: LaporanKinerjaRow) => void
 }) {
-  const activeFilters = countActiveDetailFilters(filter)
+  const pembuatOptions = useMemo(
+    () => buildPersonOptions(komponen.dokumen, row => row.pengaju_id, row => row.pengaju_nama || 'Tidak diketahui'),
+    [komponen.dokumen],
+  )
 
   return (
     <>
@@ -1521,9 +1512,7 @@ function KegiatanDocumentView({
         onSearchChange={onSearchChange}
         filter={filter}
         onFilterChange={onFilterChange}
-        filterOpen={filterOpen}
-        onFilterOpenChange={onFilterOpenChange}
-        activeFilters={activeFilters}
+        pembuatOptions={pembuatOptions}
         sortBy={sortBy}
         onSortChange={onSortChange}
         resultLabel={`${dokumen.length} dari ${totalDokumen} dokumen ditampilkan`}
@@ -1667,9 +1656,7 @@ function KegiatanDetailToolbar({
   onSearchChange,
   filter,
   onFilterChange,
-  filterOpen,
-  onFilterOpenChange,
-  activeFilters,
+  pembuatOptions,
   sortBy,
   onSortChange,
   resultLabel,
@@ -1678,144 +1665,44 @@ function KegiatanDetailToolbar({
   onSearchChange: (value: string) => void
   filter: DetailFilterValue
   onFilterChange: (value: DetailFilterValue) => void
-  filterOpen: boolean
-  onFilterOpenChange: (value: boolean) => void
-  activeFilters: number
+  pembuatOptions: { id: string; nama: string }[]
   sortBy: DetailSortMode
   onSortChange: (value: DetailSortMode) => void
   resultLabel: string
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative min-w-0 flex-1 lg:max-w-xl">
-          <span className="sr-only">Cari dokumen kegiatan</span>
-          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="Cari berdasarkan judul dokumen, jenis, atau pengaju..."
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
+    <FilterToolbar
+      search={{
+        value: search,
+        onChange: onSearchChange,
+        placeholder: 'Cari berdasarkan judul dokumen, jenis, atau pengaju...',
+        label: 'Cari dokumen kegiatan',
+      }}
+      fields={(
+        <>
+          <PembuatFilterSelect
+            value={filter.pengajuId}
+            options={pembuatOptions}
+            onChange={(pengajuId) => onFilterChange({ ...filter, pengajuId })}
           />
-        </label>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <Button
-            type="button"
-            variant={filterOpen || activeFilters > 0 ? 'outline' : 'ghost'}
-            className={[
-              'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
-              filterOpen || activeFilters > 0
-                ? 'border-brand-border-strong bg-brand-surface text-brand-text hover:bg-brand-surface'
-                : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
-            ].join(' ')}
-            onClick={() => onFilterOpenChange(!filterOpen)}
-          >
-            <Filter size={16} />
-            Filter Lanjutan
-            {activeFilters > 0 && (
-              <span className="ml-1 rounded-full bg-brand-text px-1.5 py-0.5 text-[10px] leading-none text-white">
-                {activeFilters}
-              </span>
-            )}
-          </Button>
-          <label>
-            <span className="sr-only">Urutkan dokumen kegiatan</span>
-            <Select value={sortBy} onValueChange={(value) => onSortChange(value as DetailSortMode)}>
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
-                <SelectValue placeholder="Tanggal terbaru">
-                  {selected => DETAIL_SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {DETAIL_SORT_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-        </div>
-      </div>
-
-      {filterOpen && (
-        <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
-          <KinerjaDetailAdvancedFilter
-            value={filter}
-            onChange={onFilterChange}
+          <ToolbarFilterField
+            label="Status"
+            allLabel="Semua Status"
+            value={filter.status === 'ALL' ? undefined : filter.status}
+            options={STATUS_FILTER_OPTIONS}
+            onChange={(status) => onFilterChange({ ...filter, status: (status ?? 'ALL') as StatusFilter })}
           />
-          <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
-            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange(EMPTY_DETAIL_FILTER)}>
-              Reset
-            </Button>
-            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterOpenChange(false)}>
-              Tutup
-            </Button>
-            <Button type="button" className="font-bold shadow-sm" onClick={() => onFilterOpenChange(false)}>
-              Terapkan Filter
-            </Button>
-          </div>
-        </div>
+          <ToolbarSelectField
+            label="Urutkan"
+            srLabel="dokumen kegiatan"
+            value={sortBy}
+            options={DETAIL_SORT_OPTIONS.map(option => ({ id: option.value, nama: option.label }))}
+            onChange={(value) => onSortChange(value as DetailSortMode)}
+          />
+        </>
       )}
-
-      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
-        {resultLabel}
-      </div>
-    </div>
-  )
-}
-
-function KinerjaDetailAdvancedFilter({
-  value,
-  onChange,
-}: {
-  value: DetailFilterValue
-  onChange: (value: DetailFilterValue) => void
-}) {
-  return (
-    <div className="rounded-[22px] border border-zinc-200/80 bg-brand-surface/35 p-4 shadow-none">
-      <div className="max-w-xs">
-        <FilterSelect
-          label="Status"
-          value={value.status}
-          onChange={(status) => onChange({ ...value, status: status as StatusFilter })}
-          options={[
-            { value: 'ALL', label: 'Semua Status' },
-            { value: 'COMPLETED', label: 'Selesai' },
-            { value: 'TERSIMPAN', label: 'Tersimpan' },
-          ]}
-        />
-      </div>
-    </div>
-  )
-}
-
-function FilterSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <label className="space-y-2">
-      <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">{label}</span>
-      <Select value={value} onValueChange={(next) => onChange(next ?? '')}>
-        <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
-          <SelectValue placeholder={options[0]?.label}>
-            {selected => options.find(option => option.value === selected)?.label ?? options[0]?.label}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {options.map(option => (
-            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </label>
+      resultLabel={resultLabel}
+    />
   )
 }
 
@@ -2029,22 +1916,46 @@ const SUMMARY_CARD_TONE_CLASS: Record<SummaryCardTone, {
   },
 }
 
+/**
+ * Kartu ringkasan bersama (Monitoring Realisasi, Laporan Kinerja, Laporan
+ * Kegiatan, Monitoring Dokumen Tim). Bila `onClick` diisi, kartu menjadi
+ * tombol filter: ada hover, petunjuk aksi di bawah, dan tampilan aktif.
+ */
 export function SummaryCard({
   label,
   value,
   detail,
   icon,
   tone,
+  onClick,
+  active = false,
+  actionHint = 'Klik untuk menyaring',
 }: {
   label: string
   value: ReactNode
   detail: string
   icon: ReactNode
   tone: SummaryCardTone
+  onClick?: () => void
+  active?: boolean
+  actionHint?: string
 }) {
   const t = SUMMARY_CARD_TONE_CLASS[tone]
+  const isInteractive = Boolean(onClick)
+  const Root = isInteractive ? 'button' : 'div'
+
   return (
-    <div className={['flex min-h-[140px] flex-col justify-between rounded-[22px] border p-5 shadow-sm', t.card].join(' ')}>
+    <Root
+      {...(isInteractive ? { type: 'button' as const, onClick, 'aria-pressed': active } : {})}
+      className={[
+        'group flex min-h-[140px] flex-col justify-between rounded-[22px] border p-5 text-left shadow-sm',
+        t.card,
+        isInteractive
+          ? 'cursor-pointer transition duration-200 ease-out hover:-translate-y-1 hover:border-brand-border-strong hover:shadow-[0_12px_28px_rgba(15,23,42,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-border/70 active:translate-y-0'
+          : '',
+        active ? '-translate-y-1 border-brand-border-strong ring-4 ring-brand-border/70' : '',
+      ].join(' ')}
+    >
       <div className="flex items-start justify-between gap-3">
         <p className={['text-[10px] font-black uppercase tracking-[0.14em]', t.label].join(' ')}>{label}</p>
         <span className={['flex size-7 items-center justify-center rounded-full border bg-white/65 shadow-sm shadow-zinc-950/5', t.icon].join(' ')}>
@@ -2054,8 +1965,28 @@ export function SummaryCard({
       <div>
         <p className={['line-clamp-2 font-headline text-[18px] font-extrabold leading-tight tracking-tight text-zinc-950', t.value ?? ''].join(' ')}>{value}</p>
         <p className={['mt-3 text-[10px] font-semibold uppercase tracking-[0.04em] text-zinc-500', t.detail ?? ''].join(' ')}>{detail}</p>
+        {isInteractive && (
+          <span
+            className={[
+              'mt-3 flex items-center gap-1 border-t border-zinc-950/10 pt-2.5 text-[11px] font-bold transition-colors',
+              active ? 'text-brand-text' : 'text-zinc-500 group-hover:text-brand-text',
+            ].join(' ')}
+          >
+            {active ? (
+              <>
+                <X size={12} aria-hidden="true" />
+                Filter aktif · klik untuk lepas
+              </>
+            ) : (
+              <>
+                {actionHint}
+                <ArrowRight size={12} className="transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
+              </>
+            )}
+          </span>
+        )}
       </div>
-    </div>
+    </Root>
   )
 }
 
@@ -2129,12 +2060,6 @@ function compareDocuments(a: LaporanKinerjaRow, b: LaporanKinerjaRow, sortBy: De
   if (sortBy === 'submitter_asc') return a.pengaju_nama.localeCompare(b.pengaju_nama, 'id-ID')
   if (sortBy === 'nominal_desc') return (b.nominal_realisasi ?? 0) - (a.nominal_realisasi ?? 0)
   return dateValue(b.tanggal) - dateValue(a.tanggal)
-}
-
-function countActiveDetailFilters(filter: DetailFilterValue) {
-  return [
-    filter.status !== 'ALL',
-  ].filter(Boolean).length
 }
 
 function formatStatusLabel(status: LaporanKinerjaRow['status']) {

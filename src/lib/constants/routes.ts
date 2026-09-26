@@ -14,6 +14,7 @@ export const ROUTES = {
     REVISI: '/pegawai/revisi',
     LAPORAN_SAYA: '/pegawai/laporan/saya',
     LAPORAN_KEGIATAN: '/pegawai/laporan/kegiatan',
+    MONITORING_DOKUMEN_TIM: '/pegawai/monitoring-dokumen-tim',
     PEMBERSIHAN_DOKUMEN: '/pegawai/pembersihan-dokumen',
     ACTIVITY_LOG: '/pegawai/activity-log',
   },

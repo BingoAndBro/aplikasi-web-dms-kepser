@@ -266,6 +266,43 @@ describe('POST /api/laporan/kegiatan.export-zip', () => {
     expect(rows[0].created_by).toBe(OTHER_USER_ID)
   })
 
+  it('labels a scope=monitoring export as containing non-final documents', async () => {
+    mocks.dbSelect
+      .mockReturnValueOnce(chainable([{ kegiatan_id: KEGIATAN_ID }]))
+      .mockReturnValueOnce(chainable([documentRow({ status: 'IN_PPK_VALIDATION' })]))
+
+    const response = await kegiatanHandler({
+      request: postRequest('http://localhost/api/laporan/kegiatan.export-zip', { dokumen_ids: [DOC_A], scope: 'monitoring' }),
+    })
+
+    expect(response.status).toBe(200)
+    const [[, options]] = mocks.streamDocumentZip.mock.calls
+    expect(options.sourceDescription).toContain('BELUM FINAL')
+    expect(options.filename).toContain('Monitoring_Dokumen_Tim')
+  })
+
+  it('keeps the Laporan Kegiatan labels when scope is omitted', async () => {
+    mocks.dbSelect
+      .mockReturnValueOnce(chainable([{ kegiatan_id: KEGIATAN_ID }]))
+      .mockReturnValueOnce(chainable([documentRow()]))
+
+    await kegiatanHandler({
+      request: postRequest('http://localhost/api/laporan/kegiatan.export-zip', { dokumen_ids: [DOC_A] }),
+    })
+
+    const [[, options]] = mocks.streamDocumentZip.mock.calls
+    expect(options.sourceDescription).toBe('Laporan Kegiatan (filter aktif klien)')
+    expect(options.filename).toContain('Laporan_Kegiatan')
+  })
+
+  it('rejects an unknown scope value', async () => {
+    const response = await kegiatanHandler({
+      request: postRequest('http://localhost/api/laporan/kegiatan.export-zip', { dokumen_ids: [DOC_A], scope: 'semua' }),
+    })
+
+    expect(response.status).toBe(400)
+  })
+
   it('silently excludes documents from a kegiatan the requester does not lead', async () => {
     mocks.dbSelect
       .mockReturnValueOnce(chainable([{ kegiatan_id: KEGIATAN_ID }]))

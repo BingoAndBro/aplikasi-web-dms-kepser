@@ -38,7 +38,8 @@ describe('pegawai report visual parity source guard', () => {
     expect(source).toContain('Total Nominal Realisasi')
     expect(source).toContain('DokumenDetailDialog')
     expect(source).toContain('KegiatanDetailAdvancedFilter')
-    expect(source).toContain('Pembuat Dokumen')
+    // Filter pembuat ada di toolbar (di luar Filter Lanjutan), lewat komponen bersama.
+    expect(source).toContain('<PembuatFilterSelect')
     expect(source).toContain('Jenis Permintaan')
     expect(source).toContain('Kategori Permintaan')
     expect(source).toContain('Detail Permintaan')

@@ -9,14 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#/components/ui/select'
 import { EmptyState } from '#/components/ui/EmptyState'
+import { FilterToolbar, ToolbarFilterField, ToolbarSelectField, buildPersonOptions } from '#/components/laporan/FilterToolbar'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { RoleBadge, getRoleBadgeLabel } from '#/components/ui/RoleBadge'
@@ -56,6 +50,7 @@ export function ActivityLogView({ scope }: { scope: 'self' | 'all' }) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortMode>('newest')
   const [roleFilter, setRoleFilter] = useState<string>(ROLE_FILTER_ALL)
+  const [userFilter, setUserFilter] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -99,11 +94,19 @@ export function ActivityLogView({ scope }: { scope: 'self' | 'all' }) {
     }
   }, [availableRoles, roleFilter])
 
+  // Filter pengguna hanya bermakna di scope "all" (Admin & PJ Kinerja);
+  // di scope "self" semua baris milik user sendiri.
+  const userOptions = useMemo(
+    () => scope === 'all' ? buildPersonOptions(logs, log => log.userId, log => log.userNama) : [],
+    [logs, scope],
+  )
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     return logs
       .filter((log) => {
         if (roleFilter !== ROLE_FILTER_ALL && log.role !== roleFilter) return false
+        if (userFilter && log.userId !== userFilter) return false
         if (!query) return true
         return [
           formatAksiLabel(log.aksi),
@@ -115,7 +118,7 @@ export function ActivityLogView({ scope }: { scope: 'self' | 'all' }) {
       .sort((a, b) => sortBy === 'oldest'
         ? dateValue(a.timestamp) - dateValue(b.timestamp)
         : dateValue(b.timestamp) - dateValue(a.timestamp))
-  }, [logs, search, scope, sortBy, roleFilter])
+  }, [logs, search, scope, sortBy, roleFilter, userFilter])
 
   return (
     <PageLayout>
@@ -146,6 +149,9 @@ export function ActivityLogView({ scope }: { scope: 'self' | 'all' }) {
           roleFilter={roleFilter}
           onRoleFilterChange={setRoleFilter}
           availableRoles={availableRoles}
+          userFilter={userFilter}
+          onUserFilterChange={setUserFilter}
+          userOptions={userOptions}
           resultLabel={`${filtered.length} Aktivitas Ditemukan`}
         />
 
@@ -168,7 +174,7 @@ export function ActivityLogView({ scope }: { scope: 'self' | 'all' }) {
         {!loading && !error && logs.length > 0 && filtered.length === 0 && (
           <EmptyState
             title="Tidak ada aktivitas yang cocok"
-            description="Ubah kata kunci pencarian untuk melihat aktivitas lain."
+            description="Ubah kata kunci atau filter untuk melihat aktivitas lain."
             icon={<Search size={20} />}
           />
         )}
@@ -189,6 +195,9 @@ function Toolbar({
   roleFilter,
   onRoleFilterChange,
   availableRoles,
+  userFilter,
+  onUserFilterChange,
+  userOptions,
   resultLabel,
 }: {
   search: string
@@ -198,54 +207,51 @@ function Toolbar({
   roleFilter: string
   onRoleFilterChange: (value: string) => void
   availableRoles: RoleName[]
+  userFilter: string | undefined
+  onUserFilterChange: (value: string | undefined) => void
+  userOptions: { id: string; nama: string }[]
   resultLabel: string
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative min-w-0 flex-1 lg:max-w-xl">
-          <span className="sr-only">Cari log aktivitas</span>
-          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="Cari aksi, dokumen, atau user..."
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
+    <FilterToolbar
+      search={{
+        value: search,
+        onChange: onSearchChange,
+        placeholder: 'Cari aksi, dokumen, atau user...',
+        label: 'Cari log aktivitas',
+      }}
+      fields={(
+        <>
+          {userOptions.length > 0 && (
+            <ToolbarFilterField
+              label="Pengguna"
+              allLabel="Semua Pengguna"
+              value={userFilter}
+              options={userOptions}
+              onChange={onUserFilterChange}
+            />
+          )}
+          <ToolbarFilterField
+            label="Role"
+            allLabel="Semua Role"
+            value={roleFilter === ROLE_FILTER_ALL ? undefined : roleFilter}
+            options={availableRoles.map(role => ({ id: role, nama: getRoleBadgeLabel(role) }))}
+            onChange={(role) => onRoleFilterChange(role ?? ROLE_FILTER_ALL)}
           />
-        </label>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Select value={roleFilter} onValueChange={(value) => onRoleFilterChange(value ?? ROLE_FILTER_ALL)}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
-              <SelectValue placeholder="Semua Role">
-                {(selected) => selected === ROLE_FILTER_ALL ? 'Semua Role' : getRoleBadgeLabel(selected)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ROLE_FILTER_ALL}>Semua Role</SelectItem>
-              {availableRoles.map((role) => (
-                <SelectItem key={role} value={role}>{getRoleBadgeLabel(role)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortMode)}>
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
-              <SelectValue placeholder="Waktu terbaru">
-                {(selected) => selected === 'oldest' ? 'Waktu terlama' : 'Waktu terbaru'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">Waktu terbaru</SelectItem>
-              <SelectItem value="oldest">Waktu terlama</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
-        {resultLabel}
-      </div>
-    </div>
+          <ToolbarSelectField
+            label="Urutkan"
+            srLabel="log aktivitas"
+            value={sortBy}
+            options={[
+              { id: 'newest', nama: 'Waktu terbaru' },
+              { id: 'oldest', nama: 'Waktu terlama' },
+            ]}
+            onChange={(value) => onSortChange(value as SortMode)}
+          />
+        </>
+      )}
+      resultLabel={resultLabel}
+    />
   )
 }
 

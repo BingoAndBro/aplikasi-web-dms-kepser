@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { StatusBadge } from '#/components/ui/StatusBadge'
+import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentViewer, type ViewerApiType } from '#/components/dokumen/AttachmentViewer'
 import type { DokumenRow } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
@@ -13,18 +14,21 @@ import { ApiError, apiFetch } from '#/lib/api-client'
  * Pop up detail dokumen yang di-reuse di seluruh halaman laporan (Laporan
  * Bulanan, Laporan Kegiatan, Laporan Kinerja, Pembersihan Dokumen), meniru
  * pola "Detail Dokumen Berkas" di halaman Berkas kasubag: metadata ringkas +
- * lampiran dengan tombol preview/download, tanpa tab Riwayat/Workflow.
+ * lampiran dengan tombol preview/download. Riwayat aktivitas hanya tampil
+ * bila `showRiwayat` (dipakai Monitoring Dokumen Tim untuk melacak posisi dokumen).
  */
 export function DokumenDetailDialog({
   dokumenId,
   open,
   onOpenChange,
   apiType = 'default',
+  showRiwayat = false,
 }: {
   dokumenId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
   apiType?: ViewerApiType
+  showRiwayat?: boolean
 }) {
   const [dokumen, setDokumen] = useState<DokumenRow | null>(null)
   const [loading, setLoading] = useState(false)
@@ -127,6 +131,8 @@ export function DokumenDetailDialog({
               <h3 className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-zinc-950">Lampiran Pendukung</h3>
               <AttachmentViewer dokumen={dokumen} lampiranUrls={dokumen.lampiran_urls} apiType={apiType} />
             </section>
+
+            {showRiwayat && <ActivityLog dokumenId={dokumen.id} />}
           </div>
         )}
       </DialogContent>

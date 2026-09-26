@@ -41,6 +41,7 @@ import { Route as PenanggungJawabKinerjaLaporanKinerjaRouteImport } from './rout
 import { Route as PenanggungJawabKinerjaActivityLogRouteImport } from './routes/penanggung-jawab-kinerja/activity-log'
 import { Route as PegawaiRevisiRouteImport } from './routes/pegawai/revisi'
 import { Route as PegawaiPembersihanDokumenRouteImport } from './routes/pegawai/pembersihan-dokumen'
+import { Route as PegawaiMonitoringDokumenTimRouteImport } from './routes/pegawai/monitoring-dokumen-tim'
 import { Route as PegawaiDokumenRouteImport } from './routes/pegawai/dokumen'
 import { Route as PegawaiActivityLogRouteImport } from './routes/pegawai/activity-log'
 import { Route as KasubagPenambahanArsipRouteImport } from './routes/kasubag/penambahan-arsip'
@@ -341,6 +342,12 @@ const PegawaiPembersihanDokumenRoute =
   PegawaiPembersihanDokumenRouteImport.update({
     id: '/pembersihan-dokumen',
     path: '/pembersihan-dokumen',
+    getParentRoute: () => PegawaiRoute,
+  } as any)
+const PegawaiMonitoringDokumenTimRoute =
+  PegawaiMonitoringDokumenTimRouteImport.update({
+    id: '/monitoring-dokumen-tim',
+    path: '/monitoring-dokumen-tim',
     getParentRoute: () => PegawaiRoute,
   } as any)
 const PegawaiDokumenRoute = PegawaiDokumenRouteImport.update({
@@ -1083,6 +1090,7 @@ export interface FileRoutesByFullPath {
   '/kasubag/penambahan-arsip': typeof KasubagPenambahanArsipRoute
   '/pegawai/activity-log': typeof PegawaiActivityLogRoute
   '/pegawai/dokumen': typeof PegawaiDokumenRouteWithChildren
+  '/pegawai/monitoring-dokumen-tim': typeof PegawaiMonitoringDokumenTimRoute
   '/pegawai/pembersihan-dokumen': typeof PegawaiPembersihanDokumenRoute
   '/pegawai/revisi': typeof PegawaiRevisiRoute
   '/penanggung-jawab-kinerja/activity-log': typeof PenanggungJawabKinerjaActivityLogRoute
@@ -1246,6 +1254,7 @@ export interface FileRoutesByTo {
   '/kasubag/klasifikasi': typeof KasubagKlasifikasiRoute
   '/kasubag/penambahan-arsip': typeof KasubagPenambahanArsipRoute
   '/pegawai/activity-log': typeof PegawaiActivityLogRoute
+  '/pegawai/monitoring-dokumen-tim': typeof PegawaiMonitoringDokumenTimRoute
   '/pegawai/pembersihan-dokumen': typeof PegawaiPembersihanDokumenRoute
   '/pegawai/revisi': typeof PegawaiRevisiRoute
   '/penanggung-jawab-kinerja/activity-log': typeof PenanggungJawabKinerjaActivityLogRoute
@@ -1415,6 +1424,7 @@ export interface FileRoutesById {
   '/kasubag/penambahan-arsip': typeof KasubagPenambahanArsipRoute
   '/pegawai/activity-log': typeof PegawaiActivityLogRoute
   '/pegawai/dokumen': typeof PegawaiDokumenRouteWithChildren
+  '/pegawai/monitoring-dokumen-tim': typeof PegawaiMonitoringDokumenTimRoute
   '/pegawai/pembersihan-dokumen': typeof PegawaiPembersihanDokumenRoute
   '/pegawai/revisi': typeof PegawaiRevisiRoute
   '/penanggung-jawab-kinerja/activity-log': typeof PenanggungJawabKinerjaActivityLogRoute
@@ -1587,6 +1597,7 @@ export interface FileRouteTypes {
     | '/kasubag/penambahan-arsip'
     | '/pegawai/activity-log'
     | '/pegawai/dokumen'
+    | '/pegawai/monitoring-dokumen-tim'
     | '/pegawai/pembersihan-dokumen'
     | '/pegawai/revisi'
     | '/penanggung-jawab-kinerja/activity-log'
@@ -1750,6 +1761,7 @@ export interface FileRouteTypes {
     | '/kasubag/klasifikasi'
     | '/kasubag/penambahan-arsip'
     | '/pegawai/activity-log'
+    | '/pegawai/monitoring-dokumen-tim'
     | '/pegawai/pembersihan-dokumen'
     | '/pegawai/revisi'
     | '/penanggung-jawab-kinerja/activity-log'
@@ -1918,6 +1930,7 @@ export interface FileRouteTypes {
     | '/kasubag/penambahan-arsip'
     | '/pegawai/activity-log'
     | '/pegawai/dokumen'
+    | '/pegawai/monitoring-dokumen-tim'
     | '/pegawai/pembersihan-dokumen'
     | '/pegawai/revisi'
     | '/penanggung-jawab-kinerja/activity-log'
@@ -2350,6 +2363,13 @@ declare module '@tanstack/react-router' {
       path: '/pembersihan-dokumen'
       fullPath: '/pegawai/pembersihan-dokumen'
       preLoaderRoute: typeof PegawaiPembersihanDokumenRouteImport
+      parentRoute: typeof PegawaiRoute
+    }
+    '/pegawai/monitoring-dokumen-tim': {
+      id: '/pegawai/monitoring-dokumen-tim'
+      path: '/monitoring-dokumen-tim'
+      fullPath: '/pegawai/monitoring-dokumen-tim'
+      preLoaderRoute: typeof PegawaiMonitoringDokumenTimRouteImport
       parentRoute: typeof PegawaiRoute
     }
     '/pegawai/dokumen': {
@@ -3433,6 +3453,7 @@ const PegawaiDokumenRouteWithChildren = PegawaiDokumenRoute._addFileChildren(
 interface PegawaiRouteChildren {
   PegawaiActivityLogRoute: typeof PegawaiActivityLogRoute
   PegawaiDokumenRoute: typeof PegawaiDokumenRouteWithChildren
+  PegawaiMonitoringDokumenTimRoute: typeof PegawaiMonitoringDokumenTimRoute
   PegawaiPembersihanDokumenRoute: typeof PegawaiPembersihanDokumenRoute
   PegawaiRevisiRoute: typeof PegawaiRevisiRoute
   PegawaiLaporanKegiatanRoute: typeof PegawaiLaporanKegiatanRoute
@@ -3442,6 +3463,7 @@ interface PegawaiRouteChildren {
 const PegawaiRouteChildren: PegawaiRouteChildren = {
   PegawaiActivityLogRoute: PegawaiActivityLogRoute,
   PegawaiDokumenRoute: PegawaiDokumenRouteWithChildren,
+  PegawaiMonitoringDokumenTimRoute: PegawaiMonitoringDokumenTimRoute,
   PegawaiPembersihanDokumenRoute: PegawaiPembersihanDokumenRoute,
   PegawaiRevisiRoute: PegawaiRevisiRoute,
   PegawaiLaporanKegiatanRoute: PegawaiLaporanKegiatanRoute,

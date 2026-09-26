@@ -85,6 +85,9 @@ async function canSessionReadDokumen(
   // yang bukan miliknya) di kegiatan yang ia pimpin -- selaras dengan
   // "Laporan Kegiatan" & "Pembersihan Dokumen" yang sudah menampilkan
   // dokumen ini ke ketua tim. Read-only: guard PATCH/DELETE tidak berubah.
+  // DRAFT dikecualikan: belum diajukan, jadi masih ranah pribadi pengaju.
+  if (dokumen.status === 'DRAFT') return false
+
   const assignment = await db
     .select({ id: ketuaTimAssignments.id })
     .from(ketuaTimAssignments)

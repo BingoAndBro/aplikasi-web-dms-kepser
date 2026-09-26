@@ -46,7 +46,10 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(source).toContain('Nominal terbesar')
     expect(source).toContain('Dokumen terbanyak')
     expect(source).toContain('Nama A-Z')
-    expect(source).toContain('Filter Lanjutan')
+    // Toolbar bersama; filter dokumen (pembuat & status) langsung di baris toolbar.
+    expect(source).toContain('<FilterToolbar')
+    expect(source).toContain('<PembuatFilterSelect')
+    expect(source).toContain('label="Status"')
     expect(source).toContain('Mulai Dari Tanggal')
     expect(source).toContain('Sampai Tanggal')
     expect(source).toContain('rounded-[26px] border border-zinc-200/80 bg-bg-surface')

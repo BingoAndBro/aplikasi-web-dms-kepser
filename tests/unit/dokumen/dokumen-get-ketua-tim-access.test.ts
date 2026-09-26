@@ -178,4 +178,29 @@ describe('GET /api/dokumen/$id -- ketua tim read access to non-material document
 
     expect(response.status).toBe(403)
   })
+
+  it('lets a ketua tim read an in-progress document (Monitoring Dokumen Tim)', async () => {
+    mocks.getLocalServerSession.mockResolvedValue({ user: { id: KETUA_TIM_ID }, roles: ['PEGAWAI'] })
+    queueSelectResults([
+      { terminalMethod: 'limit', result: [baseDokumenRow({ status: 'IN_PPK_VALIDATION', is_non_material: false })] },
+      { terminalMethod: 'limit', result: [{ id: 'assignment-1' }] },
+    ])
+
+    const response = await getHandler({ request: makeGetRequest(), params: { id: DOKUMEN_ID } })
+
+    expect(response.status).toBe(200)
+  })
+
+  it('rejects a ketua tim on a DRAFT document -- not submitted yet, still private to the owner', async () => {
+    mocks.getLocalServerSession.mockResolvedValue({ user: { id: KETUA_TIM_ID }, roles: ['PEGAWAI'] })
+    queueSelectResults([
+      { terminalMethod: 'limit', result: [baseDokumenRow({ status: 'DRAFT' })] },
+      // no assignment lookup expected -- DRAFT is refused before it
+    ])
+
+    const response = await getHandler({ request: makeGetRequest(), params: { id: DOKUMEN_ID } })
+
+    expect(response.status).toBe(403)
+    expect(mocks.dbSelect).toHaveBeenCalledTimes(1)
+  })
 })

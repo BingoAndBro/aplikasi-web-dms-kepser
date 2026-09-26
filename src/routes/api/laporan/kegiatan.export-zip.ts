@@ -20,7 +20,8 @@ import {
   resolveKegiatanFilenamePart,
 } from '#/lib/export/laporan-zip-entries'
 import { DocumentZipTooManyEntriesError, streamDocumentZip } from '#/lib/export/document-zip'
-import { exportZipRequestSchema } from '#/lib/schemas/export'
+import { kegiatanExportZipRequestSchema } from '#/lib/schemas/export'
+import { LAPORAN_KEGIATAN_SCOPE_STATUSES } from '#/lib/laporan/kegiatan-scope'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
 const EXPORT_MAX_DOCUMENTS = 500
@@ -38,7 +39,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const parsed = exportZipRequestSchema.safeParse(await request.json().catch(() => null))
+        const parsed = kegiatanExportZipRequestSchema.safeParse(await request.json().catch(() => null))
         if (!parsed.success) {
           return Response.json(
             { error: parsed.error.issues[0]?.message ?? 'Daftar dokumen tidak valid' },
@@ -51,6 +52,15 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             error: `Filter menghasilkan ${parsed.data.dokumen_ids.length} dokumen. Maksimal ${EXPORT_MAX_DOCUMENTS} per ekspor — persempit periode atau kegiatan.`,
           }, { status: 413 })
         }
+
+        const scope = parsed.data.scope ?? 'final'
+        const isMonitoring = scope === 'monitoring'
+        // Ekspor dari Monitoring Dokumen Tim bisa memuat dokumen yang belum final;
+        // tandai di nama file & daftar isi supaya tidak tercampur dengan arsip final.
+        const sourceDescription = isMonitoring
+          ? 'Monitoring Dokumen Tim (filter aktif klien) - TERMASUK DOKUMEN YANG MASIH DIPROSES, BELUM FINAL'
+          : 'Laporan Kegiatan (filter aktif klien)'
+        const filenamePrefix = isMonitoring ? 'Monitoring_Dokumen_Tim' : 'Laporan_Kegiatan'
 
         try {
           const assignments = await db
@@ -65,8 +75,8 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             const response = await streamDocumentZip([], {
               requesterLabel: session.user.displayName ?? session.user.username,
               requesterRole: 'PEGAWAI',
-              sourceDescription: 'Laporan Kegiatan (filter aktif klien)',
-              filename: buildLaporanExportZipFilename('Laporan_Kegiatan', 'Kegiatan'),
+              sourceDescription,
+              filename: buildLaporanExportZipFilename(filenamePrefix, 'Kegiatan'),
             })
 
             return response
@@ -114,7 +124,7 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
             .where(and(
               inArray(dokumenTransaksi.id, parsed.data.dokumen_ids),
               inArray(dokumenTransaksi.kegiatanJenisId, kegiatanIds),
-              inArray(dokumenTransaksi.status, ['COMPLETED', 'TERSIMPAN']),
+              inArray(dokumenTransaksi.status, [...LAPORAN_KEGIATAN_SCOPE_STATUSES[scope]]),
             ))
 
           const rows: DokumenRow[] = rawRows.map(row => ({
@@ -139,12 +149,13 @@ export const Route = createFileRoute('/api/laporan/kegiatan/export-zip')({
           const response = await streamDocumentZip(entries, {
             requesterLabel: session.user.displayName ?? session.user.username,
             requesterRole: 'PEGAWAI',
-            sourceDescription: 'Laporan Kegiatan (filter aktif klien)',
-            filename: buildLaporanExportZipFilename('Laporan_Kegiatan', resolveKegiatanFilenamePart(rows)),
+            sourceDescription,
+            filename: buildLaporanExportZipFilename(filenamePrefix, resolveKegiatanFilenamePart(rows)),
           })
 
           console.info('[laporan/kegiatan.export-zip] export completed', {
             actor: session.user.id,
+            scope,
             documentCount: rows.length,
           })
 

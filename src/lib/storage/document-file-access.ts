@@ -358,7 +358,10 @@ async function canSessionReadDocument(
 
   // Ketua tim boleh membuka lampiran dokumen di kegiatan yang ia pimpin --
   // konsisten dengan "Ekspor Semua File (ZIP)" di Laporan Kegiatan yang
-  // sudah memberi mereka seluruh file kegiatan itu.
+  // sudah memberi mereka seluruh file kegiatan itu. DRAFT tidak termasuk:
+  // belum diajukan, jadi masih ranah pribadi pengaju.
+  if (document.status === 'DRAFT') return false
+
   const assignment = await db
     .select({ id: ketuaTimAssignments.id })
     .from(ketuaTimAssignments)

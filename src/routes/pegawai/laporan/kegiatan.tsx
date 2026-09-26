@@ -29,6 +29,7 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
+import { FilterToolbar, PembuatFilterSelect, ToolbarSelectField, buildPersonOptions } from '#/components/laporan/FilterToolbar'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
@@ -440,81 +441,26 @@ function ReportToolbar({
   onFilterChange: (value: KegiatanFilterValue) => void
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative min-w-0 flex-1 lg:max-w-xl">
-          <span className="sr-only">{searchLabel}</span>
-          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-          <input
-            type="search"
-            placeholder={placeholder}
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
-          />
-        </label>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <Button
-            type="button"
-            variant={filterOpen || activeFilters > 0 ? 'outline' : 'ghost'}
-            className={[
-              'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
-              filterOpen || activeFilters > 0
-                ? 'border-brand-border-strong bg-brand-surface text-brand-text hover:bg-brand-surface'
-                : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
-            ].join(' ')}
-            onClick={() => onFilterOpenChange(!filterOpen)}
-          >
-            <Filter size={16} />
-            Filter Lanjutan
-            {activeFilters > 0 && (
-              <span className="ml-1 rounded-full bg-brand-text px-1.5 py-0.5 text-[10px] leading-none text-white">
-                {activeFilters}
-              </span>
-            )}
-          </Button>
-          <label>
-            <span className="sr-only">Urutkan laporan kegiatan</span>
-            <Select
-              value={sortBy}
-              onValueChange={(value) => onSortChange(value as SortMode)}
-            >
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
-                <SelectValue placeholder="Tanggal terbaru">
-                  {selected => SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-        </div>
-      </div>
-
-      {filterOpen && (
-        <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
-          <KegiatanAdvancedFilter value={filter} onChange={onFilterChange} />
-          <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
-            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange({})}>
-              Reset
-            </Button>
-            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterOpenChange(false)}>
-              Tutup
-            </Button>
-            <Button type="button" className="font-bold shadow-sm" onClick={() => onFilterOpenChange(false)}>
-              Terapkan Filter
-            </Button>
-          </div>
-        </div>
+    <FilterToolbar
+      search={{ value: search, onChange: onSearchChange, placeholder, label: searchLabel }}
+      fields={(
+        <ToolbarSelectField
+          label="Urutkan"
+          srLabel="laporan kegiatan"
+          value={sortBy}
+          options={SORT_OPTIONS.map(option => ({ id: option.value, nama: option.label }))}
+          onChange={(value) => onSortChange(value as SortMode)}
+        />
       )}
-
-      <div className="px-5 py-4 text-sm font-bold text-zinc-950">
-        {resultLabel}
-      </div>
-    </div>
+      advanced={{
+        open: filterOpen,
+        onOpenChange: onFilterOpenChange,
+        activeCount: activeFilters,
+        onReset: () => onFilterChange({}),
+        children: <KegiatanAdvancedFilter value={filter} onChange={onFilterChange} />,
+      }}
+      resultLabel={resultLabel}
+    />
   )
 }
 
@@ -542,46 +488,44 @@ function KegiatanAdvancedFilter({
   }, [])
 
   return (
-    <div className="rounded-[22px] border border-zinc-200/80 bg-brand-surface/35 p-4 shadow-none">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Fungsi</span>
-          <Select
-            value={value.fungsiId || '_all'}
-            onValueChange={(fungsiId) => onChange({ ...value, fungsiId: fungsiId === '_all' ? undefined : fungsiId ?? undefined })}
-          >
-            <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
-              <SelectValue placeholder="Semua Fungsi">
-                {selected => selected && selected !== '_all'
-                  ? fungsis.find(fungsi => fungsi.id === selected)?.nama ?? 'Semua Fungsi'
-                  : 'Semua Fungsi'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">Semua Fungsi</SelectItem>
-            {fungsis.map(fungsi => (
-                <SelectItem key={fungsi.id} value={fungsi.id}>{fungsi.nama}</SelectItem>
-            ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
-          <DatePicker
-            value={value.tanggalMulai ?? ''}
-            onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
-            placeholder="Pilih tanggal mulai"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
-          <DatePicker
-            value={value.tanggalAkhir ?? ''}
-            onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
-            placeholder="Pilih tanggal selesai"
-          />
-        </label>
-      </div>
+    <div className="grid gap-4 lg:grid-cols-3">
+      <label className="space-y-2">
+        <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Fungsi</span>
+        <Select
+          value={value.fungsiId || '_all'}
+          onValueChange={(fungsiId) => onChange({ ...value, fungsiId: fungsiId === '_all' ? undefined : fungsiId ?? undefined })}
+        >
+          <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
+            <SelectValue placeholder="Semua Fungsi">
+              {selected => selected && selected !== '_all'
+                ? fungsis.find(fungsi => fungsi.id === selected)?.nama ?? 'Semua Fungsi'
+                : 'Semua Fungsi'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">Semua Fungsi</SelectItem>
+          {fungsis.map(fungsi => (
+              <SelectItem key={fungsi.id} value={fungsi.id}>{fungsi.nama}</SelectItem>
+          ))}
+          </SelectContent>
+        </Select>
+      </label>
+      <label className="space-y-2">
+        <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
+        <DatePicker
+          value={value.tanggalMulai ?? ''}
+          onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
+          placeholder="Pilih tanggal mulai"
+        />
+      </label>
+      <label className="space-y-2">
+        <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
+        <DatePicker
+          value={value.tanggalAkhir ?? ''}
+          onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
+          placeholder="Pilih tanggal selesai"
+        />
+      </label>
     </div>
   )
 }
@@ -724,7 +668,10 @@ function KegiatanDetailView({
   onExportConfirm: () => void
 }) {
   const activeFilters = countActiveDetailFilters(filter)
-  const pembuatOptions = useMemo(() => buildPembuatOptions(kegiatan.dokumen), [kegiatan.dokumen])
+  const pembuatOptions = useMemo(
+    () => buildPersonOptions(kegiatan.dokumen, dok => dok.pengaju_id ?? dok.created_by, getSubmitterName),
+    [kegiatan.dokumen],
+  )
 
   return (
     <>
@@ -829,84 +776,38 @@ function KegiatanDetailToolbar({
   onExportClick: () => void
 }) {
   return (
-    <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
-      <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative min-w-0 flex-1 lg:max-w-xl">
-          <span className="sr-only">Cari dokumen kegiatan</span>
-          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="Cari berdasarkan judul dokumen, jenis, atau kategori..."
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="h-11 w-full rounded-[20px] border border-zinc-200 bg-bg-surface pl-11 pr-4 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-brand-border-strong focus:ring-4 focus:ring-brand-border/60"
+    <FilterToolbar
+      search={{
+        value: search,
+        onChange: onSearchChange,
+        placeholder: 'Cari berdasarkan judul dokumen, jenis, atau kategori...',
+        label: 'Cari dokumen kegiatan',
+      }}
+      fields={(
+        <>
+          <PembuatFilterSelect
+            value={filter.pembuatId}
+            options={pembuatOptions}
+            onChange={(pembuatId) => onFilterChange({ ...filter, pembuatId })}
           />
-        </label>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <Button
-            type="button"
-            variant={filterOpen || activeFilters > 0 ? 'outline' : 'ghost'}
-            className={[
-              'h-11 rounded-[22px] border px-4 text-sm font-extrabold shadow-sm',
-              filterOpen || activeFilters > 0
-                ? 'border-brand-border-strong bg-brand-surface text-brand-text hover:bg-brand-surface'
-                : 'border-zinc-200 bg-bg-surface text-zinc-950 hover:bg-brand-surface',
-            ].join(' ')}
-            onClick={() => onFilterOpenChange(!filterOpen)}
-          >
-            <Filter size={16} />
-            Filter Lanjutan
-            {activeFilters > 0 && (
-              <span className="ml-1 rounded-full bg-brand-text px-1.5 py-0.5 text-[10px] leading-none text-white">
-                {activeFilters}
-              </span>
-            )}
-          </Button>
-          <label>
-            <span className="sr-only">Urutkan dokumen kegiatan</span>
-            <Select
-              value={sortBy}
-              onValueChange={(value) => onSortChange(value as DetailSortMode)}
-            >
-              <SelectTrigger className="min-h-10 w-full rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong sm:w-fit">
-                <SelectValue placeholder="Tanggal terbaru">
-                  {selected => DETAIL_SORT_OPTIONS.find(option => option.value === selected)?.label ?? 'Tanggal terbaru'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {DETAIL_SORT_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-        </div>
-      </div>
-
-      {filterOpen && (
-        <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
-          <KegiatanDetailAdvancedFilter
-            kegiatanId={kegiatanId}
-            value={filter}
-            onChange={onFilterChange}
-            pembuatOptions={pembuatOptions}
+          <ToolbarSelectField
+            label="Urutkan"
+            srLabel="dokumen kegiatan"
+            value={sortBy}
+            options={DETAIL_SORT_OPTIONS.map(option => ({ id: option.value, nama: option.label }))}
+            onChange={(value) => onSortChange(value as DetailSortMode)}
           />
-          <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
-            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange({})}>
-              Reset
-            </Button>
-            <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterOpenChange(false)}>
-              Tutup
-            </Button>
-            <Button type="button" className="font-bold shadow-sm" onClick={() => onFilterOpenChange(false)}>
-              Terapkan Filter
-            </Button>
-          </div>
-        </div>
+        </>
       )}
-
-      <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm font-bold text-zinc-950">{resultLabel}</span>
+      advanced={{
+        open: filterOpen,
+        onOpenChange: onFilterOpenChange,
+        activeCount: activeFilters,
+        onReset: () => onFilterChange({ pembuatId: filter.pembuatId }),
+        children: <KegiatanDetailAdvancedFilter kegiatanId={kegiatanId} value={filter} onChange={onFilterChange} />,
+      }}
+      resultLabel={resultLabel}
+      actions={(
         <Button
           type="button"
           variant="outline"
@@ -918,8 +819,8 @@ function KegiatanDetailToolbar({
           <Download size={14} />
           Ekspor Semua File (ZIP)
         </Button>
-      </div>
-    </div>
+      )}
+    />
   )
 }
 
@@ -927,12 +828,10 @@ function KegiatanDetailAdvancedFilter({
   kegiatanId,
   value,
   onChange,
-  pembuatOptions,
 }: {
   kegiatanId: string
   value: DetailFilterValue
   onChange: (value: DetailFilterValue) => void
-  pembuatOptions: { id: string; nama: string }[]
 }) {
   const [komponenOptions, setKomponenOptions] = useState<MasterOption[]>([])
   const [jenisOptions, setJenisOptions] = useState<MasterOption[]>([])
@@ -1020,62 +919,53 @@ function KegiatanDetailAdvancedFilter({
   }, [value.kategoriId])
 
   return (
-    <div className="rounded-[22px] border border-zinc-200/80 bg-brand-surface/35 p-4 shadow-none">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <DetailSelect
-          label="Pembuat Dokumen"
-          value={value.pembuatId}
-          allLabel="Semua Pembuat Dokumen"
-          options={pembuatOptions}
-          onChange={(pembuatId) => onChange({ ...value, pembuatId })}
+    <div className="grid gap-4 lg:grid-cols-3">
+      <DetailSelect
+        label="Komponen"
+        value={value.komponenId}
+        allLabel="Semua Komponen"
+        options={komponenOptions}
+        onChange={(komponenId) => onChange({ ...value, komponenId })}
+      />
+      <DetailSelect
+        label="Jenis Permintaan"
+        value={value.jenisId}
+        allLabel="Semua Jenis"
+        options={jenisOptions}
+        onChange={(jenisId) => onChange({ ...value, jenisId, kategoriId: undefined, detailId: undefined })}
+      />
+      <DetailSelect
+        label="Kategori Permintaan"
+        value={value.kategoriId}
+        allLabel="Semua Kategori"
+        options={kategoriOptions}
+        disabled={!value.jenisId}
+        onChange={(kategoriId) => onChange({ ...value, kategoriId, detailId: undefined })}
+      />
+      <DetailSelect
+        label="Detail Permintaan"
+        value={value.detailId}
+        allLabel="Semua Detail"
+        options={detailOptions}
+        disabled={!value.kategoriId}
+        onChange={(detailId) => onChange({ ...value, detailId })}
+      />
+      <label className="space-y-2">
+        <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
+        <DatePicker
+          value={value.tanggalMulai ?? ''}
+          onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
+          placeholder="Pilih tanggal mulai"
         />
-        <DetailSelect
-          label="Komponen"
-          value={value.komponenId}
-          allLabel="Semua Komponen"
-          options={komponenOptions}
-          onChange={(komponenId) => onChange({ ...value, komponenId })}
+      </label>
+      <label className="space-y-2">
+        <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
+        <DatePicker
+          value={value.tanggalAkhir ?? ''}
+          onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
+          placeholder="Pilih tanggal selesai"
         />
-        <DetailSelect
-          label="Jenis Permintaan"
-          value={value.jenisId}
-          allLabel="Semua Jenis"
-          options={jenisOptions}
-          onChange={(jenisId) => onChange({ ...value, jenisId, kategoriId: undefined, detailId: undefined })}
-        />
-        <DetailSelect
-          label="Kategori Permintaan"
-          value={value.kategoriId}
-          allLabel="Semua Kategori"
-          options={kategoriOptions}
-          disabled={!value.jenisId}
-          onChange={(kategoriId) => onChange({ ...value, kategoriId, detailId: undefined })}
-        />
-        <DetailSelect
-          label="Detail Permintaan"
-          value={value.detailId}
-          allLabel="Semua Detail"
-          options={detailOptions}
-          disabled={!value.kategoriId}
-          onChange={(detailId) => onChange({ ...value, detailId })}
-        />
-        <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
-          <DatePicker
-            value={value.tanggalMulai ?? ''}
-            onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
-            placeholder="Pilih tanggal mulai"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
-          <DatePicker
-            value={value.tanggalAkhir ?? ''}
-            onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
-            placeholder="Pilih tanggal selesai"
-          />
-        </label>
-      </div>
+      </label>
     </div>
   )
 }
@@ -1411,17 +1301,6 @@ function compareDetailDocuments(a: DokumenLaporanRow, b: DokumenLaporanRow, sort
   return dateValue(b.tanggal) - dateValue(a.tanggal)
 }
 
-function buildPembuatOptions(documents: DokumenLaporanRow[]) {
-  const options = new Map<string, string>()
-  for (const dok of documents) {
-    const id = dok.pengaju_id ?? dok.created_by
-    if (!id) continue
-    options.set(id, getSubmitterName(dok))
-  }
-  return Array.from(options, ([id, nama]) => ({ id, nama }))
-    .sort((a, b) => a.nama.localeCompare(b.nama, 'id-ID'))
-}
-
 function getSubmitterName(dok: DokumenLaporanRow) {
   return dok.pengaju_nama ?? 'Tidak diketahui'
 }
@@ -1447,9 +1326,9 @@ function countActiveFilters(filter: KegiatanFilterValue) {
   ].filter(Boolean).length
 }
 
+/** Hanya filter di dalam panel Filter Lanjutan; Pembuat Dokumen ada di toolbar. */
 function countActiveDetailFilters(filter: DetailFilterValue) {
   return [
-    filter.pembuatId,
     filter.komponenId,
     filter.jenisId,
     filter.kategoriId,
