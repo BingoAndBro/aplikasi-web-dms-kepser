@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useRouterState } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 
 import { ROLE_DEFAULT_ROUTE } from '#/config/navigation'
 import { apiFetch } from '#/lib/api-client'
@@ -461,7 +461,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 &copy; {new Date().getFullYear()} BPS Kabupaten Kepulauan Seribu
               </span>
               <div className="flex gap-6">
-                <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Bantuan</button>
+                <Link to={ROUTES.HELP} className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Bantuan</Link>
                 <button className="font-body text-[10px] text-outline hover:text-primary font-bold uppercase transition-colors tracking-widest">Kebijakan</button>
               </div>
             </footer>

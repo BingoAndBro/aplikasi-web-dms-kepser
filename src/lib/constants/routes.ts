@@ -5,6 +5,7 @@ export const ROUTES = {
   LOGIN: '/login',
   FORBIDDEN: '/forbidden',
   PROFILE: '/profile',
+  HELP: '/bantuan',
   API_PREFIX: '/api/',
   PEGAWAI: {
     ROOT: '/pegawai',

@@ -101,7 +101,12 @@ function LoginPage() {
   return (
     <>
       {/* Mesh Background */}
-      <div className="mesh-bg">
+      <div
+        className="mesh-bg"
+        style={{
+          backgroundImage: 'radial-gradient(circle at bottom left, color-mix(in srgb, var(--brand-solid) 45%, transparent), transparent 32rem)',
+        }}
+      >
         <div className="mesh-blob mesh-blob-1" />
         <div className="mesh-blob mesh-blob-2" />
         <div className="mesh-blob mesh-blob-3" />
@@ -120,10 +125,10 @@ function LoginPage() {
                 BPS Kabupaten Kepulauan Seribu
               </p>
               <h1 className="font-headline text-2xl font-extrabold text-on-surface tracking-tight">
-                Masuk ke Sistem
+                Masuk ke DMS Kepser
               </h1>
-              <p className="text-on-surface-variant text-xs mt-1 text-center">
-                Masuk dengan username atau NIP Anda
+              <p className="text-on-surface-variant text-xs mt-1.5 text-center">
+                Sistem Manajemen Dokumen BPS Kabupaten Kepulauan Seribu
               </p>
             </div>
 

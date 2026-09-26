@@ -8,6 +8,7 @@ import {
 
 import { NAV_CONFIG } from '#/config/navigation'
 import { ROLE_DISPLAY, ROLES } from '#/lib/constants/roles'
+import { ROUTES } from '#/lib/constants/routes'
 import { getWorkspaceLabelFallback } from '#/lib/workspace-label'
 import { cn } from '#/lib/utils'
 
@@ -266,13 +267,13 @@ export function AppSidebar({
         </div>
 
         <div className="space-y-1 border-t border-brand-border/80 pt-4">
-          <button
-            type="button"
+          <Link
+            to={ROUTES.HELP}
             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-bold text-outline transition-all hover:bg-brand-surface hover:text-primary"
           >
             <HelpCircle size={15} />
             Bantuan
-          </button>
+          </Link>
           <button
             type="button"
             onClick={onLogout}

@@ -18,6 +18,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as KasubagRouteImport } from './routes/kasubag'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
 import { Route as DokumenRouteImport } from './routes/dokumen'
+import { Route as BantuanRouteImport } from './routes/bantuan'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PpspmIndexRouteImport } from './routes/ppspm/index'
@@ -220,6 +221,11 @@ const ForbiddenRoute = ForbiddenRouteImport.update({
 const DokumenRoute = DokumenRouteImport.update({
   id: '/dokumen',
   path: '/dokumen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BantuanRoute = BantuanRouteImport.update({
+  id: '/bantuan',
+  path: '/bantuan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -1045,6 +1051,7 @@ const ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/bantuan': typeof BantuanRoute
   '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/kasubag': typeof KasubagRouteWithChildren
@@ -1213,6 +1220,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bantuan': typeof BantuanRoute
   '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
@@ -1375,6 +1383,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/bantuan': typeof BantuanRoute
   '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/kasubag': typeof KasubagRouteWithChildren
@@ -1546,6 +1555,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/bantuan'
     | '/dokumen'
     | '/forbidden'
     | '/kasubag'
@@ -1714,6 +1724,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/bantuan'
     | '/dokumen'
     | '/forbidden'
     | '/login'
@@ -1875,6 +1886,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/bantuan'
     | '/dokumen'
     | '/forbidden'
     | '/kasubag'
@@ -2045,6 +2057,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  BantuanRoute: typeof BantuanRoute
   DokumenRoute: typeof DokumenRouteWithChildren
   ForbiddenRoute: typeof ForbiddenRoute
   KasubagRoute: typeof KasubagRouteWithChildren
@@ -2176,6 +2189,13 @@ declare module '@tanstack/react-router' {
       path: '/dokumen'
       fullPath: '/dokumen'
       preLoaderRoute: typeof DokumenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bantuan': {
+      id: '/bantuan'
+      path: '/bantuan'
+      fullPath: '/bantuan'
+      preLoaderRoute: typeof BantuanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -3801,6 +3821,7 @@ const ApiPpspmDokumenIdRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  BantuanRoute: BantuanRoute,
   DokumenRoute: DokumenRouteWithChildren,
   ForbiddenRoute: ForbiddenRoute,
   KasubagRoute: KasubagRouteWithChildren,
