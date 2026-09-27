@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { setClientAuthState } from '#/lib/auth-state'
 import { getDefaultRouteForRoles } from '#/lib/constants/routes'
@@ -28,6 +29,7 @@ function LoginPage() {
 
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -165,15 +167,34 @@ function LoginPage() {
                 <label className="text-[10px] font-extrabold text-outline uppercase tracking-widest">
                   Password
                 </label>
-                <input
-                  type="password"
-                  placeholder="Masukkan password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  autoComplete="current-password"
-                  className="w-full px-4 py-3 bg-surface-container/40 border border-outline-variant/30 rounded-xl text-sm text-on-surface placeholder:text-outline/40 focus:ring-2 focus:ring-primary/40 focus:border-primary/40 outline-none transition-all"
-                />
+                <div className="relative">
+                  {/* Tombol reveal bawaan Edge disembunyikan: Edge memunculkannya
+                      hanya selama field fokus sejak diketik, jadi terlihat acak. */}
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Masukkan password"
+                    value={password}
+                    onChange={e => {
+                      setPassword(e.target.value)
+                      if (e.target.value === '') setShowPassword(false)
+                    }}
+                    disabled={isLoading}
+                    autoComplete="current-password"
+                    className={`w-full px-4 py-3 ${password ? 'pr-11' : ''} bg-surface-container/40 border border-outline-variant/30 rounded-xl text-sm text-on-surface placeholder:text-outline/40 focus:ring-2 focus:ring-primary/40 focus:border-primary/40 outline-none transition-all [&::-ms-reveal]:hidden [&::-ms-clear]:hidden`}
+                  />
+                  {password && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      disabled={isLoading}
+                      aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+                      aria-pressed={showPassword}
+                      className="absolute inset-y-0 right-0 flex items-center px-3.5 text-outline hover:text-on-surface disabled:opacity-60 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <button
