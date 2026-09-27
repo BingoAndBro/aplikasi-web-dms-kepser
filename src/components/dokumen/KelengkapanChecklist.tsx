@@ -19,6 +19,7 @@ import {
   normalizeKelengkapanName,
 } from '#/lib/kelengkapan-validation'
 import { DOCUMENT_UPLOAD_HELPER_TEXT } from '#/lib/upload/document-upload-policy'
+import { matchesKelengkapanSelection, type KelengkapanMatchRow } from '#/lib/kelengkapan-match'
 
 type KelengkapanItem = {
   id: string
@@ -27,13 +28,7 @@ type KelengkapanItem = {
   required: boolean
 }
 
-type KelengkapanApiItem = KelengkapanItem & {
-  kegiatan_id?: string | null
-  komponen_permintaan_id?: string | null
-  jenis_permintaan_id?: string | null
-  kategori_permintaan_id?: string | null
-  detail_permintaan_id?: string | null
-}
+type KelengkapanApiItem = KelengkapanItem & KelengkapanMatchRow
 
 type UserOptionalDoc = {
   id: string           // temp UUID: "user-custom-{uuid}"
@@ -52,23 +47,6 @@ interface KelengkapanChecklistProps {
   kategoriPermintaanId?: string
   detailPermintaanId?: string
   isNonMaterial?: boolean  // NEW: jika true, skip admin kelengkapan
-}
-
-// Kelengkapan is unique per exact combination of Kegiatan (already filtered by
-// the API), Komponen, Jenis, Kategori and Detail (null when the Kategori is the leaf).
-function matchesCurrentSelection(
-  item: KelengkapanApiItem,
-  filters: {
-    komponenId?: string
-    jenisPermintaanId?: string
-    kategoriPermintaanId?: string
-    detailPermintaanId?: string
-  },
-): boolean {
-  return (item.komponen_permintaan_id ?? null) === (filters.komponenId || null)
-    && (item.jenis_permintaan_id ?? null) === (filters.jenisPermintaanId || null)
-    && (item.kategori_permintaan_id ?? null) === (filters.kategoriPermintaanId || null)
-    && (item.detail_permintaan_id ?? null) === (filters.detailPermintaanId || null)
 }
 
 export function KelengkapanChecklist({
@@ -127,7 +105,9 @@ export function KelengkapanChecklist({
         })
 
         const filtered = data
-          .filter(item => matchesCurrentSelection(item, {
+          .filter(item => matchesKelengkapanSelection(item, {
+            kegiatanId,
+            isKetuaTim,
             komponenId,
             jenisPermintaanId,
             kategoriPermintaanId,

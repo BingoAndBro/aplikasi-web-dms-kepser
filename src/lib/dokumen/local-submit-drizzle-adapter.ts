@@ -153,7 +153,8 @@ function createAdapterForDatabase(
   }
 }
 
-// Same rule as the client checklist (KelengkapanChecklist.matchesCurrentSelection):
+// Same rule as the client checklists (matchesKelengkapanSelection in
+// src/lib/kelengkapan-match.ts):
 // a kelengkapan row applies only to its exact six-column combination, and an
 // unselected level must match a NULL column.
 export function buildRequiredKelengkapanCondition(

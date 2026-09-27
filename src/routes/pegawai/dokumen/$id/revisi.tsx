@@ -10,6 +10,11 @@ import { LoadingState } from '#/components/ui/LoadingState'
 import { ActivityLog } from '#/components/dokumen/ActivityLog'
 import { AttachmentEditor, type KelengkapanItem } from '#/components/dokumen/AttachmentEditor'
 import {
+  kelengkapanSelectionFromDokumen,
+  matchesKelengkapanSelection,
+  type KelengkapanMatchRow,
+} from '#/lib/kelengkapan-match'
+import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
@@ -85,40 +90,7 @@ function getSafeErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
-type KelengkapanApiItem = KelengkapanItem & {
-  kegiatan_id?: string | null
-  is_ketua_tim?: boolean
-  komponen_permintaan_id?: string | null
-  jenis_permintaan_id?: string | null
-  kategori_permintaan_id?: string | null
-  detail_permintaan_id?: string | null
-}
-
-function matchesCurrentChain(item: KelengkapanApiItem, dokumen: DokumenRow): boolean {
-  if (dokumen.detail_permintaan_id) {
-    return item.detail_permintaan_id === dokumen.detail_permintaan_id
-  }
-
-  if (dokumen.kategori_permintaan_id) {
-    return item.kategori_permintaan_id === dokumen.kategori_permintaan_id
-      && item.detail_permintaan_id == null
-  }
-
-  if (dokumen.jenis_permintaan_id) {
-    return item.jenis_permintaan_id === dokumen.jenis_permintaan_id
-      && item.kategori_permintaan_id == null
-      && item.detail_permintaan_id == null
-  }
-
-  if (dokumen.komponen_id) {
-    return item.komponen_permintaan_id === dokumen.komponen_id
-      && item.jenis_permintaan_id == null
-      && item.kategori_permintaan_id == null
-      && item.detail_permintaan_id == null
-  }
-
-  return true
-}
+type KelengkapanApiItem = KelengkapanItem & KelengkapanMatchRow
 
 async function fetchKelengkapanForDokumen(dokumen: DokumenRow): Promise<KelengkapanItem[]> {
   const data = await apiFetch<KelengkapanApiItem[]>('/master-kelengkapan', {
@@ -129,7 +101,7 @@ async function fetchKelengkapanForDokumen(dokumen: DokumenRow): Promise<Kelengka
   })
 
   return data
-    .filter(item => matchesCurrentChain(item, dokumen))
+    .filter(item => matchesKelengkapanSelection(item, kelengkapanSelectionFromDokumen(dokumen)))
     .map(({ id, nama_dokumen, required }) => ({ id, nama_dokumen, required }))
 }
 
