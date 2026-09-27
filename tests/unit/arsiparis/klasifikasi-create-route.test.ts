@@ -213,6 +213,32 @@ describe('arsiparis klasifikasi create route', () => {
     ])
     expect(JSON.stringify(body)).not.toContain('closed-leaf')
   })
+
+  // D-3: the tree and per-TA berkas eligibility are only for KSBU pages.
+  it('GET returns 401 without a session and reads nothing', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(null)
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/kasubag/klasifikasi?eligible_for_berkas=true'),
+    })
+
+    expect(response.status).toBe(401)
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
+  it.each([['PEGAWAI'], ['PPK'], ['PPSPM'], ['PENANGGUNG_JAWAB_KINERJA'], ['ADMIN']])(
+    'GET returns 403 for %s',
+    async (role) => {
+      mocks.getLocalServerSession.mockResolvedValue(createSession([role]))
+
+      const response = await getHandler({
+        request: new Request('http://localhost/api/kasubag/klasifikasi'),
+      })
+
+      expect(response.status).toBe(403)
+      expect(mocks.dbSelect).not.toHaveBeenCalled()
+    },
+  )
 })
 
 function createSession(roles = ['KEPALA_SUB_BAGIAN_UMUM']) {

@@ -23,7 +23,7 @@ export type KlasifikasiNode = {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/kasubag/klasifikasi — list semua klasifikasi aktif dalam tree structure
+// GET /api/kasubag/klasifikasi — list semua klasifikasi aktif dalam tree structure (KSBU)
 // POST /api/kasubag/klasifikasi — create klasifikasi baru
 // ---------------------------------------------------------------------------
 
@@ -34,11 +34,14 @@ const createKlasifikasiSchema = z.object({
   parent_id: z.string().uuid().optional().nullable(),
 })
 
-async function requireKepalaSubBagianUmum(request: Request) {
+async function requireKepalaSubBagianUmum(
+  request: Request,
+  forbiddenMessage = 'Hanya Kepala Sub Bagian Umum yang bisa menambah klasifikasi',
+) {
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
-    return Response.json({ error: 'Hanya Kepala Sub Bagian Umum yang bisa menambah klasifikasi' }, { status: 403 })
+    return Response.json({ error: forbiddenMessage }, { status: 403 })
   }
   return null
 }
@@ -128,6 +131,13 @@ export const Route = createFileRoute('/api/kasubag/klasifikasi/')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
+        // Only KSBU pages (Pengklasifikasian, Penambahan Dokumen, Master Klasifikasi) read this.
+        const authError = await requireKepalaSubBagianUmum(
+          request,
+          'Hanya Kepala Sub Bagian Umum yang bisa melihat klasifikasi',
+        )
+        if (authError) return authError
+
         try {
           const url = new URL(request.url)
           const eligibleForBerkas = url.searchParams.get('eligible_for_berkas') === 'true'
