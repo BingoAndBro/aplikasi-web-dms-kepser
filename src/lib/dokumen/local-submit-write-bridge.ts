@@ -266,8 +266,9 @@ export async function prepareLocalSubmitWriteBridge({
   lampiranUrls = payload.lampiranUrls,
   now = () => new Date(),
 }: PrepareLocalSubmitWriteBridgeInput): Promise<LocalSubmitWritePreparationResult> {
-  if (lampiranUrls.length === 0) {
-    return fail('empty-attachments', 'Minimal upload satu lampiran sebelum mengajukan dokumen')
+  const lampiranCheck = checkLampiranNotEmpty(lampiranUrls)
+  if (!lampiranCheck.ok) {
+    return fail('empty-attachments', lampiranCheck.error)
   }
 
   const kegiatan = await repository.getKegiatanById(payload.kegiatanJenisId)
@@ -498,6 +499,25 @@ export async function resolveLocalSubmitLeafName(
   }
 
   return fallback
+}
+
+export const EMPTY_ATTACHMENTS_MESSAGE = 'Minimal upload satu lampiran sebelum mengajukan dokumen'
+
+export type LampiranNotEmptyCheckResult =
+  | { ok: true }
+  | { ok: false; error: string }
+
+/**
+ * Minimum-one-lampiran rule shared by SUBMIT, RESUBMIT and RESUBMIT_PPK: a
+ * document must carry at least one lampiran regardless of its kelengkapan
+ * checklist (an empty checklist does not exempt it from this rule).
+ */
+export function checkLampiranNotEmpty(lampiranUrls: LampiranUrl[]): LampiranNotEmptyCheckResult {
+  if (lampiranUrls.length === 0) {
+    return { ok: false, error: EMPTY_ATTACHMENTS_MESSAGE }
+  }
+
+  return { ok: true }
 }
 
 export type RequiredKelengkapanCheckInput = LocalSubmitRequiredKelengkapanRead & {

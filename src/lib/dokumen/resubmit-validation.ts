@@ -1,10 +1,12 @@
 // Server-only module. Do not import from client components.
 // RESUBMIT (Pegawai) and RESUBMIT_PPK (PPK) re-run the same content rules as
-// the initial SUBMIT: nominal > 0 for Material documents and the exact
-// six-column required-kelengkapan match. Both rules come from the submit path
-// itself (validateNominalForMaterial, checkRequiredKelengkapan) — no copies.
+// the initial SUBMIT: nominal > 0 for Material documents, at least one
+// lampiran, and the exact six-column required-kelengkapan match. All three
+// rules come from the submit path itself (validateNominalForMaterial,
+// checkLampiranNotEmpty, checkRequiredKelengkapan) — no copies.
 import { validateNominalForMaterial } from '#/lib/schemas/dokumen'
 import {
+  checkLampiranNotEmpty,
   checkRequiredKelengkapan,
   type LocalSubmitBridgeRepository,
 } from './local-submit-write-bridge'
@@ -42,6 +44,11 @@ export async function validateResubmitRequirements({
   const nominal = validateNominalForMaterial(dokumen.isNonMaterial, toNominalNumber(nominalRealisasi))
   if (!nominal.valid) {
     return { ok: false, error: nominal.error ?? 'Nominal realisasi tidak valid' }
+  }
+
+  const lampiranCheck = checkLampiranNotEmpty(lampiranUrls)
+  if (!lampiranCheck.ok) {
+    return { ok: false, error: lampiranCheck.error }
   }
 
   const kelengkapanRepository = repository

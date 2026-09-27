@@ -232,6 +232,17 @@ describe('Pegawai RESUBMIT — same rules as SUBMIT', () => {
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
+  it('rejects a resubmit with zero lampiran, same rule as SUBMIT', async () => {
+    useSession(['PEGAWAI'])
+    queueSelects([pegawaiDokumenRow({ lampiran_urls: [] })])
+
+    const response = await handler(PegawaiResubmitRoute)(postRequest('/api/dokumen/x/submit'))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Minimal upload satu lampiran sebelum mengajukan dokumen' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
   it('resubmits when the rules pass, clears revision_notes and guards on NEED_REVISION/USER', async () => {
     useSession(['PEGAWAI'])
     queueSelects([pegawaiDokumenRow()], requiredKelengkapanRows())
@@ -306,6 +317,28 @@ describe('PPK RESUBMIT_PPK — Zod always, same rules as SUBMIT', () => {
 
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({ error: 'Lampiran wajib belum lengkap: Kuitansi' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects a resubmit with zero lampiran, same rule as SUBMIT', async () => {
+    useSession(['PPK'])
+    queueSelects([ppkDokumenRow({ lampiran_urls: [] })])
+
+    const response = await handler(PpkResubmitRoute)(request('POST', {}))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Minimal upload satu lampiran sebelum mengajukan dokumen' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects a resubmit whose new lampiranUrls is sent explicitly empty', async () => {
+    useSession(['PPK'])
+    queueSelects([ppkDokumenRow()])
+
+    const response = await handler(PpkResubmitRoute)(request('POST', { lampiranUrls: [] }))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Minimal upload satu lampiran sebelum mengajukan dokumen' })
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
