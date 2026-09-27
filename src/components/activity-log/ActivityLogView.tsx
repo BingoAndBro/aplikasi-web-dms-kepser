@@ -130,7 +130,7 @@ export function ActivityLogView({ scope }: { scope: 'self' | 'all' }) {
             </div>
             <div className="min-w-0">
               <h1 className="font-headline text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-[30px]">
-                Activity Log
+                Log Aktivitas
               </h1>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
                 {scope === 'all'

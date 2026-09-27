@@ -51,9 +51,39 @@ describe('PENANGGUNG_JAWAB_KINERJA role foundation', () => {
       ?.items.find((item) => item.id === 'history')
 
     expect(activityLogItem).toEqual(expect.objectContaining({
-      label: 'Activity Log',
+      label: 'Log Aktivitas',
       to: ROUTES.PENANGGUNG_JAWAB_KINERJA.ACTIVITY_LOG,
     }))
+  })
+
+  // D-5: no menu item without a destination; Indonesian labels, unchanged paths.
+  it('has no navigation item without a destination in any role', () => {
+    for (const [role, groups] of Object.entries(NAV_CONFIG)) {
+      for (const item of groups.flatMap((group) => group.items)) {
+        expect(item.to, `${role} → ${item.id}`).toBeTruthy()
+      }
+    }
+  })
+
+  it('shows Settings only for ADMIN, labelled Pengaturan Aplikasi', () => {
+    for (const [role, groups] of Object.entries(NAV_CONFIG)) {
+      const settings = groups.flatMap((group) => group.items).find((item) => item.id === 'settings')
+      if (role === ROLES.ADMIN) {
+        expect(settings).toEqual(expect.objectContaining({
+          label: 'Pengaturan Aplikasi',
+          to: ROUTES.ADMIN.SETTINGS,
+        }))
+      } else {
+        expect(settings, role).toBeUndefined()
+      }
+    }
+  })
+
+  it('labels the history item Log Aktivitas for every role', () => {
+    for (const [role, groups] of Object.entries(NAV_CONFIG)) {
+      const history = groups.flatMap((group) => group.items).find((item) => item.id === 'history')
+      expect(history?.label, role).toBe('Log Aktivitas')
+    }
   })
 
   it('keeps ADMIN as a separate dedicated role', () => {

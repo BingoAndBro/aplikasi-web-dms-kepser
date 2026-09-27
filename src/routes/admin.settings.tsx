@@ -155,8 +155,8 @@ function SettingsPage() {
         <AdminPageHeader
           className={adminContentCompactClassName}
           icon={<SettingsIcon />}
-          eyebrow={<><span>Admin Sistem</span><span>/</span><span>Settings</span></>}
-          title="Tema Aplikasi"
+          eyebrow={<><span>Admin Sistem</span><span>/</span><span>Pengaturan Aplikasi</span></>}
+          title="Pengaturan Aplikasi"
           description="Pilih tema visual yang mengikuti event sensus aktif. Perubahan ini berlaku untuk semua pengguna."
         />
 

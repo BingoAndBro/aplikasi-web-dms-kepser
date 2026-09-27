@@ -71,8 +71,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History, to: ROUTES.PEGAWAI.ACTIVITY_LOG },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'history', label: 'Log Aktivitas', icon: History, to: ROUTES.PEGAWAI.ACTIVITY_LOG },
       ],
     },
   ],
@@ -105,8 +104,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History, to: ROUTES.PPK.ACTIVITY_LOG },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'history', label: 'Log Aktivitas', icon: History, to: ROUTES.PPK.ACTIVITY_LOG },
       ],
     },
   ],
@@ -138,8 +136,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History, to: ROUTES.PPSPM.ACTIVITY_LOG },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'history', label: 'Log Aktivitas', icon: History, to: ROUTES.PPSPM.ACTIVITY_LOG },
       ],
     },
   ],
@@ -163,8 +160,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.ACTIVITY_LOG },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'history', label: 'Log Aktivitas', icon: History, to: ROUTES.KEPALA_SUB_BAGIAN_UMUM.ACTIVITY_LOG },
       ],
     },
   ],
@@ -188,8 +184,7 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History, to: ROUTES.PENANGGUNG_JAWAB_KINERJA.ACTIVITY_LOG },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'history', label: 'Log Aktivitas', icon: History, to: ROUTES.PENANGGUNG_JAWAB_KINERJA.ACTIVITY_LOG },
       ],
     },
   ],
@@ -220,8 +215,8 @@ export const NAV_CONFIG: Record<RoleName, MenuGroup[]> = {
       title: 'SYSTEM',
       items: [
         { id: 'profile', label: 'Profil', icon: UserCircle, to: ROUTES.PROFILE },
-        { id: 'history', label: 'Activity Log', icon: History, to: ROUTES.ADMIN.ACTIVITY_LOG },
-        { id: 'settings', label: 'Settings', icon: Settings, to: ROUTES.ADMIN.SETTINGS },
+        { id: 'history', label: 'Log Aktivitas', icon: History, to: ROUTES.ADMIN.ACTIVITY_LOG },
+        { id: 'settings', label: 'Pengaturan Aplikasi', icon: Settings, to: ROUTES.ADMIN.SETTINGS },
       ],
     },
   ],

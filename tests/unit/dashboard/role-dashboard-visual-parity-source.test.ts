@@ -127,7 +127,7 @@ describe('role dashboard visual parity source guard', () => {
     expect(source).not.toContain('lampiran')
   })
 
-  it('keeps Admin dashboard local to configuration data and links to the global Activity Log', () => {
+  it('keeps Admin dashboard local to configuration data and links to the global Log Aktivitas', () => {
     const source = readSource('src/routes/admin.index.tsx')
     const navigation = readSource('src/config/navigation.ts')
 
@@ -141,7 +141,7 @@ describe('role dashboard visual parity source guard', () => {
     expect(source).toContain('badge="Akses"')
     expect(source).toContain('badge="Konfigurasi"')
     expect(source).toContain('Aktivitas Admin Terbaru')
-    expect(source).toContain('Activity Log global tersedia')
+    expect(source).toContain('Log Aktivitas global tersedia')
     expect(source).toContain('ROUTES.ADMIN.ACTIVITY_LOG')
     expect(source).toContain('DashboardQuickActions')
     expect(navigation).toContain("to: ROUTES.ADMIN.ACTIVITY_LOG")

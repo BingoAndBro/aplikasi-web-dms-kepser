@@ -79,8 +79,8 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     id: 'umum-activity-log',
     category: 'UMUM',
-    question: 'Apa fungsi menu Activity Log?',
-    answer: 'Activity Log mencatat riwayat aktivitas Anda di sistem, seperti pengajuan, validasi, atau perubahan dokumen. Gunakan menu ini untuk menelusuri kembali kapan sebuah tindakan dilakukan.',
+    question: 'Apa fungsi menu Log Aktivitas?',
+    answer: 'Log Aktivitas mencatat riwayat aktivitas Anda di sistem, seperti pengajuan, validasi, atau perubahan dokumen. Gunakan menu ini untuk menelusuri kembali kapan sebuah tindakan dilakukan.',
   },
   {
     id: 'pegawai-ajukan',
@@ -175,8 +175,8 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     id: 'admin-settings',
     category: 'ADMIN',
-    question: 'Untuk apa halaman Settings pada menu Admin?',
-    answer: 'Halaman "Settings" digunakan untuk mengatur konfigurasi umum sistem yang berlaku bagi seluruh pengguna.',
+    question: 'Untuk apa halaman Pengaturan Aplikasi pada menu Admin?',
+    answer: 'Halaman "Pengaturan Aplikasi" digunakan untuk mengatur konfigurasi umum sistem yang berlaku bagi seluruh pengguna.',
   },
 ]
 

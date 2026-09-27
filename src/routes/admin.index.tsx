@@ -131,7 +131,7 @@ function AdminDashboard() {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <DashboardSection
           title="Aktivitas Admin Terbaru"
-          description="Ringkasan lokal dashboard dari area konfigurasi. Lihat Activity Log untuk riwayat aktivitas seluruh user."
+          description="Ringkasan lokal dashboard dari area konfigurasi. Lihat Log Aktivitas untuk riwayat aktivitas seluruh user."
         >
           <div>
             <DashboardActionRow
@@ -150,10 +150,10 @@ function AdminDashboard() {
             />
             <DashboardActionRow
               icon={<History size={18} />}
-              title="Activity Log global tersedia"
-              description="Riwayat aktivitas dokumen seluruh user dapat ditinjau di Activity Log."
+              title="Log Aktivitas global tersedia"
+              description="Riwayat aktivitas dokumen seluruh user dapat ditinjau di Log Aktivitas."
               href={ROUTES.ADMIN.ACTIVITY_LOG}
-              actionLabel="Activity Log"
+              actionLabel="Log Aktivitas"
             />
           </div>
         </DashboardSection>
