@@ -1747,6 +1747,7 @@ function DocumentTable({
                   <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{row.judul}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">
                     Pembuat: {row.pengaju_nama || 'Tidak diketahui'}
+                    {row.sumber === 'MANUAL' ? ' · Penambahan Dokumen (KSBU)' : ''}
                   </p>
                 </TableCell>
                 <TableCell className="px-6 py-5">
@@ -1795,7 +1796,11 @@ function DocumentTable({
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
               <InfoTile label="Tanggal" value={<DateCell value={row.tanggal} className="mt-1" />} className="col-span-2" />
-              <InfoTile label="Pembuat" value={row.pengaju_nama || 'Tidak diketahui'} className="col-span-2" />
+              <InfoTile
+                label="Pembuat"
+                value={row.sumber === 'MANUAL' ? `${row.pengaju_nama || 'Tidak diketahui'} · Penambahan Dokumen (KSBU)` : (row.pengaju_nama || 'Tidak diketahui')}
+                className="col-span-2"
+              />
             </div>
             <div className="border-t border-zinc-100 pt-3">
               <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => onOpenDocument(row)}>
@@ -1844,6 +1849,10 @@ function KinerjaDocumentMetadataDialog({
         <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 sm:p-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <ModalMetadataField label="Judul Dokumen" value={dokumen.judul} className="sm:col-span-2" />
+            <ModalMetadataField
+              label="Sumber"
+              value={dokumen.sumber === 'MANUAL' ? 'Penambahan Dokumen (KSBU)' : 'Alur Persetujuan (PPK → PPSPM)'}
+            />
             <ModalMetadataField label="Fungsi" value={dokumen.fungsi_nama ?? '-'} />
             <ModalMetadataField label="Kegiatan" value={dokumen.kegiatan_nama ?? '-'} />
             <ModalMetadataField label="Status" value={formatStatusLabel(dokumen.status)} />

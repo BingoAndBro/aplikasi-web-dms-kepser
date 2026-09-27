@@ -2,6 +2,8 @@ export type LaporanKinerjaRow = {
   id: string
   judul: string
   status: 'COMPLETED' | 'TERSIMPAN'
+  /** T-5/D-26: dokumen alur biasa vs dokumen manual KSBU (Penambahan Dokumen). */
+  sumber: 'WORKFLOW' | 'MANUAL'
   fungsi_nama: string | null
   kegiatan_nama: string | null
   komponen_id: string | null

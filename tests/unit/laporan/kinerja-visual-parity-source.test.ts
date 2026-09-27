@@ -109,4 +109,14 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(source).toContain('Jumlah Dokumen')
     expect(source).not.toContain('<TableHead className={TABLE_HEAD_CLASS}>Dokumen</TableHead>')
   })
+
+  // T-5 / D-26: manual KSBU documents must be visibly labelled, not blended
+  // in silently with documents that went through PPK/PPSPM approval.
+  it('labels manual KSBU documents distinctly in the shared realisasi view', () => {
+    const source = readSource(SHARED_VIEW)
+
+    expect(source).toContain("row.sumber === 'MANUAL'")
+    expect(source).toContain('Penambahan Dokumen (KSBU)')
+    expect(source).toContain("dokumen.sumber === 'MANUAL' ? 'Penambahan Dokumen (KSBU)' : 'Alur Persetujuan (PPK → PPSPM)'")
+  })
 })

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   and: vi.fn(),
   gte: vi.fn(),
   lte: vi.fn(),
+  ne: vi.fn(),
 }))
 
 vi.mock('drizzle-orm', async (importActual) => {
@@ -30,6 +31,7 @@ vi.mock('drizzle-orm', async (importActual) => {
     and: mocks.and,
     gte: mocks.gte,
     lte: mocks.lte,
+    ne: mocks.ne,
   }
 })
 
@@ -76,6 +78,7 @@ describe('Laporan Kinerja API route', () => {
     }))
     mocks.gte.mockImplementation((column: unknown, value: unknown) => ({ type: 'gte', column, value }))
     mocks.lte.mockImplementation((column: unknown, value: unknown) => ({ type: 'lte', column, value }))
+    mocks.ne.mockImplementation((column: unknown, value: unknown) => ({ type: 'ne', column, value }))
     mocks.dbSelectDistinct.mockReturnValue(createDistinctQueryBuilder([]))
   })
 
@@ -399,6 +402,139 @@ describe('Laporan Kinerja API route', () => {
   })
 })
 
+// T-5 / D-26: dokumen manual KSBU (arsip.manual_arsip) ikut dihitung sebagai
+// realisasi di Monitoring Nominal Realisasi (PPK/PPSPM), tapi tidak di
+// Laporan Kinerja (PJ Kinerja, scope=laporan_kinerja) — lihat komentar desain
+// di src/routes/api/laporan/kinerja.ts.
+describe('Laporan Kinerja API route — dokumen manual KSBU (T-5/D-26)', () => {
+  it('includes an active manual document for PPK Monitoring Realisasi (no scope param)', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
+    setupDbSelect([], [], [], [manualRow()])
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja'),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.dokumen).toHaveLength(1)
+    expect(body.dokumen[0]).toMatchObject({
+      id: 'manual-1',
+      judul: 'Kuitansi Lama',
+      status: 'COMPLETED',
+      sumber: 'MANUAL',
+      komponen_id: 'komponen-manual',
+      komponen_nama: 'Komponen Manual',
+      tahun: 2026,
+      nominal_realisasi: 750000,
+      is_diberkaskan: true,
+      pengaju_nama: 'KSBU Test',
+    })
+  })
+
+  it('excludes manual documents from PJ Kinerja Laporan Kinerja (scope=laporan_kinerja)', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(
+      ['PENANGGUNG_JAWAB_KINERJA'],
+      'PENANGGUNG_JAWAB_KINERJA',
+    ))
+    setupDbSelect([], [], [], [manualRow()])
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja?scope=laporan_kinerja'),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.dokumen).toHaveLength(0)
+  })
+
+  it('excludes a destroyed (DIMUSNAHKAN) manual document via the ne() filter', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PPSPM'], 'PPSPM'))
+    setupDbSelect([])
+
+    await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja'),
+    })
+
+    expect(mocks.ne).toHaveBeenCalledWith(expect.anything(), 'DIMUSNAHKAN')
+  })
+
+  it('marks workflow rows sumber=WORKFLOW', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
+    setupDbSelect([createRow()])
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja'),
+    })
+    const body = await response.json()
+
+    expect(body.dokumen[0].sumber).toBe('WORKFLOW')
+  })
+
+  it('sorts workflow and manual rows together by updated_at descending', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
+    setupDbSelect(
+      [createRow({ id: 'workflow-old', updated_at: new Date('2026-01-01T00:00:00.000Z') })],
+      [],
+      [],
+      [manualRow({ id: 'manual-new', updated_at: new Date('2026-06-01T00:00:00.000Z') })],
+    )
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja'),
+    })
+    const body = await response.json()
+
+    expect(body.dokumen.map((row: { id: string }) => row.id)).toEqual(['manual-new', 'workflow-old'])
+  })
+
+  it('adds manual-only years to tahun_tersedia', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
+    setupDbSelect([], [], [], [manualRow({ tanggal: '2019-03-01' })])
+    mocks.dbSelectDistinct.mockReturnValue(createDistinctQueryBuilder([{ tahun: 2026 }]))
+
+    const response = await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja'),
+    })
+    const body = await response.json()
+
+    expect(body.meta.tahun_tersedia).toEqual([2026, 2019])
+  })
+
+  it('applies the same start_date/end_date bounds to manual_arsip.tanggal', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
+    setupDbSelect([])
+
+    await getHandler({
+      request: new Request('http://localhost/api/laporan/kinerja?start_date=2026-01-01&end_date=2026-12-31'),
+    })
+
+    // Once for dokumen_transaksi.tanggal, once for manual_arsip.tanggal.
+    expect(mocks.gte.mock.calls.filter((call) => call[1] === '2026-01-01')).toHaveLength(2)
+    expect(mocks.lte.mock.calls.filter((call) => call[1] === '2026-12-31')).toHaveLength(2)
+  })
+})
+
+function manualRow(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'manual-1',
+    judul: 'Kuitansi Lama',
+    fungsi_nama: 'Fungsi',
+    kegiatan_nama: 'Kegiatan',
+    komponen_id: 'komponen-manual',
+    komponen_nama: 'Komponen Manual',
+    tanggal: '2026-04-10',
+    pengaju_id: '33333333-3333-4333-8333-333333333333',
+    created_at: new Date('2026-04-08T00:00:00.000Z'),
+    updated_at: new Date('2026-04-10T00:00:00.000Z'),
+    nominal_realisasi: '750000.00',
+    pengaju_display_name: 'KSBU Test',
+    pengaju_nama_lengkap: null,
+    pengaju_username: 'ksbu.test',
+    ...overrides,
+  }
+}
+
 function createSession(roles: string[], activeRole: string) {
   return {
     user: {
@@ -412,19 +548,33 @@ function createSession(roles: string[], activeRole: string) {
   }
 }
 
-// The route issues three `db.select(...)` calls in order: destroyed-berkas
-// document ids, then berkased (diberkaskan) document ids, then the main row
-// query. `setupDbSelect` queues all three via `mockReturnValueOnce` so each
+// The route issues four `db.select(...)` calls in order: destroyed-berkas
+// document ids, then berkased (diberkaskan) document ids, then the main
+// dokumen_transaksi row query, then the manual_arsip row query (T-5/D-26;
+// skipped in code when scope=laporan_kinerja, but harmless to always queue
+// here). `setupDbSelect` queues all four via `mockReturnValueOnce` so each
 // test only has to describe the shapes it cares about.
 function setupDbSelect(
   mainRows: unknown[],
   destroyedDokumenIds: string[] = [],
   berkasedDokumenIds: string[] = [],
+  manualRows: unknown[] = [],
 ) {
   mocks.dbSelect
     .mockReturnValueOnce(createIdListQueryBuilder(destroyedDokumenIds.map((dokumenId) => ({ dokumenId }))))
     .mockReturnValueOnce(createIdListQueryBuilder(berkasedDokumenIds.map((dokumenId) => ({ dokumenId }))))
     .mockReturnValueOnce(createQueryBuilder(mainRows))
+    .mockReturnValueOnce(createManualRowsQueryBuilder(manualRows))
+}
+
+function createManualRowsQueryBuilder(result: unknown[]): Record<string, unknown> {
+  const query: Record<string, unknown> = {}
+
+  query.from = vi.fn(() => query)
+  query.leftJoin = vi.fn(() => query)
+  query.where = vi.fn(async () => result)
+
+  return query
 }
 
 function createIdListQueryBuilder(result: { dokumenId: string }[]): Record<string, unknown> {

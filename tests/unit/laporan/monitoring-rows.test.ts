@@ -14,6 +14,7 @@ function row(overrides: Partial<LaporanKinerjaRow> = {}): LaporanKinerjaRow {
     id: 'doc-1',
     judul: 'Dokumen',
     status: 'COMPLETED',
+    sumber: 'WORKFLOW',
     fungsi_nama: 'Fungsi A',
     kegiatan_nama: 'Kegiatan A',
     komponen_id: 'komponen-1',

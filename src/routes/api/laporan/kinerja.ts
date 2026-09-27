@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, desc, eq, gte, isNotNull, isNull, lte, notInArray, or } from 'drizzle-orm'
+import { and, desc, eq, gte, isNotNull, isNull, lte, ne, notInArray, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '#/db/client'
-import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
+import { berkasArsip, berkasArsipItem, manualArsip } from '#/db/schema/arsip'
 import { users } from '#/db/schema/auth'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
@@ -16,7 +16,7 @@ import {
   hasAnyLocalRole,
   hasLocalRole,
 } from '#/lib/auth/local-server-auth'
-import { ARCHIVE_SOURCE_TYPE, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
+import { ARCHIVE_SOURCE_TYPE, ARCHIVE_STATUS, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { ROLES } from '#/lib/constants/roles'
 
@@ -38,10 +38,19 @@ const LAPORAN_KINERJA_LIMIT = 2000
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
+// T-5 / D-26: dokumen manual KSBU ("Penambahan Dokumen", arsip.manual_arsip)
+// tidak pernah melewati alur SUBMIT/APPROVE, jadi tidak punya `status` FSM.
+// Ia dianggap terealisasi sejak diarsipkan (selalu langsung masuk berkas —
+// lihat addManualDocumentToOpenBerkas di manual-arsip.ts), sehingga dipetakan
+// ke status 'COMPLETED' yang sudah ada. `sumber` membedakannya di UI supaya
+// PPK/PPSPM tidak salah kira dokumen itu melalui persetujuan mereka.
+const LAPORAN_KINERJA_SUMBER = ['WORKFLOW', 'MANUAL'] as const
+
 const laporanKinerjaRowSchema = z.object({
   id: z.string(),
   judul: z.string(),
   status: z.enum(ALL_LAPORAN_KINERJA_STATUSES),
+  sumber: z.enum(LAPORAN_KINERJA_SUMBER),
   fungsi_nama: z.string().nullable(),
   kegiatan_nama: z.string().nullable(),
   komponen_id: z.string().nullable(),
@@ -225,36 +234,142 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             .where(scopeFilter)
             .orderBy(desc(dokumenTransaksi.tahun))
 
+          // T-5 / D-26: dokumen manual KSBU ikut dihitung sebagai realisasi,
+          // TAPI hanya untuk Monitoring Nominal Realisasi (PPK/PPSPM,
+          // !includeNonMaterial) — bukan untuk Laporan Kinerja PJ Kinerja
+          // (scope=laporan_kinerja), yang membuka detail lewat
+          // DokumenDetailDialog (fetch /api/dokumen/$id, tidak ada untuk
+          // manual_arsip). Monitoring Realisasi memakai
+          // KinerjaDocumentMetadataDialog yang hanya menampilkan field baris
+          // ini sendiri, jadi aman untuk sumber manual.
+          // "tahun" dipakai dari `tanggal` milik manual_arsip sendiri (bukan
+          // tahun_anggaran berkas yang menaunginya) — konsisten dengan makna
+          // `tahun` pada dokumen_transaksi: tahun milik dokumennya sendiri,
+          // independen dari tahun anggaran berkas (Q5).
+          // Query runs regardless of scope (keeps the db.select() call
+          // sequence constant); only the merge below is scope-gated.
+          const manualRows = await db
+            .select({
+              id: manualArsip.id,
+              judul: manualArsip.nama,
+              fungsi_nama: masterFungsi.nama,
+              kegiatan_nama: masterKegiatan.nama,
+              komponen_id: manualArsip.komponenId,
+              komponen_nama: masterKomponen.nama,
+              tanggal: manualArsip.tanggal,
+              pengaju_id: manualArsip.createdBy,
+              created_at: manualArsip.createdAt,
+              updated_at: manualArsip.updatedAt,
+              nominal_realisasi: manualArsip.nominalRealisasi,
+              pengaju_display_name: users.displayName,
+              pengaju_nama_lengkap: users.namaLengkap,
+              pengaju_username: users.username,
+            })
+            .from(manualArsip)
+            .leftJoin(masterFungsi, eq(manualArsip.fungsiId, masterFungsi.id))
+            .leftJoin(masterKegiatan, eq(manualArsip.kegiatanId, masterKegiatan.id))
+            .leftJoin(masterKomponen, eq(manualArsip.komponenId, masterKomponen.id))
+            .leftJoin(users, eq(manualArsip.createdBy, users.id))
+            .where(and(
+              ne(manualArsip.statusArsip, ARCHIVE_STATUS.DIMUSNAHKAN),
+              startDateParam ? gte(manualArsip.tanggal, startDateParam) : undefined,
+              endDateParam ? lte(manualArsip.tanggal, endDateParam) : undefined,
+            ))
+
+          type CombinedRow = {
+            id: string
+            judul: string
+            status: 'COMPLETED' | 'TERSIMPAN'
+            sumber: 'WORKFLOW' | 'MANUAL'
+            fungsi_nama: string | null
+            kegiatan_nama: string | null
+            komponen_id: string | null
+            komponen_nama: string | null
+            tahun: number
+            tanggal: string
+            pengaju_id: string | null
+            pengaju_nama: string
+            created_at: string
+            updated_at: string
+            nominal_realisasi: number | null
+            is_diberkaskan: boolean
+          }
+
+          const workflowCombined: CombinedRow[] = rows.map((row) => ({
+            id: row.id,
+            judul: row.judul,
+            status: row.status as 'COMPLETED' | 'TERSIMPAN',
+            sumber: 'WORKFLOW',
+            fungsi_nama: row.fungsi_nama,
+            kegiatan_nama: row.kegiatan_nama,
+            komponen_id: row.komponen_id,
+            komponen_nama: row.komponen_nama,
+            tahun: row.tahun,
+            tanggal: row.tanggal,
+            pengaju_id: row.pengaju_id ?? null,
+            pengaju_nama: displayUserName({
+              displayName: row.pengaju_display_name,
+              namaLengkap: row.pengaju_nama_lengkap,
+              username: row.pengaju_username,
+            }),
+            created_at: isoDateString(row.created_at),
+            updated_at: isoDateString(row.updated_at),
+            nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
+            is_diberkaskan: berkasedDocumentIds.has(row.id),
+          }))
+
+          // Manual entries only count toward Monitoring Nominal Realisasi
+          // (PPK/PPSPM, !includeNonMaterial), not PJ Kinerja's Laporan
+          // Kinerja — see the design note above the query.
+          const manualCombined: CombinedRow[] = includeNonMaterial ? [] : manualRows.map((row) => ({
+            id: row.id,
+            judul: row.judul,
+            status: DOC_STATUS.COMPLETED,
+            sumber: 'MANUAL',
+            fungsi_nama: row.fungsi_nama,
+            kegiatan_nama: row.kegiatan_nama,
+            komponen_id: row.komponen_id,
+            komponen_nama: row.komponen_nama,
+            tahun: new Date(row.tanggal).getUTCFullYear(),
+            tanggal: row.tanggal,
+            pengaju_id: row.pengaju_id ?? null,
+            pengaju_nama: displayUserName({
+              displayName: row.pengaju_display_name,
+              namaLengkap: row.pengaju_nama_lengkap,
+              username: row.pengaju_username,
+            }),
+            created_at: isoDateString(row.created_at),
+            updated_at: isoDateString(row.updated_at),
+            nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
+            // Menambahkan manual_arsip selalu langsung menempelkannya ke
+            // berkas terbuka (addManualDocumentToOpenBerkas) — tidak pernah
+            // "belum diberkaskan" seperti dokumen alur biasa.
+            is_diberkaskan: true,
+          }))
+
+          const combinedBeforeLimit = [...workflowCombined, ...manualCombined]
+            .sort((a, b) => (a.updated_at < b.updated_at ? 1 : a.updated_at > b.updated_at ? -1 : 0))
+
+          const truncated = rows.length === LAPORAN_KINERJA_LIMIT
+            || combinedBeforeLimit.length > LAPORAN_KINERJA_LIMIT
+          const finalRows = combinedBeforeLimit.slice(0, LAPORAN_KINERJA_LIMIT)
+
+          const manualTahun = new Set(manualCombined.map((row) => row.tahun))
+          const tahunTersedia = Array.from(new Set([
+            ...tahunRows.map((row) => row.tahun),
+            ...manualTahun,
+          ])).sort((a, b) => b - a)
+
           const response = laporanKinerjaResponseSchema.parse({
-            dokumen: rows.map((row) => ({
-              id: row.id,
-              judul: row.judul,
-              status: row.status,
-              fungsi_nama: row.fungsi_nama,
-              kegiatan_nama: row.kegiatan_nama,
-              komponen_id: row.komponen_id,
-              komponen_nama: row.komponen_nama,
-              tahun: row.tahun,
-              tanggal: row.tanggal,
-              pengaju_id: row.pengaju_id ?? null,
-              pengaju_nama: displayUserName({
-                displayName: row.pengaju_display_name,
-                namaLengkap: row.pengaju_nama_lengkap,
-                username: row.pengaju_username,
-              }),
-              created_at: isoDateString(row.created_at),
-              updated_at: isoDateString(row.updated_at),
-              nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
-              is_diberkaskan: berkasedDocumentIds.has(row.id),
-            })),
+            dokumen: finalRows,
             meta: {
               limit: LAPORAN_KINERJA_LIMIT,
-              count: rows.length,
-              truncated: rows.length === LAPORAN_KINERJA_LIMIT,
+              count: finalRows.length,
+              truncated,
               final_statuses: includeNonMaterial
                 ? [...ALL_LAPORAN_KINERJA_STATUSES]
                 : [DOC_STATUS.COMPLETED],
-              tahun_tersedia: tahunRows.map((row) => row.tahun),
+              tahun_tersedia: tahunTersedia,
             },
           })
 
