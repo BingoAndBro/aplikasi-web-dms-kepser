@@ -40,21 +40,21 @@ export function getDokumenValidationErrorMessage(error: z.ZodError): string {
 // Update dokumen (lampiran + optional metadata)
 // ---------------------------------------------------------------------------
 
+// D-24: only the fields the two PATCH callers actually send.
+// - src/routes/pegawai/dokumen/$id/edit.tsx (Non-Material): lampiranUrls, namaDokumen, keteranganDetail
+// - src/routes/pegawai/dokumen/$id/revisi.tsx (Material, before resubmit): lampiranUrls, nominalRealisasi
+// Everything that identifies *which* document this is (kegiatan, komponen, the
+// jenis/kategori/detail chain, fungsi, tahun, tanggal, judul) is fixed at
+// SUBMIT and never sent by any UI here — `.strict()` rejects it instead of
+// silently accepting and (for kegiatan/komponen) partially applying it,
+// which used to let a document's own request chain drift from what was
+// checked at submit.
 export const updateDokumenSchema = z.object({
   lampiranUrls: requestLampiranUrlsSchema.optional(),
-  judul: z.string().min(3, 'Judul minimal 3 karakter').max(255, 'Judul maksimal 255 karakter').optional(),
-  tahun: z.number().int().min(2000).max(2100).optional(),
-  fungsiId: z.string().uuid('ID fungsi tidak valid').optional(),
-  kegiatanId: z.string().uuid('ID kegiatan tidak valid').optional(),
-  tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal tidak valid').optional(),
-  komponenId: z.string().uuid().optional().nullable(),
-  jenisPermintaanId: z.string().uuid().optional().nullable(),
-  kategoriPermintaanId: z.string().uuid().optional().nullable(),
-  detailPermintaanId: z.string().uuid().optional().nullable(),
   nominalRealisasi: z.number().min(0).max(999999999999).nullable().optional(),
   keteranganDetail: z.string().max(5000).optional().nullable(),
   namaDokumen: z.string().trim().min(1, 'Nama dokumen tidak boleh kosong').max(255, 'Nama dokumen maksimal 255 karakter').optional().nullable(),
-})
+}).strict()
 
 // ---------------------------------------------------------------------------
 // Submit dokumen (combined create + submit in one call)

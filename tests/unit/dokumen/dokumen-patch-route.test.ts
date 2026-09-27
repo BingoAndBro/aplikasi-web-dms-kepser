@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // PATCH /api/dokumen/$id (Pegawai):
-// - D-12: changing kegiatan re-derives is_ketua_tim on the server
+// - D-24: .strict() schema — only the fields the UI actually sends
+//   (lampiranUrls, nominalRealisasi, keteranganDetail, namaDokumen) are accepted;
+//   everything that identifies the document (kegiatan, komponen, the
+//   jenis/kategori/detail chain, fungsi, tahun, tanggal, judul) is rejected.
+// - D-12: is_ketua_tim can never change here now that kegiatanId is rejected —
+//   it stays locked to the value SUBMIT set for the document's whole life.
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
 const DOKUMEN_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
@@ -119,35 +124,42 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('PATCH /api/dokumen/$id — Ketua Tim follows the kegiatan (D-12)', () => {
-  it('sets is_ketua_tim=true when the pengaju is Ketua Tim of the new kegiatan', async () => {
-    queueSelectResults([nonMaterialRow()], [{ id: 'assignment-1' }], [updatedRow])
+describe('PATCH /api/dokumen/$id — only UI-used fields accepted (D-24)', () => {
+  it.each([
+    ['kegiatanId', OTHER_KEGIATAN_ID],
+    ['fungsiId', 'ffffffff-ffff-4fff-8fff-ffffffffffff'],
+    ['komponenId', 'aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+    ['jenisPermintaanId', 'aaaaaaa2-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+    ['kategoriPermintaanId', 'aaaaaaa3-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+    ['detailPermintaanId', 'aaaaaaa4-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+    ['tahun', 2027],
+    ['tanggal', '2026-01-01'],
+    ['judul', 'Judul baru'],
+  ])('rejects unrecognized field %s before reading the document', async (field, value) => {
+    const response = await patch({ [field]: value })
 
-    const response = await patch({ kegiatanId: OTHER_KEGIATAN_ID })
-
-    expect(response.status).toBe(200)
-    expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
-      kegiatanJenisId: OTHER_KEGIATAN_ID,
-      isKetuaTim: true,
-    }))
+    expect(response.status).toBe(400)
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
-  it('sets is_ketua_tim=false when the pengaju has no assignment in the new kegiatan', async () => {
-    queueSelectResults([nonMaterialRow()], [], [updatedRow])
-
-    const response = await patch({ kegiatanId: OTHER_KEGIATAN_ID })
-
-    expect(response.status).toBe(200)
-    expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({
-      kegiatanJenisId: OTHER_KEGIATAN_ID,
-      isKetuaTim: false,
-    }))
-  })
-
-  it('leaves is_ketua_tim untouched when kegiatan does not change', async () => {
+  it('accepts the fields the UI actually sends together', async () => {
     queueSelectResults([nonMaterialRow()], [updatedRow])
 
-    const response = await patch({ judul: 'Judul baru' })
+    const response = await patch({
+      namaDokumen: 'Dokumen Baru',
+      keteranganDetail: 'Catatan',
+    })
+
+    expect(response.status).toBe(200)
+  })
+
+  // D-12: kegiatanId is rejected outright now, so is_ketua_tim can never be
+  // touched by this endpoint — it stays whatever SUBMIT locked in.
+  it('never sets is_ketua_tim from a PATCH', async () => {
+    queueSelectResults([nonMaterialRow()], [updatedRow])
+
+    const response = await patch({ namaDokumen: 'Dokumen Baru' })
 
     expect(response.status).toBe(200)
     expect(mocks.txUpdateSet.mock.calls[0][0]).not.toHaveProperty('isKetuaTim')

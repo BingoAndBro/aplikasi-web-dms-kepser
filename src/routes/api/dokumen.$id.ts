@@ -517,25 +517,9 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           return Response.json({ error: nominalCheck.error }, { status: 400 })
         }
 
-        // Ketua Tim / Anggota follows the kegiatan and is decided by the server,
-        // the same way SUBMIT decides it (D-12).
-        let verifiedIsKetuaTim: boolean | undefined
-        if (parsed.data.kegiatanId !== undefined) {
-          try {
-            const [assignment] = await db
-              .select({ id: ketuaTimAssignments.id })
-              .from(ketuaTimAssignments)
-              .where(and(
-                eq(ketuaTimAssignments.userId, dok.created_by),
-                eq(ketuaTimAssignments.kegiatanId, parsed.data.kegiatanId),
-              ))
-              .limit(1)
-            verifiedIsKetuaTim = Boolean(assignment)
-          } catch (err) {
-            console.error('[API/dokumen/:id] PATCH ketua tim lookup error:', err)
-            return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
-          }
-        }
+        // D-24: kegiatanId is no longer an accepted PATCH field (updateDokumenSchema
+        // is .strict()), so is_ketua_tim can never change here — it stays the
+        // value SUBMIT locked in (D-12), for the whole life of the document.
 
         const storedLampirans = parseLampiranUrls(dok.lampiran_urls)
         let processedLampirans: LampiranUrl[] = parsed.data.lampiranUrls ?? storedLampirans
@@ -581,12 +565,6 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               lampiranUrls: processedLampirans,
             }
 
-            if (parsed.data.judul !== undefined) updatePayload.judul = parsed.data.judul
-            if (parsed.data.tahun !== undefined) updatePayload.tahun = parsed.data.tahun
-            if (parsed.data.fungsiId !== undefined) updatePayload.fungsiId = parsed.data.fungsiId
-            if (parsed.data.kegiatanId !== undefined) updatePayload.kegiatanJenisId = parsed.data.kegiatanId
-            if (verifiedIsKetuaTim !== undefined) updatePayload.isKetuaTim = verifiedIsKetuaTim
-            if (parsed.data.tanggal !== undefined) updatePayload.tanggal = parsed.data.tanggal
             if (parsed.data.nominalRealisasi !== undefined) {
               updatePayload.nominalRealisasi =
                 parsed.data.nominalRealisasi === null
@@ -595,9 +573,6 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             }
             if (parsed.data.keteranganDetail !== undefined) {
               updatePayload.keteranganDetail = parsed.data.keteranganDetail
-            }
-            if (parsed.data.komponenId !== undefined) {
-              updatePayload.komponenId = parsed.data.komponenId
             }
             if (parsed.data.namaDokumen !== undefined) {
               updatePayload.namaDokumen = parsed.data.namaDokumen
