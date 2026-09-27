@@ -141,6 +141,13 @@
       "when": 1790316234780,
       "tag": "0019_drop_master_jenis_dokumen",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790402634780,
+      "tag": "0020_dokumen_transaksi_permintaan_fk",
+      "breakpoints": true
     }
   ]
 }

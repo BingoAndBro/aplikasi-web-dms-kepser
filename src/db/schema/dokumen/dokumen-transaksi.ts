@@ -13,7 +13,10 @@ import {
 } from 'drizzle-orm/pg-core'
 import { users } from '../auth/users'
 import {
+  masterDetailPermintaan,
   masterFungsi,
+  masterJenisPermintaan,
+  masterKategoriPermintaan,
   masterKegiatan,
   masterKomponen,
 } from '../master'
@@ -55,9 +58,12 @@ export const dokumenTransaksi = dokumenSchema.table(
       .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    jenisPermintaanId: uuid('jenis_permintaan_id'),
-    kategoriPermintaanId: uuid('kategori_permintaan_id'),
-    detailPermintaanId: uuid('detail_permintaan_id'),
+    jenisPermintaanId: uuid('jenis_permintaan_id')
+      .references(() => masterJenisPermintaan.id, { onDelete: 'restrict', onUpdate: 'no action' }),
+    kategoriPermintaanId: uuid('kategori_permintaan_id')
+      .references(() => masterKategoriPermintaan.id, { onDelete: 'restrict', onUpdate: 'no action' }),
+    detailPermintaanId: uuid('detail_permintaan_id')
+      .references(() => masterDetailPermintaan.id, { onDelete: 'restrict', onUpdate: 'no action' }),
     nominalRealisasi: numeric('nominal_realisasi', { precision: 15, scale: 2 }).default('0'),
     isNonMaterial: boolean('is_non_material').default(false),
     keteranganDetail: text('keterangan_detail'),
