@@ -508,6 +508,26 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           return Response.json({ error: 'Dokumen tidak bisa diedit — status bukan NEED_REVISION' }, { status: 400 })
         }
 
+        // Ketua Tim / Anggota follows the kegiatan and is decided by the server,
+        // the same way SUBMIT decides it (D-12).
+        let verifiedIsKetuaTim: boolean | undefined
+        if (parsed.data.kegiatanId !== undefined) {
+          try {
+            const [assignment] = await db
+              .select({ id: ketuaTimAssignments.id })
+              .from(ketuaTimAssignments)
+              .where(and(
+                eq(ketuaTimAssignments.userId, dok.created_by),
+                eq(ketuaTimAssignments.kegiatanId, parsed.data.kegiatanId),
+              ))
+              .limit(1)
+            verifiedIsKetuaTim = Boolean(assignment)
+          } catch (err) {
+            console.error('[API/dokumen/:id] PATCH ketua tim lookup error:', err)
+            return Response.json({ error: 'Gagal memperbarui dokumen' }, { status: 500 })
+          }
+        }
+
         const storedLampirans = parseLampiranUrls(dok.lampiran_urls)
         let processedLampirans: LampiranUrl[] = parsed.data.lampiranUrls ?? storedLampirans
         let movedAttachments: LocalAttachmentMovedFile[] = []
@@ -556,6 +576,7 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             if (parsed.data.tahun !== undefined) updatePayload.tahun = parsed.data.tahun
             if (parsed.data.fungsiId !== undefined) updatePayload.fungsiId = parsed.data.fungsiId
             if (parsed.data.kegiatanId !== undefined) updatePayload.kegiatanJenisId = parsed.data.kegiatanId
+            if (verifiedIsKetuaTim !== undefined) updatePayload.isKetuaTim = verifiedIsKetuaTim
             if (parsed.data.tanggal !== undefined) updatePayload.tanggal = parsed.data.tanggal
             if (parsed.data.nominalRealisasi !== undefined) {
               updatePayload.nominalRealisasi =

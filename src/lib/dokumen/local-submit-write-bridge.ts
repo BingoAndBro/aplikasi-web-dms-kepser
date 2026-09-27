@@ -276,34 +276,37 @@ export async function prepareLocalSubmitWriteBridge({
     return fail('kegiatan-not-found', 'Kegiatan tidak ditemukan')
   }
 
-  const kelengkapanCheck = await checkRequiredKelengkapan(repository, {
-    isNonMaterial: Boolean(payload.is_non_material),
+  // The Ketua Tim / Anggota role is decided by the server, not the client: a
+  // Ketua Tim claim without an assignment is rejected, and an assigned Ketua
+  // Tim who sends isKetuaTim=false is still recorded (and checked) as Ketua Tim.
+  const isAssignedKetuaTim = await repository.hasKetuaTimAssignment({
+    userId: actor.userId,
     kegiatanId: payload.kegiatanJenisId,
-    isKetuaTim: payload.isKetuaTim,
-    komponenId: payload.komponenId ?? null,
-    jenisPermintaanId: payload.jenisPermintaanId ?? null,
-    kategoriPermintaanId: payload.kategoriPermintaanId ?? null,
-    detailPermintaanId: payload.detailPermintaanId ?? null,
+  })
+
+  if (payload.isKetuaTim && !isAssignedKetuaTim) {
+    return fail(
+      'ketua-tim-assignment-missing',
+      'Anda bukan Ketua Tim yang ditunjuk untuk kegiatan ini.',
+    )
+  }
+
+  const verifiedPayload: LocalSubmitPayload = { ...payload, isKetuaTim: isAssignedKetuaTim }
+
+  const kelengkapanCheck = await checkRequiredKelengkapan(repository, {
+    isNonMaterial: Boolean(verifiedPayload.is_non_material),
+    kegiatanId: verifiedPayload.kegiatanJenisId,
+    isKetuaTim: verifiedPayload.isKetuaTim,
+    komponenId: verifiedPayload.komponenId ?? null,
+    jenisPermintaanId: verifiedPayload.jenisPermintaanId ?? null,
+    kategoriPermintaanId: verifiedPayload.kategoriPermintaanId ?? null,
+    detailPermintaanId: verifiedPayload.detailPermintaanId ?? null,
   }, lampiranUrls)
 
   if (!kelengkapanCheck.ok) {
     return { ok: false, issue: kelengkapanCheck.issue }
   }
   const { requiredKelengkapan } = kelengkapanCheck
-
-  if (payload.isKetuaTim) {
-    const isAssigned = await repository.hasKetuaTimAssignment({
-      userId: actor.userId,
-      kegiatanId: payload.kegiatanJenisId,
-    })
-
-    if (!isAssigned) {
-      return fail(
-        'ketua-tim-assignment-missing',
-        'Anda bukan Ketua Tim yang ditunjuk untuk kegiatan ini.',
-      )
-    }
-  }
 
   const leafName = await resolveLocalSubmitLeafName(repository, payload, kegiatan.nama)
   const transitionPlan = buildLocalSubmitTransitionPlan(Boolean(payload.is_non_material))
@@ -317,7 +320,7 @@ export async function prepareLocalSubmitWriteBridge({
 
   const documentCreatePayload = buildLocalSubmitDocumentCreatePayload({
     actor,
-    payload,
+    payload: verifiedPayload,
     kegiatan,
     leafName,
     lampiranUrls,

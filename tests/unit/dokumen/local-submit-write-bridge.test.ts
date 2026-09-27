@@ -91,6 +91,7 @@ describe('local submit write bridge helper foundation', () => {
 
     expect(repository.calls).toEqual([
       ['getKegiatanById', KEGIATAN_ID],
+      ['hasKetuaTimAssignment', { userId: ACTOR_ID, kegiatanId: KEGIATAN_ID }],
       ['getRequiredKelengkapan', {
         kegiatanId: KEGIATAN_ID,
         isKetuaTim: true,
@@ -99,7 +100,6 @@ describe('local submit write bridge helper foundation', () => {
         kategoriPermintaanId: KATEGORI_ID,
         detailPermintaanId: DETAIL_ID,
       }],
-      ['hasKetuaTimAssignment', { userId: ACTOR_ID, kegiatanId: KEGIATAN_ID }],
       ['getDetailPermintaanById', DETAIL_ID],
     ])
     expect(result.plan.leafName).toBe('Dev Detail')
@@ -178,6 +178,7 @@ describe('local submit write bridge helper foundation', () => {
 
     expect(repository.calls).toEqual([
       ['getKegiatanById', KEGIATAN_ID],
+      ['hasKetuaTimAssignment', { userId: ACTOR_ID, kegiatanId: KEGIATAN_ID }],
     ])
     expect(result.plan.leafName).toBe('Dev Non-Material')
     expect(result.plan.documentCreatePayload).toMatchObject({
@@ -243,6 +244,43 @@ describe('local submit write bridge helper foundation', () => {
       },
     })
     expect(ketuaRepo.txCalls).toEqual([])
+  })
+
+  // D-12: an assigned Ketua Tim cannot fall back to the lighter Anggota checklist
+  // by sending isKetuaTim=false.
+  it('uses the server-side Ketua Tim assignment when the client claims Anggota', async () => {
+    const repository = createRepository({ assignedKetuaTim: true })
+    const actor = expectActor(createLocalSubmitActorFromSession(session()))
+
+    const result = await prepareLocalSubmitWriteBridge({
+      actor,
+      payload: { ...materialPayload(), isKetuaTim: false },
+      repository,
+      now: () => NOW,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error(result.issue.message)
+    expect(repository.calls).toContainEqual(['getRequiredKelengkapan', expect.objectContaining({ isKetuaTim: true })])
+    expect(repository.calls).not.toContainEqual(['getRequiredKelengkapan', expect.objectContaining({ isKetuaTim: false })])
+    expect(result.plan.documentCreatePayload.isKetuaTim).toBe(true)
+  })
+
+  it('keeps Anggota when the pengaju has no Ketua Tim assignment', async () => {
+    const repository = createRepository({ assignedKetuaTim: false })
+    const actor = expectActor(createLocalSubmitActorFromSession(session()))
+
+    const result = await prepareLocalSubmitWriteBridge({
+      actor,
+      payload: { ...materialPayload(), isKetuaTim: false },
+      repository,
+      now: () => NOW,
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error(result.issue.message)
+    expect(repository.calls).toContainEqual(['getRequiredKelengkapan', expect.objectContaining({ isKetuaTim: false })])
+    expect(result.plan.documentCreatePayload.isKetuaTim).toBe(false)
   })
 
   it('resolves material leaf names by detail, kategori, jenis, then fallback', async () => {
