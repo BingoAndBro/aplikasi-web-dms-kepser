@@ -7,7 +7,7 @@ import {
   masterJenisPermintaan,
   masterKategoriPermintaan,
 } from '#/db/schema/master'
-import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { getLocalServerSession, hasLocalRole, requireAnyLocalSession } from '#/lib/auth/local-server-auth'
 import { updateDetailSchema } from '#/lib/schemas/master-data'
 
 async function requireAdmin(request: Request, action: 'mengubah' | 'menghapus') {
@@ -22,8 +22,11 @@ async function requireAdmin(request: Request, action: 'mengubah' | 'menghapus') 
 export const Route = createFileRoute('/api/master-detail/$id')({
   server: {
     handlers: {
-      GET: async ({ params }: { request: Request; params: { id: string } }) => {
-        // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
+      GET: async ({ request, params }: { request: Request; params: { id: string } }) => {
+        // D-23: readable by any authenticated role; powers form dropdowns across roles.
+        const sessionOrResponse = await requireAnyLocalSession(request)
+        if (sessionOrResponse instanceof Response) return sessionOrResponse
+
         try {
           const [row] = await db
             .select({

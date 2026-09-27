@@ -76,6 +76,21 @@ export function createUnauthorizedResponse(
   return Response.json({ error: message }, { status: 401 })
 }
 
+/**
+ * D-23: master-data GET endpoints (dropdown data for forms) require only a
+ * valid session, not a specific role — every caller is already a
+ * role-guarded page (aju, revisi, resubmit, admin master-data, laporan,
+ * penambahan-arsip), so this just closes the "readable without login" gap
+ * without restricting which authenticated role may read it.
+ */
+export async function requireAnyLocalSession(
+  request: Request,
+): Promise<LocalServerSession | Response> {
+  const session = await getLocalServerSession(request)
+  if (!session) return createUnauthorizedResponse()
+  return session
+}
+
 function toLocalServerSession(
   currentSession: SessionWithUserAndRoles,
   activeRole: RoleName,

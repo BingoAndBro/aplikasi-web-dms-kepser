@@ -7,7 +7,7 @@ import {
   masterKegiatan,
   masterKelengkapanDokumen,
 } from '#/db/schema/master'
-import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { getLocalServerSession, hasLocalRole, requireAnyLocalSession } from '#/lib/auth/local-server-auth'
 import { createKelengkapanSchema } from '#/lib/schemas/master-data'
 import { normalizeKelengkapanName } from '#/lib/kelengkapan-validation'
 import { validateKelengkapanChain } from '#/lib/master-data/kelengkapan-chain'
@@ -68,7 +68,10 @@ export const Route = createFileRoute('/api/master-kelengkapan')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
+        // D-23: readable by any authenticated role; powers form dropdowns across roles.
+        const sessionOrResponse = await requireAnyLocalSession(request)
+        if (sessionOrResponse instanceof Response) return sessionOrResponse
+
         try {
           const url = new URL(request.url)
           const kegiatanId = url.searchParams.get('kegiatan_id')

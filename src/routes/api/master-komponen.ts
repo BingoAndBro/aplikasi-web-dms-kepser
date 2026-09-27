@@ -3,7 +3,7 @@ import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterKegiatan, masterKomponen } from '#/db/schema/master'
-import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { getLocalServerSession, hasLocalRole, requireAnyLocalSession } from '#/lib/auth/local-server-auth'
 import { createKomponenSchema } from '#/lib/schemas/master-data'
 
 async function requireAdmin(request: Request) {
@@ -19,7 +19,10 @@ export const Route = createFileRoute('/api/master-komponen')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
-        // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
+        // D-23: readable by any authenticated role; powers form dropdowns across roles.
+        const sessionOrResponse = await requireAnyLocalSession(request)
+        if (sessionOrResponse instanceof Response) return sessionOrResponse
+
         try {
           const url = new URL(request.url)
           const kegiatanId = url.searchParams.get('kegiatan_id')

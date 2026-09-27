@@ -3,7 +3,7 @@ import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { masterJenisPermintaan } from '#/db/schema/master'
-import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
+import { getLocalServerSession, hasLocalRole, requireAnyLocalSession } from '#/lib/auth/local-server-auth'
 import { createJenisSchema } from '#/lib/schemas/master-data'
 
 async function requireAdmin(request: Request) {
@@ -18,8 +18,11 @@ async function requireAdmin(request: Request) {
 export const Route = createFileRoute('/api/master-jenis')({
   server: {
     handlers: {
-      GET: async () => {
-        // Public read endpoint: master data powers form dropdowns; mutations below remain ADMIN-only.
+      GET: async ({ request }: { request: Request }) => {
+        // D-23: readable by any authenticated role; powers form dropdowns across roles.
+        const sessionOrResponse = await requireAnyLocalSession(request)
+        if (sessionOrResponse instanceof Response) return sessionOrResponse
+
         try {
           const rows = await db
             .select({
