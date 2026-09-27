@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
@@ -13,7 +13,11 @@ import {
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
 import { parseLampiranUrls } from '#/lib/dokumen'
-import { getDokumenValidationErrorMessage, resubmitDokumenSchema } from '#/lib/schemas/dokumen'
+import {
+  getDokumenValidationErrorMessage,
+  resubmitDokumenSchema,
+  type ResubmitDokumen,
+} from '#/lib/schemas/dokumen'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import type { StatusDokumen } from '#/lib/types/fsm'
 import {
@@ -27,6 +31,11 @@ import {
   type LocalAttachmentReplacementIssue,
 } from '#/lib/storage/local-attachment-replacement'
 import { cleanupUnreferencedReplacedLocalAttachments } from '#/lib/storage/local-attachment-reference-cleanup'
+import { validateResubmitRequirements } from '#/lib/dokumen/resubmit-validation'
+import {
+  DokumenTransitionConflictError,
+  dokumenTransitionConflictResponse,
+} from '#/lib/dokumen/transition-conflict'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -122,6 +131,30 @@ async function prepareAndMoveAttachments({
     plannedAttachments: attachmentPlan.plannedAttachments,
     moved: movement.moved,
   }
+}
+
+// Every PATCH/POST body goes through resubmitDokumenSchema (lampiranUrls and
+// nominalRealisasi both optional), not only bodies that carry lampiranUrls.
+// An empty/non-JSON body still means "no changes".
+async function parseResubmitBody(request: Request): Promise<
+  | { ok: true; body: ResubmitDokumen }
+  | { ok: false; response: Response }
+> {
+  let raw: unknown = {}
+  try { raw = await request.json() } catch { /* empty body OK */ }
+
+  const parsed = resubmitDokumenSchema.safeParse(raw ?? {})
+  if (!parsed.success) {
+    return {
+      ok: false,
+      response: Response.json({
+        error: getDokumenValidationErrorMessage(parsed.error),
+        details: parsed.error.flatten(),
+      }, { status: 400 }),
+    }
+  }
+
+  return { ok: true, body: parsed.data }
 }
 
 // ---------------------------------------------------------------------------
@@ -230,18 +263,9 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
 
         if (!hasLocalRole(session, 'PPK')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        let body: { lampiranUrls?: LampiranUrl[]; nominalRealisasi?: number | null } = {}
-        try { body = await request.json() } catch { /* empty body OK */ }
-
-        if (body.lampiranUrls !== undefined) {
-          const parsed = resubmitDokumenSchema.safeParse(body)
-          if (!parsed.success) {
-            return Response.json({
-              error: getDokumenValidationErrorMessage(parsed.error),
-              details: parsed.error.flatten(),
-            }, { status: 400 })
-          }
-        }
+        const bodyResult = await parseResubmitBody(request)
+        if (!bodyResult.ok) return bodyResult.response
+        const body = bodyResult.body
 
         if (!isUuid(params.id)) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
@@ -349,20 +373,9 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
 
         if (!hasLocalRole(session, 'PPK')) return Response.json({ error: 'Akses ditolak' }, { status: 403 })
 
-        let body: { lampiranUrls?: LampiranUrl[]; nominalRealisasi?: number | null } = {}
-        try {
-          body = await request.json()
-        } catch { /* empty body OK */ }
-
-        if (body.lampiranUrls !== undefined) {
-          const parsed = resubmitDokumenSchema.safeParse(body)
-          if (!parsed.success) {
-            return Response.json({
-              error: getDokumenValidationErrorMessage(parsed.error),
-              details: parsed.error.flatten(),
-            }, { status: 400 })
-          }
-        }
+        const bodyResult = await parseResubmitBody(request)
+        if (!bodyResult.ok) return bodyResult.response
+        const body = bodyResult.body
 
         if (!isUuid(params.id)) {
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
@@ -373,6 +386,14 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
           status: string
           revision_target: string | null
           lampiran_urls: unknown
+          nominal_realisasi: string | null
+          is_non_material: boolean | null
+          kegiatan_jenis_id: string
+          is_ketua_tim: boolean
+          komponen_id: string | null
+          jenis_permintaan_id: string | null
+          kategori_permintaan_id: string | null
+          detail_permintaan_id: string | null
         }>
         try {
           dokRows = await db
@@ -381,6 +402,14 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
               status: dokumenTransaksi.status,
               revision_target: dokumenTransaksi.revisionTarget,
               lampiran_urls: dokumenTransaksi.lampiranUrls,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+              komponen_id: dokumenTransaksi.komponenId,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
             })
             .from(dokumenTransaksi)
             .where(eq(dokumenTransaksi.id, params.id))
@@ -401,6 +430,34 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
         if (!result.success) return Response.json({ error: result.error || 'Transisi gagal' }, { status: 400 })
 
         const existingLampirans = parseLampiranUrls(dok.lampiran_urls)
+
+        // Same content rules as the initial SUBMIT, checked on what the document
+        // will carry after this resubmit, before any file is moved.
+        let requirements: Awaited<ReturnType<typeof validateResubmitRequirements>>
+        try {
+          requirements = await validateResubmitRequirements({
+            dokumen: {
+              isNonMaterial: dok.is_non_material === true
+                || (!dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id),
+              kegiatanId: dok.kegiatan_jenis_id,
+              isKetuaTim: dok.is_ketua_tim,
+              komponenId: dok.komponen_id,
+              jenisPermintaanId: dok.jenis_permintaan_id,
+              kategoriPermintaanId: dok.kategori_permintaan_id,
+              detailPermintaanId: dok.detail_permintaan_id,
+            },
+            lampiranUrls: body.lampiranUrls ?? existingLampirans,
+            nominalRealisasi: body.nominalRealisasi !== undefined ? body.nominalRealisasi : dok.nominal_realisasi,
+          })
+        } catch (err) {
+          console.error('[API/ppk/resubmit/:id] local requirement lookup error:', err)
+          return Response.json({ error: 'Gagal resubmit' }, { status: 500 })
+        }
+
+        if (!requirements.ok) {
+          return Response.json({ error: requirements.error }, { status: 400 })
+        }
+
         let updatedLampirans: LampiranUrl[] | undefined = body.lampiranUrls
         let movedAttachments: LocalAttachmentMovedFile[] = []
 
@@ -425,6 +482,8 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
               status: result.newStatus,
               currentStep: result.newCurrentStep,
               revisionTarget: result.newRevisionTarget,
+              // The PPSPM reason stays in log_aktivitas (PPSPM_REJECT).
+              revisionNotes: null,
               updatedAt: new Date(),
             }
 
@@ -442,11 +501,15 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
             const updatedRows = await tx
               .update(dokumenTransaksi)
               .set(updatePayload)
-              .where(eq(dokumenTransaksi.id, params.id))
+              .where(and(
+                eq(dokumenTransaksi.id, params.id),
+                eq(dokumenTransaksi.status, 'NEED_REVISION'),
+                eq(dokumenTransaksi.revisionTarget, 'PPK'),
+              ))
               .returning({ id: dokumenTransaksi.id })
 
             if (updatedRows.length === 0) {
-              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+              throw new DokumenTransitionConflictError()
             }
 
             await tx.insert(logAktivitas).values({
@@ -457,7 +520,8 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
             })
           })
         } catch (err) {
-          console.error('[API/ppk/resubmit/:id] local transaction error:', err)
+          const isConflict = err instanceof DokumenTransitionConflictError
+          if (!isConflict) console.error('[API/ppk/resubmit/:id] local transaction error:', err)
           const rollbackOk = await rollbackMovedAttachmentsForDbFailure(movedAttachments)
           if (!rollbackOk) {
             return Response.json({
@@ -467,6 +531,7 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
             }, { status: 500 })
           }
 
+          if (isConflict) return dokumenTransitionConflictResponse()
           return Response.json({ error: 'Gagal resubmit' }, { status: 500 })
         }
 

@@ -42,13 +42,21 @@ import { updateManualArsipSchema } from '#/lib/schemas/manual-arsip'
 import {
   createManualArsipAttachmentStorageDescriptors,
   isAllowedManualArsipAttachmentContentType,
-  writeManualArsipAttachmentContent,
 } from '#/lib/storage/manual-arsip-upload'
 import {
   assertSafeLogicalStoragePath,
   getLocalStorageRoot,
   resolvePhysicalStoragePath,
 } from '#/lib/storage/local-storage-paths'
+import {
+  ManualArsipPendingAttachmentError,
+  moveManualArsipPendingAttachments,
+  prepareManualArsipPendingAttachments,
+} from '#/lib/storage/manual-arsip-pending-attachments'
+import {
+  rollbackLocalAttachmentMovements,
+  type LocalAttachmentMovedFile,
+} from '#/lib/storage/local-attachment-replacement'
 
 export const MANUAL_ARSIP_LIST_DEFAULT_LIMIT = 100
 
@@ -207,6 +215,22 @@ export async function createManualArsipRecord(
 
   const retentionDates = getManualArchiveRetentionDates(input)
 
+  // Lampiran were uploaded to the pending area beforehand; check them all
+  // before anything is written so a bad file never leaves a half-created arsip.
+  const preparedAttachments = await prepareManualArsipPendingAttachments({
+    ownerUserId: createdBy,
+    attachments: input.attachments,
+  }).catch((error) => {
+    if (error instanceof ManualArsipPendingAttachmentError) {
+      throw new ManualArsipApiError(error.message, error.status)
+    }
+    throw error
+  })
+
+  // Files moved pending -> final inside the transaction; kept here so a failed
+  // commit can put them back in pending.
+  const movedAttachments: LocalAttachmentMovedFile[] = []
+
   const created = await db.transaction(async (tx) => {
       const [source] = await tx
         .insert(manualArsip)
@@ -275,10 +299,53 @@ export async function createManualArsipRecord(
         actorUserId: createdBy,
       }, { repository: berkasRepository })
 
-      return source
-  }).catch((error) => {
+      if (preparedAttachments.length === 0) {
+        return { source, attachments: [] }
+      }
+
+      const descriptors = createManualArsipAttachmentStorageDescriptors({
+        files: preparedAttachments.map((attachment) => ({
+          name: attachment.originalFilename,
+          type: attachment.contentType,
+          size: attachment.sizeBytes,
+        })),
+        manualArsipId: source.id,
+        ownerUserId: createdBy,
+      })
+
+      const attachments = await insertManualArsipAttachmentRows(
+        tx,
+        source.id,
+        createdBy,
+        descriptors,
+        preparedAttachments.map((attachment) => attachment.judulLampiran),
+      )
+
+      // Last step before commit: a failed move aborts the whole create.
+      await moveManualArsipPendingAttachments({
+        ownerUserId: createdBy,
+        moves: preparedAttachments.map((attachment, index) => ({
+          sourceLogicalPath: attachment.sourceLogicalPath,
+          targetLogicalPath: descriptors[index].logicalPath,
+        })),
+        moved: movedAttachments,
+      })
+
+      return { source, attachments }
+  }).catch(async (error) => {
+    if (movedAttachments.length > 0) {
+      const rollback = await rollbackLocalAttachmentMovements([...movedAttachments])
+      if (!rollback.ok) {
+        console.error('[manual-arsip] Pending attachment rollback failed after transaction failure')
+      }
+    }
+
     if (error instanceof BerkasArsipServiceError) {
       throw new ManualArsipApiError(error.message, statusForBerkasServiceError(error))
+    }
+
+    if (error instanceof ManualArsipPendingAttachmentError) {
+      throw new ManualArsipApiError(error.message, error.status)
     }
 
     throw error
@@ -289,9 +356,16 @@ export async function createManualArsipRecord(
   }
 
   return {
-    ...toManualArsipListItem(created, { fungsi, kegiatan, komponen }, klasifikasi),
-    metadata: sanitizeMetadata(created.metadata),
-    attachments: [],
+    ...toManualArsipListItem(created.source, { fungsi, kegiatan, komponen }, klasifikasi),
+    metadata: sanitizeMetadata(created.source.metadata),
+    attachments: created.attachments.map((attachment) => ({
+      id: attachment.id,
+      judul_lampiran: attachment.judul_lampiran,
+      original_filename: attachment.original_filename,
+      content_type: attachment.content_type,
+      size_bytes: attachment.size_bytes,
+      created_at: isoDateString(attachment.created_at),
+    })),
   }
 }
 
@@ -360,10 +434,11 @@ function createManualArchiveBerkasRepository(
           statusBerkas: BERKAS_STATUS.OPEN,
           createdBy: input.actorUserId,
         })
+        // Loses the race quietly (no aborted transaction); caller re-reads.
+        .onConflictDoNothing({ target: [berkasArsip.klasifikasiId, berkasArsip.tahunAnggaran] })
         .returning()
 
-      if (!row) throw new Error('BERKAS_OPEN_CREATE_FAILED')
-      return row
+      return row ?? null
     },
 
     async findBerkasById(id) {
@@ -725,73 +800,14 @@ async function updateManualArsipSourceRecord({
   return updated ?? null
 }
 
-export async function uploadManualArsipAttachments(
+function insertManualArsipAttachmentRows(
+  tx: ManualArsipTransaction,
   manualArsipId: string,
   createdBy: string,
-  files: File[],
-  titles: string[],
-): Promise<ManualArsipAttachmentResponse[]> {
-  if (titles.length !== files.length) {
-    throw new ManualArsipApiError('Jumlah judul lampiran harus sesuai dengan jumlah file', 400)
-  }
-
-  if (titles.some((title) => title.trim().length === 0)) {
-    throw new ManualArsipApiError('Judul lampiran wajib diisi', 400)
-  }
-
-  if (titles.some((title) => title.trim().length > 120)) {
-    throw new ManualArsipApiError('Judul lampiran maksimal 120 karakter', 400)
-  }
-
-  const normalizedTitles = titles.map((title) => title.trim())
-
-  const [parent] = await db
-    .select({
-      id: manualArsip.id,
-      status_arsip: manualArsip.statusArsip,
-    })
-    .from(manualArsip)
-    .where(eq(manualArsip.id, manualArsipId))
-    .limit(1)
-
-  if (!parent) {
-    throw new ManualArsipApiError('Dokumen manual tidak ditemukan', 404)
-  }
-
-  if (parent.status_arsip !== ARCHIVE_STATUS.AKTIF) {
-    throw new ManualArsipApiError('Lampiran hanya dapat diunggah untuk dokumen manual berstatus AKTIF', 409)
-  }
-
-  const descriptors = createManualArsipAttachmentStorageDescriptors({
-    files: files.map((file) => ({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    })),
-    manualArsipId,
-    ownerUserId: createdBy,
-  })
-
-  const contents: ArrayBuffer[] = []
-  for (const file of files) {
-    try {
-      contents.push(await file.arrayBuffer())
-    } catch {
-      throw new ManualArsipApiError('Gagal membaca file lampiran', 400)
-    }
-  }
-
-  for (const [index, descriptor] of descriptors.entries()) {
-    await writeManualArsipAttachmentContent({
-      logicalPath: descriptor.logicalPath,
-      content: contents[index],
-      expectedBytes: descriptor.sizeBytes,
-      expectedContentType: descriptor.contentType,
-      expectedExtension: descriptor.extension,
-    })
-  }
-
-  const inserted = await db.transaction(async (tx) => tx
+  descriptors: ReturnType<typeof createManualArsipAttachmentStorageDescriptors>,
+  normalizedTitles: string[],
+) {
+  return tx
     .insert(manualArsipAttachment)
     .values(descriptors.map((descriptor, index) => ({
       manualArsipId,
@@ -810,20 +826,7 @@ export async function uploadManualArsipAttachments(
       content_type: manualArsipAttachment.contentType,
       size_bytes: manualArsipAttachment.sizeBytes,
       created_at: manualArsipAttachment.createdAt,
-    }))
-
-  if (inserted.length !== descriptors.length) {
-    throw new ManualArsipApiError('Gagal menyimpan metadata lampiran dokumen manual', 500)
-  }
-
-  return inserted.map((attachment) => ({
-    id: attachment.id,
-    judul_lampiran: attachment.judul_lampiran,
-    original_filename: attachment.original_filename,
-    content_type: attachment.content_type,
-    size_bytes: attachment.size_bytes,
-    created_at: isoDateString(attachment.created_at),
-  }))
+    })
 }
 
 export async function createManualArsipAttachmentFileResponse({

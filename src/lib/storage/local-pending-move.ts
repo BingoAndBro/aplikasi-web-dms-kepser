@@ -192,6 +192,48 @@ export async function moveLocalPendingFileToFormal({
   }
 }
 
+/**
+ * Moves one of the owner's pending uploads to an explicit target path (used
+ * where the formal layout is not `<owner>/<dokumen>/<uuid>`, e.g. manual
+ * archive attachments). Same guarantees as moveLocalPendingFileToFormal:
+ * owner check, pending-only source, no overwrite.
+ */
+export async function moveLocalPendingFileToLogicalPath({
+  sourceLogicalPath,
+  ownerUserId,
+  targetLogicalPath,
+  root,
+}: {
+  sourceLogicalPath: string
+  ownerUserId: string
+  targetLogicalPath: string
+  root?: string
+}): Promise<{ sourceLogicalPath: string; targetLogicalPath: string }> {
+  const source = validateLocalPendingMoveSource({ sourceLogicalPath, ownerUserId })
+
+  if (source.classification === 'formal') {
+    throw new LocalPendingMoveError('Local move source must be a pending upload.', 'unsupported-source-path')
+  }
+
+  let safeTarget: string
+  try {
+    safeTarget = assertSafeLogicalStoragePath(targetLogicalPath)
+  } catch {
+    throw new LocalPendingMoveError('Local move target path is not safe.', 'invalid-target-path')
+  }
+
+  const storageRoot = root ?? getLocalStorageRoot()
+  const sourcePhysicalPath = resolvePhysicalStoragePath(storageRoot, source.logicalPath)
+  const targetPhysicalPath = resolvePhysicalStoragePath(storageRoot, safeTarget)
+
+  await assertSourceFileExists(sourcePhysicalPath)
+  await assertTargetDoesNotExist(targetPhysicalPath)
+  await mkdir(path.dirname(targetPhysicalPath), { recursive: true })
+  await moveFileNoOverwrite(sourcePhysicalPath, targetPhysicalPath)
+
+  return { sourceLogicalPath: source.logicalPath, targetLogicalPath: safeTarget }
+}
+
 export function validateLocalMoveOwnerSegment(ownerUserId: string): string {
   return validateExactSafeSegment(ownerUserId, 'invalid-owner-id')
 }

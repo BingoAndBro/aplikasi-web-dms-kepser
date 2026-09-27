@@ -15,10 +15,15 @@ const PDF_CONTENT = '%PDF-1.4 local upload route'
 
 const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
+  maybeSweepStalePendingUploads: vi.fn(),
 }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
+}))
+
+vi.mock('#/lib/storage/pending-upload-sweeper', () => ({
+  maybeSweepStalePendingUploads: mocks.maybeSweepStalePendingUploads,
 }))
 
 type UploadHandler = (args: { request: Request }) => Promise<Response>
@@ -122,6 +127,8 @@ describe('/api/upload local route implementation', () => {
       'utf8',
     )
     expect(storedContent).toBe(PDF_CONTENT)
+    // A successful upload also kicks the throttled stale-pending sweep.
+    expect(mocks.maybeSweepStalePendingUploads).toHaveBeenCalledTimes(1)
   })
 
   it('uses the local session user id as the owner segment and never accepts an owner from form data', async () => {

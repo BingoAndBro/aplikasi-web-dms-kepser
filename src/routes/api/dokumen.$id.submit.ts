@@ -1,11 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
 import type { StatusDokumen } from '#/lib/types/fsm'
+import { parseLampiranUrls } from '#/lib/dokumen'
+import { validateResubmitRequirements } from '#/lib/dokumen/resubmit-validation'
+import {
+  DokumenTransitionConflictError,
+  dokumenTransitionConflictResponse,
+} from '#/lib/dokumen/transition-conflict'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -42,6 +48,11 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           status: string
           revision_target: string | null
           is_non_material: boolean | null
+          kegiatan_jenis_id: string
+          is_ketua_tim: boolean
+          lampiran_urls: unknown
+          nominal_realisasi: string | null
+          komponen_id: string | null
           jenis_permintaan_id: string | null
           kategori_permintaan_id: string | null
           detail_permintaan_id: string | null
@@ -55,6 +66,11 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
               status: dokumenTransaksi.status,
               revision_target: dokumenTransaksi.revisionTarget,
               is_non_material: dokumenTransaksi.isNonMaterial,
+              kegiatan_jenis_id: dokumenTransaksi.kegiatanJenisId,
+              is_ketua_tim: dokumenTransaksi.isKetuaTim,
+              lampiran_urls: dokumenTransaksi.lampiranUrls,
+              nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              komponen_id: dokumenTransaksi.komponenId,
               jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
               kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
               detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
@@ -99,6 +115,32 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
           return Response.json({ error: transitionResult.error || 'Transisi status gagal' }, { status: 400 })
         }
 
+        // Same content rules as the initial SUBMIT (nominal > 0, exact-match
+        // required kelengkapan), checked on the revised lampiran/nominal.
+        let requirements: Awaited<ReturnType<typeof validateResubmitRequirements>>
+        try {
+          requirements = await validateResubmitRequirements({
+            dokumen: {
+              isNonMaterial,
+              kegiatanId: dok.kegiatan_jenis_id,
+              isKetuaTim: dok.is_ketua_tim,
+              komponenId: dok.komponen_id,
+              jenisPermintaanId: dok.jenis_permintaan_id,
+              kategoriPermintaanId: dok.kategori_permintaan_id,
+              detailPermintaanId: dok.detail_permintaan_id,
+            },
+            lampiranUrls: parseLampiranUrls(dok.lampiran_urls),
+            nominalRealisasi: dok.nominal_realisasi,
+          })
+        } catch (err) {
+          console.error('[API/dokumen/:id/submit] local requirement lookup error:', err)
+          return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
+        }
+
+        if (!requirements.ok) {
+          return Response.json({ error: requirements.error }, { status: 400 })
+        }
+
         try {
           await db.transaction(async (tx) => {
             const updatedRows = await tx
@@ -110,11 +152,15 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
                 revisionNotes: null,
                 updatedAt: new Date(),
               })
-              .where(eq(dokumenTransaksi.id, params.id))
+              .where(and(
+                eq(dokumenTransaksi.id, params.id),
+                eq(dokumenTransaksi.status, 'NEED_REVISION'),
+                eq(dokumenTransaksi.revisionTarget, 'USER'),
+              ))
               .returning({ id: dokumenTransaksi.id })
 
             if (updatedRows.length === 0) {
-              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+              throw new DokumenTransitionConflictError()
             }
 
             await tx.insert(logAktivitas).values({
@@ -125,6 +171,7 @@ export const Route = createFileRoute('/api/dokumen/$id/submit')({
             })
           })
         } catch (err) {
+          if (err instanceof DokumenTransitionConflictError) return dokumenTransitionConflictResponse()
           console.error('[API/dokumen/:id/submit] local submit error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }

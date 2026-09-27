@@ -27,6 +27,8 @@ import {
   replaceLampiranByKelengkapanId,
   resetLampiranByKelengkapanId,
 } from '#/lib/storage/pending-upload-session'
+import { requestPendingUploadCleanup } from '#/lib/storage/pending-upload-cleanup-client'
+import { useDiscardPendingUploadsOnLeave } from '#/hooks/useDiscardPendingUploadsOnLeave'
 import {
   DOCUMENT_PREVIEW_PDF_ONLY_BODY,
   DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
@@ -39,8 +41,6 @@ import {
 } from '#/lib/upload/document-upload-policy'
 
 const ACCEPTED_ATTACHMENT_FILE_TYPES = DOCUMENT_UPLOAD_ACCEPT
-const PENDING_CLEANUP_ENDPOINT = '/api/upload?cleanup=pending'
-const PENDING_CLEANUP_TIMEOUT_MS = 10_000
 
 // ============================================================================
 // TYPES
@@ -237,6 +237,9 @@ export function AttachmentEditor({
   const lampiranUrlsRef = useRef<LampiranUrl[]>(initialLampirans)
   const pendingFilesRef = useRef<Map<string, PendingFile>>(new Map())
   const sessionPendingUrlsRef = useRef<Set<string>>(new Set())
+  // Leaving the page (menu, Kembalikan, tab close) without saving must not
+  // strand this session's pending uploads; save/cancel already clear the set.
+  useDiscardPendingUploadsOnLeave(sessionPendingUrlsRef, 'AttachmentEditor')
   const lastSubmitRequestSignalRef = useRef(submitRequestSignal)
   const lastCancelRequestSignalRef = useRef(cancelRequestSignal)
 
@@ -344,41 +347,7 @@ export function AttachmentEditor({
   }
 
   async function cleanupPendingUrls(urls: string[], context: string): Promise<boolean> {
-    const uniqueUrls = [...new Set(urls.filter(Boolean))]
-    if (uniqueUrls.length === 0) return true
-
-    const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), PENDING_CLEANUP_TIMEOUT_MS)
-
-    try {
-      const response = await fetch(PENDING_CLEANUP_ENDPOINT, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: uniqueUrls }),
-        signal: controller.signal,
-      })
-
-      if (!response.ok) {
-        warnDev('[AttachmentEditor] Pending cleanup request failed', { context, status: response.status })
-        return false
-      }
-
-      const json = await response.json().catch(() => null) as { success?: unknown } | null
-      const success = json?.success === true
-      if (!success) {
-        warnDev('[AttachmentEditor] Pending cleanup completed with errors', { context })
-      }
-      return success
-    } catch (error) {
-      warnDev('[AttachmentEditor] Pending cleanup error', {
-        context,
-        message: error instanceof Error ? error.message : 'unknown',
-      })
-      return false
-    } finally {
-      window.clearTimeout(timeoutId)
-    }
+    return requestPendingUploadCleanup(urls, { context: `AttachmentEditor:${context}` })
   }
 
   // ---------------------------------------------------------------------------

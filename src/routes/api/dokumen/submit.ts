@@ -24,11 +24,17 @@ import {
   validateWorkflowChainForCharacteristic,
 } from '#/lib/schemas/dokumen'
 import { buildSubmitMovePlan } from '#/lib/storage/submit-move-plan'
-import { assertSafeLogicalStoragePath } from '#/lib/storage/local-storage-paths'
 import {
-  LocalPendingMoveError,
-  moveLocalPendingFileToFormal,
-} from '#/lib/storage/local-pending-move'
+  assertSafeLogicalStoragePath,
+  getPendingUploadOriginalFilename,
+} from '#/lib/storage/local-storage-paths'
+import { moveLocalPendingFileToFormal } from '#/lib/storage/local-pending-move'
+import {
+  rollbackLocalAttachmentMovements,
+  type LocalAttachmentMovedFile,
+} from '#/lib/storage/local-attachment-replacement'
+
+const SUBMIT_FILE_MOVEMENT_FAILED_MESSAGE = 'Gagal mengajukan dokumen, silakan coba lagi'
 
 function isLocalAuthDryRunRequest(request: Request): boolean {
   return new URL(request.url).searchParams.get('useLocalAuthDryRun') === 'true'
@@ -86,14 +92,17 @@ async function handleLocalDbSubmit(
 
   if (!preflight.ok) {
     return Response.json({
-      error: 'Local submit preflight failed; submit write path was not executed.',
+      error: describeSubmitPreflightIssues(preflight.issues, payload.lampiranUrls),
       writePathExecuted: false,
       filesystemMovementExecuted: false,
-      issues: preflight.issues.map(toSafePreflightIssue),
+      issues: preflight.issues.map(issue => toSafePreflightIssue(issue, payload.lampiranUrls)),
     }, { status: 400 })
   }
 
   const moveRequiredOperations = preflight.operations.filter(isMoveRequiredOperation)
+  // Files moved pending -> formal inside the submit transaction; kept here so a
+  // failed commit can put them back in pending.
+  const moved: LocalAttachmentMovedFile[] = []
   let result: Awaited<ReturnType<typeof executeLocalSubmitWritePlan>>
 
   try {
@@ -110,29 +119,36 @@ async function handleLocalDbSubmit(
       return localSubmitBridgeIssueResponse(prepared.issue)
     }
 
-    result = await executeLocalSubmitWritePlan(repository, prepared.plan)
-  } catch {
-    return Response.json({ error: 'Gagal mengajukan dokumen' }, { status: 500 })
-  }
-
-  if (moveRequiredOperations.length > 0) {
-    const movement = await executeLocalSubmitMovements({
-      ownerUserId: localSession.userId,
-      operations: moveRequiredOperations,
+    // Files move after the dokumen/status/log inserts and before commit: a
+    // failed move throws, the transaction rolls back and no row is committed.
+    result = await executeLocalSubmitWritePlan(repository, prepared.plan, {
+      afterWrites: moveRequiredOperations.length > 0
+        ? () => moveSubmitFilesOrRollback({
+          ownerUserId: localSession.userId,
+          operations: moveRequiredOperations,
+          moved,
+        })
+        : undefined,
     })
-
-    if (!movement.ok) {
-      return Response.json({
-        error: 'Local file movement failed after local DB submit.',
-        code: 'local-file-movement-failed',
-        writePathExecuted: true,
-        filesystemMovementExecuted: movement.attempted,
-        compensationRequired: true,
-        partialMovement: movement.partialMovement,
-        movedCount: movement.movedCount,
-        issues: [movement.issue],
-      }, { status: 500 })
+  } catch (error) {
+    if (error instanceof SubmitFileMovementError) {
+      if (!error.rollbackOk) {
+        console.error('[API/dokumen/submit] pending file rollback failed after move failure')
+      }
+      return Response.json({ error: SUBMIT_FILE_MOVEMENT_FAILED_MESSAGE }, { status: 500 })
     }
+
+    // The transaction failed after files were already moved (e.g. commit
+    // failure): the rows are gone, so the files go back to pending too.
+    if (moved.length > 0) {
+      const rollback = await rollbackLocalAttachmentMovements(moved)
+      if (!rollback.ok) {
+        console.error('[API/dokumen/submit] pending file rollback failed after transaction failure')
+      }
+      return Response.json({ error: SUBMIT_FILE_MOVEMENT_FAILED_MESSAGE }, { status: 500 })
+    }
+
+    return Response.json({ error: 'Gagal mengajukan dokumen' }, { status: 500 })
   }
 
   return Response.json({ success: true, dokumen: result.dokumen }, { status: 201 })
@@ -170,8 +186,8 @@ async function handleLocalPreflightDryRun(
       preflightOk: false,
       writePathExecuted: false,
       filesystemMovementExecuted: false,
-      error: 'Local submit preflight failed; submit write path was not executed.',
-      issues: preflight.issues.map(toSafePreflightIssue),
+      error: describeSubmitPreflightIssues(preflight.issues, attachments),
+      issues: preflight.issues.map(issue => toSafePreflightIssue(issue, attachments)),
     }, { status: 400 })
   }
 
@@ -198,10 +214,15 @@ function localSubmitBridgeIssueResponse(issue: LocalSubmitBridgeIssue): Response
   return Response.json({ error: issue.message }, { status: 400 })
 }
 
-function toSafePreflightIssue(issue: SubmitFilePreflightIssue) {
+type PreflightAttachmentLabelSource = { url: string; nama?: unknown }
+
+function toSafePreflightIssue(
+  issue: SubmitFilePreflightIssue,
+  attachments: readonly PreflightAttachmentLabelSource[],
+) {
   return {
     code: issue.code,
-    message: issue.message,
+    message: describeSubmitPreflightIssue(issue.clientCategory, [attachmentLabel(attachments[issue.index])]),
     index: issue.index,
     clientCategory: issue.clientCategory,
     sourceClassification: issue.sourceClassification,
@@ -210,6 +231,63 @@ function toSafePreflightIssue(issue: SubmitFilePreflightIssue) {
     sourceLogicalPath: safeLogicalPathForResponse(issue.sourceLogicalPath),
     targetLogicalPath: safeLogicalPathForResponse(issue.targetLogicalPath),
   }
+}
+
+// User-facing (Indonesian) explanation of why submit stopped before writing
+// anything: which lampiran, what went wrong and what the Pegawai should do.
+// Issues are grouped per category so one sentence covers several lampiran.
+function describeSubmitPreflightIssues(
+  issues: readonly SubmitFilePreflightIssue[],
+  attachments: readonly PreflightAttachmentLabelSource[],
+): string {
+  const labelsByCategory = new Map<SubmitFilePreflightIssue['clientCategory'], string[]>()
+  for (const issue of issues) {
+    const labels = labelsByCategory.get(issue.clientCategory) ?? []
+    const label = attachmentLabel(attachments[issue.index])
+    if (!labels.includes(label)) labels.push(label)
+    labelsByCategory.set(issue.clientCategory, labels)
+  }
+
+  const sentences = [...labelsByCategory.entries()]
+    .map(([category, labels]) => describeSubmitPreflightIssue(category, labels))
+
+  return `Dokumen belum diajukan. ${sentences.join(' ')}`
+}
+
+function describeSubmitPreflightIssue(
+  category: SubmitFilePreflightIssue['clientCategory'],
+  labels: readonly string[],
+): string {
+  const subject = labels.length > 1 ? `Lampiran ${labels.join(', ')}` : `Lampiran ${labels[0]}`
+
+  switch (category) {
+    case 'local-storage-missing':
+      return `${subject} tidak ditemukan di penyimpanan sementara (kemungkinan sudah terhapus atau kedaluwarsa). `
+        + 'Hapus lampiran tersebut, unggah ulang filenya, lalu ajukan kembali.'
+    case 'local-storage-conflict':
+      return `${subject} tidak dapat dipindahkan ke penyimpanan tetap karena lokasi tujuannya sudah terpakai. `
+        + 'Silakan ajukan kembali; bila masih gagal, unggah ulang lampiran tersebut.'
+    case 'preflight-unavailable':
+      return `Penyimpanan file sedang tidak dapat diperiksa untuk ${subject.charAt(0).toLowerCase()}${subject.slice(1)}. `
+        + 'Silakan coba beberapa saat lagi.'
+    default:
+      return `${subject} tidak valid atau bukan milik akun Anda. `
+        + 'Hapus lampiran tersebut, unggah ulang filenya, lalu ajukan kembali.'
+  }
+}
+
+// `"Kuitansi" (bukti.pdf)` — kelengkapan name plus the original filename that is
+// embedded in pending upload paths; never exposes the full storage path.
+function attachmentLabel(attachment: PreflightAttachmentLabelSource | undefined): string {
+  if (!attachment) return 'yang dipilih'
+
+  const nama = typeof attachment.nama === 'string' ? attachment.nama.trim() : ''
+  const fileName = getPendingUploadOriginalFilename(attachment.url)
+
+  if (nama && fileName) return `"${nama}" (${fileName})`
+  if (nama) return `"${nama}"`
+  if (fileName) return `"${fileName}"`
+  return 'yang dipilih'
 }
 
 function safeLogicalPathForResponse(logicalPath: string | null): string | null {
@@ -230,42 +308,30 @@ function isMoveRequiredOperation(
   return operation.action === 'move-required'
 }
 
-async function executeLocalSubmitMovements({
+class SubmitFileMovementError extends Error {
+  constructor(readonly rollbackOk: boolean) {
+    super('SUBMIT_FILE_MOVEMENT_FAILED')
+    this.name = 'SubmitFileMovementError'
+  }
+}
+
+// Moves every planned pending file to its formal target. On the first failure
+// the files already moved are returned to pending and the error aborts the
+// surrounding submit transaction.
+async function moveSubmitFilesOrRollback({
   ownerUserId,
   operations,
+  moved,
 }: {
   ownerUserId: string
   operations: Array<SubmitFilePreflightOperation & { action: 'move-required' }>
-}): Promise<
-  | { ok: true }
-  | {
-    ok: false
-    attempted: boolean
-    partialMovement: boolean
-    movedCount: number
-    issue: LocalSubmitMovementIssue
-  }
-> {
-  let movedCount = 0
-
+  moved: LocalAttachmentMovedFile[]
+}): Promise<void> {
   for (const operation of operations) {
-    const target = parsePlannedSubmitTarget(operation.targetLogicalPath)
-    if (!target) {
-      return {
-        ok: false,
-        attempted: false,
-        partialMovement: movedCount > 0,
-        movedCount,
-        issue: createLocalSubmitMovementIssue({
-          code: 'invalid-target-path',
-          index: operation.index,
-          sourceLogicalPath: operation.sourceLogicalPath,
-          targetLogicalPath: operation.targetLogicalPath,
-        }),
-      }
-    }
-
     try {
+      const target = parsePlannedSubmitTarget(operation.targetLogicalPath)
+      if (!target) throw new Error('invalid-target-path')
+
       const result = await moveLocalPendingFileToFormal({
         sourceLogicalPath: operation.sourceLogicalPath,
         ownerUserId,
@@ -278,95 +344,20 @@ async function executeLocalSubmitMovements({
         || result.sourceLogicalPath !== operation.sourceLogicalPath
         || result.targetLogicalPath !== operation.targetLogicalPath
       ) {
-        return {
-          ok: false,
-          attempted: true,
-          partialMovement: movedCount > 0,
-          movedCount,
-          issue: createLocalSubmitMovementIssue({
-            code: 'move-result-mismatch',
-            index: operation.index,
-            sourceLogicalPath: operation.sourceLogicalPath,
-            targetLogicalPath: operation.targetLogicalPath,
-          }),
-        }
+        throw new Error('move-result-mismatch')
       }
 
-      movedCount += 1
-    } catch (error) {
-      return {
-        ok: false,
-        attempted: true,
-        partialMovement: movedCount > 0,
-        movedCount,
-        issue: createLocalSubmitMovementIssue({
-          code: mapLocalSubmitMovementErrorCode(error),
-          index: operation.index,
-          sourceLogicalPath: operation.sourceLogicalPath,
-          targetLogicalPath: operation.targetLogicalPath,
-        }),
-      }
+      moved.push({
+        index: operation.index,
+        sourceLogicalPath: operation.sourceLogicalPath,
+        targetLogicalPath: operation.targetLogicalPath,
+      })
+    } catch {
+      const rollback = await rollbackLocalAttachmentMovements([...moved])
+      if (rollback.ok) moved.length = 0
+      throw new SubmitFileMovementError(rollback.ok)
     }
   }
-
-  return { ok: true }
-}
-
-type LocalSubmitMovementIssue = {
-  code:
-    | 'invalid-target-path'
-    | 'missing-source'
-    | 'move-failed'
-    | 'move-result-mismatch'
-    | 'target-exists'
-    | 'unsupported-source-path'
-  index: number
-  clientCategory:
-    | 'local-storage-conflict'
-    | 'local-storage-missing'
-    | 'preflight-unavailable'
-    | 'validation'
-  sourceLogicalPath: string | null
-  targetLogicalPath: string | null
-}
-
-function createLocalSubmitMovementIssue({
-  code,
-  index,
-  sourceLogicalPath,
-  targetLogicalPath,
-}: {
-  code: LocalSubmitMovementIssue['code']
-  index: number
-  sourceLogicalPath: string
-  targetLogicalPath: string
-}): LocalSubmitMovementIssue {
-  return {
-    code,
-    index,
-    clientCategory: localSubmitMovementClientCategory(code),
-    sourceLogicalPath: safeLogicalPathForResponse(sourceLogicalPath),
-    targetLogicalPath: safeLogicalPathForResponse(targetLogicalPath),
-  }
-}
-
-function localSubmitMovementClientCategory(
-  code: LocalSubmitMovementIssue['code'],
-): LocalSubmitMovementIssue['clientCategory'] {
-  if (code === 'missing-source') return 'local-storage-missing'
-  if (code === 'target-exists') return 'local-storage-conflict'
-  if (code === 'invalid-target-path' || code === 'unsupported-source-path') return 'validation'
-  return 'preflight-unavailable'
-}
-
-function mapLocalSubmitMovementErrorCode(error: unknown): LocalSubmitMovementIssue['code'] {
-  if (error instanceof LocalPendingMoveError) {
-    if (error.code === 'missing-source') return 'missing-source'
-    if (error.code === 'target-exists') return 'target-exists'
-    if (error.code === 'unsupported-source-path') return 'unsupported-source-path'
-  }
-
-  return 'move-failed'
 }
 
 function parsePlannedSubmitTarget(

@@ -1,13 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { transition } from '#/lib/fsm'
 import type { StatusDokumen } from '#/lib/types/fsm'
+import {
+  DokumenTransitionConflictError,
+  dokumenTransitionConflictResponse,
+} from '#/lib/dokumen/transition-conflict'
 
 const KEMBALIKAN_CATATAN = 'Dikembalikan ke pegawai oleh PPK'
+
+// The document is in NEED_REVISION/PPK only after a PPSPM rejection, so its
+// revision_notes still hold the PPSPM reason. Keep it in the automatic note so
+// the Pegawai reads the original reason, not just "returned by PPK".
+function buildKembalikanRevisionNotes(ppspmNotes: string | null): string {
+  const reason = ppspmNotes?.trim()
+  if (!reason) return KEMBALIKAN_CATATAN
+  return `${KEMBALIKAN_CATATAN}. Alasan penolakan PPSPM: ${reason}`
+}
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -35,13 +48,19 @@ export const Route = createFileRoute('/api/ppk/kembalikan/$id')({
           return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
         }
 
-        let dokRows: Array<{ id: string; status: string; revision_target: string | null }>
+        let dokRows: Array<{
+          id: string
+          status: string
+          revision_target: string | null
+          revision_notes: string | null
+        }>
         try {
           dokRows = await db
             .select({
               id: dokumenTransaksi.id,
               status: dokumenTransaksi.status,
               revision_target: dokumenTransaksi.revisionTarget,
+              revision_notes: dokumenTransaksi.revisionNotes,
             })
             .from(dokumenTransaksi)
             .where(eq(dokumenTransaksi.id, params.id))
@@ -63,6 +82,8 @@ export const Route = createFileRoute('/api/ppk/kembalikan/$id')({
         const result = transition(dok.status as StatusDokumen, 'KEMBALIKAN', 'PPK', 'USER')
         if (!result.success) return Response.json({ error: result.error || 'Transisi gagal' }, { status: 400 })
 
+        const revisionNotes = buildKembalikanRevisionNotes(dok.revision_notes)
+
         try {
           await db.transaction(async (tx) => {
             const updatedRows = await tx
@@ -71,14 +92,18 @@ export const Route = createFileRoute('/api/ppk/kembalikan/$id')({
                 status: result.newStatus,
                 currentStep: result.newCurrentStep,
                 revisionTarget: result.newRevisionTarget,
-                revisionNotes: KEMBALIKAN_CATATAN,
+                revisionNotes,
                 updatedAt: new Date(),
               })
-              .where(eq(dokumenTransaksi.id, params.id))
+              .where(and(
+                eq(dokumenTransaksi.id, params.id),
+                eq(dokumenTransaksi.status, 'NEED_REVISION'),
+                eq(dokumenTransaksi.revisionTarget, 'PPK'),
+              ))
               .returning({ id: dokumenTransaksi.id })
 
             if (updatedRows.length === 0) {
-              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+              throw new DokumenTransitionConflictError()
             }
 
             await tx.insert(logAktivitas).values({
@@ -90,6 +115,7 @@ export const Route = createFileRoute('/api/ppk/kembalikan/$id')({
             })
           })
         } catch (err) {
+          if (err instanceof DokumenTransitionConflictError) return dokumenTransitionConflictResponse()
           console.error('[API/ppk/kembalikan/:id] local transaction error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }

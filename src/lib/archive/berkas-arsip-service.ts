@@ -177,7 +177,7 @@ export type BerkasArsipRepository = OperationalKlasifikasiSelectionRepository & 
     klasifikasi: KlasifikasiSnapshot
     tahunAnggaran: number
     actorUserId: string
-  }): Promise<BerkasRow>
+  }): Promise<BerkasRow | null>
   findBerkasById(id: string): Promise<BerkasRow | null>
   findWorkflowSource(dokumenId: string): Promise<SourceReference | null>
   findManualSource(manualArsipId: string): Promise<SourceReference | null>
@@ -204,6 +204,12 @@ export type BerkasArsipRepository = OperationalKlasifikasiSelectionRepository & 
     nextStatusArsip: BerkasArchiveStatus
   }): Promise<BerkasRow | null>
   appendBerkasActivity(input: AppendBerkasActivityInput): Promise<void>
+  /**
+   * Optional: runs `operation` against a repository bound to one database
+   * transaction. Repositories that are already transaction-scoped (route-owned
+   * `tx` repositories, test fakes) omit it and the operation runs directly.
+   */
+  transaction?<T>(operation: (repository: BerkasArsipRepository) => Promise<T>): Promise<T>
 }
 
 export type BerkasArsipServiceDeps = {
@@ -249,20 +255,20 @@ export async function getOrCreateOpenBerkasForKlasifikasi(
   const existing = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId, input.tahunAnggaran)
   if (existing) return toBerkasDto(existing)
 
-  try {
-    return toBerkasDto(await insertOpenBerkasWithActivity(repository, {
-      klasifikasi,
-      tahunAnggaran: input.tahunAnggaran,
-      actorUserId: input.actorUserId,
-    }))
-  } catch (error) {
-    if (!isUniqueConflict(error)) throw error
+  // insertOpenBerkas uses ON CONFLICT (klasifikasi_id, tahun_anggaran) DO NOTHING,
+  // so a concurrent creator never aborts the caller's transaction; a null row
+  // means another request won the race and its berkas is read back instead.
+  const inserted = await insertOpenBerkasWithActivity(repository, {
+    klasifikasi,
+    tahunAnggaran: input.tahunAnggaran,
+    actorUserId: input.actorUserId,
+  })
+  if (inserted) return toBerkasDto(inserted)
 
-    const racedExisting = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId, input.tahunAnggaran)
-    if (racedExisting) return toBerkasDto(racedExisting)
+  const racedExisting = await resolveExistingBerkasForKlasifikasi(repository, input.klasifikasiId, input.tahunAnggaran)
+  if (racedExisting) return toBerkasDto(racedExisting)
 
-    throw new BerkasArsipServiceError('CONFLICT', 'Gagal membuka berkas karena konflik data')
-  }
+  throw new BerkasArsipServiceError('CONFLICT', 'Gagal membuka berkas karena konflik data')
 }
 
 async function assertBerkasCanAcceptItems(
@@ -350,7 +356,14 @@ export async function closeBerkasArsip(
   input: CloseBerkasArsipInput,
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto> {
-  const repository = getRepository(deps)
+  // Status CLOSED and the BERKAS_DITUTUP activity must commit together.
+  return runInRepositoryTransaction(getRepository(deps), repository => closeBerkasArsipWithRepository(input, repository))
+}
+
+async function closeBerkasArsipWithRepository(
+  input: CloseBerkasArsipInput,
+  repository: BerkasArsipRepository,
+): Promise<BerkasArsipDto> {
   const existing = await repository.findBerkasById(input.berkasId)
   if (!existing) {
     throw new BerkasArsipServiceError('BERKAS_NOT_FOUND', 'Berkas tidak ditemukan')
@@ -540,230 +553,260 @@ export function buildCloseBerkasPlan(
   }
 }
 
-const defaultBerkasArsipRepository: BerkasArsipRepository = {
-  async findKlasifikasiForOperationalSelection(id) {
-    const database = await getDatabase()
-    const [row] = await database
-      .select({
-        id: masterKlasifikasiArsip.id,
-        kode: masterKlasifikasiArsip.kode,
-        nama: masterKlasifikasiArsip.nama,
-        isActive: masterKlasifikasiArsip.isActive,
-      })
-      .from(masterKlasifikasiArsip)
-      .where(eq(masterKlasifikasiArsip.id, id))
-      .limit(1)
+type BerkasArsipDatabase = Awaited<ReturnType<typeof getDatabase>>
+type BerkasArsipQueryExecutor = Pick<BerkasArsipDatabase, 'select' | 'insert' | 'update'>
 
-    if (!row) return null
+function createDrizzleBerkasArsipRepository(
+  resolveDatabase: () => Promise<BerkasArsipQueryExecutor>,
+  options: { transactional: boolean },
+): BerkasArsipRepository {
+  const repository: BerkasArsipRepository = {
+    async findKlasifikasiForOperationalSelection(id) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .select({
+          id: masterKlasifikasiArsip.id,
+          kode: masterKlasifikasiArsip.kode,
+          nama: masterKlasifikasiArsip.nama,
+          isActive: masterKlasifikasiArsip.isActive,
+        })
+        .from(masterKlasifikasiArsip)
+        .where(eq(masterKlasifikasiArsip.id, id))
+        .limit(1)
 
-    const [child] = await database
-      .select({ id: masterKlasifikasiArsip.id })
-      .from(masterKlasifikasiArsip)
-      .where(eq(masterKlasifikasiArsip.parentId, id))
-      .limit(1)
+      if (!row) return null
 
-    return {
-      ...row,
-      hasChildren: Boolean(child),
+      const [child] = await database
+        .select({ id: masterKlasifikasiArsip.id })
+        .from(masterKlasifikasiArsip)
+        .where(eq(masterKlasifikasiArsip.parentId, id))
+        .limit(1)
+
+      return {
+        ...row,
+        hasChildren: Boolean(child),
+      }
+    },
+
+    async findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .select()
+        .from(berkasArsip)
+        .where(and(
+          eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.tahunAnggaran, tahunAnggaran),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+        ))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
+      const database = await resolveDatabase()
+      return database
+        .select()
+        .from(berkasArsip)
+        .where(and(
+          eq(berkasArsip.klasifikasiId, klasifikasiId),
+          eq(berkasArsip.tahunAnggaran, tahunAnggaran),
+        )) as Promise<BerkasRow[]>
+    },
+
+    async insertOpenBerkas(input) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .insert(berkasArsip)
+        .values({
+          klasifikasiId: input.klasifikasi.id,
+          tahunAnggaran: input.tahunAnggaran,
+          klasifikasiKodeSnapshot: input.klasifikasi.kode,
+          klasifikasiNamaSnapshot: input.klasifikasi.nama,
+          statusBerkas: BERKAS_STATUS.OPEN,
+          createdBy: input.actorUserId,
+        })
+        // Loses the race quietly (no aborted transaction); caller re-reads.
+        .onConflictDoNothing({ target: [berkasArsip.klasifikasiId, berkasArsip.tahunAnggaran] })
+        .returning()
+
+      return row ?? null
+    },
+
+    async findBerkasById(id) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .select()
+        .from(berkasArsip)
+        .where(eq(berkasArsip.id, id))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findWorkflowSource(dokumenId) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .select({
+          id: dokumenTransaksi.id,
+          // dokumen_transaksi has no active klasifikasi_id; callers that know the selected
+          // workflow classification must provide a route-scoped repository.
+          klasifikasiId: sql<null>`null`,
+        })
+        .from(dokumenTransaksi)
+        .where(eq(dokumenTransaksi.id, dokumenId))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async findManualSource(manualArsipId) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .select({
+          id: manualArsip.id,
+          klasifikasiId: manualArsip.klasifikasiId,
+        })
+        .from(manualArsip)
+        .where(eq(manualArsip.id, manualArsipId))
+        .limit(1)
+
+      return row ?? null
+    },
+
+    async insertBerkasItem(input) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .insert(berkasArsipItem)
+        .values({
+          berkasId: input.berkasId,
+          sourceType: input.sourceType,
+          dokumenId: input.dokumenId,
+          manualArsipId: input.manualArsipId,
+          addedBy: input.actorUserId,
+        })
+        .returning()
+
+      if (!row) throw new Error('BERKAS_ITEM_CREATE_FAILED')
+      return row
+    },
+
+    async countBerkasItems(berkasId) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .select({ count: sql<number>`count(*)::int` })
+        .from(berkasArsipItem)
+        .where(eq(berkasArsipItem.berkasId, berkasId))
+
+      return Number(row?.count ?? 0)
+    },
+
+    async closeOpenBerkas(input) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .update(berkasArsip)
+        .set({
+          statusBerkas: BERKAS_STATUS.CLOSED,
+          statusArsip: BERKAS_ARCHIVE_STATUS.AKTIF,
+          nomorSpm: input.plan.nomorSpm,
+          retensiAktif: input.plan.retensiAktif,
+          retensiInaktif: input.plan.retensiInaktif,
+          masaAktifBerakhir: input.plan.masaAktifBerakhir,
+          masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
+          closedAt: input.plan.closedAt,
+          closedBy: input.actorUserId,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(berkasArsip.id, input.berkasId),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
+        ))
+        .returning()
+
+      return row ?? null
+    },
+
+    async updateBerkasArchiveStatus(input) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .update(berkasArsip)
+        .set({
+          statusArsip: input.nextStatusArsip,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(berkasArsip.id, input.berkasId),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.CLOSED),
+          eq(berkasArsip.statusArsip, input.currentStatusArsip),
+        ))
+        .returning()
+
+      return row ?? null
+    },
+
+    async updateActiveBerkasMetadata(input) {
+      const database = await resolveDatabase()
+      const [row] = await database
+        .update(berkasArsip)
+        .set({
+          nomorSpm: input.plan.nomorSpm,
+          retensiAktif: input.plan.retensiAktif,
+          retensiInaktif: input.plan.retensiInaktif,
+          masaAktifBerakhir: input.plan.masaAktifBerakhir,
+          masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(berkasArsip.id, input.berkasId),
+          eq(berkasArsip.statusBerkas, BERKAS_STATUS.CLOSED),
+          eq(berkasArsip.statusArsip, BERKAS_ARCHIVE_STATUS.AKTIF),
+        ))
+        .returning()
+
+      return row ?? null
+    },
+
+    async appendBerkasActivity(input) {
+      const database = await resolveDatabase()
+      await database
+        .insert(berkasArsipActivity)
+        .values({
+          berkasId: input.berkasId,
+          eventType: input.eventType,
+          actorUserId: input.actorUserId,
+          sourceType: input.sourceType ?? null,
+          workflowDocumentId: input.workflowDocumentId ?? null,
+          manualDocumentId: input.manualDocumentId ?? null,
+          catatan: normalizeActivityText(input.catatan),
+          metadataSnapshot: input.metadataSnapshot ?? null,
+        })
+    },
+  }
+
+  if (options.transactional) {
+    repository.transaction = async (operation) => {
+      const database = await getDatabase()
+      return database.transaction(tx => operation(
+        createDrizzleBerkasArsipRepository(async () => tx, { transactional: false }),
+      ))
     }
-  },
+  }
 
-  async findOpenBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
-    const database = await getDatabase()
-    const [row] = await database
-      .select()
-      .from(berkasArsip)
-      .where(and(
-        eq(berkasArsip.klasifikasiId, klasifikasiId),
-        eq(berkasArsip.tahunAnggaran, tahunAnggaran),
-        eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
-      ))
-      .limit(1)
-
-    return row ?? null
-  },
-
-  async findBerkasByKlasifikasiId(klasifikasiId, tahunAnggaran) {
-    const database = await getDatabase()
-    return database
-      .select()
-      .from(berkasArsip)
-      .where(and(
-        eq(berkasArsip.klasifikasiId, klasifikasiId),
-        eq(berkasArsip.tahunAnggaran, tahunAnggaran),
-      )) as Promise<BerkasRow[]>
-  },
-
-  async insertOpenBerkas(input) {
-    const database = await getDatabase()
-    const [row] = await database
-      .insert(berkasArsip)
-      .values({
-        klasifikasiId: input.klasifikasi.id,
-        tahunAnggaran: input.tahunAnggaran,
-        klasifikasiKodeSnapshot: input.klasifikasi.kode,
-        klasifikasiNamaSnapshot: input.klasifikasi.nama,
-        statusBerkas: BERKAS_STATUS.OPEN,
-        createdBy: input.actorUserId,
-      })
-      .returning()
-
-    if (!row) throw new Error('BERKAS_OPEN_CREATE_FAILED')
-    return row
-  },
-
-  async findBerkasById(id) {
-    const database = await getDatabase()
-    const [row] = await database
-      .select()
-      .from(berkasArsip)
-      .where(eq(berkasArsip.id, id))
-      .limit(1)
-
-    return row ?? null
-  },
-
-  async findWorkflowSource(dokumenId) {
-    const database = await getDatabase()
-    const [row] = await database
-      .select({
-        id: dokumenTransaksi.id,
-        // dokumen_transaksi has no active klasifikasi_id; callers that know the selected
-        // workflow classification must provide a route-scoped repository.
-        klasifikasiId: sql<null>`null`,
-      })
-      .from(dokumenTransaksi)
-      .where(eq(dokumenTransaksi.id, dokumenId))
-      .limit(1)
-
-    return row ?? null
-  },
-
-  async findManualSource(manualArsipId) {
-    const database = await getDatabase()
-    const [row] = await database
-      .select({
-        id: manualArsip.id,
-        klasifikasiId: manualArsip.klasifikasiId,
-      })
-      .from(manualArsip)
-      .where(eq(manualArsip.id, manualArsipId))
-      .limit(1)
-
-    return row ?? null
-  },
-
-  async insertBerkasItem(input) {
-    const database = await getDatabase()
-    const [row] = await database
-      .insert(berkasArsipItem)
-      .values({
-        berkasId: input.berkasId,
-        sourceType: input.sourceType,
-        dokumenId: input.dokumenId,
-        manualArsipId: input.manualArsipId,
-        addedBy: input.actorUserId,
-      })
-      .returning()
-
-    if (!row) throw new Error('BERKAS_ITEM_CREATE_FAILED')
-    return row
-  },
-
-  async countBerkasItems(berkasId) {
-    const database = await getDatabase()
-    const [row] = await database
-      .select({ count: sql<number>`count(*)::int` })
-      .from(berkasArsipItem)
-      .where(eq(berkasArsipItem.berkasId, berkasId))
-
-    return Number(row?.count ?? 0)
-  },
-
-  async closeOpenBerkas(input) {
-    const database = await getDatabase()
-    const [row] = await database
-      .update(berkasArsip)
-      .set({
-        statusBerkas: BERKAS_STATUS.CLOSED,
-        statusArsip: BERKAS_ARCHIVE_STATUS.AKTIF,
-        nomorSpm: input.plan.nomorSpm,
-        retensiAktif: input.plan.retensiAktif,
-        retensiInaktif: input.plan.retensiInaktif,
-        masaAktifBerakhir: input.plan.masaAktifBerakhir,
-        masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
-        closedAt: input.plan.closedAt,
-        closedBy: input.actorUserId,
-        updatedAt: new Date(),
-      })
-      .where(and(
-        eq(berkasArsip.id, input.berkasId),
-        eq(berkasArsip.statusBerkas, BERKAS_STATUS.OPEN),
-      ))
-      .returning()
-
-    return row ?? null
-  },
-
-  async updateBerkasArchiveStatus(input) {
-    const database = await getDatabase()
-    const [row] = await database
-      .update(berkasArsip)
-      .set({
-        statusArsip: input.nextStatusArsip,
-        updatedAt: new Date(),
-      })
-      .where(and(
-        eq(berkasArsip.id, input.berkasId),
-        eq(berkasArsip.statusBerkas, BERKAS_STATUS.CLOSED),
-        eq(berkasArsip.statusArsip, input.currentStatusArsip),
-      ))
-      .returning()
-
-    return row ?? null
-  },
-
-  async updateActiveBerkasMetadata(input) {
-    const database = await getDatabase()
-    const [row] = await database
-      .update(berkasArsip)
-      .set({
-        nomorSpm: input.plan.nomorSpm,
-        retensiAktif: input.plan.retensiAktif,
-        retensiInaktif: input.plan.retensiInaktif,
-        masaAktifBerakhir: input.plan.masaAktifBerakhir,
-        masaInaktifBerakhir: input.plan.masaInaktifBerakhir,
-        updatedAt: new Date(),
-      })
-      .where(and(
-        eq(berkasArsip.id, input.berkasId),
-        eq(berkasArsip.statusBerkas, BERKAS_STATUS.CLOSED),
-        eq(berkasArsip.statusArsip, BERKAS_ARCHIVE_STATUS.AKTIF),
-      ))
-      .returning()
-
-    return row ?? null
-  },
-
-  async appendBerkasActivity(input) {
-    const database = await getDatabase()
-    await database
-      .insert(berkasArsipActivity)
-      .values({
-        berkasId: input.berkasId,
-        eventType: input.eventType,
-        actorUserId: input.actorUserId,
-        sourceType: input.sourceType ?? null,
-        workflowDocumentId: input.workflowDocumentId ?? null,
-        manualDocumentId: input.manualDocumentId ?? null,
-        catatan: normalizeActivityText(input.catatan),
-        metadataSnapshot: input.metadataSnapshot ?? null,
-      })
-  },
+  return repository
 }
+
+const defaultBerkasArsipRepository = createDrizzleBerkasArsipRepository(getDatabase, { transactional: true })
 
 function getRepository(deps: BerkasArsipServiceDeps): BerkasArsipRepository {
   return deps.repository ?? defaultBerkasArsipRepository
+}
+
+async function runInRepositoryTransaction<T>(
+  repository: BerkasArsipRepository,
+  operation: (repository: BerkasArsipRepository) => Promise<T>,
+): Promise<T> {
+  if (!repository.transaction) return operation(repository)
+  return repository.transaction(operation)
 }
 
 async function validateKlasifikasiForOperationalSelection(
@@ -839,8 +882,10 @@ async function insertOpenBerkasWithActivity(
     tahunAnggaran: number
     actorUserId: string
   },
-): Promise<BerkasRow> {
+): Promise<BerkasRow | null> {
   const row = await repository.insertOpenBerkas(input)
+  if (!row) return null
+
   await repository.appendBerkasActivity({
     berkasId: row.id,
     eventType: 'BERKAS_DIBUKA',

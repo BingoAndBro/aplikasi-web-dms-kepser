@@ -22,6 +22,7 @@ import {
   resolvePhysicalStoragePath,
   storagePathBelongsToUser,
 } from '#/lib/storage/local-storage-paths'
+import { maybeSweepStalePendingUploads } from '#/lib/storage/pending-upload-sweeper'
 
 const CLEANUP_PENDING_QUERY_VALUE = 'pending'
 const ABSOLUTE_PATH_PREFIX_PATTERN = /^[\\/]+/
@@ -132,6 +133,10 @@ export const Route = createFileRoute('/api/upload')({
           console.error('[upload] Local storage write failed:', { code: 'unknown' })
           return Response.json({ error: DOCUMENT_UPLOAD_GENERIC_FAILURE_MESSAGE }, { status: 500 })
         }
+
+        // Safety net for pending files the browser could not clean up; throttled
+        // to once an hour and not awaited, so the upload response is not delayed.
+        void maybeSweepStalePendingUploads()
 
         return Response.json({
           url: descriptor.logicalPath,

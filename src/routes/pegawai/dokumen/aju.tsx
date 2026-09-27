@@ -29,6 +29,9 @@ import type {
   DetailRow,
 } from '#/components/dokumen/form/dokumen-form-types'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
+import { collectUnreferencedPendingUploadUrls } from '#/lib/storage/pending-upload-session'
+import { requestPendingUploadCleanup } from '#/lib/storage/pending-upload-cleanup-client'
+import { useDiscardPendingUploadsOnLeave } from '#/hooks/useDiscardPendingUploadsOnLeave'
 import { apiFetch } from '#/lib/api-client'
 import {
   ArrowRight,
@@ -188,6 +191,13 @@ function AjukanDokumenPage() {
     disabled: !isDirty,
     withResolver: true,
   })
+
+  // Every lampiran on this page is a fresh pending upload (a new document has
+  // no formal files yet). Files the Pegawai discards — replaced, removed, or
+  // left behind on page leave — are deleted from pending so they don't pile up.
+  const sessionPendingUrlsRef = useRef<Set<string>>(new Set())
+  // Covers "Keluar tanpa menyimpan" (the page unmounts) and tab close/reload.
+  useDiscardPendingUploadsOnLeave(sessionPendingUrlsRef, 'ajukan')
 
   useEffect(() => {
     if (typeof window === 'undefined' || !isDirty) return
@@ -466,6 +476,14 @@ function AjukanDokumenPage() {
 
   const handleKelengkapanComplete = useCallback(
     (lampirans: LampiranUrl[], missing: any[]) => {
+      // A pending upload that is no longer referenced was replaced ("Ganti")
+      // or removed ("Hapus"): delete it now instead of leaving it in pending.
+      const discardedUrls = collectUnreferencedPendingUploadUrls(sessionPendingUrlsRef.current, lampirans)
+      sessionPendingUrlsRef.current = new Set(lampirans.map(lampiran => lampiran.url))
+      if (discardedUrls.length > 0) {
+        void requestPendingUploadCleanup(discardedUrls, { context: 'ajukan-replaced-or-removed' })
+      }
+
       setLampiranUrls(lampirans)
       setMissingRequired(missing)
     },
@@ -601,6 +619,8 @@ function AjukanDokumenPage() {
         },
       })
 
+      // The files now live in formal storage; nothing left to clean up.
+      sessionPendingUrlsRef.current = new Set()
       setSubmittedDocument(response.dokumen)
       setAttachmentDirty(false)
       showToast({

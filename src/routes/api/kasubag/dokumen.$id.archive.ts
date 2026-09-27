@@ -203,10 +203,11 @@ function createWorkflowArchiveBerkasRepository(
           statusBerkas: BERKAS_STATUS.OPEN,
           createdBy: input.actorUserId,
         })
+        // Loses the race quietly (no aborted transaction); caller re-reads.
+        .onConflictDoNothing({ target: [berkasArsip.klasifikasiId, berkasArsip.tahunAnggaran] })
         .returning()
 
-      if (!row) throw new Error('BERKAS_OPEN_CREATE_FAILED')
-      return row
+      return row ?? null
     },
 
     async findBerkasById(id) {

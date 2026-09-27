@@ -167,6 +167,26 @@ export function isUploadApiPendingPath(storagePath: string): boolean {
   return segments.length === 2 && UPLOAD_API_PENDING_FILENAME_PATTERN.test(filename)
 }
 
+/**
+ * Original (sanitized) filename embedded in a pending upload path, e.g.
+ * `<owner>/<kelengkapan>_<timestamp>_Laporan.pdf` -> `Laporan.pdf`.
+ * Returns null for anything that is not a pending upload path.
+ */
+export function getPendingUploadOriginalFilename(storagePath: string): string | null {
+  const segments = storagePath.replace(/\\/g, '/').split('/')
+  const filename = segments[segments.length - 1] ?? ''
+
+  if (UPLOAD_API_PENDING_FILENAME_PATTERN.test(filename)) {
+    return /^[^_]+_\d{13}_(.+)$/.exec(filename)?.[1] ?? null
+  }
+
+  if (DASH_PENDING_FILENAME_PATTERN.test(filename)) {
+    return /^\d{13}-[a-zA-Z0-9]+-(.+)$/.exec(filename)?.[1] ?? null
+  }
+
+  return null
+}
+
 export function classifyStoragePath(storagePath: string): StoragePathClassification {
   const normalizedPath = assertSafeLogicalStoragePath(storagePath)
   const segments = normalizedPath.split('/')

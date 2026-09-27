@@ -7,6 +7,10 @@ import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-aut
 import { approveDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
 import type { StatusDokumen } from '#/lib/types/fsm'
+import {
+  DokumenTransitionConflictError,
+  dokumenTransitionConflictResponse,
+} from '#/lib/dokumen/transition-conflict'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -88,11 +92,16 @@ export const Route = createFileRoute('/api/ppspm/dokumen/$id/approve')({
                 revisionNotes: null,
                 updatedAt: new Date(),
               })
-              .where(eq(dokumenTransaksi.id, params.id))
+              // Atomic double-approval guard: only the request that still sees
+              // IN_PPSPM_APPROVAL moves the row; the loser gets 409 and no log.
+              .where(and(
+                eq(dokumenTransaksi.id, params.id),
+                eq(dokumenTransaksi.status, 'IN_PPSPM_APPROVAL'),
+              ))
               .returning({ id: dokumenTransaksi.id })
 
             if (updatedRows.length === 0) {
-              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+              throw new DokumenTransitionConflictError()
             }
 
             await tx.insert(logAktivitas).values({
@@ -103,6 +112,7 @@ export const Route = createFileRoute('/api/ppspm/dokumen/$id/approve')({
             })
           })
         } catch (err) {
+          if (err instanceof DokumenTransitionConflictError) return dokumenTransitionConflictResponse()
           console.error('[API/ppspm/dokumen/:id/approve] local transaction error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }

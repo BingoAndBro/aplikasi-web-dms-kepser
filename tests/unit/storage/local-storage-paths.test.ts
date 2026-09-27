@@ -15,6 +15,7 @@ import {
   sanitizeStoragePathSegment,
   storagePathBelongsToUser,
 } from '#/lib/storage/local-storage-paths'
+import { getPendingUploadOriginalFilename } from '#/lib/storage/local-storage-paths'
 
 describe('local storage path helpers', () => {
   describe('logical path validation', () => {
@@ -150,5 +151,20 @@ describe('local storage path helpers', () => {
     it('classifies unrecognized safe paths as other', () => {
       expect(classifyStoragePath('user-id/notes/readme.txt')).toBe('other')
     })
+  })
+})
+
+describe('getPendingUploadOriginalFilename', () => {
+  const OWNER = '11111111-1111-4111-8111-111111111111'
+
+  it('extracts the original filename from both pending path formats', () => {
+    expect(getPendingUploadOriginalFilename(`${OWNER}/66666666-6666-4666-8666-666666666666_1778064971564_Laporan_Akhir.pdf`))
+      .toBe('Laporan_Akhir.pdf')
+    expect(getPendingUploadOriginalFilename(`${OWNER}/1778064971564-random123-foto_rapat.jpg`)).toBe('foto_rapat.jpg')
+  })
+
+  it('returns null for anything that is not a pending upload', () => {
+    expect(getPendingUploadOriginalFilename(`${OWNER}/temp-id/88888888-8888-4888-8888-888888888888.pdf`)).toBeNull()
+    expect(getPendingUploadOriginalFilename('manual-arsip/a/b/c.pdf')).toBeNull()
   })
 })

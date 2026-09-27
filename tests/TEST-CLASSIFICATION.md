@@ -32,6 +32,7 @@ Catatan umum:
 | tests/unit/arsiparis/berkas-arsip-read-model.test.ts | Unit test | White-box | Menguji read model/transformasi data berkas arsip. |
 | tests/unit/arsiparis/berkas-arsip-schema.test.ts | Unit test | White-box | Menguji schema/validasi dasar data berkas arsip. |
 | tests/unit/arsiparis/berkas-arsip-service.test.ts | Unit test | White-box | Menguji fondasi service berkas arsip. |
+| tests/unit/arsiparis/berkas-default-repository-transaction.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji repository berkas default: tutup berkas + riwayat BERKAS_DITUTUP dalam satu transaksi, dan get-or-create memakai ON CONFLICT DO NOTHING. |
 | tests/unit/arsiparis/berkas-export-zip.test.ts | Unit/Component test + static source guard (gabungan) | White-box | Menguji route ekspor ZIP berkas arsip (mocked) sekaligus keberadaan tombol/dialog ekspor di source komponen. |
 | tests/unit/arsiparis/berkas-klasifikasi-eligibility.test.ts | Unit test | White-box | Menguji helper kelayakan klasifikasi berkas. |
 | tests/unit/arsiparis/klasifikasi-create-route.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji route pembuatan klasifikasi dokumen dengan dependency di-mock. |
@@ -65,6 +66,12 @@ Catatan umum:
 | tests/unit/components/confirm-dialog-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi struktur ConfirmDialog terpadu, provider `useConfirm`, dan dukungan reduced-motion via source guard. |
 | tests/unit/components/ui-foundation.test.ts | Unit test | White-box | Menguji pemetaan fondasi UI bersama (Phase 15E). |
 
+## hooks
+
+| File | Jenis Test | White/Black-box | Deskripsi Singkat |
+|---|---|---|---|
+| tests/unit/hooks/use-discard-pending-uploads-on-leave.test.ts | Unit test (jsdom) | White-box | Menguji hook yang menghapus file pending sesi saat form di-unmount (navigasi di aplikasi) atau tab ditutup (pagehide). |
+
 ## dashboard
 
 | File | Jenis Test | White/Black-box | Deskripsi Singkat |
@@ -83,10 +90,12 @@ Catatan umum:
 | File | Jenis Test | White/Black-box | Deskripsi Singkat |
 |---|---|---|---|
 | tests/unit/dokumen/ajukan-dokumen-parity-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi kelengkapan tahapan & teks form Ajukan Dokumen via source guard. |
+| tests/unit/dokumen/ajukan-pending-cleanup-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi Ajukan Dokumen, AttachmentEditor (Edit Non-Material, Revisi Pegawai, Revisi PPK) dan Penambahan Arsip KSBU memakai pola pending yang sama dan menghapus file pending yang dibuang. |
 | tests/unit/dokumen/cross-role-detail-parity-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi paritas visual halaman detail dokumen lintas role via source guard. |
 | tests/unit/dokumen/cross-role-list-parity-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi paritas visual daftar dokumen lintas role via source guard. |
 | tests/unit/dokumen/dokumen-delete-audit-log.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji audit trail hard-delete dokumen pada route DELETE dengan dependency di-mock. |
 | tests/unit/dokumen/dokumen-get-ketua-tim-access.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji akses baca role Ketua Tim ke dokumen non-material pada route GET. |
+| tests/unit/dokumen/dokumen-transition-guards-route.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji guard transisi dokumen: update bersyarat atomik (409), catatan PPSPM pada KEMBALIKAN, validasi ulang RESUBMIT/RESUBMIT_PPK, Zod resubmit PPK, dan rollback file lampiran PPK. |
 | tests/unit/dokumen/local-submit-drizzle-adapter.test.ts | Unit test | White-box | Menguji fondasi adapter Drizzle untuk submit dokumen lokal. |
 | tests/unit/dokumen/local-submit-repository.test.ts | Unit test | White-box | Menguji fondasi repository submit dokumen lokal. |
 | tests/unit/dokumen/local-submit-write-bridge.test.ts | Unit test | White-box | Menguji fondasi helper write-bridge submit dokumen lokal. |
@@ -96,12 +105,12 @@ Catatan umum:
 | tests/unit/dokumen/penambahan-dokumen-upload-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi wiring upload pada form Penambahan Dokumen via source guard. |
 | tests/unit/dokumen/ppk-detail-and-log-route.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji paritas UUID pada route detail & log dokumen untuk role PPK. |
 | tests/unit/dokumen/ppk-resubmit-parity-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi paritas visual alur resubmit PPK via source guard. |
+| tests/unit/dokumen/resubmit-validation.test.ts | Unit test | White-box | Menguji aturan validasi ulang resubmit (nominal > 0, kelengkapan exact-match enam kolom) yang sama dengan submit. |
 | tests/unit/dokumen/revisi-dokumen-parity-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi paritas visual form Revisi Dokumen via source guard. |
-| tests/unit/dokumen/submit-db-file-compensation.test.ts | Unit test | White-box | Menguji kebijakan kompensasi DB/file saat submit dokumen gagal sebagian. |
 | tests/unit/dokumen/submit-disk-preflight-checker.test.ts | Unit test | White-box | Menguji pemeriksaan preflight kapasitas disk sebelum submit dokumen. |
 | tests/unit/dokumen/submit-file-preflight.test.ts | Unit test | White-box | Menguji helper preflight validasi file sebelum submit dokumen. |
+| tests/unit/dokumen/submit-file-move-transaction.test.ts | Integration test (filesystem nyata, DB in-memory) | White-box | Menguji pemindahan file pending ke lokasi tetap di dalam transaksi submit: gagal pindah atau gagal commit tidak meninggalkan baris dan file kembali ke pending. |
 | tests/unit/dokumen/submit-route-parity.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji orkestrasi route submit dokumen lokal dengan seluruh dependency (auth, adapter DB, storage) di-mock. |
-| tests/unit/dokumen/submit-runtime-orchestrator.test.ts | Unit test | White-box | Menguji fondasi orkestrator runtime batas proses submit dokumen. |
 
 ## export
 
@@ -163,6 +172,9 @@ Catatan umum:
 | tests/unit/storage/logical-file-deletion.test.ts | Unit test | White-box | Menguji penghapusan file logis secara aman. |
 | tests/unit/storage/manual-arsip-upload.test.ts | Unit test | White-box | Menguji kesesuaian kebijakan upload untuk arsip manual. |
 | tests/unit/storage/pending-upload-session.test.ts | Unit test | White-box | Menguji helper sesi upload pending. |
+| tests/unit/storage/pending-upload-sweeper.test.ts | Integration test (filesystem nyata) | White-box | Menguji pembersihan otomatis file pending berumur > 24 jam: hanya file pending tak dirujuk yang dihapus, file resmi/avatar/arsip manual/rujukan lama aman, throttle sekali per jam. |
+| tests/unit/storage/pending-upload-cleanup-client.test.ts | Unit test | White-box | Menguji helper klien pembersihan file pending (batch 50, keepalive, penanganan kegagalan). |
+| tests/unit/storage/pending-upload-client.test.ts | Unit test | White-box | Menguji helper klien unggah file ke area pending (sukses, ditolak server, gagal jaringan). |
 | tests/unit/storage/profile-avatar.test.ts | Unit test | White-box | Menguji helper storage untuk avatar profil. |
 | tests/unit/storage/raw-download-url-hardening.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji pengerasan keamanan URL unduhan mentah dengan dependency di-mock. |
 | tests/unit/storage/raw-preview-internal-url-runtime.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji verifikasi runtime URL preview internal mentah dengan dependency di-mock. |

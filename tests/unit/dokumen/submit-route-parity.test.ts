@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
   insertLog: vi.fn(),
   moveLocalPendingFileToFormal: vi.fn(),
+  rollbackLocalAttachmentMovements: vi.fn(),
   resolveLeafNodeName: vi.fn(),
   updateDokumenStatus: vi.fn(),
 }))
@@ -47,6 +48,11 @@ vi.mock('#/lib/storage/local-pending-move', () => ({
     }
   },
   moveLocalPendingFileToFormal: mocks.moveLocalPendingFileToFormal,
+}))
+
+vi.mock('#/lib/storage/local-attachment-replacement', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#/lib/storage/local-attachment-replacement')>()),
+  rollbackLocalAttachmentMovements: mocks.rollbackLocalAttachmentMovements,
 }))
 
 vi.mock('#/lib/dokumen-helpers', () => ({
@@ -96,6 +102,7 @@ describe('/api/dokumen/submit local default parity', () => {
       roles: ['PEGAWAI'],
       activeRole: 'PEGAWAI',
     }))
+    mocks.rollbackLocalAttachmentMovements.mockResolvedValue({ ok: true })
   })
 
   afterEach(() => {
@@ -255,7 +262,36 @@ describe('/api/dokumen/submit local default parity', () => {
     expect(localSubmitAdapterCalls).toContainEqual(['insertDokumen', expect.objectContaining({
       lampiranUrls: [expect.objectContaining({ url: returnedPath })],
     })])
+    expect(mocks.rollbackLocalAttachmentMovements).not.toHaveBeenCalled()
     expectNoLegacySubmitCalls()
+  })
+
+  it('moves pending files inside the submit transaction: after the audit log, before commit', async () => {
+    mocks.moveLocalPendingFileToFormal.mockImplementation(async (input: {
+      sourceLogicalPath: string
+      ownerUserId: string
+      dokumenId: string
+      targetUuid: string
+    }) => {
+      localSubmitAdapterCalls.push(['move', input.sourceLogicalPath])
+      return {
+        action: 'moved',
+        sourceLogicalPath: input.sourceLogicalPath,
+        targetLogicalPath: `${input.ownerUserId}/${input.dokumenId}/${input.targetUuid}.pdf`,
+        sourceClassification: 'pending-upload-api',
+      }
+    })
+
+    const response = await submitHandler({
+      request: createJsonRequest(createValidMaterialSubmitPayload({
+        lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+      })),
+    })
+
+    expect(response.status).toBe(201)
+    const names = localSubmitAdapterCalls.map(call => (call as unknown[])[0])
+    expect(names.indexOf('move')).toBeGreaterThan(names.indexOf('insertLog'))
+    expect(names.indexOf('move')).toBeLessThan(names.indexOf('transaction:commit'))
   })
 
   it('uses the local default path and succeeds for non-material payload', async () => {
@@ -350,7 +386,8 @@ describe('/api/dokumen/submit local default parity', () => {
 
     expect(response.status).toBe(400)
     expect(body).toMatchObject({
-      error: 'Local submit preflight failed; submit write path was not executed.',
+      error: 'Dokumen belum diajukan. Lampiran "Laporan" (Laporan.pdf) tidak ditemukan di penyimpanan sementara '
+        + '(kemungkinan sudah terhapus atau kedaluwarsa). Hapus lampiran tersebut, unggah ulang filenya, lalu ajukan kembali.',
       writePathExecuted: false,
       filesystemMovementExecuted: false,
       issues: [
@@ -367,6 +404,31 @@ describe('/api/dokumen/submit local default parity', () => {
     expectNoLegacySubmitCalls()
   })
 
+  it('names every affected lampiran in one Indonesian message when several sources are missing', async () => {
+    preflightCheckSourceExists.mockResolvedValue(false)
+
+    const response = await submitHandler({
+      request: createJsonRequest(createValidMaterialSubmitPayload({
+        lampiranUrls: [
+          createLampiran({ url: UNDERSCORE_PENDING_PATH }),
+          createLampiran({ nama: 'Foto Kegiatan', url: `${OWNER_ID}/1778064971565-abc123-foto_rapat.jpg` }),
+        ],
+      })),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.error).toBe(
+      'Dokumen belum diajukan. Lampiran "Laporan" (Laporan.pdf), "Foto Kegiatan" (foto_rapat.jpg) tidak ditemukan '
+        + 'di penyimpanan sementara (kemungkinan sudah terhapus atau kedaluwarsa). '
+        + 'Hapus lampiran tersebut, unggah ulang filenya, lalu ajukan kembali.',
+    )
+    expect(body.issues).toHaveLength(2)
+    expect(body.issues[1].message).toContain('"Foto Kegiatan" (foto_rapat.jpg)')
+    expect(body.error).not.toContain(OWNER_ID)
+    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
+  })
+
   it('returns controlled 400 before DB write when the target conflicts', async () => {
     preflightCheckTargetAvailable.mockResolvedValue(false)
 
@@ -379,7 +441,8 @@ describe('/api/dokumen/submit local default parity', () => {
 
     expect(response.status).toBe(400)
     expect(body).toMatchObject({
-      error: 'Local submit preflight failed; submit write path was not executed.',
+      error: 'Dokumen belum diajukan. Lampiran "Laporan" (Laporan.pdf) tidak dapat dipindahkan ke penyimpanan tetap '
+        + 'karena lokasi tujuannya sudah terpakai. Silakan ajukan kembali; bila masih gagal, unggah ulang lampiran tersebut.',
       issues: [
         expect.objectContaining({
           code: 'target-already-exists',
@@ -438,7 +501,7 @@ describe('/api/dokumen/submit local default parity', () => {
     expectNoLegacySubmitCalls()
   })
 
-  it('returns safe non-success when local movement fails after DB success', async () => {
+  it('rolls the submit back when the file move fails: no committed row, clear error', async () => {
     mocks.moveLocalPendingFileToFormal.mockRejectedValue(
       new Error('raw ' + 'filesystem failure at C:\\' + 'private\\storage with secret' + '-token'),
     )
@@ -452,36 +515,18 @@ describe('/api/dokumen/submit local default parity', () => {
     const serializedBody = JSON.stringify(body)
 
     expect(response.status).toBe(500)
-    expect(body).toMatchObject({
-      error: 'Local file movement failed after local DB submit.',
-      code: 'local-file-movement-failed',
-      writePathExecuted: true,
-      filesystemMovementExecuted: true,
-      compensationRequired: true,
-      partialMovement: false,
-      movedCount: 0,
-      issues: [
-        expect.objectContaining({
-          code: 'move-failed',
-          clientCategory: 'preflight-unavailable',
-          index: 0,
-          sourceLogicalPath: UNDERSCORE_PENDING_PATH,
-        }),
-      ],
-    })
-    expect(body).not.toHaveProperty('success', true)
-    expect(body).not.toHaveProperty('dokumen')
-    expect(localSubmitAdapterCalls).toEqual(expect.arrayContaining([
-      ['transaction:commit'],
-    ]))
+    expect(body).toEqual({ error: 'Gagal mengajukan dokumen, silakan coba lagi' })
+    expect(localSubmitAdapterCalls).toContainEqual(['transaction:rollback'])
+    expect(localSubmitAdapterCalls).not.toContainEqual(['transaction:commit'])
     expect(mocks.moveLocalPendingFileToFormal).toHaveBeenCalledTimes(1)
+    // Nothing had moved yet, so there is nothing to put back.
+    expect(mocks.rollbackLocalAttachmentMovements).toHaveBeenCalledWith([])
     expect(serializedBody).not.toContain('C:\\' + 'private')
     expect(serializedBody).not.toContain('secret' + '-token')
-    expect(serializedBody).not.toContain('raw ' + 'filesystem failure')
     expectNoLegacySubmitCalls()
   })
 
-  it('returns safe non-success for partial local movement failure after DB success', async () => {
+  it('returns already-moved files to pending when a later file move fails', async () => {
     mocks.moveLocalPendingFileToFormal
       .mockImplementationOnce(async (input: {
         sourceLogicalPath: string
@@ -507,30 +552,41 @@ describe('/api/dokumen/submit local default parity', () => {
       })),
     })
     const body = await response.json()
-    const serializedBody = JSON.stringify(body)
 
     expect(response.status).toBe(500)
-    expect(body).toMatchObject({
-      error: 'Local file movement failed after local DB submit.',
-      code: 'local-file-movement-failed',
-      writePathExecuted: true,
-      filesystemMovementExecuted: true,
-      compensationRequired: true,
-      partialMovement: true,
-      movedCount: 1,
-      issues: [
-        expect.objectContaining({
-          code: 'move-failed',
-          index: 1,
-          sourceLogicalPath: DASH_PENDING_PATH,
-        }),
-      ],
-    })
-    expect(body).not.toHaveProperty('success', true)
+    expect(body).toEqual({ error: 'Gagal mengajukan dokumen, silakan coba lagi' })
     expect(mocks.moveLocalPendingFileToFormal).toHaveBeenCalledTimes(2)
-    expect(serializedBody).not.toContain('DATABASE' + '_URL')
-    expect(serializedBody).not.toContain('storage' + ' root')
-    expect(serializedBody).not.toContain('partial failure')
+    expect(mocks.rollbackLocalAttachmentMovements).toHaveBeenCalledTimes(1)
+    expect(mocks.rollbackLocalAttachmentMovements).toHaveBeenCalledWith([
+      expect.objectContaining({
+        index: 0,
+        sourceLogicalPath: UNDERSCORE_PENDING_PATH,
+        targetLogicalPath: expect.stringMatching(new RegExp(`^${OWNER_ID}/temp-id/[0-9a-f-]{36}\\.pdf$`)),
+      }),
+    ])
+    expect(localSubmitAdapterCalls).toContainEqual(['transaction:rollback'])
+    expect(localSubmitAdapterCalls).not.toContainEqual(['transaction:commit'])
+    expectNoLegacySubmitCalls()
+  })
+
+  it('returns moved files to pending when the commit itself fails after the move', async () => {
+    mocks.createLiveLocalSubmitDrizzleAdapter.mockResolvedValue(
+      createLocalSubmitAdapter({ failCommit: true }),
+    )
+
+    const response = await submitHandler({
+      request: createJsonRequest(createValidMaterialSubmitPayload({
+        lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
+      })),
+    })
+    const body = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(body).toEqual({ error: 'Gagal mengajukan dokumen, silakan coba lagi' })
+    expect(mocks.moveLocalPendingFileToFormal).toHaveBeenCalledTimes(1)
+    expect(mocks.rollbackLocalAttachmentMovements).toHaveBeenCalledWith([
+      expect.objectContaining({ index: 0, sourceLogicalPath: UNDERSCORE_PENDING_PATH }),
+    ])
     expectNoLegacySubmitCalls()
   })
 
@@ -752,6 +808,7 @@ function expectNoSensitiveFragments(serializedBody: string) {
 function createLocalSubmitAdapter(options: {
   failStatusUpdate?: boolean
   failAuditInsert?: boolean
+  failCommit?: boolean
 } = {}) {
   return {
     async selectKegiatanById(kegiatanId: string) {
@@ -786,6 +843,7 @@ function createLocalSubmitAdapter(options: {
       localSubmitAdapterCalls.push(['transaction:begin'])
       try {
         const result = await operation(createLocalSubmitTransactionAdapter(options))
+        if (options.failCommit) throw new Error('commit failed')
         localSubmitAdapterCalls.push(['transaction:commit'])
         return result
       } catch (error) {

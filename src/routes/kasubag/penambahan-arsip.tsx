@@ -45,11 +45,14 @@ import {
   DOCUMENT_PREVIEW_PDF_ONLY_TITLE,
   DOCUMENT_UPLOAD_ACCEPT,
   DOCUMENT_UPLOAD_HELPER_TEXT,
-  DOCUMENT_UPLOAD_MULTIPLE_FAILURE_MESSAGE,
   getDocumentUploadValidationUiMessage,
   validateDocumentUploadClientFileMetadata,
 } from '#/lib/upload/document-upload-policy'
 import { cn } from '#/lib/utils'
+import { createClientId } from '#/lib/utils/client-id'
+import { useDiscardPendingUploadsOnLeave } from '#/hooks/useDiscardPendingUploadsOnLeave'
+import { requestPendingUploadCleanup } from '#/lib/storage/pending-upload-cleanup-client'
+import { uploadPendingFile } from '#/lib/storage/pending-upload-client'
 import { formatDate, formatDateTime } from '#/lib/utils/format'
 import { getTahunOptions } from '#/lib/utils/tahun'
 
@@ -116,7 +119,7 @@ type ManualArsipListResponse = {
 }
 
 type ManualArsipCreateResponse = {
-  manual_arsip?: ManualArsipListItem
+  manual_arsip?: ManualArsipListItem & { attachments?: ManualArsipAttachmentMetadata[] }
   error?: string
 }
 
@@ -126,11 +129,6 @@ type ManualArsipAttachmentMetadata = {
   content_type: string
   size_bytes: number
   created_at: string
-}
-
-type ManualArsipUploadResponse = {
-  attachments?: ManualArsipAttachmentMetadata[]
-  error?: string
 }
 
 type ManualArsipDetail = ManualArsipListItem & {
@@ -168,7 +166,13 @@ type CreateManualArsipResult = {
 type AttachmentRow = {
   id: string
   title: string
+  /** Local copy, used only for the in-browser preview and file name/size. */
   file: File | null
+  /** UUID grouping this row's upload in the pending area. */
+  uploadId: string
+  /** Pending upload path once the file reached the server. */
+  pendingUrl: string | null
+  uploading: boolean
 }
 
 type PreviewingAttachment = {
@@ -193,8 +197,6 @@ type ManualCreateDraftState = {
   step: number
 }
 
-const MANUAL_ARSIP_ATTACHMENT_FIELD_NAME = 'files'
-const MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME = 'titles'
 const MANUAL_ARSIP_ATTACHMENT_MAX_FILES = 5
 const MANUAL_ARSIP_ATTACHMENT_TITLE_MAX_LENGTH = 120
 const MANUAL_ARSIP_ATTACHMENT_ACCEPT = DOCUMENT_UPLOAD_ACCEPT
@@ -959,6 +961,11 @@ function CreateManualArsipModal({
   const [previewingDraftAttachment, setPreviewingDraftAttachment] = useState<PreviewingAttachment | null>(null)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const skipBeforeUnloadRef = useRef(false)
+  // Lampiran go to the pending area as soon as they are picked (same pattern
+  // as Ajukan/Revisi). Uploads the KSBU abandons are deleted: replaced or
+  // removed rows right away, everything else when the form is left.
+  const sessionPendingUrlsRef = useRef<Set<string>>(new Set())
+  useDiscardPendingUploadsOnLeave(sessionPendingUrlsRef, 'penambahan-arsip')
   const allKlasifikasiOptions = useMemo(() => {
     const rootNode = findRootKlasifikasiNode(klasifikasiNodes)
     return flattenKlasifikasiTree(rootNode?.children ?? klasifikasiNodes)
@@ -1217,7 +1224,15 @@ function CreateManualArsipModal({
     setErrors((prev) => ({ ...prev, attachments: '' }))
   }
 
+  function discardPendingUpload(url: string | null) {
+    if (!url || !sessionPendingUrlsRef.current.has(url)) return
+
+    sessionPendingUrlsRef.current.delete(url)
+    void requestPendingUploadCleanup([url], { context: 'penambahan-arsip-replaced-or-removed' })
+  }
+
   function removeAttachmentRow(rowId: string) {
+    discardPendingUpload(attachmentRows.find((row) => row.id === rowId)?.pendingUrl ?? null)
     setAttachmentRows((prev) => prev.filter((row) => row.id !== rowId))
     setErrors((prev) => clearAttachmentRowErrors(prev, rowId))
   }
@@ -1233,15 +1248,14 @@ function CreateManualArsipModal({
     }))
   }
 
-  function updateAttachmentFile(rowId: string, event: ChangeEvent<HTMLInputElement>) {
+  async function updateAttachmentFile(rowId: string, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null
-    const fileError = file ? validateAttachmentFile(file) : null
+    event.target.value = ''
+    const row = attachmentRows.find((candidate) => candidate.id === rowId)
+    if (!file || !row) return
 
+    const fileError = validateAttachmentFile(file)
     if (fileError) {
-      event.target.value = ''
-      setAttachmentRows((prev) => prev.map((row) => (
-        row.id === rowId ? { ...row, file: null } : row
-      )))
       setErrors((prev) => ({
         ...prev,
         [attachmentFileErrorKey(rowId)]: fileError,
@@ -1250,14 +1264,37 @@ function CreateManualArsipModal({
       return
     }
 
-    setAttachmentRows((prev) => prev.map((row) => (
-      row.id === rowId ? { ...row, file } : row
+    setAttachmentRows((prev) => prev.map((candidate) => (
+      candidate.id === rowId ? { ...candidate, uploading: true } : candidate
     )))
     setErrors((prev) => ({
       ...prev,
       [attachmentFileErrorKey(rowId)]: '',
       attachments: '',
     }))
+
+    const result = await uploadPendingFile({
+      file,
+      kelengkapanId: row.uploadId,
+      namaDokumen: row.title.trim() || file.name,
+    })
+
+    if (!result.ok) {
+      // Keep the previous file (if any); only this replacement failed.
+      setAttachmentRows((prev) => prev.map((candidate) => (
+        candidate.id === rowId ? { ...candidate, uploading: false } : candidate
+      )))
+      setErrors((prev) => ({ ...prev, [attachmentFileErrorKey(rowId)]: result.error }))
+      return
+    }
+
+    sessionPendingUrlsRef.current.add(result.url)
+    discardPendingUpload(row.pendingUrl)
+    setAttachmentRows((prev) => prev.map((candidate) => (
+      candidate.id === rowId
+        ? { ...candidate, file, pendingUrl: result.url, uploading: false }
+        : candidate
+    )))
   }
 
   function validateCurrentStep(): boolean {
@@ -1393,68 +1430,34 @@ function CreateManualArsipModal({
           klasifikasi_id: form.klasifikasi_id,
           tahun_anggaran: Number(form.tahun_anggaran),
           nominal_realisasi: validation.nominal,
+          // Pending uploads; the server moves them inside the create transaction.
+          attachments: attachmentValidation.rows.map((row) => ({
+            url: row.url,
+            judul_lampiran: row.title,
+          })),
         },
       })
 
-      const createdId = createResponse.manual_arsip?.id
       const createdManualArsip = createResponse.manual_arsip
-      if (attachmentValidation.rows.length === 0) {
-        if (!createdManualArsip) {
-          throw new Error('Dokumen manual tidak ditemukan pada respons.')
-        }
-
-        clearManualCreateDraft()
-        await onSuccess({
-          manualArsip: createdManualArsip,
-          uploadedCount: 0,
-          notice: {
-            tone: 'success',
-            message: 'Dokumen manual berhasil dibuat.',
-          },
-        })
-        return
-      }
-
-      if (!createdId || !createdManualArsip) {
+      if (!createdManualArsip) {
         throw new Error('Dokumen manual tidak ditemukan pada respons.')
       }
 
-      const formData = new FormData()
-      for (const row of attachmentValidation.rows) {
-        formData.append(MANUAL_ARSIP_ATTACHMENT_FIELD_NAME, row.file)
-        formData.append(MANUAL_ARSIP_ATTACHMENT_TITLE_FIELD_NAME, row.title)
-      }
+      // The files now live in the manual archive; nothing left to clean up.
+      sessionPendingUrlsRef.current = new Set()
+      const uploadedCount = createdManualArsip.attachments?.length ?? attachmentValidation.rows.length
 
-      try {
-        const uploadResponse = await apiMutation<ManualArsipUploadResponse>(
-          `/api/kasubag/manual-arsip/${createdId}/attachments`,
-          {
-            method: 'POST',
-            body: formData,
-          },
-        )
-        const uploadedCount = uploadResponse.attachments?.length ?? attachmentValidation.rows.length
-
-        clearManualCreateDraft()
-        await onSuccess({
-          manualArsip: createdManualArsip,
-          uploadedCount,
-          notice: {
-            tone: 'success',
-            message: `Dokumen manual berhasil dibuat. ${uploadedCount} lampiran berhasil diunggah.`,
-          },
-        })
-      } catch {
-        clearManualCreateDraft()
-        await onSuccess({
-          manualArsip: createdManualArsip,
-          uploadedCount: 0,
-          notice: {
-            tone: 'warning',
-            message: DOCUMENT_UPLOAD_MULTIPLE_FAILURE_MESSAGE,
-          },
-        })
-      }
+      clearManualCreateDraft()
+      await onSuccess({
+        manualArsip: createdManualArsip,
+        uploadedCount,
+        notice: {
+          tone: 'success',
+          message: uploadedCount > 0
+            ? `Dokumen manual berhasil dibuat. ${uploadedCount} lampiran berhasil disimpan.`
+            : 'Dokumen manual berhasil dibuat.',
+        },
+      })
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setSubmitError('Akses ditolak')
@@ -1792,14 +1795,18 @@ function CreateManualArsipModal({
                             <Eye size={13} />
                           </Button>
                         )}
-                        <label className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded-full border border-brand-solid bg-white px-4 text-xs font-bold text-brand-solid transition hover:bg-bg-surface">
-                          <Upload size={13} />
-                          {row.file ? 'Ganti' : 'Unggah'}
+                        <label className={cn(
+                          'flex h-9 items-center justify-center gap-2 rounded-full border border-brand-solid bg-white px-4 text-xs font-bold text-brand-solid transition',
+                          row.uploading || submitting ? 'cursor-wait opacity-70' : 'cursor-pointer hover:bg-bg-surface',
+                        )}>
+                          {row.uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                          {row.uploading ? 'Mengunggah...' : row.file ? 'Ganti' : 'Unggah'}
                           <input
                             id={fileInputId}
                             type="file"
                             accept={MANUAL_ARSIP_ATTACHMENT_ACCEPT}
-                            onChange={(event) => updateAttachmentFile(row.id, event)}
+                            onChange={(event) => { void updateAttachmentFile(row.id, event) }}
+                            disabled={row.uploading || submitting}
                             className="sr-only"
                           />
                         </label>
@@ -1808,7 +1815,7 @@ function CreateManualArsipModal({
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => removeAttachmentRow(row.id)}
-                          disabled={submitting}
+                          disabled={submitting || row.uploading}
                           aria-label={`Hapus lampiran ${index + 1}`}
                           className="flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-700 transition hover:bg-red-50 hover:text-red-600"
                         >
@@ -2605,10 +2612,10 @@ function validateForm(form: ManualArsipFormState): {
 
 function validateAttachmentRows(rows: AttachmentRow[]): {
   errors: Record<string, string>
-  rows: Array<{ title: string; file: File }>
+  rows: Array<{ title: string; url: string }>
 } {
   const errors: Record<string, string> = {}
-  const validatedRows: Array<{ title: string; file: File }> = []
+  const validatedRows: Array<{ title: string; url: string }> = []
 
   if (rows.length > MANUAL_ARSIP_ATTACHMENT_MAX_FILES) {
     errors.attachments = 'Maksimal 5 lampiran'
@@ -2626,19 +2633,16 @@ function validateAttachmentRows(rows: AttachmentRow[]): {
       rowHasError = true
     }
 
-    if (!row.file) {
-      errors[attachmentFileErrorKey(row.id)] = 'File lampiran wajib dipilih'
+    if (row.uploading) {
+      errors[attachmentFileErrorKey(row.id)] = 'Tunggu hingga unggahan lampiran selesai'
       rowHasError = true
-    } else {
-      const fileError = validateAttachmentFile(row.file)
-      if (fileError) {
-        errors[attachmentFileErrorKey(row.id)] = fileError
-        rowHasError = true
-      }
+    } else if (!row.file || !row.pendingUrl) {
+      errors[attachmentFileErrorKey(row.id)] = 'File lampiran wajib diunggah'
+      rowHasError = true
     }
 
-    if (!rowHasError && row.file) {
-      validatedRows.push({ title, file: row.file })
+    if (!rowHasError && row.pendingUrl) {
+      validatedRows.push({ title, url: row.pendingUrl })
     }
   }
 
@@ -2657,6 +2661,9 @@ function createAttachmentRow(title = ''): AttachmentRow {
     id: `attachment-row-${Date.now()}-${attachmentRowCounter}`,
     title,
     file: null,
+    uploadId: createClientId(''),
+    pendingUrl: null,
+    uploading: false,
   }
 }
 

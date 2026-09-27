@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   txInsert: vi.fn(),
   txInsertValues: vi.fn(),
   txInsertReturning: vi.fn(),
+  txInsertOnConflictDoNothing: vi.fn(),
   txSelect: vi.fn(),
   txUpdate: vi.fn(),
   txUpdateSet: vi.fn(),
@@ -364,6 +365,60 @@ describe('workflow classification to berkas route', () => {
     expect(mocks.dbSelect).not.toHaveBeenCalled()
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
+
+  it('inserts the new berkas with ON CONFLICT (klasifikasi_id, tahun_anggaran) DO NOTHING', async () => {
+    queueSelectResults([dokumenRow()])
+    queueSuccessfulTransaction()
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(mocks.txInsertOnConflictDoNothing).toHaveBeenCalledTimes(1)
+    const [config] = mocks.txInsertOnConflictDoNothing.mock.calls[0] as [{ target: unknown[] }]
+    expect(config.target).toHaveLength(2)
+  })
+
+  it('joins the berkas created by a concurrent request instead of failing the transaction', async () => {
+    queueSelectResults([dokumenRow()])
+    queueSuccessfulTransaction({
+      txSelectResults: [
+        [klasifikasiRow()],
+        [],
+        [],
+        [openBerkasRow()],
+        [openBerkasRow()],
+        [workflowSourceRow()],
+      ],
+      // ON CONFLICT DO NOTHING returns no row when another request won the race.
+      txInsertReturningByCall: { 1: [] },
+    })
+
+    const response = await postHandler({
+      request: createPostRequest(validArchiveBody()),
+      params: { id: DOCUMENT_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      success: true,
+      message: 'Dokumen berhasil diklasifikasikan',
+    })
+    expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
+      eventType: 'BERKAS_DIBUKA',
+    }))
+    expect(mocks.txInsertValues).toHaveBeenCalledWith(expect.objectContaining({
+      berkasId: BERKAS_ID,
+      sourceType: 'WORKFLOW',
+      dokumenId: DOCUMENT_ID,
+    }))
+    expect(mocks.txInsertValues).toHaveBeenCalledWith(expect.objectContaining({
+      berkasId: BERKAS_ID,
+      eventType: 'DOKUMEN_PERSETUJUAN_DIKLASIFIKASIKAN',
+    }))
+  })
 })
 
 function createSession(roles: string[]) {
@@ -479,7 +534,7 @@ function queueSuccessfulTransaction(options: {
           mocks.txInsertValues(value)
           txInsertCall += 1
 
-          return {
+          const builder: Record<string, unknown> = {
             returning: async () => {
               mocks.txInsertReturning()
               const override = options.txInsertReturningByCall?.[txInsertCall]
@@ -491,6 +546,11 @@ function queueSuccessfulTransaction(options: {
               return []
             },
           }
+          builder.onConflictDoNothing = (config: unknown) => {
+            mocks.txInsertOnConflictDoNothing(config)
+            return builder
+          }
+          return builder
         },
       })),
       update: mocks.txUpdate.mockReturnValue({

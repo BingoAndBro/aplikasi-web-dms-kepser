@@ -88,79 +88,82 @@ export const manualArsipSafeMetadataSchema = z
     }
   })
 
-export const createManualArsipSchema = z
-  .object({
-    nama: z.string().trim().min(1, 'Nama dokumen wajib diisi').max(255),
-    tanggal: z.string().refine(isDateOnlyString, 'Tanggal harus valid dengan format YYYY-MM-DD'),
-    nomor_surat: optionalTrimmedString(120, 'Nomor surat maksimal 120 karakter').optional(),
-    tanggal_diarsipkan: optionalDateOnlyString('Tanggal harus valid dengan format YYYY-MM-DD').optional(),
-    keterangan: z.string().trim().min(1, 'Keterangan wajib diisi'),
-    fungsi_id: z.string().uuid('Fungsi tidak valid'),
-    kegiatan_id: z.string().uuid('Kegiatan tidak valid'),
-    komponen_id: z.string().uuid('Komponen tidak valid'),
-    klasifikasi_id: z.string({ error: 'Jenis pembayaran wajib dipilih' }).uuid('Jenis pembayaran tidak valid'),
-    tahun_anggaran: z.number({ error: 'Tahun anggaran wajib dipilih' }).int().min(2000).max(2100),
-    retensi_aktif: optionalRetentionLabel('Retensi aktif tidak valid'),
-    retensi_inaktif: optionalRetentionLabel('Retensi inaktif tidak valid'),
-    nominal_realisasi: z.unknown(),
-    metadata: manualArsipSafeMetadataSchema.optional(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    const hasNominal = Object.prototype.hasOwnProperty.call(value, 'nominal_realisasi')
-    const nominal = value.nominal_realisasi
+const manualArsipFieldShape = {
+  nama: z.string().trim().min(1, 'Nama dokumen wajib diisi').max(255),
+  tanggal: z.string().refine(isDateOnlyString, 'Tanggal harus valid dengan format YYYY-MM-DD'),
+  nomor_surat: optionalTrimmedString(120, 'Nomor surat maksimal 120 karakter').optional(),
+  tanggal_diarsipkan: optionalDateOnlyString('Tanggal harus valid dengan format YYYY-MM-DD').optional(),
+  keterangan: z.string().trim().min(1, 'Keterangan wajib diisi'),
+  fungsi_id: z.string().uuid('Fungsi tidak valid'),
+  kegiatan_id: z.string().uuid('Kegiatan tidak valid'),
+  komponen_id: z.string().uuid('Komponen tidak valid'),
+  klasifikasi_id: z.string({ error: 'Jenis pembayaran wajib dipilih' }).uuid('Jenis pembayaran tidak valid'),
+  tahun_anggaran: z.number({ error: 'Tahun anggaran wajib dipilih' }).int().min(2000).max(2100),
+  retensi_aktif: optionalRetentionLabel('Retensi aktif tidak valid'),
+  retensi_inaktif: optionalRetentionLabel('Retensi inaktif tidak valid'),
+  nominal_realisasi: z.unknown(),
+  metadata: manualArsipSafeMetadataSchema.optional(),
+}
 
-    if (!hasNominal || nominal === null || nominal === undefined || nominal === '') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['nominal_realisasi'],
-        message: REQUIRED_NOMINAL_MESSAGE,
-      })
-      return
-    }
+type ManualArsipFieldValues = z.infer<z.ZodObject<typeof manualArsipFieldShape>>
 
-    if (typeof nominal !== 'number' || !Number.isFinite(nominal)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['nominal_realisasi'],
-        message: 'Nominal realisasi harus berupa angka',
-      })
-      return
-    }
+function refineManualArsipFields(value: ManualArsipFieldValues, ctx: z.RefinementCtx) {
+  const hasNominal = Object.prototype.hasOwnProperty.call(value, 'nominal_realisasi')
+  const nominal = value.nominal_realisasi
 
-    if (!Number.isInteger(nominal)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['nominal_realisasi'],
-        message: 'Nominal realisasi harus berupa bilangan bulat',
-      })
-      return
-    }
+  if (!hasNominal || nominal === null || nominal === undefined || nominal === '') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['nominal_realisasi'],
+      message: REQUIRED_NOMINAL_MESSAGE,
+    })
+    return
+  }
 
-    if (nominal <= 0) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['nominal_realisasi'],
-        message: POSITIVE_NOMINAL_MESSAGE,
-      })
-    }
+  if (typeof nominal !== 'number' || !Number.isFinite(nominal)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['nominal_realisasi'],
+      message: 'Nominal realisasi harus berupa angka',
+    })
+    return
+  }
 
-    const hasFinalRetentionMetadata = Boolean(
-      value.tanggal_diarsipkan || value.retensi_aktif || value.retensi_inaktif,
-    )
-    const hasCompleteFinalRetentionMetadata = Boolean(
-      value.tanggal_diarsipkan && value.retensi_aktif && value.retensi_inaktif,
-    )
+  if (!Number.isInteger(nominal)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['nominal_realisasi'],
+      message: 'Nominal realisasi harus berupa bilangan bulat',
+    })
+    return
+  }
 
-    if (hasFinalRetentionMetadata && !hasCompleteFinalRetentionMetadata) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['tanggal_diarsipkan'],
-        message: 'Metadata retensi final harus lengkap atau dikosongkan',
-      })
-    }
-  })
-  .transform((value) => ({
+  if (nominal <= 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['nominal_realisasi'],
+      message: POSITIVE_NOMINAL_MESSAGE,
+    })
+  }
+
+  const hasFinalRetentionMetadata = Boolean(
+    value.tanggal_diarsipkan || value.retensi_aktif || value.retensi_inaktif,
+  )
+  const hasCompleteFinalRetentionMetadata = Boolean(
+    value.tanggal_diarsipkan && value.retensi_aktif && value.retensi_inaktif,
+  )
+
+  if (hasFinalRetentionMetadata && !hasCompleteFinalRetentionMetadata) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['tanggal_diarsipkan'],
+      message: 'Metadata retensi final harus lengkap atau dikosongkan',
+    })
+  }
+}
+
+function toManualArsipInput(value: ManualArsipFieldValues) {
+  return {
     nama: value.nama,
     tanggal: value.tanggal,
     nomor_surat: value.nomor_surat ?? null,
@@ -175,9 +178,47 @@ export const createManualArsipSchema = z
     retensi_inaktif: value.retensi_inaktif ?? null,
     nominal_realisasi: value.nominal_realisasi as number,
     metadata: value.metadata,
+  }
+}
+
+// Lampiran already uploaded to the pending area (POST /api/upload); the server
+// moves them to the manual archive location inside the create transaction.
+export const manualArsipPendingAttachmentsSchema = z
+  .array(z.object({
+    url: z.string().trim().min(1, 'Lampiran tidak valid').max(500, 'Lampiran tidak valid'),
+    judul_lampiran: z.string().trim()
+      .min(1, 'Judul lampiran wajib diisi')
+      .max(120, 'Judul lampiran maksimal 120 karakter'),
+  }).strict())
+  .max(5, 'Maksimal 5 lampiran')
+  .superRefine((attachments, ctx) => {
+    const seen = new Set<string>()
+    for (const attachment of attachments) {
+      if (seen.has(attachment.url)) {
+        ctx.addIssue({ code: 'custom', message: 'File lampiran yang sama tidak boleh dipakai dua kali' })
+        return
+      }
+      seen.add(attachment.url)
+    }
+  })
+
+export const createManualArsipSchema = z
+  .object({
+    ...manualArsipFieldShape,
+    attachments: manualArsipPendingAttachmentsSchema.optional(),
+  })
+  .strict()
+  .superRefine(refineManualArsipFields)
+  .transform((value) => ({
+    ...toManualArsipInput(value),
+    attachments: value.attachments ?? [],
   }))
 
-export const updateManualArsipSchema = createManualArsipSchema
+export const updateManualArsipSchema = z
+  .object(manualArsipFieldShape)
+  .strict()
+  .superRefine(refineManualArsipFields)
+  .transform(toManualArsipInput)
 
 export const listManualArsipQuerySchema = z
   .object({

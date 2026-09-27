@@ -139,9 +139,9 @@ describe('berkas arsip service foundation', () => {
     expect(repository.calls.some(([name]) => name === 'insertOpenBerkas')).toBe(false)
   })
 
-  it('recovers get-or-create when concurrent open-folder creation hits a unique conflict', async () => {
+  it('recovers get-or-create when a concurrent creator wins the ON CONFLICT DO NOTHING insert', async () => {
     const repository = createFakeRepository({
-      insertOpenBerkasError: Object.assign(new Error('unique conflict'), { code: '23505' }),
+      insertOpenBerkasConflict: true,
       openAfterConflict: true,
     })
 
@@ -153,6 +153,37 @@ describe('berkas arsip service foundation', () => {
 
     expect(berkas.id).toBe(BERKAS_ID)
     expect(repository.calls.filter(([name]) => name === 'findBerkasByKlasifikasiId')).toHaveLength(2)
+    // The losing request did not create the berkas, so it must not log BERKAS_DIBUKA.
+    expect(repository.calls.some(([name, , eventType]) => name === 'appendBerkasActivity' && eventType === 'BERKAS_DIBUKA')).toBe(false)
+  })
+
+  it('reports CONFLICT when the insert loses the race but no berkas can be read back', async () => {
+    const repository = createFakeRepository({
+      insertOpenBerkasConflict: true,
+    })
+
+    await expect(getOrCreateOpenBerkasForKlasifikasi({
+      klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      code: 'CONFLICT',
+    })
+  })
+
+  it('rejects when the race winner already CLOSED the berkas for the same pair', async () => {
+    const repository = createFakeRepository({
+      insertOpenBerkasConflict: true,
+      closedAfterConflict: true,
+    })
+
+    await expect(getOrCreateOpenBerkasForKlasifikasi({
+      klasifikasiId: KLASIFIKASI_ID,
+      tahunAnggaran: TAHUN_ANGGARAN,
+      actorUserId: ACTOR_ID,
+    }, { repository })).rejects.toMatchObject({
+      code: 'BERKAS_KLASIFIKASI_CLOSED',
+    })
   })
 
   it('rejects adding a workflow document to a CLOSED berkas', async () => {
@@ -347,6 +378,42 @@ describe('berkas arsip service foundation', () => {
     })
 
     expect(plan.masaAktifBerakhir).toBe('9999-12-31')
+  })
+
+  it('runs the CLOSED update and the BERKAS_DITUTUP activity inside one repository transaction', async () => {
+    const repository = createFakeRepository({ itemCount: 1, withTransaction: true })
+
+    await closeBerkasArsip({
+      berkasId: BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      metadata: validCloseMetadata(),
+    }, { repository })
+
+    const names = repository.calls.map(([name]) => name)
+    expect(names[0]).toBe('transaction:begin')
+    expect(names.at(-1)).toBe('transaction:commit')
+    expect(names.indexOf('closeOpenBerkas')).toBeGreaterThan(names.indexOf('transaction:begin'))
+    expect(names.indexOf('appendBerkasActivity')).toBeGreaterThan(names.indexOf('closeOpenBerkas'))
+    expect(names.indexOf('appendBerkasActivity')).toBeLessThan(names.indexOf('transaction:commit'))
+  })
+
+  it('rolls the close back when the BERKAS_DITUTUP activity insert fails', async () => {
+    const repository = createFakeRepository({
+      itemCount: 1,
+      withTransaction: true,
+      appendBerkasActivityError: new Error('activity insert failed'),
+    })
+
+    await expect(closeBerkasArsip({
+      berkasId: BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      metadata: validCloseMetadata(),
+    }, { repository })).rejects.toThrow('activity insert failed')
+
+    const names = repository.calls.map(([name]) => name)
+    expect(names).toContain('closeOpenBerkas')
+    expect(names).toContain('transaction:rollback')
+    expect(names).not.toContain('transaction:commit')
   })
 
   it('closes a non-empty OPEN berkas without source item or canonical archive mutation', async () => {
@@ -651,6 +718,10 @@ function createFakeRepository(options: {
   klasifikasiHasChildren?: boolean
   existingBerkasRows?: ReturnType<typeof baseBerkas>[]
   insertOpenBerkasError?: unknown
+  insertOpenBerkasConflict?: boolean
+  closedAfterConflict?: boolean
+  withTransaction?: boolean
+  appendBerkasActivityError?: unknown
   insertBerkasItemError?: unknown
   openAfterConflict?: boolean
   closedStatusArsip?: TestBerkasArchiveStatus | null
@@ -658,7 +729,7 @@ function createFakeRepository(options: {
   const calls: unknown[][] = []
   let openLookupCount = 0
 
-  return {
+  const repository: BerkasArsipRepository & { calls: unknown[][] } = {
     calls,
     async findKlasifikasiForOperationalSelection(id) {
       calls.push(['findKlasifikasiForOperationalSelection', id])
@@ -684,6 +755,7 @@ function createFakeRepository(options: {
       openLookupCount += 1
       if (options.existingBerkasRows) return options.existingBerkasRows
       if (options.openAfterConflict && openLookupCount > 1) return [openBerkas()]
+      if (options.closedAfterConflict && openLookupCount > 1) return [closedBerkas()]
       return []
     },
     async insertOpenBerkas(input) {
@@ -695,6 +767,7 @@ function createFakeRepository(options: {
         input.tahunAnggaran,
       ])
       if (options.insertOpenBerkasError) throw options.insertOpenBerkasError
+      if (options.insertOpenBerkasConflict) return null
       return openBerkas({
         id: 'berkas-created',
         tahunAnggaran: input.tahunAnggaran,
@@ -803,8 +876,25 @@ function createFakeRepository(options: {
         input.workflowDocumentId ?? null,
         input.manualDocumentId ?? null,
       ])
+      if (options.appendBerkasActivityError) throw options.appendBerkasActivityError
     },
   }
+
+  if (options.withTransaction) {
+    repository.transaction = async (operation) => {
+      calls.push(['transaction:begin'])
+      try {
+        const result = await operation(repository)
+        calls.push(['transaction:commit'])
+        return result
+      } catch (error) {
+        calls.push(['transaction:rollback'])
+        throw error
+      }
+    }
+  }
+
+  return repository
 }
 
 function openBerkas(overrides: Partial<ReturnType<typeof baseBerkas>> = {}) {

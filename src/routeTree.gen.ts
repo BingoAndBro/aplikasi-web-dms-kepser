@@ -162,7 +162,6 @@ import { Route as ApiPpspmDokumenIdRejectRouteImport } from './routes/api/ppspm/
 import { Route as ApiPpspmDokumenIdApproveRouteImport } from './routes/api/ppspm/dokumen/$id/approve'
 import { Route as ApiPpkDokumenIdRejectRouteImport } from './routes/api/ppk/dokumen/$id/reject'
 import { Route as ApiPpkDokumenIdApproveRouteImport } from './routes/api/ppk/dokumen/$id/approve'
-import { Route as ApiKasubagManualArsipIdAttachmentsRouteImport } from './routes/api/kasubag/manual-arsip/$id/attachments'
 import { Route as ApiKasubagDokumenIdArchiveRouteImport } from './routes/api/kasubag/dokumen.$id.archive'
 import { Route as ApiKasubagBerkasIdLifecycleRouteImport } from './routes/api/kasubag/berkas/$id/lifecycle'
 import { Route as ApiKasubagBerkasIdItemsRouteImport } from './routes/api/kasubag/berkas/$id/items'
@@ -960,12 +959,6 @@ const ApiPpkDokumenIdApproveRoute = ApiPpkDokumenIdApproveRouteImport.update({
   path: '/approve',
   getParentRoute: () => ApiPpkDokumenIdRoute,
 } as any)
-const ApiKasubagManualArsipIdAttachmentsRoute =
-  ApiKasubagManualArsipIdAttachmentsRouteImport.update({
-    id: '/attachments',
-    path: '/attachments',
-    getParentRoute: () => ApiKasubagManualArsipIdRoute,
-  } as any)
 const ApiKasubagDokumenIdArchiveRoute =
   ApiKasubagDokumenIdArchiveRouteImport.update({
     id: '/archive',
@@ -1032,15 +1025,15 @@ const ApiPpkDokumenIdDownloadLampiranIndexRoute =
   } as any)
 const ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute =
   ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRouteImport.update({
-    id: '/$attachmentId/preview',
-    path: '/$attachmentId/preview',
-    getParentRoute: () => ApiKasubagManualArsipIdAttachmentsRoute,
+    id: '/attachments/$attachmentId/preview',
+    path: '/attachments/$attachmentId/preview',
+    getParentRoute: () => ApiKasubagManualArsipIdRoute,
   } as any)
 const ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute =
   ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRouteImport.update({
-    id: '/$attachmentId/download',
-    path: '/$attachmentId/download',
-    getParentRoute: () => ApiKasubagManualArsipIdAttachmentsRoute,
+    id: '/attachments/$attachmentId/download',
+    path: '/attachments/$attachmentId/download',
+    getParentRoute: () => ApiKasubagManualArsipIdRoute,
   } as any)
 const ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRoute =
   ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRouteImport.update({
@@ -1211,7 +1204,6 @@ export interface FileRoutesByFullPath {
   '/api/kasubag/berkas/$id/items': typeof ApiKasubagBerkasIdItemsRouteWithChildren
   '/api/kasubag/berkas/$id/lifecycle': typeof ApiKasubagBerkasIdLifecycleRoute
   '/api/kasubag/dokumen/$id/archive': typeof ApiKasubagDokumenIdArchiveRoute
-  '/api/kasubag/manual-arsip/$id/attachments': typeof ApiKasubagManualArsipIdAttachmentsRouteWithChildren
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
   '/api/ppspm/dokumen/$id/approve': typeof ApiPpspmDokumenIdApproveRoute
@@ -1373,7 +1365,6 @@ export interface FileRoutesByTo {
   '/api/kasubag/berkas/$id/items': typeof ApiKasubagBerkasIdItemsRouteWithChildren
   '/api/kasubag/berkas/$id/lifecycle': typeof ApiKasubagBerkasIdLifecycleRoute
   '/api/kasubag/dokumen/$id/archive': typeof ApiKasubagDokumenIdArchiveRoute
-  '/api/kasubag/manual-arsip/$id/attachments': typeof ApiKasubagManualArsipIdAttachmentsRouteWithChildren
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
   '/api/ppspm/dokumen/$id/approve': typeof ApiPpspmDokumenIdApproveRoute
@@ -1545,7 +1536,6 @@ export interface FileRoutesById {
   '/api/kasubag/berkas/$id/items': typeof ApiKasubagBerkasIdItemsRouteWithChildren
   '/api/kasubag/berkas/$id/lifecycle': typeof ApiKasubagBerkasIdLifecycleRoute
   '/api/kasubag/dokumen/$id/archive': typeof ApiKasubagDokumenIdArchiveRoute
-  '/api/kasubag/manual-arsip/$id/attachments': typeof ApiKasubagManualArsipIdAttachmentsRouteWithChildren
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
   '/api/ppspm/dokumen/$id/approve': typeof ApiPpspmDokumenIdApproveRoute
@@ -1718,7 +1708,6 @@ export interface FileRouteTypes {
     | '/api/kasubag/berkas/$id/items'
     | '/api/kasubag/berkas/$id/lifecycle'
     | '/api/kasubag/dokumen/$id/archive'
-    | '/api/kasubag/manual-arsip/$id/attachments'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
     | '/api/ppspm/dokumen/$id/approve'
@@ -1880,7 +1869,6 @@ export interface FileRouteTypes {
     | '/api/kasubag/berkas/$id/items'
     | '/api/kasubag/berkas/$id/lifecycle'
     | '/api/kasubag/dokumen/$id/archive'
-    | '/api/kasubag/manual-arsip/$id/attachments'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
     | '/api/ppspm/dokumen/$id/approve'
@@ -2051,7 +2039,6 @@ export interface FileRouteTypes {
     | '/api/kasubag/berkas/$id/items'
     | '/api/kasubag/berkas/$id/lifecycle'
     | '/api/kasubag/dokumen/$id/archive'
-    | '/api/kasubag/manual-arsip/$id/attachments'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
     | '/api/ppspm/dokumen/$id/approve'
@@ -3212,13 +3199,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPpkDokumenIdApproveRouteImport
       parentRoute: typeof ApiPpkDokumenIdRoute
     }
-    '/api/kasubag/manual-arsip/$id/attachments': {
-      id: '/api/kasubag/manual-arsip/$id/attachments'
-      path: '/attachments'
-      fullPath: '/api/kasubag/manual-arsip/$id/attachments'
-      preLoaderRoute: typeof ApiKasubagManualArsipIdAttachmentsRouteImport
-      parentRoute: typeof ApiKasubagManualArsipIdRoute
-    }
     '/api/kasubag/dokumen/$id/archive': {
       id: '/api/kasubag/dokumen/$id/archive'
       path: '/archive'
@@ -3298,17 +3278,17 @@ declare module '@tanstack/react-router' {
     }
     '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': {
       id: '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
-      path: '/$attachmentId/preview'
+      path: '/attachments/$attachmentId/preview'
       fullPath: '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
       preLoaderRoute: typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRouteImport
-      parentRoute: typeof ApiKasubagManualArsipIdAttachmentsRoute
+      parentRoute: typeof ApiKasubagManualArsipIdRoute
     }
     '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download': {
       id: '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
-      path: '/$attachmentId/download'
+      path: '/attachments/$attachmentId/download'
       fullPath: '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
       preLoaderRoute: typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRouteImport
-      parentRoute: typeof ApiKasubagManualArsipIdAttachmentsRoute
+      parentRoute: typeof ApiKasubagManualArsipIdRoute
     }
     '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex': {
       id: '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex'
@@ -3768,32 +3748,17 @@ const ApiKasubagDokumenIdRouteChildren: ApiKasubagDokumenIdRouteChildren = {
 const ApiKasubagDokumenIdRouteWithChildren =
   ApiKasubagDokumenIdRoute._addFileChildren(ApiKasubagDokumenIdRouteChildren)
 
-interface ApiKasubagManualArsipIdAttachmentsRouteChildren {
+interface ApiKasubagManualArsipIdRouteChildren {
   ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute: typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute
   ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute: typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute
 }
 
-const ApiKasubagManualArsipIdAttachmentsRouteChildren: ApiKasubagManualArsipIdAttachmentsRouteChildren =
+const ApiKasubagManualArsipIdRouteChildren: ApiKasubagManualArsipIdRouteChildren =
   {
     ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute:
       ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute,
     ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute:
       ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute,
-  }
-
-const ApiKasubagManualArsipIdAttachmentsRouteWithChildren =
-  ApiKasubagManualArsipIdAttachmentsRoute._addFileChildren(
-    ApiKasubagManualArsipIdAttachmentsRouteChildren,
-  )
-
-interface ApiKasubagManualArsipIdRouteChildren {
-  ApiKasubagManualArsipIdAttachmentsRoute: typeof ApiKasubagManualArsipIdAttachmentsRouteWithChildren
-}
-
-const ApiKasubagManualArsipIdRouteChildren: ApiKasubagManualArsipIdRouteChildren =
-  {
-    ApiKasubagManualArsipIdAttachmentsRoute:
-      ApiKasubagManualArsipIdAttachmentsRouteWithChildren,
   }
 
 const ApiKasubagManualArsipIdRouteWithChildren =

@@ -1,12 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { approveDokumenSchema } from '#/lib/schemas/dokumen'
 import { transition } from '#/lib/fsm'
 import type { StatusDokumen } from '#/lib/types/fsm'
+import {
+  DokumenTransitionConflictError,
+  dokumenTransitionConflictResponse,
+} from '#/lib/dokumen/transition-conflict'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -95,11 +99,14 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/approve')({
                 revisionNotes: null,
                 updatedAt: new Date(),
               })
-              .where(eq(dokumenTransaksi.id, params.id))
+              .where(and(
+                eq(dokumenTransaksi.id, params.id),
+                eq(dokumenTransaksi.status, 'IN_PPK_VALIDATION'),
+              ))
               .returning({ id: dokumenTransaksi.id })
 
             if (updatedRows.length === 0) {
-              throw new Error('DOCUMENT_STATUS_UPDATE_NOT_FOUND')
+              throw new DokumenTransitionConflictError()
             }
 
             // User ID comes from the local session, not an admin impersonation.
@@ -111,6 +118,7 @@ export const Route = createFileRoute('/api/ppk/dokumen/$id/approve')({
             })
           })
         } catch (err) {
+          if (err instanceof DokumenTransitionConflictError) return dokumenTransitionConflictResponse()
           console.error('[API/ppk/dokumen/:id/approve] local transaction error:', err)
           return Response.json({ error: 'Gagal memperbarui status dokumen' }, { status: 500 })
         }

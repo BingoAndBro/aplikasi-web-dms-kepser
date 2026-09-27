@@ -13,6 +13,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "auth:hash-password": "tsx src/scripts/generate-password-hash.ts",
+    "storage:sweep-pending": "dotenv -e .env -- tsx src/scripts/sweep-pending-uploads.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed/index.ts",

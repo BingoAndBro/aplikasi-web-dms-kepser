@@ -275,33 +275,20 @@ export async function prepareLocalSubmitWriteBridge({
     return fail('kegiatan-not-found', 'Kegiatan tidak ditemukan')
   }
 
-  let requiredKelengkapan: LocalSubmitRequiredKelengkapan[] = []
-  if (shouldReadRequiredKelengkapan(payload)) {
-    requiredKelengkapan = await repository.getRequiredKelengkapan({
-      kegiatanId: payload.kegiatanJenisId,
-      isKetuaTim: payload.isKetuaTim,
-      komponenId: payload.komponenId ?? null,
-      jenisPermintaanId: payload.jenisPermintaanId ?? null,
-      kategoriPermintaanId: payload.kategoriPermintaanId ?? null,
-      detailPermintaanId: payload.detailPermintaanId ?? null,
-    })
+  const kelengkapanCheck = await checkRequiredKelengkapan(repository, {
+    isNonMaterial: Boolean(payload.is_non_material),
+    kegiatanId: payload.kegiatanJenisId,
+    isKetuaTim: payload.isKetuaTim,
+    komponenId: payload.komponenId ?? null,
+    jenisPermintaanId: payload.jenisPermintaanId ?? null,
+    kategoriPermintaanId: payload.kategoriPermintaanId ?? null,
+    detailPermintaanId: payload.detailPermintaanId ?? null,
+  }, lampiranUrls)
 
-    const missingRequiredNames = getMissingRequiredKelengkapanNames(
-      requiredKelengkapan,
-      lampiranUrls,
-    )
-
-    if (missingRequiredNames.length > 0) {
-      return {
-        ok: false,
-        issue: {
-          code: 'required-attachments-missing',
-          message: `Lampiran wajib belum lengkap: ${missingRequiredNames.join(', ')}`,
-          missingRequiredNames,
-        },
-      }
-    }
+  if (!kelengkapanCheck.ok) {
+    return { ok: false, issue: kelengkapanCheck.issue }
   }
+  const { requiredKelengkapan } = kelengkapanCheck
 
   if (payload.isKetuaTim) {
     const isAssigned = await repository.hasKetuaTimAssignment({
@@ -363,9 +350,19 @@ export async function prepareLocalSubmitWriteBridge({
   }
 }
 
+export type ExecuteLocalSubmitWriteOptions = {
+  /**
+   * Runs inside the submit transaction after the document, status and audit
+   * rows are written and before commit. Throwing rolls the whole submit back
+   * (used to move pending files so a failed move never leaves a committed row).
+   */
+  afterWrites?: () => Promise<void>
+}
+
 export async function executeLocalSubmitWritePlan(
   repository: LocalSubmitBridgeRepository,
   plan: LocalSubmitWritePlan,
+  options: ExecuteLocalSubmitWriteOptions = {},
 ): Promise<ExecuteLocalSubmitWriteResult> {
   return repository.withSubmitWriteTransaction(async (tx) => {
     const created = await tx.createDokumen(plan.documentCreatePayload)
@@ -381,6 +378,8 @@ export async function executeLocalSubmitWritePlan(
       ...plan.auditPayload,
     }
     await tx.appendLog(auditPayload)
+
+    await options.afterWrites?.()
 
     return {
       dokumen: {
@@ -501,6 +500,57 @@ export async function resolveLocalSubmitLeafName(
   return fallback
 }
 
+export type RequiredKelengkapanCheckInput = LocalSubmitRequiredKelengkapanRead & {
+  isNonMaterial: boolean
+}
+
+export type RequiredKelengkapanCheckResult =
+  | { ok: true; requiredKelengkapan: LocalSubmitRequiredKelengkapan[] }
+  | { ok: false; issue: LocalSubmitBridgeIssue & { code: 'required-attachments-missing' } }
+
+/**
+ * Required-attachment rule shared by SUBMIT, RESUBMIT and RESUBMIT_PPK: the
+ * checklist is the exact six-column kelengkapan match
+ * (buildRequiredKelengkapanCondition) and every required row must have an
+ * uploaded lampiran with the same kelengkapan_id.
+ */
+export async function checkRequiredKelengkapan(
+  repository: Pick<LocalSubmitBridgeRepository, 'getRequiredKelengkapan'>,
+  input: RequiredKelengkapanCheckInput,
+  lampiranUrls: LampiranUrl[],
+): Promise<RequiredKelengkapanCheckResult> {
+  if (!shouldReadRequiredKelengkapan(input)) {
+    return { ok: true, requiredKelengkapan: [] }
+  }
+
+  const requiredKelengkapan = await repository.getRequiredKelengkapan({
+    kegiatanId: input.kegiatanId,
+    isKetuaTim: input.isKetuaTim,
+    komponenId: input.komponenId ?? null,
+    jenisPermintaanId: input.jenisPermintaanId ?? null,
+    kategoriPermintaanId: input.kategoriPermintaanId ?? null,
+    detailPermintaanId: input.detailPermintaanId ?? null,
+  })
+
+  const missingRequiredNames = getMissingRequiredKelengkapanNames(
+    requiredKelengkapan,
+    lampiranUrls,
+  )
+
+  if (missingRequiredNames.length > 0) {
+    return {
+      ok: false,
+      issue: {
+        code: 'required-attachments-missing',
+        message: `Lampiran wajib belum lengkap: ${missingRequiredNames.join(', ')}`,
+        missingRequiredNames,
+      },
+    }
+  }
+
+  return { ok: true, requiredKelengkapan }
+}
+
 function getMissingRequiredKelengkapanNames(
   requiredItems: LocalSubmitRequiredKelengkapan[],
   lampiranUrls: LampiranUrl[],
@@ -512,8 +562,8 @@ function getMissingRequiredKelengkapanNames(
     .map(item => item.namaDokumen)
 }
 
-function shouldReadRequiredKelengkapan(payload: LocalSubmitPayload): boolean {
-  return !payload.is_non_material || Boolean(payload.jenisPermintaanId)
+function shouldReadRequiredKelengkapan(input: RequiredKelengkapanCheckInput): boolean {
+  return !input.isNonMaterial || Boolean(input.jenisPermintaanId)
 }
 
 export function deriveLocalSubmitDisplayName(session: LocalServerSession): string {

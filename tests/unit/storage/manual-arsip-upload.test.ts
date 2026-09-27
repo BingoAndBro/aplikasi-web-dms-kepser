@@ -5,7 +5,6 @@ import {
   ManualArsipUploadError,
   createManualArsipAttachmentStorageDescriptors,
   isAllowedManualArsipAttachmentContentType,
-  writeManualArsipAttachmentContent,
 } from '#/lib/storage/manual-arsip-upload'
 
 const OWNER_ID = '11111111-1111-4111-8111-111111111111'
@@ -65,15 +64,5 @@ describe('manual arsip upload policy alignment', () => {
     ])
     expect(JSON.stringify(descriptors)).not.toContain('D:\\')
     expect(JSON.stringify(descriptors)).not.toContain('storage_root')
-  })
-
-  it('rejects invalid content signatures when declared content type is supplied', async () => {
-    await expect(writeManualArsipAttachmentContent({
-      logicalPath: `${OWNER_ID}/${MANUAL_ARSIP_ID}_spoofed.pdf`,
-      content: Buffer.from('<script></script>'),
-      expectedBytes: 17,
-      expectedContentType: 'application/pdf',
-      expectedExtension: 'pdf',
-    })).rejects.toMatchObject({ code: 'invalid-file-signature' })
   })
 })
