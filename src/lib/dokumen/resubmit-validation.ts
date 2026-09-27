@@ -4,6 +4,16 @@
 // lampiran, and the exact six-column required-kelengkapan match. All three
 // rules come from the submit path itself (validateNominalForMaterial,
 // checkLampiranNotEmpty, checkRequiredKelengkapan) — no copies.
+//
+// D-12 policy: dokumen.isKetuaTim here is the value the server already locked
+// in at SUBMIT time (prepareLocalSubmitWriteBridge resolves it from the
+// Ketua Tim assignment, ignoring the client's claim). RESUBMIT does NOT call
+// hasKetuaTimAssignment again — the repository type below deliberately picks
+// only 'getRequiredKelengkapan', so it cannot re-check the assignment even by
+// accident. If the Ketua Tim roster for the kegiatan changes after submit,
+// this document keeps the checklist it was submitted under until its
+// kegiatanId itself changes (see PATCH /api/dokumen/$id, which recomputes
+// isKetuaTim only then). This is a deliberate design choice, not a gap.
 import { validateNominalForMaterial } from '#/lib/schemas/dokumen'
 import {
   checkLampiranNotEmpty,

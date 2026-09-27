@@ -122,4 +122,31 @@ describe('validateResubmitRequirements', () => {
     expect(result).toEqual({ ok: true })
     expect(repository.getRequiredKelengkapan).not.toHaveBeenCalled()
   })
+
+  // D-12 policy: the Ketua Tim value is locked at SUBMIT time and RESUBMIT
+  // never re-verifies it against the current assignment roster, even when the
+  // repository could answer that question. The type of `repository` only
+  // exposes `getRequiredKelengkapan`, so this is enforced by the compiler as
+  // well as at runtime.
+  it('never re-verifies the Ketua Tim assignment on resubmit, even if it changed after submit', async () => {
+    const repository = fakeRepository()
+    // The document was submitted as Ketua Tim (isKetuaTim: true, locked in
+    // `materialDokumen`). Assume the admin has since removed that assignment
+    // — resubmit must still use the stored value and check the Ketua Tim
+    // checklist, not silently fall back to the Anggota checklist.
+    const hasKetuaTimAssignment = vi.fn(async () => false)
+
+    const result = await validateResubmitRequirements({
+      dokumen: materialDokumen,
+      lampiranUrls: [lampiran(REQUIRED_ID)],
+      nominalRealisasi: '1500000.00',
+      repository: { ...repository, hasKetuaTimAssignment } as typeof repository,
+    })
+
+    expect(result).toEqual({ ok: true })
+    expect(repository.getRequiredKelengkapan).toHaveBeenCalledWith(
+      expect.objectContaining({ isKetuaTim: true }),
+    )
+    expect(hasKetuaTimAssignment).not.toHaveBeenCalled()
+  })
 })
