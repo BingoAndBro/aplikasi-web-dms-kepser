@@ -16,7 +16,7 @@ function assertSuccess(result: ReturnType<typeof transition>, msg?: string) {
 describe('FSM transition()', () => {
 
   // ═══════════════════════════════════════════════════════
-  // HAPPY PATH — All 9 Valid Transitions
+  // HAPPY PATH — All 8 Valid Transitions
   // ═══════════════════════════════════════════════════════
 
   describe('Valid Transitions', () => {
@@ -81,6 +81,15 @@ describe('FSM transition()', () => {
       expect(result.newCurrentStep).toBe('PPSPM')
       expect(result.newRevisionTarget).toBeNull()
       expect(result.stepUrutan).toBe(2)
+    })
+
+    it('NEED_REVISION + KEMBALIKAN → NEED_REVISION, target=USER, step=1', () => {
+      const result = transition('NEED_REVISION', 'KEMBALIKAN', 'PPK', 'USER')
+      assertSuccess(result)
+      expect(result.newStatus).toBe('NEED_REVISION')
+      expect(result.newCurrentStep).toBe('PPK')
+      expect(result.newRevisionTarget).toBe('USER')
+      expect(result.stepUrutan).toBe(1)
     })
 
   })
@@ -155,6 +164,38 @@ describe('FSM transition()', () => {
       assertError(transition('NEED_REVISION', 'RESUBMIT_PPK', 'PEGAWAI', 'PPK'))
     })
 
+    // KEMBALIKAN
+    it('KEMBALIKAN by PPK → success', () => {
+      assertSuccess(transition('NEED_REVISION', 'KEMBALIKAN', 'PPK', 'USER'))
+    })
+    it.each(['PEGAWAI', 'PPSPM', 'KEPALA_SUB_BAGIAN_UMUM', 'ADMIN'] as const)(
+      'KEMBALIKAN by %s → error',
+      (role) => {
+        assertError(transition('NEED_REVISION', 'KEMBALIKAN', role, 'USER'))
+      },
+    )
+
+  })
+
+  // ═══════════════════════════════════════════════════════
+  // KEMBALIKAN (transisi #8: PPK mengembalikan ke Pegawai)
+  // ═══════════════════════════════════════════════════════
+
+  describe('KEMBALIKAN Validation', () => {
+    it('KEMBALIKAN from IN_PPK_VALIDATION → error', () => {
+      assertError(transition('IN_PPK_VALIDATION', 'KEMBALIKAN', 'PPK', 'USER'))
+    })
+    it('KEMBALIKAN from IN_PPSPM_APPROVAL → error', () => {
+      assertError(transition('IN_PPSPM_APPROVAL', 'KEMBALIKAN', 'PPK', 'USER'))
+    })
+    it('KEMBALIKAN from COMPLETED → error', () => {
+      assertError(transition('COMPLETED', 'KEMBALIKAN', 'PPK', 'USER'))
+    })
+    it('KEMBALIKAN result always targets USER', () => {
+      // The route reads revision_target=PPK from the row; the FSM result must flip it to USER.
+      expect(transition('NEED_REVISION', 'KEMBALIKAN', 'PPK', 'PPK').newRevisionTarget).toBe('USER')
+      expect(transition('NEED_REVISION', 'KEMBALIKAN', 'PPK').newRevisionTarget).toBe('USER')
+    })
   })
 
   // ═══════════════════════════════════════════════════════

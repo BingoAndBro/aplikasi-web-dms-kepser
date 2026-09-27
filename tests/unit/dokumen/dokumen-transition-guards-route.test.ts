@@ -194,6 +194,30 @@ describe('PPK kembalikan — keeps the PPSPM rejection reason', () => {
     }))
   })
 
+  it.each([
+    ['revision_target USER', { status: 'NEED_REVISION', revision_target: 'USER' }],
+    ['revision_target null', { status: 'NEED_REVISION', revision_target: null }],
+    ['status IN_PPK_VALIDATION', { status: 'IN_PPK_VALIDATION', revision_target: null }],
+  ])('rejects with 400 and no write when %s', async (_label, row) => {
+    useSession(['PPK'])
+    queueSelects([{ id: DOCUMENT_ID, revision_notes: 'x', ...row }])
+
+    const response = await handler(KembalikanRoute)(postRequest('/api/ppk/kembalikan/x', {}))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Dokumen ini tidak dalam status revisi PPK' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it.each([['PEGAWAI'], ['PPSPM'], ['KEPALA_SUB_BAGIAN_UMUM']])('rejects %s with 403', async (role) => {
+    useSession([role])
+
+    const response = await handler(KembalikanRoute)(postRequest('/api/ppk/kembalikan/x', {}))
+
+    expect(response.status).toBe(403)
+    expect(mocks.dbSelect).not.toHaveBeenCalled()
+  })
+
   it('returns 409 when the document left NEED_REVISION/PPK concurrently', async () => {
     useSession(['PPK'])
     queueSelects([{ id: DOCUMENT_ID, status: 'NEED_REVISION', revision_target: 'PPK', revision_notes: 'x' }])
