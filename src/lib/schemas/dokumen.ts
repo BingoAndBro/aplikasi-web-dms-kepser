@@ -151,6 +151,22 @@ export function validateNominalForMaterial(
 }
 
 /**
+ * PATCH (save without submit) rule for a nominal the client sends: Material
+ * must pass validateNominalForMaterial (> 0), Non-Material carries no nominal
+ * at all. An omitted nominal leaves the stored value untouched.
+ */
+export function validateNominalUpdate(
+  isNonMaterial: boolean,
+  nominalRealisasi: number | null | undefined,
+): { valid: boolean; error?: string } {
+  if (nominalRealisasi === undefined) return { valid: true }
+  if (isNonMaterial) {
+    return { valid: false, error: 'Dokumen Non-Material tidak memiliki nominal realisasi' }
+  }
+  return validateNominalForMaterial(false, nominalRealisasi)
+}
+
+/**
  * Validates the workflow chain field required per document characteristic:
  * Material requires komponenId (Komponen selection); Non-Material requires
  * a free-text namaDokumen ("Nama Dokumen").

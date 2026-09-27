@@ -307,6 +307,27 @@ describe('PPK RESUBMIT_PPK — Zod always, same rules as SUBMIT', () => {
     expect(mocks.dbSelect).not.toHaveBeenCalled()
   })
 
+  // D-2: PATCH (save without submit) applies the same nominal rule as SUBMIT.
+  it.each([
+    ['0 on Material', ppkDokumenRow(), 0, 'Nominal_realisasi wajib untuk dokumen Material'],
+    ['null on Material', ppkDokumenRow(), null, 'Nominal_realisasi wajib untuk dokumen Material'],
+    [
+      'any value on Non-Material',
+      ppkDokumenRow({ is_non_material: true, jenis_permintaan_id: null, kategori_permintaan_id: null }),
+      1000,
+      'Dokumen Non-Material tidak memiliki nominal realisasi',
+    ],
+  ])('PATCH rejects nominal %s before touching files or the row', async (_label, row, nominal, error) => {
+    useSession(['PPK'])
+    queueSelects([row])
+
+    const response = await handler(PpkResubmitRoute, 'PATCH')(request('PATCH', { nominalRealisasi: nominal }))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error })
+    expect(mocks.prepareLocalAttachmentReplacement).not.toHaveBeenCalled()
+  })
+
   it('still accepts an empty body as "no changes"', async () => {
     useSession(['PPK'])
     queueSelects([ppkDokumenRow()], requiredKelengkapanRows())

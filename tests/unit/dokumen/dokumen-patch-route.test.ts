@@ -153,3 +153,50 @@ describe('PATCH /api/dokumen/$id — Ketua Tim follows the kegiatan (D-12)', () 
     expect(mocks.txUpdateSet.mock.calls[0][0]).not.toHaveProperty('isKetuaTim')
   })
 })
+
+describe('PATCH /api/dokumen/$id — nominal follows the SUBMIT rule (D-2)', () => {
+  it.each([
+    ['0', 0],
+    ['null', null],
+  ])('rejects Material nominal %s', async (_label, nominal) => {
+    queueSelectResults([materialRevisionRow()])
+
+    const response = await patch({ nominalRealisasi: nominal })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Nominal_realisasi wajib untuk dokumen Material' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('accepts a positive Material nominal', async () => {
+    queueSelectResults([materialRevisionRow()], [updatedRow])
+
+    const response = await patch({ nominalRealisasi: 1500000 })
+
+    expect(response.status).toBe(200)
+    expect(mocks.txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({ nominalRealisasi: '1500000' }))
+  })
+
+  it.each([
+    ['0', 0],
+    ['a positive value', 5000],
+    ['null', null],
+  ])('rejects any nominal (%s) on a Non-Material document', async (_label, nominal) => {
+    queueSelectResults([nonMaterialRow()])
+
+    const response = await patch({ nominalRealisasi: nominal })
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: 'Dokumen Non-Material tidak memiliki nominal realisasi' })
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+
+  it('keeps Material metadata locked once COMPLETED', async () => {
+    queueSelectResults([materialRevisionRow({ status: 'COMPLETED', revision_target: null })])
+
+    const response = await patch({ nominalRealisasi: 2000000 })
+
+    expect(response.status).toBe(400)
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+})

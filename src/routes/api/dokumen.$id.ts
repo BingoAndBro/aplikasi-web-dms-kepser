@@ -18,7 +18,11 @@ import {
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
 import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
-import { getDokumenValidationErrorMessage, updateDokumenSchema } from '#/lib/schemas/dokumen'
+import {
+  getDokumenValidationErrorMessage,
+  updateDokumenSchema,
+  validateNominalUpdate,
+} from '#/lib/schemas/dokumen'
 import { type LampiranUrl } from '#/lib/dokumen-helpers'
 import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
 import { deriveLocalSubmitDisplayName } from '#/lib/dokumen/local-submit-write-bridge'
@@ -506,6 +510,11 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             return Response.json({ error: 'Dokumen Non-Material hanya bisa diedit jika status Tersimpan' }, { status: 400 })
           }
           return Response.json({ error: 'Dokumen tidak bisa diedit — status bukan NEED_REVISION' }, { status: 400 })
+        }
+
+        const nominalCheck = validateNominalUpdate(isNonMaterial, parsed.data.nominalRealisasi)
+        if (!nominalCheck.valid) {
+          return Response.json({ error: nominalCheck.error }, { status: 400 })
         }
 
         // Ketua Tim / Anggota follows the kegiatan and is decided by the server,

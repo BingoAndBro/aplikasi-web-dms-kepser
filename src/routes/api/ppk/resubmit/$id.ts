@@ -17,6 +17,7 @@ import {
   getDokumenValidationErrorMessage,
   resubmitDokumenSchema,
   type ResubmitDokumen,
+  validateNominalUpdate,
 } from '#/lib/schemas/dokumen'
 import type { LampiranUrl } from '#/lib/dokumen-helpers'
 import type { StatusDokumen } from '#/lib/types/fsm'
@@ -278,6 +279,10 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
           status: string
           revision_target: string | null
           lampiran_urls: unknown
+          is_non_material: boolean | null
+          jenis_permintaan_id: string | null
+          kategori_permintaan_id: string | null
+          detail_permintaan_id: string | null
         }>
         try {
           dokRows = await db
@@ -286,6 +291,10 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
               status: dokumenTransaksi.status,
               revision_target: dokumenTransaksi.revisionTarget,
               lampiran_urls: dokumenTransaksi.lampiranUrls,
+              is_non_material: dokumenTransaksi.isNonMaterial,
+              jenis_permintaan_id: dokumenTransaksi.jenisPermintaanId,
+              kategori_permintaan_id: dokumenTransaksi.kategoriPermintaanId,
+              detail_permintaan_id: dokumenTransaksi.detailPermintaanId,
             })
             .from(dokumenTransaksi)
             .where(eq(dokumenTransaksi.id, params.id))
@@ -300,6 +309,14 @@ export const Route = createFileRoute('/api/ppk/resubmit/$id')({
 
         if (dok.status !== 'NEED_REVISION' || dok.revision_target !== 'PPK') {
           return Response.json({ error: 'Dokumen ini tidak memerlukan revisi oleh PPK' }, { status: 400 })
+        }
+
+        // Same Material/Non-Material reading as GET, same nominal rule as SUBMIT.
+        const isNonMaterial = dok.is_non_material === true ||
+          (!dok.jenis_permintaan_id && !dok.kategori_permintaan_id && !dok.detail_permintaan_id)
+        const nominalCheck = validateNominalUpdate(isNonMaterial, body.nominalRealisasi)
+        if (!nominalCheck.valid) {
+          return Response.json({ error: nominalCheck.error }, { status: 400 })
         }
 
         const existingLampirans = parseLampiranUrls(dok.lampiran_urls)
