@@ -7,6 +7,8 @@ import {
   validateOperationalKlasifikasiSelection,
 } from '#/lib/archive/berkas-klasifikasi-eligibility'
 
+const TA = 2026
+
 describe('berkas klasifikasi eligibility helper', () => {
   it('accepts active leaf classification for operational selection', async () => {
     await expect(validateOperationalKlasifikasiSelection('active-leaf', {
@@ -86,7 +88,7 @@ describe('berkas klasifikasi eligibility helper', () => {
   })
 
   it('includes classifications with no existing berkas', () => {
-    expect(getKlasifikasiBerkasEligibility([])).toMatchObject({
+    expect(getKlasifikasiBerkasEligibility([], TA)).toMatchObject({
       is_selectable: true,
       has_open_berkas: false,
       unavailable_reason: null,
@@ -96,7 +98,7 @@ describe('berkas klasifikasi eligibility helper', () => {
   it('includes classifications with exactly one OPEN berkas for reuse', () => {
     expect(getKlasifikasiBerkasEligibility([
       eligibilityRow('klasifikasi-open', 'OPEN', null),
-    ])).toMatchObject({
+    ], TA)).toMatchObject({
       is_selectable: true,
       has_open_berkas: true,
       unavailable_reason: null,
@@ -112,18 +114,25 @@ describe('berkas klasifikasi eligibility helper', () => {
   ] as const)('excludes CLOSED classifications with status_arsip %s', (statusArsip) => {
     expect(getKlasifikasiBerkasEligibility([
       eligibilityRow('klasifikasi-closed', 'CLOSED', statusArsip),
-    ])).toMatchObject({
+    ], TA)).toMatchObject({
       is_selectable: false,
       has_open_berkas: false,
-      unavailable_reason: 'Berkas untuk cara pembayaran ini sudah ditutup',
+      unavailable_reason: 'Berkas untuk Cara Pembayaran ini pada TA 2026 sudah ditutup.',
     })
+  })
+
+  // D-18: the closed reason names the Tahun Anggaran the lock applies to.
+  it('names the Tahun Anggaran in the closed reason', () => {
+    expect(getKlasifikasiBerkasEligibility([
+      eligibilityRow('klasifikasi-closed', 'CLOSED', 'AKTIF'),
+    ], 2025).unavailable_reason).toBe('Berkas untuk Cara Pembayaran ini pada TA 2025 sudah ditutup.')
   })
 
   it('fails safe for anomalous multiple OPEN berkas rows', () => {
     expect(getKlasifikasiBerkasEligibility([
       eligibilityRow('klasifikasi-anomaly', 'OPEN', null),
       eligibilityRow('klasifikasi-anomaly', 'OPEN', null),
-    ])).toMatchObject({
+    ], TA)).toMatchObject({
       is_selectable: false,
       has_open_berkas: true,
       anomaly: 'MULTIPLE_OPEN_BERKAS',
@@ -144,7 +153,7 @@ describe('berkas klasifikasi eligibility helper', () => {
     ], [
       eligibilityRow('closed-leaf', 'CLOSED', 'AKTIF'),
       eligibilityRow('open-leaf', 'OPEN', null),
-    ])
+    ], TA)
 
     expect(filtered).toEqual([
       {
@@ -175,7 +184,7 @@ describe('berkas klasifikasi eligibility helper', () => {
       },
     ], [
       eligibilityRow('up-1', 'CLOSED', 'AKTIF'),
-    ])
+    ], TA)
 
     expect(filtered).toEqual([])
   })

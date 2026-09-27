@@ -182,7 +182,7 @@ export const Route = createFileRoute('/api/kasubag/klasifikasi/')({
             .where(eq(berkasArsip.tahunAnggaran, tahunAnggaran))
 
           return Response.json({
-            klasifikasi: filterKlasifikasiTreeForBerkasSelection(tree, berkasRows),
+            klasifikasi: filterKlasifikasiTreeForBerkasSelection(tree, berkasRows, tahunAnggaran),
           })
         } catch (err) {
           console.error('[arsiparis/klasifikasi] GET local query error:', toSafeErrorLog(err))

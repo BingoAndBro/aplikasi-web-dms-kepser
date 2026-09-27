@@ -39,7 +39,10 @@ export type OperationalKlasifikasiSelectionErrorCode =
   | 'KLASIFIKASI_INACTIVE'
   | 'KLASIFIKASI_PARENT'
 
-const CLOSED_UNAVAILABLE_REASON = 'Berkas untuk cara pembayaran ini sudah ditutup'
+// A closed berkas locks (Cara Pembayaran, Tahun Anggaran), so the reason names the year.
+function closedUnavailableReason(tahunAnggaran: number): string {
+  return `Berkas untuk Cara Pembayaran ini pada TA ${tahunAnggaran} sudah ditutup.`
+}
 const ANOMALY_UNAVAILABLE_REASON = 'Data berkas untuk cara pembayaran ini perlu ditinjau'
 
 export class OperationalKlasifikasiSelectionError extends Error {
@@ -88,6 +91,7 @@ export async function validateOperationalKlasifikasiSelection(
 
 export function getKlasifikasiBerkasEligibility(
   rows: readonly KlasifikasiBerkasEligibilityRow[],
+  tahunAnggaran: number,
 ): KlasifikasiBerkasEligibility {
   const openRows = rows.filter((row) => row.status_berkas === BERKAS_STATUS.OPEN)
 
@@ -113,7 +117,7 @@ export function getKlasifikasiBerkasEligibility(
     return {
       is_selectable: false,
       has_open_berkas: false,
-      unavailable_reason: CLOSED_UNAVAILABLE_REASON,
+      unavailable_reason: closedUnavailableReason(tahunAnggaran),
       anomaly: null,
     }
   }
@@ -129,21 +133,23 @@ export function getKlasifikasiBerkasEligibility(
 export function filterKlasifikasiTreeForBerkasSelection<TNode extends KlasifikasiEligibilityNode>(
   nodes: readonly TNode[],
   berkasRows: readonly KlasifikasiBerkasEligibilityRow[],
+  tahunAnggaran: number,
 ): TNode[] {
   const rowsByKlasifikasi = groupBerkasRowsByKlasifikasiId(berkasRows)
 
-  return filterNodes(nodes, rowsByKlasifikasi)
+  return filterNodes(nodes, rowsByKlasifikasi, tahunAnggaran)
 }
 
 function filterNodes<TNode extends KlasifikasiEligibilityNode>(
   nodes: readonly TNode[],
   rowsByKlasifikasi: Map<string, KlasifikasiBerkasEligibilityRow[]>,
+  tahunAnggaran: number,
 ): TNode[] {
   const filtered: TNode[] = []
 
   for (const node of nodes) {
     const hasSourceChildren = Boolean(node.children && node.children.length > 0)
-    const children = filterNodes(node.children as readonly TNode[] | undefined ?? [], rowsByKlasifikasi)
+    const children = filterNodes(node.children as readonly TNode[] | undefined ?? [], rowsByKlasifikasi, tahunAnggaran)
 
     if (hasSourceChildren) {
       // This node is a parent in the master data. A parent can never be
@@ -159,7 +165,7 @@ function filterNodes<TNode extends KlasifikasiEligibilityNode>(
       continue
     }
 
-    const eligibility = getKlasifikasiBerkasEligibility(rowsByKlasifikasi.get(node.id) ?? [])
+    const eligibility = getKlasifikasiBerkasEligibility(rowsByKlasifikasi.get(node.id) ?? [], tahunAnggaran)
 
     if (eligibility.is_selectable) {
       filtered.push({

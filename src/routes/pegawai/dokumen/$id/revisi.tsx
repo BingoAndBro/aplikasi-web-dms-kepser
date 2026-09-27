@@ -372,7 +372,7 @@ function DokumenRevisiPage() {
 
           <div className="mt-6 grid w-full gap-3 rounded-2xl border border-brand-border bg-bg-surface p-4 text-left shadow-sm sm:grid-cols-3">
             <div>
-              <p className="text-[10px] font-semibold text-zinc-500">Jenis Dokumen</p>
+              <p className="text-[10px] font-semibold text-zinc-500">Karakteristik</p>
               <p className="mt-1 text-sm font-bold text-zinc-950">
                 {resubmitSuccess.isNonMaterial ? 'Non-Material' : 'Material'}
               </p>

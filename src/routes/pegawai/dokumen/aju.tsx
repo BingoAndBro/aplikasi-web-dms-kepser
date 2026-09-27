@@ -1181,7 +1181,7 @@ function AjukanDokumenPage() {
         title="Ajukan dokumen ini?"
         description={
           isNonMaterial
-            ? 'Pastikan jenis dokumen, kegiatan, keterangan detail, dan kelengkapan sudah benar. Dokumen Non-Material akan disimpan sebagai Tersimpan.'
+            ? 'Pastikan karakteristik, kegiatan, keterangan detail, dan kelengkapan sudah benar. Dokumen Non-Material akan disimpan sebagai Tersimpan.'
             : 'Pastikan jenis permintaan, kegiatan, nominal realisasi, dan kelengkapan sudah benar. Dokumen Material akan mengikuti alur validasi dan persetujuan yang berlaku.'
         }
         confirmLabel={isNonMaterial ? 'Simpan Dokumen' : 'Ajukan Dokumen'}
