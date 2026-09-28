@@ -403,9 +403,9 @@ describe('Laporan Kinerja API route', () => {
 })
 
 // T-5 / D-26: dokumen manual KSBU (arsip.manual_arsip) ikut dihitung sebagai
-// realisasi di Monitoring Nominal Realisasi (PPK/PPSPM), tapi tidak di
-// Laporan Kinerja (PJ Kinerja, scope=laporan_kinerja) — lihat komentar desain
-// di src/routes/api/laporan/kinerja.ts.
+// realisasi di Monitoring Nominal Realisasi (PPK/PPSPM) dan juga di Laporan
+// Kinerja (PJ Kinerja, scope=laporan_kinerja) — lihat komentar desain di
+// src/routes/api/laporan/kinerja.ts.
 describe('Laporan Kinerja API route — dokumen manual KSBU (T-5/D-26)', () => {
   it('includes an active manual document for PPK Monitoring Realisasi (no scope param)', async () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(['PPK'], 'PPK'))
@@ -432,7 +432,7 @@ describe('Laporan Kinerja API route — dokumen manual KSBU (T-5/D-26)', () => {
     })
   })
 
-  it('excludes manual documents from PJ Kinerja Laporan Kinerja (scope=laporan_kinerja)', async () => {
+  it('includes manual documents in PJ Kinerja Laporan Kinerja (scope=laporan_kinerja)', async () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(
       ['PENANGGUNG_JAWAB_KINERJA'],
       'PENANGGUNG_JAWAB_KINERJA',
@@ -445,7 +445,9 @@ describe('Laporan Kinerja API route — dokumen manual KSBU (T-5/D-26)', () => {
     const body = await response.json()
 
     expect(response.status).toBe(200)
-    expect(body.dokumen).toHaveLength(0)
+    expect(body.dokumen).toHaveLength(1)
+    expect(body.dokumen[0]).toMatchObject({ id: 'manual-1', status: 'COMPLETED', sumber: 'MANUAL' })
+    expect(body.meta.tahun_tersedia).toContain(2026)
   })
 
   it('excludes a destroyed (DIMUSNAHKAN) manual document via the ne() filter', async () => {
@@ -551,8 +553,7 @@ function createSession(roles: string[], activeRole: string) {
 // The route issues four `db.select(...)` calls in order: destroyed-berkas
 // document ids, then berkased (diberkaskan) document ids, then the main
 // dokumen_transaksi row query, then the manual_arsip row query (T-5/D-26;
-// skipped in code when scope=laporan_kinerja, but harmless to always queue
-// here). `setupDbSelect` queues all four via `mockReturnValueOnce` so each
+// merged for every scope). `setupDbSelect` queues all four via `mockReturnValueOnce` so each
 // test only has to describe the shapes it cares about.
 function setupDbSelect(
   mainRows: unknown[],

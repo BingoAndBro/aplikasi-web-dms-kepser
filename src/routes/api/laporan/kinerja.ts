@@ -235,19 +235,15 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             .orderBy(desc(dokumenTransaksi.tahun))
 
           // T-5 / D-26: dokumen manual KSBU ikut dihitung sebagai realisasi,
-          // TAPI hanya untuk Monitoring Nominal Realisasi (PPK/PPSPM,
-          // !includeNonMaterial) — bukan untuk Laporan Kinerja PJ Kinerja
-          // (scope=laporan_kinerja), yang membuka detail lewat
-          // DokumenDetailDialog (fetch /api/dokumen/$id, tidak ada untuk
-          // manual_arsip). Monitoring Realisasi memakai
-          // KinerjaDocumentMetadataDialog yang hanya menampilkan field baris
-          // ini sendiri, jadi aman untuk sumber manual.
+          // baik di Monitoring Nominal Realisasi (PPK/PPSPM) maupun di Laporan
+          // Kinerja PJ Kinerja (scope=laporan_kinerja). Detailnya dibuka lewat
+          // KinerjaDocumentMetadataDialog (hanya field baris ini sendiri),
+          // bukan DokumenDetailDialog — /api/dokumen/$id tidak ada untuk
+          // manual_arsip; view memilih dialog berdasarkan `sumber`.
           // "tahun" dipakai dari `tanggal` milik manual_arsip sendiri (bukan
           // tahun_anggaran berkas yang menaunginya) — konsisten dengan makna
           // `tahun` pada dokumen_transaksi: tahun milik dokumennya sendiri,
           // independen dari tahun anggaran berkas (Q5).
-          // Query runs regardless of scope (keeps the db.select() call
-          // sequence constant); only the merge below is scope-gated.
           const manualRows = await db
             .select({
               id: manualArsip.id,
@@ -318,10 +314,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             is_diberkaskan: berkasedDocumentIds.has(row.id),
           }))
 
-          // Manual entries only count toward Monitoring Nominal Realisasi
-          // (PPK/PPSPM, !includeNonMaterial), not PJ Kinerja's Laporan
-          // Kinerja — see the design note above the query.
-          const manualCombined: CombinedRow[] = includeNonMaterial ? [] : manualRows.map((row) => ({
+          const manualCombined: CombinedRow[] = manualRows.map((row) => ({
             id: row.id,
             judul: row.judul,
             status: DOC_STATUS.COMPLETED,

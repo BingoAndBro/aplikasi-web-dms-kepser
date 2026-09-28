@@ -58,6 +58,8 @@ const METADATA_FORBIDDEN_KEYS = new Set([
   'fileToken',
 ])
 
+export const MANUAL_ARSIP_ATTACHMENT_REQUIRED_MESSAGE = 'Minimal 1 lampiran wajib diunggah'
+
 const REQUIRED_NOMINAL_MESSAGE = 'Nominal realisasi wajib diisi'
 const POSITIVE_NOMINAL_MESSAGE = 'Nominal realisasi harus lebih dari 0'
 
@@ -208,7 +210,18 @@ export const createManualArsipSchema = z
     attachments: manualArsipPendingAttachmentsSchema.optional(),
   })
   .strict()
-  .superRefine(refineManualArsipFields)
+  .superRefine((value, ctx) => {
+    refineManualArsipFields(value, ctx)
+    // Sama seperti jalur pengajuan: dokumen tanpa berkas pendukung tidak sah.
+    // Dicek setelah field lain supaya error field tetap dilaporkan lebih dulu.
+    if (!value.attachments || value.attachments.length === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['attachments'],
+        message: MANUAL_ARSIP_ATTACHMENT_REQUIRED_MESSAGE,
+      })
+    }
+  })
   .transform((value) => ({
     ...toManualArsipInput(value),
     attachments: value.attachments ?? [],

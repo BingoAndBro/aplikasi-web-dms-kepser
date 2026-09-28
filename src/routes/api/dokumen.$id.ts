@@ -84,6 +84,13 @@ async function canSessionReadDokumen(
   if (hasLocalRole(session, 'KEPALA_SUB_BAGIAN_UMUM') && dokumen.status === 'COMPLETED') {
     return true
   }
+  // PJ Kinerja membaca (read-only) dokumen final yang tampil di Laporan
+  // Kinerja: material COMPLETED dan non-material TERSIMPAN.
+  if (hasLocalRole(session, 'PENANGGUNG_JAWAB_KINERJA') && (
+    dokumen.status === 'COMPLETED' || dokumen.status === 'TERSIMPAN'
+  )) {
+    return true
+  }
 
   // Ketua tim kegiatan ini boleh membaca metadata dokumen apa pun (termasuk
   // yang bukan miliknya) di kegiatan yang ia pimpin -- selaras dengan

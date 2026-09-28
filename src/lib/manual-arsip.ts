@@ -12,6 +12,7 @@ import {
 import { masterFungsi, masterKegiatan, masterKomponen } from '#/db/schema/master'
 import {
   getLocalServerSession,
+  hasAnyLocalRole,
   hasLocalRole,
   type LocalServerSession,
 } from '#/lib/auth/local-server-auth'
@@ -198,6 +199,29 @@ export async function requireManualArsipApiSession(request: Request): Promise<Lo
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   if (!hasLocalRole(session, ROLES.KEPALA_SUB_BAGIAN_UMUM)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  return session
+}
+
+/**
+ * Read-only guard for manual KSBU documents surfaced in the realisasi reports
+ * (T-5/D-26): PJ Kinerja's Laporan Kinerja and PPK/PPSPM's Monitoring Nominal
+ * Realisasi list them via /api/laporan/kinerja, so the same roles (plus KSBU,
+ * who owns them) may open their detail and lampiran. Write access stays
+ * KSBU-only through requireManualArsipApiSession.
+ */
+export async function requireLaporanManualArsipSession(request: Request): Promise<LocalServerSession | Response> {
+  const session = await getLocalServerSession(request)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  if (!hasAnyLocalRole(session, [
+    ROLES.PENANGGUNG_JAWAB_KINERJA,
+    ROLES.PPK,
+    ROLES.PPSPM,
+    ROLES.KEPALA_SUB_BAGIAN_UMUM,
+  ])) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

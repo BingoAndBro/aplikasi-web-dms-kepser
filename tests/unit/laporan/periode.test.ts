@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  currentBulan,
   currentPeriode,
+  defaultPeriode,
+  isTanggalInPeriode,
   normalizePeriodeSearch,
   periodeForMode,
   periodeLabel,
   resolvePeriodeRange,
+  shiftBulan,
+  shiftPeriode,
   shiftTriwulan,
 } from '#/lib/laporan/periode'
 
@@ -157,5 +162,86 @@ describe('normalizePeriodeSearch', () => {
   it('passes through semua and tahunan', () => {
     expect(normalizePeriodeSearch({ mode: 'SEMUA' })).toEqual({ mode: 'SEMUA' })
     expect(normalizePeriodeSearch({ mode: 'TAHUNAN', tahun: 2025 })).toEqual({ mode: 'TAHUNAN', tahun: 2025 })
+  })
+})
+
+describe('BULANAN mode', () => {
+  it('resolves a month to its exact calendar boundaries, including leap-year February', () => {
+    expect(resolvePeriodeRange({ mode: 'BULANAN', tahun: 2026, bulan: 1 }))
+      .toEqual({ dari: '2026-01-01', sampai: '2026-01-31' })
+    expect(resolvePeriodeRange({ mode: 'BULANAN', tahun: 2026, bulan: 4 }))
+      .toEqual({ dari: '2026-04-01', sampai: '2026-04-30' })
+    expect(resolvePeriodeRange({ mode: 'BULANAN', tahun: 2026, bulan: 2 }))
+      .toEqual({ dari: '2026-02-01', sampai: '2026-02-28' })
+    expect(resolvePeriodeRange({ mode: 'BULANAN', tahun: 2028, bulan: 2 }))
+      .toEqual({ dari: '2028-02-01', sampai: '2028-02-29' })
+    expect(resolvePeriodeRange({ mode: 'BULANAN', tahun: 2026, bulan: 12 }))
+      .toEqual({ dari: '2026-12-01', sampai: '2026-12-31' })
+  })
+
+  it('returns null bounds for an incomplete bulanan value', () => {
+    expect(resolvePeriodeRange({ mode: 'BULANAN', tahun: 2026 })).toEqual({ dari: null, sampai: null })
+  })
+
+  it('labels a month in Indonesian', () => {
+    expect(periodeLabel({ mode: 'BULANAN', tahun: 2026, bulan: 9 })).toBe('September 2026')
+  })
+
+  it('derives the current month from an injected date', () => {
+    expect(currentBulan(new Date('2026-09-28'))).toEqual({ mode: 'BULANAN', tahun: 2026, bulan: 9 })
+  })
+
+  it('defaultPeriode picks triwulan unless bulanan is requested', () => {
+    const now = new Date('2026-09-28')
+    expect(defaultPeriode('TRIWULAN', now)).toEqual({ mode: 'TRIWULAN', tahun: 2026, triwulan: 3 })
+    expect(defaultPeriode('BULANAN', now)).toEqual({ mode: 'BULANAN', tahun: 2026, bulan: 9 })
+  })
+
+  it('shifts across year boundaries', () => {
+    expect(shiftBulan({ mode: 'BULANAN', tahun: 2026, bulan: 12 }, 1))
+      .toEqual({ mode: 'BULANAN', tahun: 2027, bulan: 1 })
+    expect(shiftBulan({ mode: 'BULANAN', tahun: 2026, bulan: 1 }, -1))
+      .toEqual({ mode: 'BULANAN', tahun: 2025, bulan: 12 })
+  })
+
+  it('shiftPeriode dispatches on mode and leaves other modes unchanged', () => {
+    expect(shiftPeriode({ mode: 'BULANAN', tahun: 2026, bulan: 5 }, 1))
+      .toEqual({ mode: 'BULANAN', tahun: 2026, bulan: 6 })
+    expect(shiftPeriode({ mode: 'TRIWULAN', tahun: 2026, triwulan: 2 }, -1))
+      .toEqual({ mode: 'TRIWULAN', tahun: 2026, triwulan: 1 })
+    expect(shiftPeriode({ mode: 'SEMUA' }, 1)).toEqual({ mode: 'SEMUA' })
+  })
+
+  it('periodeForMode lands on the current month when entering bulanan', () => {
+    expect(periodeForMode('BULANAN', { mode: 'TAHUNAN', tahun: 2020 })).toEqual(currentBulan())
+  })
+
+  it('normalizePeriodeSearch accepts a valid bulan and rejects an invalid one', () => {
+    expect(normalizePeriodeSearch({ mode: 'BULANAN', tahun: 2026, bulan: 3 }))
+      .toEqual({ mode: 'BULANAN', tahun: 2026, bulan: 3 })
+    expect(normalizePeriodeSearch({ mode: 'BULANAN', tahun: 2026, bulan: 13 })).toEqual(currentBulan())
+  })
+
+  it('normalizePeriodeSearch honours the default mode for missing input', () => {
+    expect(normalizePeriodeSearch(undefined, 'BULANAN')).toEqual(currentBulan())
+    expect(normalizePeriodeSearch({})).toEqual(currentPeriode())
+  })
+})
+
+describe('isTanggalInPeriode', () => {
+  const range = { dari: '2026-09-01', sampai: '2026-09-30' }
+
+  it('includes both boundary days', () => {
+    expect(isTanggalInPeriode('2026-09-01', range)).toBe(true)
+    expect(isTanggalInPeriode('2026-09-30', range)).toBe(true)
+  })
+
+  it('compares on the date prefix of a timestamp', () => {
+    expect(isTanggalInPeriode('2026-09-30T23:59:59.000Z', range)).toBe(true)
+    expect(isTanggalInPeriode('2026-10-01T00:00:00.000Z', range)).toBe(false)
+  })
+
+  it('treats null bounds as open-ended', () => {
+    expect(isTanggalInPeriode('1999-01-01', { dari: null, sampai: null })).toBe(true)
   })
 })

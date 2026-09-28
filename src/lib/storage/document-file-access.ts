@@ -355,6 +355,14 @@ async function canSessionReadDocument(
   if (session.roles.includes(ROLES.KEPALA_SUB_BAGIAN_UMUM) && document.status === 'COMPLETED') {
     return true
   }
+  // PJ Kinerja: lampiran dokumen final yang tampil di Laporan Kinerja
+  // (material COMPLETED, non-material TERSIMPAN) — sama dengan GET /api/dokumen/$id.
+  if (
+    session.roles.includes(ROLES.PENANGGUNG_JAWAB_KINERJA)
+    && (document.status === 'COMPLETED' || document.status === 'TERSIMPAN')
+  ) {
+    return true
+  }
 
   // Ketua tim boleh membuka lampiran dokumen di kegiatan yang ia pimpin --
   // konsisten dengan "Ekspor Semua File (ZIP)" di Laporan Kegiatan yang

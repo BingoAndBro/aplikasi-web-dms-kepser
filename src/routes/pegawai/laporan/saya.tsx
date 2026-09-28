@@ -26,6 +26,13 @@ import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
+import { PeriodeSelector, tahunFromTanggal } from '#/components/laporan/PeriodeSelector'
+import {
+  defaultPeriode,
+  isTanggalInPeriode,
+  resolvePeriodeRange,
+  type PeriodeValue,
+} from '#/lib/laporan/periode'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
@@ -66,6 +73,8 @@ function LaporanSayaPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<HierarchicalFilterValue>({})
+  // Laporan Saya dibuka pada bulan berjalan (halaman laporan lain: triwulan).
+  const [periode, setPeriode] = useState<PeriodeValue>(() => defaultPeriode('BULANAN'))
   const [sortBy, setSortBy] = useState<SortMode>('newest')
   const [filterOpen, setFilterOpen] = useState(false)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
@@ -91,19 +100,21 @@ function LaporanSayaPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const periodeRange = useMemo(() => resolvePeriodeRange(periode), [periode])
+  const tahunTersedia = useMemo(() => tahunFromTanggal(dokumen), [dokumen])
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
 
     return dokumen
       .filter(d => {
+        if (!isTanggalInPeriode(d.tanggal, periodeRange)) return false
         if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
         if (filter.kegiatanId && d.kegiatan_jenis_id !== filter.kegiatanId) return false
         if (filter.komponenId && d.komponen_id !== filter.komponenId) return false
         if (filter.jenisId && d.jenis_permintaan_id !== filter.jenisId) return false
         if (filter.kategoriId && d.kategori_permintaan_id !== filter.kategoriId) return false
         if (filter.detailId && d.detail_permintaan_id !== filter.detailId) return false
-        if (filter.tanggalMulai && d.tanggal < filter.tanggalMulai) return false
-        if (filter.tanggalAkhir && d.tanggal > filter.tanggalAkhir) return false
         if (!query) return true
 
         return [
@@ -119,7 +130,7 @@ function LaporanSayaPage() {
         ].some(value => value?.toLowerCase().includes(query))
       })
       .sort((a, b) => compareDocuments(a, b, sortBy))
-  }, [dokumen, filter, search, sortBy])
+  }, [dokumen, filter, periodeRange, search, sortBy])
 
   const activeFilters = countActiveFilters(filter)
 
@@ -175,6 +186,10 @@ function LaporanSayaPage() {
           </div>
         </section>
 
+        {!loading && !error && dokumen.length > 0 && (
+          <PeriodeSelector value={periode} tahunTersedia={tahunTersedia} onChange={setPeriode} />
+        )}
+
         <ReportToolbar
           search={search}
           onSearchChange={setSearch}
@@ -219,7 +234,7 @@ function LaporanSayaPage() {
         {!loading && !error && dokumen.length > 0 && filtered.length === 0 && (
           <EmptyState
             title="Tidak ada dokumen yang cocok"
-            description="Reset filter atau ubah kata kunci untuk melihat dokumen lain."
+            description="Ubah periode, reset filter, atau ubah kata kunci untuk melihat dokumen lain."
             icon={<Filter size={20} />}
             action={<Button variant="outline" size="sm" onClick={() => { setFilter({}); setSearch('') }}>Reset Filter</Button>}
           />
@@ -331,7 +346,8 @@ function ReportToolbar({
       {filterOpen && (
         <div className="border-b border-zinc-100 bg-bg-surface p-4 sm:p-5">
           <div className="[&>div]:border-zinc-200/80 [&>div]:bg-brand-surface/35 [&>div]:shadow-none [&_label]:text-[11px] [&_label]:font-black [&_label]:uppercase [&_label]:tracking-[0.14em] [&_label]:text-zinc-500 [&_input]:h-11 [&_input]:rounded-xl [&_input]:border-zinc-200 [&_input]:bg-bg-surface">
-            <HierarchicalFilter value={filter} onChange={onFilterChange} />
+            {/* Rentang tanggal diatur oleh PeriodeSelector di atas toolbar. */}
+            <HierarchicalFilter value={filter} onChange={onFilterChange} showDateRange={false} />
           </div>
           <div className="mt-5 flex flex-col gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" className="font-bold" onClick={() => onFilterChange({})}>
@@ -562,7 +578,5 @@ function countActiveFilters(filter: HierarchicalFilterValue) {
     filter.jenisId,
     filter.kategoriId,
     filter.detailId,
-    filter.tanggalMulai,
-    filter.tanggalAkhir,
   ].filter(Boolean).length
 }

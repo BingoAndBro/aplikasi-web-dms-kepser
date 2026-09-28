@@ -204,3 +204,42 @@ describe('GET /api/dokumen/$id -- ketua tim read access to non-material document
     expect(mocks.dbSelect).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('GET /api/dokumen/$id -- PJ Kinerja read access (Laporan Kinerja detail)', () => {
+  const PJ_KINERJA_ID = '44444444-4444-4444-8444-444444444444'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it.each([
+    [{ status: 'COMPLETED', is_non_material: false, lampiran_dibersihkan_at: null }],
+    [{ status: 'TERSIMPAN', is_non_material: true, lampiran_dibersihkan_at: null }],
+  ])('lets PJ Kinerja read a final document without a ketua-tim lookup (%o)', async (overrides) => {
+    mocks.getLocalServerSession.mockResolvedValue({ user: { id: PJ_KINERJA_ID }, roles: ['PENANGGUNG_JAWAB_KINERJA'] })
+    queueSelectResults([
+      { terminalMethod: 'limit', result: [baseDokumenRow(overrides)] },
+    ])
+
+    const response = await getHandler({ request: makeGetRequest(), params: { id: DOKUMEN_ID } })
+
+    expect(response.status).toBe(200)
+    expect(mocks.dbSelect).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['DRAFT', 'IN_PPK_VALIDATION', 'NEED_REVISION'])('rejects PJ Kinerja on a non-final %s document', async (status) => {
+    mocks.getLocalServerSession.mockResolvedValue({ user: { id: PJ_KINERJA_ID }, roles: ['PENANGGUNG_JAWAB_KINERJA'] })
+    queueSelectResults([
+      { terminalMethod: 'limit', result: [baseDokumenRow({ status, is_non_material: false })] },
+      { terminalMethod: 'limit', result: [] }, // ketua-tim fallback (not reached for DRAFT)
+    ])
+
+    const response = await getHandler({ request: makeGetRequest(), params: { id: DOKUMEN_ID } })
+
+    expect(response.status).toBe(403)
+  })
+})

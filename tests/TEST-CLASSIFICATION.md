@@ -132,8 +132,9 @@ Catatan umum:
 | tests/unit/laporan/hierarchical-filter-select-mount.test.ts | Unit test (static source guard) | White-box | Memverifikasi Select bertingkat pada HierarchicalFilter tetap "mounted" via source guard (RP-04). |
 | tests/unit/laporan/kinerja-route.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji route API Laporan Kinerja dengan dependency di-mock. |
 | tests/unit/laporan/kinerja-visual-parity-source.test.ts | Unit test (static source guard) | White-box | Memverifikasi paritas visual halaman Laporan Kinerja via source guard. |
+| tests/unit/laporan/manual-arsip-route.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji route read-only detail & lampiran dokumen manual KSBU untuk Laporan Kinerja/Monitoring Nominal (matriks peran, id tidak valid, dokumen dimusnahkan). |
 | tests/unit/laporan/monitoring-rows.test.ts | Unit test | White-box | Menguji pembangunan baris data monitoring (komponen/kegiatan/fungsi) dan total nominal. |
-| tests/unit/laporan/periode.test.ts | Unit test | White-box | Menguji resolusi rentang periode, triwulan, label, dan normalisasi pencarian periode laporan. |
+| tests/unit/laporan/periode.test.ts | Unit test | White-box | Menguji resolusi rentang periode (bulanan, triwulan, tahunan), label, pergeseran periode, dan normalisasi pencarian periode laporan. |
 
 ## pegawai
 

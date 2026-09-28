@@ -17,6 +17,9 @@ const ATTACHMENT_LOGICAL_PATH = 'manual-arsip/test-user/test-arsip/test.pdf'
 const TEST_STORAGE_ROOT = path.resolve('.tmp', 'manual-arsip-route-storage')
 const TEST_FILE_CONTENT = '%PDF-1.4 manual archive test file'
 const ORIGINAL_STORAGE_ROOT = process.env.DMS_LOCAL_STORAGE_ROOT
+// Lampiran is required on create (≥1); the POST tests upload this one to the
+// pending area first, like the Penambahan Dokumen form does.
+const DEFAULT_PENDING_ATTACHMENT = `${USER_ID}/dddddddd-dddd-4ddd-8ddd-dddddddddddd_1778064971566_lampiran_uji.pdf`
 
 const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
@@ -38,6 +41,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
   hasLocalRole: (session: { roles: string[] }, role: string) => session.roles.includes(role),
+  hasAnyLocalRole: (session: { roles: string[] }, roles: string[]) =>
+    roles.some((role) => session.roles.includes(role)),
 }))
 
 vi.mock('#/db/client', () => ({
@@ -137,6 +142,9 @@ describe('manual arsip API foundation routes', () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
     process.env.DMS_LOCAL_STORAGE_ROOT = TEST_STORAGE_ROOT
     await rm(TEST_STORAGE_ROOT, { force: true, recursive: true })
+    const pendingPath = path.join(TEST_STORAGE_ROOT, ...DEFAULT_PENDING_ATTACHMENT.split('/'))
+    await mkdir(path.dirname(pendingPath), { recursive: true })
+    await writeFile(pendingPath, TEST_FILE_CONTENT)
   })
 
   afterEach(async () => {
@@ -156,7 +164,7 @@ describe('manual arsip API foundation routes', () => {
 
   it('protects create with the same-origin guard before auth/db work', async () => {
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody(), 'http://evil.test'),
+      request: createPostRequest(validPostBody(), 'http://evil.test'),
     })
 
     expect(response.status).toBe(403)
@@ -170,7 +178,7 @@ describe('manual arsip API foundation routes', () => {
     mocks.getLocalServerSession.mockResolvedValue(createSession(['PEGAWAI'], USER_ID))
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
 
     expect(response.status).toBe(403)
@@ -182,7 +190,7 @@ describe('manual arsip API foundation routes', () => {
     mocks.getLocalServerSession.mockResolvedValueOnce(null)
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
 
     expect(response.status).toBe(401)
@@ -195,7 +203,7 @@ describe('manual arsip API foundation routes', () => {
     mocks.getLocalServerSession.mockResolvedValueOnce(createSession(['ADMIN'], ADMIN_ID))
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
 
     expect(response.status).toBe(403)
@@ -207,7 +215,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects missing keterangan without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         keterangan: '',
       }),
     })
@@ -219,11 +227,11 @@ describe('manual arsip API foundation routes', () => {
 
   it('rejects invalid or partial final retention metadata without a 500', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [{ ...validCreateBody(), tanggal_diarsipkan: '24/05/2026' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
-      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
-      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-02-31' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
-      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
-      [{ ...validCreateBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
+      [{ ...validPostBody(), tanggal_diarsipkan: '24/05/2026' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
+      [{ ...validPostBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
+      [{ ...validPostBody(), tanggal_diarsipkan: '2026-02-31' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
+      [{ ...validPostBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
+      [{ ...validPostBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
     ]
 
     for (const [body, expectedError] of cases) {
@@ -242,9 +250,9 @@ describe('manual arsip API foundation routes', () => {
 
   it('rejects missing or invalid klasifikasi_id without a 500', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [omit(validCreateBody(), 'klasifikasi_id'), 'Jenis pembayaran wajib dipilih'],
-      [{ ...validCreateBody(), klasifikasi_id: null }, 'Jenis pembayaran wajib dipilih'],
-      [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Jenis pembayaran tidak valid'],
+      [omit(validPostBody(), 'klasifikasi_id'), 'Jenis pembayaran wajib dipilih'],
+      [{ ...validPostBody(), klasifikasi_id: null }, 'Jenis pembayaran wajib dipilih'],
+      [{ ...validPostBody(), klasifikasi_id: 'not-a-uuid' }, 'Jenis pembayaran tidak valid'],
     ]
 
     for (const [body, expectedError] of cases) {
@@ -263,8 +271,8 @@ describe('manual arsip API foundation routes', () => {
 
   it('rejects invalid legacy retention labels without a 500', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
-      [{ ...validCreateBody(), retensi_aktif: '2 Tahun' }, 'Retensi aktif tidak valid'],
-      [{ ...validCreateBody(), retensi_inaktif: 'Selamanya' }, 'Retensi inaktif tidak valid'],
+      [{ ...validPostBody(), retensi_aktif: '2 Tahun' }, 'Retensi aktif tidak valid'],
+      [{ ...validPostBody(), retensi_inaktif: 'Selamanya' }, 'Retensi inaktif tidak valid'],
     ]
 
     for (const [body, expectedError] of cases) {
@@ -291,7 +299,7 @@ describe('manual arsip API foundation routes', () => {
     )
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
     const body = await response.json()
 
@@ -310,7 +318,7 @@ describe('manual arsip API foundation routes', () => {
   })
 
   it('rejects missing nominal_realisasi without a 500', async () => {
-    const body = validCreateBody() as Record<string, unknown>
+    const body = validPostBody() as Record<string, unknown>
     delete body.nominal_realisasi
 
     const response = await indexHandlers.POST({
@@ -325,7 +333,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects null nominal_realisasi without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         nominal_realisasi: null,
       }),
     })
@@ -338,7 +346,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects empty nominal_realisasi without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         nominal_realisasi: '',
       }),
     })
@@ -352,7 +360,7 @@ describe('manual arsip API foundation routes', () => {
     for (const nominal_realisasi of ['Rp 1.500.000', '1.500.000']) {
       const response = await indexHandlers.POST({
         request: createPostRequest({
-          ...validCreateBody(),
+          ...validPostBody(),
           nominal_realisasi,
         }),
       })
@@ -366,7 +374,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects decimal nominal_realisasi without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         nominal_realisasi: 1000.5,
       }),
     })
@@ -379,7 +387,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects zero nominal_realisasi without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         nominal_realisasi: 0,
       }),
     })
@@ -392,7 +400,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects negative nominal without a 500', async () => {
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         nominal_realisasi: -1,
       }),
     })
@@ -418,7 +426,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
     const body = await response.json()
 
@@ -484,7 +492,7 @@ describe('manual arsip API foundation routes', () => {
     expect(JSON.stringify(body)).not.toContain('token')
     expect(JSON.stringify(body)).not.toContain('sql')
     expect(JSON.stringify(body)).not.toContain('env')
-    expect(JSON.stringify(body.manual_arsip.attachments)).toBe('[]')
+    expect(body.manual_arsip.attachments).toHaveLength(1)
   })
 
   it('reuses an existing OPEN berkas when creating a manual document', async () => {
@@ -494,11 +502,12 @@ describe('manual arsip API foundation routes', () => {
     })
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.txInsertValues).toHaveBeenCalledTimes(3)
+    // manual_arsip + berkas item + berkas event + manual_arsip_attachment rows
+    expect(mocks.txInsertValues).toHaveBeenCalledTimes(4)
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       statusBerkas: 'OPEN',
     }))
@@ -526,7 +535,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
 
     expect(response.status).toBe(409)
@@ -545,7 +554,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
     const body = await response.json()
 
@@ -563,7 +572,7 @@ describe('manual arsip API foundation routes', () => {
 
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         tanggal_diarsipkan: '2026-05-24',
         retensi_aktif: 'Permanen',
         retensi_inaktif: '1 Tahun',
@@ -598,7 +607,7 @@ describe('manual arsip API foundation routes', () => {
 
     const response = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         nama: 'Canonical source row',
         nomor_surat: 'B-099/2026',
         tanggal_diarsipkan: '2026-06-02',
@@ -638,7 +647,7 @@ describe('manual arsip API foundation routes', () => {
     })
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
     const body = JSON.stringify(await response.json())
 
@@ -663,7 +672,7 @@ describe('manual arsip API foundation routes', () => {
     queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [])
 
     const response = await indexHandlers.POST({
-      request: createPostRequest(validCreateBody()),
+      request: createPostRequest(validPostBody()),
     })
 
     expect(response.status).toBe(400)
@@ -674,7 +683,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects top-level and metadata file path fields on create', async () => {
     const topLevelResponse = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         logical_path: 'manual/path.pdf',
       }),
     })
@@ -684,7 +693,7 @@ describe('manual arsip API foundation routes', () => {
 
     const metadataResponse = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         metadata: { logical_path: 'manual/path.pdf' },
       }),
     })
@@ -698,7 +707,7 @@ describe('manual arsip API foundation routes', () => {
     for (const key of ['canonical_arsip_id', 'canonicalArsipId']) {
       const legacyMetadataResponse = await indexHandlers.POST({
         request: createPostRequest({
-          ...validCreateBody(),
+          ...validPostBody(),
           metadata: { [key]: 'legacy-internal-id' },
         }),
       })
@@ -714,7 +723,7 @@ describe('manual arsip API foundation routes', () => {
   it('rejects client-provided classification snapshots on create', async () => {
     const topLevelResponse = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         klasifikasi_kode_snapshot: 'CLIENT-CODE',
       }),
     })
@@ -724,7 +733,7 @@ describe('manual arsip API foundation routes', () => {
 
     const metadataResponse = await indexHandlers.POST({
       request: createPostRequest({
-        ...validCreateBody(),
+        ...validPostBody(),
         metadata: { klasifikasi_nama_snapshot: 'Client Snapshot' },
       }),
     })
@@ -1576,6 +1585,14 @@ function createSession(roles: string[], userId: string) {
   }
 }
 
+/** validCreateBody + the required pending lampiran, for POST (create) requests. */
+function validPostBody() {
+  return {
+    ...validCreateBody(),
+    attachments: [{ url: DEFAULT_PENDING_ATTACHMENT, judul_lampiran: 'Lampiran Uji' }],
+  }
+}
+
 function validCreateBody() {
   return {
     nama: 'Arsip manual uji',
@@ -2109,15 +2126,14 @@ describe('manual arsip create with pending attachments (real filesystem)', () =>
     expect(await listManualArsipFiles()).toEqual([])
   })
 
-  it('still creates an arsip without attachments (lampiran stay optional)', async () => {
-    queueSelectResults([fungsiRow()], [kegiatanRow()], [komponenRow()], [klasifikasiRow()])
-    queueManualArchiveCreateTransaction()
+  it('rejects an arsip without attachments (minimal 1 lampiran, like pengajuan)', async () => {
+    for (const body of [validCreateBody(), { ...validCreateBody(), attachments: [] }]) {
+      const response = await indexHandlers.POST({ request: createPostRequest(body) })
 
-    const response = await indexHandlers.POST({ request: createPostRequest(validCreateBody()) })
-
-    expect(response.status).toBe(201)
-    expect((await response.json()).manual_arsip.attachments).toEqual([])
-    expect(mocks.txInsertValues.mock.calls.some(([values]) => Array.isArray(values))).toBe(false)
+      expect(response.status).toBe(400)
+      expect((await response.json()).error).toBe('Minimal 1 lampiran wajib diunggah')
+    }
+    expect(mocks.dbTransaction).not.toHaveBeenCalled()
   })
 
   it('rejects the same pending file used twice and more than five attachments', async () => {

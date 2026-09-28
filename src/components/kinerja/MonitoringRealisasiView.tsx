@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Banknote,
-  ChevronLeft,
   ChevronRight,
   Clock3,
   ClipboardList,
@@ -22,29 +21,16 @@ import {
   ToolbarSelectField,
   buildPersonOptions,
 } from '#/components/laporan/FilterToolbar'
+import { PeriodeSelector } from '#/components/laporan/PeriodeSelector'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { ManualArsipDetailDialog } from '#/components/arsip/ManualArsipDetailDialog'
 import { DokumenDetailDialog } from '#/components/dokumen/DokumenDetailDialog'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
 import { Button } from '#/components/ui/button'
-import { DatePicker } from '#/components/ui/date-picker'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#/components/ui/select'
 import { StatusBadge } from '#/components/ui/StatusBadge'
 import {
   Table,
@@ -57,12 +43,9 @@ import {
 import type { MonitoringRealisasiGroupBy } from '#/components/kinerja/monitoringRealisasiNavigation'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import {
-  periodeForMode,
   periodeLabel,
   resolvePeriodeRange,
-  shiftTriwulan,
-  TRIWULAN_OPTIONS,
-  type PeriodeMode,
+  shiftPeriode,
   type PeriodeValue,
 } from '#/lib/laporan/periode'
 import {
@@ -158,13 +141,6 @@ const EMPTY_DETAIL_FILTER: DetailFilterValue = {
 const GROUP_BY_OPTIONS: { value: MonitoringRealisasiGroupBy; label: string }[] = [
   { value: 'kegiatan', label: 'Fungsi' },
   { value: 'pegawai', label: 'Pegawai' },
-]
-
-const PERIODE_MODE_OPTIONS: { value: PeriodeMode; label: string }[] = [
-  { value: 'TRIWULAN', label: 'Triwulan' },
-  { value: 'TAHUNAN', label: 'Tahunan' },
-  { value: 'SEMUA', label: 'Seluruh Periode' },
-  { value: 'KUSTOM', label: 'Kustom' },
 ]
 
 export function MonitoringRealisasiView({
@@ -420,12 +396,12 @@ export function MonitoringRealisasiView({
               <EmptyState
                 icon={<Inbox className="h-5 w-5" />}
                 title={`Belum ada realisasi pada ${periodeLabel(periode)}`}
-                description="Coba lihat triwulan sebelumnya atau tampilkan seluruh periode."
+                description="Coba lihat periode sebelumnya atau tampilkan seluruh periode."
                 action={
                   <div className="flex flex-wrap justify-center gap-2">
-                    {periode.mode === 'TRIWULAN' && (
-                      <Button variant="outline" onClick={() => onSelectPeriode(shiftTriwulan(periode, -1))}>
-                        Lihat {periodeLabel(shiftTriwulan(periode, -1))}
+                    {(periode.mode === 'TRIWULAN' || periode.mode === 'BULANAN') && (
+                      <Button variant="outline" onClick={() => onSelectPeriode(shiftPeriode(periode, -1))}>
+                        Lihat {periodeLabel(shiftPeriode(periode, -1))}
                       </Button>
                     )}
                     <Button onClick={() => onSelectPeriode({ mode: 'SEMUA' })}>
@@ -570,21 +546,18 @@ export function MonitoringRealisasiView({
           />
         )}
 
-        {scope === 'laporan_kinerja' ? (
-          <DokumenDetailDialog
-            dokumenId={selectedDocument?.id ?? null}
-            open={selectedDocument !== null}
-            onOpenChange={(open) => { if (!open) setSelectedDocument(null) }}
-          />
-        ) : (
-          selectedDocument && (
-            <KinerjaDocumentMetadataDialog
-              dokumen={selectedDocument}
-              title={title}
-              onClose={() => setSelectedDocument(null)}
-            />
-          )
-        )}
+        {/* Workflow rows open the full document detail (metadata + lampiran);
+            manual KSBU rows (T-5/D-26) have no /api/dokumen/$id, so they use
+            the read-only /api/laporan/manual-arsip detail instead. */}
+        <DokumenDetailDialog
+          dokumenId={selectedDocument?.sumber === 'WORKFLOW' ? selectedDocument.id : null}
+          open={selectedDocument?.sumber === 'WORKFLOW'}
+          onOpenChange={(open) => { if (!open) setSelectedDocument(null) }}
+        />
+        <ManualArsipDetailDialog
+          dokumen={selectedDocument?.sumber === 'MANUAL' ? selectedDocument : null}
+          onClose={() => setSelectedDocument(null)}
+        />
       </div>
     </PageLayout>
   )
@@ -610,151 +583,6 @@ function KinerjaHeader({ title, description }: { title: string; description: str
         Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
       </div>
     </section>
-  )
-}
-
-function PeriodeSelector({
-  value,
-  tahunTersedia,
-  onChange,
-}: {
-  value: PeriodeValue
-  tahunTersedia: number[]
-  onChange: (value: PeriodeValue) => void
-}) {
-  const tahunOptions = useMemo(() => {
-    const years = new Set(tahunTersedia)
-    if (value.tahun) years.add(value.tahun)
-    return Array.from(years).sort((a, b) => b - a)
-  }, [tahunTersedia, value.tahun])
-
-  return (
-    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-4">
-      <div className="flex items-center gap-2">
-        <span className="hidden text-[11px] font-bold uppercase tracking-[0.1em] text-zinc-400 sm:inline">
-          Periode
-        </span>
-        <div
-          role="group"
-          aria-label="Pilih mode periode"
-          className="inline-flex flex-wrap rounded-[10px] border border-zinc-200/80 bg-zinc-50 p-0.5"
-        >
-          {PERIODE_MODE_OPTIONS.map(option => {
-            const active = option.value === value.mode
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onChange(periodeForMode(option.value, value, tahunOptions))}
-                className={[
-                  'whitespace-nowrap rounded-[7px] px-3 py-1 text-[13px] font-semibold transition',
-                  active
-                    ? 'bg-white text-brand-text shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-800',
-                ].join(' ')}
-              >
-                {option.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {value.mode !== 'SEMUA' && (
-        <span className="hidden h-8 w-px shrink-0 bg-zinc-200 lg:block" aria-hidden="true" />
-      )}
-
-      {value.mode === 'TRIWULAN' && (
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            aria-label="Triwulan sebelumnya"
-            onClick={() => onChange(shiftTriwulan(value, -1))}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-brand-border-strong hover:text-brand-solid"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <Select
-            value={value.tahun ? String(value.tahun) : ''}
-            onValueChange={(next) => onChange({ mode: 'TRIWULAN', tahun: Number(next), triwulan: value.triwulan ?? 1 })}
-          >
-            <SelectTrigger className="min-h-10 w-fit min-w-[88px] shrink-0 rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
-              <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
-            </SelectTrigger>
-            <SelectContent>
-              {tahunOptions.map(year => (
-                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={value.triwulan ? String(value.triwulan) : ''}
-            onValueChange={(next) => onChange({
-              mode: 'TRIWULAN',
-              tahun: value.tahun ?? new Date().getFullYear(),
-              triwulan: Number(next) as 1 | 2 | 3 | 4,
-            })}
-          >
-            <SelectTrigger className="min-h-10 w-fit min-w-[168px] shrink-0 rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
-              <SelectValue placeholder="Triwulan">
-                {selected => TRIWULAN_OPTIONS.find(option => String(option.value) === selected)?.label ?? 'Triwulan'}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {TRIWULAN_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <button
-            type="button"
-            aria-label="Triwulan berikutnya"
-            onClick={() => onChange(shiftTriwulan(value, 1))}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-bg-surface text-zinc-600 transition hover:border-brand-border-strong hover:text-brand-solid"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
-
-      {value.mode === 'TAHUNAN' && (
-        <Select
-          value={value.tahun ? String(value.tahun) : ''}
-          onValueChange={(next) => onChange({ mode: 'TAHUNAN', tahun: Number(next) })}
-        >
-          <SelectTrigger className="min-h-10 w-fit min-w-[104px] shrink-0 rounded-xl border-brand-border bg-bg-surface px-4 text-sm font-semibold hover:border-brand-border-strong">
-            <SelectValue placeholder={value.tahun ? String(value.tahun) : 'Tahun'} />
-          </SelectTrigger>
-          <SelectContent>
-            {tahunOptions.map(year => (
-              <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-
-      {value.mode === 'KUSTOM' && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="space-y-1">
-            <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
-            <DatePicker
-              value={value.dari ?? ''}
-              onChange={(tanggal) => onChange({ mode: 'KUSTOM', dari: tanggal || undefined, sampai: value.sampai })}
-              placeholder="Pilih tanggal mulai"
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
-            <DatePicker
-              value={value.sampai ?? ''}
-              onChange={(tanggal) => onChange({ mode: 'KUSTOM', dari: value.dari, sampai: tanggal || undefined })}
-              placeholder="Pilih tanggal selesai"
-            />
-          </label>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -1812,80 +1640,6 @@ function DocumentTable({
         ))}
       </div>
     </>
-  )
-}
-
-function KinerjaDocumentMetadataDialog({
-  dokumen,
-  title,
-  onClose,
-}: {
-  dokumen: LaporanKinerjaRow
-  title: string
-  onClose: () => void
-}) {
-  return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto border-brand-border bg-bg-surface shadow-2xl shadow-zinc-950/10 sm:max-w-3xl sm:rounded-3xl">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
-              onClick={onClose}
-              aria-label="Kembali dari detail metadata dokumen"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="min-w-0">
-              <DialogTitle>Detail Metadata Dokumen</DialogTitle>
-              <DialogDescription className="line-clamp-1">
-                {title} / {dokumen.judul}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 sm:p-5">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <ModalMetadataField label="Judul Dokumen" value={dokumen.judul} className="sm:col-span-2" />
-            <ModalMetadataField
-              label="Sumber"
-              value={dokumen.sumber === 'MANUAL' ? 'Penambahan Dokumen (KSBU)' : 'Alur Persetujuan (PPK → PPSPM)'}
-            />
-            <ModalMetadataField label="Fungsi" value={dokumen.fungsi_nama ?? '-'} />
-            <ModalMetadataField label="Kegiatan" value={dokumen.kegiatan_nama ?? '-'} />
-            <ModalMetadataField label="Status" value={formatStatusLabel(dokumen.status)} />
-            <ModalMetadataField label="Tanggal Dokumen" value={formatDate(dokumen.tanggal)} />
-            <ModalMetadataField label="Tahun" value={dokumen.tahun} />
-            <ModalMetadataField label="Pengaju / Pembuat" value={dokumen.pengaju_nama || '-'} />
-            <ModalMetadataField label="Terakhir Diperbarui" value={formatDate(dokumen.updated_at)} />
-            <ModalMetadataField label="Nominal Realisasi" value={formatNullableCurrency(dokumen.nominal_realisasi)} emphasis />
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function ModalMetadataField({
-  label,
-  value,
-  emphasis,
-  className,
-}: {
-  label: string
-  value: ReactNode
-  emphasis?: boolean
-  className?: string
-}) {
-  return (
-    <div className={className}>
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <div className={`mt-1 text-sm font-semibold leading-relaxed ${emphasis ? 'font-mono font-bold text-zinc-950' : 'text-zinc-950'}`}>
-        {value}
-      </div>
-    </div>
   )
 }
 

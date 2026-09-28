@@ -30,6 +30,13 @@ import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
 import { FilterToolbar, PembuatFilterSelect, ToolbarSelectField, buildPersonOptions } from '#/components/laporan/FilterToolbar'
+import { PeriodeSelector, tahunFromTanggal } from '#/components/laporan/PeriodeSelector'
+import {
+  defaultPeriode,
+  isTanggalInPeriode,
+  resolvePeriodeRange,
+  type PeriodeValue,
+} from '#/lib/laporan/periode'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
@@ -75,10 +82,10 @@ type LaporanKegiatanResponse = {
   error?: string
 }
 
+// Rentang tanggal daftar kegiatan diatur oleh PeriodeSelector (default
+// triwulan berjalan), bukan lagi lewat Filter Lanjutan.
 type KegiatanFilterValue = {
   fungsiId?: string
-  tanggalMulai?: string
-  tanggalAkhir?: string
 }
 
 type DetailFilterValue = {
@@ -144,6 +151,7 @@ function LaporanKegiatanPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<KegiatanFilterValue>({})
+  const [periode, setPeriode] = useState<PeriodeValue>(() => defaultPeriode('TRIWULAN'))
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState('Ketua Tim')
   const [search, setSearch] = useState('')
@@ -209,9 +217,12 @@ function LaporanKegiatanPage() {
     checkPermission()
   }, [])
 
+  const periodeRange = useMemo(() => resolvePeriodeRange(periode), [periode])
+  const tahunTersedia = useMemo(() => tahunFromTanggal(dokumen), [dokumen])
+
   const filteredDocuments = useMemo(() => {
-    return dokumen.filter(d => matchesKegiatanListFilter(d, filter))
-  }, [dokumen, filter])
+    return dokumen.filter(d => isTanggalInPeriode(d.tanggal, periodeRange) && matchesKegiatanListFilter(d, filter))
+  }, [dokumen, filter, periodeRange])
 
   const kegiatanRows = useMemo(() => {
     return buildKegiatanRows(allowedKegiatan, filteredDocuments, currentUserName)
@@ -315,6 +326,10 @@ function LaporanKegiatanPage() {
             icon={<ShieldX size={20} />}
             action={<Button onClick={() => { window.location.href = '/' }}>Kembali ke Dashboard</Button>}
           />
+        )}
+
+        {!checkingAuth && isAuthorized && !loading && !error && (
+          <PeriodeSelector value={periode} tahunTersedia={tahunTersedia} onChange={setPeriode} />
         )}
 
         {!checkingAuth && isAuthorized && selectedKegiatan ? (
@@ -509,22 +524,6 @@ function KegiatanAdvancedFilter({
           ))}
           </SelectContent>
         </Select>
-      </label>
-      <label className="space-y-2">
-        <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Mulai Dari Tanggal</span>
-        <DatePicker
-          value={value.tanggalMulai ?? ''}
-          onChange={(tanggal) => onChange({ ...value, tanggalMulai: tanggal || undefined })}
-          placeholder="Pilih tanggal mulai"
-        />
-      </label>
-      <label className="space-y-2">
-        <span className="block text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">Sampai Tanggal</span>
-        <DatePicker
-          value={value.tanggalAkhir ?? ''}
-          onChange={(tanggal) => onChange({ ...value, tanggalAkhir: tanggal || undefined })}
-          placeholder="Pilih tanggal selesai"
-        />
       </label>
     </div>
   )
@@ -1280,8 +1279,6 @@ function buildKegiatanRows(allowedKegiatan: { id: string; nama: string }[], docu
 
 function matchesKegiatanListFilter(d: DokumenLaporanRow, filter: KegiatanFilterValue) {
   if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
-  if (filter.tanggalMulai && d.tanggal < filter.tanggalMulai) return false
-  if (filter.tanggalAkhir && d.tanggal > filter.tanggalAkhir) return false
   return true
 }
 
@@ -1319,11 +1316,7 @@ function selectKegiatan(id: string | null, navigate: ReturnType<typeof useNaviga
 }
 
 function countActiveFilters(filter: KegiatanFilterValue) {
-  return [
-    filter.fungsiId,
-    filter.tanggalMulai,
-    filter.tanggalAkhir,
-  ].filter(Boolean).length
+  return [filter.fungsiId].filter(Boolean).length
 }
 
 /** Hanya filter di dalam panel Filter Lanjutan; Pembuat Dokumen ada di toolbar. */

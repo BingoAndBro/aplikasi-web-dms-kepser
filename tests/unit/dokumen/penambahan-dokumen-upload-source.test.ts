@@ -25,4 +25,9 @@ describe('Phase 15L.7D.1 Penambahan Dokumen upload source guard', () => {
     expect(source).toContain('htmlFor={inputId}')
     expect(source).not.toContain('text-[10px] text-error">{errors[attachmentFileErrorKey(row.id)]}</p>')
   })
+
+  it('requires at least one lampiran on the client, same as the create schema', () => {
+    expect(source).toContain('if (rows.length === 0) {\n    errors.attachments = MANUAL_ARSIP_ATTACHMENT_REQUIRED_MESSAGE')
+    expect(source).not.toContain('lampiran opsional')
+  })
 })

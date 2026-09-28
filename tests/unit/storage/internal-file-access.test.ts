@@ -587,6 +587,23 @@ describe('internal file access foundation', () => {
     expect(result).toEqual({ ok: true, logicalPath: 'owner-user/document-id/file.pdf' })
   })
 
+  it('allows PJ Kinerja document-token access for final documents shown in Laporan Kinerja', async () => {
+    for (const status of ['COMPLETED', 'TERSIMPAN']) {
+      const result = await resolveDocumentTokenWithMockedContext({
+        document: {
+          id: '11111111-1111-4111-8111-111111111111',
+          createdBy: 'owner-user',
+          status,
+          revisionTarget: null,
+          lampiranUrls: [{ url: 'owner-user/document-id/file.pdf' }],
+        },
+        session: session('pj-kinerja-user', [ROLES.PENANGGUNG_JAWAB_KINERJA]),
+      })
+
+      expect(result).toEqual({ ok: true, logicalPath: 'owner-user/document-id/file.pdf' })
+    }
+  })
+
   it('does not require old canonical archive snapshots for document-token access', async () => {
     const result = await resolveDocumentTokenWithMockedContext({
       document: {

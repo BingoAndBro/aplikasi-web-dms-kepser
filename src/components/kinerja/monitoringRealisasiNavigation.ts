@@ -11,6 +11,9 @@ export type MonitoringRealisasiSearch = {
   periode?: PeriodeValue['mode']
   tahun?: number
   triwulan?: 1 | 2 | 3 | 4
+  // Plain number here (the route schema can only say 1–12);
+  // normalizePeriodeSearch narrows it back to a valid Bulan.
+  bulan?: number
   dari?: string
   sampai?: string
 }
@@ -30,10 +33,12 @@ export type MonitoringRealisasiHandlers = {
   onSelectPeriode: (next: PeriodeValue) => void
 }
 
-type PeriodeSearchFields = Pick<MonitoringRealisasiSearch, 'periode' | 'tahun' | 'triwulan' | 'dari' | 'sampai'>
+type PeriodeSearchFields = Pick<MonitoringRealisasiSearch, 'periode' | 'tahun' | 'triwulan' | 'bulan' | 'dari' | 'sampai'>
 
 function periodeToSearch(periode: PeriodeValue): PeriodeSearchFields {
   switch (periode.mode) {
+    case 'BULANAN':
+      return { periode: 'BULANAN', tahun: periode.tahun, bulan: periode.bulan }
     case 'TRIWULAN':
       return { periode: 'TRIWULAN', tahun: periode.tahun, triwulan: periode.triwulan }
     case 'TAHUNAN':
@@ -65,6 +70,7 @@ export function createMonitoringRealisasiHandlers(
     mode: search.periode,
     tahun: search.tahun,
     triwulan: search.triwulan,
+    bulan: search.bulan,
     dari: search.dari,
     sampai: search.sampai,
   })

@@ -147,6 +147,7 @@ import { Route as ApiPpkResubmitIdRouteImport } from './routes/api/ppk/resubmit/
 import { Route as ApiPpkKembalikanIdRouteImport } from './routes/api/ppk/kembalikan/$id'
 import { Route as ApiPpkDokumenIdRouteImport } from './routes/api/ppk/dokumen/$id'
 import { Route as ApiLaporanSayaExportZipRouteImport } from './routes/api/laporan/saya.export-zip'
+import { Route as ApiLaporanManualArsipIdRouteImport } from './routes/api/laporan/manual-arsip.$id'
 import { Route as ApiLaporanKegiatanExportZipRouteImport } from './routes/api/laporan/kegiatan.export-zip'
 import { Route as ApiKetuaTimUserUserIdRouteImport } from './routes/api/ketua-tim/user/$userId'
 import { Route as ApiKetuaTimKegiatanKegiatanIdRouteImport } from './routes/api/ketua-tim/kegiatan/$kegiatanId'
@@ -173,6 +174,8 @@ import { Route as ApiPpspmDokumenIdPreviewLampiranIndexRouteImport } from './rou
 import { Route as ApiPpspmDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppspm/dokumen/$id/download/$lampiranIndex'
 import { Route as ApiPpkDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/preview/$lampiranIndex'
 import { Route as ApiPpkDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/download/$lampiranIndex'
+import { Route as ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRouteImport } from './routes/api/laporan/manual-arsip.$id.attachments.$attachmentId.preview'
+import { Route as ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRouteImport } from './routes/api/laporan/manual-arsip.$id.attachments.$attachmentId.download'
 import { Route as ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRouteImport } from './routes/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
 import { Route as ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRouteImport } from './routes/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
 import { Route as ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRouteImport } from './routes/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex'
@@ -880,6 +883,11 @@ const ApiLaporanSayaExportZipRoute = ApiLaporanSayaExportZipRouteImport.update({
   path: '/export-zip',
   getParentRoute: () => ApiLaporanSayaRoute,
 } as any)
+const ApiLaporanManualArsipIdRoute = ApiLaporanManualArsipIdRouteImport.update({
+  id: '/api/laporan/manual-arsip/$id',
+  path: '/api/laporan/manual-arsip/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiLaporanKegiatanExportZipRoute =
   ApiLaporanKegiatanExportZipRouteImport.update({
     id: '/export-zip',
@@ -1022,6 +1030,18 @@ const ApiPpkDokumenIdDownloadLampiranIndexRoute =
     id: '/download/$lampiranIndex',
     path: '/download/$lampiranIndex',
     getParentRoute: () => ApiPpkDokumenIdRoute,
+  } as any)
+const ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute =
+  ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRouteImport.update({
+    id: '/attachments/$attachmentId/preview',
+    path: '/attachments/$attachmentId/preview',
+    getParentRoute: () => ApiLaporanManualArsipIdRoute,
+  } as any)
+const ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute =
+  ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRouteImport.update({
+    id: '/attachments/$attachmentId/download',
+    path: '/attachments/$attachmentId/download',
+    getParentRoute: () => ApiLaporanManualArsipIdRoute,
   } as any)
 const ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute =
   ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRouteImport.update({
@@ -1177,6 +1197,7 @@ export interface FileRoutesByFullPath {
   '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
   '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
   '/api/laporan/kegiatan/export-zip': typeof ApiLaporanKegiatanExportZipRoute
+  '/api/laporan/manual-arsip/$id': typeof ApiLaporanManualArsipIdRouteWithChildren
   '/api/laporan/saya/export-zip': typeof ApiLaporanSayaExportZipRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
@@ -1215,6 +1236,8 @@ export interface FileRoutesByFullPath {
   '/api/ppspm/dokumen/$id/preview/$lampiranIndex': typeof ApiPpspmDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute
+  '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute
+  '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute
   '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute
   '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRoute
 }
@@ -1338,6 +1361,7 @@ export interface FileRoutesByTo {
   '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
   '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
   '/api/laporan/kegiatan/export-zip': typeof ApiLaporanKegiatanExportZipRoute
+  '/api/laporan/manual-arsip/$id': typeof ApiLaporanManualArsipIdRouteWithChildren
   '/api/laporan/saya/export-zip': typeof ApiLaporanSayaExportZipRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
@@ -1376,6 +1400,8 @@ export interface FileRoutesByTo {
   '/api/ppspm/dokumen/$id/preview/$lampiranIndex': typeof ApiPpspmDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute
+  '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute
+  '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute
   '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute
   '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRoute
 }
@@ -1509,6 +1535,7 @@ export interface FileRoutesById {
   '/api/ketua-tim/kegiatan/$kegiatanId': typeof ApiKetuaTimKegiatanKegiatanIdRoute
   '/api/ketua-tim/user/$userId': typeof ApiKetuaTimUserUserIdRoute
   '/api/laporan/kegiatan/export-zip': typeof ApiLaporanKegiatanExportZipRoute
+  '/api/laporan/manual-arsip/$id': typeof ApiLaporanManualArsipIdRouteWithChildren
   '/api/laporan/saya/export-zip': typeof ApiLaporanSayaExportZipRoute
   '/api/ppk/dokumen/$id': typeof ApiPpkDokumenIdRouteWithChildren
   '/api/ppk/kembalikan/$id': typeof ApiPpkKembalikanIdRoute
@@ -1547,6 +1574,8 @@ export interface FileRoutesById {
   '/api/ppspm/dokumen/$id/preview/$lampiranIndex': typeof ApiPpspmDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdDownloadRoute
   '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiKasubagManualArsipIdAttachmentsAttachmentIdPreviewRoute
+  '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download': typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute
+  '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview': typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute
   '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdDownloadLampiranIndexRoute
   '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex': typeof ApiKasubagBerkasIdItemsItemIdPreviewLampiranIndexRoute
 }
@@ -1681,6 +1710,7 @@ export interface FileRouteTypes {
     | '/api/ketua-tim/kegiatan/$kegiatanId'
     | '/api/ketua-tim/user/$userId'
     | '/api/laporan/kegiatan/export-zip'
+    | '/api/laporan/manual-arsip/$id'
     | '/api/laporan/saya/export-zip'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
@@ -1719,6 +1749,8 @@ export interface FileRouteTypes {
     | '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
+    | '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download'
+    | '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview'
     | '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex'
     | '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex'
   fileRoutesByTo: FileRoutesByTo
@@ -1842,6 +1874,7 @@ export interface FileRouteTypes {
     | '/api/ketua-tim/kegiatan/$kegiatanId'
     | '/api/ketua-tim/user/$userId'
     | '/api/laporan/kegiatan/export-zip'
+    | '/api/laporan/manual-arsip/$id'
     | '/api/laporan/saya/export-zip'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
@@ -1880,6 +1913,8 @@ export interface FileRouteTypes {
     | '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
+    | '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download'
+    | '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview'
     | '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex'
     | '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex'
   id:
@@ -2012,6 +2047,7 @@ export interface FileRouteTypes {
     | '/api/ketua-tim/kegiatan/$kegiatanId'
     | '/api/ketua-tim/user/$userId'
     | '/api/laporan/kegiatan/export-zip'
+    | '/api/laporan/manual-arsip/$id'
     | '/api/laporan/saya/export-zip'
     | '/api/ppk/dokumen/$id'
     | '/api/ppk/kembalikan/$id'
@@ -2050,6 +2086,8 @@ export interface FileRouteTypes {
     | '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/download'
     | '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
+    | '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download'
+    | '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview'
     | '/api/kasubag/berkas/$id/items/$itemId/download/$lampiranIndex'
     | '/api/kasubag/berkas/$id/items/$itemId/preview/$lampiranIndex'
   fileRoutesById: FileRoutesById
@@ -2117,6 +2155,7 @@ export interface RootRouteChildren {
   ApiKasubagManualArsipIdRoute: typeof ApiKasubagManualArsipIdRouteWithChildren
   ApiKetuaTimKegiatanKegiatanIdRoute: typeof ApiKetuaTimKegiatanKegiatanIdRoute
   ApiKetuaTimUserUserIdRoute: typeof ApiKetuaTimUserUserIdRoute
+  ApiLaporanManualArsipIdRoute: typeof ApiLaporanManualArsipIdRouteWithChildren
   ApiPpkDokumenIdRoute: typeof ApiPpkDokumenIdRouteWithChildren
   ApiPpkKembalikanIdRoute: typeof ApiPpkKembalikanIdRoute
   ApiPpkResubmitIdRoute: typeof ApiPpkResubmitIdRoute
@@ -3094,6 +3133,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLaporanSayaExportZipRouteImport
       parentRoute: typeof ApiLaporanSayaRoute
     }
+    '/api/laporan/manual-arsip/$id': {
+      id: '/api/laporan/manual-arsip/$id'
+      path: '/api/laporan/manual-arsip/$id'
+      fullPath: '/api/laporan/manual-arsip/$id'
+      preLoaderRoute: typeof ApiLaporanManualArsipIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/laporan/kegiatan/export-zip': {
       id: '/api/laporan/kegiatan/export-zip'
       path: '/export-zip'
@@ -3275,6 +3321,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/ppk/dokumen/$id/download/$lampiranIndex'
       preLoaderRoute: typeof ApiPpkDokumenIdDownloadLampiranIndexRouteImport
       parentRoute: typeof ApiPpkDokumenIdRoute
+    }
+    '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview': {
+      id: '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview'
+      path: '/attachments/$attachmentId/preview'
+      fullPath: '/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview'
+      preLoaderRoute: typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRouteImport
+      parentRoute: typeof ApiLaporanManualArsipIdRoute
+    }
+    '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download': {
+      id: '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download'
+      path: '/attachments/$attachmentId/download'
+      fullPath: '/api/laporan/manual-arsip/$id/attachments/$attachmentId/download'
+      preLoaderRoute: typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRouteImport
+      parentRoute: typeof ApiLaporanManualArsipIdRoute
     }
     '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview': {
       id: '/api/kasubag/manual-arsip/$id/attachments/$attachmentId/preview'
@@ -3766,6 +3826,24 @@ const ApiKasubagManualArsipIdRouteWithChildren =
     ApiKasubagManualArsipIdRouteChildren,
   )
 
+interface ApiLaporanManualArsipIdRouteChildren {
+  ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute: typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute
+  ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute: typeof ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute
+}
+
+const ApiLaporanManualArsipIdRouteChildren: ApiLaporanManualArsipIdRouteChildren =
+  {
+    ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute:
+      ApiLaporanManualArsipIdAttachmentsAttachmentIdDownloadRoute,
+    ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute:
+      ApiLaporanManualArsipIdAttachmentsAttachmentIdPreviewRoute,
+  }
+
+const ApiLaporanManualArsipIdRouteWithChildren =
+  ApiLaporanManualArsipIdRoute._addFileChildren(
+    ApiLaporanManualArsipIdRouteChildren,
+  )
+
 interface ApiPpkDokumenIdRouteChildren {
   ApiPpkDokumenIdApproveRoute: typeof ApiPpkDokumenIdApproveRoute
   ApiPpkDokumenIdRejectRoute: typeof ApiPpkDokumenIdRejectRoute
@@ -3868,6 +3946,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiKasubagManualArsipIdRoute: ApiKasubagManualArsipIdRouteWithChildren,
   ApiKetuaTimKegiatanKegiatanIdRoute: ApiKetuaTimKegiatanKegiatanIdRoute,
   ApiKetuaTimUserUserIdRoute: ApiKetuaTimUserUserIdRoute,
+  ApiLaporanManualArsipIdRoute: ApiLaporanManualArsipIdRouteWithChildren,
   ApiPpkDokumenIdRoute: ApiPpkDokumenIdRouteWithChildren,
   ApiPpkKembalikanIdRoute: ApiPpkKembalikanIdRoute,
   ApiPpkResubmitIdRoute: ApiPpkResubmitIdRoute,
