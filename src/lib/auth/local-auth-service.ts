@@ -6,10 +6,7 @@ import { roles as rolesTable, userRoles, users } from '#/db/schema/auth'
 import { ROLE_NAMES, type RoleName } from '#/lib/constants/roles'
 import { verifyPassword } from './password'
 import { resolvePrimaryRole, validateAssignedRoles } from './role-resolution'
-import {
-  REMEMBER_ME_DURATION_SECONDS,
-  SESSION_DURATION_SECONDS,
-} from './session-constants'
+import { SESSION_DURATION_SECONDS } from './session-constants'
 import { createSessionRecord } from './session-repository'
 import { generateSessionToken, hashSessionToken } from './session-token'
 
@@ -38,7 +35,6 @@ export type LocalLoginResult =
 type LoginOptions = {
   identifier: string
   password: string
-  rememberMe?: boolean
   userAgent?: string | null
   ipAddress?: string | null
 }
@@ -92,15 +88,14 @@ export async function loginWithLocalCredentials(
   const activeRole = resolvePrimaryRole(found.roles)
   const rawToken = generateSessionToken()
   const tokenHash = hashSessionToken(rawToken)
-  const sessionMaxAgeSeconds = options.rememberMe
-    ? REMEMBER_ME_DURATION_SECONDS
-    : SESSION_DURATION_SECONDS
+  // Every session lasts SESSION_DURATION_SECONDS (8 hours); there is no
+  // "remember me" option (D-9).
+  const sessionMaxAgeSeconds = SESSION_DURATION_SECONDS
 
   await createSessionRecord({
     userId: found.user.id,
     tokenHash,
     expiresAt: new Date(Date.now() + sessionMaxAgeSeconds * 1000),
-    rememberMe: Boolean(options.rememberMe),
     userAgent: options.userAgent,
     ipAddress: options.ipAddress,
   })

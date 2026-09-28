@@ -624,62 +624,22 @@ describe('/api/dokumen/submit local default parity', () => {
     expectNoLegacySubmitCalls()
   })
 
-  it('keeps the local auth dry-run diagnostic branch non-writing', async () => {
+  // D-16: the old `useLocalAuthDryRun` / `useLocalPreflightDryRun` diagnostic
+  // branches were removed; the query params are now ignored and never answer
+  // with a dry-run payload.
+  it.each(['useLocalAuthDryRun', 'useLocalPreflightDryRun'])('ignores the removed %s query param', async (param) => {
     const response = await submitHandler({
       request: createJsonRequest(
         createValidMaterialSubmitPayload({
           lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
         }),
-        'http://localhost/api/dokumen/submit?useLocalAuthDryRun=true',
+        `http://localhost/api/dokumen/submit?${param}=true`,
       ),
     })
     const body = await response.json()
 
-    expect(response.status).toBe(200)
-    expect(body).toEqual({
-      dryRun: true,
-      boundary: 'local-auth',
-      submitCompatible: true,
-      writePathExecuted: false,
-      filesystemMovementExecuted: false,
-      message: 'Local auth boundary validated; submit write path was not executed.',
-    })
-    expect(body).not.toHaveProperty('success', true)
-    expect(body).not.toHaveProperty('dokumen')
-    expect(mocks.createSubmitDiskPreflightChecker).not.toHaveBeenCalled()
-    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
-    expect(mocks.moveLocalPendingFileToFormal).not.toHaveBeenCalled()
-    expectNoLegacySubmitCalls()
-  })
-
-  it('keeps the local preflight dry-run diagnostic branch non-writing', async () => {
-    const response = await submitHandler({
-      request: createJsonRequest(
-        createValidMaterialSubmitPayload({
-          lampiranUrls: [createLampiran({ url: UNDERSCORE_PENDING_PATH })],
-        }),
-        'http://localhost/api/dokumen/submit?useLocalPreflightDryRun=true',
-      ),
-    })
-    const body = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(body).toEqual({
-      dryRun: true,
-      boundary: 'local-preflight',
-      submitCompatible: true,
-      preflightOk: true,
-      writePathExecuted: false,
-      filesystemMovementExecuted: false,
-      message: 'Local submit preflight validated; submit write path was not executed.',
-    })
-    expect(body).not.toHaveProperty('success', true)
-    expect(body).not.toHaveProperty('dokumen')
-    expect(preflightCheckSourceExists).toHaveBeenCalledWith(UNDERSCORE_PENDING_PATH)
-    expect(preflightCheckTargetAvailable).toHaveBeenCalledTimes(1)
-    expect(mocks.createLiveLocalSubmitDrizzleAdapter).not.toHaveBeenCalled()
-    expect(mocks.moveLocalPendingFileToFormal).not.toHaveBeenCalled()
-    expectNoLegacySubmitCalls()
+    expect(body).not.toHaveProperty('dryRun')
+    expect(body).not.toHaveProperty('boundary')
   })
 })
 

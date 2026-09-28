@@ -62,6 +62,9 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(source).toContain('Total Dokumen Final')
     expect(source).toContain('<DokumenDetailDialog')
     expect(source).toContain('<ManualArsipDetailDialog')
+    // D-27: catatan cakupan di header mengikuti scope, bukan teks material-only lama.
+    expect(source).toContain("scope === 'laporan_kinerja' ? LAPORAN_KINERJA_SCOPE_NOTE : MONITORING_SCOPE_NOTE")
+    expect(source).not.toContain('Hanya dokumen material berstatus Selesai')
   })
 
   it('keeps the periode selector and the komponen drilldown level', () => {

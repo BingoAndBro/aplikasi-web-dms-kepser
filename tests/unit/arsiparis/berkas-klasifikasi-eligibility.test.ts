@@ -128,17 +128,6 @@ describe('berkas klasifikasi eligibility helper', () => {
     ], 2025).unavailable_reason).toBe('Berkas untuk Cara Pembayaran ini pada TA 2025 sudah ditutup.')
   })
 
-  it('fails safe for anomalous multiple OPEN berkas rows', () => {
-    expect(getKlasifikasiBerkasEligibility([
-      eligibilityRow('klasifikasi-anomaly', 'OPEN', null),
-      eligibilityRow('klasifikasi-anomaly', 'OPEN', null),
-    ], TA)).toMatchObject({
-      is_selectable: false,
-      has_open_berkas: true,
-      anomaly: 'MULTIPLE_OPEN_BERKAS',
-    })
-  })
-
   it('filters unavailable leaves while retaining parents for eligible children', () => {
     const filtered = filterKlasifikasiTreeForBerkasSelection([
       {

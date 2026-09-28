@@ -148,15 +148,10 @@ async function submitDokumenViaAPI(page: Page): Promise<string> {
     }
   }
 
-  // Navigate to dokumen saya to get the submitted doc ID
-  await page.goto(`${BASE_URL}/dokumen/saya`)
+  // Navigate to Dokumen Diajukan to get the submitted doc ID
+  await page.goto(`${BASE_URL}/pegawai/dokumen`)
   await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(2000)
-
-  // Check if redirected away (success)
-  if (!page.url().includes('/dokumen/saya')) {
-    // Still on same page - document was submitted
-  }
 
   // Get first row link
   const firstRow = page.locator('table tbody tr').first()

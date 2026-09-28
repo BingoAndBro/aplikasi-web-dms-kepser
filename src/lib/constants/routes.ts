@@ -63,11 +63,6 @@ export const ROUTES = {
     SETTINGS: '/admin/settings',
     ACTIVITY_LOG: '/admin/activity-log',
   },
-  LEGACY_DOKUMEN: {
-    ROOT: '/dokumen',
-    AJU: '/dokumen/aju',
-    SAYA: '/dokumen/saya',
-  },
 } as const
 
 export const PUBLIC_PATHS = [ROUTES.LOGIN, ROUTES.API_PREFIX] as const

@@ -45,7 +45,8 @@ function displayUserName(user: {
 //
 // Sumbernya dua tabel terpisah karena domainnya memang terpisah:
 // - `dokumen.log_aktivitas` — alur submit/approve/reject dokumen (Pegawai,
-//   PPK, PPSPM, dan update nominal oleh Pegawai/Kasubag).
+//   PPK, PPSPM). Baris lama `UPDATE_NOMINAL` (endpoint-nya sudah dihapus)
+//   tetap ditampilkan lewat resolveAksiRole.
 // - `arsip.berkas_arsip_activity` — alur pemberkasan (buka/tutup berkas,
 //   klasifikasi dokumen, penambahan dokumen manual, pemusnahan), yang
 //   seluruhnya aksi Kasubag (KEPALA_SUB_BAGIAN_UMUM) — lihat guard role di

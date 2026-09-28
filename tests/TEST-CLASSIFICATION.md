@@ -180,7 +180,6 @@ Catatan umum:
 | tests/unit/storage/raw-download-url-hardening.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji pengerasan keamanan URL unduhan mentah dengan dependency di-mock. |
 | tests/unit/storage/raw-preview-internal-url-runtime.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji verifikasi runtime URL preview internal mentah dengan dependency di-mock. |
 | tests/unit/storage/raw-preview-internal-url-wiring.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji wiring URL preview internal mentah dengan dependency di-mock. |
-| tests/unit/storage/rename-pending-local-route.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji implementasi route rename/pemindahan file pending lokal dengan dependency di-mock. |
 | tests/unit/storage/storage-client.test.ts | Unit test | White-box | Menguji penanganan error file-terhapus pada storage client. |
 | tests/unit/storage/submit-move-plan.test.ts | Unit test | White-box | Menguji pembangun rencana pemindahan file saat submit dokumen. |
 | tests/unit/storage/upload-route-local.test.ts | Unit/Component test (dependency di-mock) | White-box | Menguji implementasi route upload lokal dengan dependency di-mock. |

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -104,6 +104,14 @@ export type MonitoringRealisasiViewProps = {
   forbiddenDescription?: string
   loadingLabel?: string
 }
+
+// Catatan cakupan di header (D-27): isi halaman berbeda per scope, lihat
+// filter di src/routes/api/laporan/kinerja.ts.
+const MONITORING_SCOPE_NOTE =
+  'Dokumen material berstatus Selesai dan dokumen tambahan KSBU, kecuali yang berkasnya sudah dimusnahkan.'
+const LAPORAN_KINERJA_SCOPE_NOTE =
+  'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU. Tidak termasuk berkas yang sudah dimusnahkan atau lampiran yang sudah dibersihkan.'
+const ScopeNoteContext = createContext(MONITORING_SCOPE_NOTE)
 
 const DEFAULT_TITLE = 'Laporan Kinerja'
 const DEFAULT_DESCRIPTION = 'Pantau dokumen final berdasarkan kegiatan atau berdasarkan pegawai.'
@@ -346,6 +354,7 @@ export function MonitoringRealisasiView({
   }, [detailFilter, detailSearch, detailSortBy, selectedKomponen])
 
   return (
+    <ScopeNoteContext.Provider value={scope === 'laporan_kinerja' ? LAPORAN_KINERJA_SCOPE_NOTE : MONITORING_SCOPE_NOTE}>
     <PageLayout>
       <div className="mx-auto w-full max-w-[1280px] space-y-7 px-7 pt-6 sm:px-8 lg:px-10">
         {loading && <LoadingState label={loadingLabel} rows={5} />}
@@ -560,10 +569,12 @@ export function MonitoringRealisasiView({
         />
       </div>
     </PageLayout>
+    </ScopeNoteContext.Provider>
   )
 }
 
 function KinerjaHeader({ title, description }: { title: string; description: string }) {
+  const scopeNote = useContext(ScopeNoteContext)
   return (
     <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-5">
@@ -580,7 +591,7 @@ function KinerjaHeader({ title, description }: { title: string; description: str
         </div>
       </div>
       <div className="max-w-xs rounded-[18px] border border-brand-border bg-bg-surface px-4 py-3 text-xs font-bold text-brand-text shadow-sm">
-        Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
+        {scopeNote}
       </div>
     </section>
   )
@@ -1375,6 +1386,7 @@ function ReportBackHeader({
   onBack: () => void
   backLabel: string
 }) {
+  const scopeNote = useContext(ScopeNoteContext)
   return (
     <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex min-w-0 items-start gap-4">
@@ -1399,7 +1411,7 @@ function ReportBackHeader({
         </div>
       </div>
       <div className="max-w-xs rounded-[18px] border border-brand-border bg-bg-surface px-4 py-3 text-xs font-bold text-brand-text shadow-sm">
-        Hanya dokumen material berstatus Selesai, dan berkas belum dimusnahkan.
+        {scopeNote}
       </div>
     </section>
   )

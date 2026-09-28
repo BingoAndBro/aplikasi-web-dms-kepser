@@ -17,7 +17,6 @@ import { Route as PegawaiRouteImport } from './routes/pegawai'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KasubagRouteImport } from './routes/kasubag'
 import { Route as ForbiddenRouteImport } from './routes/forbidden'
-import { Route as DokumenRouteImport } from './routes/dokumen'
 import { Route as BantuanRouteImport } from './routes/bantuan'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -48,10 +47,6 @@ import { Route as KasubagPenambahanArsipRouteImport } from './routes/kasubag/pen
 import { Route as KasubagKlasifikasiRouteImport } from './routes/kasubag/klasifikasi'
 import { Route as KasubagInboxRouteImport } from './routes/kasubag/inbox'
 import { Route as KasubagActivityLogRouteImport } from './routes/kasubag/activity-log'
-import { Route as DokumenSayaRouteImport } from './routes/dokumen/saya'
-import { Route as DokumenAjuRouteImport } from './routes/dokumen/aju'
-import { Route as DokumenAjiRouteImport } from './routes/dokumen/aji'
-import { Route as DokumenIdRouteImport } from './routes/dokumen/$id'
 import { Route as ApiUploadRouteImport } from './routes/api/upload'
 import { Route as ApiPembersihanDokumenRouteImport } from './routes/api/pembersihan-dokumen'
 import { Route as ApiMasterKomponenRouteImport } from './routes/api/master-komponen'
@@ -67,7 +62,6 @@ import { Route as AdminActivityLogRouteImport } from './routes/admin.activity-lo
 import { Route as PegawaiDokumenIndexRouteImport } from './routes/pegawai/dokumen/index'
 import { Route as KasubagPembersihanIndexRouteImport } from './routes/kasubag/pembersihan/index'
 import { Route as KasubagBerkasIndexRouteImport } from './routes/kasubag/berkas/index'
-import { Route as DokumenIdIndexRouteImport } from './routes/dokumen/$id/index'
 import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
 import { Route as ApiKetuaTimIndexRouteImport } from './routes/api/ketua-tim/index'
 import { Route as ApiDokumenIndexRouteImport } from './routes/api/dokumen/index'
@@ -80,7 +74,6 @@ import { Route as PegawaiDokumenAjuRouteImport } from './routes/pegawai/dokumen/
 import { Route as PegawaiDokumenIdRouteImport } from './routes/pegawai/dokumen/$id'
 import { Route as KasubagBerkasTertutupRouteImport } from './routes/kasubag/berkas/tertutup'
 import { Route as KasubagBerkasIdRouteImport } from './routes/kasubag/berkas/$id'
-import { Route as DokumenIdEditRouteImport } from './routes/dokumen/$id/edit'
 import { Route as ApiUsersMeRouteImport } from './routes/api/users/me'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
 import { Route as ApiSettingsThemeRouteImport } from './routes/api/settings/theme'
@@ -109,7 +102,6 @@ import { Route as ApiKetuaTimIdRouteImport } from './routes/api/ketua-tim/$id'
 import { Route as ApiKasubagInboxRouteImport } from './routes/api/kasubag/inbox'
 import { Route as ApiFilesAccessRouteImport } from './routes/api/files/access'
 import { Route as ApiDokumenSubmitRouteImport } from './routes/api/dokumen/submit'
-import { Route as ApiDokumenRenamePendingRouteImport } from './routes/api/dokumen/rename-pending'
 import { Route as ApiDokumenPreviewUrlRouteImport } from './routes/api/dokumen/preview-url'
 import { Route as ApiDokumenDownloadUrlRouteImport } from './routes/api/dokumen/download-url'
 import { Route as ApiDokumenIdRouteImport } from './routes/api/dokumen.$id'
@@ -219,11 +211,6 @@ const KasubagRoute = KasubagRouteImport.update({
 const ForbiddenRoute = ForbiddenRouteImport.update({
   id: '/forbidden',
   path: '/forbidden',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DokumenRoute = DokumenRouteImport.update({
-  id: '/dokumen',
-  path: '/dokumen',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BantuanRoute = BantuanRouteImport.update({
@@ -382,26 +369,6 @@ const KasubagActivityLogRoute = KasubagActivityLogRouteImport.update({
   path: '/activity-log',
   getParentRoute: () => KasubagRoute,
 } as any)
-const DokumenSayaRoute = DokumenSayaRouteImport.update({
-  id: '/saya',
-  path: '/saya',
-  getParentRoute: () => DokumenRoute,
-} as any)
-const DokumenAjuRoute = DokumenAjuRouteImport.update({
-  id: '/aju',
-  path: '/aju',
-  getParentRoute: () => DokumenRoute,
-} as any)
-const DokumenAjiRoute = DokumenAjiRouteImport.update({
-  id: '/aji',
-  path: '/aji',
-  getParentRoute: () => DokumenRoute,
-} as any)
-const DokumenIdRoute = DokumenIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => DokumenRoute,
-} as any)
 const ApiUploadRoute = ApiUploadRouteImport.update({
   id: '/api/upload',
   path: '/api/upload',
@@ -477,11 +444,6 @@ const KasubagBerkasIndexRoute = KasubagBerkasIndexRouteImport.update({
   path: '/berkas/',
   getParentRoute: () => KasubagRoute,
 } as any)
-const DokumenIdIndexRoute = DokumenIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DokumenIdRoute,
-} as any)
 const ApiUsersIndexRoute = ApiUsersIndexRouteImport.update({
   id: '/api/users/',
   path: '/api/users/',
@@ -541,11 +503,6 @@ const KasubagBerkasIdRoute = KasubagBerkasIdRouteImport.update({
   id: '/berkas/$id',
   path: '/berkas/$id',
   getParentRoute: () => KasubagRoute,
-} as any)
-const DokumenIdEditRoute = DokumenIdEditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => DokumenIdRoute,
 } as any)
 const ApiUsersMeRoute = ApiUsersMeRouteImport.update({
   id: '/api/users/me',
@@ -686,11 +643,6 @@ const ApiFilesAccessRoute = ApiFilesAccessRouteImport.update({
 const ApiDokumenSubmitRoute = ApiDokumenSubmitRouteImport.update({
   id: '/api/dokumen/submit',
   path: '/api/dokumen/submit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiDokumenRenamePendingRoute = ApiDokumenRenamePendingRouteImport.update({
-  id: '/api/dokumen/rename-pending',
-  path: '/api/dokumen/rename-pending',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiDokumenPreviewUrlRoute = ApiDokumenPreviewUrlRouteImport.update({
@@ -1072,7 +1024,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/bantuan': typeof BantuanRoute
-  '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/kasubag': typeof KasubagRouteWithChildren
   '/login': typeof LoginRoute
@@ -1093,10 +1044,6 @@ export interface FileRoutesByFullPath {
   '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/pembersihan-dokumen': typeof ApiPembersihanDokumenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
-  '/dokumen/$id': typeof DokumenIdRouteWithChildren
-  '/dokumen/aji': typeof DokumenAjiRoute
-  '/dokumen/aju': typeof DokumenAjuRoute
-  '/dokumen/saya': typeof DokumenSayaRoute
   '/kasubag/activity-log': typeof KasubagActivityLogRoute
   '/kasubag/inbox': typeof KasubagInboxRoute
   '/kasubag/klasifikasi': typeof KasubagKlasifikasiRoute
@@ -1141,7 +1088,6 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
-  '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/kasubag/inbox': typeof ApiKasubagInboxRoute
@@ -1170,7 +1116,6 @@ export interface FileRoutesByFullPath {
   '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
-  '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/kasubag/berkas/$id': typeof KasubagBerkasIdRoute
   '/kasubag/berkas/tertutup': typeof KasubagBerkasTertutupRoute
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdRouteWithChildren
@@ -1183,7 +1128,6 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/': typeof ApiDokumenIndexRoute
   '/api/ketua-tim/': typeof ApiKetuaTimIndexRoute
   '/api/users/': typeof ApiUsersIndexRoute
-  '/dokumen/$id/': typeof DokumenIdIndexRoute
   '/kasubag/berkas/': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
@@ -1244,7 +1188,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bantuan': typeof BantuanRoute
-  '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/login': typeof LoginRoute
   '/pegawai': typeof PegawaiRouteWithChildren
@@ -1261,9 +1204,6 @@ export interface FileRoutesByTo {
   '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/pembersihan-dokumen': typeof ApiPembersihanDokumenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
-  '/dokumen/aji': typeof DokumenAjiRoute
-  '/dokumen/aju': typeof DokumenAjuRoute
-  '/dokumen/saya': typeof DokumenSayaRoute
   '/kasubag/activity-log': typeof KasubagActivityLogRoute
   '/kasubag/inbox': typeof KasubagInboxRoute
   '/kasubag/klasifikasi': typeof KasubagKlasifikasiRoute
@@ -1307,7 +1247,6 @@ export interface FileRoutesByTo {
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
-  '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/kasubag/inbox': typeof ApiKasubagInboxRoute
@@ -1336,7 +1275,6 @@ export interface FileRoutesByTo {
   '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
-  '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/kasubag/berkas/$id': typeof KasubagBerkasIdRoute
   '/kasubag/berkas/tertutup': typeof KasubagBerkasTertutupRoute
   '/pegawai/dokumen/aju': typeof PegawaiDokumenAjuRoute
@@ -1347,7 +1285,6 @@ export interface FileRoutesByTo {
   '/api/dokumen': typeof ApiDokumenIndexRoute
   '/api/ketua-tim': typeof ApiKetuaTimIndexRoute
   '/api/users': typeof ApiUsersIndexRoute
-  '/dokumen/$id': typeof DokumenIdIndexRoute
   '/kasubag/berkas': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen': typeof PegawaiDokumenIndexRoute
@@ -1410,7 +1347,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/bantuan': typeof BantuanRoute
-  '/dokumen': typeof DokumenRouteWithChildren
   '/forbidden': typeof ForbiddenRoute
   '/kasubag': typeof KasubagRouteWithChildren
   '/login': typeof LoginRoute
@@ -1431,10 +1367,6 @@ export interface FileRoutesById {
   '/api/master-komponen': typeof ApiMasterKomponenRouteWithChildren
   '/api/pembersihan-dokumen': typeof ApiPembersihanDokumenRouteWithChildren
   '/api/upload': typeof ApiUploadRoute
-  '/dokumen/$id': typeof DokumenIdRouteWithChildren
-  '/dokumen/aji': typeof DokumenAjiRoute
-  '/dokumen/aju': typeof DokumenAjuRoute
-  '/dokumen/saya': typeof DokumenSayaRoute
   '/kasubag/activity-log': typeof KasubagActivityLogRoute
   '/kasubag/inbox': typeof KasubagInboxRoute
   '/kasubag/klasifikasi': typeof KasubagKlasifikasiRoute
@@ -1479,7 +1411,6 @@ export interface FileRoutesById {
   '/api/dokumen/$id': typeof ApiDokumenIdRouteWithChildren
   '/api/dokumen/download-url': typeof ApiDokumenDownloadUrlRoute
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
-  '/api/dokumen/rename-pending': typeof ApiDokumenRenamePendingRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
   '/api/kasubag/inbox': typeof ApiKasubagInboxRoute
@@ -1508,7 +1439,6 @@ export interface FileRoutesById {
   '/api/settings/theme': typeof ApiSettingsThemeRoute
   '/api/users/$id': typeof ApiUsersIdRouteWithChildren
   '/api/users/me': typeof ApiUsersMeRouteWithChildren
-  '/dokumen/$id/edit': typeof DokumenIdEditRoute
   '/kasubag/berkas/$id': typeof KasubagBerkasIdRoute
   '/kasubag/berkas/tertutup': typeof KasubagBerkasTertutupRoute
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdRouteWithChildren
@@ -1521,7 +1451,6 @@ export interface FileRoutesById {
   '/api/dokumen/': typeof ApiDokumenIndexRoute
   '/api/ketua-tim/': typeof ApiKetuaTimIndexRoute
   '/api/users/': typeof ApiUsersIndexRoute
-  '/dokumen/$id/': typeof DokumenIdIndexRoute
   '/kasubag/berkas/': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
@@ -1585,7 +1514,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/bantuan'
-    | '/dokumen'
     | '/forbidden'
     | '/kasubag'
     | '/login'
@@ -1606,10 +1534,6 @@ export interface FileRouteTypes {
     | '/api/master-komponen'
     | '/api/pembersihan-dokumen'
     | '/api/upload'
-    | '/dokumen/$id'
-    | '/dokumen/aji'
-    | '/dokumen/aju'
-    | '/dokumen/saya'
     | '/kasubag/activity-log'
     | '/kasubag/inbox'
     | '/kasubag/klasifikasi'
@@ -1654,7 +1578,6 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
-    | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
     | '/api/files/access'
     | '/api/kasubag/inbox'
@@ -1683,7 +1606,6 @@ export interface FileRouteTypes {
     | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
-    | '/dokumen/$id/edit'
     | '/kasubag/berkas/$id'
     | '/kasubag/berkas/tertutup'
     | '/pegawai/dokumen/$id'
@@ -1696,7 +1618,6 @@ export interface FileRouteTypes {
     | '/api/dokumen/'
     | '/api/ketua-tim/'
     | '/api/users/'
-    | '/dokumen/$id/'
     | '/kasubag/berkas/'
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
@@ -1757,7 +1678,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/bantuan'
-    | '/dokumen'
     | '/forbidden'
     | '/login'
     | '/pegawai'
@@ -1774,9 +1694,6 @@ export interface FileRouteTypes {
     | '/api/master-komponen'
     | '/api/pembersihan-dokumen'
     | '/api/upload'
-    | '/dokumen/aji'
-    | '/dokumen/aju'
-    | '/dokumen/saya'
     | '/kasubag/activity-log'
     | '/kasubag/inbox'
     | '/kasubag/klasifikasi'
@@ -1820,7 +1737,6 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
-    | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
     | '/api/files/access'
     | '/api/kasubag/inbox'
@@ -1849,7 +1765,6 @@ export interface FileRouteTypes {
     | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
-    | '/dokumen/$id/edit'
     | '/kasubag/berkas/$id'
     | '/kasubag/berkas/tertutup'
     | '/pegawai/dokumen/aju'
@@ -1860,7 +1775,6 @@ export interface FileRouteTypes {
     | '/api/dokumen'
     | '/api/ketua-tim'
     | '/api/users'
-    | '/dokumen/$id'
     | '/kasubag/berkas'
     | '/kasubag/pembersihan'
     | '/pegawai/dokumen'
@@ -1922,7 +1836,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/bantuan'
-    | '/dokumen'
     | '/forbidden'
     | '/kasubag'
     | '/login'
@@ -1943,10 +1856,6 @@ export interface FileRouteTypes {
     | '/api/master-komponen'
     | '/api/pembersihan-dokumen'
     | '/api/upload'
-    | '/dokumen/$id'
-    | '/dokumen/aji'
-    | '/dokumen/aju'
-    | '/dokumen/saya'
     | '/kasubag/activity-log'
     | '/kasubag/inbox'
     | '/kasubag/klasifikasi'
@@ -1991,7 +1900,6 @@ export interface FileRouteTypes {
     | '/api/dokumen/$id'
     | '/api/dokumen/download-url'
     | '/api/dokumen/preview-url'
-    | '/api/dokumen/rename-pending'
     | '/api/dokumen/submit'
     | '/api/files/access'
     | '/api/kasubag/inbox'
@@ -2020,7 +1928,6 @@ export interface FileRouteTypes {
     | '/api/settings/theme'
     | '/api/users/$id'
     | '/api/users/me'
-    | '/dokumen/$id/edit'
     | '/kasubag/berkas/$id'
     | '/kasubag/berkas/tertutup'
     | '/pegawai/dokumen/$id'
@@ -2033,7 +1940,6 @@ export interface FileRouteTypes {
     | '/api/dokumen/'
     | '/api/ketua-tim/'
     | '/api/users/'
-    | '/dokumen/$id/'
     | '/kasubag/berkas/'
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
@@ -2096,7 +2002,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   BantuanRoute: typeof BantuanRoute
-  DokumenRoute: typeof DokumenRouteWithChildren
   ForbiddenRoute: typeof ForbiddenRoute
   KasubagRoute: typeof KasubagRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -2124,7 +2029,6 @@ export interface RootRouteChildren {
   ApiDokumenIdRoute: typeof ApiDokumenIdRouteWithChildren
   ApiDokumenDownloadUrlRoute: typeof ApiDokumenDownloadUrlRoute
   ApiDokumenPreviewUrlRoute: typeof ApiDokumenPreviewUrlRoute
-  ApiDokumenRenamePendingRoute: typeof ApiDokumenRenamePendingRoute
   ApiDokumenSubmitRoute: typeof ApiDokumenSubmitRoute
   ApiFilesAccessRoute: typeof ApiFilesAccessRoute
   ApiKasubagInboxRoute: typeof ApiKasubagInboxRoute
@@ -2221,13 +2125,6 @@ declare module '@tanstack/react-router' {
       path: '/forbidden'
       fullPath: '/forbidden'
       preLoaderRoute: typeof ForbiddenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dokumen': {
-      id: '/dokumen'
-      path: '/dokumen'
-      fullPath: '/dokumen'
-      preLoaderRoute: typeof DokumenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bantuan': {
@@ -2440,34 +2337,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KasubagActivityLogRouteImport
       parentRoute: typeof KasubagRoute
     }
-    '/dokumen/saya': {
-      id: '/dokumen/saya'
-      path: '/saya'
-      fullPath: '/dokumen/saya'
-      preLoaderRoute: typeof DokumenSayaRouteImport
-      parentRoute: typeof DokumenRoute
-    }
-    '/dokumen/aju': {
-      id: '/dokumen/aju'
-      path: '/aju'
-      fullPath: '/dokumen/aju'
-      preLoaderRoute: typeof DokumenAjuRouteImport
-      parentRoute: typeof DokumenRoute
-    }
-    '/dokumen/aji': {
-      id: '/dokumen/aji'
-      path: '/aji'
-      fullPath: '/dokumen/aji'
-      preLoaderRoute: typeof DokumenAjiRouteImport
-      parentRoute: typeof DokumenRoute
-    }
-    '/dokumen/$id': {
-      id: '/dokumen/$id'
-      path: '/$id'
-      fullPath: '/dokumen/$id'
-      preLoaderRoute: typeof DokumenIdRouteImport
-      parentRoute: typeof DokumenRoute
-    }
     '/api/upload': {
       id: '/api/upload'
       path: '/api/upload'
@@ -2573,13 +2442,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KasubagBerkasIndexRouteImport
       parentRoute: typeof KasubagRoute
     }
-    '/dokumen/$id/': {
-      id: '/dokumen/$id/'
-      path: '/'
-      fullPath: '/dokumen/$id/'
-      preLoaderRoute: typeof DokumenIdIndexRouteImport
-      parentRoute: typeof DokumenIdRoute
-    }
     '/api/users/': {
       id: '/api/users/'
       path: '/api/users'
@@ -2663,13 +2525,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/kasubag/berkas/$id'
       preLoaderRoute: typeof KasubagBerkasIdRouteImport
       parentRoute: typeof KasubagRoute
-    }
-    '/dokumen/$id/edit': {
-      id: '/dokumen/$id/edit'
-      path: '/edit'
-      fullPath: '/dokumen/$id/edit'
-      preLoaderRoute: typeof DokumenIdEditRouteImport
-      parentRoute: typeof DokumenIdRoute
     }
     '/api/users/me': {
       id: '/api/users/me'
@@ -2865,13 +2720,6 @@ declare module '@tanstack/react-router' {
       path: '/api/dokumen/submit'
       fullPath: '/api/dokumen/submit'
       preLoaderRoute: typeof ApiDokumenSubmitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/dokumen/rename-pending': {
-      id: '/api/dokumen/rename-pending'
-      path: '/api/dokumen/rename-pending'
-      fullPath: '/api/dokumen/rename-pending'
-      preLoaderRoute: typeof ApiDokumenRenamePendingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/dokumen/preview-url': {
@@ -3399,37 +3247,6 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface DokumenIdRouteChildren {
-  DokumenIdEditRoute: typeof DokumenIdEditRoute
-  DokumenIdIndexRoute: typeof DokumenIdIndexRoute
-}
-
-const DokumenIdRouteChildren: DokumenIdRouteChildren = {
-  DokumenIdEditRoute: DokumenIdEditRoute,
-  DokumenIdIndexRoute: DokumenIdIndexRoute,
-}
-
-const DokumenIdRouteWithChildren = DokumenIdRoute._addFileChildren(
-  DokumenIdRouteChildren,
-)
-
-interface DokumenRouteChildren {
-  DokumenIdRoute: typeof DokumenIdRouteWithChildren
-  DokumenAjiRoute: typeof DokumenAjiRoute
-  DokumenAjuRoute: typeof DokumenAjuRoute
-  DokumenSayaRoute: typeof DokumenSayaRoute
-}
-
-const DokumenRouteChildren: DokumenRouteChildren = {
-  DokumenIdRoute: DokumenIdRouteWithChildren,
-  DokumenAjiRoute: DokumenAjiRoute,
-  DokumenAjuRoute: DokumenAjuRoute,
-  DokumenSayaRoute: DokumenSayaRoute,
-}
-
-const DokumenRouteWithChildren =
-  DokumenRoute._addFileChildren(DokumenRouteChildren)
-
 interface KasubagRouteChildren {
   KasubagActivityLogRoute: typeof KasubagActivityLogRoute
   KasubagInboxRoute: typeof KasubagInboxRoute
@@ -3887,7 +3704,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   BantuanRoute: BantuanRoute,
-  DokumenRoute: DokumenRouteWithChildren,
   ForbiddenRoute: ForbiddenRoute,
   KasubagRoute: KasubagRouteWithChildren,
   LoginRoute: LoginRoute,
@@ -3915,7 +3731,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenIdRoute: ApiDokumenIdRouteWithChildren,
   ApiDokumenDownloadUrlRoute: ApiDokumenDownloadUrlRoute,
   ApiDokumenPreviewUrlRoute: ApiDokumenPreviewUrlRoute,
-  ApiDokumenRenamePendingRoute: ApiDokumenRenamePendingRoute,
   ApiDokumenSubmitRoute: ApiDokumenSubmitRoute,
   ApiFilesAccessRoute: ApiFilesAccessRoute,
   ApiKasubagInboxRoute: ApiKasubagInboxRoute,

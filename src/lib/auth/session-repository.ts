@@ -10,7 +10,6 @@ export type CreateSessionRecordInput = {
   userId: string
   tokenHash: string
   expiresAt: Date
-  rememberMe?: boolean
   userAgent?: string | null
   ipAddress?: string | null
 }
@@ -23,6 +22,8 @@ export type CreatedSessionRecord = {
   createdAt: Date
   lastUsedAt: Date | null
   revokedAt: Date | null
+  // Kolom lama `sessions.remember_me` (selalu false; fitur "Ingat saya" tidak
+  // ada, D-9). Kolomnya dipertahankan di skema, jadi masih ikut `.returning()`.
   rememberMe: boolean
   userAgent: string | null
   ipAddress: string | null
@@ -55,7 +56,6 @@ export async function createSessionRecord(
       userId: input.userId,
       tokenHash: input.tokenHash,
       expiresAt: input.expiresAt,
-      rememberMe: input.rememberMe ?? false,
       userAgent: input.userAgent ?? null,
       ipAddress: input.ipAddress ?? null,
     })

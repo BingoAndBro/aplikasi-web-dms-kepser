@@ -31,7 +31,6 @@ export type KlasifikasiBerkasEligibility = {
   is_selectable: boolean
   has_open_berkas: boolean
   unavailable_reason: string | null
-  anomaly: 'MULTIPLE_OPEN_BERKAS' | null
 }
 
 export type OperationalKlasifikasiSelectionErrorCode =
@@ -43,7 +42,6 @@ export type OperationalKlasifikasiSelectionErrorCode =
 function closedUnavailableReason(tahunAnggaran: number): string {
   return `Berkas untuk Cara Pembayaran ini pada TA ${tahunAnggaran} sudah ditutup.`
 }
-const ANOMALY_UNAVAILABLE_REASON = 'Data berkas untuk cara pembayaran ini perlu ditinjau'
 
 export class OperationalKlasifikasiSelectionError extends Error {
   constructor(
@@ -93,23 +91,13 @@ export function getKlasifikasiBerkasEligibility(
   rows: readonly KlasifikasiBerkasEligibilityRow[],
   tahunAnggaran: number,
 ): KlasifikasiBerkasEligibility {
-  const openRows = rows.filter((row) => row.status_berkas === BERKAS_STATUS.OPEN)
-
-  if (openRows.length === 1) {
+  // The unique index berkas_arsip_klasifikasi_tahun_unique allows at most one
+  // berkas per (Cara Pembayaran, TA), so there is never more than one row here.
+  if (rows.some((row) => row.status_berkas === BERKAS_STATUS.OPEN)) {
     return {
       is_selectable: true,
       has_open_berkas: true,
       unavailable_reason: null,
-      anomaly: null,
-    }
-  }
-
-  if (openRows.length > 1) {
-    return {
-      is_selectable: false,
-      has_open_berkas: true,
-      unavailable_reason: ANOMALY_UNAVAILABLE_REASON,
-      anomaly: 'MULTIPLE_OPEN_BERKAS',
     }
   }
 
@@ -118,7 +106,6 @@ export function getKlasifikasiBerkasEligibility(
       is_selectable: false,
       has_open_berkas: false,
       unavailable_reason: closedUnavailableReason(tahunAnggaran),
-      anomaly: null,
     }
   }
 
@@ -126,7 +113,6 @@ export function getKlasifikasiBerkasEligibility(
     is_selectable: true,
     has_open_berkas: false,
     unavailable_reason: null,
-    anomaly: null,
   }
 }
 

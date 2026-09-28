@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
-import { ROLES } from '#/lib/constants/roles'
 import {
   preflightSubmitFiles,
   type SubmitFilePreflightIssue,
@@ -35,35 +34,6 @@ import {
 } from '#/lib/storage/local-attachment-replacement'
 
 const SUBMIT_FILE_MOVEMENT_FAILED_MESSAGE = 'Gagal mengajukan dokumen, silakan coba lagi'
-
-function isLocalAuthDryRunRequest(request: Request): boolean {
-  return new URL(request.url).searchParams.get('useLocalAuthDryRun') === 'true'
-}
-
-function isLocalPreflightDryRunRequest(request: Request): boolean {
-  return new URL(request.url).searchParams.get('useLocalPreflightDryRun') === 'true'
-}
-
-async function handleLocalAuthDryRun(request: Request): Promise<Response> {
-  const localSession = await getLocalServerSession(request)
-
-  if (!localSession?.userId || !localSession.user?.id) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (!localSession.roles.includes(ROLES.PEGAWAI)) {
-    return Response.json({ error: 'Akses ditolak' }, { status: 403 })
-  }
-
-  return Response.json({
-    dryRun: true,
-    boundary: 'local-auth',
-    submitCompatible: true,
-    writePathExecuted: false,
-    filesystemMovementExecuted: false,
-    message: 'Local auth boundary validated; submit write path was not executed.',
-  }, { status: 200 })
-}
 
 async function handleLocalDbSubmit(
   request: Request,
@@ -152,54 +122,6 @@ async function handleLocalDbSubmit(
   }
 
   return Response.json({ success: true, dokumen: result.dokumen }, { status: 201 })
-}
-
-async function handleLocalPreflightDryRun(
-  request: Request,
-  attachments: Array<{ url: string; [key: string]: unknown }>,
-): Promise<Response> {
-  const localSession = await getLocalServerSession(request)
-
-  if (!localSession?.userId || !localSession.user?.id) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (!localSession.roles.includes(ROLES.PEGAWAI)) {
-    return Response.json({ error: 'Akses ditolak' }, { status: 403 })
-  }
-
-  const movePlan = buildSubmitMovePlan({
-    ownerUserId: localSession.userId,
-    attachments,
-  })
-  const preflight = await preflightSubmitFiles({
-    actorUserId: localSession.userId,
-    movePlan,
-    existenceChecker: createSubmitDiskPreflightChecker(),
-  })
-
-  if (!preflight.ok) {
-    return Response.json({
-      dryRun: true,
-      boundary: 'local-preflight',
-      submitCompatible: true,
-      preflightOk: false,
-      writePathExecuted: false,
-      filesystemMovementExecuted: false,
-      error: describeSubmitPreflightIssues(preflight.issues, attachments),
-      issues: preflight.issues.map(issue => toSafePreflightIssue(issue, attachments)),
-    }, { status: 400 })
-  }
-
-  return Response.json({
-    dryRun: true,
-    boundary: 'local-preflight',
-    submitCompatible: true,
-    preflightOk: true,
-    writePathExecuted: false,
-    filesystemMovementExecuted: false,
-    message: 'Local submit preflight validated; submit write path was not executed.',
-  }, { status: 200 })
 }
 
 function localSubmitBridgeIssueResponse(issue: LocalSubmitBridgeIssue): Response {
@@ -436,17 +358,6 @@ export const Route = createFileRoute('/api/dokumen/submit')({
           return Response.json({ error: chainValidation.error }, { status: 400 })
         }
 
-        if (isLocalAuthDryRunRequest(request)) {
-          return handleLocalAuthDryRun(request)
-        }
-
-        if (isLocalPreflightDryRunRequest(request)) {
-          return handleLocalPreflightDryRun(request, parsed.data.lampiranUrls)
-        }
-
-        // Default submit is local-backed. The previous `useLocalDbSubmit=true`
-        // trigger is now a redundant diagnostic alias because all non-dry-run
-        // submit requests execute this local path.
         return handleLocalDbSubmit(request, parsed.data)
       },
     },

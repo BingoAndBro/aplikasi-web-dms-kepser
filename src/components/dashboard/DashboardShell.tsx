@@ -23,7 +23,7 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
     title: 'Dashboard',
     desc: 'Selamat datang di ruang kerja Pegawai BPS Kabupaten Kepulauan Seribu.',
     ctaLabel: 'Ajukan Dokumen',
-    ctaTo: '/dokumen/aju',
+    ctaTo: '/pegawai/dokumen/aju',
   },
   PPK: {
     badge: 'PPK PORTAL',

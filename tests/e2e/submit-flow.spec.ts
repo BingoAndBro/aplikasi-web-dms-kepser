@@ -53,23 +53,8 @@ async function advanceToStep(page: Page, targetStep: number) {
   }
 }
 
-// =============================================================================
-// TC-01: Redirect /dokumen → /dokumen/saya
-// =============================================================================
-
-test('TC-01: should redirect /dokumen to /dokumen/saya', async ({ page }) => {
-  await login(page)
-  await page.goto(`${BASE_URL}/dokumen`)
-  await page.waitForLoadState('load')
-  await page.waitForTimeout(3000)
-  const url = page.url()
-  expect(url).toMatch(/\/dokumen\/saya/)
-  // Wait for dokumen saya page to finish loading
-  await page.waitForFunction(() => {
-    return document.body.textContent?.includes('Belum ada dokumen') === true
-    || document.querySelector('table tbody tr') !== null
-  }, { timeout: 15000 })
-})
+// TC-01 (redirect /dokumen → /dokumen/saya) dihapus bersama rute lama /dokumen/*
+// (D-16); halaman dokumen pegawai kini hanya di /pegawai/dokumen.
 
 // =============================================================================
 // TC-02: Step 1 — Fungsi, Tahun, Tanggal
@@ -227,7 +212,7 @@ test('TC-08: Submit dokumen successfully', async ({ page }) => {
 test.describe('TC-09: Dokumen List — Filter & Search', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
-    await page.goto(`${BASE_URL}/dokumen/saya`)
+    await page.goto(`${BASE_URL}/pegawai/dokumen`)
     await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(1000)
   })
@@ -255,7 +240,7 @@ test.describe('TC-09: Dokumen List — Filter & Search', () => {
 
 test('TC-10: Empty state with CTA', async ({ page }) => {
   await login(page)
-  await page.goto(`${BASE_URL}/dokumen/saya`)
+  await page.goto(`${BASE_URL}/pegawai/dokumen`)
   await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(1000)
 
@@ -275,7 +260,7 @@ test('TC-10: Empty state with CTA', async ({ page }) => {
 
 test('TC-11: Dokumen detail page displays all sections', async ({ page }) => {
   await login(page)
-  await page.goto(`${BASE_URL}/dokumen/saya`)
+  await page.goto(`${BASE_URL}/pegawai/dokumen`)
   await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(1000)
 
@@ -298,7 +283,7 @@ test('TC-11: Dokumen detail page displays all sections', async ({ page }) => {
 
 test('TC-12: Download lampiran opens signed URL', async ({ page }) => {
   await login(page)
-  await page.goto(`${BASE_URL}/dokumen/saya`)
+  await page.goto(`${BASE_URL}/pegawai/dokumen`)
   await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(1000)
 
@@ -330,7 +315,7 @@ test('TC-12: Download lampiran opens signed URL', async ({ page }) => {
 
 test('TC-13: Resubmit workflow for NEED_REVISION documents', async ({ page }) => {
   await login(page)
-  await page.goto(`${BASE_URL}/dokumen/saya`)
+  await page.goto(`${BASE_URL}/pegawai/dokumen`)
   await page.waitForLoadState('domcontentloaded')
   await page.waitForTimeout(1000)
 
