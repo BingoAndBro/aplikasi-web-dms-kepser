@@ -60,7 +60,20 @@ function jsName(column: Column): string {
   return name
 }
 
+/**
+ * Stand-in for a raw `sql` expression (e.g. a correlated subquery): the test
+ * supplies how to compute it from the current joined row and all fixture tables.
+ */
+export type FakeSqlExpression = {
+  __fakeEval: (row: ReadonlyMap<Table, FixtureRow | null>, allTables: ReadonlyMap<Table, FixtureRow[]>) => unknown
+}
+
+function isFakeSql(value: unknown): value is FakeSqlExpression {
+  return typeof value === 'object' && value !== null && '__fakeEval' in value
+}
+
 function valueOf(operand: unknown, row: JoinedRow): unknown {
+  if (isFakeSql(operand)) return operand.__fakeEval(row, tables)
   if (!isColumn(operand)) return operand
   const record = row.get(operand.table)
   if (!record) return null

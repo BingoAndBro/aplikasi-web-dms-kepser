@@ -27,6 +27,9 @@ function row(overrides: Partial<LaporanKinerjaRow> = {}): LaporanKinerjaRow {
     updated_at: '2026-05-10T00:00:00.000Z',
     nominal_realisasi: 1_000_000,
     is_diberkaskan: false,
+    lampiran_dibersihkan_at: null,
+    lampiran_dibersihkan_alasan: null,
+    berkas_dimusnahkan: false,
     ...overrides,
   }
 }
@@ -139,5 +142,21 @@ describe('totalNominal', () => {
       row({ nominal_realisasi: null }),
     ]
     expect(totalNominal(rows)).toBe(300)
+  })
+})
+
+describe('totalNominal — berkas dimusnahkan (D-29)', () => {
+  it('shows destroyed rows but leaves their nominal out of every total', () => {
+    const rows = [
+      row({ id: 'a', nominal_realisasi: 1_000_000 }),
+      row({ id: 'b', nominal_realisasi: 500_000, berkas_dimusnahkan: true }),
+      row({ id: 'c', nominal_realisasi: 250_000, sumber: 'MANUAL', berkas_dimusnahkan: true }),
+    ]
+
+    expect(totalNominal(rows)).toBe(1_000_000)
+    const [fungsi] = buildFungsiRows(rows)
+    expect(fungsi.dokumen).toHaveLength(3)
+    expect(fungsi.totalNominal).toBe(1_000_000)
+    expect(fungsi.kegiatan[0].komponen[0].totalNominal).toBe(1_000_000)
   })
 })

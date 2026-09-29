@@ -4,7 +4,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 import { and, eq } from 'drizzle-orm'
 import { db } from '#/db/client'
-import { berkasArsipItem } from '#/db/schema/arsip'
+import { berkasArsip, berkasArsipItem } from '#/db/schema/arsip'
 import { auditLog } from '#/db/schema/audit'
 import { dokumenTransaksi, logAktivitas } from '#/db/schema/dokumen'
 import {
@@ -17,7 +17,7 @@ import {
   masterKomponen,
 } from '#/db/schema/master'
 import { getLocalServerSession, hasLocalRole } from '#/lib/auth/local-server-auth'
-import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
+import { ARCHIVE_SOURCE_TYPE, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 import {
   getDokumenValidationErrorMessage,
   updateDokumenSchema,
@@ -386,6 +386,9 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               jenis_permintaan_nama: masterJenisPermintaan.nama,
               kategori_permintaan_nama: masterKategoriPermintaan.nama,
               detail_permintaan_nama: masterDetailPermintaan.nama,
+              // D-29: status arsip dokumen mengikuti berkas penaungnya (satu
+              // dokumen paling banyak di satu berkas, unique index dokumen_id).
+              berkas_status_arsip: berkasArsip.statusArsip,
             })
             .from(dokumenTransaksi)
             .leftJoin(masterFungsi, eq(dokumenTransaksi.fungsiId, masterFungsi.id))
@@ -394,6 +397,8 @@ export const Route = createFileRoute('/api/dokumen/$id')({
             .leftJoin(masterJenisPermintaan, eq(dokumenTransaksi.jenisPermintaanId, masterJenisPermintaan.id))
             .leftJoin(masterKategoriPermintaan, eq(dokumenTransaksi.kategoriPermintaanId, masterKategoriPermintaan.id))
             .leftJoin(masterDetailPermintaan, eq(dokumenTransaksi.detailPermintaanId, masterDetailPermintaan.id))
+            .leftJoin(berkasArsipItem, eq(berkasArsipItem.dokumenId, dokumenTransaksi.id))
+            .leftJoin(berkasArsip, eq(berkasArsip.id, berkasArsipItem.berkasId))
             .where(eq(dokumenTransaksi.id, params.id))
             .limit(1)
 
@@ -407,10 +412,13 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           }
 
           return Response.json({
-            dokumen: parseDokumen({
-              ...row,
-              nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
-            }),
+            dokumen: {
+              ...parseDokumen({
+                ...row,
+                nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
+              }),
+              berkas_dimusnahkan: row.berkas_status_arsip === BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN,
+            },
           })
         } catch (err) {
           console.error('[API/dokumen/:id] GET local query error:', err)

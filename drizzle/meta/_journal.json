@@ -148,6 +148,13 @@
       "when": 1790402634780,
       "tag": "0020_dokumen_transaksi_permintaan_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790489034780,
+      "tag": "0021_manual_arsip_drop_own_lifecycle",
+      "breakpoints": true
     }
   ]
 }

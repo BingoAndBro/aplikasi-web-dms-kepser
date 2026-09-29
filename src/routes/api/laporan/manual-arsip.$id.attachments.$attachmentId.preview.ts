@@ -5,7 +5,6 @@ import {
   requireLaporanManualArsipSession,
   toSafeErrorLog,
 } from '#/lib/manual-arsip'
-import { isManualArsipInDestroyedBerkas } from '#/lib/laporan/manual-realisasi'
 
 export const Route = createFileRoute('/api/laporan/manual-arsip/$id/attachments/$attachmentId/preview')({
   server: {
@@ -19,15 +18,8 @@ export const Route = createFileRoute('/api/laporan/manual-arsip/$id/attachments/
         }
 
         try {
-          // Pemusnahan terjadi di tingkat berkas; status_arsip dokumen manual
-          // sendiri diperiksa di createManualArsipAttachmentFileResponse.
-          if (await isManualArsipInDestroyedBerkas(params.id)) {
-            return Response.json(
-              { error: 'File lampiran tidak tersedia - arsip telah dimusnahkan' },
-              { status: 410, headers: { 'Cache-Control': 'no-store' } },
-            )
-          }
-
+          // 410 bila berkas penaungnya DIMUSNAHKAN: createManualArsipAttachmentFileResponse
+          // memakai status arsip efektif (D-29).
           return await createManualArsipAttachmentFileResponse({
             manualArsipId: params.id,
             attachmentId: params.attachmentId,

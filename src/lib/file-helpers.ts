@@ -21,6 +21,31 @@ export function buildFormalFilename(dok: DokumenRow, lamp: LampiranUrl): string 
   return `${sanitizeFilename(kelengkapanNama)}_${sanitizeFilename(leafNode)}_${sanitizeFilename(kegiatanNama)}_${tanggal}.${ext}`
 }
 
+/**
+ * D-31: ekspor ZIP laporan diunduh secara bawaan browser, sama seperti ekspor
+ * berkas KSBU. Dulu ZIP diambil dengan fetch + blob; di browser dengan
+ * ekstensi/pengelola unduhan (terlihat di Edge) respons lampiran ZIP direbut
+ * ekstensi sehingga halaman mendapat "Failed to fetch" walau server mengirim
+ * 200 lengkap. Langkah 1 (POST ?mode=ticket) tetap memvalidasi daftar dokumen
+ * dan mengembalikan pesan error (400/413) seperti biasa; langkah 2 menavigasi
+ * ke tautan sekali pakai sehingga browser sendiri yang mengunduh.
+ */
+export async function startZipDownload(endpoint: string, body: unknown): Promise<void> {
+  const response = await fetch(`${endpoint}?mode=ticket`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const payload = await response.json().catch(() => null)
+
+  if (!response.ok || typeof payload?.download_url !== 'string') {
+    throw new Error(typeof payload?.error === 'string' ? payload.error : 'Gagal membuat ekspor ZIP')
+  }
+
+  window.location.assign(payload.download_url)
+}
+
 export function downloadZipBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

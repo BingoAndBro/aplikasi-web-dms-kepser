@@ -34,6 +34,7 @@ import {
 import { statusForBerkasServiceError } from '#/lib/archive/berkas-arsip-api'
 import { calculateManualArchiveRetentionDates } from '#/lib/archive/retention'
 import { buildManualArsipAttachmentFilename } from '#/lib/archive/manual-arsip-attachment-filename'
+import { manualArsipEffectiveStatusArsip } from '#/lib/archive/manual-arsip-effective-status'
 import type {
   CreateManualArsipInput,
   ListManualArsipQuery,
@@ -307,7 +308,6 @@ export async function createManualArsipRecord(
           masaAktifBerakhir: retentionDates.masaAktifBerakhir,
           masaInaktifBerakhir: retentionDates.masaInaktifBerakhir,
           nominalRealisasi: normalizeNominalForWrite(input.nominal_realisasi),
-          statusArsip: ARCHIVE_STATUS.AKTIF,
           metadata: input.metadata ?? {},
           createdBy,
           archivedBy: input.tanggal_diarsipkan ? createdBy : null,
@@ -320,7 +320,7 @@ export async function createManualArsipRecord(
           tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
           keterangan: manualArsip.keterangan,
           nominal_realisasi: manualArsip.nominalRealisasi,
-          status_arsip: manualArsip.statusArsip,
+          status_arsip: manualArsipEffectiveStatusArsip,
           fungsi_id: manualArsip.fungsiId,
           kegiatan_id: manualArsip.kegiatanId,
           komponen_id: manualArsip.komponenId,
@@ -606,7 +606,8 @@ export async function listManualArsipRecords(
   if (query.kegiatan_id) filters.push(eq(manualArsip.kegiatanId, query.kegiatan_id))
   if (query.komponen_id) filters.push(eq(manualArsip.komponenId, query.komponen_id))
   if (query.klasifikasi_id) filters.push(eq(manualArsip.klasifikasiId, query.klasifikasi_id))
-  if (query.status_arsip) filters.push(eq(manualArsip.statusArsip, query.status_arsip))
+  // D-29: status arsip dokumen manual mengikuti berkasnya (status efektif).
+  if (query.status_arsip) filters.push(eq(manualArsipEffectiveStatusArsip, query.status_arsip))
 
   let builder = db
     .select({
@@ -615,7 +616,7 @@ export async function listManualArsipRecords(
       tanggal: manualArsip.tanggal,
       keterangan: manualArsip.keterangan,
       nominal_realisasi: manualArsip.nominalRealisasi,
-      status_arsip: manualArsip.statusArsip,
+      status_arsip: manualArsipEffectiveStatusArsip,
       fungsi_id: manualArsip.fungsiId,
       fungsi_nama: masterFungsi.nama,
       kegiatan_id: manualArsip.kegiatanId,
@@ -675,7 +676,7 @@ export async function getManualArsipDetail(
       tanggal: manualArsip.tanggal,
       keterangan: manualArsip.keterangan,
       nominal_realisasi: manualArsip.nominalRealisasi,
-      status_arsip: manualArsip.statusArsip,
+      status_arsip: manualArsipEffectiveStatusArsip,
       fungsi_id: manualArsip.fungsiId,
       fungsi_nama: masterFungsi.nama,
       kegiatan_id: manualArsip.kegiatanId,
@@ -750,7 +751,7 @@ export async function updateManualArsipRecord(
   const [existing] = await db
     .select({
       id: manualArsip.id,
-      status_arsip: manualArsip.statusArsip,
+      status_arsip: manualArsipEffectiveStatusArsip,
     })
     .from(manualArsip)
     .where(eq(manualArsip.id, id))
@@ -825,7 +826,8 @@ async function updateManualArsipSourceRecord({
     .set(updateValues)
     .where(and(
       eq(manualArsip.id, id),
-      eq(manualArsip.statusArsip, ARCHIVE_STATUS.AKTIF),
+      // D-29: hanya bisa diedit selama BERKASNYA masih aktif.
+      eq(manualArsipEffectiveStatusArsip, ARCHIVE_STATUS.AKTIF),
     ))
     .returning({
       id: manualArsip.id,
@@ -835,7 +837,7 @@ async function updateManualArsipSourceRecord({
       tanggal_diarsipkan: manualArsip.tanggalDiarsipkan,
       keterangan: manualArsip.keterangan,
       nominal_realisasi: manualArsip.nominalRealisasi,
-      status_arsip: manualArsip.statusArsip,
+      status_arsip: manualArsipEffectiveStatusArsip,
       fungsi_id: manualArsip.fungsiId,
       kegiatan_id: manualArsip.kegiatanId,
       komponen_id: manualArsip.komponenId,
@@ -1135,7 +1137,7 @@ async function loadManualArsipAttachmentFileReference(
       id: manualArsip.id,
       nama: manualArsip.nama,
       tanggal: manualArsip.tanggal,
-      status_arsip: manualArsip.statusArsip,
+      status_arsip: manualArsipEffectiveStatusArsip,
       komponen_nama: masterKomponen.nama,
     })
     .from(manualArsip)

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, desc, eq, gte, isNotNull, isNull, lte, notInArray, or } from 'drizzle-orm'
+import { and, desc, eq, gte, isNotNull, lte, notInArray, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '#/db/client'
@@ -20,6 +20,7 @@ import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { ROLES } from '#/lib/constants/roles'
 import {
+  isManualArsipDestroyed,
   listManualRealisasiRows,
   loadDestroyedArchiveIds,
   tahunFromManualTanggal,
@@ -68,6 +69,11 @@ const laporanKinerjaRowSchema = z.object({
   updated_at: z.string(),
   nominal_realisasi: z.number().nullable(),
   is_diberkaskan: z.boolean(),
+  /** D-30: badge "File Dibersihkan" (pembersihan non-material atau pemusnahan berkas). */
+  lampiran_dibersihkan_at: z.string().nullable(),
+  lampiran_dibersihkan_alasan: z.string().nullable(),
+  /** D-29: berkasnya DIMUSNAHKAN — hanya muncul di scope=laporan_kinerja; nominal tidak dihitung. */
+  berkas_dimusnahkan: z.boolean(),
 })
 
 const laporanKinerjaResponseSchema = z.object({
@@ -154,8 +160,16 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
           // otoritas "dimusnahkan" ada pada join berkas_arsip_item → berkas_arsip
           // (loadDestroyedArchiveIds), sama seperti guard akses lampiran di
           // document-file-access.ts. Aturan ini dipakai juga oleh Laporan Kegiatan.
+          //   - Nominal Realisasi (PPK/PPSPM): dokumen itu tidak ditampilkan.
+          //   - Laporan Kinerja (scope=laporan_kinerja, D-29): tetap ditampilkan
+          //     dengan `berkas_dimusnahkan: true` — metadata sengaja tidak
+          //     dihapus, hanya lampirannya — dan klien tidak menjumlahkan
+          //     nominalnya (totalNominal di monitoring-rows.ts).
           const destroyed = await loadDestroyedArchiveIds()
           const destroyedDocumentIds = destroyed.dokumenIds
+          const destroyedDocumentIdSet = new Set(destroyedDocumentIds)
+          const destroyedManualArsipIdSet = new Set(destroyed.manualArsipIds)
+          const hideDestroyed = !includeNonMaterial
 
           // "Diberkaskan" adalah metadata tambahan (dokumen sudah ditempel ke
           // berkas_arsip_item), bukan status FSM — dokumen TERSIMPAN tidak
@@ -181,14 +195,16 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             includeNonMaterial
               ? or(
                   materialFilter,
+                  // D-29: termasuk non-material yang lampirannya sudah
+                  // dibersihkan — metadatanya sengaja disimpan; lampirannya
+                  // dijawab 410 oleh rute file. Tidak bernominal.
                   and(
                     eq(dokumenTransaksi.isNonMaterial, true),
                     eq(dokumenTransaksi.status, DOC_STATUS.TERSIMPAN),
-                    isNull(dokumenTransaksi.lampiranDibersihkanAt),
                   ),
                 )
               : materialFilter,
-            destroyedDocumentIds.length > 0
+            hideDestroyed && destroyedDocumentIds.length > 0
               ? notInArray(dokumenTransaksi.id, destroyedDocumentIds)
               : undefined,
           )
@@ -208,6 +224,8 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
               created_at: dokumenTransaksi.createdAt,
               updated_at: dokumenTransaksi.updatedAt,
               nominal_realisasi: dokumenTransaksi.nominalRealisasi,
+              lampiran_dibersihkan_at: dokumenTransaksi.lampiranDibersihkanAt,
+              lampiran_dibersihkan_alasan: dokumenTransaksi.lampiranDibersihkanAlasan,
               pengaju_display_name: users.displayName,
               pengaju_nama_lengkap: users.namaLengkap,
               pengaju_username: users.username,
@@ -241,12 +259,12 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
           // tahun_anggaran berkas yang menaunginya) — konsisten dengan makna
           // `tahun` pada dokumen_transaksi: tahun milik dokumennya sendiri,
           // independen dari tahun anggaran berkas (Q5). Dokumen manual yang
-          // DIMUSNAHKAN — baik statusnya sendiri maupun berkas yang
-          // menaunginya — dikecualikan (D-28).
+          // berkasnya DIMUSNAHKAN mengikuti aturan dokumen alur di atas
+          // (D-28/D-29).
           const manualRows = await listManualRealisasiRows({
             startDate: startDateParam,
             endDate: endDateParam,
-            destroyed: 'exclude',
+            destroyed: hideDestroyed ? 'exclude' : 'include',
             destroyedManualArsipIds: destroyed.manualArsipIds,
           })
 
@@ -267,6 +285,9 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             updated_at: string
             nominal_realisasi: number | null
             is_diberkaskan: boolean
+            lampiran_dibersihkan_at: string | null
+            lampiran_dibersihkan_alasan: string | null
+            berkas_dimusnahkan: boolean
           }
 
           const workflowCombined: CombinedRow[] = rows.map((row) => ({
@@ -290,6 +311,9 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             updated_at: isoDateString(row.updated_at),
             nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
             is_diberkaskan: berkasedDocumentIds.has(row.id),
+            lampiran_dibersihkan_at: row.lampiran_dibersihkan_at ? isoDateString(row.lampiran_dibersihkan_at) : null,
+            lampiran_dibersihkan_alasan: row.lampiran_dibersihkan_alasan ?? null,
+            berkas_dimusnahkan: destroyedDocumentIdSet.has(row.id),
           }))
 
           const manualCombined: CombinedRow[] = manualRows.map((row) => ({
@@ -316,6 +340,11 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             // berkas terbuka (addManualDocumentToOpenBerkas) — tidak pernah
             // "belum diberkaskan" seperti dokumen alur biasa.
             is_diberkaskan: true,
+            // Dokumen manual tidak punya penanda pembersihan per dokumen; bila
+            // berkasnya dimusnahkan, berkas_dimusnahkan yang menandainya.
+            lampiran_dibersihkan_at: null,
+            lampiran_dibersihkan_alasan: null,
+            berkas_dimusnahkan: isManualArsipDestroyed(row, destroyedManualArsipIdSet),
           }))
 
           const combinedBeforeLimit = [...workflowCombined, ...manualCombined]

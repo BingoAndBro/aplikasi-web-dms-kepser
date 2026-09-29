@@ -16,6 +16,11 @@ export type LaporanKinerjaRow = {
   updated_at: string
   nominal_realisasi: number | null
   is_diberkaskan: boolean
+  /** D-30: badge "File Dibersihkan" di Laporan Kinerja. */
+  lampiran_dibersihkan_at: string | null
+  lampiran_dibersihkan_alasan: string | null
+  /** D-29: berkasnya DIMUSNAHKAN (hanya di Laporan Kinerja). Tampil, nominal tidak dihitung. */
+  berkas_dimusnahkan: boolean
 }
 
 export type SortMode = 'updated_desc' | 'nominal_desc' | 'documents_desc' | 'name_asc'
@@ -177,7 +182,7 @@ export function compareNamedRows(
 
 export function totalNominal(rows: LaporanKinerjaRow[]) {
   return rows.reduce((total, row) => {
-    if (row.nominal_realisasi === null) return total
+    if (row.nominal_realisasi === null || row.berkas_dimusnahkan) return total
     return total + row.nominal_realisasi
   }, 0)
 }

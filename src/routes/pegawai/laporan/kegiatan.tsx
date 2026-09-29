@@ -30,7 +30,7 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
-import { FilterToolbar, PembuatFilterSelect, ToolbarSelectField, buildPersonOptions } from '#/components/laporan/FilterToolbar'
+import { FilterToolbar, PembuatFilterSelect, ToolbarFilterField, ToolbarSelectField, buildPersonOptions } from '#/components/laporan/FilterToolbar'
 import { PeriodeSelector, tahunFromTanggal } from '#/components/laporan/PeriodeSelector'
 import {
   defaultPeriode,
@@ -39,8 +39,14 @@ import {
   type PeriodeValue,
 } from '#/lib/laporan/periode'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
-import { countedNominalRealisasi } from '#/lib/laporan/kegiatan-scope'
-import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
+import { BERKAS_DIMUSNAHKAN_NOMINAL_NOTE, countedNominalRealisasi } from '#/lib/laporan/kegiatan-scope'
+import {
+  LAPORAN_STATUS_FILTER_OPTIONS,
+  laporanStatusLabel,
+  matchesLaporanStatus,
+  type LaporanStatus,
+} from '#/lib/laporan/status-laporan'
+import { startZipDownload } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
 import {
   ArrowLeft,
@@ -62,8 +68,6 @@ import {
 // scope=final di src/routes/api/laporan/kegiatan.ts.
 const LAPORAN_KEGIATAN_SCOPE_NOTE =
   'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU dari kegiatan yang Anda pimpin. Dokumen yang berkasnya sudah dimusnahkan tetap ditampilkan, tetapi nominal realisasinya tidak lagi dihitung.'
-
-const BERKAS_DIMUSNAHKAN_NOMINAL_NOTE = 'Tidak dihitung · berkas dimusnahkan'
 
 export const Route = createFileRoute('/pegawai/laporan/kegiatan')({
   validateSearch: z.object({
@@ -162,6 +166,9 @@ function LaporanKegiatanPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<KegiatanFilterValue>({})
+  // D-30: filter Status (Material / Non-Material), berlaku untuk daftar
+  // kegiatan beserta totalnya dan untuk detail kegiatan.
+  const [statusFilter, setStatusFilter] = useState<LaporanStatus | undefined>(undefined)
   const [periode, setPeriode] = useState<PeriodeValue>(() => defaultPeriode('TRIWULAN'))
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUserName, setCurrentUserName] = useState('Ketua Tim')
@@ -232,8 +239,10 @@ function LaporanKegiatanPage() {
   const tahunTersedia = useMemo(() => tahunFromTanggal(dokumen), [dokumen])
 
   const filteredDocuments = useMemo(() => {
-    return dokumen.filter(d => isTanggalInPeriode(d.tanggal, periodeRange) && matchesKegiatanListFilter(d, filter))
-  }, [dokumen, filter, periodeRange])
+    return dokumen.filter(d => isTanggalInPeriode(d.tanggal, periodeRange)
+      && matchesLaporanStatus(d.status, statusFilter)
+      && matchesKegiatanListFilter(d, filter))
+  }, [dokumen, filter, periodeRange, statusFilter])
 
   const kegiatanRows = useMemo(() => {
     return buildKegiatanRows(allowedKegiatan, filteredDocuments, currentUserName)
@@ -245,7 +254,7 @@ function LaporanKegiatanPage() {
     const query = search.trim().toLowerCase()
     return kegiatanRows
       .filter(row => {
-        if (activeFilters > 0 && row.dokumen.length === 0) return false
+        if ((activeFilters > 0 || statusFilter) && row.dokumen.length === 0) return false
         if (!query) return true
         return [
           row.nama,
@@ -255,7 +264,7 @@ function LaporanKegiatanPage() {
         ].some(value => value?.toLowerCase().includes(query))
       })
       .sort((a, b) => compareKegiatanRows(a, b, sortBy))
-  }, [activeFilters, kegiatanRows, search, sortBy])
+  }, [activeFilters, kegiatanRows, search, sortBy, statusFilter])
 
   const selectedKegiatan = useMemo(() => {
     return kegiatanRows.find(row => row.id === kegiatanId) ?? null
@@ -301,35 +310,23 @@ function LaporanKegiatanPage() {
     setDetailId(documentId)
   }
 
-  // Ekspor ZIP hanya membaca dokumen_transaksi, jadi dokumen tambahan KSBU
-  // tidak ikut dikirim (dan tidak ikut dihitung di dialog ekspor).
+  // Ekspor ZIP: dokumen alur dikirim sebagai dokumen_ids, dokumen tambahan
+  // KSBU sebagai manual_arsip_ids (D-29). Server memeriksa ulang keduanya
+  // terhadap kegiatan yang dipimpin.
   const exportDocumentIds = selectedDocuments.filter(dok => dok.sumber !== 'MANUAL').map(dok => dok.id)
+  const exportManualArsipIds = selectedDocuments.filter(dok => dok.sumber === 'MANUAL').map(dok => dok.id)
 
   async function handleExportZip() {
-    if (exportDocumentIds.length === 0 || exportDocumentIds.length > 500) return
+    if (selectedDocuments.length === 0 || selectedDocuments.length > 500) return
 
     setExportPending(true)
     setExportError('')
 
     try {
-      const response = await fetch('/api/laporan/kegiatan/export-zip', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dokumen_ids: exportDocumentIds }),
+      await startZipDownload('/api/laporan/kegiatan/export-zip', {
+        dokumen_ids: exportDocumentIds,
+        manual_arsip_ids: exportManualArsipIds,
       })
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null)
-        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Gagal membuat ekspor ZIP')
-      }
-
-      const blob = await response.blob()
-      const filename = extractContentDispositionFilename(
-        response.headers.get('Content-Disposition'),
-        'Laporan_Kegiatan.zip',
-      )
-      downloadZipBlob(blob, filename)
       setExportDialogOpen(false)
     } catch (error) {
       setExportError(error instanceof Error ? error.message : 'Gagal membuat ekspor ZIP')
@@ -374,7 +371,9 @@ function LaporanKegiatanPage() {
             onBack={() => selectKegiatan(null, navigate)}
             onOpenDocument={openDocument}
             isCurrentUser={isCurrentUser}
-            exportCount={exportDocumentIds.length}
+            exportCount={selectedDocuments.length}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
             exportDialogOpen={exportDialogOpen}
             onExportDialogOpenChange={setExportDialogOpen}
             exportPending={exportPending}
@@ -417,6 +416,8 @@ function LaporanKegiatanPage() {
               resultLabel={`${filteredKegiatanRows.length} Kegiatan Ditemukan`}
               filter={filter}
               onFilterChange={setFilter}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
             />
 
             {loading && <LoadingState variant="list" rows={4} label="Memuat laporan kegiatan" />}
@@ -430,7 +431,7 @@ function LaporanKegiatanPage() {
                 title="Tidak ada kegiatan yang cocok"
                 description="Reset filter atau ubah kata kunci untuk melihat kegiatan lain."
                 icon={<Filter size={20} />}
-                action={<Button variant="outline" size="sm" onClick={() => { setFilter({}); setSearch('') }}>Reset Filter</Button>}
+                action={<Button variant="outline" size="sm" onClick={() => { setFilter({}); setStatusFilter(undefined); setSearch('') }}>Reset Filter</Button>}
               />
             )}
 
@@ -473,6 +474,8 @@ function ReportToolbar({
   resultLabel,
   filter,
   onFilterChange,
+  statusFilter,
+  onStatusFilterChange,
 }: {
   search: string
   onSearchChange: (value: string) => void
@@ -486,18 +489,23 @@ function ReportToolbar({
   resultLabel: string
   filter: KegiatanFilterValue
   onFilterChange: (value: KegiatanFilterValue) => void
+  statusFilter: LaporanStatus | undefined
+  onStatusFilterChange: (value: LaporanStatus | undefined) => void
 }) {
   return (
     <FilterToolbar
       search={{ value: search, onChange: onSearchChange, placeholder, label: searchLabel }}
       fields={(
-        <ToolbarSelectField
-          label="Urutkan"
-          srLabel="laporan kegiatan"
-          value={sortBy}
-          options={SORT_OPTIONS.map(option => ({ id: option.value, nama: option.label }))}
-          onChange={(value) => onSortChange(value as SortMode)}
-        />
+        <>
+          <LaporanStatusFilterField value={statusFilter} onChange={onStatusFilterChange} />
+          <ToolbarSelectField
+            label="Urutkan"
+            srLabel="laporan kegiatan"
+            value={sortBy}
+            options={SORT_OPTIONS.map(option => ({ id: option.value, nama: option.label }))}
+            onChange={(value) => onSortChange(value as SortMode)}
+          />
+        </>
       )}
       advanced={{
         open: filterOpen,
@@ -673,6 +681,8 @@ function KegiatanDetailView({
   onOpenDocument,
   isCurrentUser,
   exportCount,
+  statusFilter,
+  onStatusFilterChange,
   exportDialogOpen,
   onExportDialogOpenChange,
   exportPending,
@@ -694,6 +704,8 @@ function KegiatanDetailView({
   onOpenDocument: (id: string) => void
   isCurrentUser: (dok: DokumenLaporanRow) => boolean
   exportCount: number
+  statusFilter: LaporanStatus | undefined
+  onStatusFilterChange: (value: LaporanStatus | undefined) => void
   exportDialogOpen: boolean
   onExportDialogOpenChange: (open: boolean) => void
   exportPending: boolean
@@ -751,6 +763,8 @@ function KegiatanDetailView({
         pembuatOptions={pembuatOptions}
         resultLabel={`${dokumen.length} dari ${totalDokumen} dokumen ditampilkan`}
         exportCount={exportCount}
+        statusFilter={statusFilter}
+        onStatusFilterChange={onStatusFilterChange}
         onExportClick={() => onExportDialogOpenChange(true)}
       />
 
@@ -758,7 +772,7 @@ function KegiatanDetailView({
         open={exportDialogOpen}
         onOpenChange={onExportDialogOpenChange}
         documentCount={exportCount}
-        description={`Mengikuti dokumen yang sedang ditampilkan pada kegiatan "${kegiatan.nama}". Dokumen tambahan KSBU tidak termasuk dalam ekspor.`}
+        description={`Mengikuti dokumen yang sedang ditampilkan pada kegiatan "${kegiatan.nama}", termasuk dokumen tambahan KSBU.`}
         pending={exportPending}
         error={exportError}
         onConfirm={onExportConfirm}
@@ -791,6 +805,8 @@ function KegiatanDetailToolbar({
   pembuatOptions,
   resultLabel,
   exportCount,
+  statusFilter,
+  onStatusFilterChange,
   onExportClick,
 }: {
   kegiatanId: string
@@ -806,6 +822,8 @@ function KegiatanDetailToolbar({
   pembuatOptions: { id: string; nama: string }[]
   resultLabel: string
   exportCount: number
+  statusFilter: LaporanStatus | undefined
+  onStatusFilterChange: (value: LaporanStatus | undefined) => void
   onExportClick: () => void
 }) {
   return (
@@ -823,6 +841,7 @@ function KegiatanDetailToolbar({
             options={pembuatOptions}
             onChange={(pembuatId) => onFilterChange({ ...filter, pembuatId })}
           />
+          <LaporanStatusFilterField value={statusFilter} onChange={onStatusFilterChange} />
           <ToolbarSelectField
             label="Urutkan"
             srLabel="dokumen kegiatan"
@@ -1107,7 +1126,7 @@ function DocumentTable({
             <TableRow className="border-neutral-200 bg-neutral-100 hover:bg-neutral-100">
               <TableHead className={TABLE_HEAD_CLASS}>Judul Dokumen</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Jenis Scope</TableHead>
-              <TableHead className={TABLE_HEAD_CLASS}>Tanggal Pengajuan</TableHead>
+              <TableHead className={TABLE_HEAD_CLASS}>Tanggal Dokumen</TableHead>
               <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
               <TableHead className={`text-center ${TABLE_HEAD_CLASS}`}>Nominal Realisasi</TableHead>
               <TableHead className={`w-20 text-right ${TABLE_HEAD_CLASS}`}>Aksi</TableHead>
@@ -1286,10 +1305,30 @@ function ScopeBadge({ dok }: { dok: DokumenLaporanRow }) {
   )
 }
 
+function LaporanStatusFilterField({
+  value,
+  onChange,
+}: {
+  value: LaporanStatus | undefined
+  onChange: (value: LaporanStatus | undefined) => void
+}) {
+  return (
+    <ToolbarFilterField
+      label="Status"
+      allLabel="Semua Status"
+      value={value}
+      options={[...LAPORAN_STATUS_FILTER_OPTIONS]}
+      onChange={(status) => onChange(status as LaporanStatus | undefined)}
+    />
+  )
+}
+
+// D-30: status final ditampilkan sebagai jenis dokumen (Selesai = Material,
+// Tersimpan = Non-Material), lihat src/lib/laporan/status-laporan.ts.
 function ReportStatusBadge({ status, className }: { status: string; className?: string }) {
   const statusMap: Record<string, { label: string; className: string }> = {
-    COMPLETED: { label: 'Selesai', className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
-    TERSIMPAN: { label: 'Tersimpan', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
+    COMPLETED: { label: laporanStatusLabel('COMPLETED'), className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
+    TERSIMPAN: { label: laporanStatusLabel('TERSIMPAN'), className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
   }
   const presentation = statusMap[status] ?? {
     label: status || 'Status Tidak Diketahui',

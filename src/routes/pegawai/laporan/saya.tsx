@@ -26,6 +26,7 @@ import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
+import { ToolbarFilterField } from '#/components/laporan/FilterToolbar'
 import { PeriodeSelector, tahunFromTanggal } from '#/components/laporan/PeriodeSelector'
 import {
   defaultPeriode,
@@ -34,7 +35,13 @@ import {
   type PeriodeValue,
 } from '#/lib/laporan/periode'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
-import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
+import {
+  LAPORAN_STATUS_FILTER_OPTIONS,
+  laporanStatusLabel,
+  matchesLaporanStatus,
+  type LaporanStatus,
+} from '#/lib/laporan/status-laporan'
+import { startZipDownload } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
 import {
   ChevronRight,
@@ -73,6 +80,8 @@ function LaporanSayaPage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<HierarchicalFilterValue>({})
+  // D-30: filter Status (Material / Non-Material).
+  const [statusFilter, setStatusFilter] = useState<LaporanStatus | undefined>(undefined)
   // Laporan Saya dibuka pada bulan berjalan (halaman laporan lain: triwulan).
   const [periode, setPeriode] = useState<PeriodeValue>(() => defaultPeriode('BULANAN'))
   const [sortBy, setSortBy] = useState<SortMode>('newest')
@@ -109,6 +118,7 @@ function LaporanSayaPage() {
     return dokumen
       .filter(d => {
         if (!isTanggalInPeriode(d.tanggal, periodeRange)) return false
+        if (!matchesLaporanStatus(d.status, statusFilter)) return false
         if (filter.fungsiId && d.fungsi_id !== filter.fungsiId) return false
         if (filter.kegiatanId && d.kegiatan_jenis_id !== filter.kegiatanId) return false
         if (filter.komponenId && d.komponen_id !== filter.komponenId) return false
@@ -130,7 +140,7 @@ function LaporanSayaPage() {
         ].some(value => value?.toLowerCase().includes(query))
       })
       .sort((a, b) => compareDocuments(a, b, sortBy))
-  }, [dokumen, filter, periodeRange, search, sortBy])
+  }, [dokumen, filter, periodeRange, search, sortBy, statusFilter])
 
   const activeFilters = countActiveFilters(filter)
 
@@ -141,24 +151,9 @@ function LaporanSayaPage() {
     setExportError('')
 
     try {
-      const response = await fetch('/api/laporan/saya/export-zip', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dokumen_ids: filtered.map((dok) => dok.id) }),
+      await startZipDownload('/api/laporan/saya/export-zip', {
+        dokumen_ids: filtered.map((dok) => dok.id),
       })
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null)
-        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Gagal membuat ekspor ZIP')
-      }
-
-      const blob = await response.blob()
-      const filename = extractContentDispositionFilename(
-        response.headers.get('Content-Disposition'),
-        'Laporan_Saya.zip',
-      )
-      downloadZipBlob(blob, filename)
       setExportDialogOpen(false)
     } catch (error) {
       setExportError(error instanceof Error ? error.message : 'Gagal membuat ekspor ZIP')
@@ -203,6 +198,8 @@ function LaporanSayaPage() {
           resultLabel={`${filtered.length} Dokumen Ditemukan`}
           filter={filter}
           onFilterChange={setFilter}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
           exportCount={filtered.length}
           onExportClick={() => setExportDialogOpen(true)}
         />
@@ -236,7 +233,7 @@ function LaporanSayaPage() {
             title="Tidak ada dokumen yang cocok"
             description="Ubah periode, reset filter, atau ubah kata kunci untuk melihat dokumen lain."
             icon={<Filter size={20} />}
-            action={<Button variant="outline" size="sm" onClick={() => { setFilter({}); setSearch('') }}>Reset Filter</Button>}
+            action={<Button variant="outline" size="sm" onClick={() => { setFilter({}); setStatusFilter(undefined); setSearch('') }}>Reset Filter</Button>}
           />
         )}
 
@@ -271,6 +268,8 @@ function ReportToolbar({
   resultLabel,
   filter,
   onFilterChange,
+  statusFilter,
+  onStatusFilterChange,
   exportCount,
   onExportClick,
 }: {
@@ -286,6 +285,8 @@ function ReportToolbar({
   resultLabel: string
   filter: HierarchicalFilterValue
   onFilterChange: (value: HierarchicalFilterValue) => void
+  statusFilter: LaporanStatus | undefined
+  onStatusFilterChange: (value: LaporanStatus | undefined) => void
   exportCount: number
   onExportClick: () => void
 }) {
@@ -304,6 +305,13 @@ function ReportToolbar({
           />
         </label>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <ToolbarFilterField
+            label="Status"
+            allLabel="Semua Status"
+            value={statusFilter}
+            options={[...LAPORAN_STATUS_FILTER_OPTIONS]}
+            onChange={(status) => onStatusFilterChange(status as LaporanStatus | undefined)}
+          />
           <Button
             type="button"
             variant={filterOpen || activeFilters > 0 ? 'outline' : 'ghost'}
@@ -536,10 +544,12 @@ function InfoTile({ label, value, className }: { label: string; value: React.Rea
   )
 }
 
+// D-30: status final ditampilkan sebagai jenis dokumen (Selesai = Material,
+// Tersimpan = Non-Material), lihat src/lib/laporan/status-laporan.ts.
 function ReportStatusBadge({ status, className }: { status: string; className?: string }) {
   const statusMap: Record<string, { label: string; className: string }> = {
-    COMPLETED: { label: 'Selesai', className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
-    TERSIMPAN: { label: 'Tersimpan', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
+    COMPLETED: { label: laporanStatusLabel('COMPLETED'), className: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700' },
+    TERSIMPAN: { label: laporanStatusLabel('TERSIMPAN'), className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
   }
   const presentation = statusMap[status] ?? {
     label: status || 'Status Tidak Diketahui',

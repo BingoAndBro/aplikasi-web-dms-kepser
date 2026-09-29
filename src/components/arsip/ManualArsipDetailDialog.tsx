@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
+import { BERKAS_DIMUSNAHKAN_DETAIL_MESSAGE, BERKAS_DIMUSNAHKAN_NOMINAL_SUFFIX } from '#/lib/laporan/kegiatan-scope'
 import { formatDate } from '#/lib/utils/format'
 
 const LAPORAN_MANUAL_ARSIP_API = '/api/laporan/manual-arsip'
@@ -15,7 +16,7 @@ type ManualArsipDetail = {
   id: string
   keterangan: string
   status_arsip: string
-  /** Status dokumen sendiri ATAU berkas yang menaunginya DIMUSNAHKAN (D-28). */
+  /** Berkas penaungnya DIMUSNAHKAN (status_arsip mengikuti berkas, D-29). */
   dimusnahkan?: boolean
   klasifikasi: { nama: string | null }
   attachments: Array<ManualArsipAttachmentMetadata & { original_filename?: string }>
@@ -35,9 +36,6 @@ export type ManualArsipDialogRow = {
   pengaju_nama?: string | null
   nominal_realisasi: number | null
 }
-
-export const MANUAL_ARSIP_DIMUSNAHKAN_MESSAGE =
-  'Berkas dokumen ini sudah dimusnahkan. Nominal realisasinya tidak lagi dihitung dalam total realisasi, dan lampirannya tidak dapat dibuka.'
 
 /**
  * Detail dokumen manual KSBU (Penambahan Dokumen, T-5/D-26) untuk Laporan
@@ -115,7 +113,7 @@ export function ManualArsipDetailDialog({
         <div className="space-y-5 p-5">
           {detail?.dimusnahkan && (
             <div role="note" className="rounded-[1.25rem] border border-danger-border bg-danger-surface px-4 py-3 text-sm font-semibold text-danger-text">
-              {MANUAL_ARSIP_DIMUSNAHKAN_MESSAGE}
+              {BERKAS_DIMUSNAHKAN_DETAIL_MESSAGE}
             </div>
           )}
           <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 sm:p-5">
@@ -133,7 +131,7 @@ export function ManualArsipDetailDialog({
                 <MetadataField
                   label="Nominal Realisasi"
                   value={detail?.dimusnahkan
-                    ? `Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')} (tidak dihitung, berkas dimusnahkan)`
+                    ? `Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')}${BERKAS_DIMUSNAHKAN_NOMINAL_SUFFIX}`
                     : `Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')}`}
                   emphasis
                 />
@@ -155,7 +153,7 @@ export function ManualArsipDetailDialog({
                 apiBase={LAPORAN_MANUAL_ARSIP_API}
                 manualArsipId={detail.id}
                 attachments={detail.attachments}
-                fileUnavailable={detail.dimusnahkan ?? detail.status_arsip === 'DIMUSNAHKAN'}
+                fileUnavailable={detail.dimusnahkan ?? false}
               />
             )}
           </section>

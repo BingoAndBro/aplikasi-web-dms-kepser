@@ -68,3 +68,17 @@ export function countedNominalRealisasi(dok: {
   if (dok.is_non_material || dok.berkas_dimusnahkan) return 0
   return dok.nominal_realisasi ?? 0
 }
+
+/** Keterangan di sel nominal untuk dokumen yang berkasnya dimusnahkan (D-28/D-29). */
+export const BERKAS_DIMUSNAHKAN_NOMINAL_NOTE = 'Tidak dihitung · berkas dimusnahkan'
+
+/**
+ * Pesan di dialog detail dokumen (alur maupun tambahan KSBU) yang berkasnya
+ * sudah DIMUSNAHKAN (D-29). Hanya untuk berkas dimusnahkan, bukan pembersihan
+ * lampiran non-material.
+ */
+export const BERKAS_DIMUSNAHKAN_DETAIL_MESSAGE =
+  'Berkas dokumen ini sudah dimusnahkan. Nominal realisasinya tidak lagi dihitung dalam total realisasi, dan lampirannya tidak dapat dibuka.'
+
+/** Akhiran nilai nominal di dialog detail untuk dokumen yang berkasnya dimusnahkan. */
+export const BERKAS_DIMUSNAHKAN_NOMINAL_SUFFIX = ' (tidak dihitung, berkas dimusnahkan)'

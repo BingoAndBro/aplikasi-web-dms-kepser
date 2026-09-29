@@ -433,10 +433,11 @@ describe('manual arsip API foundation routes', () => {
     expect(response.status).toBe(201)
     expect(mocks.dbTransaction).toHaveBeenCalledOnce()
     expect(mocks.dbInsert).not.toHaveBeenCalled()
+    // D-29: dokumen manual tidak punya kolom status arsip sendiri (migrasi 0021).
+    expect(mocks.txInsertValues.mock.calls[0][0]).not.toHaveProperty('statusArsip')
     expect(mocks.txInsertValues).toHaveBeenNthCalledWith(1, expect.objectContaining({
       createdBy: USER_ID,
       archivedBy: null,
-      statusArsip: 'AKTIF',
       fungsiId: FUNGSI_ID,
       kegiatanId: KEGIATAN_ID,
       komponenId: KOMPONEN_ID,
@@ -632,8 +633,9 @@ describe('manual arsip API foundation routes', () => {
       archivedBy: USER_ID,
       createdBy: USER_ID,
       nominalRealisasi: '250000',
-      statusArsip: 'AKTIF',
     }))
+    // D-29: dokumen manual tidak punya kolom status arsip sendiri (migrasi 0021).
+    expect(mocks.txInsertValues.mock.calls[0][0]).not.toHaveProperty('statusArsip')
     expect(mocks.txInsertValues).not.toHaveBeenCalledWith(expect.objectContaining({
       namaArsip: expect.anything(),
     }))

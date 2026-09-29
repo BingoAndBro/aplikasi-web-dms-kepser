@@ -242,4 +242,32 @@ describe('GET /api/dokumen/$id -- PJ Kinerja read access (Laporan Kinerja detail
 
     expect(response.status).toBe(403)
   })
+
+  it('flags berkas_dimusnahkan from the berkas that holds the document (D-29), never from lampiran cleanup', async () => {
+    mocks.getLocalServerSession.mockResolvedValue({ user: { id: OWNER_ID }, roles: ['PEGAWAI'] })
+    queueSelectResults([
+      { terminalMethod: 'limit', result: [baseDokumenRow({ status: 'COMPLETED', berkas_status_arsip: 'DIMUSNAHKAN' })] },
+    ])
+    const destroyed = await (await getHandler({ request: makeGetRequest(), params: { id: DOKUMEN_ID } })).json()
+    expect(destroyed.dokumen.berkas_dimusnahkan).toBe(true)
+
+    queueSelectResults([
+      {
+        terminalMethod: 'limit',
+        result: [baseDokumenRow({
+          berkas_status_arsip: null,
+          lampiran_dibersihkan_at: new Date('2026-09-01T00:00:00.000Z'),
+          lampiran_dibersihkan_alasan: 'PEMBERSIHAN_NON_MATERIAL',
+        })],
+      },
+    ])
+    const cleanedOnly = await (await getHandler({ request: makeGetRequest(), params: { id: DOKUMEN_ID } })).json()
+    expect(cleanedOnly.dokumen.berkas_dimusnahkan).toBe(false)
+
+    queueSelectResults([
+      { terminalMethod: 'limit', result: [baseDokumenRow({ status: 'COMPLETED', berkas_status_arsip: 'INAKTIF' })] },
+    ])
+    const inaktif = await (await getHandler({ request: makeGetRequest(), params: { id: DOKUMEN_ID } })).json()
+    expect(inaktif.dokumen.berkas_dimusnahkan).toBe(false)
+  })
 })

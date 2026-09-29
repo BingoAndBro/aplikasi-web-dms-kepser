@@ -402,29 +402,32 @@ describe('extractContentDispositionFilename', () => {
 })
 
 describe('Ekspor Semua File (ZIP) buttons + dialog (/pegawai/laporan/saya, /pegawai/laporan/kegiatan)', () => {
-  it('wires /pegawai/laporan/saya to fetch+blob against filtered, with a 500-document dialog cap', () => {
+  // D-31: ekspor diunduh secara bawaan browser lewat tiket (startZipDownload),
+  // bukan fetch + blob — lihat src/lib/export/download-ticket.ts.
+  it('wires /pegawai/laporan/saya to a native ticketed download against filtered, with a 500-document dialog cap', () => {
     const source = readFileSync('src/routes/pegawai/laporan/saya.tsx', 'utf8')
 
     expect(source).toContain('Ekspor Semua File (ZIP)')
-    expect(source).toContain("fetch('/api/laporan/saya/export-zip'")
-    expect(source).toContain('body: JSON.stringify({ dokumen_ids: filtered.map((dok) => dok.id) })')
-    expect(source).toContain('downloadZipBlob(blob, filename)')
+    expect(source).toContain("await startZipDownload('/api/laporan/saya/export-zip', {")
+    expect(source).toContain('dokumen_ids: filtered.map((dok) => dok.id),')
+    expect(source).not.toContain('downloadZipBlob')
     expect(source).toContain('disabled={exportCount === 0}')
     expect(source).toContain('exportCount={filtered.length}')
     expect(EXPORT_ZIP_MAX_DOCUMENTS).toBe(500)
   })
 
-  it('wires /pegawai/laporan/kegiatan to fetch+blob against selectedDocuments (the currently viewed kegiatan), not the full kegiatanRows list', () => {
+  it('wires /pegawai/laporan/kegiatan to a native ticketed download against selectedDocuments (the currently viewed kegiatan), not the full kegiatanRows list', () => {
     const source = readFileSync('src/routes/pegawai/laporan/kegiatan.tsx', 'utf8')
 
     expect(source).toContain('Ekspor Semua File (ZIP)')
-    expect(source).toContain("fetch('/api/laporan/kegiatan/export-zip'")
-    // D-28: dokumen tambahan KSBU tampil di daftar, tetapi ekspor ZIP hanya
-    // membaca dokumen_transaksi — jadi hanya id dokumen alur yang dikirim/dihitung.
+    expect(source).toContain("await startZipDownload('/api/laporan/kegiatan/export-zip', {")
+    // D-29: dokumen tambahan KSBU ikut diekspor lewat manual_arsip_ids.
     expect(source).toContain("const exportDocumentIds = selectedDocuments.filter(dok => dok.sumber !== 'MANUAL').map(dok => dok.id)")
-    expect(source).toContain('body: JSON.stringify({ dokumen_ids: exportDocumentIds })')
-    expect(source).toContain('downloadZipBlob(blob, filename)')
-    expect(source).toContain('exportCount={exportDocumentIds.length}')
+    expect(source).toContain("const exportManualArsipIds = selectedDocuments.filter(dok => dok.sumber === 'MANUAL').map(dok => dok.id)")
+    expect(source).toContain('dokumen_ids: exportDocumentIds,')
+    expect(source).toContain('manual_arsip_ids: exportManualArsipIds,')
+    expect(source).not.toContain('downloadZipBlob')
+    expect(source).toContain('exportCount={selectedDocuments.length}')
     expect(source).not.toContain('dokumen_ids: kegiatanRows')
   })
 

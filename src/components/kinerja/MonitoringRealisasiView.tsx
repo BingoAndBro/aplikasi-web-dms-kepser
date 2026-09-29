@@ -31,7 +31,7 @@ import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
-import { StatusBadge } from '#/components/ui/StatusBadge'
+import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import {
   Table,
   TableBody,
@@ -63,6 +63,8 @@ import {
   type PegawaiRow,
   type SortMode,
 } from '#/lib/laporan/monitoring-rows'
+import { BERKAS_DIMUSNAHKAN_NOMINAL_NOTE } from '#/lib/laporan/kegiatan-scope'
+import { LAPORAN_STATUS_FILTER_OPTIONS, laporanStatusLabel } from '#/lib/laporan/status-laporan'
 
 type LaporanKinerjaResponse = {
   dokumen?: LaporanKinerjaRow[]
@@ -110,8 +112,11 @@ export type MonitoringRealisasiViewProps = {
 // dipertegas bahwa nominalnya tidak lagi dihitung.
 const MONITORING_SCOPE_NOTE =
   'Dokumen material berstatus Selesai dan dokumen tambahan KSBU. Dokumen yang berkasnya sudah dimusnahkan tidak ditampilkan dan nominal realisasinya tidak lagi dihitung.'
+// D-29: Laporan Kinerja tetap menampilkan dokumen yang berkasnya dimusnahkan
+// dan non-material yang lampirannya dibersihkan (metadata disimpan, lampiran
+// sudah dihapus); nominal dokumen dari berkas dimusnahkan tidak dihitung.
 const LAPORAN_KINERJA_SCOPE_NOTE =
-  'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU. Tidak termasuk berkas yang sudah dimusnahkan atau lampiran yang sudah dibersihkan.'
+  'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU. Dokumen yang berkasnya sudah dimusnahkan tetap ditampilkan, tetapi nominal realisasinya tidak lagi dihitung.'
 const ScopeNoteContext = createContext(MONITORING_SCOPE_NOTE)
 
 const DEFAULT_TITLE = 'Laporan Kinerja'
@@ -138,10 +143,8 @@ const DETAIL_SORT_OPTIONS: { value: DetailSortMode; label: string }[] = [
   { value: 'nominal_desc', label: 'Nominal terbesar' },
 ]
 
-const STATUS_FILTER_OPTIONS = [
-  { id: 'COMPLETED', nama: 'Selesai' },
-  { id: 'TERSIMPAN', nama: 'Tersimpan' },
-]
+// D-30: status final ditampilkan sebagai jenis dokumen (Material / Non-Material).
+const STATUS_FILTER_OPTIONS = [...LAPORAN_STATUS_FILTER_OPTIONS]
 
 const EMPTY_DETAIL_FILTER: DetailFilterValue = {
   status: 'ALL',
@@ -266,10 +269,26 @@ export function MonitoringRealisasiView({
     return selectedFungsi.kegiatan.find(row => row.id === kegiatanId) ?? null
   }, [kegiatanId, selectedFungsi])
 
+  // D-30: Laporan Kinerja cukup sampai Kegiatan (tanpa level Komponen), supaya
+  // dokumen non-material — yang memang tidak punya Komponen — tidak terkumpul
+  // di grup "Tanpa Komponen". Nominal Realisasi tetap sampai Komponen.
+  const stopAtKegiatan = scope === 'laporan_kinerja'
+
   const selectedKomponen = useMemo(() => {
-    if (!selectedKegiatan) return null
+    if (!selectedKegiatan || stopAtKegiatan) return null
     return selectedKegiatan.komponen.find(row => row.id === komponenId) ?? null
-  }, [komponenId, selectedKegiatan])
+  }, [komponenId, selectedKegiatan, stopAtKegiatan])
+
+  const documentGroup: DocumentGroup | null = useMemo(() => {
+    if (stopAtKegiatan) {
+      return selectedKegiatan
+        ? { level: 'kegiatan', nama: selectedKegiatan.nama, dokumen: selectedKegiatan.dokumen, totalNominal: selectedKegiatan.totalNominal }
+        : null
+    }
+    return selectedKomponen
+      ? { level: 'komponen', nama: selectedKomponen.nama, dokumen: selectedKomponen.dokumen, totalNominal: selectedKomponen.totalNominal }
+      : null
+  }, [selectedKegiatan, selectedKomponen, stopAtKegiatan])
 
   const filteredPegawaiRows = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -334,9 +353,9 @@ export function MonitoringRealisasiView({
   }, [search, selectedKegiatan, sortBy])
 
   const selectedDocuments = useMemo(() => {
-    if (!selectedKomponen) return []
+    if (!documentGroup) return []
     const query = detailSearch.trim().toLowerCase()
-    return selectedKomponen.dokumen
+    return documentGroup.dokumen
       .filter(row => {
         if (detailFilter.status !== 'ALL' && row.status !== detailFilter.status) return false
         if (detailFilter.pengajuId && row.pengaju_id !== detailFilter.pengajuId) return false
@@ -352,7 +371,7 @@ export function MonitoringRealisasiView({
         ].some(value => value.toLowerCase().includes(query))
       })
       .sort((a, b) => compareDocuments(a, b, detailSortBy))
-  }, [detailFilter, detailSearch, detailSortBy, selectedKomponen])
+  }, [detailFilter, detailSearch, detailSortBy, documentGroup])
 
   return (
     <ScopeNoteContext.Provider value={scope === 'laporan_kinerja' ? LAPORAN_KINERJA_SCOPE_NOTE : MONITORING_SCOPE_NOTE}>
@@ -522,7 +541,7 @@ export function MonitoringRealisasiView({
           />
         )}
 
-        {!loading && !forbidden && !error && selectedFungsi && selectedKegiatan && !selectedKomponen && (
+        {!loading && !forbidden && !error && selectedFungsi && selectedKegiatan && !stopAtKegiatan && !selectedKomponen && (
           <KomponenDetailView
             fungsi={selectedFungsi}
             kegiatan={selectedKegiatan}
@@ -537,13 +556,13 @@ export function MonitoringRealisasiView({
           />
         )}
 
-        {!loading && !forbidden && !error && selectedFungsi && selectedKegiatan && selectedKomponen && (
+        {!loading && !forbidden && !error && selectedFungsi && selectedKegiatan && documentGroup && (
           <KegiatanDocumentView
             fungsi={selectedFungsi}
             kegiatan={selectedKegiatan}
-            komponen={selectedKomponen}
+            group={documentGroup}
             dokumen={selectedDocuments}
-            totalDokumen={selectedKomponen.dokumen.length}
+            totalDokumen={documentGroup.dokumen.length}
             limit={limit}
             search={detailSearch}
             onSearchChange={setDetailSearch}
@@ -551,7 +570,9 @@ export function MonitoringRealisasiView({
             onFilterChange={setDetailFilter}
             sortBy={detailSortBy}
             onSortChange={setDetailSortBy}
-            onBack={() => onSelectKomponen(selectedFungsi.id, selectedKegiatan.id, null)}
+            onBack={() => (documentGroup.level === 'kegiatan'
+              ? onSelectKegiatan(selectedFungsi.id, null)
+              : onSelectKomponen(selectedFungsi.id, selectedKegiatan.id, null))}
             onOpenDocument={setSelectedDocument}
           />
         )}
@@ -1301,10 +1322,17 @@ function KegiatanList({ rows, onSelect }: { rows: KegiatanRow[]; onSelect: (id: 
   )
 }
 
+type DocumentGroup = {
+  level: 'kegiatan' | 'komponen'
+  nama: string
+  dokumen: LaporanKinerjaRow[]
+  totalNominal: number
+}
+
 function KegiatanDocumentView({
   fungsi,
   kegiatan,
-  komponen,
+  group,
   dokumen,
   totalDokumen,
   limit,
@@ -1319,7 +1347,7 @@ function KegiatanDocumentView({
 }: {
   fungsi: FungsiRow
   kegiatan: KegiatanRow
-  komponen: KomponenRow
+  group: DocumentGroup
   dokumen: LaporanKinerjaRow[]
   totalDokumen: number
   limit: number | null
@@ -1333,20 +1361,27 @@ function KegiatanDocumentView({
   onOpenDocument: (dokumen: LaporanKinerjaRow) => void
 }) {
   const pembuatOptions = useMemo(
-    () => buildPersonOptions(komponen.dokumen, row => row.pengaju_id, row => row.pengaju_nama || 'Tidak diketahui'),
-    [komponen.dokumen],
+    () => buildPersonOptions(group.dokumen, row => row.pengaju_id, row => row.pengaju_nama || 'Tidak diketahui'),
+    [group.dokumen],
   )
+  const isKegiatanLevel = group.level === 'kegiatan'
 
   return (
     <>
       <ReportBackHeader
-        title={komponen.nama}
-        subtitle={`${fungsi.nama} / ${kegiatan.nama} / Detail Komponen`}
-        description="Daftar dokumen final dalam komponen terpilih."
+        title={group.nama}
+        subtitle={isKegiatanLevel ? `${fungsi.nama} / Detail Kegiatan` : `${fungsi.nama} / ${kegiatan.nama} / Detail Komponen`}
+        description={isKegiatanLevel ? 'Daftar dokumen final dalam kegiatan terpilih.' : 'Daftar dokumen final dalam komponen terpilih.'}
         onBack={onBack}
-        backLabel="Kembali ke detail komponen"
+        backLabel={isKegiatanLevel ? 'Kembali ke daftar kegiatan' : 'Kembali ke detail komponen'}
       />
-      <KomponenDetailCards komponen={komponen} />
+      <DocumentGroupCards
+        label={isKegiatanLevel ? 'Nama Kegiatan' : 'Nama Komponen'}
+        nama={group.nama}
+        detail={isKegiatanLevel ? fungsi.nama : `${kegiatan.nama} · ${fungsi.nama}`}
+        dokumen={group.dokumen}
+        totalNominal={group.totalNominal}
+      />
       <KegiatanDetailToolbar
         search={search}
         onSearchChange={onSearchChange}
@@ -1453,17 +1488,29 @@ function KegiatanDetailCards({ kegiatan }: { kegiatan: KegiatanRow }) {
   )
 }
 
-function KomponenDetailCards({ komponen }: { komponen: KomponenRow }) {
-  const materialDokumen = komponen.dokumen.filter(row => row.status === 'COMPLETED')
+function DocumentGroupCards({
+  label,
+  nama,
+  detail,
+  dokumen,
+  totalNominal,
+}: {
+  label: string
+  nama: string
+  detail: string
+  dokumen: LaporanKinerjaRow[]
+  totalNominal: number
+}) {
+  const materialDokumen = dokumen.filter(row => row.status === 'COMPLETED')
   const belumDiberkaskan = materialDokumen.filter(row => !row.is_diberkaskan).length
   const sudahDiberkaskan = materialDokumen.filter(row => row.is_diberkaskan).length
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
-        label="Nama Komponen"
-        value={komponen.nama}
-        detail={`${komponen.kegiatanNama} · ${komponen.fungsiNama}`}
+        label={label}
+        value={nama}
+        detail={detail}
         icon={<FolderOpen size={16} />}
         tone="neutral"
       />
@@ -1483,7 +1530,7 @@ function KomponenDetailCards({ komponen }: { komponen: KomponenRow }) {
       />
       <SummaryCard
         label="Total Nominal Realisasi"
-        value={formatCurrency(komponen.totalNominal)}
+        value={formatCurrency(totalNominal)}
         detail="Akumulasi Seluruh Dokumen"
         icon={<Banknote size={16} />}
         tone="money"
@@ -1595,10 +1642,16 @@ function DocumentTable({
                   <DateCell value={row.tanggal} />
                 </TableCell>
                 <TableCell className="px-6 py-5">
-                  <StatusBadge status={row.status} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <ReportStatusBadge status={row.status} />
+                    <LampiranDibersihkanBadge
+                      lampiranDibersihkanAt={row.lampiran_dibersihkan_at}
+                      lampiranDibersihkanAlasan={row.lampiran_dibersihkan_alasan}
+                    />
+                  </div>
                 </TableCell>
                 <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">
-                  {formatNullableCurrency(row.nominal_realisasi)}
+                  <DocumentNominal row={row} />
                 </TableCell>
                 <TableCell className="px-6 py-5 text-right">
                   <ChevronActionButton label={`Metadata dokumen ${row.judul}`} />
@@ -1633,7 +1686,13 @@ function DocumentTable({
                 <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand-solid-active/70">Dokumen #{idx + 1}</p>
                 <h2 className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-950">{row.judul}</h2>
               </div>
-              <StatusBadge status={row.status} />
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                <ReportStatusBadge status={row.status} />
+                <LampiranDibersihkanBadge
+                  lampiranDibersihkanAt={row.lampiran_dibersihkan_at}
+                  lampiranDibersihkanAlasan={row.lampiran_dibersihkan_alasan}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
               <InfoTile label="Tanggal" value={<DateCell value={row.tanggal} className="mt-1" />} className="col-span-2" />
@@ -1642,6 +1701,9 @@ function DocumentTable({
                 value={row.sumber === 'MANUAL' ? `${row.pengaju_nama || 'Tidak diketahui'} · Penambahan Dokumen (KSBU)` : (row.pengaju_nama || 'Tidak diketahui')}
                 className="col-span-2"
               />
+              {row.berkas_dimusnahkan && (
+                <InfoTile label="Nominal Realisasi" value={<DocumentNominal row={row} />} className="col-span-2 font-mono font-bold" />
+              )}
             </div>
             <div className="border-t border-zinc-100 pt-3">
               <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => onOpenDocument(row)}>
@@ -1656,10 +1718,35 @@ function DocumentTable({
   )
 }
 
+/** D-30: status final sebagai jenis dokumen (Material / Non-Material). */
+function ReportStatusBadge({ status }: { status: LaporanKinerjaRow['status'] }) {
+  return (
+    <span className={[
+      'inline-flex w-fit items-center rounded-md border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-nowrap',
+      status === 'COMPLETED'
+        ? 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700'
+        : 'border-zinc-200 bg-zinc-50 text-zinc-600',
+    ].join(' ')}>
+      {laporanStatusLabel(status)}
+    </span>
+  )
+}
+
+function DocumentNominal({ row }: { row: LaporanKinerjaRow }) {
+  if (!row.berkas_dimusnahkan) return <>{formatNullableCurrency(row.nominal_realisasi)}</>
+
+  return (
+    <span className="inline-flex flex-col items-center gap-0.5">
+      <span className="text-zinc-400 line-through">{formatNullableCurrency(row.nominal_realisasi)}</span>
+      <span className="font-sans text-[11px] font-bold text-danger-text">{BERKAS_DIMUSNAHKAN_NOMINAL_NOTE}</span>
+    </span>
+  )
+}
+
 export type SummaryCardTone = 'neutral' | 'gold' | 'orange' | 'money'
 
 /** Fase 5: consolidates 4 palette clusters that PegawaiDetailCards, FungsiDetailCards,
- * KegiatanDetailCards, and KomponenDetailCards each repeated byte-identical via 5 raw
+ * KegiatanDetailCards, and DocumentGroupCards each repeated byte-identical via 5 raw
  * className props — see tema-global plan Fase 5. */
 const SUMMARY_CARD_TONE_CLASS: Record<SummaryCardTone, {
   card: string
@@ -1839,8 +1926,7 @@ function compareDocuments(a: LaporanKinerjaRow, b: LaporanKinerjaRow, sortBy: De
 }
 
 function formatStatusLabel(status: LaporanKinerjaRow['status']) {
-  if (status === 'COMPLETED') return 'Selesai'
-  return 'Tersimpan'
+  return laporanStatusLabel(status)
 }
 
 function formatDate(value: string) {

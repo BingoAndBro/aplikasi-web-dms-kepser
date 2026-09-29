@@ -9,6 +9,7 @@ import { AttachmentViewer, type ViewerApiType } from '#/components/dokumen/Attac
 import type { DokumenRow } from '#/lib/dokumen-helpers'
 import { formatDate } from '#/lib/utils/format'
 import { ApiError, apiFetch } from '#/lib/api-client'
+import { BERKAS_DIMUSNAHKAN_DETAIL_MESSAGE, BERKAS_DIMUSNAHKAN_NOMINAL_SUFFIX } from '#/lib/laporan/kegiatan-scope'
 
 /**
  * Pop up detail dokumen yang di-reuse di seluruh halaman laporan (Laporan
@@ -105,6 +106,11 @@ export function DokumenDetailDialog({
 
         {!loading && !error && dokumen && (
           <div className="space-y-5 p-5">
+            {dokumen.berkas_dimusnahkan && (
+              <div role="note" className="rounded-[1.25rem] border border-danger-border bg-danger-surface px-4 py-3 text-sm font-semibold text-danger-text">
+                {BERKAS_DIMUSNAHKAN_DETAIL_MESSAGE}
+              </div>
+            )}
             <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 sm:p-5">
               <div className="grid gap-5 sm:grid-cols-2">
                 <ModalMetadataField
@@ -120,7 +126,7 @@ export function DokumenDetailDialog({
                 {!dokumen.is_non_material && dokumen.nominal_realisasi !== null && (
                   <ModalMetadataField
                     label="Nominal Realisasi"
-                    value={`Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')}`}
+                    value={`Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')}${dokumen.berkas_dimusnahkan ? BERKAS_DIMUSNAHKAN_NOMINAL_SUFFIX : ''}`}
                     emphasis
                   />
                 )}

@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // Monitoring Nominal Realisasi and — since D-28 — Laporan Kegiatan:
 // /api/laporan/manual-arsip/$id (+ lampiran preview/download). Detail/file
 // lookups are mocked; the role guard and the Ketua Tim ownership check are
-// real, running against a fake `db` that answers the two join queries.
+// real, running against a fake `db` that answers the ownership join query.
+// `status_arsip` from getManualArsipDetail / the file response is already the
+// EFFECTIVE status (that of the berkas, D-29) — verified against Postgres in
+// tests/integration/manual-arsip-effective-status.test.ts.
 
 const MANUAL_ID = '33333333-3333-4333-8333-333333333333'
 const ATTACHMENT_ID = '77777777-7777-4777-8777-777777777777'
@@ -16,8 +19,6 @@ const mocks = vi.hoisted(() => ({
   createManualArsipAttachmentFileResponse: vi.fn(),
   // Rows returned by the "manual_arsip ⨝ ketua_tim_assignments" ownership query.
   ketuaTimRows: vi.fn(),
-  // Rows returned by the "berkas_arsip_item ⨝ berkas_arsip DIMUSNAHKAN" query.
-  destroyedBerkasRows: vi.fn(),
   selectCalls: [] as Array<{ joined: unknown }>,
 }))
 
@@ -30,7 +31,6 @@ vi.mock('#/lib/auth/local-server-auth', () => ({
 
 vi.mock('#/db/client', async () => {
   const { ketuaTimAssignments } = await import('#/db/schema/master')
-  const { berkasArsip } = await import('#/db/schema/arsip')
 
   return {
     db: {
@@ -46,7 +46,6 @@ vi.mock('#/db/client', async () => {
         query.where = vi.fn(() => query)
         query.limit = vi.fn(async () => {
           if (call.joined === ketuaTimAssignments) return mocks.ketuaTimRows()
-          if (call.joined === berkasArsip) return mocks.destroyedBerkasRows()
           throw new Error('unexpected query')
         })
         return query
@@ -126,7 +125,6 @@ function resetMocks() {
   mocks.getManualArsipDetail.mockResolvedValue(detail())
   mocks.createManualArsipAttachmentFileResponse.mockResolvedValue(new Response('file', { status: 200 }))
   mocks.ketuaTimRows.mockReturnValue([])
-  mocks.destroyedBerkasRows.mockReturnValue([])
 }
 
 describe('GET /api/laporan/manual-arsip/$id', () => {
@@ -204,18 +202,18 @@ describe('GET /api/laporan/manual-arsip/$id', () => {
     expect((await detailGet(detailArgs())).status).toBe(404)
   })
 
-  it('still returns a destroyed document, flagged dimusnahkan, whether its own status or its berkas is DIMUSNAHKAN (D-28)', async () => {
+  it('still returns a document whose berkas is DIMUSNAHKAN, flagged dimusnahkan (D-28/D-29)', async () => {
     mocks.getLocalServerSession.mockResolvedValue(session(['PENANGGUNG_JAWAB_KINERJA']))
 
     mocks.getManualArsipDetail.mockResolvedValueOnce(detail({ status_arsip: 'DIMUSNAHKAN' }))
-    const ownStatus = await detailGet(detailArgs())
-    expect(ownStatus.status).toBe(200)
-    expect((await ownStatus.json()).manual_arsip.dimusnahkan).toBe(true)
+    const destroyed = await detailGet(detailArgs())
+    expect(destroyed.status).toBe(200)
+    const body = await destroyed.json()
+    expect(body.manual_arsip.dimusnahkan).toBe(true)
+    expect(body.manual_arsip.status_arsip).toBe('DIMUSNAHKAN')
 
-    mocks.destroyedBerkasRows.mockReturnValueOnce([{ id: 'item-1' }])
-    const inDestroyedBerkas = await detailGet(detailArgs())
-    expect(inDestroyedBerkas.status).toBe(200)
-    expect((await inDestroyedBerkas.json()).manual_arsip.dimusnahkan).toBe(true)
+    mocks.getManualArsipDetail.mockResolvedValueOnce(detail({ status_arsip: 'INAKTIF' }))
+    expect((await (await detailGet(detailArgs())).json()).manual_arsip.dimusnahkan).toBe(false)
   })
 })
 
@@ -280,14 +278,16 @@ describe('GET /api/laporan/manual-arsip/$id/attachments/$attachmentId/{preview,d
   it.each([
     ['preview', previewGet],
     ['download', downloadGet],
-  ] as const)('answers %s with 410 when the berkas holding the document is DIMUSNAHKAN', async (purpose, handler) => {
+  ] as const)('relays the shared 410 for %s when the berkas holding the document is DIMUSNAHKAN', async (purpose, handler) => {
     mocks.getLocalServerSession.mockResolvedValue(session(['PEGAWAI']))
     mocks.ketuaTimRows.mockReturnValue([{ id: MANUAL_ID }])
-    mocks.destroyedBerkasRows.mockReturnValue([{ id: 'item-1' }])
+    mocks.createManualArsipAttachmentFileResponse.mockResolvedValue(
+      Response.json({ error: 'File lampiran tidak tersedia - arsip telah dimusnahkan' }, { status: 410 }),
+    )
 
     const response = await handler(fileArgs(purpose))
 
     expect(response.status).toBe(410)
-    expect(mocks.createManualArsipAttachmentFileResponse).not.toHaveBeenCalled()
+    expect(mocks.createManualArsipAttachmentFileResponse).toHaveBeenCalledTimes(1)
   })
 })

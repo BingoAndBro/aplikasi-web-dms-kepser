@@ -170,7 +170,9 @@ describe('Laporan Kinerja API route', () => {
     expect(body.meta.final_statuses).toEqual(BROAD_FINAL_STATUSES)
     expect(body.dokumen.map((row: { status: string }) => row.status)).toEqual(['COMPLETED', 'TERSIMPAN'])
     expect(mocks.or).toHaveBeenCalled()
-    expect(mocks.isNull).toHaveBeenCalledWith(expect.anything())
+    // D-29: non-material yang lampirannya sudah dibersihkan tetap ikut
+    // (metadata disimpan), jadi tidak ada lagi filter isNull(lampiranDibersihkanAt).
+    expect(mocks.isNull).not.toHaveBeenCalled()
   })
 
   it.each(['PPK', 'PPSPM'])('rejects %s requesting scope=laporan_kinerja with 403', async (role) => {
@@ -450,15 +452,23 @@ describe('Laporan Kinerja API route — dokumen manual KSBU (T-5/D-26)', () => {
     expect(body.meta.tahun_tersedia).toContain(2026)
   })
 
-  it('excludes a destroyed (DIMUSNAHKAN) manual document via the ne() filter', async () => {
+  it('excludes a manual document whose berkas is DIMUSNAHKAN (D-29: status follows the berkas)', async () => {
+    const destroyedManualId = '44444444-4444-4444-8444-444444444444'
     mocks.getLocalServerSession.mockResolvedValue(createSession(['PPSPM'], 'PPSPM'))
-    setupDbSelect([])
+    mocks.dbSelect
+      .mockReturnValueOnce(createIdListQueryBuilder([
+        { dokumenId: null, manualArsipId: destroyedManualId },
+      ] as unknown as { dokumenId: string }[]))
+      .mockReturnValueOnce(createIdListQueryBuilder([]))
+      .mockReturnValueOnce(createQueryBuilder([]))
+      .mockReturnValueOnce(createManualRowsQueryBuilder([]))
 
     await getHandler({
       request: new Request('http://localhost/api/laporan/kinerja'),
     })
 
-    expect(mocks.ne).toHaveBeenCalledWith(expect.anything(), 'DIMUSNAHKAN')
+    expect(mocks.notInArray).toHaveBeenCalledWith(expect.anything(), [destroyedManualId])
+    expect(mocks.ne).not.toHaveBeenCalled()
   })
 
   it('marks workflow rows sumber=WORKFLOW', async () => {

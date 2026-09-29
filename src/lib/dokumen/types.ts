@@ -28,6 +28,9 @@ export type DokumenRow = {
   // non-material oleh ketua tim, atau pemusnahan berkas oleh kasubag.
   lampiran_dibersihkan_at?: string | null
   lampiran_dibersihkan_alasan?: string | null
+  // D-28/D-29: berkas penaungnya DIMUSNAHKAN (otoritas: berkas_arsip, bukan
+  // lampiran_dibersihkan_*). Dokumen tetap tampil, nominalnya tidak dihitung.
+  berkas_dimusnahkan?: boolean
   // Chain fields (for Material)
   komponen_id?: string | null
   jenis_permintaan_id?: string | null
@@ -66,8 +69,6 @@ export type DokumenLaporanRow = DokumenRow & {
   pengaju_nama?: string
   pengaju_id?: string
   leaf_node_nama?: string
-  // Laporan Kegiatan (D-28): dokumen alur vs dokumen tambahan KSBU, dan
-  // penanda berkas yang sudah dimusnahkan (tampil, nominal tidak dihitung).
+  // Laporan Kegiatan (D-28): dokumen alur vs dokumen tambahan KSBU.
   sumber?: 'WORKFLOW' | 'MANUAL'
-  berkas_dimusnahkan?: boolean
 }

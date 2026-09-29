@@ -30,7 +30,7 @@ import {
 } from '#/components/ui/table'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
-import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
+import { startZipDownload } from '#/lib/file-helpers'
 import {
   getPosisiDokumen,
   POSISI_DOKUMEN_LABEL,
@@ -212,24 +212,10 @@ function MonitoringDokumenTimPage() {
     setExportError('')
 
     try {
-      const response = await fetch('/api/laporan/kegiatan/export-zip', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dokumen_ids: visibleDocuments.map(dok => dok.id), scope: 'monitoring' }),
+      await startZipDownload('/api/laporan/kegiatan/export-zip', {
+        dokumen_ids: visibleDocuments.map(dok => dok.id),
+        scope: 'monitoring',
       })
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null)
-        throw new Error(typeof payload?.error === 'string' ? payload.error : 'Gagal membuat ekspor ZIP')
-      }
-
-      const blob = await response.blob()
-      const filename = extractContentDispositionFilename(
-        response.headers.get('Content-Disposition'),
-        'Monitoring_Dokumen_Tim.zip',
-      )
-      downloadZipBlob(blob, filename)
       setExportDialogOpen(false)
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Gagal membuat ekspor ZIP')

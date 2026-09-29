@@ -18,6 +18,8 @@ export type DocumentZipFileInput = {
 export type DocumentZipEntry = {
   folderPath: string
   files: DocumentZipFileInput[]
+  /** Alasan di daftar isi bila tidak ada file (bawaan: "tanpa lampiran"). */
+  skipReason?: string
 }
 
 export type DocumentZipPlanOptions = {
@@ -142,7 +144,7 @@ export function buildZipPlan(
 
   for (const entry of entries) {
     if (entry.files.length === 0) {
-      skipped.push({ label: entry.folderPath, reason: 'tanpa lampiran' })
+      skipped.push({ label: entry.folderPath, reason: entry.skipReason ?? 'tanpa lampiran' })
       continue
     }
 

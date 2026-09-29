@@ -50,37 +50,24 @@ export const manualArsip = arsipSchema.table(
     masaInaktifBerakhir: date('masa_inaktif_berakhir'),
     archivedBy: uuid('archived_by')
       .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
-    // Canonical active lifecycle values: AKTIF, INAKTIF, USUL_MUSNAH, DIMUSNAHKAN.
-    statusArsip: text('status_arsip').notNull().default('AKTIF'),
+    // Tidak ada kolom status arsip / siklus hidup sendiri (dihapus di migrasi
+    // 0021, D-29): statusnya mengikuti berkas penaungnya, lihat
+    // src/lib/archive/manual-arsip-effective-status.ts.
     metadata: jsonb('metadata').$type<ManualArsipMetadataJson>().notNull().default(sql`'{}'::jsonb`),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    inactivatedAt: timestamp('inactivated_at', { withTimezone: true }),
-    inactivatedBy: uuid('inactivated_by')
-      .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
-    proposedDestroyAt: timestamp('proposed_destroy_at', { withTimezone: true }),
-    proposedDestroyBy: uuid('proposed_destroy_by')
-      .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
-    destroyedAt: timestamp('destroyed_at', { withTimezone: true }),
-    destroyedBy: uuid('destroyed_by')
-      .references(() => users.id, { onDelete: 'no action', onUpdate: 'no action' }),
   },
   (table) => [
     index('idx_manual_arsip_fungsi_id').on(table.fungsiId),
     index('idx_manual_arsip_kegiatan_id').on(table.kegiatanId),
     index('idx_manual_arsip_komponen_id').on(table.komponenId),
     index('idx_manual_arsip_klasifikasi_id').on(table.klasifikasiId),
-    index('idx_manual_arsip_status_arsip').on(table.statusArsip),
     index('idx_manual_arsip_tanggal').on(table.tanggal),
     index('idx_manual_arsip_tanggal_diarsipkan').on(table.tanggalDiarsipkan),
     index('idx_manual_arsip_created_by').on(table.createdBy),
-    check(
-      'manual_arsip_status_arsip_check',
-      sql`${table.statusArsip} in ('AKTIF', 'INAKTIF', 'USUL_MUSNAH', 'DIMUSNAHKAN')`,
-    ),
     check(
       'manual_arsip_nominal_realisasi_positive',
       sql`${table.nominalRealisasi} is null or ${table.nominalRealisasi} >= 0`,
@@ -115,7 +102,8 @@ export const manualArsipAttachment = arsipSchema.table(
 )
 
 // Manual archive file paths are logical storage paths only. Future file-access
-// routes must revalidate authorization and deny access when status_arsip is DIMUSNAHKAN.
+// routes must revalidate authorization and deny access when the EFFECTIVE archive
+// status (that of the berkas holding the document) is DIMUSNAHKAN.
 export type ManualArsip = typeof manualArsip.$inferSelect
 export type NewManualArsip = typeof manualArsip.$inferInsert
 export type ManualArsipAttachment = typeof manualArsipAttachment.$inferSelect

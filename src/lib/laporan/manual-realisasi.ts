@@ -1,10 +1,10 @@
-import { and, eq, gte, inArray, lte, ne, notInArray } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte, notInArray } from 'drizzle-orm'
 
 import { db } from '#/db/client'
 import { berkasArsip, berkasArsipItem, manualArsip } from '#/db/schema/arsip'
 import { users } from '#/db/schema/auth'
 import { masterFungsi, masterKegiatan, masterKomponen } from '#/db/schema/master'
-import { ARCHIVE_STATUS, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
+import { BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
 
 // Server-only. Dipakai bersama oleh /api/laporan/kinerja (Nominal Realisasi,
 // Laporan Kinerja) dan /api/laporan/kegiatan (Laporan Kegiatan) supaya aturan
@@ -19,9 +19,11 @@ export type DestroyedArchiveIds = {
 
 /**
  * Pemusnahan terjadi di tingkat berkas (`berkas_arsip.status_arsip`), bukan di
- * baris dokumennya: `manual_arsip.status_arsip` tidak ikut berubah saat berkas
- * yang menaunginya dimusnahkan. Jadi otoritas "dimusnahkan" untuk kedua sumber
- * adalah join berkas_arsip_item → berkas_arsip ini.
+ * baris dokumennya: seluruh dokumen (alur maupun tambahan KSBU) mengikuti
+ * status arsip berkasnya (D-29). Jadi otoritas "dimusnahkan" untuk kedua sumber
+ * adalah join berkas_arsip_item → berkas_arsip ini — aturan yang sama dengan
+ * `manualArsipEffectiveStatusArsip` (src/lib/archive/manual-arsip-effective-status.ts),
+ * hanya dalam bentuk daftar id supaya bisa dipakai bersama untuk dokumen alur.
  */
 export async function loadDestroyedArchiveIds(): Promise<DestroyedArchiveIds> {
   const rows = await db
@@ -43,20 +45,6 @@ export async function loadDestroyedArchiveIds(): Promise<DestroyedArchiveIds> {
   }
 }
 
-export async function isManualArsipInDestroyedBerkas(manualArsipId: string): Promise<boolean> {
-  const rows = await db
-    .select({ id: berkasArsipItem.id })
-    .from(berkasArsipItem)
-    .innerJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
-    .where(and(
-      eq(berkasArsipItem.manualArsipId, manualArsipId),
-      eq(berkasArsip.statusArsip, BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN),
-    ))
-    .limit(1)
-
-  return rows.length > 0
-}
-
 export type ManualRealisasiQueryRow = {
   id: string
   judul: string
@@ -67,7 +55,6 @@ export type ManualRealisasiQueryRow = {
   komponen_id: string | null
   komponen_nama: string | null
   tanggal: string
-  status_arsip: string
   pengaju_id: string | null
   created_at: Date | string | null
   updated_at: Date | string | null
@@ -113,7 +100,6 @@ export async function listManualRealisasiRows({
       komponen_id: manualArsip.komponenId,
       komponen_nama: masterKomponen.nama,
       tanggal: manualArsip.tanggal,
-      status_arsip: manualArsip.statusArsip,
       pengaju_id: manualArsip.createdBy,
       created_at: manualArsip.createdAt,
       updated_at: manualArsip.updatedAt,
@@ -129,7 +115,6 @@ export async function listManualRealisasiRows({
     .leftJoin(users, eq(manualArsip.createdBy, users.id))
     .where(and(
       kegiatanIds ? inArray(manualArsip.kegiatanId, [...kegiatanIds]) : undefined,
-      excludeDestroyed ? ne(manualArsip.statusArsip, ARCHIVE_STATUS.DIMUSNAHKAN) : undefined,
       excludeDestroyed && destroyedManualArsipIds.length > 0
         ? notInArray(manualArsip.id, [...destroyedManualArsipIds])
         : undefined,
@@ -139,10 +124,10 @@ export async function listManualRealisasiRows({
 }
 
 export function isManualArsipDestroyed(
-  row: { id: string; status_arsip: string },
+  row: { id: string },
   destroyedManualArsipIds: ReadonlySet<string>,
 ): boolean {
-  return row.status_arsip === ARCHIVE_STATUS.DIMUSNAHKAN || destroyedManualArsipIds.has(row.id)
+  return destroyedManualArsipIds.has(row.id)
 }
 
 /** Tahun milik dokumen manual sendiri (dari `tanggal`), bukan tahun anggaran berkas (Q5). */

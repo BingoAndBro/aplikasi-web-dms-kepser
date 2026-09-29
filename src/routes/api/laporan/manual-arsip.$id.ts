@@ -6,14 +6,13 @@ import {
   requireLaporanManualArsipSession,
   toSafeErrorLog,
 } from '#/lib/manual-arsip'
-import { isManualArsipInDestroyedBerkas } from '#/lib/laporan/manual-realisasi'
 
 // Read-only detail of a manual KSBU document for Laporan Kinerja / Monitoring
 // Nominal Realisasi (T-5/D-26) and Laporan Kegiatan (D-28). Laporan Kegiatan
 // keeps destroyed documents visible (nominal not counted), so a destroyed
-// document still returns its metadata with `dimusnahkan: true` — either its
-// own status_arsip or the berkas holding it is DIMUSNAHKAN. Its files answer
-// 410 on the preview/download routes.
+// document still returns its metadata with `dimusnahkan: true`. `status_arsip`
+// is the EFFECTIVE status, i.e. that of the berkas holding it (D-29). Its files
+// answer 410 on the preview/download routes.
 export const Route = createFileRoute('/api/laporan/manual-arsip/$id')({
   server: {
     handlers: {
@@ -32,7 +31,6 @@ export const Route = createFileRoute('/api/laporan/manual-arsip/$id')({
           }
 
           const dimusnahkan = manual_arsip.status_arsip === ARCHIVE_STATUS.DIMUSNAHKAN
-            || await isManualArsipInDestroyedBerkas(params.id)
 
           return Response.json({ manual_arsip: { ...manual_arsip, dimusnahkan } })
         } catch (err) {
