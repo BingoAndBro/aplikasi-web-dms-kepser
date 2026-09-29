@@ -9,7 +9,7 @@ import {
   manualArsipAttachment,
   masterKlasifikasiArsip,
 } from '#/db/schema/arsip'
-import { masterFungsi, masterKegiatan, masterKomponen } from '#/db/schema/master'
+import { ketuaTimAssignments, masterFungsi, masterKegiatan, masterKomponen } from '#/db/schema/master'
 import {
   getLocalServerSession,
   hasAnyLocalRole,
@@ -211,21 +211,53 @@ export async function requireManualArsipApiSession(request: Request): Promise<Lo
  * Realisasi list them via /api/laporan/kinerja, so the same roles (plus KSBU,
  * who owns them) may open their detail and lampiran. Write access stays
  * KSBU-only through requireManualArsipApiSession.
+ *
+ * D-28: Laporan Kegiatan also lists them, so a Pegawai who is Ketua Tim may
+ * open a manual document ONLY when its kegiatan is one they lead
+ * (manual_arsip.kegiatan_id ↔ ketua_tim_assignments). Order: session (401) →
+ * role → kegiatan ownership (403) → the route's own existence (404) and
+ * destroyed (410) checks. A missing id is also 403 for a Ketua Tim, so the
+ * response never reveals whether another kegiatan's document exists.
  */
-export async function requireLaporanManualArsipSession(request: Request): Promise<LocalServerSession | Response> {
+export async function requireLaporanManualArsipSession(
+  request: Request,
+  manualArsipId: string,
+): Promise<LocalServerSession | Response> {
   const session = await getLocalServerSession(request)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (!hasAnyLocalRole(session, [
+  if (hasAnyLocalRole(session, [
     ROLES.PENANGGUNG_JAWAB_KINERJA,
     ROLES.PPK,
     ROLES.PPSPM,
     ROLES.KEPALA_SUB_BAGIAN_UMUM,
   ])) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
+    return session
   }
 
-  return session
+  if (
+    hasLocalRole(session, ROLES.PEGAWAI)
+    && isUuid(manualArsipId)
+    && await isKetuaTimOfManualArsipKegiatan(session.user.id, manualArsipId)
+  ) {
+    return session
+  }
+
+  return Response.json({ error: 'Forbidden' }, { status: 403 })
+}
+
+async function isKetuaTimOfManualArsipKegiatan(userId: string, manualArsipId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: manualArsip.id })
+    .from(manualArsip)
+    .innerJoin(ketuaTimAssignments, eq(ketuaTimAssignments.kegiatanId, manualArsip.kegiatanId))
+    .where(and(
+      eq(manualArsip.id, manualArsipId),
+      eq(ketuaTimAssignments.userId, userId),
+    ))
+    .limit(1)
+
+  return rows.length > 0
 }
 
 export async function createManualArsipRecord(

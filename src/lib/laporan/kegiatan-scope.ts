@@ -53,3 +53,18 @@ export function getPosisiDokumen(dok: { status: string; revision_target?: string
       return null
   }
 }
+
+/**
+ * Nominal yang dijumlahkan ke total realisasi Laporan Kegiatan — sama dengan
+ * yang dihitung Nominal Realisasi (D-28): dokumen non-material tidak bernominal,
+ * dan dokumen yang berkasnya sudah dimusnahkan (alur maupun tambahan KSBU)
+ * tetap tampil di daftar tetapi nominalnya tidak lagi dihitung.
+ */
+export function countedNominalRealisasi(dok: {
+  is_non_material: boolean
+  berkas_dimusnahkan?: boolean
+  nominal_realisasi: number | null
+}): number {
+  if (dok.is_non_material || dok.berkas_dimusnahkan) return 0
+  return dok.nominal_realisasi ?? 0
+}

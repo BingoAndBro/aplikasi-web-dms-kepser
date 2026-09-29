@@ -419,9 +419,12 @@ describe('Ekspor Semua File (ZIP) buttons + dialog (/pegawai/laporan/saya, /pega
 
     expect(source).toContain('Ekspor Semua File (ZIP)')
     expect(source).toContain("fetch('/api/laporan/kegiatan/export-zip'")
-    expect(source).toContain('body: JSON.stringify({ dokumen_ids: selectedDocuments.map((dok) => dok.id) })')
+    // D-28: dokumen tambahan KSBU tampil di daftar, tetapi ekspor ZIP hanya
+    // membaca dokumen_transaksi — jadi hanya id dokumen alur yang dikirim/dihitung.
+    expect(source).toContain("const exportDocumentIds = selectedDocuments.filter(dok => dok.sumber !== 'MANUAL').map(dok => dok.id)")
+    expect(source).toContain('body: JSON.stringify({ dokumen_ids: exportDocumentIds })')
     expect(source).toContain('downloadZipBlob(blob, filename)')
-    expect(source).toContain('exportCount={dokumen.length}')
+    expect(source).toContain('exportCount={exportDocumentIds.length}')
     expect(source).not.toContain('dokumen_ids: kegiatanRows')
   })
 

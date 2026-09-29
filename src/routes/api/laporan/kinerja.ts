@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, desc, eq, gte, isNotNull, isNull, lte, ne, notInArray, or } from 'drizzle-orm'
+import { and, desc, eq, gte, isNotNull, isNull, lte, notInArray, or } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db } from '#/db/client'
-import { berkasArsip, berkasArsipItem, manualArsip } from '#/db/schema/arsip'
+import { berkasArsipItem } from '#/db/schema/arsip'
 import { users } from '#/db/schema/auth'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
 import {
@@ -16,9 +16,14 @@ import {
   hasAnyLocalRole,
   hasLocalRole,
 } from '#/lib/auth/local-server-auth'
-import { ARCHIVE_SOURCE_TYPE, ARCHIVE_STATUS, BERKAS_ARCHIVE_STATUS } from '#/lib/constants/archive-status'
+import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { ROLES } from '#/lib/constants/roles'
+import {
+  listManualRealisasiRows,
+  loadDestroyedArchiveIds,
+  tahunFromManualTanggal,
+} from '#/lib/laporan/manual-realisasi'
 
 // Dokumen material yang final (COMPLETED) dihitung sebagai realisasi — wajib
 // mengisi Komponen saat submit (lihat lib/schemas/dokumen.ts); dokumen lama
@@ -144,21 +149,13 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
         }
 
         try {
-          // Dokumen yang ikut dalam berkas arsip yang sudah DIMUSNAHKAN tidak
-          // lagi dihitung sebagai realisasi — otoritas "dimusnahkan" ada pada
-          // join ini, sama seperti guard akses lampiran di document-file-access.ts.
-          const destroyedRows = await db
-            .select({ dokumenId: berkasArsipItem.dokumenId })
-            .from(berkasArsipItem)
-            .innerJoin(berkasArsip, eq(berkasArsipItem.berkasId, berkasArsip.id))
-            .where(and(
-              eq(berkasArsipItem.sourceType, ARCHIVE_SOURCE_TYPE.WORKFLOW),
-              eq(berkasArsip.statusArsip, BERKAS_ARCHIVE_STATUS.DIMUSNAHKAN),
-            ))
-
-          const destroyedDocumentIds = destroyedRows
-            .map((row) => row.dokumenId)
-            .filter((id): id is string => id !== null)
+          // Dokumen (alur maupun tambahan KSBU) yang ikut dalam berkas arsip
+          // yang sudah DIMUSNAHKAN tidak lagi dihitung sebagai realisasi —
+          // otoritas "dimusnahkan" ada pada join berkas_arsip_item → berkas_arsip
+          // (loadDestroyedArchiveIds), sama seperti guard akses lampiran di
+          // document-file-access.ts. Aturan ini dipakai juga oleh Laporan Kegiatan.
+          const destroyed = await loadDestroyedArchiveIds()
+          const destroyedDocumentIds = destroyed.dokumenIds
 
           // "Diberkaskan" adalah metadata tambahan (dokumen sudah ditempel ke
           // berkas_arsip_item), bukan status FSM — dokumen TERSIMPAN tidak
@@ -243,34 +240,15 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
           // "tahun" dipakai dari `tanggal` milik manual_arsip sendiri (bukan
           // tahun_anggaran berkas yang menaunginya) — konsisten dengan makna
           // `tahun` pada dokumen_transaksi: tahun milik dokumennya sendiri,
-          // independen dari tahun anggaran berkas (Q5).
-          const manualRows = await db
-            .select({
-              id: manualArsip.id,
-              judul: manualArsip.nama,
-              fungsi_nama: masterFungsi.nama,
-              kegiatan_nama: masterKegiatan.nama,
-              komponen_id: manualArsip.komponenId,
-              komponen_nama: masterKomponen.nama,
-              tanggal: manualArsip.tanggal,
-              pengaju_id: manualArsip.createdBy,
-              created_at: manualArsip.createdAt,
-              updated_at: manualArsip.updatedAt,
-              nominal_realisasi: manualArsip.nominalRealisasi,
-              pengaju_display_name: users.displayName,
-              pengaju_nama_lengkap: users.namaLengkap,
-              pengaju_username: users.username,
-            })
-            .from(manualArsip)
-            .leftJoin(masterFungsi, eq(manualArsip.fungsiId, masterFungsi.id))
-            .leftJoin(masterKegiatan, eq(manualArsip.kegiatanId, masterKegiatan.id))
-            .leftJoin(masterKomponen, eq(manualArsip.komponenId, masterKomponen.id))
-            .leftJoin(users, eq(manualArsip.createdBy, users.id))
-            .where(and(
-              ne(manualArsip.statusArsip, ARCHIVE_STATUS.DIMUSNAHKAN),
-              startDateParam ? gte(manualArsip.tanggal, startDateParam) : undefined,
-              endDateParam ? lte(manualArsip.tanggal, endDateParam) : undefined,
-            ))
+          // independen dari tahun anggaran berkas (Q5). Dokumen manual yang
+          // DIMUSNAHKAN — baik statusnya sendiri maupun berkas yang
+          // menaunginya — dikecualikan (D-28).
+          const manualRows = await listManualRealisasiRows({
+            startDate: startDateParam,
+            endDate: endDateParam,
+            destroyed: 'exclude',
+            destroyedManualArsipIds: destroyed.manualArsipIds,
+          })
 
           type CombinedRow = {
             id: string
@@ -323,7 +301,7 @@ export const Route = createFileRoute('/api/laporan/kinerja')({
             kegiatan_nama: row.kegiatan_nama,
             komponen_id: row.komponen_id,
             komponen_nama: row.komponen_nama,
-            tahun: new Date(row.tanggal).getUTCFullYear(),
+            tahun: tahunFromManualTanggal(row.tanggal),
             tanggal: row.tanggal,
             pengaju_id: row.pengaju_id ?? null,
             pengaju_nama: displayUserName({

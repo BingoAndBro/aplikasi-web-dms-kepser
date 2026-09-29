@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
-import type { LaporanKinerjaRow } from '#/lib/laporan/monitoring-rows'
 import { formatDate } from '#/lib/utils/format'
 
 const LAPORAN_MANUAL_ARSIP_API = '/api/laporan/manual-arsip'
@@ -16,13 +15,33 @@ type ManualArsipDetail = {
   id: string
   keterangan: string
   status_arsip: string
+  /** Status dokumen sendiri ATAU berkas yang menaunginya DIMUSNAHKAN (D-28). */
+  dimusnahkan?: boolean
   klasifikasi: { nama: string | null }
   attachments: Array<ManualArsipAttachmentMetadata & { original_filename?: string }>
 }
 
 /**
+ * Field baris laporan yang dipakai dialog. Cocok untuk baris Laporan Kinerja /
+ * Nominal Realisasi (LaporanKinerjaRow) maupun Laporan Kegiatan (DokumenLaporanRow).
+ */
+export type ManualArsipDialogRow = {
+  id: string
+  judul: string
+  fungsi_nama?: string | null
+  kegiatan_nama?: string | null
+  komponen_nama?: string | null
+  tanggal: string
+  pengaju_nama?: string | null
+  nominal_realisasi: number | null
+}
+
+export const MANUAL_ARSIP_DIMUSNAHKAN_MESSAGE =
+  'Berkas dokumen ini sudah dimusnahkan. Nominal realisasinya tidak lagi dihitung dalam total realisasi, dan lampirannya tidak dapat dibuka.'
+
+/**
  * Detail dokumen manual KSBU (Penambahan Dokumen, T-5/D-26) untuk Laporan
- * Kinerja dan Monitoring Nominal Realisasi — padanan DokumenDetailDialog,
+ * Kinerja, Monitoring Nominal Realisasi, dan Laporan Kegiatan (D-28) — padanan DokumenDetailDialog,
  * karena dokumen manual tidak punya /api/dokumen/$id. Metadata diambil dari
  * baris laporan; keterangan, jenis pembayaran dan lampiran dari endpoint
  * read-only /api/laporan/manual-arsip/$id.
@@ -31,7 +50,7 @@ export function ManualArsipDetailDialog({
   dokumen,
   onClose,
 }: {
-  dokumen: LaporanKinerjaRow | null
+  dokumen: ManualArsipDialogRow | null
   onClose: () => void
 }) {
   const [detail, setDetail] = useState<ManualArsipDetail | null>(null)
@@ -94,6 +113,11 @@ export function ManualArsipDetailDialog({
         </DialogHeader>
 
         <div className="space-y-5 p-5">
+          {detail?.dimusnahkan && (
+            <div role="note" className="rounded-[1.25rem] border border-danger-border bg-danger-surface px-4 py-3 text-sm font-semibold text-danger-text">
+              {MANUAL_ARSIP_DIMUSNAHKAN_MESSAGE}
+            </div>
+          )}
           <div className="rounded-[1.25rem] border border-brand-border bg-bg-surface p-4 sm:p-5">
             <div className="grid gap-5 sm:grid-cols-2">
               <MetadataField label="Judul Dokumen" value={dokumen.judul} className="sm:col-span-2" />
@@ -108,7 +132,9 @@ export function ManualArsipDetailDialog({
               {dokumen.nominal_realisasi !== null && (
                 <MetadataField
                   label="Nominal Realisasi"
-                  value={`Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')}`}
+                  value={detail?.dimusnahkan
+                    ? `Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')} (tidak dihitung, berkas dimusnahkan)`
+                    : `Rp ${Number(dokumen.nominal_realisasi).toLocaleString('id-ID')}`}
                   emphasis
                 />
               )}
@@ -129,7 +155,7 @@ export function ManualArsipDetailDialog({
                 apiBase={LAPORAN_MANUAL_ARSIP_API}
                 manualArsipId={detail.id}
                 attachments={detail.attachments}
-                fileUnavailable={detail.status_arsip === 'DIMUSNAHKAN'}
+                fileUnavailable={detail.dimusnahkan ?? detail.status_arsip === 'DIMUSNAHKAN'}
               />
             )}
           </section>

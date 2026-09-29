@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
 import { PageLayout } from '#/components/dashboard/PageLayout'
+import { ManualArsipDetailDialog } from '#/components/arsip/ManualArsipDetailDialog'
 import { DokumenDetailDialog } from '#/components/dokumen/DokumenDetailDialog'
 import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
 import { PegawaiPanel } from '#/components/pegawai/PegawaiPagePrimitives'
@@ -38,6 +39,7 @@ import {
   type PeriodeValue,
 } from '#/lib/laporan/periode'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
+import { countedNominalRealisasi } from '#/lib/laporan/kegiatan-scope'
 import { downloadZipBlob, extractContentDispositionFilename } from '#/lib/file-helpers'
 import { formatDate } from '#/lib/utils/format'
 import {
@@ -54,6 +56,14 @@ import {
   ShieldX,
   Users,
 } from 'lucide-react'
+
+// Catatan cakupan di header (D-28), gaya kalimat sama dengan catatan Nominal
+// Realisasi / Laporan Kinerja (MonitoringRealisasiView.tsx). Isinya mengikuti
+// scope=final di src/routes/api/laporan/kegiatan.ts.
+const LAPORAN_KEGIATAN_SCOPE_NOTE =
+  'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU dari kegiatan yang Anda pimpin. Dokumen yang berkasnya sudah dimusnahkan tetap ditampilkan, tetapi nominal realisasinya tidak lagi dihitung.'
+
+const BERKAS_DIMUSNAHKAN_NOMINAL_NOTE = 'Tidak dihitung · berkas dimusnahkan'
 
 export const Route = createFileRoute('/pegawai/laporan/kegiatan')({
   validateSearch: z.object({
@@ -143,6 +153,7 @@ const DETAIL_SORT_OPTIONS: { value: DetailSortMode; label: string }[] = [
 function LaporanKegiatanPage() {
   const navigate = useNavigate()
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [manualDetail, setManualDetail] = useState<DokumenLaporanRow | null>(null)
   const { kegiatanId } = Route.useSearch()
   const [dokumen, setDokumen] = useState<DokumenLaporanRow[]>([])
   const [isAuthorized, setIsAuthorized] = useState(false)
@@ -279,8 +290,23 @@ function LaporanKegiatanPage() {
 
   const isCurrentUser = (dok: DokumenLaporanRow) => dok.pengaju_id === currentUserId
 
+  // Dokumen tambahan KSBU tidak punya /api/dokumen/$id; detailnya dibuka lewat
+  // ManualArsipDetailDialog (endpoint read-only /api/laporan/manual-arsip/$id).
+  function openDocument(documentId: string) {
+    const dok = selectedKegiatan?.dokumen.find(row => row.id === documentId)
+    if (dok?.sumber === 'MANUAL') {
+      setManualDetail(dok)
+      return
+    }
+    setDetailId(documentId)
+  }
+
+  // Ekspor ZIP hanya membaca dokumen_transaksi, jadi dokumen tambahan KSBU
+  // tidak ikut dikirim (dan tidak ikut dihitung di dialog ekspor).
+  const exportDocumentIds = selectedDocuments.filter(dok => dok.sumber !== 'MANUAL').map(dok => dok.id)
+
   async function handleExportZip() {
-    if (selectedDocuments.length === 0 || selectedDocuments.length > 500) return
+    if (exportDocumentIds.length === 0 || exportDocumentIds.length > 500) return
 
     setExportPending(true)
     setExportError('')
@@ -290,7 +316,7 @@ function LaporanKegiatanPage() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dokumen_ids: selectedDocuments.map((dok) => dok.id) }),
+        body: JSON.stringify({ dokumen_ids: exportDocumentIds }),
       })
 
       if (!response.ok) {
@@ -346,8 +372,9 @@ function LaporanKegiatanPage() {
             sortBy={detailSortBy}
             onSortChange={setDetailSortBy}
             onBack={() => selectKegiatan(null, navigate)}
-            onOpenDocument={(documentId) => setDetailId(documentId)}
+            onOpenDocument={openDocument}
             isCurrentUser={isCurrentUser}
+            exportCount={exportDocumentIds.length}
             exportDialogOpen={exportDialogOpen}
             onExportDialogOpenChange={setExportDialogOpen}
             exportPending={exportPending}
@@ -371,6 +398,9 @@ function LaporanKegiatanPage() {
                     Pantau dokumen berdasarkan kegiatan yang Anda pimpin sebagai Ketua Tim.
                   </p>
                 </div>
+              </div>
+              <div className="max-w-xs rounded-[18px] border border-brand-border bg-bg-surface px-4 py-3 text-xs font-bold text-brand-text shadow-sm">
+                {LAPORAN_KEGIATAN_SCOPE_NOTE}
               </div>
             </section>
 
@@ -423,6 +453,8 @@ function LaporanKegiatanPage() {
           open={detailId !== null}
           onOpenChange={(open) => { if (!open) setDetailId(null) }}
         />
+
+        <ManualArsipDetailDialog dokumen={manualDetail} onClose={() => setManualDetail(null)} />
       </div>
     </PageLayout>
   )
@@ -640,6 +672,7 @@ function KegiatanDetailView({
   onBack,
   onOpenDocument,
   isCurrentUser,
+  exportCount,
   exportDialogOpen,
   onExportDialogOpenChange,
   exportPending,
@@ -660,6 +693,7 @@ function KegiatanDetailView({
   onBack: () => void
   onOpenDocument: (id: string) => void
   isCurrentUser: (dok: DokumenLaporanRow) => boolean
+  exportCount: number
   exportDialogOpen: boolean
   onExportDialogOpenChange: (open: boolean) => void
   exportPending: boolean
@@ -696,8 +730,8 @@ function KegiatanDetailView({
             </p>
           </div>
         </div>
-        <div className="rounded-[18px] border border-brand-border bg-bg-surface px-4 py-3 text-xs font-bold text-brand-text shadow-sm">
-          Halaman ini menampilkan dokumen terkait kegiatan yang Anda pimpin.
+        <div className="max-w-xs rounded-[18px] border border-brand-border bg-bg-surface px-4 py-3 text-xs font-bold text-brand-text shadow-sm">
+          {LAPORAN_KEGIATAN_SCOPE_NOTE}
         </div>
       </section>
 
@@ -716,15 +750,15 @@ function KegiatanDetailView({
         onSortChange={onSortChange}
         pembuatOptions={pembuatOptions}
         resultLabel={`${dokumen.length} dari ${totalDokumen} dokumen ditampilkan`}
-        exportCount={dokumen.length}
+        exportCount={exportCount}
         onExportClick={() => onExportDialogOpenChange(true)}
       />
 
       <ExportZipDialog
         open={exportDialogOpen}
         onOpenChange={onExportDialogOpenChange}
-        documentCount={dokumen.length}
-        description={`Mengikuti dokumen yang sedang ditampilkan pada kegiatan "${kegiatan.nama}".`}
+        documentCount={exportCount}
+        description={`Mengikuti dokumen yang sedang ditampilkan pada kegiatan "${kegiatan.nama}". Dokumen tambahan KSBU tidak termasuk dalam ekspor.`}
         pending={exportPending}
         error={exportError}
         onConfirm={onExportConfirm}
@@ -1044,7 +1078,7 @@ function KegiatanDetailCards({
       <SummaryCard
         label="Total Nominal Realisasi"
         value={formatRupiah(kegiatan.totalNominal)}
-        detail="Hanya Belanja Material"
+        detail="Belanja Material, tanpa berkas dimusnahkan"
         icon={<Banknote size={16} />}
         tone="money"
       />
@@ -1097,7 +1131,8 @@ function DocumentTable({
                 <TableCell className="max-w-[460px] px-6 py-5">
                   <p className="line-clamp-2 text-[15px] font-semibold tracking-tight text-zinc-950 transition-colors group-hover:text-brand-text">{dok.judul}</p>
                   <p className="mt-1 text-xs font-medium text-zinc-500">
-                    Pembuat: {(dok as any).pengaju_nama ?? 'Tidak diketahui'}
+                    Pembuat: {dok.pengaju_nama ?? 'Tidak diketahui'}
+                    {dok.sumber === 'MANUAL' ? ' · Penambahan Dokumen (KSBU)' : ''}
                     {isCurrentUser(dok) ? <Badge className="ml-2 border-brand-border-strong bg-brand-surface text-brand-solid-active">Anda</Badge> : null}
                   </p>
                 </TableCell>
@@ -1117,7 +1152,7 @@ function DocumentTable({
                   </div>
                 </TableCell>
                 <TableCell className="px-6 py-5 text-center font-mono text-sm font-bold text-zinc-950">
-                  {dok.is_non_material ? '-' : formatRupiah(dok.nominal_realisasi ?? 0)}
+                  <NominalCell dok={dok} />
                 </TableCell>
                 <TableCell className="px-6 py-5 text-right">
                   <DocumentDetailButton dok={dok} onOpenDocument={onOpenDocument} />
@@ -1160,7 +1195,14 @@ function DocumentTable({
             <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
               <InfoTile label="Scope" value={dok.is_non_material ? 'Non-Material' : 'Material'} />
               <InfoTile label="Tanggal" value={<DateCell value={dok.tanggal} className="mt-1" />} />
-              <InfoTile label="Pembuat" value={(dok as any).pengaju_nama ?? 'Tidak diketahui'} className="col-span-2" />
+              <InfoTile
+                label="Pembuat"
+                value={`${dok.pengaju_nama ?? 'Tidak diketahui'}${dok.sumber === 'MANUAL' ? ' · Penambahan Dokumen (KSBU)' : ''}`}
+                className="col-span-2"
+              />
+              {!dok.is_non_material && (
+                <InfoTile label="Nominal Realisasi" value={<NominalCell dok={dok} />} className="col-span-2 font-mono font-bold" />
+              )}
             </div>
             <div className="border-t border-zinc-100 pt-3">
               <DocumentDetailButton dok={dok} onOpenDocument={onOpenDocument} mobile />
@@ -1169,6 +1211,18 @@ function DocumentTable({
         ))}
       </div>
     </>
+  )
+}
+
+function NominalCell({ dok }: { dok: DokumenLaporanRow }) {
+  if (dok.is_non_material) return <>-</>
+  if (!dok.berkas_dimusnahkan) return <>{formatRupiah(dok.nominal_realisasi ?? 0)}</>
+
+  return (
+    <span className="inline-flex flex-col items-center gap-0.5">
+      <span className="text-zinc-400 line-through">{formatRupiah(dok.nominal_realisasi ?? 0)}</span>
+      <span className="font-sans text-[11px] font-bold text-danger-text">{BERKAS_DIMUSNAHKAN_NOMINAL_NOTE}</span>
+    </span>
   )
 }
 
@@ -1270,7 +1324,7 @@ function buildKegiatanRows(allowedKegiatan: { id: string; nama: string }[], docu
       dokumen: docs,
       materialCount: docs.filter(d => !d.is_non_material).length,
       nonMaterialCount: docs.filter(d => d.is_non_material).length,
-      totalNominal: docs.reduce((sum, d) => sum + (d.is_non_material ? 0 : d.nominal_realisasi ?? 0), 0),
+      totalNominal: docs.reduce((sum, d) => sum + countedNominalRealisasi(d), 0),
       latestDate,
       pengajuCount: new Set(docs.map(d => d.pengaju_id ?? d.created_by).filter(Boolean)).size,
     }

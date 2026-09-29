@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, or } from 'drizzle-orm'
 import { db } from '#/db/client'
 import { users } from '#/db/schema/auth'
 import { dokumenTransaksi } from '#/db/schema/dokumen'
@@ -18,6 +18,13 @@ import {
   LAPORAN_KEGIATAN_SCOPE_STATUSES,
   parseLaporanKegiatanScope,
 } from '#/lib/laporan/kegiatan-scope'
+import {
+  isManualArsipDestroyed,
+  listManualRealisasiRows,
+  loadDestroyedArchiveIds,
+  tahunFromManualTanggal,
+  type ManualRealisasiQueryRow,
+} from '#/lib/laporan/manual-realisasi'
 
 function normalizeNumericValue(value: string | number | null): number | null {
   if (value === null) return null
@@ -25,6 +32,12 @@ function normalizeNumericValue(value: string | number | null): number | null {
 
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function isoDateString(value: Date | string | null): string {
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === 'string') return value
+  return ''
 }
 
 function displayUserName(user: {
@@ -42,6 +55,18 @@ function displayUserName(user: {
 // GET /api/laporan/kegiatan - Semua dokumen dari kegiatan yang dipimpin user
 //   ?scope=final  (default) dokumen final -> Laporan Kegiatan
 //   ?scope=monitoring semua dokumen yang sudah diajukan -> Monitoring Dokumen Tim
+//
+// D-28: scope=final juga memuat dokumen tambahan KSBU (arsip.manual_arsip)
+// dari kegiatan yang dipimpin — kegiatan disaring DI SERVER lewat
+// ketua_tim_assignments, sama seperti dokumen alur. Aturannya mengikuti
+// Nominal Realisasi (/api/laporan/kinerja, helper bersama manual-realisasi.ts):
+//   - dokumen manual dianggap Selesai sejak diberkaskan (`sumber: 'MANUAL'`);
+//   - dokumen material tanpa Komponen tidak dimuat (data yatim);
+//   - dokumen (alur maupun manual) yang berkasnya DIMUSNAHKAN TETAP dimuat
+//     supaya riwayat kegiatan utuh, tetapi ditandai `berkas_dimusnahkan: true`
+//     dan klien tidak menjumlahkan nominalnya. Nominal Realisasi justru tidak
+//     menampilkannya sama sekali; totalnya sama.
+// scope=monitoring (Monitoring Dokumen Tim) tidak berubah.
 // ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/api/laporan/kegiatan')({
@@ -116,10 +141,27 @@ export const Route = createFileRoute('/api/laporan/kegiatan')({
             .where(and(
               inArray(dokumenTransaksi.kegiatanJenisId, kegiatanIds),
               inArray(dokumenTransaksi.status, [...LAPORAN_KEGIATAN_SCOPE_STATUSES[scope]]),
+              scope === 'final'
+                ? or(eq(dokumenTransaksi.isNonMaterial, true), isNotNull(dokumenTransaksi.komponenId))
+                : undefined,
             ))
 
-          return Response.json({
-            dokumen: rows.map((row) => ({
+          let destroyedDokumenIds = new Set<string>()
+          let destroyedManualArsipIds = new Set<string>()
+          let manualRows: ManualRealisasiQueryRow[] = []
+
+          if (scope === 'final') {
+            const destroyed = await loadDestroyedArchiveIds()
+            destroyedDokumenIds = new Set(destroyed.dokumenIds)
+            destroyedManualArsipIds = new Set(destroyed.manualArsipIds)
+            manualRows = await listManualRealisasiRows({
+              kegiatanIds,
+              destroyed: 'include',
+              destroyedManualArsipIds: destroyed.manualArsipIds,
+            })
+          }
+
+          const workflowDokumen = rows.map((row) => ({
               id: row.id,
               judul: row.judul,
               fungsi_id: row.fungsi_id,
@@ -165,7 +207,52 @@ export const Route = createFileRoute('/api/laporan/kegiatan')({
                 namaLengkap: row.pengaju_nama_lengkap,
                 username: row.pengaju_username,
               }),
-            })),
+              sumber: 'WORKFLOW' as const,
+              berkas_dimusnahkan: destroyedDokumenIds.has(row.id),
+            }))
+
+          const manualDokumen = manualRows.map((row) => ({
+            id: row.id,
+            judul: row.judul,
+            fungsi_id: row.fungsi_id,
+            kegiatan_jenis_id: row.kegiatan_id,
+            is_ketua_tim: false,
+            status: 'COMPLETED',
+            current_step: null,
+            revision_target: null,
+            revision_notes: null,
+            lampiran_urls: [],
+            tahun: tahunFromManualTanggal(row.tanggal),
+            tanggal: row.tanggal,
+            created_by: row.pengaju_id,
+            nominal_realisasi: normalizeNumericValue(row.nominal_realisasi),
+            is_non_material: false,
+            nama_dokumen: null,
+            keterangan_detail: null,
+            created_at: isoDateString(row.created_at),
+            updated_at: isoDateString(row.updated_at),
+            lampiran_dibersihkan_at: null,
+            lampiran_dibersihkan_alasan: null,
+            komponen_id: row.komponen_id,
+            komponen_nama: row.komponen_nama ?? undefined,
+            jenis_permintaan_id: null,
+            kategori_permintaan_id: null,
+            detail_permintaan_id: null,
+            fungsi_nama: row.fungsi_nama ?? undefined,
+            kegiatan_nama: row.kegiatan_nama ?? undefined,
+            leaf_node_nama: row.komponen_nama ?? row.kegiatan_nama ?? '',
+            pengaju_id: row.pengaju_id,
+            pengaju_nama: displayUserName({
+              displayName: row.pengaju_display_name,
+              namaLengkap: row.pengaju_nama_lengkap,
+              username: row.pengaju_username,
+            }),
+            sumber: 'MANUAL' as const,
+            berkas_dimusnahkan: isManualArsipDestroyed(row, destroyedManualArsipIds),
+          }))
+
+          return Response.json({
+            dokumen: [...workflowDokumen, ...manualDokumen],
             isKetuaTim: true,
           })
         } catch (err) {

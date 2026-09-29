@@ -66,4 +66,8 @@ export type DokumenLaporanRow = DokumenRow & {
   pengaju_nama?: string
   pengaju_id?: string
   leaf_node_nama?: string
+  // Laporan Kegiatan (D-28): dokumen alur vs dokumen tambahan KSBU, dan
+  // penanda berkas yang sudah dimusnahkan (tampil, nominal tidak dihitung).
+  sumber?: 'WORKFLOW' | 'MANUAL'
+  berkas_dimusnahkan?: boolean
 }

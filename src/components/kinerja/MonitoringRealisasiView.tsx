@@ -106,9 +106,10 @@ export type MonitoringRealisasiViewProps = {
 }
 
 // Catatan cakupan di header (D-27): isi halaman berbeda per scope, lihat
-// filter di src/routes/api/laporan/kinerja.ts.
+// filter di src/routes/api/laporan/kinerja.ts. D-28: kalimat dimusnahkan
+// dipertegas bahwa nominalnya tidak lagi dihitung.
 const MONITORING_SCOPE_NOTE =
-  'Dokumen material berstatus Selesai dan dokumen tambahan KSBU, kecuali yang berkasnya sudah dimusnahkan.'
+  'Dokumen material berstatus Selesai dan dokumen tambahan KSBU. Dokumen yang berkasnya sudah dimusnahkan tidak ditampilkan dan nominal realisasinya tidak lagi dihitung.'
 const LAPORAN_KINERJA_SCOPE_NOTE =
   'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU. Tidak termasuk berkas yang sudah dimusnahkan atau lampiran yang sudah dibersihkan.'
 const ScopeNoteContext = createContext(MONITORING_SCOPE_NOTE)
