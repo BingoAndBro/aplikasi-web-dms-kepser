@@ -175,7 +175,7 @@ function LaporanSayaPage() {
                 Laporan Saya
               </h1>
               <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
-                Dokumen final milik Anda yang sudah selesai disetujui atau tersimpan.
+                Dokumen milik Anda yang sudah selesai disetujui atau tersimpan.
               </p>
             </div>
           </div>

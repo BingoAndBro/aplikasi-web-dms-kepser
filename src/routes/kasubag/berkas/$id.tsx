@@ -517,8 +517,8 @@ function BerkasArsipDetailPage() {
                             <p className="mt-0.5 max-w-2xl text-[10px] font-medium leading-relaxed text-white/90 sm:text-xs">
                               {activeTab === 'metadata'
                                 ? isOpenFolder
-                                  ? 'Metadata berkas berjalan sebelum finalisasi berkas.'
-                                  : 'Metadata final folder-first untuk lifecycle berkas.'
+                                  ? 'Metadata berkas sebelum berkas ditutup.'
+                                  : 'Metadata yang dicatat saat berkas ditutup.'
                                 : activeTab === 'documents'
                                   ? 'Dokumen dalam berkas dengan metadata sumber dan akses lampiran.'
                                   : 'Kronologi khusus berkas berdasarkan data yang tersedia.'}
@@ -635,7 +635,7 @@ function EditActiveMetadataDialog({
         <DialogHeader>
           <DialogTitle>Edit Metadata Tersimpan</DialogTitle>
           <DialogDescription>
-            Perbarui metadata final berkas selama statusnya masih Tersimpan.
+            Perbarui metadata berkas selama statusnya masih Tersimpan.
           </DialogDescription>
         </DialogHeader>
 
@@ -664,7 +664,7 @@ function EditActiveMetadataDialog({
                 placeholder="Tanggal tutup belum tersedia"
               />
               <span className="mt-1 block text-[11px] font-semibold leading-relaxed text-zinc-500">
-                Tanggal tutup adalah waktu finalisasi berkas dan tidak diubah dari edit metadata.
+                Tanggal tutup adalah waktu berkas ditutup dan tidak diubah dari edit metadata.
               </span>
             </label>
             <label className={ARCHIVE_METADATA_FORM_LABEL_CLASS} id="edit-berkas-retensi-aktif-label">
@@ -966,7 +966,7 @@ function FolderActionPanel({
           }
         >
           <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 text-xs font-extrabold leading-relaxed text-rose-700">
-            <p>Pemberitahuan: Pembersihan file ini bersifat final.</p>
+            <p>Pemberitahuan: Pembersihan file ini tidak dapat dibatalkan.</p>
             <p className="mt-2">File fisik terkait berkas akan dihapus.</p>
             <p>Preview dan download file tidak akan tersedia setelah pembersihan.</p>
             <p>Metadata berkas dan dokumen tetap tersimpan, namun lampiran berkas tidak akan dapat dilekatkan, diunduh, atau dipreview lagi.</p>
@@ -1831,7 +1831,7 @@ export function buildBerkasHistoryItems(detail: BerkasDetail): BerkasHistoryItem
     items.push(historyItem({
       label: 'Berkas ditutup',
       date: detail.closed_at,
-      helper: 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.',
+      helper: 'Nomor SPM dan masa simpan sudah dicatat.',
       icon: <Check size={15} />,
       iconTone: 'bg-emerald-50 text-emerald-700',
       dateOnly: isUtcMidnightTimestamp(detail.closed_at),
@@ -1887,7 +1887,7 @@ function buildAuthoritativeBerkasHistoryHelper(event: BerkasActivityEvent): stri
     case 'DOKUMEN_MANUAL_DITAMBAHKAN':
       return 'Dokumen Manual masuk ke berkas.'
     case 'BERKAS_DITUTUP':
-      return 'Metadata final seperti Nomor SPM dan retensi sudah dicatat.'
+      return 'Nomor SPM dan masa simpan sudah dicatat.'
     case 'METADATA_ARSIP_AKTIF_DIPERBARUI':
       return 'Metadata Tersimpan diperbarui.'
     case 'BERKAS_DIPINDAHKAN_KE_INAKTIF':

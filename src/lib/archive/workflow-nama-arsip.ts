@@ -4,7 +4,7 @@ export type WorkflowNamaArsipSource = {
   kegiatanNama?: string | null
 }
 
-const FALLBACK_WORKFLOW_NAMA_ARSIP = 'Arsip Dokumen'
+const FALLBACK_WORKFLOW_NAMA_ARSIP = 'Dokumen'
 const MAX_WORKFLOW_NAMA_ARSIP_LENGTH = 255
 
 export function deriveWorkflowNamaArsip(source: WorkflowNamaArsipSource): string {

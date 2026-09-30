@@ -151,8 +151,8 @@ describe('berkas attachment name resolver', () => {
       },
     )).toEqual({
       label: 'Bukti Manual',
-      previewTitle: 'Bukti_Manual_Arsip_Komponen_Tanggal.pdf',
-      downloadFilename: 'Bukti_Manual_Arsip_Komponen_Tanggal.pdf',
+      previewTitle: 'Bukti_Manual_Dokumen_Komponen_Tanggal.pdf',
+      downloadFilename: 'Bukti_Manual_Dokumen_Komponen_Tanggal.pdf',
     })
   })
 

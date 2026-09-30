@@ -230,8 +230,8 @@ describe('manual arsip API foundation routes', () => {
       [{ ...validPostBody(), tanggal_diarsipkan: '24/05/2026' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
       [{ ...validPostBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
       [{ ...validPostBody(), tanggal_diarsipkan: '2026-02-31' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
-      [{ ...validPostBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
-      [{ ...validPostBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
+      [{ ...validPostBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata masa simpan harus lengkap atau dikosongkan'],
+      [{ ...validPostBody(), retensi_aktif: '1 Tahun' }, 'Metadata masa simpan harus lengkap atau dikosongkan'],
     ]
 
     for (const [body, expectedError] of cases) {
@@ -1098,8 +1098,8 @@ describe('manual arsip API foundation routes', () => {
   it('rejects invalid or partial final metadata fields on manual archive PATCH', async () => {
     const cases: Array<[Record<string, unknown>, string]> = [
       [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24T00:00:00.000Z' }, 'Tanggal harus valid dengan format YYYY-MM-DD'],
-      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
-      [{ ...validCreateBody(), retensi_aktif: '1 Tahun' }, 'Metadata retensi final harus lengkap atau dikosongkan'],
+      [{ ...validCreateBody(), tanggal_diarsipkan: '2026-05-24' }, 'Metadata masa simpan harus lengkap atau dikosongkan'],
+      [{ ...validCreateBody(), retensi_aktif: '1 Tahun' }, 'Metadata masa simpan harus lengkap atau dikosongkan'],
       [omit(validCreateBody(), 'klasifikasi_id'), 'Jenis pembayaran wajib dipilih'],
       [{ ...validCreateBody(), klasifikasi_id: 'not-a-uuid' }, 'Jenis pembayaran tidak valid'],
       [{ ...validCreateBody(), retensi_inaktif: '2 Tahun' }, 'Retensi inaktif tidak valid'],
@@ -1414,7 +1414,7 @@ describe('manual arsip API foundation routes', () => {
 
       expect(response.status).toBe(410)
       expect(await response.json()).toEqual({
-        error: 'File lampiran tidak tersedia - arsip telah dimusnahkan',
+        error: 'File lampiran tidak tersedia - file berkas telah dibersihkan',
       })
     }
   })
@@ -1544,7 +1544,7 @@ describe('manual arsip API foundation routes', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Disposition')).toBe(
-      'attachment; filename="Lampiran_Arsip_Komponen_Tanggal.jpeg"',
+      'attachment; filename="Lampiran_Dokumen_Komponen_Tanggal.jpeg"',
     )
   })
 

@@ -95,7 +95,7 @@ const ROLE_HELP_TEXT: Record<RoleName, string> = {
   PEGAWAI: 'Mengajukan dokumen dan melihat laporan pribadi.',
   PPK: 'Memvalidasi dokumen sebelum persetujuan.',
   PPSPM: 'Menyetujui pembayaran dokumen.',
-  KEPALA_SUB_BAGIAN_UMUM: 'Mengelola klasifikasi dan lifecycle arsip.',
+  KEPALA_SUB_BAGIAN_UMUM: 'Mengelola klasifikasi dan pembersihan berkas.',
   PENANGGUNG_JAWAB_KINERJA: 'Melihat dashboard dan laporan metadata.',
   ADMIN: 'Mengelola user dan data referensi sistem.',
 }

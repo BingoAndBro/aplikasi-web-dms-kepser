@@ -116,11 +116,11 @@ const MONITORING_SCOPE_NOTE =
 // dan non-material yang lampirannya dibersihkan (metadata disimpan, lampiran
 // sudah dihapus); nominal dokumen dari berkas dimusnahkan tidak dihitung.
 const LAPORAN_KINERJA_SCOPE_NOTE =
-  'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU. Dokumen yang berkasnya sudah dimusnahkan tetap ditampilkan, tetapi nominal realisasinya tidak lagi dihitung.'
+  'Dokumen Material berstatus Selesai, Non-Material berstatus Tersimpan, dan dokumen tambahan KSBU. Dokumen yang berkasnya sudah dimusnahkan tetap ditampilkan, tetapi nominal realisasinya tidak lagi dihitung.'
 const ScopeNoteContext = createContext(MONITORING_SCOPE_NOTE)
 
 const DEFAULT_TITLE = 'Laporan Kinerja'
-const DEFAULT_DESCRIPTION = 'Pantau dokumen final berdasarkan kegiatan atau berdasarkan pegawai.'
+const DEFAULT_DESCRIPTION = 'Pantau dokumen Selesai dan Tersimpan berdasarkan kegiatan atau berdasarkan pegawai.'
 const DEFAULT_FORBIDDEN_TITLE = 'Akses Ditolak'
 const DEFAULT_FORBIDDEN_DESCRIPTION =
   'Laporan Kinerja hanya dapat diakses oleh Penanggung Jawab Kinerja yang ditetapkan melalui otorisasi server.'
@@ -418,8 +418,8 @@ export function MonitoringRealisasiView({
             {periode.mode === 'SEMUA' ? (
               <EmptyState
                 icon={<Inbox className="h-5 w-5" />}
-                title="Belum ada dokumen final"
-                description="Dokumen final (status Selesai atau Tersimpan) akan muncul di sini sebagai metadata Laporan Kinerja."
+                title="Belum ada dokumen"
+                description="Dokumen berstatus Selesai atau Tersimpan akan muncul di sini sebagai metadata Laporan Kinerja."
               />
             ) : (
               <EmptyState
@@ -690,7 +690,7 @@ function SatkerSummaryBand({
       </div>
       <span className="hidden h-9 w-px shrink-0 bg-money-border/70 sm:block" />
       <div className="flex items-center gap-5">
-        <MiniStat label="Dokumen Final" value={dokumenCount.toLocaleString('id-ID')} />
+        <MiniStat label="Jumlah Dokumen" value={dokumenCount.toLocaleString('id-ID')} />
         <MiniStat label={primaryCountLabel} value={primaryCountValue.toLocaleString('id-ID')} />
       </div>
     </div>
@@ -856,7 +856,7 @@ function PegawaiDetailView({
       <ReportBackHeader
         title={pegawai.nama}
         subtitle={`${title} / Pegawai`}
-        description="Daftar fungsi dan kegiatan dari dokumen final yang diajukan pegawai ini."
+        description="Daftar fungsi dan kegiatan dari dokumen yang diajukan pegawai ini."
         onBack={onBack}
         backLabel="Kembali ke daftar pegawai"
       />
@@ -890,7 +890,7 @@ function PegawaiDetailCards({ pegawai }: { pegawai: PegawaiRow }) {
       <SummaryCard
         label="Nama Pegawai"
         value={pegawai.nama}
-        detail="Pengaju Dokumen Final"
+        detail="Pengaju Dokumen"
         icon={<Users size={16} />}
         tone="neutral"
       />
@@ -902,7 +902,7 @@ function PegawaiDetailCards({ pegawai }: { pegawai: PegawaiRow }) {
         tone="gold"
       />
       <SummaryCard
-        label="Total Dokumen Final"
+        label="Total Dokumen"
         value={pegawai.dokumen.length.toLocaleString('id-ID')}
         detail="Dokumen Terverifikasi"
         icon={<FileText size={16} />}
@@ -1031,7 +1031,7 @@ function FungsiDetailView({
       <ReportBackHeader
         title={fungsi.nama}
         subtitle={`${title} / Fungsi`}
-        description="Daftar kegiatan dan dokumen final pada fungsi terpilih."
+        description="Daftar kegiatan dan dokumen pada fungsi terpilih."
         onBack={onBack}
         backLabel="Kembali ke daftar fungsi"
       />
@@ -1077,7 +1077,7 @@ function FungsiDetailCards({ fungsi }: { fungsi: FungsiRow }) {
         tone="gold"
       />
       <SummaryCard
-        label="Total Dokumen Final"
+        label="Total Dokumen"
         value={fungsi.dokumen.length.toLocaleString('id-ID')}
         detail="Dokumen Terverifikasi"
         icon={<FileText size={16} />}
@@ -1122,7 +1122,7 @@ function KomponenDetailView({
       <ReportBackHeader
         title={kegiatan.nama}
         subtitle={`${fungsi.nama} / Detail Kegiatan`}
-        description="Daftar komponen dan dokumen final pada kegiatan terpilih."
+        description="Daftar komponen dan dokumen pada kegiatan terpilih."
         onBack={onBack}
         backLabel="Kembali ke detail fungsi"
       />
@@ -1371,7 +1371,7 @@ function KegiatanDocumentView({
       <ReportBackHeader
         title={group.nama}
         subtitle={isKegiatanLevel ? `${fungsi.nama} / Detail Kegiatan` : `${fungsi.nama} / ${kegiatan.nama} / Detail Komponen`}
-        description={isKegiatanLevel ? 'Daftar dokumen final dalam kegiatan terpilih.' : 'Daftar dokumen final dalam komponen terpilih.'}
+        description={isKegiatanLevel ? 'Daftar dokumen dalam kegiatan terpilih.' : 'Daftar dokumen dalam komponen terpilih.'}
         onBack={onBack}
         backLabel={isKegiatanLevel ? 'Kembali ke daftar kegiatan' : 'Kembali ke detail komponen'}
       />
@@ -1471,7 +1471,7 @@ function KegiatanDetailCards({ kegiatan }: { kegiatan: KegiatanRow }) {
         tone="gold"
       />
       <SummaryCard
-        label="Total Dokumen Final"
+        label="Total Dokumen"
         value={kegiatan.dokumen.length.toLocaleString('id-ID')}
         detail="Dokumen Terverifikasi"
         icon={<FileText size={16} />}
@@ -1661,7 +1661,7 @@ function DocumentTable({
           </TableBody>
         </Table>
         <div className="border-t border-zinc-100 px-6 py-3 text-xs font-medium text-zinc-500">
-          Menampilkan {dokumen.length}{totalLimit ? ` dari maksimal ${totalLimit}` : ''} dokumen final.
+          Menampilkan {dokumen.length}{totalLimit ? ` dari maksimal ${totalLimit}` : ''} dokumen.
         </div>
       </div>
 

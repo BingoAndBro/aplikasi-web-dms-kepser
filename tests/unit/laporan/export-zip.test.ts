@@ -277,7 +277,7 @@ describe('POST /api/laporan/kegiatan.export-zip', () => {
 
     expect(response.status).toBe(200)
     const [[, options]] = mocks.streamDocumentZip.mock.calls
-    expect(options.sourceDescription).toContain('BELUM FINAL')
+    expect(options.sourceDescription).toContain('MASIH DIPROSES')
     expect(options.filename).toContain('Monitoring_Dokumen_Tim')
   })
 

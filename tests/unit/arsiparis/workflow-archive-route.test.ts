@@ -347,7 +347,7 @@ describe('workflow classification to berkas route', () => {
     })
 
     expect(response.status).toBe(400)
-    expect(await response.json()).toEqual({ error: 'Dokumen belum berada di tahap final' })
+    expect(await response.json()).toEqual({ error: 'Dokumen belum berstatus Selesai' })
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
     expect(mocks.txUpdate).not.toHaveBeenCalled()
   })

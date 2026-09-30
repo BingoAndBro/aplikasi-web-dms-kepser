@@ -32,7 +32,7 @@ const AKSI_CONFIG: Record<string, { label: string; icon: typeof FileText; color:
   RESUBMIT: { label: 'Diajukan ulang ke PPK', icon: Upload, color: 'text-amber-600 bg-amber-50' },
   RESUBMIT_PPK: { label: 'Diajukan ulang ke PPSPM', icon: ArrowRight, color: 'text-blue-600 bg-blue-50' },
   PPK_KEMBALIKAN: { label: 'Dikembalikan ke Pegawai', icon: XCircle, color: 'text-red-600 bg-red-50' },
-  ARCHIVE: { label: 'Diarsipkan', icon: FileText, color: 'text-purple-600 bg-purple-50' },
+  ARCHIVE: { label: 'Diberkaskan', icon: FileText, color: 'text-purple-600 bg-purple-50' },
   // Non-Material documents
   STORE: { label: 'Laporan kegiatan disimpan', icon: Upload, color: 'text-purple-600 bg-purple-50' },
   UPDATE: { label: 'Lampiran diperbarui', icon: FileText, color: 'text-blue-600 bg-blue-50' },

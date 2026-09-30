@@ -427,7 +427,7 @@ function PenambahanArsipPage() {
             <p className="mt-4 max-w-xl text-xs font-medium leading-relaxed text-zinc-500 sm:text-sm">
               Dokumen masuk ke folder Cara Pembayaran{' '}
               <span className="font-bold text-zinc-700">{submittedManualArsip.klasifikasiName || 'yang dipilih'}</span>.
-              Metadata final tetap diisi saat berkas ditutup.
+              Nomor SPM dan masa simpan diisi saat berkas ditutup.
             </p>
 
             {submittedManualArsip.warning && (
@@ -1391,7 +1391,7 @@ function CreateManualArsipModal({
 
             <div className="space-y-3 rounded-b-[1.25rem] border border-t-0 border-brand-border bg-bg-surface p-3.5 sm:p-4">
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium leading-snug text-amber-800">
-            Dokumen manual ini belum final. Dokumen akan menjadi bagian berkas ketika berkas Cara Pembayaran ditutup.
+            Berkas Cara Pembayaran dokumen ini masih terbuka. Dokumen menjadi bagian berkas tersimpan ketika berkas ditutup.
           </div>
 
           {step === 1 && (
@@ -2050,7 +2050,7 @@ function ManualCreateReview({
     <div className="space-y-3">
       <div className="rounded-[1rem] border border-brand-border-strong bg-brand-surface px-3 py-2.5">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand-text">
-          Nama Dokumen Hasil Sistem (Final)
+          Nama Dokumen Hasil Sistem
         </p>
         <p className="mt-1 text-sm font-extrabold uppercase tracking-tight text-zinc-950">
           {finalName}

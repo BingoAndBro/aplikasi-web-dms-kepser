@@ -22,7 +22,7 @@ const AKSI_LABELS: Record<string, string> = {
   RESUBMIT: 'Diajukan ulang ke PPK',
   RESUBMIT_PPK: 'Diajukan ulang ke PPSPM',
   PPK_KEMBALIKAN: 'Dikembalikan ke Pegawai',
-  ARCHIVE: 'Diarsipkan',
+  ARCHIVE: 'Diberkaskan',
   STORE: 'Laporan kegiatan disimpan',
   UPDATE: 'Lampiran diperbarui',
   DELETE: 'Dokumen dihapus',

@@ -282,7 +282,7 @@ describe('GET /api/laporan/manual-arsip/$id/attachments/$attachmentId/{preview,d
     mocks.getLocalServerSession.mockResolvedValue(session(['PEGAWAI']))
     mocks.ketuaTimRows.mockReturnValue([{ id: MANUAL_ID }])
     mocks.createManualArsipAttachmentFileResponse.mockResolvedValue(
-      Response.json({ error: 'File lampiran tidak tersedia - arsip telah dimusnahkan' }, { status: 410 }),
+      Response.json({ error: 'File lampiran tidak tersedia - file berkas telah dibersihkan' }, { status: 410 }),
     )
 
     const response = await handler(fileArgs(purpose))

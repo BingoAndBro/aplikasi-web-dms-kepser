@@ -250,7 +250,7 @@ function MonitoringDokumenTimPage() {
                 </h1>
                 <p className="mt-1 max-w-3xl text-sm font-medium leading-6 text-zinc-700">
                   Lihat posisi setiap dokumen yang diajukan anggota tim pada kegiatan yang Anda pimpin,
-                  dari validasi PPK sampai selesai. Dokumen final untuk arsip tetap ada di Laporan Kegiatan.
+                  dari validasi PPK sampai selesai. Dokumen Selesai dan Tersimpan tetap tersedia di Laporan Kegiatan.
                 </p>
               </div>
             </section>
@@ -323,7 +323,7 @@ function MonitoringDokumenTimPage() {
               open={exportDialogOpen}
               onOpenChange={setExportDialogOpen}
               documentCount={visibleDocuments.length}
-              description="Mengikuti dokumen yang sedang ditampilkan. Dokumen yang masih diproses ikut disertakan dan ditandai BELUM FINAL di daftar isi ZIP."
+              description="Mengikuti dokumen yang sedang ditampilkan. Dokumen yang masih diproses ikut disertakan dan ditandai MASIH DIPROSES di daftar isi ZIP."
               pending={exportPending}
               error={exportError}
               onConfirm={handleExportZip}

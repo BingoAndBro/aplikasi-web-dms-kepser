@@ -59,7 +59,7 @@ describe('laporan kinerja visual parity source guard', () => {
     expect(source).toContain('FungsiDetailCards')
     expect(source).toContain('Nama Fungsi')
     expect(source).toContain('Jumlah Kegiatan')
-    expect(source).toContain('Total Dokumen Final')
+    expect(source).toContain('Total Dokumen')
     expect(source).toContain('<DokumenDetailDialog')
     expect(source).toContain('<ManualArsipDetailDialog')
     // D-27: catatan cakupan di header mengikuti scope, bukan teks material-only lama.

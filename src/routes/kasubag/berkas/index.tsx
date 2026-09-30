@@ -209,7 +209,7 @@ function BerkasUnifiedSection({
           title={hasSearchQuery ? LOCAL_NO_MATCH_MESSAGE : 'Belum ada berkas terbuka'}
           description={hasSearchQuery
             ? 'Ubah kata kunci untuk melihat berkas lain di halaman ini.'
-            : 'Berkas terbuka muncul setelah dokumen persetujuan atau manual pertama memilih cara pembayaran yang belum final.'}
+            : 'Berkas terbuka muncul setelah dokumen persetujuan atau manual pertama memilih cara pembayaran yang berkasnya belum ditutup.'}
           icon={<FolderOpen size={22} />}
         />
       ) : (

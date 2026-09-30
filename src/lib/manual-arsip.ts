@@ -905,7 +905,7 @@ export async function createManualArsipAttachmentFileResponse({
   }
 
   if (reference.status_arsip === ARCHIVE_STATUS.DIMUSNAHKAN) {
-    return secureJsonError('File lampiran tidak tersedia - arsip telah dimusnahkan', 410)
+    return secureJsonError('File lampiran tidak tersedia - file berkas telah dibersihkan', 410)
   }
 
   const normalizedContentType = reference.attachment.content_type.trim().toLowerCase()

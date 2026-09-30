@@ -55,7 +55,7 @@ export const CANONICAL_SEED_ROLES = [
   {
     id: SEED_ROLE_IDS.PENANGGUNG_JAWAB_KINERJA,
     nama: ROLES.PENANGGUNG_JAWAB_KINERJA,
-    description: 'Penanggung Jawab Kinerja pembaca laporan kinerja final',
+    description: 'Penanggung Jawab Kinerja pembaca laporan kinerja',
   },
   {
     id: SEED_ROLE_IDS.ADMIN,

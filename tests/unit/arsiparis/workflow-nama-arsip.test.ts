@@ -26,7 +26,7 @@ describe('deriveWorkflowNamaArsip', () => {
       judul: '   ',
       namaDokumen: null,
       kegiatanNama: '',
-    })).toBe('Arsip Dokumen')
+    })).toBe('Dokumen')
   })
 
   it('caps the derived name to a bounded length', () => {

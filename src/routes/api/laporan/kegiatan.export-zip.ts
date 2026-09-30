@@ -104,9 +104,9 @@ async function createKegiatanExportZipResponse(
   const scope = data.scope ?? 'final'
   const isMonitoring = scope === 'monitoring'
   // Ekspor dari Monitoring Dokumen Tim bisa memuat dokumen yang belum final;
-  // tandai di nama file & daftar isi supaya tidak tercampur dengan arsip final.
+  // tandai di nama file & daftar isi supaya tidak tercampur dengan dokumen Selesai/Tersimpan.
   const sourceDescription = isMonitoring
-    ? 'Monitoring Dokumen Tim (filter aktif klien) - TERMASUK DOKUMEN YANG MASIH DIPROSES, BELUM FINAL'
+    ? 'Monitoring Dokumen Tim (filter aktif klien) - TERMASUK DOKUMEN YANG MASIH DIPROSES'
     : 'Laporan Kegiatan (filter aktif klien)'
   const filenamePrefix = isMonitoring ? 'Monitoring_Dokumen_Tim' : 'Laporan_Kegiatan'
 

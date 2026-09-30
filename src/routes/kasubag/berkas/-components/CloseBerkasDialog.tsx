@@ -119,7 +119,7 @@ export function CloseBerkasDialog({
             Setelah berkas ditutup, dokumen baru tidak dapat lagi dimasukkan ke cara pembayaran ini untuk TA {summary.tahunAnggaran}; tahun berikutnya dapat digunakan kembali.
           </DialogDescription>
           <div className="sr-only">
-            <p>Berkas akan difinalisasi menjadi Tersimpan.</p>
+            <p>Berkas akan ditutup dan berstatus Tersimpan.</p>
             <p>Setelah ditutup, Cara Pembayaran ini tidak bisa menerima dokumen baru untuk TA {summary.tahunAnggaran}; tahun berikutnya dapat digunakan kembali.</p>
             <p>Dokumen dan file fisik tidak dihapus.</p>
             <p>Status berkas menjadi Ditutup dan statusnya menjadi Tersimpan.</p>
@@ -223,7 +223,7 @@ export function CloseBerkasDialog({
           >
             {pending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Simpan Metadata & Tutup Berkas
-            <span className="sr-only">Finalisasi Berkas</span>
+            <span className="sr-only">Tutup Berkas</span>
           </Button>
         </DialogFooter>
       </DialogContent>

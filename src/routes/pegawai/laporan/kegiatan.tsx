@@ -67,7 +67,7 @@ import {
 // Realisasi / Laporan Kinerja (MonitoringRealisasiView.tsx). Isinya mengikuti
 // scope=final di src/routes/api/laporan/kegiatan.ts.
 const LAPORAN_KEGIATAN_SCOPE_NOTE =
-  'Dokumen final: material Selesai, non-material Tersimpan, dan dokumen tambahan KSBU dari kegiatan yang Anda pimpin. Dokumen yang berkasnya sudah dimusnahkan tetap ditampilkan, tetapi nominal realisasinya tidak lagi dihitung.'
+  'Dokumen Material berstatus Selesai, Non-Material berstatus Tersimpan, dan dokumen tambahan KSBU dari kegiatan yang Anda pimpin. Dokumen yang berkasnya sudah dimusnahkan tetap ditampilkan, tetapi nominal realisasinya tidak lagi dihitung.'
 
 export const Route = createFileRoute('/pegawai/laporan/kegiatan')({
   validateSearch: z.object({
@@ -738,7 +738,7 @@ function KegiatanDetailView({
               {kegiatan.nama}
             </h1>
             <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-zinc-700">
-              Daftar dokumen final dalam kegiatan yang Anda pimpin.
+              Daftar dokumen Selesai dan Tersimpan dalam kegiatan yang Anda pimpin.
             </p>
           </div>
         </div>

@@ -59,7 +59,7 @@ function PenanggungJawabKinerjaDashboard() {
     <RoleDashboardPage>
       <RoleDashboardHeader
         title="Dashboard Penanggung Jawab Kinerja"
-        description="Pantau dokumen final dan nominal realisasi berbasis metadata."
+        description="Pantau dokumen Selesai dan Tersimpan serta nominal realisasi berbasis metadata."
         actionHref={ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA}
         actionLabel="Lihat Laporan Kinerja"
         actionIcon={<ClipboardList size={16} />}
@@ -67,9 +67,9 @@ function PenanggungJawabKinerjaDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <DashboardMetricCard
-          label="Total Dokumen Final"
+          label="Total Dokumen"
           value={documents.length}
-          badge="Final"
+          badge="Selesai/Tersimpan"
           icon={<CheckCircle2 size={20} />}
           tone="success"
         />
@@ -99,8 +99,8 @@ function PenanggungJawabKinerjaDashboard() {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <DashboardSection
-          title="Dokumen Final Terbaru"
-          description="Ringkasan metadata dokumen final. Dashboard ini hanya membuka halaman Laporan Kinerja."
+          title="Dokumen Terbaru"
+          description="Ringkasan metadata dokumen Selesai dan Tersimpan. Dashboard ini hanya membuka halaman Laporan Kinerja."
         >
           {latestDocuments.length > 0 ? (
             <div>
@@ -109,7 +109,7 @@ function PenanggungJawabKinerjaDashboard() {
                   key={document.id}
                   icon={<FileCheck2 size={18} />}
                   title={document.judul}
-                  description={[document.fungsi_nama, document.kegiatan_nama].filter(Boolean).join(' / ') || 'Metadata dokumen final'}
+                  description={[document.fungsi_nama, document.kegiatan_nama].filter(Boolean).join(' / ') || 'Metadata dokumen'}
                   meta={`${formatStatusLabel(document.status)} - Diperbarui ${formatDate(document.updated_at)}`}
                   href={ROUTES.PENANGGUNG_JAWAB_KINERJA.LAPORAN_KINERJA}
                   actionLabel="Detail Metadata"
@@ -118,8 +118,8 @@ function PenanggungJawabKinerjaDashboard() {
             </div>
           ) : (
             <DashboardEmptyState
-              title="Belum ada dokumen final"
-              description="Dokumen final dari Laporan Kinerja akan tampil sebagai metadata di sini."
+              title="Belum ada dokumen"
+              description="Dokumen dari Laporan Kinerja akan tampil sebagai metadata di sini."
             />
           )}
         </DashboardSection>

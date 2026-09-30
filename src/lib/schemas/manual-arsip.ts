@@ -159,7 +159,7 @@ function refineManualArsipFields(value: ManualArsipFieldValues, ctx: z.Refinemen
     ctx.addIssue({
       code: 'custom',
       path: ['tanggal_diarsipkan'],
-      message: 'Metadata retensi final harus lengkap atau dikosongkan',
+      message: 'Metadata masa simpan harus lengkap atau dikosongkan',
     })
   }
 }

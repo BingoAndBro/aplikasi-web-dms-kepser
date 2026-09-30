@@ -100,7 +100,7 @@ export const Route = createFileRoute('/api/kasubag/dokumen/$id/archive')({
 
         const dok = dokRows[0]
         if (!dok) return Response.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
-        if (dok.status !== 'COMPLETED') return Response.json({ error: 'Dokumen belum berada di tahap final' }, { status: 400 })
+        if (dok.status !== 'COMPLETED') return Response.json({ error: 'Dokumen belum berstatus Selesai' }, { status: 400 })
 
         try {
           await db.transaction(async (tx) => {

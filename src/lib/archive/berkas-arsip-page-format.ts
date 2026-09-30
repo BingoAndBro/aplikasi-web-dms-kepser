@@ -26,13 +26,13 @@ export function formatBerkasArchiveStatusLabel(
   statusArsip: BerkasArchiveStatus | string | null | undefined,
   statusBerkas?: BerkasStatus | string | null,
 ): string {
-  if (statusBerkas === 'OPEN' && !statusArsip) return 'Belum final'
+  if (statusBerkas === 'OPEN' && !statusArsip) return 'Terbuka'
   if (statusBerkas === 'CLOSED' && !statusArsip) return 'Status belum tersedia'
   // RP-01 label: Tersimpan / Usul Pembersihan / File Dibersihkan; INAKTIF dibuang dari alur.
   if (statusArsip === 'AKTIF') return 'Tersimpan'
   if (statusArsip === 'USUL_MUSNAH') return 'Usul Pembersihan'
   if (statusArsip === 'DIMUSNAHKAN') return 'File Dibersihkan'
-  if (!statusArsip) return 'Belum final'
+  if (!statusArsip) return 'Terbuka'
 
   return 'Status tidak dikenal'
 }
@@ -98,7 +98,7 @@ export function formatSourceTypeLabel(sourceType: ArchiveSourceType | string | n
 }
 
 export function formatFolderWarningLabel(warning: string): string {
-  if (warning === 'OPEN_STATUS_ARSIP_NULL') return 'Berkas terbuka dan belum final'
+  if (warning === 'OPEN_STATUS_ARSIP_NULL') return 'Berkas masih terbuka'
   if (warning === 'CLOSED_STATUS_ARSIP_UNKNOWN') return 'Berkas ditutup tetapi status belum tersedia'
 
   return 'Status transisi perlu ditinjau'

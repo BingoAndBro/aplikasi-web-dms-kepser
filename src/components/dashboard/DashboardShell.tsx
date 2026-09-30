@@ -7,7 +7,7 @@ import type { RoleName } from '#/lib/types/auth'
 
 // BPS Kepulauan Seribu motto
 const BPS_MOTTO = '"Mencatat Data, Membangun Negeri"'
-const BPS_TAGLINE = 'BPS Kabupaten Kepulauan Seribu — Dukung pengelolaan dokumen dengan tata kelola arsip yang transparan dan akuntabel.'
+const BPS_TAGLINE = 'BPS Kabupaten Kepulauan Seribu — Dukung pengelolaan dokumen dengan tata kelola dokumen yang transparan dan akuntabel.'
 const BPS_VISION = 'Terintegrasi, Akuntabel, Sejarahan.'
 
 interface DashboardShellProps {
@@ -42,14 +42,14 @@ const ROLE_LABELS: Record<RoleName, { badge: string; title: string; desc: string
   KEPALA_SUB_BAGIAN_UMUM: {
     badge: 'KEPALA SUB BAGIAN UMUM PORTAL',
     title: 'Dashboard',
-    desc: 'Ruang kerja Kepala Sub Bagian Umum — pengklasifikasian dokumen dan pengelolaan arsip.',
+    desc: 'Ruang kerja Kepala Sub Bagian Umum — pengklasifikasian dokumen dan pengelolaan berkas.',
     ctaLabel: 'Pengklasifikasian Dokumen',
     ctaTo: '/kasubag/inbox',
   },
   PENANGGUNG_JAWAB_KINERJA: {
     badge: 'PENANGGUNG JAWAB KINERJA PORTAL',
     title: 'Dashboard',
-    desc: 'Ruang kerja Penanggung Jawab Kinerja untuk laporan metadata dokumen final.',
+    desc: 'Ruang kerja Penanggung Jawab Kinerja untuk metadata dokumen bahan laporan kinerja.',
     ctaLabel: 'Laporan Kinerja',
     ctaTo: '/penanggung-jawab-kinerja/laporan-kinerja',
   },
