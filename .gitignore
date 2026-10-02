@@ -23,3 +23,7 @@ storage/*
 # Local env variants
 .env.migration
 .env.postgres
+
+# Laporan coverage Vitest
+coverage/
+coverage-ast/

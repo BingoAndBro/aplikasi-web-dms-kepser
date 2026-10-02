@@ -1,11 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import { transition } from '../src/lib/fsm'
+import type { FSMAction } from '../src/lib/types/fsm'
+
+// Pesan galat yang diharapkan, satu per cabang galat di transition().
+// Pesan dicocokkan persis supaya terbukti cabang mana yang ditempuh.
+const actorError = (role: string, action: string, status: string) =>
+  `Actor '${role}' tidak bisa melakukan aksi '${action}' pada status '${status}'`
+const REJECT_TARGET_ERROR = "REJECT requires revisionTarget: 'USER' or 'PPK'"
+const RESUBMIT_TARGET_ERROR = "RESUBMIT only valid when revisionTarget is 'USER'"
+const RESUBMIT_PPK_TARGET_ERROR = "RESUBMIT_PPK only valid when revisionTarget is 'PPK'"
+const tableError = (action: string, status: string) =>
+  `Transisi '${action}' dari '${status}' tidak valid`
 
 // Helper untuk error shape consistency
-function assertError(result: ReturnType<typeof transition>, msg?: string) {
-  expect(result.success, msg).toBe(false)
-  expect(result.error, msg).toBeDefined()
-  expect(typeof result.error).toBe('string')
+function assertError(result: ReturnType<typeof transition>, expectedError: string) {
+  expect(result.success).toBe(false)
+  expect(result.error).toBe(expectedError)
 }
 
 function assertSuccess(result: ReturnType<typeof transition>, msg?: string) {
@@ -105,16 +115,19 @@ describe('FSM transition()', () => {
       assertSuccess(result)
     })
     it('SUBMIT by PPK → error', () => {
-      assertError(transition('DRAFT', 'SUBMIT', 'PPK'))
+      assertError(transition('DRAFT', 'SUBMIT', 'PPK'), actorError('PPK', 'SUBMIT', 'DRAFT'))
     })
     it('SUBMIT by PPSPM → error', () => {
-      assertError(transition('DRAFT', 'SUBMIT', 'PPSPM'))
+      assertError(transition('DRAFT', 'SUBMIT', 'PPSPM'), actorError('PPSPM', 'SUBMIT', 'DRAFT'))
     })
     it('SUBMIT by KEPALA_SUB_BAGIAN_UMUM → error', () => {
-      assertError(transition('DRAFT', 'SUBMIT', 'KEPALA_SUB_BAGIAN_UMUM'))
+      assertError(
+        transition('DRAFT', 'SUBMIT', 'KEPALA_SUB_BAGIAN_UMUM'),
+        actorError('KEPALA_SUB_BAGIAN_UMUM', 'SUBMIT', 'DRAFT'),
+      )
     })
     it('SUBMIT by ADMIN → error', () => {
-      assertError(transition('DRAFT', 'SUBMIT', 'ADMIN'))
+      assertError(transition('DRAFT', 'SUBMIT', 'ADMIN'), actorError('ADMIN', 'SUBMIT', 'DRAFT'))
     })
 
     // APPROVE
@@ -123,10 +136,16 @@ describe('FSM transition()', () => {
       assertSuccess(result)
     })
     it('APPROVE by PPSPM on IN_PPK_VALIDATION → error', () => {
-      assertError(transition('IN_PPK_VALIDATION', 'APPROVE', 'PPSPM'))
+      assertError(
+        transition('IN_PPK_VALIDATION', 'APPROVE', 'PPSPM'),
+        actorError('PPSPM', 'APPROVE', 'IN_PPK_VALIDATION'),
+      )
     })
     it('APPROVE by PPK on IN_PPSPM_APPROVAL → error', () => {
-      assertError(transition('IN_PPSPM_APPROVAL', 'APPROVE', 'PPK'))
+      assertError(
+        transition('IN_PPSPM_APPROVAL', 'APPROVE', 'PPK'),
+        actorError('PPK', 'APPROVE', 'IN_PPSPM_APPROVAL'),
+      )
     })
     it('APPROVE by PPSPM on IN_PPSPM_APPROVAL → success', () => {
       const result = transition('IN_PPSPM_APPROVAL', 'APPROVE', 'PPSPM')
@@ -143,7 +162,10 @@ describe('FSM transition()', () => {
       assertSuccess(result)
     })
     it('REJECT by PPSPM on IN_PPK_VALIDATION → error', () => {
-      assertError(transition('IN_PPK_VALIDATION', 'REJECT', 'PPSPM', 'USER'))
+      assertError(
+        transition('IN_PPK_VALIDATION', 'REJECT', 'PPSPM', 'USER'),
+        actorError('PPSPM', 'REJECT', 'IN_PPK_VALIDATION'),
+      )
     })
 
     // RESUBMIT
@@ -152,7 +174,10 @@ describe('FSM transition()', () => {
       assertSuccess(result)
     })
     it('RESUBMIT by PPK → error', () => {
-      assertError(transition('NEED_REVISION', 'RESUBMIT', 'PPK', 'USER'))
+      assertError(
+        transition('NEED_REVISION', 'RESUBMIT', 'PPK', 'USER'),
+        actorError('PPK', 'RESUBMIT', 'NEED_REVISION'),
+      )
     })
 
     // RESUBMIT_PPK
@@ -161,7 +186,10 @@ describe('FSM transition()', () => {
       assertSuccess(result)
     })
     it('RESUBMIT_PPK by PEGAWAI → error', () => {
-      assertError(transition('NEED_REVISION', 'RESUBMIT_PPK', 'PEGAWAI', 'PPK'))
+      assertError(
+        transition('NEED_REVISION', 'RESUBMIT_PPK', 'PEGAWAI', 'PPK'),
+        actorError('PEGAWAI', 'RESUBMIT_PPK', 'NEED_REVISION'),
+      )
     })
 
     // KEMBALIKAN
@@ -171,7 +199,10 @@ describe('FSM transition()', () => {
     it.each(['PEGAWAI', 'PPSPM', 'KEPALA_SUB_BAGIAN_UMUM', 'ADMIN'] as const)(
       'KEMBALIKAN by %s → error',
       (role) => {
-        assertError(transition('NEED_REVISION', 'KEMBALIKAN', role, 'USER'))
+        assertError(
+          transition('NEED_REVISION', 'KEMBALIKAN', role, 'USER'),
+          actorError(role, 'KEMBALIKAN', 'NEED_REVISION'),
+        )
       },
     )
 
@@ -183,13 +214,22 @@ describe('FSM transition()', () => {
 
   describe('KEMBALIKAN Validation', () => {
     it('KEMBALIKAN from IN_PPK_VALIDATION → error', () => {
-      assertError(transition('IN_PPK_VALIDATION', 'KEMBALIKAN', 'PPK', 'USER'))
+      assertError(
+        transition('IN_PPK_VALIDATION', 'KEMBALIKAN', 'PPK', 'USER'),
+        actorError('PPK', 'KEMBALIKAN', 'IN_PPK_VALIDATION'),
+      )
     })
     it('KEMBALIKAN from IN_PPSPM_APPROVAL → error', () => {
-      assertError(transition('IN_PPSPM_APPROVAL', 'KEMBALIKAN', 'PPK', 'USER'))
+      assertError(
+        transition('IN_PPSPM_APPROVAL', 'KEMBALIKAN', 'PPK', 'USER'),
+        actorError('PPK', 'KEMBALIKAN', 'IN_PPSPM_APPROVAL'),
+      )
     })
     it('KEMBALIKAN from COMPLETED → error', () => {
-      assertError(transition('COMPLETED', 'KEMBALIKAN', 'PPK', 'USER'))
+      assertError(
+        transition('COMPLETED', 'KEMBALIKAN', 'PPK', 'USER'),
+        actorError('PPK', 'KEMBALIKAN', 'COMPLETED'),
+      )
     })
     it('KEMBALIKAN result always targets USER', () => {
       // The route reads revision_target=PPK from the row; the FSM result must flip it to USER.
@@ -204,7 +244,7 @@ describe('FSM transition()', () => {
 
   describe('REJECT RevisionTarget Validation', () => {
     it('REJECT without revisionTarget → error', () => {
-      assertError(transition('IN_PPK_VALIDATION', 'REJECT', 'PPK'))
+      assertError(transition('IN_PPK_VALIDATION', 'REJECT', 'PPK'), REJECT_TARGET_ERROR)
     })
     it('REJECT with USER target from PPK step → success', () => {
       const result = transition('IN_PPK_VALIDATION', 'REJECT', 'PPK', 'USER')
@@ -226,14 +266,17 @@ describe('FSM transition()', () => {
       assertSuccess(result)
     })
     it('RESUBMIT with PPK target → error', () => {
-      assertError(transition('NEED_REVISION', 'RESUBMIT', 'PEGAWAI', 'PPK'))
+      assertError(transition('NEED_REVISION', 'RESUBMIT', 'PEGAWAI', 'PPK'), RESUBMIT_TARGET_ERROR)
     })
     it('RESUBMIT_PPK with PPK target → success', () => {
       const result = transition('NEED_REVISION', 'RESUBMIT_PPK', 'PPK', 'PPK')
       assertSuccess(result)
     })
     it('RESUBMIT_PPK with USER target → error', () => {
-      assertError(transition('NEED_REVISION', 'RESUBMIT_PPK', 'PPK', 'USER'))
+      assertError(
+        transition('NEED_REVISION', 'RESUBMIT_PPK', 'PPK', 'USER'),
+        RESUBMIT_PPK_TARGET_ERROR,
+      )
     })
   })
 
@@ -243,25 +286,40 @@ describe('FSM transition()', () => {
 
   describe('Invalid Status + Action Combinations', () => {
     it('DRAFT + APPROVE → error', () => {
-      assertError(transition('DRAFT', 'APPROVE', 'PPK'))
+      assertError(transition('DRAFT', 'APPROVE', 'PPK'), actorError('PPK', 'APPROVE', 'DRAFT'))
     })
     it('DRAFT + REJECT → error', () => {
-      assertError(transition('DRAFT', 'REJECT', 'PPK', 'USER'))
+      assertError(
+        transition('DRAFT', 'REJECT', 'PPK', 'USER'),
+        actorError('PPK', 'REJECT', 'DRAFT'),
+      )
     })
     it('COMPLETED + SUBMIT → error', () => {
-      assertError(transition('COMPLETED', 'SUBMIT', 'PEGAWAI'))
+      assertError(transition('COMPLETED', 'SUBMIT', 'PEGAWAI'), tableError('SUBMIT', 'COMPLETED'))
     })
     it('NEED_REVISION + APPROVE → error', () => {
-      assertError(transition('NEED_REVISION', 'APPROVE', 'PPK'))
+      assertError(
+        transition('NEED_REVISION', 'APPROVE', 'PPK'),
+        actorError('PPK', 'APPROVE', 'NEED_REVISION'),
+      )
     })
     it('NEED_REVISION + REJECT → error (use RESUBMIT)', () => {
-      assertError(transition('NEED_REVISION', 'REJECT', 'PPK', 'USER'))
+      assertError(
+        transition('NEED_REVISION', 'REJECT', 'PPK', 'USER'),
+        actorError('PPK', 'REJECT', 'NEED_REVISION'),
+      )
     })
     it('IN_PPK_VALIDATION + RESUBMIT → error', () => {
-      assertError(transition('IN_PPK_VALIDATION', 'RESUBMIT', 'PEGAWAI', 'USER'))
+      assertError(
+        transition('IN_PPK_VALIDATION', 'RESUBMIT', 'PEGAWAI', 'USER'),
+        tableError('RESUBMIT', 'IN_PPK_VALIDATION'),
+      )
     })
     it('IN_PPSPM_APPROVAL + SUBMIT → error', () => {
-      assertError(transition('IN_PPSPM_APPROVAL', 'SUBMIT', 'PEGAWAI'))
+      assertError(
+        transition('IN_PPSPM_APPROVAL', 'SUBMIT', 'PEGAWAI'),
+        tableError('SUBMIT', 'IN_PPSPM_APPROVAL'),
+      )
     })
   })
 
@@ -277,11 +335,38 @@ describe('FSM transition()', () => {
       expect(result.newCurrentStep).toBeNull()
       expect(result.newRevisionTarget).toBeNull()
       expect(result.stepUrutan).toBeNull()
+      expect(result.error).toBe(actorError('PPK', 'APPROVE', 'DRAFT'))
     })
 
     it('Error message is descriptive', () => {
       const result = transition('DRAFT', 'APPROVE', 'PPK')
       expect(result.error).toContain('tidak bisa')
+      expect(result.error).toBe(actorError('PPK', 'APPROVE', 'DRAFT'))
+    })
+  })
+
+  // ═══════════════════════════════════════════════════════
+  // Additional Decision Outcomes (white-box, decision coverage)
+  // ═══════════════════════════════════════════════════════
+
+  describe('Additional Decision Outcomes', () => {
+    it('IN_PPK_VALIDATION + REJECT (target X) → error', () => {
+      // fsm.ts L96: revisionTarget terisi tetapi bukan USER/PPK.
+      assertError(transition('IN_PPK_VALIDATION', 'REJECT', 'PPK', 'X'), REJECT_TARGET_ERROR)
+    })
+    it('IN_PPSPM_APPROVAL + REJECT by PPK → error', () => {
+      // fsm.ts L145: status IN_PPSPM_APPROVAL, tetapi peran bukan PPSPM.
+      assertError(
+        transition('IN_PPSPM_APPROVAL', 'REJECT', 'PPK', 'PPK'),
+        actorError('PPK', 'REJECT', 'IN_PPSPM_APPROVAL'),
+      )
+    })
+    it('DRAFT + X (unknown action) → error', () => {
+      // fsm.ts L153: cabang default pada isActorValidForAction.
+      assertError(
+        transition('DRAFT', 'X' as FSMAction, 'PEGAWAI'),
+        actorError('PEGAWAI', 'X', 'DRAFT'),
+      )
     })
   })
 
