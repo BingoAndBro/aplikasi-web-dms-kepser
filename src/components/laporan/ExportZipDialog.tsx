@@ -1,4 +1,8 @@
 import { Download, Loader2 } from 'lucide-react'
+import {
+  DIALOG_PRIMARY_BUTTON_CLASS,
+  DIALOG_SECONDARY_BUTTON_CLASS,
+} from '#/components/laporan/actionButtonStyles'
 import { Button } from '#/components/ui/button'
 import {
   Dialog,
@@ -57,13 +61,19 @@ export function ExportZipDialog({
         )}
 
         <DialogFooter className="gap-2">
-          <Button type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            className={DIALOG_SECONDARY_BUTTON_CLASS}
+            disabled={pending}
+            onClick={() => onOpenChange(false)}
+          >
             Batal
           </Button>
           {!overLimit && (
             <Button
               type="button"
-              className="gap-1.5"
+              className={DIALOG_PRIMARY_BUTTON_CLASS}
               disabled={pending || documentCount === 0}
               onClick={onConfirm}
             >

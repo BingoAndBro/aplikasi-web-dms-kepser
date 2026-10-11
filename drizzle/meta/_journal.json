@@ -155,6 +155,20 @@
       "when": 1790489034780,
       "tag": "0021_manual_arsip_drop_own_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790575434780,
+      "tag": "0022_laporan_tautan",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790661834780,
+      "tag": "0023_laporan_tautan_akses",
+      "breakpoints": true
     }
   ]
 }

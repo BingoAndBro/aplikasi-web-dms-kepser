@@ -113,7 +113,10 @@ describe('laporan kinerja visual parity source guard', () => {
   })
 
   it('renders manual KSBU lampiran with the same item and action styling as AttachmentViewer', () => {
-    const viewer = readSource('src/components/arsip/ManualArsipAttachmentViewer.tsx')
+    // Kartu & modal pratinjau dipindah ke StreamedAttachmentViewer (dipakai juga
+    // halaman Tautan Laporan); ManualArsipAttachmentViewer kini membungkusnya.
+    expect(readSource('src/components/arsip/ManualArsipAttachmentViewer.tsx')).toContain('<StreamedAttachmentViewer')
+    const viewer = readSource('src/components/dokumen/StreamedAttachmentViewer.tsx')
     const workflowViewer = readSource('src/components/dokumen/AttachmentViewer.tsx')
 
     for (const snippet of [

@@ -8,6 +8,7 @@ import { clearClientAuthState, setClientAuthState, updateClientAuthState } from 
 import { logDev } from '#/lib/dev-logger'
 import { MESH_ROUTES, ROUTES } from '#/lib/constants/routes'
 import { ROLES } from '#/lib/constants/roles'
+import { buildLoginHref } from '#/lib/laporan/tautan-shared'
 import { AppToastProvider } from '#/components/ui/AppToast'
 
 import type { RoleName } from '#/lib/types/auth'
@@ -109,6 +110,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = routerState.location.pathname
   const isMeshPage = MESH_ROUTES.some((route) => route === pathname)
   const isLoginPage = pathname === ROUTES.LOGIN
+  // Tautan Laporan: tautan PUBLIK dibuka tanpa akun, jadi layout tidak boleh
+  // memaksa login. Halaman tautan sendiri yang mengalihkan ke login bila server
+  // menjawab 401 LOGIN_REQUIRED (tautan terbatas).
+  const isTautanPage = pathname.startsWith('/tautan/')
 
   const refreshCurrentUserProfile = React.useCallback(async () => {
     try {
@@ -308,10 +313,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [refreshCurrentUserProfile])
 
   React.useEffect(() => {
-    if (!isLoading && !hasSession && !isLoginPage) {
+    if (!isLoading && !hasSession && !isLoginPage && !isTautanPage) {
       window.location.href = ROUTES.LOGIN
     }
-  }, [isLoading, hasSession, isLoginPage])
+  }, [isLoading, hasSession, isLoginPage, isTautanPage])
 
   React.useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -379,6 +384,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="text-sm font-medium text-on-surface-variant">Memuat...</span>
         </div>
       </div>
+    )
+  }
+
+  // Pembuka tautan tanpa akun: tampilan polos tanpa sidebar/menu aplikasi.
+  if (!hasSession && isTautanPage) {
+    return (
+      <AppToastProvider>
+        <div className="min-h-screen bg-brand-surface">
+          <header className="flex items-center justify-between border-b border-brand-border/70 bg-bg-surface px-4 py-3 sm:px-8">
+            <span className="font-headline text-sm font-extrabold tracking-tight text-zinc-950">{appTitle}</span>
+            <a
+              href={buildLoginHref(ROUTES.LOGIN, pathname)}
+              className="inline-flex h-9 items-center rounded-xl border border-brand-border bg-bg-surface px-4 text-xs font-bold text-zinc-950 shadow-sm transition-colors hover:border-brand-border-strong hover:bg-brand-surface"
+            >
+              Masuk
+            </a>
+          </header>
+          <main className="pb-10">{children}</main>
+        </div>
+      </AppToastProvider>
     )
   }
 

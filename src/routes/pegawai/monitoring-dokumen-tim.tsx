@@ -3,6 +3,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { DokumenDetailDialog } from '#/components/dokumen/DokumenDetailDialog'
 import { LampiranDibersihkanBadge } from '#/components/dokumen/LampiranDibersihkanBadge'
+import {
+  ACTION_BUTTON_ICON_CLASS,
+  TOOLBAR_ACTION_BUTTON_CLASS,
+} from '#/components/laporan/actionButtonStyles'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
 import { FilterToolbar, PembuatFilterSelect, ToolbarSelectField, buildPersonOptions } from '#/components/laporan/FilterToolbar'
 import { SummaryCard } from '#/components/kinerja/MonitoringRealisasiView'
@@ -479,12 +483,11 @@ function MonitoringToolbar({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="gap-1.5 border-brand-border bg-bg-surface font-bold"
+          className={TOOLBAR_ACTION_BUTTON_CLASS}
           disabled={exportCount === 0}
           onClick={onExportClick}
         >
-          <Download size={14} />
+          <Download size={15} className={ACTION_BUTTON_ICON_CLASS} />
           Ekspor File (ZIP)
         </Button>
       )}

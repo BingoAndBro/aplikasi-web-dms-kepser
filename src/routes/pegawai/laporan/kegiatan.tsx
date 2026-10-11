@@ -29,15 +29,22 @@ import { EmptyState } from '#/components/ui/EmptyState'
 import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
+import {
+  ACTION_BUTTON_ICON_CLASS,
+  TOOLBAR_ACTION_BUTTON_CLASS,
+} from '#/components/laporan/actionButtonStyles'
+import { BagikanTautanActions } from '#/components/laporan/BagikanTautan'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
 import { FilterToolbar, PembuatFilterSelect, ToolbarFilterField, ToolbarSelectField, buildPersonOptions } from '#/components/laporan/FilterToolbar'
 import { PeriodeSelector, tahunFromTanggal } from '#/components/laporan/PeriodeSelector'
 import {
   defaultPeriode,
   isTanggalInPeriode,
+  periodeLabel,
   resolvePeriodeRange,
   type PeriodeValue,
 } from '#/lib/laporan/periode'
+import { TAUTAN_SUMBER } from '#/lib/laporan/tautan-shared'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 import { BERKAS_DIMUSNAHKAN_NOMINAL_NOTE, countedNominalRealisasi } from '#/lib/laporan/kegiatan-scope'
 import {
@@ -379,6 +386,23 @@ function LaporanKegiatanPage() {
             exportPending={exportPending}
             exportError={exportError}
             onExportConfirm={handleExportZip}
+            shareAction={(
+              <BagikanTautanActions
+                sumber={TAUTAN_SUMBER.LAPORAN_KEGIATAN}
+                dokumenIds={exportDocumentIds}
+                manualArsipIds={exportManualArsipIds}
+                defaultJudul={`Laporan Kegiatan ${selectedKegiatan.nama} - ${periodeLabel(periode)}`}
+                keterangan={[
+                  `Kegiatan: ${selectedKegiatan.nama}`,
+                  `Periode: ${periodeLabel(periode)}`,
+                  statusFilter ? `Status: ${laporanStatusLabel(statusFilter)}` : null,
+                  detailSearch.trim() ? `Pencarian: "${detailSearch.trim()}"` : null,
+                  countActiveDetailFilters(detailFilter) > 0
+                    ? `${countActiveDetailFilters(detailFilter)} filter aktif`
+                    : null,
+                ].filter(Boolean).join(' · ')}
+              />
+            )}
           />
         ) : null}
 
@@ -688,6 +712,7 @@ function KegiatanDetailView({
   exportPending,
   exportError,
   onExportConfirm,
+  shareAction,
 }: {
   kegiatan: KegiatanRow
   dokumen: DokumenLaporanRow[]
@@ -711,6 +736,7 @@ function KegiatanDetailView({
   exportPending: boolean
   exportError: string
   onExportConfirm: () => void
+  shareAction: React.ReactNode
 }) {
   const activeFilters = countActiveDetailFilters(filter)
   const pembuatOptions = useMemo(
@@ -766,6 +792,7 @@ function KegiatanDetailView({
         statusFilter={statusFilter}
         onStatusFilterChange={onStatusFilterChange}
         onExportClick={() => onExportDialogOpenChange(true)}
+        shareAction={shareAction}
       />
 
       <ExportZipDialog
@@ -808,6 +835,7 @@ function KegiatanDetailToolbar({
   statusFilter,
   onStatusFilterChange,
   onExportClick,
+  shareAction,
 }: {
   kegiatanId: string
   search: string
@@ -825,6 +853,7 @@ function KegiatanDetailToolbar({
   statusFilter: LaporanStatus | undefined
   onStatusFilterChange: (value: LaporanStatus | undefined) => void
   onExportClick: () => void
+  shareAction: React.ReactNode
 }) {
   return (
     <FilterToolbar
@@ -860,17 +889,19 @@ function KegiatanDetailToolbar({
       }}
       resultLabel={resultLabel}
       actions={(
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5 border-brand-border bg-bg-surface font-bold"
-          disabled={exportCount === 0}
-          onClick={onExportClick}
-        >
-          <Download size={14} />
-          Ekspor Semua File (ZIP)
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {shareAction}
+          <Button
+            type="button"
+            variant="outline"
+            className={TOOLBAR_ACTION_BUTTON_CLASS}
+            disabled={exportCount === 0}
+            onClick={onExportClick}
+          >
+            <Download size={15} className={ACTION_BUTTON_ICON_CLASS} />
+            Ekspor Semua File (ZIP)
+          </Button>
+        </div>
       )}
     />
   )

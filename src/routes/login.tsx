@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { ApiError, apiMutation } from '#/lib/api-mutation'
 import { setClientAuthState } from '#/lib/auth-state'
 import { getDefaultRouteForRoles } from '#/lib/constants/routes'
+import { sanitizeLoginNext } from '#/lib/laporan/tautan-shared'
 import { loginSchema } from '#/lib/schemas/auth'
 import type { RoleName } from '#/lib/types/auth'
 
@@ -86,7 +87,10 @@ function LoginPage() {
         isReady: true,
       })
 
-      window.location.href = getDefaultRouteForRoles(data.roles, data.activeRole)
+      // Tautan Laporan yang diklik dari aplikasi lain kembali ke tautannya
+      // setelah login; selain itu mendarat di dashboard role seperti biasa.
+      window.location.href = sanitizeLoginNext(searchParams.get('next'))
+        ?? getDefaultRouteForRoles(data.roles, data.activeRole)
 
     } catch (error) {
       if (error instanceof ApiError) {

@@ -22,6 +22,7 @@ import {
   buildPersonOptions,
 } from '#/components/laporan/FilterToolbar'
 import { PeriodeSelector } from '#/components/laporan/PeriodeSelector'
+import { BagikanTautanActions } from '#/components/laporan/BagikanTautan'
 
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { ManualArsipDetailDialog } from '#/components/arsip/ManualArsipDetailDialog'
@@ -65,6 +66,7 @@ import {
 } from '#/lib/laporan/monitoring-rows'
 import { BERKAS_DIMUSNAHKAN_NOMINAL_NOTE } from '#/lib/laporan/kegiatan-scope'
 import { LAPORAN_STATUS_FILTER_OPTIONS, laporanStatusLabel } from '#/lib/laporan/status-laporan'
+import { TAUTAN_SUMBER } from '#/lib/laporan/tautan-shared'
 
 type LaporanKinerjaResponse = {
   dokumen?: LaporanKinerjaRow[]
@@ -373,6 +375,28 @@ export function MonitoringRealisasiView({
       .sort((a, b) => compareDocuments(a, b, detailSortBy))
   }, [detailFilter, detailSearch, detailSortBy, documentGroup])
 
+  // Bagikan Tautan hanya untuk Laporan Kinerja (PJ Kinerja), di daftar dokumen:
+  // isinya dokumen yang sedang ditampilkan (drilldown + filter aktif).
+  const shareAction = scope === 'laporan_kinerja' && selectedFungsi && documentGroup ? (
+    <BagikanTautanActions
+      sumber={TAUTAN_SUMBER.LAPORAN_KINERJA}
+      dokumenIds={selectedDocuments.filter(row => row.sumber !== 'MANUAL').map(row => row.id)}
+      manualArsipIds={selectedDocuments.filter(row => row.sumber === 'MANUAL').map(row => row.id)}
+      defaultJudul={`Laporan Kinerja ${documentGroup.nama} - ${periodeLabel(periode)}`}
+      keterangan={[
+        selectedPegawai ? `Pegawai: ${selectedPegawai.nama}` : null,
+        `Fungsi: ${selectedFungsi.nama}`,
+        `Kegiatan: ${documentGroup.nama}`,
+        `Periode: ${periodeLabel(periode)}`,
+        detailFilter.status !== 'ALL' ? `Status: ${laporanStatusLabel(detailFilter.status)}` : null,
+        detailFilter.pengajuId
+          ? `Pengaju: ${documentGroup.dokumen.find(row => row.pengaju_id === detailFilter.pengajuId)?.pengaju_nama ?? '-'}`
+          : null,
+        detailSearch.trim() ? `Pencarian: "${detailSearch.trim()}"` : null,
+      ].filter(Boolean).join(' · ')}
+    />
+  ) : null
+
   return (
     <ScopeNoteContext.Provider value={scope === 'laporan_kinerja' ? LAPORAN_KINERJA_SCOPE_NOTE : MONITORING_SCOPE_NOTE}>
     <PageLayout>
@@ -574,6 +598,7 @@ export function MonitoringRealisasiView({
               ? onSelectKegiatan(selectedFungsi.id, null)
               : onSelectKomponen(selectedFungsi.id, selectedKegiatan.id, null))}
             onOpenDocument={setSelectedDocument}
+            shareAction={shareAction}
           />
         )}
 
@@ -1344,6 +1369,7 @@ function KegiatanDocumentView({
   onSortChange,
   onBack,
   onOpenDocument,
+  shareAction,
 }: {
   fungsi: FungsiRow
   kegiatan: KegiatanRow
@@ -1359,6 +1385,7 @@ function KegiatanDocumentView({
   onSortChange: (value: DetailSortMode) => void
   onBack: () => void
   onOpenDocument: (dokumen: LaporanKinerjaRow) => void
+  shareAction: ReactNode
 }) {
   const pembuatOptions = useMemo(
     () => buildPersonOptions(group.dokumen, row => row.pengaju_id, row => row.pengaju_nama || 'Tidak diketahui'),
@@ -1391,6 +1418,7 @@ function KegiatanDocumentView({
         sortBy={sortBy}
         onSortChange={onSortChange}
         resultLabel={`${dokumen.length} dari ${totalDokumen} dokumen ditampilkan`}
+        actions={shareAction}
       />
       {dokumen.length === 0 ? (
         <EmptyState
@@ -1548,6 +1576,7 @@ function KegiatanDetailToolbar({
   sortBy,
   onSortChange,
   resultLabel,
+  actions,
 }: {
   search: string
   onSearchChange: (value: string) => void
@@ -1557,6 +1586,7 @@ function KegiatanDetailToolbar({
   sortBy: DetailSortMode
   onSortChange: (value: DetailSortMode) => void
   resultLabel: string
+  actions?: ReactNode
 }) {
   return (
     <FilterToolbar
@@ -1590,6 +1620,7 @@ function KegiatanDetailToolbar({
         </>
       )}
       resultLabel={resultLabel}
+      actions={actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : undefined}
     />
   )
 }

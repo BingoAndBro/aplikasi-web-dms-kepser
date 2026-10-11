@@ -134,7 +134,43 @@ export async function handleInternalFileAccessRequest({
   return await readLocalLogicalPathFile({
     logicalPath,
     physicalPath,
-    payload,
+    disposition: payload.contentDisposition
+      ?? (payload.purpose === 'download' ? 'attachment' : 'inline'),
+    downloadFilename: payload.downloadFilename,
+  })
+}
+
+/**
+ * Mengalirkan satu file lokal berdasarkan logical path yang SUDAH diotorisasi
+ * pemanggil (tanpa token). Dipakai Tautan Laporan (src/lib/laporan/tautan.ts):
+ * otorisasinya keanggotaan snapshot tautan, bukan hak sesi pembuka. Header,
+ * tipe konten, dan sanitasi nama file sama dengan jalur token di atas.
+ */
+export async function createLogicalPathFileResponse({
+  logicalPath,
+  purpose,
+  downloadFilename,
+  root,
+}: {
+  logicalPath: string
+  purpose: 'preview' | 'download'
+  downloadFilename?: string
+  root?: string
+}): Promise<Response> {
+  let safeLogicalPath: string
+  let physicalPath: string
+  try {
+    safeLogicalPath = assertSafeLogicalStoragePath(logicalPath)
+    physicalPath = resolvePhysicalStoragePath(root ?? getLocalStorageRoot(), safeLogicalPath)
+  } catch {
+    return jsonError('File access path is not available', 500)
+  }
+
+  return await readLocalLogicalPathFile({
+    logicalPath: safeLogicalPath,
+    physicalPath,
+    disposition: purpose === 'download' ? 'attachment' : 'inline',
+    downloadFilename,
   })
 }
 
@@ -357,11 +393,13 @@ function jsonError(message: string, status: number): Response {
 async function readLocalLogicalPathFile({
   logicalPath,
   physicalPath,
-  payload,
+  disposition,
+  downloadFilename,
 }: {
   logicalPath: string
   physicalPath: string
-  payload: FileAccessTokenPayload
+  disposition: 'inline' | 'attachment'
+  downloadFilename?: string
 }): Promise<Response> {
   try {
     const fileStat = await stat(physicalPath)
@@ -385,7 +423,7 @@ async function readLocalLogicalPathFile({
 
   const headers = secureHeaders()
   headers.set('Content-Type', inferContentType(logicalPath))
-  headers.set('Content-Disposition', buildContentDisposition(payload, logicalPath))
+  headers.set('Content-Disposition', buildContentDisposition(disposition, downloadFilename, logicalPath))
   headers.set('Content-Length', String(fileContent.byteLength))
 
   // View over the same memory (no copy); readFile never returns a SharedArrayBuffer.
@@ -410,22 +448,21 @@ function inferContentType(logicalPath: string): string {
 }
 
 function buildContentDisposition(
-  payload: FileAccessTokenPayload,
+  disposition: 'inline' | 'attachment',
+  downloadFilename: string | undefined,
   logicalPath: string,
 ): string {
-  const disposition = payload.contentDisposition
-    ?? (payload.purpose === 'download' ? 'attachment' : 'inline')
-  const filename = resolveResponseFilename(payload, logicalPath)
+  const filename = resolveResponseFilename(downloadFilename, logicalPath)
 
   return `${disposition}; filename="${filename}"`
 }
 
 function resolveResponseFilename(
-  payload: FileAccessTokenPayload,
+  downloadFilename: string | undefined,
   logicalPath: string,
 ): string {
-  const explicitFilename = payload.downloadFilename
-    ? sanitizeContentDispositionFilename(payload.downloadFilename)
+  const explicitFilename = downloadFilename
+    ? sanitizeContentDispositionFilename(downloadFilename)
     : null
 
   if (explicitFilename) {

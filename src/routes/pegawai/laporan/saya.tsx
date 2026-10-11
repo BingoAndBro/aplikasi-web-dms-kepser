@@ -25,15 +25,22 @@ import { ErrorState } from '#/components/ui/ErrorState'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { ApiError, apiFetch } from '#/lib/api-client'
 import { HierarchicalFilter, type HierarchicalFilterValue } from '#/components/laporan/HierarchicalFilter'
+import {
+  ACTION_BUTTON_ICON_CLASS,
+  TOOLBAR_ACTION_BUTTON_CLASS,
+} from '#/components/laporan/actionButtonStyles'
+import { BagikanTautanActions } from '#/components/laporan/BagikanTautan'
 import { ExportZipDialog } from '#/components/laporan/ExportZipDialog'
 import { ToolbarFilterField } from '#/components/laporan/FilterToolbar'
 import { PeriodeSelector, tahunFromTanggal } from '#/components/laporan/PeriodeSelector'
 import {
   defaultPeriode,
   isTanggalInPeriode,
+  periodeLabel,
   resolvePeriodeRange,
   type PeriodeValue,
 } from '#/lib/laporan/periode'
+import { TAUTAN_SUMBER } from '#/lib/laporan/tautan-shared'
 import type { DokumenLaporanRow } from '#/lib/dokumen-helpers'
 import {
   LAPORAN_STATUS_FILTER_OPTIONS,
@@ -202,6 +209,14 @@ function LaporanSayaPage() {
           onStatusFilterChange={setStatusFilter}
           exportCount={filtered.length}
           onExportClick={() => setExportDialogOpen(true)}
+          shareAction={(
+            <BagikanTautanActions
+              sumber={TAUTAN_SUMBER.LAPORAN_SAYA}
+              dokumenIds={filtered.map((dok) => dok.id)}
+              defaultJudul={`Laporan Saya - ${periodeLabel(periode)}`}
+              keterangan={buildShareKeterangan({ periode, statusFilter, search, activeFilters })}
+            />
+          )}
         />
 
         <ExportZipDialog
@@ -272,6 +287,7 @@ function ReportToolbar({
   onStatusFilterChange,
   exportCount,
   onExportClick,
+  shareAction,
 }: {
   search: string
   onSearchChange: (value: string) => void
@@ -289,6 +305,7 @@ function ReportToolbar({
   onStatusFilterChange: (value: LaporanStatus | undefined) => void
   exportCount: number
   onExportClick: () => void
+  shareAction: React.ReactNode
 }) {
   return (
     <div className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-bg-surface shadow-[0_3px_14px_rgba(15,23,42,0.07)]">
@@ -373,17 +390,19 @@ function ReportToolbar({
 
       <div className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm font-bold text-zinc-950">{resultLabel}</span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5 border-brand-border bg-bg-surface font-bold"
-          disabled={exportCount === 0}
-          onClick={onExportClick}
-        >
-          <Download size={14} />
-          Ekspor Semua File (ZIP)
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {shareAction}
+          <Button
+            type="button"
+            variant="outline"
+            className={TOOLBAR_ACTION_BUTTON_CLASS}
+            disabled={exportCount === 0}
+            onClick={onExportClick}
+          >
+            <Download size={15} className={ACTION_BUTTON_ICON_CLASS} />
+            Ekspor Semua File (ZIP)
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -578,6 +597,26 @@ function dateValue(value?: string | null) {
   if (!value) return 0
   const time = new Date(value).getTime()
   return Number.isFinite(time) ? time : 0
+}
+
+// Ringkasan filter yang ikut disimpan di tautan, supaya pembuka tahu cakupannya.
+function buildShareKeterangan({
+  periode,
+  statusFilter,
+  search,
+  activeFilters,
+}: {
+  periode: PeriodeValue
+  statusFilter: LaporanStatus | undefined
+  search: string
+  activeFilters: number
+}) {
+  return [
+    `Periode: ${periodeLabel(periode)}`,
+    statusFilter ? `Status: ${laporanStatusLabel(statusFilter)}` : null,
+    search.trim() ? `Pencarian: "${search.trim()}"` : null,
+    activeFilters > 0 ? `${activeFilters} filter lanjutan aktif` : null,
+  ].filter(Boolean).join(' · ')
 }
 
 function countActiveFilters(filter: HierarchicalFilterValue) {
