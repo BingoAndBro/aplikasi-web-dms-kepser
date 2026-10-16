@@ -1,193 +1,134 @@
-Welcome to your new TanStack Start app! 
+# KEPSER — Sistem Manajemen Dokumen (DMS) Workflow Keuangan & Arsip
 
-# Getting Started
+Aplikasi web untuk mengelola alur dokumen permintaan/pertanggungjawaban keuangan satuan kerja, mulai dari pengajuan oleh pegawai, validasi PPK, persetujuan PPSPM, hingga pengarsipan berkas secara terstruktur.
 
-To run this application:
+> Skripsi — NIM 222212554 (Politeknik Statistika STIS).
+>
+> _Lengkapi: judul skripsi, nama lengkap, dosen pembimbing, dan tahun._
 
-```bash
-pnpm install
-pnpm dev
+## Fitur Utama
+
+- **Autentikasi & RBAC** — login berbasis username, sesi cookie, pembatasan percobaan login, dan pembatasan akses halaman per peran.
+- **Alur dokumen (FSM)** — status dokumen berpindah hanya lewat mesin status tunggal (`src/lib/fsm.ts`): *Draft → Validasi PPK → Persetujuan PPSPM → Selesai*, dengan jalur *Perlu Revisi* (tolak, kirim ulang, kembalikan).
+- **Manajemen dokumen & lampiran** — unggah file ke penyimpanan lokal, akses file lewat token bertanda tangan, pembersihan unggahan tertunda.
+- **Arsip folder-first** — berkas arsip, klasifikasi dokumen, retensi, penghancuran fisik, dan ekspor ZIP/CSV.
+- **Laporan & tautan bagikan** — Laporan Saya / Kegiatan / Kinerja yang dapat dibagikan lewat tautan.
+- **Master data & administrasi** — fungsi, jenis, kategori, kegiatan, komponen, kelengkapan, pengguna, pengaturan tema, dan log aktivitas.
+
+## Peran Pengguna
+
+| Peran | Keterangan |
+|---|---|
+| `PEGAWAI` | Mengajukan dan merevisi dokumen |
+| `PPK` | Pejabat Pembuat Komitmen — memvalidasi dokumen |
+| `PPSPM` | Menyetujui dokumen tahap akhir |
+| `KEPALA_SUB_BAGIAN_UMUM` | Kepala Sub Bagian Umum |
+| `PENANGGUNG_JAWAB_KINERJA` | Memantau laporan kinerja |
+| `ADMIN` | Mengelola master data, pengguna, dan pengaturan |
+
+## Teknologi
+
+- [TanStack Start](https://tanstack.com/start) + TanStack Router (React 19, file-based routing)
+- TypeScript, Vite, Tailwind CSS v4, Base UI, Framer Motion
+- PostgreSQL 16 dengan [Drizzle ORM](https://orm.drizzle.team/) dan drizzle-kit (migrasi)
+- Argon2 untuk hash password, Zod untuk validasi
+- Vitest (unit/integrasi) dan Playwright (E2E)
+- Docker Compose untuk database lokal; ngrok opsional untuk berbagi akses
+
+## Struktur Proyek
+
+```
+src/
+  routes/        Halaman & endpoint API (file-based routing, per peran)
+  components/    Komponen UI per domain (dokumen, arsip, laporan, admin, ...)
+  lib/           Logika bisnis: FSM, auth, storage, validasi, ekspor
+  db/            Koneksi, skema Drizzle, dan seed
+  scripts/       Skrip CLI (hash password, sweep unggahan)
+drizzle/         Berkas migrasi SQL
+infra/docker/    Docker Compose PostgreSQL
+tests/           Unit, integrasi, dan E2E
 ```
 
-# Building For Production
+## Prasyarat
 
-To build this application for production:
+- Node.js 22+
+- [pnpm](https://pnpm.io/)
+- Docker (untuk PostgreSQL lokal) atau PostgreSQL 16 yang sudah ada
 
-```bash
-pnpm build
-```
+## Menjalankan Secara Lokal
 
-## Testing
+1. **Pasang dependensi**
+   ```bash
+   pnpm install
+   ```
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+2. **Jalankan PostgreSQL**
+   ```bash
+   docker compose -f infra/docker/postgres/docker-compose.yml up -d
+   ```
 
-```bash
-pnpm test
-```
+3. **Siapkan environment**
+   ```bash
+   cp .env.example .env
+   cp .env.migration.example .env.migration
+   ```
+   Lalu ubah nilai berikut:
+   - `DATABASE_URL` — sesuaikan dengan database Anda
+   - `DMS_FILE_TOKEN_SECRET` — isi string acak yang panjang
+   - `DMS_DEV_SEED_PASSWORD_HASH` (di `.env.migration`) — hash argon2id untuk akun pengembangan:
+     ```bash
+     pnpm auth:hash-password
+     ```
 
-## Styling
+4. **Migrasi dan seed database**
+   ```bash
+   pnpm db:local:migrate
+   pnpm db:local:seed
+   ```
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
+5. **Jalankan aplikasi**
+   ```bash
+   pnpm dev
+   ```
+   Buka `https://localhost:3000` (dev server memakai HTTPS self-signed, terima peringatan browser).
 
-### Removing Tailwind CSS
+## Variabel Environment
 
-If you prefer not to use Tailwind CSS:
+| Variabel | Fungsi |
+|---|---|
+| `DATABASE_URL` | Koneksi PostgreSQL |
+| `DMS_LOCAL_STORAGE_ROOT` | Folder penyimpanan file unggahan |
+| `DMS_FILE_TOKEN_SECRET` | Secret penanda tangan token akses file |
+| `APP_URL` | Origin aplikasi (harus sama dengan address bar) |
+| `DMS_PUBLIC_BASE_URL` | (Opsional) alamat tetap untuk tautan bagikan |
+| `DMS_SESSION_COOKIE_SECURE` | `true` bila dilayani lewat HTTPS |
 
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `pnpm add @tailwindcss/vite tailwindcss --dev`
+Jangan pernah meng-commit file `.env`, kunci, atau token.
 
+## Skrip yang Tersedia
 
+| Perintah | Fungsi |
+|---|---|
+| `pnpm dev` | Dev server di port 3000 |
+| `pnpm build` / `pnpm start` | Build dan jalankan produksi |
+| `pnpm typecheck` | Pemeriksaan tipe TypeScript |
+| `pnpm test` | Unit test (Vitest) |
+| `pnpm test:integration` | Integration test (butuh database) |
+| `npx playwright test` | Test E2E |
+| `pnpm db:generate` | Buat migrasi baru dari skema |
+| `pnpm db:local:migrate` | Terapkan migrasi ke database lokal |
+| `pnpm db:local:seed` | Isi role, master data, dan akun pengembangan |
+| `pnpm db:local:studio` | Drizzle Studio |
+| `pnpm storage:sweep-pending` | Bersihkan unggahan yang tidak selesai |
 
-## Routing
+Klasifikasi seluruh file test ada di [`tests/TEST-CLASSIFICATION.md`](tests/TEST-CLASSIFICATION.md).
 
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
+## Catatan Keamanan
 
-### Adding A Route
+- Password disimpan sebagai hash argon2id; seed tidak menyimpan password plaintext.
+- Akun hasil seed hanya untuk pengembangan, jangan dipakai di produksi.
+- Isi `ngrok/kepser.yml` hanya placeholder; isi authtoken ngrok Anda sendiri secara lokal dan jangan di-commit.
 
-To add a new route to your application just add a new file in the `./src/routes` directory.
+## Lisensi
 
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+_Tentukan lisensi atau tulis "Hak cipta dilindungi — untuk keperluan akademik"._
