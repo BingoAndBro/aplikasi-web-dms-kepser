@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const source = readFileSync('src/routes/kasubag/penambahan-arsip.tsx', 'utf8')
-const manualUploadSource = readFileSync('src/lib/storage/manual-arsip-upload.ts', 'utf8')
+const source = readFileSync('src/routes/kasubag/penambahan-arsip.tsx', 'utf8').replace(/\r\n/g, '\n')
+const manualUploadSource = readFileSync('src/lib/storage/manual-arsip-upload.ts', 'utf8').replace(/\r\n/g, '\n')
 
 describe('Phase 15L.7D.1 Penambahan Dokumen upload source guard', () => {
   it('uses the central document/lampiran upload policy for manual attachments', () => {
