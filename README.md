@@ -33,7 +33,7 @@ DMS Kepser menyediakan empat kelompok fitur utama:
 | Judul skripsi | PEMBANGUNAN SISTEM INFORMASI PENGELOLAAN DOKUMENTASI KINERJA DAN PERTANGGUNGJAWABAN KEGIATAN UNTUK MENDUKUNG AKUNTABILITAS KINERJA DI BPS KABUPATEN KEPULAUAN SERIBU |
 | Lokasi penelitian | BPS Kabupaten Kepulauan Seribu |
 | Lingkungan akses | Jaringan lokal kantor (tidak dipublikasikan di internet) |
-|Buku Panduan|[Buku Panduan Pengguna DMS Kepser](Buku Panduan Pengguna DMS Kepser.pdf).
+|Buku Panduan|[Buku Panduan Pengguna DMS Kepser](/Buku Panduan Pengguna DMS Kepser.pdf).
 |
 
 Repository ini mendokumentasikan implementasi aplikasi, fitur pengguna, alur proses, serta petunjuk menjalankan prototipe. Penjelasan metodologi (DSRM dan *Modified Waterfall*), rancangan sistem, dan hasil evaluasi secara lengkap mengacu pada naskah skripsi.
@@ -276,7 +276,7 @@ Admin dan Penanggung Jawab Kinerja melihat aktivitas seluruh pengguna beserta pe
 Panduan penggunaan tersedia melalui:
 
 - Menu Bantuan pada aplikasi.
-- [Buku Panduan Pengguna DMS Kepser](Buku Panduan Pengguna DMS Kepser.pdf).
+- [Buku Panduan Pengguna DMS Kepser](/Buku Panduan Pengguna DMS Kepser.pdf).
 
 ## 6. Alur Proses Sistem
 
