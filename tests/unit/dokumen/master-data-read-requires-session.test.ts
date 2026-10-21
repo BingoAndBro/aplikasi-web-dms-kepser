@@ -52,6 +52,10 @@ const ROUTE_IMPORTS = [
   () => import('#/routes/api/master-kelengkapan').then((m) => m.Route),
 ] as const
 
+// Each case dynamically imports a route (and its dependency graph); the first
+// import is slow when the full suite runs in parallel, so 5s default is too tight.
+const IMPORT_TIMEOUT_MS = 30_000
+
 const ROUTE_NAMES = [
   'master-fungsi',
   'master-kegiatan',
@@ -91,6 +95,7 @@ describe('master-data GET endpoints require a session (D-23)', () => {
       expect(response.status).toBe(401)
       expect(mocks.dbSelect).not.toHaveBeenCalled()
     },
+    IMPORT_TIMEOUT_MS,
   )
 
   it.each(ROUTE_IMPORTS.map((load, i) => [ROUTE_NAMES[i], load] as const))(
@@ -115,5 +120,6 @@ describe('master-data GET endpoints require a session (D-23)', () => {
       expect(response.status).not.toBe(401)
       expect(mocks.dbSelect).toHaveBeenCalled()
     },
+    IMPORT_TIMEOUT_MS,
   )
 })
