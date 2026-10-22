@@ -213,6 +213,9 @@ Catatan umum:
 | tests/unit/google-drive/config.test.ts | Unit test | White-box | Menguji `readDriveConfig`: tiga env wajib, trim, kunci base64/base64url tepat 32 byte, fitur mati rapi tanpa melempar, serta konstanta OAuth/Drive. |
 | tests/unit/google-drive/token-crypto.test.ts | Unit test | White-box | Menguji enkripsi refresh token AES-256-GCM `v1:<iv>:<tag>:<data>`: roundtrip, IV acak, ciphertext/tag/kunci salah, format tidak dikenal, dan pesan galat tanpa rahasia. |
 | tests/unit/google-drive/shared.test.ts | Unit test + static source guard (gabungan) | White-box | Menguji `buildDriveFolderName` (zona Asia/Jakarta, sanitasi, batas 150 karakter), teks alasan/peringatan/pesan galat Drive, dan memastikan `shared.ts` tidak mengimpor modul server. |
+| tests/unit/google-drive/drive-errors.test.ts | Unit test | White-box | Menguji `classifyDriveError`: pemetaan status/reason/`invalid_grant`/galat jaringan/`TokenCryptoError` ke kategori galat Drive dan pesan tanpa isi respons mentah. |
+| tests/unit/google-drive/drive-client.test.ts | Unit/Component test (dependency di-mock) + static source guard | White-box | Menguji `createGoogleDriveClient` dengan Drive API dan OAuth2Client di-mock (argumen setiap metode, `retry: false` + timeout, kueri `appProperties has`, penolakan nilai kueri berbahaya) dan memastikan paket Google hanya diimpor `drive-client.ts`/`oauth.ts`. |
+| tests/unit/google-drive/fake-drive.test.ts | Unit test | White-box | Menguji helper `FakeDrive` (Drive in-memory untuk tes): id berurutan, isi stream, hapus berantai, `failNext` termasuk mode respons hilang, dan `failWhen`. |
 
 ## Integrasi (`pnpm test:integration`, PostgreSQL asli)
 

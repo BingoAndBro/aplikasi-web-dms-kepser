@@ -99,3 +99,32 @@ pnpm typecheck
 - [ ] Tidak ada impor `@googleapis/drive`/`google-auth-library` di luar `drive-client.ts` (dan `oauth.ts` di section 05).
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tidak ada regresi.
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- Paket: `@googleapis/drive@27.0.0` dan `google-auth-library@11.3.1` (versi persis). Lockfile hanya berisi satu
+  `google-auth-library` (11.3.1; dipakai juga oleh `googleapis-common@9.3.1`). Diff lockfile murni penambahan
+  (baris `libc:` yang dihapus pnpm VM dikembalikan); `pnpm install --frozen-lockfile` lulus. `@googleapis/drive`
+  mensyaratkan Node ≥ 22 (VM: 22.22.0).
+- Interface `DriveClient` sesuai plan, ditambah tipe `DriveUploadBody` dan `GoogleDriveClientDeps`.
+  `updateFileContent`/`shareAnyoneReader` meminta `fields: 'id'`. Sukses tanpa `id` → `PERMANEN`.
+- `classifyDriveError`: kode jaringan dicari di rantai `cause`/`error` (maks. 4 tingkat), juga `code`/`name`
+  `AbortError`/`TimeoutError`; hanya bila tidak ada status HTTP.
+- Tes: `drive-errors` 29, `drive-client` 20, `fake-drive` 8 (total `tests/unit/google-drive` 93). Seluruh `pnpm test`
+  1419 lulus / 1 skip; `pnpm typecheck` bersih.
+
+### Verifikasi saat implementasi
+
+1. **Sintaks `appProperties has` — terverifikasi** dari dokumentasi resmi Drive API v3 ("Search for files and folders",
+   developers.google.com/workspace/drive/api/guides/search-files): contoh
+   `appProperties has { key='additionalID' and value='8e8aceg2af2ge72e78' }`. Escape petik di string kueri memakai `\'`;
+   dokumentasi tidak mengatur backslash, jadi keduanya ditolak sebelum memanggil API (sesuai plan). Kueri yang dipakai:
+   `'<parentId>' in parents and appProperties has { key='<k>' and value='<v>' } and trashed = false`.
+2. **Bundling Nitro paket CJS Google — terverifikasi** dengan rute API sementara (`src/routes/api/zz-drive-probe.ts`,
+   dihapus lagi; `routeTree.gen.ts` dikembalikan, tidak ada yang di-commit): `pnpm build` sukses, paket Google dibundel
+   ke chunk server (tidak dieksternalkan ke `.output/server/node_modules`), server hasil build (`node .output/server/index.mjs`)
+   membuat client dengan dependensi asli dan `fileExists` mencapai Google lalu galatnya terklasifikasi
+   (`DriveApiError`, `TOKEN_TIDAK_VALID` untuk kredensial palsu). Catatan: jaringan VM ternyata bisa mencapai Google lewat proxy.
+3. Isi `tokens.scope` pada consent granular: di luar cakupan section ini (section 05, `oauth.ts`).
