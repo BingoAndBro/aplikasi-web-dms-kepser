@@ -27,3 +27,9 @@ storage/*
 # Laporan coverage Vitest
 coverage/
 coverage-ast/
+
+# Lokal saja (repo pengembangan)
+graphify-out/
+ngrok/*.yml
+playwright-report/
+test-results/
