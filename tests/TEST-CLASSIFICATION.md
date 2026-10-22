@@ -16,6 +16,12 @@ Catatan umum:
 |---|---|---|---|
 | tests/fsm.test.ts | Unit test | White-box | Menguji fungsi `transition()` FSM alur dokumen: transisi status valid/invalid, validasi aktor, dan bentuk error, langsung dari `src/lib/fsm`. |
 
+## admin
+
+| File | Jenis Test | White/Black-box | Deskripsi Singkat |
+|---|---|---|---|
+| tests/unit/admin/google-drive-settings-source.test.ts | Unit test (static source guard) | White-box | Menjaga bagian "Google Drive" di Admin → Pengaturan (SPEC 10.3): `admin.settings.tsx` merender `GoogleDriveSettings` di luar dialog tema, delapan teks kunci, endpoint lewat `GOOGLE_DRIVE_API` (tanpa path ajaib), langkah 1 membuka tab baru `noopener`, mode HUBUNGKAN/GANTI/HUBUNGKAN_ULANG, putuskan dengan `konfirmasi: true` + jumlah tautan aktif, kartu tanpa konfigurasi hanya menyebut nama env, tidak memanggil logout/settings, tidak merender nama file/ID Drive/token, dan `jumlah_file: null` sebagai seluruh folder. |
+
 ## arsiparis
 
 | File | Jenis Test | White/Black-box | Deskripsi Singkat |

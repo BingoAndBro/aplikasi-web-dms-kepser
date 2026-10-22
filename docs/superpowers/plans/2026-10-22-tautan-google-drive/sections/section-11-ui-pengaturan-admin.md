@@ -73,3 +73,21 @@ Uji visual manual lokal (`pnpm dev`, login ADMIN): kartu tanpa env, dengan env t
 - [ ] Simpan tema/identitas tetap berperilaku seperti sebelumnya (logout), aksi Drive tidak.
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tidak ada regresi.
+
+## Implementasi Aktual (deep-implement, sesi D)
+
+- File: `src/components/admin/GoogleDriveSettings.tsx` (baru), `src/routes/admin.settings.tsx` (pasang komponen di bawah
+  pilihan tema, di luar `AdminConfirmationDialog` tema; deskripsi header menyebut koneksi Google Drive),
+  `tests/unit/admin/google-drive-settings-source.test.ts` (baru), `tests/TEST-CLASSIFICATION.md` (bagian baru "admin").
+- **Penyimpangan / tambahan (dicatat juga di `code-reviews/section-11-review.md`):**
+  1. Tautan cadangan ke `auth_url` setelah langkah 1 (pop-up bisa diblokir dan `noopener` membuat hasil `window.open`
+     tidak bisa diperiksa).
+  2. Kategori di daftar "perlu dihapus manual" ditampilkan dengan `DRIVE_PESAN_GALAT` (tanpa konstanta label baru);
+     `jumlah_file: null` → "Seluruh folder", angka → "N file di folder".
+  3. Konfirmasi putus memakai `AdminConfirmationDialog` (tone destructive) dan mengirim `{ konfirmasi: true }` sesuai Zod
+     `putuskanRequestSchema`. Teks menyebut jumlah tautan aktif dan bahwa folder yang masih ada harus dihapus manual.
+  4. Kartu memakai `<section aria-labelledby>`; galat muat pertama → kotak merah + **Muat ulang**; galat muat ulang
+     berikutnya tidak menghapus data terakhir.
+- Hasil tes: `tests/unit/admin` 13 lulus (+ `tests/unit/styles` lulus); seluruh `pnpm test` 1708 lulus / 1 skip
+  (sebelum 1697 / 1 skip); integrasi 101; `pnpm typecheck` bersih. Uji visual manual (tanpa env, env tanpa akun, panel
+  2 langkah, login Google nyata) masuk checklist section 12 — tidak bisa di VM (Google diblokir).

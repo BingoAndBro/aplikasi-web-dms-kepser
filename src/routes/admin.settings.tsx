@@ -9,6 +9,7 @@ import {
   AdminConfirmationDialog,
   AdminPageHeader,
 } from '#/components/admin/AdminPagePrimitives'
+import { GoogleDriveSettings } from '#/components/admin/GoogleDriveSettings'
 import { PageLayout } from '#/components/dashboard/PageLayout'
 import { LoadingState } from '#/components/ui/LoadingState'
 import { useAppToast } from '#/components/ui/AppToast'
@@ -157,7 +158,7 @@ function SettingsPage() {
           icon={<SettingsIcon />}
           eyebrow={<><span>Admin Sistem</span><span>/</span><span>Pengaturan Aplikasi</span></>}
           title="Pengaturan Aplikasi"
-          description="Pilih tema visual yang mengikuti event sensus aktif. Perubahan ini berlaku untuk semua pengguna."
+          description="Pilih tema visual yang mengikuti event sensus aktif dan kelola koneksi Google Drive. Perubahan tema dan identitas berlaku untuk semua pengguna."
         />
 
         <div className={cn(adminContentCompactClassName, 'space-y-4 rounded-[18px] border border-border-default bg-white p-5')}>
@@ -254,6 +255,11 @@ function SettingsPage() {
             })}
           </div>
         )}
+
+        {/* Kartu terpisah: aksi Google Drive tidak ikut alur simpan + logout tema/identitas. */}
+        <div className={adminContentCompactClassName}>
+          <GoogleDriveSettings />
+        </div>
       </div>
 
       <AdminConfirmationDialog
