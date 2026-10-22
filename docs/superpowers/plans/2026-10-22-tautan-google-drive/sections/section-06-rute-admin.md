@@ -88,3 +88,29 @@ pnpm typecheck
 - [ ] `src/routeTree.gen.ts` dibuat ulang oleh tool, bukan diedit tangan.
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tidak ada regresi.
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- File sesuai rencana: `routes.ts` (`GOOGLE_DRIVE_API`, `TAUTAN_API`), `schemas/google-drive.ts`, `admin-route.ts`,
+  `jobs.ts` (`resetFailedDeletionJobs`), rute `api/google-drive/status.ts` dan
+  `api/admin/google-drive/{index,mulai-hubung,hubungkan,$id.putuskan,coba-lagi-penghapusan}.ts`.
+- `routeTree.gen.ts` dibuat ulang oleh `pnpm build` (sukses); diff murni penambahan enam rute, tanpa baris lama berubah.
+- Helper di `admin-route.ts`: `requireDriveAdmin`, `requireDriveConfig` (409 `{ error, kode: 'BELUM_DIKONFIGURASI' }`),
+  `parseDriveBody` (JSON rusak/Zod → 400 dengan pesan isu pertama), `driveRouteError(error, aksi)`, `isDriveUuid`, `NO_STORE`.
+- Bentuk respons: mulai-hubung `{ auth_url }`; hubungkan `{ akun: { id, email, status } }`; putuskan
+  `{ success: true, jumlah_tautan_aktif }`; coba-lagi-penghapusan `{ jumlah }`; galat `{ error, kode? }`.
+- **Penyimpangan / tambahan (dicatat juga di `code-reviews/section-06-review.md`):**
+  1. `AkunDriveError` `AKUN_TIDAK_DITEMUKAN` → 404 dan `AKUN_SUDAH_DIPUTUS` → 409 (kode tambahan dari section 05).
+  2. `DriveApiError` non-`SEMENTARA` → 400 dengan pesan kategorinya (mis. "Kuota Google Drive penuh").
+  3. `console.error('[admin/google-drive] <aksi> gagal', { kategori })` hanya untuk 500 (`kategori: 'TAK_TERDUGA'`) dan 502;
+     galat 400/409 yang wajar tidak dicatat sebagai error.
+  4. `resetFailedDeletionJobs` memakai aturan relevansi yang sama dengan daftar "perlu dihapus manual" (section 05
+     penyimpangan 6): hanya job GAGAL terbaru per (tautan, jenis), tidak ada kembar `MENUNGGU`/`PROSES` (menghindari
+     pelanggaran `drive_job_satu_menunggu`), akun belum `DIPUTUS`, folder belum `DIHAPUS` / masih ada file `MENGHAPUS`.
+  5. Putuskan: `revoke` mendekripsi token di dalam callback, sehingga galat dekripsi ikut "best effort" (dicatat kategori
+     `TOKEN_TIDAK_VALID` oleh `putuskanAkun`) dan tidak menggagalkan pemutusan. Akun tanpa token → `revoke: null`.
+  6. `mulai-hubung` mode selain `HUBUNGKAN_ULANG` mengabaikan `akun_id` (tetap divalidasi uuid oleh Zod).
+- Hasil tes: `status-route` 4, `admin-routes` 44, integrasi `resetFailedDeletionJobs` 2 baru. Seluruh `pnpm test` 1523 lulus /
+  1 skip; integrasi 71 lulus; `pnpm typecheck` bersih; `pnpm build` sukses.

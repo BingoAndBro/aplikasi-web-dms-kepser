@@ -103,6 +103,7 @@ import { Route as ApiLaporanKinerjaRouteImport } from './routes/api/laporan/kine
 import { Route as ApiLaporanKegiatanRouteImport } from './routes/api/laporan/kegiatan'
 import { Route as ApiKetuaTimIdRouteImport } from './routes/api/ketua-tim/$id'
 import { Route as ApiKasubagInboxRouteImport } from './routes/api/kasubag/inbox'
+import { Route as ApiGoogleDriveStatusRouteImport } from './routes/api/google-drive/status'
 import { Route as ApiFilesAccessRouteImport } from './routes/api/files/access'
 import { Route as ApiDokumenSubmitRouteImport } from './routes/api/dokumen/submit'
 import { Route as ApiDokumenPreviewUrlRouteImport } from './routes/api/dokumen/preview-url'
@@ -128,6 +129,7 @@ import { Route as KasubagDokumenIdIndexRouteImport } from './routes/kasubag/doku
 import { Route as ApiKasubagManualArsipIndexRouteImport } from './routes/api/kasubag/manual-arsip/index'
 import { Route as ApiKasubagKlasifikasiIndexRouteImport } from './routes/api/kasubag/klasifikasi/index'
 import { Route as ApiKasubagBerkasIndexRouteImport } from './routes/api/kasubag/berkas/index'
+import { Route as ApiAdminGoogleDriveIndexRouteImport } from './routes/api/admin/google-drive/index'
 import { Route as PpkDokumenIdResubmitRouteImport } from './routes/ppk/dokumen/$id/resubmit'
 import { Route as PegawaiDokumenIdRevisiRouteImport } from './routes/pegawai/dokumen/$id/revisi'
 import { Route as PegawaiDokumenIdEditRouteImport } from './routes/pegawai/dokumen/$id/edit'
@@ -154,6 +156,9 @@ import { Route as ApiKasubagBerkasOpenRouteImport } from './routes/api/kasubag/b
 import { Route as ApiKasubagBerkasIdRouteImport } from './routes/api/kasubag/berkas/$id'
 import { Route as ApiDokumenIdSubmitRouteImport } from './routes/api/dokumen.$id.submit'
 import { Route as ApiDokumenIdLogRouteImport } from './routes/api/dokumen.$id.log'
+import { Route as ApiAdminGoogleDriveMulaiHubungRouteImport } from './routes/api/admin/google-drive/mulai-hubung'
+import { Route as ApiAdminGoogleDriveHubungkanRouteImport } from './routes/api/admin/google-drive/hubungkan'
+import { Route as ApiAdminGoogleDriveCobaLagiPenghapusanRouteImport } from './routes/api/admin/google-drive/coba-lagi-penghapusan'
 import { Route as LampiranTautanIdDokumenIdRefSigRouteImport } from './routes/lampiran.$tautanId.$dokumenId.$ref.$sig'
 import { Route as ApiUsersMeIsKetuaTimKegiatanIdRouteImport } from './routes/api/users/me/is-ketua-tim/$kegiatanId'
 import { Route as ApiPpspmDokumenIdRejectRouteImport } from './routes/api/ppspm/dokumen/$id/reject'
@@ -168,6 +173,7 @@ import { Route as ApiKasubagBerkasIdExportZipRouteImport } from './routes/api/ka
 import { Route as ApiKasubagBerkasIdCloseRouteImport } from './routes/api/kasubag/berkas/$id/close'
 import { Route as ApiDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/dokumen.$id.preview.$lampiranIndex'
 import { Route as ApiDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/dokumen.$id.download.$lampiranIndex'
+import { Route as ApiAdminGoogleDriveIdPutuskanRouteImport } from './routes/api/admin/google-drive/$id.putuskan'
 import { Route as ApiPpspmDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppspm/dokumen/$id/preview/$lampiranIndex'
 import { Route as ApiPpspmDokumenIdDownloadLampiranIndexRouteImport } from './routes/api/ppspm/dokumen/$id/download/$lampiranIndex'
 import { Route as ApiPpkDokumenIdPreviewLampiranIndexRouteImport } from './routes/api/ppk/dokumen/$id/preview/$lampiranIndex'
@@ -660,6 +666,11 @@ const ApiKasubagInboxRoute = ApiKasubagInboxRouteImport.update({
   path: '/api/kasubag/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGoogleDriveStatusRoute = ApiGoogleDriveStatusRouteImport.update({
+  id: '/api/google-drive/status',
+  path: '/api/google-drive/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFilesAccessRoute = ApiFilesAccessRouteImport.update({
   id: '/api/files/access',
   path: '/api/files/access',
@@ -789,6 +800,12 @@ const ApiKasubagBerkasIndexRoute = ApiKasubagBerkasIndexRouteImport.update({
   path: '/api/kasubag/berkas/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminGoogleDriveIndexRoute =
+  ApiAdminGoogleDriveIndexRouteImport.update({
+    id: '/api/admin/google-drive/',
+    path: '/api/admin/google-drive/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PpkDokumenIdResubmitRoute = PpkDokumenIdResubmitRouteImport.update({
   id: '/resubmit',
   path: '/resubmit',
@@ -922,6 +939,24 @@ const ApiDokumenIdLogRoute = ApiDokumenIdLogRouteImport.update({
   path: '/log',
   getParentRoute: () => ApiDokumenIdRoute,
 } as any)
+const ApiAdminGoogleDriveMulaiHubungRoute =
+  ApiAdminGoogleDriveMulaiHubungRouteImport.update({
+    id: '/api/admin/google-drive/mulai-hubung',
+    path: '/api/admin/google-drive/mulai-hubung',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminGoogleDriveHubungkanRoute =
+  ApiAdminGoogleDriveHubungkanRouteImport.update({
+    id: '/api/admin/google-drive/hubungkan',
+    path: '/api/admin/google-drive/hubungkan',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminGoogleDriveCobaLagiPenghapusanRoute =
+  ApiAdminGoogleDriveCobaLagiPenghapusanRouteImport.update({
+    id: '/api/admin/google-drive/coba-lagi-penghapusan',
+    path: '/api/admin/google-drive/coba-lagi-penghapusan',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LampiranTautanIdDokumenIdRefSigRoute =
   LampiranTautanIdDokumenIdRefSigRouteImport.update({
     id: '/lampiran/$tautanId/$dokumenId/$ref/$sig',
@@ -1000,6 +1035,12 @@ const ApiDokumenIdDownloadLampiranIndexRoute =
     id: '/download/$lampiranIndex',
     path: '/download/$lampiranIndex',
     getParentRoute: () => ApiDokumenIdRoute,
+  } as any)
+const ApiAdminGoogleDriveIdPutuskanRoute =
+  ApiAdminGoogleDriveIdPutuskanRouteImport.update({
+    id: '/api/admin/google-drive/$id/putuskan',
+    path: '/api/admin/google-drive/$id/putuskan',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPpspmDokumenIdPreviewLampiranIndexRoute =
   ApiPpspmDokumenIdPreviewLampiranIndexRouteImport.update({
@@ -1161,6 +1202,7 @@ export interface FileRoutesByFullPath {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
+  '/api/google-drive/status': typeof ApiGoogleDriveStatusRoute
   '/api/kasubag/inbox': typeof ApiKasubagInboxRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRouteWithChildren
@@ -1204,6 +1246,9 @@ export interface FileRoutesByFullPath {
   '/kasubag/berkas/': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
+  '/api/admin/google-drive/coba-lagi-penghapusan': typeof ApiAdminGoogleDriveCobaLagiPenghapusanRoute
+  '/api/admin/google-drive/hubungkan': typeof ApiAdminGoogleDriveHubungkanRoute
+  '/api/admin/google-drive/mulai-hubung': typeof ApiAdminGoogleDriveMulaiHubungRoute
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/kasubag/berkas/$id': typeof ApiKasubagBerkasIdRouteWithChildren
@@ -1230,12 +1275,14 @@ export interface FileRoutesByFullPath {
   '/pegawai/dokumen/$id/edit': typeof PegawaiDokumenIdEditRoute
   '/pegawai/dokumen/$id/revisi': typeof PegawaiDokumenIdRevisiRoute
   '/ppk/dokumen/$id/resubmit': typeof PpkDokumenIdResubmitRoute
+  '/api/admin/google-drive/': typeof ApiAdminGoogleDriveIndexRoute
   '/api/kasubag/berkas/': typeof ApiKasubagBerkasIndexRoute
   '/api/kasubag/klasifikasi/': typeof ApiKasubagKlasifikasiIndexRoute
   '/api/kasubag/manual-arsip/': typeof ApiKasubagManualArsipIndexRoute
   '/kasubag/dokumen/$id/': typeof KasubagDokumenIdIndexRoute
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
+  '/api/admin/google-drive/$id/putuskan': typeof ApiAdminGoogleDriveIdPutuskanRoute
   '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
   '/api/dokumen/$id/preview/$lampiranIndex': typeof ApiDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/berkas/$id/close': typeof ApiKasubagBerkasIdCloseRoute
@@ -1330,6 +1377,7 @@ export interface FileRoutesByTo {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
+  '/api/google-drive/status': typeof ApiGoogleDriveStatusRoute
   '/api/kasubag/inbox': typeof ApiKasubagInboxRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRouteWithChildren
@@ -1371,6 +1419,9 @@ export interface FileRoutesByTo {
   '/kasubag/berkas': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen': typeof PegawaiDokumenIndexRoute
+  '/api/admin/google-drive/coba-lagi-penghapusan': typeof ApiAdminGoogleDriveCobaLagiPenghapusanRoute
+  '/api/admin/google-drive/hubungkan': typeof ApiAdminGoogleDriveHubungkanRoute
+  '/api/admin/google-drive/mulai-hubung': typeof ApiAdminGoogleDriveMulaiHubungRoute
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/kasubag/berkas/$id': typeof ApiKasubagBerkasIdRouteWithChildren
@@ -1397,12 +1448,14 @@ export interface FileRoutesByTo {
   '/pegawai/dokumen/$id/edit': typeof PegawaiDokumenIdEditRoute
   '/pegawai/dokumen/$id/revisi': typeof PegawaiDokumenIdRevisiRoute
   '/ppk/dokumen/$id/resubmit': typeof PpkDokumenIdResubmitRoute
+  '/api/admin/google-drive': typeof ApiAdminGoogleDriveIndexRoute
   '/api/kasubag/berkas': typeof ApiKasubagBerkasIndexRoute
   '/api/kasubag/klasifikasi': typeof ApiKasubagKlasifikasiIndexRoute
   '/api/kasubag/manual-arsip': typeof ApiKasubagManualArsipIndexRoute
   '/kasubag/dokumen/$id': typeof KasubagDokumenIdIndexRoute
   '/pegawai/dokumen/$id': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id': typeof PpkDokumenIdIndexRoute
+  '/api/admin/google-drive/$id/putuskan': typeof ApiAdminGoogleDriveIdPutuskanRoute
   '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
   '/api/dokumen/$id/preview/$lampiranIndex': typeof ApiDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/berkas/$id/close': typeof ApiKasubagBerkasIdCloseRoute
@@ -1504,6 +1557,7 @@ export interface FileRoutesById {
   '/api/dokumen/preview-url': typeof ApiDokumenPreviewUrlRoute
   '/api/dokumen/submit': typeof ApiDokumenSubmitRoute
   '/api/files/access': typeof ApiFilesAccessRoute
+  '/api/google-drive/status': typeof ApiGoogleDriveStatusRoute
   '/api/kasubag/inbox': typeof ApiKasubagInboxRoute
   '/api/ketua-tim/$id': typeof ApiKetuaTimIdRoute
   '/api/laporan/kegiatan': typeof ApiLaporanKegiatanRouteWithChildren
@@ -1547,6 +1601,9 @@ export interface FileRoutesById {
   '/kasubag/berkas/': typeof KasubagBerkasIndexRoute
   '/kasubag/pembersihan/': typeof KasubagPembersihanIndexRoute
   '/pegawai/dokumen/': typeof PegawaiDokumenIndexRoute
+  '/api/admin/google-drive/coba-lagi-penghapusan': typeof ApiAdminGoogleDriveCobaLagiPenghapusanRoute
+  '/api/admin/google-drive/hubungkan': typeof ApiAdminGoogleDriveHubungkanRoute
+  '/api/admin/google-drive/mulai-hubung': typeof ApiAdminGoogleDriveMulaiHubungRoute
   '/api/dokumen/$id/log': typeof ApiDokumenIdLogRoute
   '/api/dokumen/$id/submit': typeof ApiDokumenIdSubmitRoute
   '/api/kasubag/berkas/$id': typeof ApiKasubagBerkasIdRouteWithChildren
@@ -1573,12 +1630,14 @@ export interface FileRoutesById {
   '/pegawai/dokumen/$id/edit': typeof PegawaiDokumenIdEditRoute
   '/pegawai/dokumen/$id/revisi': typeof PegawaiDokumenIdRevisiRoute
   '/ppk/dokumen/$id/resubmit': typeof PpkDokumenIdResubmitRoute
+  '/api/admin/google-drive/': typeof ApiAdminGoogleDriveIndexRoute
   '/api/kasubag/berkas/': typeof ApiKasubagBerkasIndexRoute
   '/api/kasubag/klasifikasi/': typeof ApiKasubagKlasifikasiIndexRoute
   '/api/kasubag/manual-arsip/': typeof ApiKasubagManualArsipIndexRoute
   '/kasubag/dokumen/$id/': typeof KasubagDokumenIdIndexRoute
   '/pegawai/dokumen/$id/': typeof PegawaiDokumenIdIndexRoute
   '/ppk/dokumen/$id/': typeof PpkDokumenIdIndexRoute
+  '/api/admin/google-drive/$id/putuskan': typeof ApiAdminGoogleDriveIdPutuskanRoute
   '/api/dokumen/$id/download/$lampiranIndex': typeof ApiDokumenIdDownloadLampiranIndexRoute
   '/api/dokumen/$id/preview/$lampiranIndex': typeof ApiDokumenIdPreviewLampiranIndexRoute
   '/api/kasubag/berkas/$id/close': typeof ApiKasubagBerkasIdCloseRoute
@@ -1681,6 +1740,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/submit'
     | '/api/files/access'
+    | '/api/google-drive/status'
     | '/api/kasubag/inbox'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
@@ -1724,6 +1784,9 @@ export interface FileRouteTypes {
     | '/kasubag/berkas/'
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
+    | '/api/admin/google-drive/coba-lagi-penghapusan'
+    | '/api/admin/google-drive/hubungkan'
+    | '/api/admin/google-drive/mulai-hubung'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/submit'
     | '/api/kasubag/berkas/$id'
@@ -1750,12 +1813,14 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id/edit'
     | '/pegawai/dokumen/$id/revisi'
     | '/ppk/dokumen/$id/resubmit'
+    | '/api/admin/google-drive/'
     | '/api/kasubag/berkas/'
     | '/api/kasubag/klasifikasi/'
     | '/api/kasubag/manual-arsip/'
     | '/kasubag/dokumen/$id/'
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
+    | '/api/admin/google-drive/$id/putuskan'
     | '/api/dokumen/$id/download/$lampiranIndex'
     | '/api/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/berkas/$id/close'
@@ -1850,6 +1915,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/submit'
     | '/api/files/access'
+    | '/api/google-drive/status'
     | '/api/kasubag/inbox'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
@@ -1891,6 +1957,9 @@ export interface FileRouteTypes {
     | '/kasubag/berkas'
     | '/kasubag/pembersihan'
     | '/pegawai/dokumen'
+    | '/api/admin/google-drive/coba-lagi-penghapusan'
+    | '/api/admin/google-drive/hubungkan'
+    | '/api/admin/google-drive/mulai-hubung'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/submit'
     | '/api/kasubag/berkas/$id'
@@ -1917,12 +1986,14 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id/edit'
     | '/pegawai/dokumen/$id/revisi'
     | '/ppk/dokumen/$id/resubmit'
+    | '/api/admin/google-drive'
     | '/api/kasubag/berkas'
     | '/api/kasubag/klasifikasi'
     | '/api/kasubag/manual-arsip'
     | '/kasubag/dokumen/$id'
     | '/pegawai/dokumen/$id'
     | '/ppk/dokumen/$id'
+    | '/api/admin/google-drive/$id/putuskan'
     | '/api/dokumen/$id/download/$lampiranIndex'
     | '/api/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/berkas/$id/close'
@@ -2023,6 +2094,7 @@ export interface FileRouteTypes {
     | '/api/dokumen/preview-url'
     | '/api/dokumen/submit'
     | '/api/files/access'
+    | '/api/google-drive/status'
     | '/api/kasubag/inbox'
     | '/api/ketua-tim/$id'
     | '/api/laporan/kegiatan'
@@ -2066,6 +2138,9 @@ export interface FileRouteTypes {
     | '/kasubag/berkas/'
     | '/kasubag/pembersihan/'
     | '/pegawai/dokumen/'
+    | '/api/admin/google-drive/coba-lagi-penghapusan'
+    | '/api/admin/google-drive/hubungkan'
+    | '/api/admin/google-drive/mulai-hubung'
     | '/api/dokumen/$id/log'
     | '/api/dokumen/$id/submit'
     | '/api/kasubag/berkas/$id'
@@ -2092,12 +2167,14 @@ export interface FileRouteTypes {
     | '/pegawai/dokumen/$id/edit'
     | '/pegawai/dokumen/$id/revisi'
     | '/ppk/dokumen/$id/resubmit'
+    | '/api/admin/google-drive/'
     | '/api/kasubag/berkas/'
     | '/api/kasubag/klasifikasi/'
     | '/api/kasubag/manual-arsip/'
     | '/kasubag/dokumen/$id/'
     | '/pegawai/dokumen/$id/'
     | '/ppk/dokumen/$id/'
+    | '/api/admin/google-drive/$id/putuskan'
     | '/api/dokumen/$id/download/$lampiranIndex'
     | '/api/dokumen/$id/preview/$lampiranIndex'
     | '/api/kasubag/berkas/$id/close'
@@ -2162,6 +2239,7 @@ export interface RootRouteChildren {
   ApiDokumenPreviewUrlRoute: typeof ApiDokumenPreviewUrlRoute
   ApiDokumenSubmitRoute: typeof ApiDokumenSubmitRoute
   ApiFilesAccessRoute: typeof ApiFilesAccessRoute
+  ApiGoogleDriveStatusRoute: typeof ApiGoogleDriveStatusRoute
   ApiKasubagInboxRoute: typeof ApiKasubagInboxRoute
   ApiKetuaTimIdRoute: typeof ApiKetuaTimIdRoute
   ApiLaporanKegiatanRoute: typeof ApiLaporanKegiatanRouteWithChildren
@@ -2185,6 +2263,9 @@ export interface RootRouteChildren {
   ApiDokumenIndexRoute: typeof ApiDokumenIndexRoute
   ApiKetuaTimIndexRoute: typeof ApiKetuaTimIndexRoute
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
+  ApiAdminGoogleDriveCobaLagiPenghapusanRoute: typeof ApiAdminGoogleDriveCobaLagiPenghapusanRoute
+  ApiAdminGoogleDriveHubungkanRoute: typeof ApiAdminGoogleDriveHubungkanRoute
+  ApiAdminGoogleDriveMulaiHubungRoute: typeof ApiAdminGoogleDriveMulaiHubungRoute
   ApiKasubagBerkasIdRoute: typeof ApiKasubagBerkasIdRouteWithChildren
   ApiKasubagBerkasOpenRoute: typeof ApiKasubagBerkasOpenRoute
   ApiKasubagDokumenIdRoute: typeof ApiKasubagDokumenIdRouteWithChildren
@@ -2197,9 +2278,11 @@ export interface RootRouteChildren {
   ApiPpkKembalikanIdRoute: typeof ApiPpkKembalikanIdRoute
   ApiPpkResubmitIdRoute: typeof ApiPpkResubmitIdRoute
   ApiPpspmDokumenIdRoute: typeof ApiPpspmDokumenIdRouteWithChildren
+  ApiAdminGoogleDriveIndexRoute: typeof ApiAdminGoogleDriveIndexRoute
   ApiKasubagBerkasIndexRoute: typeof ApiKasubagBerkasIndexRoute
   ApiKasubagKlasifikasiIndexRoute: typeof ApiKasubagKlasifikasiIndexRoute
   ApiKasubagManualArsipIndexRoute: typeof ApiKasubagManualArsipIndexRoute
+  ApiAdminGoogleDriveIdPutuskanRoute: typeof ApiAdminGoogleDriveIdPutuskanRoute
   LampiranTautanIdDokumenIdRefSigRoute: typeof LampiranTautanIdDokumenIdRefSigRoute
 }
 
@@ -2863,6 +2946,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiKasubagInboxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/google-drive/status': {
+      id: '/api/google-drive/status'
+      path: '/api/google-drive/status'
+      fullPath: '/api/google-drive/status'
+      preLoaderRoute: typeof ApiGoogleDriveStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/files/access': {
       id: '/api/files/access'
       path: '/api/files/access'
@@ -3036,6 +3126,13 @@ declare module '@tanstack/react-router' {
       path: '/api/kasubag/berkas'
       fullPath: '/api/kasubag/berkas/'
       preLoaderRoute: typeof ApiKasubagBerkasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/google-drive/': {
+      id: '/api/admin/google-drive/'
+      path: '/api/admin/google-drive'
+      fullPath: '/api/admin/google-drive/'
+      preLoaderRoute: typeof ApiAdminGoogleDriveIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ppk/dokumen/$id/resubmit': {
@@ -3220,6 +3317,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDokumenIdLogRouteImport
       parentRoute: typeof ApiDokumenIdRoute
     }
+    '/api/admin/google-drive/mulai-hubung': {
+      id: '/api/admin/google-drive/mulai-hubung'
+      path: '/api/admin/google-drive/mulai-hubung'
+      fullPath: '/api/admin/google-drive/mulai-hubung'
+      preLoaderRoute: typeof ApiAdminGoogleDriveMulaiHubungRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/google-drive/hubungkan': {
+      id: '/api/admin/google-drive/hubungkan'
+      path: '/api/admin/google-drive/hubungkan'
+      fullPath: '/api/admin/google-drive/hubungkan'
+      preLoaderRoute: typeof ApiAdminGoogleDriveHubungkanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/google-drive/coba-lagi-penghapusan': {
+      id: '/api/admin/google-drive/coba-lagi-penghapusan'
+      path: '/api/admin/google-drive/coba-lagi-penghapusan'
+      fullPath: '/api/admin/google-drive/coba-lagi-penghapusan'
+      preLoaderRoute: typeof ApiAdminGoogleDriveCobaLagiPenghapusanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lampiran/$tautanId/$dokumenId/$ref/$sig': {
       id: '/lampiran/$tautanId/$dokumenId/$ref/$sig'
       path: '/lampiran/$tautanId/$dokumenId/$ref/$sig'
@@ -3317,6 +3435,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/dokumen/$id/download/$lampiranIndex'
       preLoaderRoute: typeof ApiDokumenIdDownloadLampiranIndexRouteImport
       parentRoute: typeof ApiDokumenIdRoute
+    }
+    '/api/admin/google-drive/$id/putuskan': {
+      id: '/api/admin/google-drive/$id/putuskan'
+      path: '/api/admin/google-drive/$id/putuskan'
+      fullPath: '/api/admin/google-drive/$id/putuskan'
+      preLoaderRoute: typeof ApiAdminGoogleDriveIdPutuskanRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/ppspm/dokumen/$id/preview/$lampiranIndex': {
       id: '/api/ppspm/dokumen/$id/preview/$lampiranIndex'
@@ -3973,6 +4098,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenPreviewUrlRoute: ApiDokumenPreviewUrlRoute,
   ApiDokumenSubmitRoute: ApiDokumenSubmitRoute,
   ApiFilesAccessRoute: ApiFilesAccessRoute,
+  ApiGoogleDriveStatusRoute: ApiGoogleDriveStatusRoute,
   ApiKasubagInboxRoute: ApiKasubagInboxRoute,
   ApiKetuaTimIdRoute: ApiKetuaTimIdRoute,
   ApiLaporanKegiatanRoute: ApiLaporanKegiatanRouteWithChildren,
@@ -3996,6 +4122,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDokumenIndexRoute: ApiDokumenIndexRoute,
   ApiKetuaTimIndexRoute: ApiKetuaTimIndexRoute,
   ApiUsersIndexRoute: ApiUsersIndexRoute,
+  ApiAdminGoogleDriveCobaLagiPenghapusanRoute:
+    ApiAdminGoogleDriveCobaLagiPenghapusanRoute,
+  ApiAdminGoogleDriveHubungkanRoute: ApiAdminGoogleDriveHubungkanRoute,
+  ApiAdminGoogleDriveMulaiHubungRoute: ApiAdminGoogleDriveMulaiHubungRoute,
   ApiKasubagBerkasIdRoute: ApiKasubagBerkasIdRouteWithChildren,
   ApiKasubagBerkasOpenRoute: ApiKasubagBerkasOpenRoute,
   ApiKasubagDokumenIdRoute: ApiKasubagDokumenIdRouteWithChildren,
@@ -4008,9 +4138,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPpkKembalikanIdRoute: ApiPpkKembalikanIdRoute,
   ApiPpkResubmitIdRoute: ApiPpkResubmitIdRoute,
   ApiPpspmDokumenIdRoute: ApiPpspmDokumenIdRouteWithChildren,
+  ApiAdminGoogleDriveIndexRoute: ApiAdminGoogleDriveIndexRoute,
   ApiKasubagBerkasIndexRoute: ApiKasubagBerkasIndexRoute,
   ApiKasubagKlasifikasiIndexRoute: ApiKasubagKlasifikasiIndexRoute,
   ApiKasubagManualArsipIndexRoute: ApiKasubagManualArsipIndexRoute,
+  ApiAdminGoogleDriveIdPutuskanRoute: ApiAdminGoogleDriveIdPutuskanRoute,
   LampiranTautanIdDokumenIdRefSigRoute: LampiranTautanIdDokumenIdRefSigRoute,
 }
 export const routeTree = rootRouteImport

@@ -322,6 +322,88 @@ describe('findActiveSinkronJob', () => {
   })
 })
 
+describe('resetFailedDeletionJobs', () => {
+  type Jenis = 'SINKRON_TAUTAN' | 'HAPUS_TAUTAN' | 'HAPUS_FILE'
+  async function gagal(tx: Tx, f: { akunId: string; tautanId: string }, jenis: Jenis, kategori: 'PERMANEN' | 'SEMENTARA' | 'AKUN_DIPUTUS', selesai = NOW) {
+    const [row] = await tx.insert(app.driveJob).values({
+      jenis, akunId: f.akunId, tautanId: f.tautanId, prioritas: jobs.DRIVE_JOB_PRIORITAS[jenis], status: 'GAGAL',
+      percobaan: 9, galatKategori: kategori, galatPesan: 'gagal', selesaiPada: selesai, dibuatPada: at(-60 * MENIT),
+    }).returning({ id: app.driveJob.id })
+    return row.id
+  }
+  async function cabut(tx: Tx, tautanId: string) {
+    await tx.update(app.laporanTautan).set({ revokedAt: NOW, revokedBy: userId, driveStatus: 'MENGHAPUS' })
+      .where(eq(app.laporanTautan.id, tautanId))
+  }
+  async function fileMenghapus(tx: Tx, tautanId: string) {
+    await tx.insert(app.laporanTautanDriveFile).values({
+      tautanId, sumber: 'DOKUMEN', dokumenId: randomUUID(), lampiranIndex: 0, kunciLampiran: `DOKUMEN:${randomUUID()}:0`,
+      namaFile: 'a.pdf', labelDokumen: 'Dok', urutan: 0, contentType: 'application/pdf', status: 'MENGHAPUS',
+      keteranganHapus: 'DIMUSNAHKAN', driveFileId: 'f1',
+    })
+  }
+
+  it('HAPUS_* GAGAL (bukan AKUN_DIPUTUS) -> MENUNGGU, percobaan 0, jadwal now, galat dikosongkan', async () => {
+    await inRollback(async (tx) => {
+      const a = await fixture(tx)
+      await cabut(tx, a.tautanId)
+      const b = await fixture(tx)
+      await fileMenghapus(tx, b.tautanId)
+      const hapusTautan = await gagal(tx, a, 'HAPUS_TAUTAN', 'PERMANEN')
+      const hapusFile = await gagal(tx, b, 'HAPUS_FILE', 'SEMENTARA')
+      const sinkron = await gagal(tx, b, 'SINKRON_TAUTAN', 'PERMANEN')
+      const diputus = await gagal(tx, await fixture(tx), 'HAPUS_TAUTAN', 'AKUN_DIPUTUS')
+
+      const later = at(5 * MENIT)
+      expect(await jobs.resetFailedDeletionJobs({ now: later, executor: tx })).toBe(2)
+      for (const id of [hapusTautan, hapusFile]) {
+        expect(await loadJob(tx, id)).toMatchObject({
+          status: 'MENUNGGU', percobaan: 0, jadwalBerikut: later, galatKategori: null, galatPesan: null,
+          selesaiPada: null, dikunciPada: null,
+        })
+      }
+      expect((await loadJob(tx, sinkron)).status).toBe('GAGAL')
+      expect(await loadJob(tx, diputus)).toMatchObject({ status: 'GAGAL', galatKategori: 'AKUN_DIPUTUS' })
+      expect(await jobs.resetFailedDeletionJobs({ now: later, executor: tx })).toBe(0)
+    })
+  })
+
+  it('akun DIPUTUS, job kembar, dan job yang sudah tidak relevan tidak direset; tidak melanggar unique MENUNGGU', async () => {
+    await inRollback(async (tx) => {
+      // Akun sudah diputus setelah job gagal PERMANEN: tidak bisa diproses lagi.
+      const putus = await fixture(tx, { status: 'DIPUTUS' })
+      await cabut(tx, putus.tautanId)
+      const jobAkunPutus = await gagal(tx, putus, 'HAPUS_TAUTAN', 'PERMANEN')
+
+      // Dua GAGAL kembar untuk (tautan, jenis) yang sama: hanya yang terbaru direset.
+      const kembar = await fixture(tx)
+      await cabut(tx, kembar.tautanId)
+      const lama = await gagal(tx, kembar, 'HAPUS_TAUTAN', 'SEMENTARA', at(-10 * MENIT))
+      const baru = await gagal(tx, kembar, 'HAPUS_TAUTAN', 'SEMENTARA', at(-MENIT))
+
+      // Sudah ada job MENUNGGU untuk pasangan itu.
+      const menunggu = await fixture(tx)
+      await cabut(tx, menunggu.tautanId)
+      const jobGagal = await gagal(tx, menunggu, 'HAPUS_TAUTAN', 'PERMANEN')
+      await jobs.enqueueDriveJob(tx, { jenis: 'HAPUS_TAUTAN', ...menunggu, now: NOW })
+
+      // Folder sudah DIHAPUS / tidak ada file MENGHAPUS lagi.
+      const selesai = await fixture(tx)
+      await tx.update(app.laporanTautan).set({ revokedAt: NOW, revokedBy: userId, driveStatus: 'DIHAPUS' })
+        .where(eq(app.laporanTautan.id, selesai.tautanId))
+      const jobSelesai = await gagal(tx, selesai, 'HAPUS_TAUTAN', 'PERMANEN')
+      const tanpaFile = await fixture(tx)
+      const jobTanpaFile = await gagal(tx, tanpaFile, 'HAPUS_FILE', 'PERMANEN')
+
+      expect(await jobs.resetFailedDeletionJobs({ now: NOW, executor: tx })).toBe(1)
+      expect((await loadJob(tx, baru)).status).toBe('MENUNGGU')
+      for (const id of [jobAkunPutus, lama, jobGagal, jobSelesai, jobTanpaFile]) {
+        expect((await loadJob(tx, id)).status).toBe('GAGAL')
+      }
+    })
+  })
+})
+
 describe('klaim bersamaan dari dua koneksi', () => {
   it('hanya satu koneksi mendapat job (FOR UPDATE SKIP LOCKED)', async () => {
     const setup = drizzle(client.pool)

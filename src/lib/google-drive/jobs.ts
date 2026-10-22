@@ -339,3 +339,47 @@ export async function findActiveSinkronJob(
     .limit(1)
   return row ?? null
 }
+
+/**
+ * "Coba lagi penghapusan" ADMIN: job HAPUS_* GAGAL -> MENUNGGU dengan
+ * percobaan 0, jadwal `now`, galat dikosongkan. Dilewati: kategori
+ * AKUN_DIPUTUS dan akun yang sudah DIPUTUS (tidak bisa diproses lagi),
+ * pasangan (tautan, jenis) yang sudah punya job MENUNGGU/PROSES (partial
+ * unique `drive_job_satu_menunggu`), dan job yang sudah tidak relevan (folder
+ * sudah DIHAPUS / tidak ada file MENGHAPUS). Untuk GAGAL kembar hanya yang
+ * terbaru direset -- aturan yang sama dengan daftar "perlu dihapus manual"
+ * di akun-repository.ts. Mengembalikan jumlah job yang direset.
+ */
+export async function resetFailedDeletionJobs(
+  { now, executor }: { now: Date; executor?: DriveJobExecutor },
+): Promise<number> {
+  const run = executor ?? await getDatabase()
+  const result = await run.execute<{ id: string }>(sql`
+    UPDATE app.drive_job j
+       SET status = 'MENUNGGU', percobaan = 0, jadwal_berikut = ${now}::timestamptz,
+           galat_kategori = NULL, galat_pesan = NULL, selesai_pada = NULL, dikunci_pada = NULL
+     WHERE j.status = 'GAGAL'
+       AND j.id IN (
+         SELECT DISTINCT ON (g.tautan_id, g.jenis) g.id
+           FROM app.drive_job g
+           JOIN app.google_drive_akun a ON a.id = g.akun_id
+           JOIN app.laporan_tautan t ON t.id = g.tautan_id
+          WHERE g.jenis IN ('HAPUS_TAUTAN', 'HAPUS_FILE')
+            AND g.status = 'GAGAL'
+            AND g.galat_kategori IS DISTINCT FROM 'AKUN_DIPUTUS'
+            AND a.status <> 'DIPUTUS'
+            AND NOT EXISTS (
+              SELECT 1 FROM app.drive_job s
+               WHERE s.tautan_id = g.tautan_id AND s.jenis = g.jenis AND s.status IN ('MENUNGGU', 'PROSES')
+            )
+            AND ((g.jenis = 'HAPUS_TAUTAN' AND t.drive_status IS DISTINCT FROM 'DIHAPUS')
+              OR (g.jenis = 'HAPUS_FILE' AND EXISTS (
+                SELECT 1 FROM app.laporan_tautan_drive_file f
+                 WHERE f.tautan_id = g.tautan_id AND f.status = 'MENGHAPUS'
+              )))
+          ORDER BY g.tautan_id, g.jenis, g.selesai_pada DESC NULLS LAST, g.dibuat_pada DESC
+       )
+    RETURNING j.id
+  `)
+  return result.rows.length
+}

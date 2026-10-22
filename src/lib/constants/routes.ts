@@ -65,6 +65,21 @@ export const ROUTES = {
   },
 } as const
 
+// Endpoint Google Drive (SPEC 7.3). Path rute file-based tetap ditulis literal
+// di createFileRoute; konstanta ini dipakai klien dan tes.
+export const GOOGLE_DRIVE_API = {
+  STATUS: '/api/google-drive/status',
+  ADMIN: '/api/admin/google-drive',
+  MULAI_HUBUNG: '/api/admin/google-drive/mulai-hubung',
+  HUBUNGKAN: '/api/admin/google-drive/hubungkan',
+  putuskan: (id: string) => `/api/admin/google-drive/${encodeURIComponent(id)}/putuskan`,
+  COBA_LAGI_PENGHAPUSAN: '/api/admin/google-drive/coba-lagi-penghapusan',
+} as const
+
+export const TAUTAN_API = {
+  cobaLagi: (id: string) => `/api/laporan/tautan/${encodeURIComponent(id)}/coba-lagi`,
+} as const
+
 export const PUBLIC_PATHS = [ROUTES.LOGIN, ROUTES.API_PREFIX] as const
 
 export const ROLE_DEFAULT_ROUTE: Record<RoleName, string> = {
