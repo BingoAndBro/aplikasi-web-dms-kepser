@@ -166,6 +166,7 @@ import { Route as ApiPpspmDokumenIdApproveRouteImport } from './routes/api/ppspm
 import { Route as ApiPpkDokumenIdRejectRouteImport } from './routes/api/ppk/dokumen/$id/reject'
 import { Route as ApiPpkDokumenIdApproveRouteImport } from './routes/api/ppk/dokumen/$id/approve'
 import { Route as ApiLaporanTautanIdRevokeRouteImport } from './routes/api/laporan/tautan.$id.revoke'
+import { Route as ApiLaporanTautanIdCobaLagiRouteImport } from './routes/api/laporan/tautan.$id.coba-lagi'
 import { Route as ApiKasubagDokumenIdArchiveRouteImport } from './routes/api/kasubag/dokumen.$id.archive'
 import { Route as ApiKasubagBerkasIdLifecycleRouteImport } from './routes/api/kasubag/berkas/$id/lifecycle'
 import { Route as ApiKasubagBerkasIdItemsRouteImport } from './routes/api/kasubag/berkas/$id/items'
@@ -996,6 +997,12 @@ const ApiLaporanTautanIdRevokeRoute =
     path: '/$id/revoke',
     getParentRoute: () => ApiLaporanTautanRoute,
   } as any)
+const ApiLaporanTautanIdCobaLagiRoute =
+  ApiLaporanTautanIdCobaLagiRouteImport.update({
+    id: '/$id/coba-lagi',
+    path: '/$id/coba-lagi',
+    getParentRoute: () => ApiLaporanTautanRoute,
+  } as any)
 const ApiKasubagDokumenIdArchiveRoute =
   ApiKasubagDokumenIdArchiveRouteImport.update({
     id: '/archive',
@@ -1290,6 +1297,7 @@ export interface FileRoutesByFullPath {
   '/api/kasubag/berkas/$id/items': typeof ApiKasubagBerkasIdItemsRouteWithChildren
   '/api/kasubag/berkas/$id/lifecycle': typeof ApiKasubagBerkasIdLifecycleRoute
   '/api/kasubag/dokumen/$id/archive': typeof ApiKasubagDokumenIdArchiveRoute
+  '/api/laporan/tautan/$id/coba-lagi': typeof ApiLaporanTautanIdCobaLagiRoute
   '/api/laporan/tautan/$id/revoke': typeof ApiLaporanTautanIdRevokeRoute
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
@@ -1463,6 +1471,7 @@ export interface FileRoutesByTo {
   '/api/kasubag/berkas/$id/items': typeof ApiKasubagBerkasIdItemsRouteWithChildren
   '/api/kasubag/berkas/$id/lifecycle': typeof ApiKasubagBerkasIdLifecycleRoute
   '/api/kasubag/dokumen/$id/archive': typeof ApiKasubagDokumenIdArchiveRoute
+  '/api/laporan/tautan/$id/coba-lagi': typeof ApiLaporanTautanIdCobaLagiRoute
   '/api/laporan/tautan/$id/revoke': typeof ApiLaporanTautanIdRevokeRoute
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
@@ -1645,6 +1654,7 @@ export interface FileRoutesById {
   '/api/kasubag/berkas/$id/items': typeof ApiKasubagBerkasIdItemsRouteWithChildren
   '/api/kasubag/berkas/$id/lifecycle': typeof ApiKasubagBerkasIdLifecycleRoute
   '/api/kasubag/dokumen/$id/archive': typeof ApiKasubagDokumenIdArchiveRoute
+  '/api/laporan/tautan/$id/coba-lagi': typeof ApiLaporanTautanIdCobaLagiRoute
   '/api/laporan/tautan/$id/revoke': typeof ApiLaporanTautanIdRevokeRoute
   '/api/ppk/dokumen/$id/approve': typeof ApiPpkDokumenIdApproveRoute
   '/api/ppk/dokumen/$id/reject': typeof ApiPpkDokumenIdRejectRoute
@@ -1828,6 +1838,7 @@ export interface FileRouteTypes {
     | '/api/kasubag/berkas/$id/items'
     | '/api/kasubag/berkas/$id/lifecycle'
     | '/api/kasubag/dokumen/$id/archive'
+    | '/api/laporan/tautan/$id/coba-lagi'
     | '/api/laporan/tautan/$id/revoke'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
@@ -2001,6 +2012,7 @@ export interface FileRouteTypes {
     | '/api/kasubag/berkas/$id/items'
     | '/api/kasubag/berkas/$id/lifecycle'
     | '/api/kasubag/dokumen/$id/archive'
+    | '/api/laporan/tautan/$id/coba-lagi'
     | '/api/laporan/tautan/$id/revoke'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
@@ -2182,6 +2194,7 @@ export interface FileRouteTypes {
     | '/api/kasubag/berkas/$id/items'
     | '/api/kasubag/berkas/$id/lifecycle'
     | '/api/kasubag/dokumen/$id/archive'
+    | '/api/laporan/tautan/$id/coba-lagi'
     | '/api/laporan/tautan/$id/revoke'
     | '/api/ppk/dokumen/$id/approve'
     | '/api/ppk/dokumen/$id/reject'
@@ -3387,6 +3400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLaporanTautanIdRevokeRouteImport
       parentRoute: typeof ApiLaporanTautanRoute
     }
+    '/api/laporan/tautan/$id/coba-lagi': {
+      id: '/api/laporan/tautan/$id/coba-lagi'
+      path: '/$id/coba-lagi'
+      fullPath: '/api/laporan/tautan/$id/coba-lagi'
+      preLoaderRoute: typeof ApiLaporanTautanIdCobaLagiRouteImport
+      parentRoute: typeof ApiLaporanTautanRoute
+    }
     '/api/kasubag/dokumen/$id/archive': {
       id: '/api/kasubag/dokumen/$id/archive'
       path: '/archive'
@@ -3875,10 +3895,12 @@ const ApiLaporanSayaRouteWithChildren = ApiLaporanSayaRoute._addFileChildren(
 )
 
 interface ApiLaporanTautanRouteChildren {
+  ApiLaporanTautanIdCobaLagiRoute: typeof ApiLaporanTautanIdCobaLagiRoute
   ApiLaporanTautanIdRevokeRoute: typeof ApiLaporanTautanIdRevokeRoute
 }
 
 const ApiLaporanTautanRouteChildren: ApiLaporanTautanRouteChildren = {
+  ApiLaporanTautanIdCobaLagiRoute: ApiLaporanTautanIdCobaLagiRoute,
   ApiLaporanTautanIdRevokeRoute: ApiLaporanTautanIdRevokeRoute,
 }
 

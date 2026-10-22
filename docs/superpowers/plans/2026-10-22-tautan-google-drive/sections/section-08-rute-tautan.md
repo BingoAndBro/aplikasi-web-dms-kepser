@@ -85,3 +85,39 @@ DATABASE_URL=postgresql://kepser:kepser_dev_password@localhost:5432/dms_kepser_t
 - [ ] Tidak ada jalur DMS yang membuka tautan DRIVE.
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tes tautan lama lulus.
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- File sesuai rencana: `schemas/tautan.ts`, `laporan/{tautan,tautan-repository,tautan-shared}.ts`,
+  `google-drive/tautan-drive-repository.ts` (`cobaLagiTautanDrive`), rute `api/laporan/tautan.ts`, rute baru
+  `api/laporan/tautan.$id.coba-lagi.ts`, pemicu di `api/admin/google-drive/{index,hubungkan,coba-lagi-penghapusan}.ts`,
+  `BagikanTautan.tsx` (tipe minimal: `TautanUrlField` tidak dirender bila `path` null), `routeTree.gen.ts` dibuat ulang
+  oleh `pnpm build` (diff murni +22 baris, satu rute).
+- Signature aktual:
+  - `insertTautanDrive({ values, files, dilewati, akunId, now }, executor = db)` → `LaporanTautan` (plan:
+    `{ tautan, files, akunId, now }`; `dilewati` ikut karena kolom `drive_dokumen_dilewati` diisi di insert yang sama).
+  - `loadDriveRingkasanByTautanIds(ids, executor = db)` → `Map<id, { selesai, total, galat, akunPerluHubungUlang }>`.
+  - `toTautanListItem(tautan, ringkasanDrive?)`.
+  - `cobaLagiTautanDrive({ tautanId, userId, now }, executor?)` → `'DIJADWALKAN' | 'BUKAN_GAGAL' | 'TIDAK_DITEMUKAN'`.
+  - Kegagalan `createTautanForSession` membawa `kode?` (alasan ketersediaan); rute meneruskannya: 409
+    `{ error, kode: 'BELUM_DIKONFIGURASI' | 'BELUM_ADA_AKUN' | 'PERLU_HUBUNG_ULANG' }`.
+- **Penyimpangan (dicatat juga di `code-reviews/section-08-review.md`):**
+  1. `drive_progres.selesai` = baris file yang **sudah tidak `MENUNGGU`** (plan: `TERUNGGAH` + `DILEWATI`). Baris yang
+     ditandai `MENGHAPUS`/`DIHAPUS` oleh pemicu hapus (section 09) di tengah unggah juga sudah "selesai" diproses;
+     tanpa ini progres tidak pernah mencapai total.
+  2. `drive_galat` hanya diisi saat `drive_status = GAGAL`; `drive_tertunda_akun` = belum dicabut ∧ status ∈
+     {MENUNGGU, MENGUNGGAH} ∧ akun `perlu_hubung_ulang_sejak` terisi. Job yang dijeda `TOKEN_TIDAK_VALID` menyisakan
+     `drive_status = MENGUNGGAH` dan ditandai `drive_tertunda_akun: true` (diuji di integrasi dengan runner asli).
+  3. Urutan pemeriksaan buat tautan: 413 → ketersediaan Drive (409, hanya DRIVE) → cakupan (403) → 0 dokumen (400).
+  4. `cobaLagiTautanDrive`: bila sudah ada job sinkron `MENUNGGU`/`PROSES` → job GAGAL tidak diubah (partial unique);
+     bila tidak ada job GAGAL → job baru di-enqueue. Status 409 hanya bila tautan milik pembuat, DRIVE, belum dicabut,
+     tetapi bukan `GAGAL`.
+  5. Insert baris file dipotong per 1000 baris.
+- Tes yang disesuaikan (alasan: perubahan rencana, bukan pelemahan): `google-drive-migration-source.test.ts` (Zod kini
+  menerima DRIVE), tiruan `toTautanListItem` di `tautan-route.test.ts`, mock runner di `admin-routes.test.ts`.
+- Hasil tes: unit baru/diperluas — `tautan-service` (34 → 51), `tautan-route` (17 → 27), `tautan-drive-route` (19 baru),
+  `admin-routes` (44 → 51); integrasi baru `google-drive-tautan.test.ts` (9). Seluruh `pnpm test` 1628 lulus / 1 skip
+  (sebelum 1575 / 1 skip); integrasi 88 (sebelum 79), tanpa data uji tertinggal; `tests/unit/arsiparis` 334 + 1 skip
+  (tidak berubah); `tests/unit/laporan` 291 (sebelum 245); `pnpm typecheck` bersih; `pnpm build` sukses.

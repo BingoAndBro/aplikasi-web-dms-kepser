@@ -1,7 +1,11 @@
 // Dipakai server dan klien -- jangan impor modul server di sini.
-import type { LaporanTautanAkses, LaporanTautanSumber } from '#/db/schema/app/laporan-tautan'
+import type {
+  LaporanTautanAkses,
+  LaporanTautanDriveStatus,
+  LaporanTautanSumber,
+} from '#/db/schema/app/laporan-tautan'
 
-export type { LaporanTautanAkses, LaporanTautanSumber }
+export type { LaporanTautanAkses, LaporanTautanDriveStatus, LaporanTautanSumber }
 
 /**
  * Tautan Laporan: "ekspor sebagai link". Klien mengunggah tautan (bukan file)
@@ -174,11 +178,17 @@ export function buildTautanExportZipEndpoint(token: string): string {
 export type TautanCreateResponse = {
   id: string
   akses: LaporanTautanAkses
-  path: string
+  /** null untuk akses DRIVE: tautan Drive tidak bisa dibuka lewat DMS. */
+  path: string | null
+  /** MENUNGGU untuk tautan DRIVE baru; null untuk LOGIN/PUBLIK. */
+  drive_status: LaporanTautanDriveStatus | null
   public_base_url: string | null
   jumlah_dokumen: number
   jumlah_diabaikan: number
 }
+
+/** Lampiran yang sudah diproses (terunggah/dilewati/dihapus) dari seluruh lampiran tautan. */
+export type TautanDriveProgres = { selesai: number; total: number }
 
 export type TautanListItem = {
   id: string
@@ -186,12 +196,23 @@ export type TautanListItem = {
   akses: LaporanTautanAkses
   judul: string
   keterangan: string | null
-  path: string
+  /** null untuk akses DRIVE (SPEC 6.2). */
+  path: string | null
   jumlah_dokumen: number
   jumlah_akses: number
   created_at: string
   last_accessed_at: string | null
   revoked_at: string | null
+  // Field Drive (SPEC 10.2): null/false untuk LOGIN/PUBLIK. Tidak pernah memuat
+  // ID folder/file Drive; drive_url adalah link folder yang memang dibagikan.
+  drive_status: LaporanTautanDriveStatus | null
+  drive_progres: TautanDriveProgres | null
+  /** Link folder, hanya bila SIAP dan belum dicabut. */
+  drive_url: string | null
+  /** Pesan pendek galat terakhir, hanya bila GAGAL. */
+  drive_galat: string | null
+  /** Unggahan dijeda karena akun Drive perlu dihubungkan ulang. */
+  drive_tertunda_akun: boolean
 }
 
 export type TautanListResponse = {

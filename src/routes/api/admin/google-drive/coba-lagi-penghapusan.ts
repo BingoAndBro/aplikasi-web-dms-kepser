@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { driveRouteError, requireDriveAdmin, requireDriveConfig } from '#/lib/google-drive/admin-route'
 import { resetFailedDeletionJobs } from '#/lib/google-drive/jobs'
+import { triggerDriveRunner } from '#/lib/google-drive/runner'
 
 // POST /api/admin/google-drive/coba-lagi-penghapusan -- ADMIN. Menjadwalkan
 // ulang job hapus Drive yang GAGAL (kecuali AKUN_DIPUTUS). Body diabaikan.
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/api/admin/google-drive/coba-lagi-penghapu
         try {
           const jumlah = await resetFailedDeletionJobs({ now: new Date() })
           console.info('[admin/google-drive] coba lagi penghapusan', { actor: session.user.id, jumlah })
+          triggerDriveRunner()
           return Response.json({ jumlah })
         } catch (error) {
           return driveRouteError(error, 'coba-lagi-penghapusan')

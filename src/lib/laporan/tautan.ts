@@ -16,6 +16,9 @@ import {
   buildManualArsipZipEntries,
 } from '#/lib/export/laporan-zip-entries'
 import { buildFormalFilename } from '#/lib/file-helpers'
+import { getDriveAvailability } from '#/lib/google-drive/availability'
+import { rencanakanFileDrive } from '#/lib/google-drive/rencana-file'
+import { DRIVE_ALASAN_TIDAK_TERSEDIA } from '#/lib/google-drive/shared'
 import { loadDestroyedArchiveIds } from '#/lib/laporan/manual-realisasi'
 import { ROUTES } from '#/lib/constants/routes'
 import {
@@ -25,6 +28,7 @@ import {
 } from '#/lib/laporan/tautan-lampiran-link'
 import * as repository from '#/lib/laporan/tautan-repository'
 import {
+  TAUTAN_AKSES,
   TAUTAN_LOGIN_REQUIRED_CODE,
   TAUTAN_MAX_DOKUMEN,
   TAUTAN_SUMBER_LABEL,
@@ -59,6 +63,10 @@ import { createLogicalPathFileResponse } from '#/lib/storage/internal-file-acces
  *   Yang diperiksa ulang hanya tautan masih aktif, dokumen termasuk snapshot,
  *   dan file belum dimusnahkan/dibersihkan (pemeriksaan file yang sama dengan
  *   ekspor ZIP).
+ * - Akses DRIVE: lampiran snapshot disalin runner ke folder Google Drive dan
+ *   dibagikan lewat link folder itu. Tautan DRIVE TIDAK PERNAH bisa dibuka
+ *   lewat jalur DMS (/tautan, /api/tautan, /lampiran): semuanya menjawab 404
+ *   yang sama dengan tautan yang tidak ada.
  * - Tautan berlaku sampai dicabut pembuatnya.
  */
 
@@ -68,7 +76,7 @@ const TAUTAN_TOKEN_BYTES = 24
 export const TAUTAN_NOT_FOUND_MESSAGE = 'Tautan tidak ditemukan. Periksa kembali alamat tautan.'
 export const TAUTAN_REVOKED_MESSAGE = 'Tautan ini sudah dicabut oleh pembuatnya.'
 
-type Failure = { ok: false; status: number; error: string }
+type Failure = { ok: false; status: number; error: string; kode?: string }
 
 export function generateTautanToken(): string {
   return randomBytes(TAUTAN_TOKEN_BYTES).toString('base64url')
@@ -124,6 +132,21 @@ export async function createTautanForSession(
     }
   }
 
+  // Ketersediaan Drive dihitung dengan logika yang sama dengan GET /api/google-drive/status (SPEC 8.1).
+  let driveAkunId: string | null = null
+  if (input.akses === TAUTAN_AKSES.DRIVE) {
+    const availability = await getDriveAvailability()
+    if (!availability.tersedia) {
+      return {
+        ok: false,
+        status: 409,
+        error: DRIVE_ALASAN_TIDAK_TERSEDIA[availability.alasan],
+        kode: availability.alasan,
+      }
+    }
+    driveAkunId = availability.akunId
+  }
+
   const scoped = await scopeSnapshotToCreator(session, input.sumber, requestedDokumenIds, requestedManualIds)
   if (!scoped.ok) return scoped
 
@@ -135,18 +158,42 @@ export async function createTautanForSession(
     return { ok: false, status: 400, error: 'Tidak ada dokumen yang bisa dibagikan dari filter ini.' }
   }
 
-  const tautan = await repository.insertTautan({
+  const values = {
     token: generateTautanToken(),
     sumber: input.sumber,
-    akses: input.akses,
     judul: input.judul,
     keterangan: input.keterangan,
     dokumenIds,
     manualArsipIds,
     createdBy: session.user.id,
-  })
+  }
+
+  const tautan = driveAkunId === null
+    ? await repository.insertTautan({ ...values, akses: input.akses })
+    : await insertDriveTautan(values, driveAkunId)
 
   return { ok: true, tautan, jumlahDiabaikan: requestedCount - keptCount }
+}
+
+/**
+ * Daftar file + nama file dari helper ekspor ZIP yang sama (SPEC 8.1 langkah 3);
+ * dokumen tanpa lampiran tersedia dicatat sebagai `dilewati` untuk DAFTAR_ISI.txt.
+ */
+async function insertDriveTautan(
+  values: Parameters<typeof repository.insertTautanDrive>[0]['values'],
+  akunId: string,
+): Promise<LaporanTautan> {
+  const [dokumenRows, manualRows] = await Promise.all([
+    repository.loadTautanDokumenRows(values.dokumenIds),
+    repository.loadTautanManualRows(values.manualArsipIds),
+  ])
+  const entries = [
+    ...await buildLaporanZipEntries(dokumenRows),
+    ...await buildManualArsipZipEntries(manualRows),
+  ]
+  const { files, dilewati } = rencanakanFileDrive(entries)
+
+  return repository.insertTautanDrive({ values, files, dilewati, akunId, now: new Date() })
 }
 
 /** Aturan cakupan per halaman asal, sama dengan ekspor ZIP halaman tersebut. */
@@ -184,19 +231,41 @@ async function scopeSnapshotToCreator(
   }
 }
 
-export function toTautanListItem(tautan: LaporanTautan): TautanListItem {
+const DRIVE_STATUS_BERPROSES: ReadonlySet<string> = new Set(['MENUNGGU', 'MENGUNGGAH'])
+
+/**
+ * Baris tautan -> item Riwayat Tautan. Field disalin satu per satu (bukan
+ * spread) supaya kolom internal -- token tautan DRIVE, ID folder/file Drive,
+ * akun -- tidak pernah ikut terkirim.
+ */
+export function toTautanListItem(
+  tautan: LaporanTautan,
+  ringkasanDrive?: repository.TautanDriveRingkasan,
+): TautanListItem {
+  const isDrive = tautan.akses === TAUTAN_AKSES.DRIVE
+  const driveStatus = isDrive ? tautan.driveStatus : null
+  const aktif = tautan.revokedAt === null
+
   return {
     id: tautan.id,
     sumber: tautan.sumber,
     akses: tautan.akses,
     judul: tautan.judul,
     keterangan: tautan.keterangan,
-    path: buildTautanPath(tautan.token),
+    path: isDrive ? null : buildTautanPath(tautan.token),
     jumlah_dokumen: tautan.dokumenIds.length + tautan.manualArsipIds.length,
     jumlah_akses: tautan.jumlahAkses,
     created_at: tautan.createdAt.toISOString(),
     last_accessed_at: tautan.lastAccessedAt ? tautan.lastAccessedAt.toISOString() : null,
     revoked_at: tautan.revokedAt ? tautan.revokedAt.toISOString() : null,
+    drive_status: driveStatus,
+    drive_progres: isDrive && ringkasanDrive ? { selesai: ringkasanDrive.selesai, total: ringkasanDrive.total } : null,
+    drive_url: driveStatus === 'SIAP' && aktif ? tautan.driveFolderUrl : null,
+    drive_galat: driveStatus === 'GAGAL' ? (ringkasanDrive?.galat ?? null) : null,
+    drive_tertunda_akun: aktif
+      && driveStatus !== null
+      && DRIVE_STATUS_BERPROSES.has(driveStatus)
+      && (ringkasanDrive?.akunPerluHubungUlang ?? false),
   }
 }
 
@@ -210,7 +279,9 @@ export async function resolveActiveTautan(
   }
 
   const tautan = await repository.findTautanByToken(token)
-  if (!tautan) {
+  // DRIVE dijawab persis seperti "tidak ada" -- sebelum cek dicabut, supaya
+  // tautan Drive aktif maupun dicabut tidak bisa dibedakan dari token acak.
+  if (!tautan || tautan.akses === TAUTAN_AKSES.DRIVE) {
     return { ok: false, status: 404, error: TAUTAN_NOT_FOUND_MESSAGE }
   }
 
@@ -482,6 +553,9 @@ export async function handleTautanLampiranRequest({
     })) {
       return notFound()
     }
+
+    // Tautan DRIVE tidak pernah dibuka lewat DMS: respons identik dengan "tidak ada".
+    if (tautan.akses === TAUTAN_AKSES.DRIVE) return notFound()
 
     if (tautan.revokedAt) {
       return renderTautanErrorPage(410, TAUTAN_REVOKED_MESSAGE)

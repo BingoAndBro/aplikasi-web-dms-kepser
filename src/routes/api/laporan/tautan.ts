@@ -1,19 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
+import { triggerDriveRunner } from '#/lib/google-drive/runner'
 import {
   createTautanForSession,
   getTautanPublicBaseUrl,
   toTautanListItem,
 } from '#/lib/laporan/tautan'
-import { listTautanByCreator } from '#/lib/laporan/tautan-repository'
-import type { TautanCreateResponse, TautanListResponse } from '#/lib/laporan/tautan-shared'
+import { listTautanByCreator, loadDriveRingkasanByTautanIds } from '#/lib/laporan/tautan-repository'
+import {
+  TAUTAN_AKSES,
+  type TautanCreateResponse,
+  type TautanListResponse,
+} from '#/lib/laporan/tautan-shared'
 import { createTautanRequestSchema, listTautanQuerySchema } from '#/lib/schemas/tautan'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
 // Tautan Laporan milik pengguna yang sedang login (lihat src/lib/laporan/tautan.ts).
 // POST membuat tautan baru dari daftar dokumen yang sedang ditampilkan halaman
-// laporan; GET mengembalikan riwayat tautan pengguna untuk dialog Riwayat Tautan.
+// laporan; GET mengembalikan riwayat tautan pengguna untuk dialog Riwayat Tautan,
+// termasuk status salinan Google Drive (SPEC 10.2). Keduanya memicu runner Drive
+// (POST hanya untuk tautan DRIVE) tanpa menunggu hasilnya.
 export const Route = createFileRoute('/api/laporan/tautan')({
   ssr: false,
   server: {
@@ -33,10 +40,15 @@ export const Route = createFileRoute('/api/laporan/tautan')({
 
         try {
           const rows = await listTautanByCreator(session.user.id, parsed.data.sumber)
+          const driveIds = rows.filter(row => row.akses === TAUTAN_AKSES.DRIVE).map(row => row.id)
+          const ringkasan = driveIds.length > 0 ? await loadDriveRingkasanByTautanIds(driveIds) : new Map()
           const body: TautanListResponse = {
-            tautan: rows.map(toTautanListItem),
+            tautan: rows.map(row => toTautanListItem(row, ringkasan.get(row.id))),
             public_base_url: getTautanPublicBaseUrl(),
           }
+          // Riwayat dipoll selama ada unggahan berjalan; pemicu ini juga menyusul
+          // job yang jadwalnya terlewat (mis. setelah server restart).
+          triggerDriveRunner()
           return Response.json(body, { headers: { 'Cache-Control': 'no-store' } })
         } catch {
           console.error('[laporan/tautan] list error')
@@ -63,7 +75,10 @@ export const Route = createFileRoute('/api/laporan/tautan')({
         try {
           const result = await createTautanForSession(session, parsed.data)
           if (!result.ok) {
-            return Response.json({ error: result.error }, { status: result.status })
+            return Response.json(
+              result.kode ? { error: result.error, kode: result.kode } : { error: result.error },
+              { status: result.status },
+            )
           }
 
           const item = toTautanListItem(result.tautan)
@@ -79,10 +94,12 @@ export const Route = createFileRoute('/api/laporan/tautan')({
             id: item.id,
             akses: item.akses,
             path: item.path,
+            drive_status: item.drive_status,
             public_base_url: getTautanPublicBaseUrl(),
             jumlah_dokumen: item.jumlah_dokumen,
             jumlah_diabaikan: result.jumlahDiabaikan,
           }
+          if (result.tautan.akses === TAUTAN_AKSES.DRIVE) triggerDriveRunner()
           return Response.json(body, { status: 201 })
         } catch {
           console.error('[laporan/tautan] create error')

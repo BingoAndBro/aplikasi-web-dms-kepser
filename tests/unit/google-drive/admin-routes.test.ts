@@ -20,7 +20,10 @@ const mocks = vi.hoisted(() => ({
   resetFailedDeletionJobs: vi.fn(),
   createGoogleDriveClient: vi.fn(),
   revokeToken: vi.fn(),
+  triggerDriveRunner: vi.fn(),
 }))
+
+vi.mock('#/lib/google-drive/runner', () => ({ triggerDriveRunner: mocks.triggerDriveRunner }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
@@ -306,5 +309,50 @@ describe('POST coba-lagi-penghapusan', () => {
     const res = await callPost(POSTS[3])
     expect(res.status).toBe(500)
     expect(console.error).toHaveBeenCalledWith('[admin/google-drive] coba-lagi-penghapusan gagal', { kategori: 'TAK_TERDUGA' })
+  })
+})
+
+describe('pemicu runner (section 08)', () => {
+  it('GET ringkasan ADMIN memicu runner; 401/403 tidak', async () => {
+    await handler(IndexRoute, 'GET')({ request: getReq() })
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+
+    mocks.triggerDriveRunner.mockClear()
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+    await handler(IndexRoute, 'GET')({ request: getReq() })
+    mocks.getLocalServerSession.mockResolvedValueOnce(sessionFor('PEGAWAI'))
+    await handler(IndexRoute, 'GET')({ request: getReq() })
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('hubungkan sukses memicu runner (job tertunda akun dijadwalkan ulang); gagal tidak', async () => {
+    await callPost(POSTS[1])
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+
+    mocks.triggerDriveRunner.mockClear()
+    mocks.hubungkanDariAlamat.mockRejectedValueOnce(new OAuthFlowError('STATE_KEDALUWARSA'))
+    expect((await callPost(POSTS[1])).status).toBe(409)
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('coba-lagi-penghapusan sukses memicu runner; galat tidak', async () => {
+    await callPost(POSTS[3])
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+
+    mocks.triggerDriveRunner.mockClear()
+    mocks.resetFailedDeletionJobs.mockRejectedValueOnce(new Error('db'))
+    await callPost(POSTS[3])
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it.each(POSTS)('$name: Origin beda / tanpa sesi / non-ADMIN tidak memicu runner', async (c) => {
+    await callPost(c, 'http://evil.example')
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+    await callPost(c)
+    for (const role of ['PEGAWAI', 'PPK', 'PPSPM', 'KEPALA_SUB_BAGIAN_UMUM', 'PENANGGUNG_JAWAB_KINERJA']) {
+      mocks.getLocalServerSession.mockResolvedValueOnce(sessionFor(role))
+      expect((await callPost(c)).status).toBe(403)
+    }
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
   })
 })

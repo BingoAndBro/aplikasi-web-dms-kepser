@@ -13,7 +13,12 @@ const mocks = vi.hoisted(() => ({
   recordTautanAccess: vi.fn(),
   revokeTautanByCreator: vi.fn(),
   listTautanByCreator: vi.fn(),
+  loadDriveRingkasanByTautanIds: vi.fn(),
+  toTautanListItemArgs: [] as unknown[][],
+  triggerDriveRunner: vi.fn(),
 }))
+
+vi.mock('#/lib/google-drive/runner', () => ({ triggerDriveRunner: mocks.triggerDriveRunner }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
@@ -24,12 +29,19 @@ vi.mock('#/lib/laporan/tautan', () => ({
   requireTautanViewer: mocks.requireTautanViewer,
   buildTautanDetail: mocks.buildTautanDetail,
   getTautanPublicBaseUrl: () => null,
-  toTautanListItem: (row: { id: string; token: string; akses: string; dokumenIds: string[]; manualArsipIds: string[] }) => ({
-    id: row.id,
-    akses: row.akses,
-    path: `/tautan/${row.token}`,
-    jumlah_dokumen: row.dokumenIds.length + row.manualArsipIds.length,
-  }),
+  toTautanListItem: (
+    row: { id: string; token: string; akses: string; dokumenIds: string[]; manualArsipIds: string[]; driveStatus?: string },
+    ...rest: unknown[]
+  ) => {
+    mocks.toTautanListItemArgs.push([row, ...rest])
+    return {
+      id: row.id,
+      akses: row.akses,
+      path: row.akses === 'DRIVE' ? null : `/tautan/${row.token}`,
+      jumlah_dokumen: row.dokumenIds.length + row.manualArsipIds.length,
+      drive_status: row.driveStatus,
+    }
+  },
   isUuid: (value: string) => /^[0-9a-f-]{36}$/i.test(value),
 }))
 
@@ -37,6 +49,7 @@ vi.mock('#/lib/laporan/tautan-repository', () => ({
   recordTautanAccess: mocks.recordTautanAccess,
   revokeTautanByCreator: mocks.revokeTautanByCreator,
   listTautanByCreator: mocks.listTautanByCreator,
+  loadDriveRingkasanByTautanIds: mocks.loadDriveRingkasanByTautanIds,
 }))
 
 import { Route as TautanRoute } from '#/routes/api/laporan/tautan'
@@ -74,6 +87,7 @@ const validBody = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.toTautanListItemArgs.length = 0
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
   vi.spyOn(console, 'info').mockImplementation(() => undefined)
   mocks.getLocalServerSession.mockResolvedValue(session)
@@ -156,6 +170,145 @@ describe('POST /api/laporan/tautan', () => {
     const response = await post({ request: postRequest('http://localhost/api/laporan/tautan', { ...validBody, sumber: 'LAPORAN_KINERJA' }) })
 
     expect(response.status).toBe(403)
+  })
+})
+
+describe('POST /api/laporan/tautan — akses DRIVE', () => {
+  const post = handler(TautanRoute, 'POST')
+
+  it('creates a DRIVE tautan: 201 without a DMS path, drive_status MENUNGGU, runner triggered', async () => {
+    mocks.createTautanForSession.mockResolvedValue({
+      ok: true,
+      tautan: { id: TAUTAN_ID, token: TOKEN, sumber: 'LAPORAN_SAYA', akses: 'DRIVE', driveStatus: 'MENUNGGU', dokumenIds: [DOC_A], manualArsipIds: [] },
+      jumlahDiabaikan: 0,
+    })
+
+    const response = await post({ request: postRequest('http://localhost/api/laporan/tautan', { ...validBody, akses: 'DRIVE' }) })
+
+    expect(response.status).toBe(201)
+    expect(mocks.createTautanForSession).toHaveBeenCalledWith(session, expect.objectContaining({ akses: 'DRIVE' }))
+    const body = await response.json()
+    expect(body).toEqual({
+      id: TAUTAN_ID,
+      akses: 'DRIVE',
+      path: null,
+      drive_status: 'MENUNGGU',
+      public_base_url: null,
+      jumlah_dokumen: 1,
+      jumlah_diabaikan: 0,
+    })
+    expect(JSON.stringify(body)).not.toContain(TOKEN)
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not trigger the runner for LOGIN / PUBLIK tautan', async () => {
+    mocks.createTautanForSession.mockResolvedValue({
+      ok: true,
+      tautan: { id: TAUTAN_ID, token: TOKEN, sumber: 'LAPORAN_SAYA', akses: 'LOGIN', dokumenIds: [DOC_A], manualArsipIds: [] },
+      jumlahDiabaikan: 0,
+    })
+
+    await post({ request: postRequest('http://localhost/api/laporan/tautan', validBody) })
+
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('maps Drive unavailability to 409 with the reason code, without triggering the runner', async () => {
+    mocks.createTautanForSession.mockResolvedValue({
+      ok: false, status: 409, error: 'Belum ada akun Google Drive terhubung — hubungi Admin', kode: 'BELUM_ADA_AKUN',
+    })
+
+    const response = await post({ request: postRequest('http://localhost/api/laporan/tautan', { ...validBody, akses: 'DRIVE' }) })
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Belum ada akun Google Drive terhubung — hubungi Admin',
+      kode: 'BELUM_ADA_AKUN',
+    })
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('logs only ids, sumber, akses, and count — never the token', async () => {
+    mocks.createTautanForSession.mockResolvedValue({
+      ok: true,
+      tautan: { id: TAUTAN_ID, token: TOKEN, sumber: 'LAPORAN_SAYA', akses: 'DRIVE', driveStatus: 'MENUNGGU', dokumenIds: [DOC_A], manualArsipIds: [] },
+      jumlahDiabaikan: 0,
+    })
+
+    await post({ request: postRequest('http://localhost/api/laporan/tautan', { ...validBody, akses: 'DRIVE' }) })
+
+    const logged = JSON.stringify(vi.mocked(console.info).mock.calls)
+    expect(logged).toContain('DRIVE')
+    expect(logged).not.toContain(TOKEN)
+  })
+
+  it('500 does not leak the error and does not trigger the runner', async () => {
+    mocks.createTautanForSession.mockRejectedValue(new Error(`boom ${TOKEN}`))
+
+    const response = await post({ request: postRequest('http://localhost/api/laporan/tautan', { ...validBody, akses: 'DRIVE' }) })
+
+    expect(response.status).toBe(500)
+    expect(await response.text()).not.toContain(TOKEN)
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+})
+
+describe('GET /api/laporan/tautan — riwayat dengan status Drive', () => {
+  const get = handler(TautanRoute, 'GET')
+  const DRIVE_ID = '88888888-8888-4888-8888-888888888888'
+
+  it('requires a session', async () => {
+    mocks.getLocalServerSession.mockResolvedValue(null)
+
+    const response = await get({ request: new Request('http://localhost/api/laporan/tautan') })
+
+    expect(response.status).toBe(401)
+    expect(mocks.listTautanByCreator).not.toHaveBeenCalled()
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('rejects an invalid sumber with 400', async () => {
+    const response = await get({ request: new Request('http://localhost/api/laporan/tautan?sumber=SEMUA') })
+
+    expect(response.status).toBe(400)
+    expect(mocks.listTautanByCreator).not.toHaveBeenCalled()
+  })
+
+  it('loads the Drive summary only for DRIVE rows, passes it per row, and triggers the runner', async () => {
+    const login = { id: TAUTAN_ID, token: TOKEN, akses: 'LOGIN', dokumenIds: [DOC_A], manualArsipIds: [] }
+    const drive = { id: DRIVE_ID, token: 'ZyXwVuTsRqPoNmLkJiHgFeDcBa987654', akses: 'DRIVE', driveStatus: 'MENGUNGGAH', dokumenIds: [DOC_A], manualArsipIds: [] }
+    const ringkasan = { selesai: 1, total: 3, galat: null, akunPerluHubungUlang: true }
+    mocks.listTautanByCreator.mockResolvedValue([login, drive])
+    mocks.loadDriveRingkasanByTautanIds.mockResolvedValue(new Map([[DRIVE_ID, ringkasan]]))
+
+    const response = await get({ request: new Request('http://localhost/api/laporan/tautan?sumber=LAPORAN_SAYA') })
+
+    expect(response.status).toBe(200)
+    expect(mocks.listTautanByCreator).toHaveBeenCalledWith(USER_ID, 'LAPORAN_SAYA')
+    expect(mocks.loadDriveRingkasanByTautanIds).toHaveBeenCalledWith([DRIVE_ID])
+    expect(mocks.toTautanListItemArgs).toEqual([[login, undefined], [drive, ringkasan]])
+    const body = await response.json()
+    expect(body.tautan.map((item: { path: string | null }) => item.path)).toEqual([`/tautan/${TOKEN}`, null])
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips the Drive summary query when there are no DRIVE rows', async () => {
+    mocks.listTautanByCreator.mockResolvedValue([{ id: TAUTAN_ID, token: TOKEN, akses: 'PUBLIK', dokumenIds: [DOC_A], manualArsipIds: [] }])
+
+    const response = await get({ request: new Request('http://localhost/api/laporan/tautan') })
+
+    expect(response.status).toBe(200)
+    expect(mocks.loadDriveRingkasanByTautanIds).not.toHaveBeenCalled()
+  })
+
+  it('500 when the summary fails, without leaking details', async () => {
+    mocks.listTautanByCreator.mockResolvedValue([{ id: DRIVE_ID, token: TOKEN, akses: 'DRIVE', dokumenIds: [], manualArsipIds: [] }])
+    mocks.loadDriveRingkasanByTautanIds.mockRejectedValue(new Error('relation app.drive_job does not exist'))
+
+    const response = await get({ request: new Request('http://localhost/api/laporan/tautan') })
+
+    expect(response.status).toBe(500)
+    expect(await response.text()).not.toContain('drive_job')
   })
 })
 

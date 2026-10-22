@@ -6,7 +6,7 @@
 // (section 09) selalu menang atas runner. Handler memakai antarmuka
 // `TautanDriveRepository` supaya tes bisa memakai implementasi in-memory.
 // `db` dimuat malas (pola jobs.ts) agar modul bisa diimpor tanpa DATABASE_URL.
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type { db as Database } from '#/db/client'
 import { driveJob } from '#/db/schema/app/drive-job'
 import {
@@ -295,4 +295,79 @@ export function createTautanDriveRepository(executor?: TautanDriveExecutor): Tau
       return updated.length > 0
     },
   }
+}
+
+export type CobaLagiHasil = 'DIJADWALKAN' | 'BUKAN_GAGAL' | 'TIDAK_DITEMUKAN'
+
+/**
+ * "Coba lagi" oleh pembuat (SPEC 8.4), satu transaksi: drive_status GAGAL ->
+ * MENUNGGU (bersyarat pembuat, akses DRIVE, belum dicabut, masih GAGAL), lalu
+ * job SINKRON_TAUTAN GAGAL terbaru -> MENUNGGU dengan percobaan 0, jadwal
+ * `now`, galat dikosongkan. Bila sudah ada job sinkron MENUNGGU/PROSES untuk
+ * tautan itu, job lama tidak diubah (partial unique `drive_job_satu_menunggu`);
+ * bila tidak ada job GAGAL sama sekali, job baru di-enqueue.
+ * TIDAK_DITEMUKAN: bukan pembuat / tidak ada / dicabut / bukan DRIVE (404).
+ */
+export async function cobaLagiTautanDrive(
+  { tautanId, userId, now }: { tautanId: string; userId: string; now: Date },
+  executor?: TautanDriveExecutor,
+): Promise<CobaLagiHasil> {
+  const run = executor ?? await getDatabase()
+  return run.transaction(async (tx) => {
+    const milikPembuat = and(
+      eq(laporanTautan.id, tautanId),
+      eq(laporanTautan.createdBy, userId),
+      eq(laporanTautan.akses, 'DRIVE'),
+      isNull(laporanTautan.revokedAt),
+    )
+    const [tautan] = await tx
+      .update(laporanTautan)
+      .set({ driveStatus: 'MENUNGGU' })
+      .where(and(milikPembuat, eq(laporanTautan.driveStatus, 'GAGAL')))
+      .returning({ akunId: laporanTautan.driveAkunId })
+
+    if (!tautan) {
+      const [ada] = await tx.select({ id: laporanTautan.id }).from(laporanTautan).where(milikPembuat).limit(1)
+      return ada ? 'BUKAN_GAGAL' : 'TIDAK_DITEMUKAN'
+    }
+
+    const [aktif] = await tx
+      .select({ id: driveJob.id })
+      .from(driveJob)
+      .where(and(
+        eq(driveJob.tautanId, tautanId),
+        eq(driveJob.jenis, 'SINKRON_TAUTAN'),
+        inArray(driveJob.status, ['MENUNGGU', 'PROSES']),
+      ))
+      .limit(1)
+    if (aktif) return 'DIJADWALKAN'
+
+    const [gagal] = await tx
+      .select({ id: driveJob.id })
+      .from(driveJob)
+      .where(and(eq(driveJob.tautanId, tautanId), eq(driveJob.jenis, 'SINKRON_TAUTAN'), eq(driveJob.status, 'GAGAL')))
+      .orderBy(sql`${driveJob.selesaiPada} DESC NULLS LAST`, desc(driveJob.dibuatPada))
+      .limit(1)
+
+    const direset = gagal
+      ? await tx
+        .update(driveJob)
+        .set({
+          status: 'MENUNGGU',
+          percobaan: 0,
+          jadwalBerikut: now,
+          galatKategori: null,
+          galatPesan: null,
+          selesaiPada: null,
+          dikunciPada: null,
+        })
+        .where(and(eq(driveJob.id, gagal.id), eq(driveJob.status, 'GAGAL')))
+        .returning({ id: driveJob.id })
+      : []
+    if (direset.length === 0) {
+      // drive_akun_id selalu terisi untuk akses DRIVE (laporan_tautan_drive_check).
+      await enqueueDriveJob(tx, { jenis: 'SINKRON_TAUTAN', akunId: tautan.akunId as string, tautanId, now })
+    }
+    return 'DIJADWALKAN'
+  })
 }

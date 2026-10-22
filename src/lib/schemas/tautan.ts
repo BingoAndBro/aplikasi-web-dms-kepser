@@ -11,8 +11,8 @@ import {
 export const createTautanRequestSchema = z
   .object({
     sumber: z.enum(['LAPORAN_SAYA', 'LAPORAN_KEGIATAN', 'LAPORAN_KINERJA']),
-    // Bawaan LOGIN: tautan publik harus dipilih secara eksplisit.
-    akses: z.enum(['LOGIN', 'PUBLIK']).default('LOGIN'),
+    // Bawaan LOGIN: tautan publik dan Google Drive harus dipilih secara eksplisit.
+    akses: z.enum(['LOGIN', 'PUBLIK', 'DRIVE']).default('LOGIN'),
     judul: z
       .string()
       .trim()

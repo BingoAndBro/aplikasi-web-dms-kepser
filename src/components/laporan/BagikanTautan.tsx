@@ -136,7 +136,8 @@ function BagikanTautanDialog({
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState<{
-    url: string
+    /** null untuk tautan Google Drive (tidak punya alamat DMS; tampilan lengkap di section 10). */
+    url: string | null
     akses: LaporanTautanAkses
     jumlahDokumen: number
     jumlahDiabaikan: number
@@ -171,7 +172,7 @@ function BagikanTautanDialog({
         },
       })
       setCreated({
-        url: resolveTautanUrl(result.path, result.public_base_url, currentOrigin()),
+        url: result.path ? resolveTautanUrl(result.path, result.public_base_url, currentOrigin()) : null,
         akses: result.akses,
         jumlahDokumen: result.jumlah_dokumen,
         jumlahDiabaikan: result.jumlah_diabaikan,
@@ -201,7 +202,7 @@ function BagikanTautanDialog({
 
         {created ? (
           <div className="space-y-3 px-5 pb-2">
-            <TautanUrlField url={created.url} />
+            {created.url && <TautanUrlField url={created.url} />}
             <p className="text-xs font-semibold text-zinc-600">
               {created.jumlahDokumen} dokumen dimasukkan ke tautan.
               {created.jumlahDiabaikan > 0 && ` ${created.jumlahDiabaikan} dokumen dilewati karena di luar cakupan laporan ini.`}
@@ -509,7 +510,7 @@ function RiwayatTautanDialog({
                 {!revoked && (
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <div className="min-w-0 flex-1">
-                      <TautanUrlField url={resolveTautanUrl(item.path, publicBaseUrl, currentOrigin())} compact />
+                      {item.path && <TautanUrlField url={resolveTautanUrl(item.path, publicBaseUrl, currentOrigin())} compact />}
                     </div>
                     <Button
                       type="button"

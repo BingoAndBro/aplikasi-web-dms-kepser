@@ -162,13 +162,15 @@ describe('konstanta akses DRIVE (section 01)', () => {
     expect(TAUTAN_AKSES_LABEL.DRIVE).toBe('Google Drive')
   })
 
-  it('createTautanRequestSchema masih menolak akses DRIVE (dibuka di section 08)', () => {
+  it('createTautanRequestSchema menerima akses DRIVE sejak section 08, nilai lain tetap ditolak', () => {
     const base = {
       sumber: 'LAPORAN_KEGIATAN',
       judul: 'Laporan',
       dokumen_ids: ['11111111-1111-4111-8111-111111111111'],
     }
     expect(createTautanRequestSchema.safeParse({ ...base, akses: 'PUBLIK' }).success).toBe(true)
-    expect(createTautanRequestSchema.safeParse({ ...base, akses: 'DRIVE' }).success).toBe(false)
+    expect(createTautanRequestSchema.safeParse({ ...base, akses: 'DRIVE' }).success).toBe(true)
+    expect(createTautanRequestSchema.safeParse({ ...base, akses: 'drive' }).success).toBe(false)
+    expect(createTautanRequestSchema.safeParse({ ...base, akses: 'GOOGLE' }).success).toBe(false)
   })
 })

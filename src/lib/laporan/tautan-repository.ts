@@ -3,9 +3,12 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle
 
 import { db } from '#/db/client'
 import {
+  googleDriveAkun,
   laporanTautan,
+  laporanTautanDriveFile,
   type LaporanTautan,
   type LaporanTautanAkses,
+  type LaporanTautanDriveDilewati,
   type LaporanTautanSumber,
 } from '#/db/schema/app'
 import { manualArsip, manualArsipAttachment } from '#/db/schema/arsip'
@@ -24,6 +27,8 @@ import { manualArsipEffectiveStatusArsip } from '#/lib/archive/manual-arsip-effe
 import { DOC_STATUS } from '#/lib/constants/document-status'
 import { parseLampiranUrls } from '#/lib/dokumen'
 import type { DokumenRow } from '#/lib/dokumen/types'
+import { enqueueDriveJob } from '#/lib/google-drive/jobs'
+import type { RencanaFileDrive } from '#/lib/google-drive/rencana-file'
 import { LAPORAN_KEGIATAN_SCOPE_STATUSES } from '#/lib/laporan/kegiatan-scope'
 
 /**
@@ -141,6 +146,122 @@ export async function insertTautan(values: {
 }): Promise<LaporanTautan> {
   const [row] = await db.insert(laporanTautan).values(values).returning()
   return row
+}
+
+/** `db` atau transaksi Drizzle; tes integrasi memakai transaksi yang di-rollback. */
+export type TautanRepositoryExecutor = Pick<typeof db, 'select' | 'insert' | 'update' | 'execute' | 'transaction'>
+
+// Batas parameter PostgreSQL 65535; 11 kolom per baris file -> potong per 1000 baris.
+const DRIVE_FILE_INSERT_CHUNK = 1000
+
+/**
+ * Tautan akses DRIVE (SPEC 8.1 langkah 4): baris tautan, satu baris per
+ * lampiran yang akan disalin, dan job SINKRON_TAUTAN dalam SATU transaksi,
+ * supaya tidak pernah ada tautan Drive tanpa pekerjaan (atau sebaliknya).
+ */
+export async function insertTautanDrive(
+  {
+    values,
+    files,
+    dilewati,
+    akunId,
+    now,
+  }: {
+    values: {
+      token: string
+      sumber: LaporanTautanSumber
+      judul: string
+      keterangan: string | null
+      dokumenIds: string[]
+      manualArsipIds: string[]
+      createdBy: string
+    }
+    files: RencanaFileDrive[]
+    dilewati: LaporanTautanDriveDilewati[]
+    akunId: string
+    now: Date
+  },
+  executor: TautanRepositoryExecutor = db,
+): Promise<LaporanTautan> {
+  return executor.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(laporanTautan)
+      .values({
+        ...values,
+        akses: 'DRIVE',
+        driveAkunId: akunId,
+        driveStatus: 'MENUNGGU',
+        driveDokumenDilewati: dilewati,
+      })
+      .returning()
+
+    for (let start = 0; start < files.length; start += DRIVE_FILE_INSERT_CHUNK) {
+      await tx.insert(laporanTautanDriveFile).values(files.slice(start, start + DRIVE_FILE_INSERT_CHUNK).map(file => ({
+        tautanId: row.id,
+        sumber: file.sumber,
+        dokumenId: file.dokumenId,
+        lampiranIndex: file.lampiranIndex,
+        manualArsipId: file.manualArsipId,
+        attachmentId: file.attachmentId,
+        kunciLampiran: file.kunci,
+        namaFile: file.namaFile,
+        labelDokumen: file.labelDokumen,
+        urutan: file.urutan,
+        contentType: file.contentType,
+      })))
+    }
+
+    await enqueueDriveJob(tx, { jenis: 'SINKRON_TAUTAN', akunId, tautanId: row.id, now })
+    return row
+  })
+}
+
+export type TautanDriveRingkasan = {
+  /** Baris file yang sudah tidak MENUNGGU (terunggah, dilewati, atau sudah ditandai hapus). */
+  selesai: number
+  total: number
+  /** galat_pesan job SINKRON_TAUTAN GAGAL terbaru (pesan sistem pendek, bukan respons Google). */
+  galat: string | null
+  /** Akun tautan sedang ditandai perlu dihubungkan ulang (job dijeda, SPEC 7.2). */
+  akunPerluHubungUlang: boolean
+}
+
+/** Ringkasan Drive untuk Riwayat Tautan (SPEC 10.2), per id tautan DRIVE. */
+export async function loadDriveRingkasanByTautanIds(
+  ids: readonly string[],
+  executor: TautanRepositoryExecutor = db,
+): Promise<Map<string, TautanDriveRingkasan>> {
+  if (ids.length === 0) return new Map()
+
+  const rows = await executor
+    .select({
+      id: laporanTautan.id,
+      total: sql<number>`(
+        SELECT count(*) FROM app.laporan_tautan_drive_file f
+         WHERE f.tautan_id = ${laporanTautan.id}
+      )::int`,
+      selesai: sql<number>`(
+        SELECT count(*) FROM app.laporan_tautan_drive_file f
+         WHERE f.tautan_id = ${laporanTautan.id} AND f.status <> 'MENUNGGU'
+      )::int`,
+      galat: sql<string | null>`(
+        SELECT j.galat_pesan FROM app.drive_job j
+         WHERE j.tautan_id = ${laporanTautan.id} AND j.jenis = 'SINKRON_TAUTAN' AND j.status = 'GAGAL'
+         ORDER BY j.selesai_pada DESC NULLS LAST, j.dibuat_pada DESC
+         LIMIT 1
+      )`,
+      perluHubungUlangSejak: googleDriveAkun.perluHubungUlangSejak,
+    })
+    .from(laporanTautan)
+    .leftJoin(googleDriveAkun, eq(googleDriveAkun.id, laporanTautan.driveAkunId))
+    .where(and(inArray(laporanTautan.id, [...ids]), eq(laporanTautan.akses, 'DRIVE')))
+
+  return new Map(rows.map(row => [row.id, {
+    selesai: Number(row.selesai),
+    total: Number(row.total),
+    galat: row.galat,
+    akunPerluHubungUlang: row.perluHubungUlangSejak !== null,
+  }]))
 }
 
 export async function listTautanByCreator(

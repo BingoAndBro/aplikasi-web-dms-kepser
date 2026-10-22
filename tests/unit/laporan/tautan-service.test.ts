@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { LaporanTautanDriveStatus } from '#/db/schema/app/laporan-tautan'
 import type { LocalServerSession } from '#/lib/auth/local-server-auth'
 
 const USER_ID = '11111111-1111-4111-8111-111111111111'
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
     selectKinerjaDokumenIds: vi.fn(),
     selectExistingManualArsipIds: vi.fn(),
     insertTautan: vi.fn(),
+    insertTautanDrive: vi.fn(),
     findTautanByToken: vi.fn(),
     findTautanById: vi.fn(),
     recordTautanAccess: vi.fn(),
@@ -32,7 +34,12 @@ const mocks = vi.hoisted(() => ({
   resolveDocumentLampiranLogicalPathForExport: vi.fn(),
   createLogicalPathFileResponse: vi.fn(),
   createManualArsipAttachmentFileResponse: vi.fn(),
+  getDriveAvailability: vi.fn(),
+  rencanakanFileDrive: vi.fn(),
 }))
+
+vi.mock('#/lib/google-drive/availability', () => ({ getDriveAvailability: mocks.getDriveAvailability }))
+vi.mock('#/lib/google-drive/rencana-file', () => ({ rencanakanFileDrive: mocks.rencanakanFileDrive }))
 
 vi.mock('#/lib/laporan/tautan-repository', () => mocks.repository)
 
@@ -84,6 +91,7 @@ import {
   resolveActiveTautan,
   toTautanListItem,
 } from '#/lib/laporan/tautan'
+import { buildLaporanZipEntries, buildManualArsipZipEntries } from '#/lib/export/laporan-zip-entries'
 import { buildTautanLampiranLinkPath } from '#/lib/laporan/tautan-lampiran-link'
 import type { CreateTautanRequest } from '#/lib/schemas/tautan'
 
@@ -114,7 +122,7 @@ function tautanRow(overrides: Record<string, unknown> = {}) {
     id: '99999999-9999-4999-8999-999999999999',
     token: TOKEN,
     sumber: 'LAPORAN_KEGIATAN' as const,
-    akses: 'LOGIN' as 'LOGIN' | 'PUBLIK',
+    akses: 'LOGIN' as 'LOGIN' | 'PUBLIK' | 'DRIVE',
     judul: 'Laporan Kegiatan X',
     keterangan: null,
     dokumenIds: [DOC_A],
@@ -128,7 +136,7 @@ function tautanRow(overrides: Record<string, unknown> = {}) {
     driveAkunId: null,
     driveFolderId: null,
     driveFolderUrl: null,
-    driveStatus: null,
+    driveStatus: null as LaporanTautanDriveStatus | null,
     driveDaftarIsiFileId: null,
     driveFolderDicobaPada: null,
     driveDokumenDilewati: [],
@@ -675,5 +683,253 @@ describe('tautan per lampiran (/lampiran/...)', () => {
     const response = await open(buildTautanLampiranLinkPath(tautan, MANUAL_A, ATTACHMENT_A))
 
     expect(response.status).toBe(200)
+  })
+})
+
+describe('tautan DRIVE (section 08)', () => {
+  const AKUN_ID = '22222222-2222-4222-8222-222222222222'
+  const PLAN_FILE = {
+    sumber: 'DOKUMEN',
+    dokumenId: DOC_A,
+    lampiranIndex: 0,
+    manualArsipId: null,
+    attachmentId: null,
+    kunci: `DOKUMEN:${DOC_A}:0`,
+    namaFile: 'Kuitansi.pdf',
+    labelDokumen: '01_Dokumen A',
+    urutan: 0,
+    contentType: 'application/pdf',
+  }
+
+  beforeEach(() => {
+    mocks.getDriveAvailability.mockResolvedValue({ tersedia: true, alasan: null, akunId: AKUN_ID })
+    mocks.repository.loadTautanDokumenRows.mockResolvedValue([{ id: DOC_A }])
+    mocks.repository.loadTautanManualRows.mockResolvedValue([{ id: MANUAL_A }])
+    vi.mocked(buildLaporanZipEntries).mockResolvedValue([{ folderPath: '01_Dokumen A', files: [] }] as never)
+    vi.mocked(buildManualArsipZipEntries).mockResolvedValue([{ folderPath: '02_Manual', files: [] }] as never)
+    mocks.rencanakanFileDrive.mockReturnValue({ files: [PLAN_FILE], dilewati: [{ label: '02_Manual', alasan: 'tanpa lampiran tersedia' }] })
+    mocks.repository.insertTautanDrive.mockImplementation(async ({ values, akunId }: { values: Record<string, unknown>; akunId: string }) => tautanRow({
+      ...values,
+      akses: 'DRIVE',
+      driveAkunId: akunId,
+      driveStatus: 'MENUNGGU',
+    }))
+  })
+
+  it('creates a DRIVE tautan in one repository transaction: row + planned files + job', async () => {
+    mocks.repository.selectKetuaTimKegiatanIds.mockResolvedValue([KEGIATAN_ID])
+    mocks.repository.selectKegiatanDokumenIds.mockResolvedValue([DOC_A])
+    mocks.repository.selectManualArsipIdsByKegiatan.mockResolvedValue([MANUAL_A])
+
+    const result = await createTautanForSession(session(), request({
+      sumber: 'LAPORAN_KEGIATAN',
+      akses: 'DRIVE',
+      dokumen_ids: [DOC_A, DOC_OUTSIDE],
+      manual_arsip_ids: [MANUAL_A],
+    }))
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.jumlahDiabaikan).toBe(1)
+    expect(result.tautan.driveStatus).toBe('MENUNGGU')
+    expect(mocks.repository.insertTautan).not.toHaveBeenCalled()
+    // Rencana file dibangun dari helper ZIP yang sama untuk snapshot yang SUDAH disaring.
+    expect(mocks.repository.loadTautanDokumenRows).toHaveBeenCalledWith([DOC_A])
+    expect(mocks.repository.loadTautanManualRows).toHaveBeenCalledWith([MANUAL_A])
+    expect(mocks.rencanakanFileDrive).toHaveBeenCalledWith([
+      { folderPath: '01_Dokumen A', files: [] },
+      { folderPath: '02_Manual', files: [] },
+    ])
+    expect(mocks.repository.insertTautanDrive).toHaveBeenCalledTimes(1)
+    const [input] = mocks.repository.insertTautanDrive.mock.calls[0]
+    expect(input).toMatchObject({
+      akunId: AKUN_ID,
+      files: [PLAN_FILE],
+      dilewati: [{ label: '02_Manual', alasan: 'tanpa lampiran tersedia' }],
+      values: {
+        sumber: 'LAPORAN_KEGIATAN',
+        judul: 'Laporan Saya - Oktober 2026',
+        dokumenIds: [DOC_A],
+        manualArsipIds: [MANUAL_A],
+        createdBy: USER_ID,
+      },
+    })
+    expect(input.values.token).toMatch(/^[A-Za-z0-9_-]{32}$/)
+    expect(input.now).toBeInstanceOf(Date)
+  })
+
+  it.each([
+    ['BELUM_DIKONFIGURASI', 'Fitur Google Drive belum dikonfigurasi'],
+    ['BELUM_ADA_AKUN', 'Belum ada akun Google Drive terhubung — hubungi Admin'],
+    ['PERLU_HUBUNG_ULANG', 'Akun Google Drive perlu dihubungkan ulang — hubungi Admin'],
+  ])('refuses DRIVE with 409 when Google Drive is unavailable (%s)', async (alasan, pesan) => {
+    mocks.getDriveAvailability.mockResolvedValue({ tersedia: false, alasan })
+
+    const result = await createTautanForSession(session(), request({ akses: 'DRIVE' }))
+
+    expect(result).toEqual({ ok: false, status: 409, error: pesan, kode: alasan })
+    expect(mocks.repository.selectSayaDokumenIds).not.toHaveBeenCalled()
+    expect(mocks.repository.insertTautanDrive).not.toHaveBeenCalled()
+    expect(mocks.repository.insertTautan).not.toHaveBeenCalled()
+  })
+
+  it('rejects more than 500 documents with 413 before checking or touching Google Drive', async () => {
+    const ids = Array.from({ length: 501 }, (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`)
+
+    const result = await createTautanForSession(session(), request({ akses: 'DRIVE', dokumen_ids: ids }))
+
+    expect(result).toMatchObject({ ok: false, status: 413 })
+    expect(mocks.getDriveAvailability).not.toHaveBeenCalled()
+    expect(mocks.repository.insertTautanDrive).not.toHaveBeenCalled()
+  })
+
+  it('scopes the DRIVE snapshot exactly like LOGIN (nothing left -> 400, no Drive rows)', async () => {
+    mocks.repository.selectSayaDokumenIds.mockResolvedValue([])
+
+    const result = await createTautanForSession(session(), request({ akses: 'DRIVE', dokumen_ids: [DOC_OUTSIDE] }))
+
+    expect(result).toMatchObject({ ok: false, status: 400 })
+    expect(mocks.rencanakanFileDrive).not.toHaveBeenCalled()
+    expect(mocks.repository.insertTautanDrive).not.toHaveBeenCalled()
+  })
+
+  it('PJ Kinerja role check still applies to DRIVE', async () => {
+    const result = await createTautanForSession(session(['PEGAWAI']), request({ sumber: 'LAPORAN_KINERJA', akses: 'DRIVE' }))
+
+    expect(result).toMatchObject({ ok: false, status: 403 })
+    expect(mocks.repository.insertTautanDrive).not.toHaveBeenCalled()
+  })
+
+  it('LOGIN / PUBLIK never consult Google Drive', async () => {
+    mocks.repository.selectSayaDokumenIds.mockResolvedValue([DOC_A])
+
+    await createTautanForSession(session(), request({ akses: 'PUBLIK' }))
+    await createTautanForSession(session(), request({ akses: 'LOGIN' }))
+
+    expect(mocks.getDriveAvailability).not.toHaveBeenCalled()
+    expect(mocks.repository.insertTautanDrive).not.toHaveBeenCalled()
+    expect(mocks.repository.insertTautan).toHaveBeenCalledTimes(2)
+  })
+
+  describe('toTautanListItem', () => {
+    const drive = (overrides: Record<string, unknown> = {}) => tautanRow({
+      akses: 'DRIVE',
+      driveAkunId: AKUN_ID,
+      driveStatus: 'MENGUNGGAH',
+      driveFolderId: 'folder-rahasia-123',
+      driveDaftarIsiFileId: 'daftar-isi-rahasia-456',
+      ...overrides,
+    })
+    const ringkasan = { selesai: 12, total: 40, galat: null, akunPerluHubungUlang: false }
+
+    it('LOGIN / PUBLIK: page path, Drive fields empty', () => {
+      expect(toTautanListItem(tautanRow({ akses: 'PUBLIK' }))).toMatchObject({
+        path: `/tautan/${TOKEN}`,
+        drive_status: null,
+        drive_progres: null,
+        drive_url: null,
+        drive_galat: null,
+        drive_tertunda_akun: false,
+      })
+    })
+
+    it('DRIVE: no DMS path, progress from the summary, no Drive ids leaked', () => {
+      const item = toTautanListItem(drive(), ringkasan)
+
+      expect(item).toMatchObject({
+        path: null,
+        akses: 'DRIVE',
+        drive_status: 'MENGUNGGAH',
+        drive_progres: { selesai: 12, total: 40 },
+        drive_url: null,
+        drive_galat: null,
+        drive_tertunda_akun: false,
+      })
+      const json = JSON.stringify(item)
+      expect(json).not.toContain('folder-rahasia-123')
+      expect(json).not.toContain('daftar-isi-rahasia-456')
+      expect(json).not.toContain(TOKEN)
+      expect(json).not.toContain(AKUN_ID)
+    })
+
+    it('drive_url only when SIAP and not revoked', () => {
+      const url = 'https://drive.google.com/drive/folders/abc'
+      expect(toTautanListItem(drive({ driveStatus: 'SIAP', driveFolderUrl: url }), ringkasan).drive_url).toBe(url)
+      expect(toTautanListItem(drive({ driveStatus: 'SIAP', driveFolderUrl: url, revokedAt: new Date() }), ringkasan).drive_url).toBeNull()
+      expect(toTautanListItem(drive({ driveStatus: 'MENGHAPUS', driveFolderUrl: url, revokedAt: new Date() }), ringkasan).drive_url).toBeNull()
+      expect(toTautanListItem(drive({ driveStatus: 'MENGUNGGAH', driveFolderUrl: url }), ringkasan).drive_url).toBeNull()
+    })
+
+    it('drive_galat only while GAGAL', () => {
+      const gagal = { ...ringkasan, galat: 'Kuota Google Drive penuh' }
+      expect(toTautanListItem(drive({ driveStatus: 'GAGAL' }), gagal).drive_galat).toBe('Kuota Google Drive penuh')
+      expect(toTautanListItem(drive({ driveStatus: 'MENUNGGU' }), gagal).drive_galat).toBeNull()
+    })
+
+    it('drive_tertunda_akun: job paused by TOKEN_TIDAK_VALID keeps MENGUNGGAH and is flagged', () => {
+      const tertunda = { ...ringkasan, akunPerluHubungUlang: true }
+      expect(toTautanListItem(drive({ driveStatus: 'MENGUNGGAH' }), tertunda).drive_tertunda_akun).toBe(true)
+      expect(toTautanListItem(drive({ driveStatus: 'MENUNGGU' }), tertunda).drive_tertunda_akun).toBe(true)
+      expect(toTautanListItem(drive({ driveStatus: 'SIAP' }), tertunda).drive_tertunda_akun).toBe(false)
+      expect(toTautanListItem(drive({ driveStatus: 'MENGUNGGAH', revokedAt: new Date() }), tertunda).drive_tertunda_akun).toBe(false)
+    })
+
+    it('DRIVE without a summary (e.g. create response) has no progress yet', () => {
+      expect(toTautanListItem(drive({ driveStatus: 'MENUNGGU' }))).toMatchObject({ drive_progres: null, drive_tertunda_akun: false })
+    })
+  })
+
+  describe('DMS openers refuse DRIVE tautan (404 identical to not found)', () => {
+    it('resolveActiveTautan answers 404, also for a revoked DRIVE tautan (not 410)', async () => {
+      mocks.repository.findTautanByToken.mockResolvedValueOnce(null)
+      const unknown = await resolveActiveTautan(TOKEN)
+
+      mocks.repository.findTautanByToken.mockResolvedValueOnce(tautanRow({ akses: 'DRIVE', driveStatus: 'SIAP' }))
+      const active = await resolveActiveTautan(TOKEN)
+
+      mocks.repository.findTautanByToken.mockResolvedValueOnce(tautanRow({ akses: 'DRIVE', driveStatus: 'MENGHAPUS', revokedAt: new Date() }))
+      const revoked = await resolveActiveTautan(TOKEN)
+
+      expect(active).toEqual(unknown)
+      expect(revoked).toEqual(unknown)
+      expect(active).toMatchObject({ ok: false, status: 404 })
+    })
+
+    it('requireTautanViewer answers 404 with or without a session', async () => {
+      for (const viewer of [null, session(['ADMIN'])]) {
+        mocks.getLocalServerSession.mockResolvedValue(viewer)
+        mocks.repository.findTautanByToken.mockResolvedValue(tautanRow({ akses: 'DRIVE', driveStatus: 'SIAP' }))
+
+        const response = await requireTautanViewer(new Request('http://localhost/api/tautan/x'), TOKEN)
+
+        expect((response as Response).status).toBe(404)
+        await expect((response as Response).json()).resolves.toEqual({ error: 'Tautan tidak ditemukan. Periksa kembali alamat tautan.' })
+      }
+    })
+
+    it('/lampiran/... answers the same 404 page for a DRIVE tautan with a valid signature, even revoked', async () => {
+      const TAUTAN_ID = '99999999-9999-4999-8999-999999999999'
+      const open = async (tautan: ReturnType<typeof tautanRow> | null, sigFrom = tautanRow()) => {
+        mocks.repository.findTautanById.mockResolvedValue(tautan)
+        const path = buildTautanLampiranLinkPath(sigFrom, DOC_A, '0')
+        const [, , tautanId, dokumenId, ref, sig] = path.split('/')
+        const response = await handleTautanLampiranRequest({
+          request: new Request(`http://localhost${path}`),
+          params: { tautanId, dokumenId, ref, sig },
+        })
+        return { status: response.status, body: await response.text() }
+      }
+      mocks.getLocalServerSession.mockResolvedValue(session())
+
+      const unknown = await open(null)
+      const active = await open(tautanRow({ id: TAUTAN_ID, akses: 'DRIVE', driveStatus: 'SIAP' }))
+      const revoked = await open(tautanRow({ id: TAUTAN_ID, akses: 'DRIVE', driveStatus: 'MENGHAPUS', revokedAt: new Date() }))
+
+      expect(unknown.status).toBe(404)
+      expect(active).toEqual(unknown)
+      expect(revoked).toEqual(unknown)
+      expect(mocks.resolveDocumentLampiranLogicalPathForExport).not.toHaveBeenCalled()
+      expect(mocks.repository.recordTautanAccess).not.toHaveBeenCalled()
+    })
   })
 })
