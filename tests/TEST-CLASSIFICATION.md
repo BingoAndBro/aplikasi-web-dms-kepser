@@ -84,6 +84,7 @@ Catatan umum:
 |---|---|---|---|
 | tests/unit/db/seed-users.test.ts | Unit test | White-box | Menguji fungsi seeding user development. |
 | tests/unit/db/username-migration-source.test.ts | Unit test (static source guard) | White-box | Memastikan migrasi `0017_username_login_identity.sql` terdaftar di journal dan CHECK constraint username-nya identik dengan `isValidUsername()`. |
+| tests/unit/db/google-drive-migration-source.test.ts | Unit test (static source guard) | White-box | Memastikan migrasi `0024_google_drive_tautan.sql` terdaftar di journal, idempoten, memakai nama constraint/index yang sama dengan skema Drizzle, dan setiap CHECK nilai (akses, status Drive, audit) identik dengan konstanta; Zod tautan belum menerima `DRIVE`. |
 
 ## dokumen
 
@@ -204,3 +205,13 @@ Catatan umum:
 | tests/unit/utils/client-id.test.ts | Unit test | White-box | Menguji fungsi pembuatan client ID unik. |
 | tests/unit/utils/file.test.ts | Unit test | White-box | Menguji utilitas file: sanitasi nama file, ekstraksi ekstensi, ekstraksi nama file dari path, dan deteksi file pending. |
 | tests/unit/utils/format.test.ts | Unit test | White-box | Menguji utilitas format tanggal/waktu dan pengurutan berdasarkan `created_at`. |
+
+## Integrasi (`pnpm test:integration`, PostgreSQL asli)
+
+Dijalankan terpisah dengan `vitest.integration.config.ts` (tidak termasuk `pnpm test`). Butuh database yang sudah dimigrasi dan di-seed; data uji dibuat di transaksi yang di-ROLLBACK (lihat `docs/superpowers/plans/2026-10-22-tautan-google-drive/sections/index.md` untuk menyiapkan DB tes `dms_kepser_test`).
+
+| File | Jenis Test | White/Black-box | Deskripsi Singkat |
+|---|---|---|---|
+| tests/integration/dokumen-transaksi-permintaan-fk.test.ts | Integration test | White-box | Memastikan FK `dokumen_transaksi` ke master permintaan menolak id yang tidak ada (23503). |
+| tests/integration/manual-arsip-effective-status.test.ts | Integration test | White-box | Menguji SQL status arsip efektif dokumen tambahan KSBU di SELECT, WHERE, dan UPDATE. |
+| tests/integration/google-drive-schema.test.ts | Integration test | White-box | Menguji hasil migrasi 0024: kolom/constraint/index sama dengan Drizzle, partial unique akun AKTIF dan email, check konsistensi tautan DRIVE, unique kunci lampiran, unique job MENUNGGU, dan aksi audit Drive. |

@@ -24,11 +24,13 @@ export const TAUTAN_SUMBER_LABEL: Record<LaporanTautanSumber, string> = {
 export const TAUTAN_AKSES = {
   LOGIN: 'LOGIN',
   PUBLIK: 'PUBLIK',
+  DRIVE: 'DRIVE',
 } as const satisfies Record<LaporanTautanAkses, LaporanTautanAkses>
 
 export const TAUTAN_AKSES_LABEL: Record<LaporanTautanAkses, string> = {
   LOGIN: 'Terbatas',
   PUBLIK: 'Publik',
+  DRIVE: 'Google Drive',
 }
 
 /**

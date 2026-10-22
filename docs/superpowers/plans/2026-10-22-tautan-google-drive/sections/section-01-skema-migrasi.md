@@ -127,3 +127,22 @@ pnpm typecheck
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tes `tests/unit/laporan` lama lulus.
 - [ ] Tidak ada perubahan perilaku aplikasi (Zod tautan belum menerima `DRIVE`).
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- File sesuai rencana. Tambahan di luar daftar: fixture `tautanRow()` di `tests/unit/laporan/tautan-service.test.ts`
+  diberi tujuh kolom `drive_*` (tipe `LaporanTautan` bertambah; tanpa itu typecheck merah). Tidak ada asersi yang diubah.
+- Nama constraint yang dipilih untuk check yang tidak dinamai plan: `laporan_tautan_drive_file_sumber_check`,
+  `laporan_tautan_drive_file_status_check`, `laporan_tautan_drive_file_keterangan_hapus_check`,
+  `laporan_tautan_drive_file_sumber_kolom_check`, `drive_job_jenis_check`, `drive_job_status_check`,
+  `drive_job_galat_kategori_check`. Index file: `idx_laporan_tautan_drive_file_dokumen`, `…_manual_arsip`, `…_tautan_status`.
+- `drive_job.status` tanpa default (plan tidak menyebutkannya; enqueue selalu mengisi).
+- Tes static juga membandingkan CHECK di skema Drizzle (lewat `getTableConfig` + `PgDialect`) dengan konstanta, bukan hanya SQL;
+  tes integrasi membandingkan kolom `information_schema` dan nama constraint/index `pg_constraint`/`pg_indexes` dengan Drizzle.
+- Tes `createTautanRequestSchema` masih menolak `DRIVE` ditaruh di `google-drive-migration-source.test.ts`.
+- Verifikasi migrasi: diterapkan ke DB tes berisi 0000–0023 + seed, ke DB kosong sementara (lalu di-drop), dan SQL 0024
+  dijalankan ulang dengan `psql -v ON_ERROR_STOP=1` tanpa galat di keduanya.
+- Hasil tes: `google-drive-migration-source` 18 lulus (+ `username-migration-source` 3), integrasi 31 lulus (22 baru),
+  `tests/unit/laporan` + `tests/unit/db` 270 lulus, seluruh `pnpm test` 1326 lulus / 1 skip, `pnpm typecheck` bersih.

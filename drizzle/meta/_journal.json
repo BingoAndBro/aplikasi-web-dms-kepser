@@ -169,6 +169,13 @@
       "when": 1790661834780,
       "tag": "0023_laporan_tautan_akses",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790748234780,
+      "tag": "0024_google_drive_tautan",
+      "breakpoints": true
     }
   ]
 }
