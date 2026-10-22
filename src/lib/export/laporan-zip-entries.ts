@@ -39,7 +39,11 @@ export async function buildLaporanZipEntries(rows: DokumenRow[]): Promise<Docume
 
       const reference = resolveDocumentLampiranReferenceFromContext(context, lampiranIndex)
       if (reference.ok) {
-        files.push({ namaAman: buildFormalFilename(row, lampiran), logicalPath: reference.logicalPath })
+        files.push({
+          namaAman: buildFormalFilename(row, lampiran),
+          logicalPath: reference.logicalPath,
+          kunci: `DOKUMEN:${row.id}:${lampiranIndex}`,
+        })
       }
     })
 
@@ -112,6 +116,7 @@ export async function buildManualArsipZipEntries(rows: ManualArsipExportRow[]): 
 
     const attachments = await db
       .select({
+        id: manualArsipAttachment.id,
         logical_path: manualArsipAttachment.logicalPath,
         judul_lampiran: manualArsipAttachment.judulLampiran,
         original_filename: manualArsipAttachment.originalFilename,
@@ -125,6 +130,7 @@ export async function buildManualArsipZipEntries(rows: ManualArsipExportRow[]): 
       folderPath,
       files: attachments.map((attachment) => ({
         logicalPath: attachment.logical_path,
+        kunci: `MANUAL:${row.id}:${attachment.id}`,
         namaAman: sanitizeBerkasAttachmentFilename(
           buildManualArsipAttachmentFilename(attachment, {
             nama: row.nama,

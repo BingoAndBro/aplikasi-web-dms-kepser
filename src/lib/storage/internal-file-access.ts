@@ -442,7 +442,7 @@ function secureHeaders(): Headers {
   })
 }
 
-function inferContentType(logicalPath: string): string {
+export function inferContentType(logicalPath: string): string {
   return CONTENT_TYPE_BY_EXTENSION[path.extname(logicalPath).toLowerCase()]
     ?? 'application/octet-stream'
 }

@@ -104,3 +104,46 @@ pnpm typecheck
 - [ ] Ekspor ZIP berperilaku sama (tes lama lulus tanpa mengubah harapan).
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tidak ada regresi.
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- Helper ZIP: `DocumentZipFileInput.kunci?`, `nextAvailableFileName` diekspor, `laporan-zip-entries.ts` mengisi kunci
+  (`DOKUMEN:<id>:<index>`, `MANUAL:<id>:<attachment_id>`; select attachment ditambah `id`), `inferContentType` diekspor dari
+  `internal-file-access.ts`. Isi/nama ZIP tidak berubah (tes ekspor/laporan/storage lama lulus tanpa mengubah harapan).
+- Modul baru sesuai rencana: `rencana-file.ts`, `daftar-isi.ts`, `tautan-drive-repository.ts`, `file-source.ts`,
+  `sinkron-tautan.ts`, `runner.ts`; helper tes `helpers/memory-tautan-repo.ts` (`MemoryTautanRepo`, `MemoryAkun`).
+- Signature aktual:
+  - `rencanakanFileDrive(entries)` → `{ files: RencanaFileDrive[], dilewati }`; konstanta `DRIVE_DAFTAR_ISI_NAMA`.
+  - `buildDriveDaftarIsiText({ judul, sumberLabel, dibagikanOleh, diperbaruiPada, files, dilewati })`.
+  - `createTautanDriveRepository(executor?)` → `TautanDriveRepository` (nama fungsi sesuai plan; `tandaiSiap` menerima `jobId`).
+  - `bukaFileUntukUnggah(baris, deps?)` → `{ ok: true, size, buka } | { ok: false }`.
+  - `createSinkronTautanHandler({ repo, akun, driveClientFor, bukaFile })` → `DriveJobHandler`
+    (`({ job, now: () => Date }) => { hasil: 'SELESAI' | 'DIBATALKAN' }`).
+  - `runDriveRunnerOnce({ now?, deps?, anggaranMs? })` → `{ diproses, selesai, dibatalkan, gagal, dijeda, anggaranHabis }`;
+    `triggerDriveRunner()`, `resetDriveRunnerForTest(deps?)`, `createDefaultDriveRunnerDeps()`, `defaultDriveClientFor(akun)`.
+- **Penyimpangan / tambahan (dicatat juga di `code-reviews/section-07-review.md`):**
+  1. `file-source` mengembalikan `buka()` (stream dibuka malas) alih-alih `stream`, supaya tidak ada stream yang dibuka lalu
+     ditinggal saat salinan ditemukan lewat `appProperties`.
+  2. `tandaiSiap({ id, jobId, url, now })` sekaligus menandai job `SELESAI` di transaksi yang sama (plan Step 7 langkah 7);
+     `completeDriveJob` dari runner sesudahnya no-op (job sudah bukan `PROSES`).
+  3. Handler mengembalikan `DIBATALKAN` juga bila `drive_status` sudah bukan `MENUNGGU`/`MENGUNGGAH` (mis. sudah `SIAP` oleh
+     job lain) atau tautan tidak ada.
+  4. `DAFTAR_ISI.txt`: bila ID belum tersimpan selalu dicari dulu lewat `dmsJenis='DAFTAR_ISI'` (folder pasti sudah pernah
+     dicoba saat langkah ini); yang ditemukan diperbarui isinya. `updateFileContent` 404 → unggah baru.
+  5. **Salinan yatim:** baris yang `dicoba_pada`-nya terisi tetapi file lokalnya kini tidak tersedia → salinan yang ditemukan
+     lewat `dmsKunci` dihapus (404 dianggap berhasil) lalu baris `DILEWATI`. Ditemukan saat code review.
+  6. Pesan galat non-Drive: "Gagal memproses salinan Google Drive"; jenis tanpa handler: "Pemroses belum tersedia".
+     Log `console.error('[google-drive/runner] job gagal', { jenis, kategori })` untuk setiap kegagalan job dan
+     `[google-drive/runner] putaran gagal` `{ kategori: 'TAK_TERDUGA' }` bila putaran gagal (mis. DB mati). Putaran yang gagal
+     tidak menjadwalkan timer ulang sendiri; pemicu berikutnya (rute/`drive:sync`) menjalankannya lagi.
+  7. `tandaiPerluHubungUlang` dipanggil untuk setiap `TOKEN_TIDAK_VALID` (idempoten). `defaultDriveClientFor` memetakan
+     galat dekripsi → `TOKEN_TIDAK_VALID`, token kosong → `AKUN_DIPUTUS`.
+- **`failDriveJob` = 'MENUNGGU'** (permintaan sesi ini): runner memperlakukannya sebagai "masih akan dicoba", termasuk job yang
+  `DIBATALKAN` karena sudah ada job `MENUNGGU` kembar; tautan **tidak** ditandai `GAGAL`. Diuji di unit (`runner.test.ts`) dan
+  integrasi dengan antrean asli (`google-drive-sinkron.test.ts`, kasus `SEMENTARA` dan `TOKEN_TIDAK_VALID`). Uji mutasi
+  (tandai GAGAL untuk nasib apa pun selain null) membuat 2 tes unit + 2 tes integrasi merah.
+- Hasil tes: `tests/unit/google-drive` 248 lulus; perintah tes section (google-drive + export + export-zip + storage) lulus;
+  seluruh `pnpm test` 1575 lulus / 1 skip (sebelum section 1523 / 1 skip); integrasi 79 lulus (sebelum 71), tanpa data uji
+  tertinggal; `pnpm typecheck` bersih.

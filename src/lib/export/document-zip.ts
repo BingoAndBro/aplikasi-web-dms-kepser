@@ -13,6 +13,12 @@ import {
 export type DocumentZipFileInput = {
   namaAman: string
   logicalPath: string
+  /**
+   * Kunci lampiran stabil (`DOKUMEN:<dokumen_id>:<index>` /
+   * `MANUAL:<manual_arsip_id>:<attachment_id>`) untuk salinan Google Drive.
+   * Tidak dipakai perakit ZIP.
+   */
+  kunci?: string
 }
 
 export type DocumentZipEntry = {
@@ -299,7 +305,8 @@ function defaultCreateArchive(): DocumentZipArchiveHandle {
   return new ZipArchive({ zlib: { level: 9 } }) as unknown as DocumentZipArchiveHandle
 }
 
-function nextAvailableFileName(namaAman: string, seen: Map<string, number>): string {
+/** Nama unik di dalam satu folder: kemunculan kedua dst. diberi akhiran ` (2)`, ` (3)` sebelum ekstensi. */
+export function nextAvailableFileName(namaAman: string, seen: Map<string, number>): string {
   const count = seen.get(namaAman) ?? 0
   seen.set(namaAman, count + 1)
 

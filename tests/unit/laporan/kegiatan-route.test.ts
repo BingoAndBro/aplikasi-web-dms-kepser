@@ -430,7 +430,7 @@ describe('POST /api/laporan/kegiatan/export-zip — dokumen tambahan KSBU (D-29)
     })
   }
 
-  type Entry = { folderPath: string; files: Array<{ namaAman: string; logicalPath: string }>; skipReason?: string }
+  type Entry = { folderPath: string; files: Array<{ namaAman: string; logicalPath: string; kunci?: string }>; skipReason?: string }
   const plannedEntries = (): Entry[] => mocks.streamDocumentZip.mock.calls[0][0]
 
   it('ikut mengekspor lampiran dokumen tambahan KSBU dari kegiatan yang dipimpin, dan mengabaikan kegiatan lain', async () => {
@@ -445,6 +445,8 @@ describe('POST /api/laporan/kegiatan/export-zip — dokumen tambahan KSBU (D-29)
       `manual/${MANUAL_K1}/bast.pdf`,
     ])
     expect(entries[0].files.every((file) => file.namaAman.length > 0)).toBe(true)
+    // Kunci lampiran dipakai salinan Google Drive (section 07); tidak mengubah isi ZIP.
+    expect(entries[0].files.map((file) => file.kunci)).toEqual([`MANUAL:${MANUAL_K1}:a1`, `MANUAL:${MANUAL_K1}:a2`])
   })
 
   it('mencatat dokumen tambahan KSBU yang berkasnya dimusnahkan di daftar isi, tanpa file', async () => {
