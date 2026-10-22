@@ -339,6 +339,41 @@ describe('POST /api/laporan/tautan/$id/revoke', () => {
   })
 })
 
+describe('POST /api/laporan/tautan/$id/revoke — pemicu runner (section 09)', () => {
+  const post = handler(RevokeRoute, 'POST')
+  const call = (origin = 'http://localhost') => post({
+    request: postRequest(`http://localhost/api/laporan/tautan/${TAUTAN_ID}/revoke`, {}, origin),
+    params: { id: TAUTAN_ID },
+  })
+
+  it('revoked -> runner dipicu (job HAPUS_TAUTAN lahir di transaksi cabut); respons tidak berubah', async () => {
+    mocks.revokeTautanByCreator.mockResolvedValue('revoked')
+
+    const response = await call()
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ success: true })
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['already_revoked', 'not_found'] as const)('%s -> runner tidak dipicu', async (result) => {
+    mocks.revokeTautanByCreator.mockResolvedValue(result)
+
+    await call()
+
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('beda origin (403), tanpa sesi (401), galat (500) -> tidak memicu runner', async () => {
+    expect((await call('https://evil.example')).status).toBe(403)
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+    expect((await call()).status).toBe(401)
+    mocks.revokeTautanByCreator.mockRejectedValueOnce(new Error('db'))
+    expect((await call()).status).toBe(500)
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+})
+
 describe('GET /api/tautan/$token', () => {
   const get = handler(ViewerRoute, 'GET')
 

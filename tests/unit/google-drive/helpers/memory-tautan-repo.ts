@@ -10,6 +10,7 @@ import type {
 import type { AkunUntukJob } from '#/lib/google-drive/akun-repository'
 import type {
   BarisFileUnggah,
+  HapusDriveRepository,
   TautanDriveRepository,
   TautanUntukSinkron,
 } from '#/lib/google-drive/tautan-drive-repository'
@@ -26,6 +27,7 @@ export type MemFile = BarisFileUnggah & {
   keteranganHapus: LaporanTautanDriveFileKeteranganHapus | null
   driveFileId: string | null
   diunggahPada: Date | null
+  dihapusPada?: Date | null
 }
 
 type Hook = (...args: unknown[]) => void | Promise<void>
@@ -33,7 +35,9 @@ type Hook = (...args: unknown[]) => void | Promise<void>
 export const TAUTAN_ID = '77777777-7777-4777-8777-777777777777'
 export const AKUN_ID = '22222222-2222-4222-8222-222222222222'
 
-export class MemoryTautanRepo implements TautanDriveRepository {
+type RepoMethod = keyof TautanDriveRepository | keyof HapusDriveRepository
+
+export class MemoryTautanRepo implements TautanDriveRepository, HapusDriveRepository {
   readonly tautan = new Map<string, MemTautan>()
   readonly files: MemFile[] = []
   readonly enqueued: Array<{ jenis: 'HAPUS_FILE'; tautanId: string; akunId: string }> = []
@@ -41,7 +45,7 @@ export class MemoryTautanRepo implements TautanDriveRepository {
   readonly jobSelesai: string[] = []
   readonly events: string[] = []
   /** Dipanggil di awal method dengan argumennya (mis. untuk mencabut tautan di tengah unggah). */
-  readonly hooks: Partial<Record<keyof TautanDriveRepository, Hook>> = {}
+  readonly hooks: Partial<Record<RepoMethod, Hook>> = {}
 
   addTautan(overrides: Partial<MemTautan> = {}): MemTautan {
     const row: MemTautan = {
@@ -94,7 +98,7 @@ export class MemoryTautanRepo implements TautanDriveRepository {
     return row
   }
 
-  private async enter(method: keyof TautanDriveRepository, args: unknown[]) {
+  private async enter(method: RepoMethod, args: unknown[]) {
     this.events.push(method)
     await this.hooks[method]?.(...args)
   }
@@ -216,6 +220,49 @@ export class MemoryTautanRepo implements TautanDriveRepository {
     if (row.revokedAt || !row.driveStatus || !['MENUNGGU', 'MENGUNGGAH'].includes(row.driveStatus)) return false
     row.driveStatus = 'GAGAL'
     return true
+  }
+
+  // ---- HapusDriveRepository (section 09) ----
+
+  async ambilBarisMenghapusBerikut(tautanId: string) {
+    await this.enter('ambilBarisMenghapusBerikut', [tautanId])
+    const row = this.files
+      .filter((f) => f.tautanId === tautanId && f.status === 'MENGHAPUS')
+      .sort((a, b) => a.kunciLampiran.localeCompare(b.kunciLampiran))[0]
+    return row ? { id: row.id, driveFileId: row.driveFileId, keteranganHapus: row.keteranganHapus } : null
+  }
+
+  async tandaiBarisDihapus(id: string, now: Date) {
+    await this.enter('tandaiBarisDihapus', [id, now])
+    const row = this.file(id)
+    if (row.status !== 'MENGHAPUS') return false
+    Object.assign(row, { status: 'DIHAPUS', dihapusPada: now })
+    return true
+  }
+
+  async selesaikanHapusTautan({ tautanId, jobId, now }: { tautanId: string; jobId: string; now: Date }) {
+    await this.enter('selesaikanHapusTautan', [{ tautanId, jobId }])
+    const row = this.get(tautanId)
+    if (!row.revokedAt || row.driveStatus === 'DIHAPUS') return false
+    const files = this.files.filter((f) => f.tautanId === tautanId && f.status !== 'DIHAPUS')
+    const jumlahFile = files.filter((f) => f.driveFileId && (f.status === 'TERUNGGAH' || f.status === 'MENGHAPUS')).length
+    for (const f of files) Object.assign(f, { status: 'DIHAPUS', keteranganHapus: f.keteranganHapus ?? 'DICABUT', dihapusPada: now })
+    row.driveStatus = 'DIHAPUS'
+    this.audits.push({ aksi: 'DRIVE_TAUTAN_DIHAPUS', entityId: tautanId, metadata: { jumlah_file: jumlahFile } })
+    this.jobSelesai.push(jobId)
+    return true
+  }
+
+  async selesaikanHapusFile(input: { tautanId: string; jobId: string; jumlahFile: number; keterangan: LaporanTautanDriveFileKeteranganHapus[]; now: Date }) {
+    await this.enter('selesaikanHapusFile', [input])
+    if (input.jumlahFile > 0) {
+      this.audits.push({
+        aksi: 'DRIVE_FILE_DIHAPUS',
+        entityId: input.tautanId,
+        metadata: { jumlah_file: input.jumlahFile, keterangan: input.keterangan },
+      })
+    }
+    this.jobSelesai.push(input.jobId)
   }
 }
 

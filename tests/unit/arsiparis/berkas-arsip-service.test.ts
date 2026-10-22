@@ -725,6 +725,9 @@ function createFakeRepository(options: {
   insertBerkasItemError?: unknown
   openAfterConflict?: boolean
   closedStatusArsip?: TestBerkasArchiveStatus | null
+  withDestructionHook?: boolean
+  destructionHookError?: unknown
+  updateBerkasArchiveStatusConflict?: boolean
 } = {}): BerkasArsipRepository & { calls: unknown[][] } {
   const calls: unknown[][] = []
   let openLookupCount = 0
@@ -861,6 +864,7 @@ function createFakeRepository(options: {
         input.currentStatusArsip,
         input.nextStatusArsip,
       ])
+      if (options.updateBerkasArchiveStatusConflict) return null
       return {
         ...closedBerkas({ statusArsip: input.nextStatusArsip }),
         updatedAt: new Date('2026-05-30T00:00:00.000Z'),
@@ -878,6 +882,13 @@ function createFakeRepository(options: {
       ])
       if (options.appendBerkasActivityError) throw options.appendBerkasActivityError
     },
+  }
+
+  if (options.withDestructionHook) {
+    repository.onBerkasDimusnahkan = async (input) => {
+      calls.push(['onBerkasDimusnahkan', input.berkasId, input.now instanceof Date])
+      if (options.destructionHookError) throw options.destructionHookError
+    }
   }
 
   if (options.withTransaction) {
@@ -942,3 +953,114 @@ function baseBerkas(): TestBerkasRow {
     createdBy: ACTOR_ID,
   }
 }
+
+describe('transitionBerkasArchiveStatus -- hook penghapusan salinan Google Drive (section 09)', () => {
+  const names = (repository: { calls: unknown[][] }) => repository.calls.map(([name]) => name)
+
+  it('approve_destruction: update bersyarat -> hook -> activity, semuanya di dalam satu transaksi', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+      withTransaction: true,
+      withDestructionHook: true,
+    })
+
+    const updated = await transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'approve_destruction',
+    }, { repository })
+
+    expect(updated.status_arsip).toBe('DIMUSNAHKAN')
+    expect(names(repository)).toEqual([
+      'transaction:begin',
+      'findBerkasById',
+      'updateBerkasArchiveStatus',
+      'onBerkasDimusnahkan',
+      'appendBerkasActivity',
+      'transaction:commit',
+    ])
+    expect(repository.calls).toContainEqual(['onBerkasDimusnahkan', CLOSED_BERKAS_ID, true])
+    // Update tetap bersyarat pada status lama.
+    expect(repository.calls).toContainEqual(['updateBerkasArchiveStatus', CLOSED_BERKAS_ID, 'USUL_MUSNAH', 'DIMUSNAHKAN'])
+  })
+
+  it.each([
+    ['propose_destruction', BERKAS_ARCHIVE_STATUS.AKTIF],
+    ['cancel_proposal', BERKAS_ARCHIVE_STATUS.USUL_MUSNAH],
+  ] as const)('%s tidak memanggil hook', async (action, closedStatusArsip) => {
+    const repository = createFakeRepository({ closedStatusArsip, withTransaction: true, withDestructionHook: true })
+
+    await transitionBerkasArchiveStatus({ berkasId: CLOSED_BERKAS_ID, actorUserId: ACTOR_ID, action }, { repository })
+
+    expect(names(repository)).not.toContain('onBerkasDimusnahkan')
+    expect(names(repository).at(-1)).toBe('transaction:commit')
+  })
+
+  it('hook gagal -> transaksi rollback, activity tidak ditulis, galat diteruskan', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+      withTransaction: true,
+      withDestructionHook: true,
+      destructionHookError: new Error('drive job insert failed'),
+    })
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'approve_destruction',
+    }, { repository })).rejects.toThrow('drive job insert failed')
+
+    expect(names(repository)).toContain('transaction:rollback')
+    expect(names(repository)).not.toContain('transaction:commit')
+    expect(names(repository)).not.toContain('appendBerkasActivity')
+  })
+
+  it('activity gagal setelah hook -> rollback (status, job hapus, dan activity lahir bersama)', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+      withTransaction: true,
+      withDestructionHook: true,
+      appendBerkasActivityError: new Error('activity insert failed'),
+    })
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'approve_destruction',
+    }, { repository })).rejects.toThrow('activity insert failed')
+
+    expect(names(repository)).toContain('onBerkasDimusnahkan')
+    expect(names(repository)).toContain('transaction:rollback')
+  })
+
+  it('update bersyarat gagal (status sudah berubah) -> tanpa hook dan tanpa activity', async () => {
+    const repository = createFakeRepository({
+      closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH,
+      withTransaction: true,
+      withDestructionHook: true,
+      updateBerkasArchiveStatusConflict: true,
+    })
+
+    await expect(transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'approve_destruction',
+    }, { repository })).rejects.toMatchObject({ code: 'BERKAS_LIFECYCLE_INVALID' })
+
+    expect(names(repository)).not.toContain('onBerkasDimusnahkan')
+    expect(names(repository)).not.toContain('appendBerkasActivity')
+    expect(names(repository)).toContain('transaction:rollback')
+  })
+
+  it('repository tanpa hook (repo palsu lama / transaksi rute) tetap berjalan', async () => {
+    const repository = createFakeRepository({ closedStatusArsip: BERKAS_ARCHIVE_STATUS.USUL_MUSNAH })
+
+    const updated = await transitionBerkasArchiveStatus({
+      berkasId: CLOSED_BERKAS_ID,
+      actorUserId: ACTOR_ID,
+      action: 'approve_destruction',
+    }, { repository })
+
+    expect(updated.status_arsip).toBe('DIMUSNAHKAN')
+  })
+})

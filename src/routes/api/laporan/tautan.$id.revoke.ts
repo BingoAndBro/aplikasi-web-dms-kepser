@@ -1,12 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { getLocalServerSession } from '#/lib/auth/local-server-auth'
+import { triggerDriveRunner } from '#/lib/google-drive/runner'
 import { isUuid } from '#/lib/laporan/tautan'
 import { revokeTautanByCreator } from '#/lib/laporan/tautan-repository'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
 // Mencabut tautan: hanya pembuatnya. Tautan yang dicabut langsung tidak bisa
 // dibuka lagi (410) dan tidak bisa diaktifkan kembali -- buat tautan baru.
+// Tautan DRIVE: salinan di Drive dihapus runner (job HAPUS_TAUTAN dibuat di
+// transaksi cabut); selama internet putus, link Drive masih terbuka sampai job berhasil.
 export const Route = createFileRoute('/api/laporan/tautan/$id/revoke')({
   ssr: false,
   server: {
@@ -32,6 +35,7 @@ export const Route = createFileRoute('/api/laporan/tautan/$id/revoke')({
 
           if (result === 'revoked') {
             console.info('[laporan/tautan] tautan dicabut', { actor: session.user.id, tautanId: params.id })
+            triggerDriveRunner()
           }
 
           return Response.json({ success: true })

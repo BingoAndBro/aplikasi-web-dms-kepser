@@ -11,6 +11,7 @@ import { dokumenTransaksi } from '#/db/schema/dokumen'
 import { ARCHIVE_SOURCE_TYPE } from '#/lib/constants/archive-status'
 import { parseLampiranUrls } from '#/lib/dokumen/parse'
 import { PEMBERSIHAN_BATCH_LIMIT } from '#/lib/dokumen/pembersihan'
+import { tandaiFileDihapusUntukSumber, type PenghapusanExecutor } from '#/lib/google-drive/penghapusan'
 import {
   assertSafeLogicalStoragePath,
 } from '#/lib/storage/local-storage-paths'
@@ -339,27 +340,53 @@ const defaultPembersihanExecutionRepository: PembersihanExecutionRepository = {
     const database = await getDatabase()
     const now = new Date()
 
-    await database.transaction(async (tx) => {
-      for (const entry of entries) {
-        await tx
-          .update(dokumenTransaksi)
-          .set({
-            lampiranDibersihkanAt: now,
-            lampiranDibersihkanBy: actorUserId,
-            lampiranDibersihkanAlasan: 'PEMBERSIHAN_NON_MATERIAL',
-          })
-          .where(eq(dokumenTransaksi.id, entry.dokumenId))
-
-        await tx.insert(auditLog).values({
-          entityType: 'DOKUMEN',
-          entityId: entry.dokumenId,
-          aksi: 'DOKUMEN_LAMPIRAN_DIBERSIHKAN',
-          actorUserId,
-          metadataSnapshot: entry.metadataSnapshot,
-        })
-      }
-    })
+    await database.transaction(tx => applyCleanupInTransaction(tx, { actorUserId, entries, now }))
   },
+}
+
+/**
+ * Isi transaksi `applyCleanup`: tandai lampiran dibersihkan + audit per dokumen,
+ * lalu (section 09 Google Drive) salinan lampiran yang sama di tautan DRIVE
+ * ditandai DIBERSIHKAN dan job hapusnya dibuat -- semuanya commit bersama.
+ */
+export async function applyCleanupInTransaction(
+  tx: PenghapusanExecutor,
+  {
+    actorUserId,
+    entries,
+    now,
+  }: {
+    actorUserId: string
+    entries: Parameters<PembersihanExecutionRepository['applyCleanup']>[0]['entries']
+    now: Date
+  },
+): Promise<void> {
+  if (entries.length === 0) return
+
+  for (const entry of entries) {
+    await tx
+      .update(dokumenTransaksi)
+      .set({
+        lampiranDibersihkanAt: now,
+        lampiranDibersihkanBy: actorUserId,
+        lampiranDibersihkanAlasan: 'PEMBERSIHAN_NON_MATERIAL',
+      })
+      .where(eq(dokumenTransaksi.id, entry.dokumenId))
+
+    await tx.insert(auditLog).values({
+      entityType: 'DOKUMEN',
+      entityId: entry.dokumenId,
+      aksi: 'DOKUMEN_LAMPIRAN_DIBERSIHKAN',
+      actorUserId,
+      metadataSnapshot: entry.metadataSnapshot,
+    })
+  }
+
+  await tandaiFileDihapusUntukSumber(tx, {
+    dokumenIds: entries.map(entry => entry.dokumenId),
+    keterangan: 'DIBERSIHKAN',
+    now,
+  })
 }
 
 function addSafeLogicalPath(target: Set<string>, value: unknown): void {

@@ -28,6 +28,7 @@ import { DOC_STATUS } from '#/lib/constants/document-status'
 import { parseLampiranUrls } from '#/lib/dokumen'
 import type { DokumenRow } from '#/lib/dokumen/types'
 import { enqueueDriveJob } from '#/lib/google-drive/jobs'
+import { tandaiTautanDicabut } from '#/lib/google-drive/penghapusan'
 import type { RencanaFileDrive } from '#/lib/google-drive/rencana-file'
 import { LAPORAN_KEGIATAN_SCOPE_STATUSES } from '#/lib/laporan/kegiatan-scope'
 
@@ -319,27 +320,44 @@ export async function findTautanById(id: string): Promise<LaporanTautan | null> 
   return rows[0] ?? null
 }
 
-/** Hanya pembuat yang bisa mencabut; tautan yang sudah dicabut tidak diubah lagi. */
-export async function revokeTautanByCreator(id: string, userId: string): Promise<'revoked' | 'already_revoked' | 'not_found'> {
-  const updated = await db
-    .update(laporanTautan)
-    .set({ revokedAt: new Date(), revokedBy: userId })
-    .where(and(
-      eq(laporanTautan.id, id),
-      eq(laporanTautan.createdBy, userId),
-      isNull(laporanTautan.revokedAt),
-    ))
-    .returning({ id: laporanTautan.id })
+/**
+ * Hanya pembuat yang bisa mencabut; tautan yang sudah dicabut tidak diubah lagi.
+ * Satu transaksi (SPEC 9): revoked_at, dan untuk tautan DRIVE sekaligus
+ * drive_status MENGHAPUS, job sinkron/hapus-file MENUNGGU dibatalkan, dan job
+ * HAPUS_TAUTAN -- supaya tidak ada tautan dicabut yang salinan Drive-nya terlupa.
+ */
+export async function revokeTautanByCreator(
+  id: string,
+  userId: string,
+  executor: TautanRepositoryExecutor = db,
+): Promise<'revoked' | 'already_revoked' | 'not_found'> {
+  return executor.transaction(async (tx) => {
+    const now = new Date()
+    const [updated] = await tx
+      .update(laporanTautan)
+      .set({ revokedAt: now, revokedBy: userId })
+      .where(and(
+        eq(laporanTautan.id, id),
+        eq(laporanTautan.createdBy, userId),
+        isNull(laporanTautan.revokedAt),
+      ))
+      .returning({ id: laporanTautan.id, akses: laporanTautan.akses, driveAkunId: laporanTautan.driveAkunId })
 
-  if (updated.length > 0) return 'revoked'
+    if (updated) {
+      if (updated.akses === 'DRIVE' && updated.driveAkunId) {
+        await tandaiTautanDicabut(tx, { tautanId: updated.id, akunId: updated.driveAkunId, now })
+      }
+      return 'revoked'
+    }
 
-  const existing = await db
-    .select({ id: laporanTautan.id })
-    .from(laporanTautan)
-    .where(and(eq(laporanTautan.id, id), eq(laporanTautan.createdBy, userId)))
-    .limit(1)
+    const existing = await tx
+      .select({ id: laporanTautan.id })
+      .from(laporanTautan)
+      .where(and(eq(laporanTautan.id, id), eq(laporanTautan.createdBy, userId)))
+      .limit(1)
 
-  return existing.length > 0 ? 'already_revoked' : 'not_found'
+    return existing.length > 0 ? 'already_revoked' : 'not_found'
+  })
 }
 
 export async function recordTautanAccess(id: string): Promise<void> {

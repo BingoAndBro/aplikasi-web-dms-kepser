@@ -11,7 +11,14 @@ const mocks = vi.hoisted(() => ({
   txInsert: vi.fn(),
   txInsertValues: vi.fn(),
   txDelete: vi.fn(),
+  tandaiFileDihapusUntukSumber: vi.fn(),
+  triggerDriveRunner: vi.fn(),
 }))
+
+// Hook Drive (section 09) dijalankan dengan tx rute; tx tiruan di sini hanya
+// mengenal insert/delete, jadi hook di-mock dan urutannya diperiksa terpisah.
+vi.mock('#/lib/google-drive/penghapusan', () => ({ tandaiFileDihapusUntukSumber: mocks.tandaiFileDihapusUntukSumber }))
+vi.mock('#/lib/google-drive/runner', () => ({ triggerDriveRunner: mocks.triggerDriveRunner }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
@@ -71,6 +78,7 @@ describe('DELETE /api/dokumen/$id -- hard delete audit trail', () => {
       })),
     }))
 
+    mocks.tandaiFileDihapusUntukSumber.mockResolvedValue({ tautanTerdampak: 0 })
     mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<void>) => {
       await callback({
         insert: mocks.txInsert,
@@ -158,5 +166,83 @@ describe('DELETE /api/dokumen/$id -- hard delete audit trail', () => {
 
     expect(response.status).toBe(400)
     expect(mocks.dbTransaction).not.toHaveBeenCalled()
+  })
+})
+
+describe('DELETE /api/dokumen/$id -- salinan Google Drive ikut dihapus (P4, section 09)', () => {
+  const dokumenRow = (overrides: Record<string, unknown> = {}) => ({
+    id: DOKUMEN_ID,
+    judul: 'Notulen',
+    nama_dokumen: 'Notulen',
+    created_by: USER_ID,
+    kegiatan_jenis_id: KEGIATAN_ID,
+    status: 'TERSIMPAN',
+    lampiran_urls: [],
+    is_non_material: true,
+    jenis_permintaan_id: null,
+    kategori_permintaan_id: null,
+    detail_permintaan_id: null,
+    ...overrides,
+  })
+
+  let txObject: unknown
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getLocalServerSession.mockResolvedValue({ user: { id: USER_ID }, roles: ['PEGAWAI'] })
+    const txInsertValues = vi.fn(async () => undefined)
+    mocks.txInsert = vi.fn(() => ({ values: txInsertValues }))
+    mocks.txDelete = vi.fn(() => ({ where: vi.fn(() => ({ returning: vi.fn(async () => [{ id: DOKUMEN_ID }]) })) }))
+    mocks.tandaiFileDihapusUntukSumber.mockResolvedValue({ tautanTerdampak: 1 })
+    mocks.dbTransaction.mockImplementation(async (callback: (tx: unknown) => Promise<void>) => {
+      txObject = { insert: mocks.txInsert, delete: mocks.txDelete }
+      await callback(txObject)
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('menandai salinan Drive DIHAPUS_PEMILIK di transaksi DELETE yang sama, sebelum baris dihapus; lalu memicu runner', async () => {
+    queueSelectResults([[dokumenRow()], []])
+
+    const response = await deleteHandler({ request: makeDeleteRequest(), params: { id: DOKUMEN_ID } })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ success: true })
+    expect(mocks.tandaiFileDihapusUntukSumber).toHaveBeenCalledTimes(1)
+    const [tx, input] = mocks.tandaiFileDihapusUntukSumber.mock.calls[0]
+    expect(tx).toBe(txObject)
+    expect(input).toEqual({ dokumenIds: [DOKUMEN_ID], keterangan: 'DIHAPUS_PEMILIK', now: expect.any(Date) })
+    expect(mocks.tandaiFileDihapusUntukSumber.mock.invocationCallOrder[0])
+      .toBeLessThan(mocks.txDelete.mock.invocationCallOrder[0])
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+    expect(mocks.triggerDriveRunner.mock.invocationCallOrder[0])
+      .toBeGreaterThan(mocks.dbTransaction.mock.invocationCallOrder[0])
+  })
+
+  it('hook gagal -> transaksi gagal (500), dokumen tidak dihapus, runner tidak dipicu', async () => {
+    queueSelectResults([[dokumenRow()], []])
+    mocks.tandaiFileDihapusUntukSumber.mockRejectedValue(new Error('drive_job insert failed'))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const response = await deleteHandler({ request: makeDeleteRequest(), params: { id: DOKUMEN_ID } })
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: 'Gagal menghapus dokumen' })
+    expect(mocks.txDelete).not.toHaveBeenCalled()
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('dokumen yang tidak boleh dihapus (400) / bukan pemilik (403) tidak menyentuh Drive', async () => {
+    queueSelectResults([[dokumenRow({ status: 'COMPLETED', is_non_material: false })]])
+    expect((await deleteHandler({ request: makeDeleteRequest(), params: { id: DOKUMEN_ID } })).status).toBe(400)
+
+    queueSelectResults([[dokumenRow({ created_by: 'orang-lain' })]])
+    expect((await deleteHandler({ request: makeDeleteRequest(), params: { id: DOKUMEN_ID } })).status).toBe(403)
+
+    expect(mocks.tandaiFileDihapusUntukSumber).not.toHaveBeenCalled()
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
   })
 })

@@ -17,10 +17,13 @@ import { isDriveConfigured, readDriveConfig } from '#/lib/google-drive/config'
 import { createGoogleDriveClient, type DriveClient } from '#/lib/google-drive/drive-client'
 import { DriveApiError } from '#/lib/google-drive/drive-errors'
 import { bukaFileUntukUnggah } from '#/lib/google-drive/file-source'
+import { createHapusFileHandler, createHapusTautanHandler, type HapusDriveDeps } from '#/lib/google-drive/hapus'
 import {
   claimNextDriveJob,
   completeDriveJob,
+  deferDriveJob,
   failDriveJob,
+  findActiveSinkronJob,
   nextScheduledAt,
   type DriveJob,
 } from '#/lib/google-drive/jobs'
@@ -33,7 +36,11 @@ export const DRIVE_RUNNER_TIMER_MAKS_MS = 60 * 60_000
 export const DRIVE_RUNNER_PESAN_UMUM = 'Gagal memproses salinan Google Drive'
 export const DRIVE_RUNNER_PESAN_TANPA_HANDLER = 'Pemroses belum tersedia'
 
-export type DriveJobHandler = (input: { job: DriveJob; now: () => Date }) => Promise<{ hasil: 'SELESAI' | 'DIBATALKAN' }>
+/**
+ * DITUNDA: handler sudah mengembalikan job ke antrean sendiri (deferDriveJob,
+ * D13) -- runner tidak menandainya selesai dan tidak menghitungnya gagal.
+ */
+export type DriveJobHandler = (input: { job: DriveJob; now: () => Date }) => Promise<{ hasil: 'SELESAI' | 'DIBATALKAN' | 'DITUNDA' }>
 
 export type DriveRunnerDeps = {
   isConfigured: () => boolean
@@ -43,7 +50,7 @@ export type DriveRunnerDeps = {
     fail(id: string, input: { kategori: DriveGalatKategori; pesan: string; now: Date }): Promise<'MENUNGGU' | 'GAGAL' | null>
     nextScheduledAt(): Promise<Date | null>
   }
-  /** Handler per jenis; HAPUS_* dipasang di section 09. */
+  /** Handler per jenis; jenis tanpa handler -> PERMANEN "Pemroses belum tersedia". */
   handlers: Partial<Record<DriveJobJenis, DriveJobHandler>>
   tandaiPerluHubungUlang(akunId: string, now: Date): Promise<unknown>
   /** drive_status tautan -> GAGAL (bersyarat belum dicabut). */
@@ -76,6 +83,15 @@ export async function defaultDriveClientFor(akun: AkunUntukJob): Promise<DriveCl
 
 export function createDefaultDriveRunnerDeps(): DriveRunnerDeps {
   const repo = createTautanDriveRepository()
+  const hapusDeps: HapusDriveDeps = {
+    repo,
+    akun: { muatAkunUntukJob: (akunId) => muatAkunUntukJob(akunId) },
+    driveClientFor: defaultDriveClientFor,
+    jobs: {
+      findActiveSinkron: (tautanId, now) => findActiveSinkronJob(tautanId, { now }),
+      defer: (id, input) => deferDriveJob(id, input),
+    },
+  }
   return {
     isConfigured: () => isDriveConfigured(),
     jobs: {
@@ -94,6 +110,8 @@ export function createDefaultDriveRunnerDeps(): DriveRunnerDeps {
         driveClientFor: defaultDriveClientFor,
         bukaFile: (baris) => bukaFileUntukUnggah(baris),
       }),
+      HAPUS_TAUTAN: createHapusTautanHandler(hapusDeps),
+      HAPUS_FILE: createHapusFileHandler(hapusDeps),
     },
     tandaiPerluHubungUlang: (akunId, now) => tandaiPerluHubungUlang(akunId, now),
     tandaiTautanGagal: (tautanId) => repo.tandaiGagal(tautanId),
@@ -132,6 +150,10 @@ export async function runDriveRunnerOnce({
       const handler = deps.handlers[job.jenis]
       if (!handler) throw new DriveApiError('PERMANEN', DRIVE_RUNNER_PESAN_TANPA_HANDLER)
       const { hasil } = await handler({ job, now })
+      if (hasil === 'DITUNDA') {
+        ringkasan.dijeda += 1
+        continue
+      }
       await deps.jobs.complete(job.id, { status: hasil, now: now() })
       if (hasil === 'SELESAI') ringkasan.selesai += 1
       else ringkasan.dibatalkan += 1

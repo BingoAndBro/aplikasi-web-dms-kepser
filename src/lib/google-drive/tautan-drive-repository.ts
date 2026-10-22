@@ -6,7 +6,7 @@
 // (section 09) selalu menang atas runner. Handler memakai antarmuka
 // `TautanDriveRepository` supaya tes bisa memakai implementasi in-memory.
 // `db` dimuat malas (pola jobs.ts) agar modul bisa diimpor tanpa DATABASE_URL.
-import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import type { db as Database } from '#/db/client'
 import { driveJob } from '#/db/schema/app/drive-job'
 import {
@@ -16,6 +16,7 @@ import {
 import {
   laporanTautanDriveFile,
   type LaporanTautanDriveFile,
+  type LaporanTautanDriveFileKeteranganHapus,
 } from '#/db/schema/app/laporan-tautan-drive-file'
 import { users } from '#/db/schema/auth/users'
 import { auditLog } from '#/db/schema/audit/audit-log'
@@ -92,12 +93,39 @@ export interface TautanDriveRepository {
   tandaiGagal(id: string): Promise<boolean>
 }
 
+export type BarisFileHapus = Pick<LaporanTautanDriveFile, 'id' | 'driveFileId' | 'keteranganHapus'>
+
+/** Bagian repository yang dipakai handler HAPUS_TAUTAN / HAPUS_FILE (hapus.ts). */
+export interface HapusDriveRepository {
+  muatTautanUntukSinkron(id: string): Promise<TautanUntukSinkron | null>
+  muatDataDaftarIsi(tautanId: string): Promise<DataDaftarIsi | null>
+  /** Baris MENGHAPUS berikutnya urut kunci_lampiran (diambil ulang tiap iterasi). */
+  ambilBarisMenghapusBerikut(tautanId: string): Promise<BarisFileHapus | null>
+  /** MENGHAPUS -> DIHAPUS + dihapus_pada; false bila baris sudah bukan MENGHAPUS. */
+  tandaiBarisDihapus(id: string, now: Date): Promise<boolean>
+  /**
+   * Satu transaksi setelah folder terhapus: drive_status DIHAPUS (bersyarat
+   * sudah dicabut & belum DIHAPUS), semua baris yang belum DIHAPUS -> DIHAPUS
+   * (keterangan DICABUT bila kosong), audit DRIVE_TAUTAN_DIHAPUS (actor null),
+   * job SELESAI. false bila tautan tidak dalam keadaan itu (tidak ada yang ditulis).
+   */
+  selesaikanHapusTautan(input: { tautanId: string; jobId: string; now: Date }): Promise<boolean>
+  /** Satu transaksi: audit DRIVE_FILE_DIHAPUS (bila ada file terhapus) + job SELESAI. */
+  selesaikanHapusFile(input: {
+    tautanId: string
+    jobId: string
+    jumlahFile: number
+    keterangan: LaporanTautanDriveFileKeteranganHapus[]
+    now: Date
+  }): Promise<void>
+}
+
 async function getDatabase(): Promise<TautanDriveExecutor> {
   const client = await import('#/db/client')
   return client.db
 }
 
-export function createTautanDriveRepository(executor?: TautanDriveExecutor): TautanDriveRepository {
+export function createTautanDriveRepository(executor?: TautanDriveExecutor): TautanDriveRepository & HapusDriveRepository {
   const database = () => (executor ? Promise.resolve(executor) : getDatabase())
 
   return {
@@ -293,6 +321,99 @@ export function createTautanDriveRepository(executor?: TautanDriveExecutor): Tau
         ))
         .returning({ id: laporanTautan.id })
       return updated.length > 0
+    },
+
+    async ambilBarisMenghapusBerikut(tautanId) {
+      const run = await database()
+      const [row] = await run
+        .select({
+          id: laporanTautanDriveFile.id,
+          driveFileId: laporanTautanDriveFile.driveFileId,
+          keteranganHapus: laporanTautanDriveFile.keteranganHapus,
+        })
+        .from(laporanTautanDriveFile)
+        .where(and(eq(laporanTautanDriveFile.tautanId, tautanId), eq(laporanTautanDriveFile.status, 'MENGHAPUS')))
+        .orderBy(asc(laporanTautanDriveFile.kunciLampiran))
+        .limit(1)
+      return row ?? null
+    },
+
+    async tandaiBarisDihapus(id, now) {
+      const run = await database()
+      const updated = await run
+        .update(laporanTautanDriveFile)
+        .set({ status: 'DIHAPUS', dihapusPada: now })
+        .where(and(eq(laporanTautanDriveFile.id, id), eq(laporanTautanDriveFile.status, 'MENGHAPUS')))
+        .returning({ id: laporanTautanDriveFile.id })
+      return updated.length > 0
+    },
+
+    async selesaikanHapusTautan({ tautanId, jobId, now }) {
+      const run = await database()
+      return run.transaction(async (tx) => {
+        const updated = await tx
+          .update(laporanTautan)
+          .set({ driveStatus: 'DIHAPUS' })
+          .where(and(
+            eq(laporanTautan.id, tautanId),
+            isNotNull(laporanTautan.revokedAt),
+            ne(laporanTautan.driveStatus, 'DIHAPUS'),
+          ))
+          .returning({ id: laporanTautan.id })
+        if (updated.length === 0) return false
+
+        // Salinan yang memang ada di Drive (bukan baris yang dilewati / belum diunggah).
+        const [hitung] = await tx
+          .select({ jumlah: sql<number>`count(*)::int` })
+          .from(laporanTautanDriveFile)
+          .where(and(
+            eq(laporanTautanDriveFile.tautanId, tautanId),
+            inArray(laporanTautanDriveFile.status, ['TERUNGGAH', 'MENGHAPUS']),
+            isNotNull(laporanTautanDriveFile.driveFileId),
+          ))
+        await tx
+          .update(laporanTautanDriveFile)
+          .set({
+            status: 'DIHAPUS',
+            keteranganHapus: sql`coalesce(${laporanTautanDriveFile.keteranganHapus}, 'DICABUT')`,
+            dihapusPada: now,
+          })
+          .where(and(eq(laporanTautanDriveFile.tautanId, tautanId), ne(laporanTautanDriveFile.status, 'DIHAPUS')))
+
+        await tx.insert(auditLog).values({
+          entityType: 'LAPORAN_TAUTAN',
+          entityId: tautanId,
+          aksi: 'DRIVE_TAUTAN_DIHAPUS',
+          actorUserId: null,
+          metadataSnapshot: { jumlah_file: Number(hitung?.jumlah ?? 0) },
+          createdAt: now,
+        })
+        await tx
+          .update(driveJob)
+          .set({ status: 'SELESAI', selesaiPada: now, dikunciPada: null })
+          .where(and(eq(driveJob.id, jobId), eq(driveJob.status, 'PROSES')))
+        return true
+      })
+    },
+
+    async selesaikanHapusFile({ tautanId, jobId, jumlahFile, keterangan, now }) {
+      const run = await database()
+      await run.transaction(async (tx) => {
+        if (jumlahFile > 0) {
+          await tx.insert(auditLog).values({
+            entityType: 'LAPORAN_TAUTAN',
+            entityId: tautanId,
+            aksi: 'DRIVE_FILE_DIHAPUS',
+            actorUserId: null,
+            metadataSnapshot: { jumlah_file: jumlahFile, keterangan },
+            createdAt: now,
+          })
+        }
+        await tx
+          .update(driveJob)
+          .set({ status: 'SELESAI', selesaiPada: now, dikunciPada: null })
+          .where(and(eq(driveJob.id, jobId), eq(driveJob.status, 'PROSES')))
+      })
     },
   }
 }

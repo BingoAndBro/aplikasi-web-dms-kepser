@@ -27,9 +27,12 @@ const mocks = vi.hoisted(() => {
     closeBerkasArsip: vi.fn(),
     transitionBerkasArchiveStatus: vi.fn(),
     executeBerkasPhysicalFileDestruction: vi.fn(),
+    triggerDriveRunner: vi.fn(),
     BerkasArsipServiceError: MockBerkasArsipServiceError,
   }
 })
+
+vi.mock('#/lib/google-drive/runner', () => ({ triggerDriveRunner: mocks.triggerDriveRunner }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
@@ -714,3 +717,70 @@ function expectNoSensitiveOutput(value: unknown): void {
   expect(serialized).not.toContain('cookie')
   expect(serialized).not.toContain('raw')
 }
+
+describe('lifecycle berkas -- pemicu runner Google Drive (section 09)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.getLocalServerSession.mockResolvedValue(createSession(['KEPALA_SUB_BAGIAN_UMUM'], USER_ID))
+    mocks.transitionBerkasArchiveStatus.mockResolvedValue(destroyedBerkasDto())
+    mocks.executeBerkasPhysicalFileDestruction.mockResolvedValue(physicalDeletionReport())
+  })
+
+  const approve = () => lifecyclePostHandler({
+    request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
+      action: 'approve_destruction',
+      confirmation: 'BERSIHKAN FILE BERKAS',
+    }),
+    params: { id: BERKAS_ID },
+  })
+
+  it('approve_destruction sukses memicu runner sebelum pemusnahan fisik lokal; bentuk respons tidak berubah', async () => {
+    const response = await approve()
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ berkas: destroyedBerkasDto(), physical_deletion: physicalDeletionReport() })
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+    expect(mocks.triggerDriveRunner.mock.invocationCallOrder[0])
+      .toBeLessThan(mocks.executeBerkasPhysicalFileDestruction.mock.invocationCallOrder[0])
+  })
+
+  it('propose_destruction dan cancel_proposal tidak memicu runner', async () => {
+    mocks.transitionBerkasArchiveStatus.mockResolvedValue(proposedBerkasDto())
+    for (const action of ['propose_destruction', 'cancel_proposal']) {
+      const response = await lifecyclePostHandler({
+        request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, { action }),
+        params: { id: BERKAS_ID },
+      })
+      expect(response.status).toBe(200)
+    }
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('transisi gagal (status sudah berubah), 401, 403, dan beda origin tidak memicu runner', async () => {
+    mocks.transitionBerkasArchiveStatus.mockRejectedValueOnce(
+      new mocks.BerkasArsipServiceError('BERKAS_LIFECYCLE_INVALID', 'Status berkas sudah berubah'),
+    )
+    expect((await approve()).status).toBe(409)
+
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+    expect((await approve()).status).toBe(401)
+
+    for (const role of ['ADMIN', 'PEGAWAI', 'PPK', 'PPSPM', 'PENANGGUNG_JAWAB_KINERJA']) {
+      mocks.getLocalServerSession.mockResolvedValueOnce(createSession([role], USER_ID))
+      expect((await approve()).status).toBe(403)
+    }
+
+    const crossOrigin = await lifecyclePostHandler({
+      request: jsonRequest(`/api/kasubag/berkas/${BERKAS_ID}/lifecycle`, {
+        action: 'approve_destruction',
+        confirmation: 'BERSIHKAN FILE BERKAS',
+      }, 'https://evil.example'),
+      params: { id: BERKAS_ID },
+    })
+    expect(crossOrigin.status).toBe(403)
+
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+    expect(mocks.executeBerkasPhysicalFileDestruction).not.toHaveBeenCalled()
+  })
+})

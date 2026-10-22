@@ -107,7 +107,7 @@ function fromSqlRow(row: DriveJobSqlRow): DriveJob {
  * job MENUNGGU, tidak ada baris baru: jadwalnya dimajukan ke yang lebih awal (D12).
  */
 export async function enqueueDriveJob(
-  tx: DriveJobExecutor,
+  tx: Pick<DriveJobExecutor, 'insert'>,
   input: { jenis: DriveJobJenis; akunId: string; tautanId: string; now: Date },
 ): Promise<string> {
   const [row] = await tx

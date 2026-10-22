@@ -14,6 +14,7 @@ import {
   requireBerkasArsipApiSession,
   safeBerkasDto,
 } from '#/lib/archive/berkas-arsip-api'
+import { triggerDriveRunner } from '#/lib/google-drive/runner'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
 const nonDestructiveLifecycleBodySchema = z
@@ -57,6 +58,9 @@ export const Route = createFileRoute('/api/kasubag/berkas/$id/lifecycle')({
             actorUserId: sessionOrResponse.user.id,
             action: parsed.data.action,
           })
+          // Salinan Google Drive isi berkas sudah diantrekan di transaksi lifecycle;
+          // runner berjalan terpisah dari pemusnahan fisik lokal (tidak ditunggu).
+          if (parsed.data.action === 'approve_destruction') triggerDriveRunner()
           const physicalDeletion = parsed.data.action === 'approve_destruction'
             ? await executePhysicalDeletionAfterLifecycle(berkasId, sessionOrResponse.user.id)
             : undefined

@@ -9,6 +9,7 @@ import {
   PEMBERSIHAN_DOKUMEN_CONFIRMATION_PHRASE,
 } from '#/lib/dokumen/pembersihan'
 import { executePembersihanLampiran } from '#/lib/dokumen/pembersihan-service'
+import { triggerDriveRunner } from '#/lib/google-drive/runner'
 import { requireSameOrigin } from '#/lib/security/same-origin'
 
 const bodySchema = z
@@ -68,6 +69,8 @@ export const Route = createFileRoute('/api/pembersihan-dokumen/bersihkan')({
             actorKegiatanIds,
           })
 
+          // Salinan Google Drive lampiran yang dibersihkan sudah diantrekan di transaksi pembersihan.
+          if (report.cleaned_count > 0) triggerDriveRunner()
           return Response.json({ success: true, report })
         } catch (error) {
           console.error('[API] /api/pembersihan-dokumen/bersihkan execute error:', error)

@@ -10,7 +10,10 @@ const mocks = vi.hoisted(() => ({
   getLocalServerSession: vi.fn(),
   dbSelect: vi.fn(),
   executePembersihanLampiran: vi.fn(),
+  triggerDriveRunner: vi.fn(),
 }))
+
+vi.mock('#/lib/google-drive/runner', () => ({ triggerDriveRunner: mocks.triggerDriveRunner }))
 
 vi.mock('#/lib/auth/local-server-auth', () => ({
   getLocalServerSession: mocks.getLocalServerSession,
@@ -163,5 +166,51 @@ describe('POST /api/pembersihan-dokumen/bersihkan', () => {
     expect(response.status).toBe(200)
     const payload = await response.json()
     expect(payload.report.failed_count).toBe(1)
+  })
+})
+
+describe('POST /api/pembersihan-dokumen/bersihkan -- pemicu runner Google Drive (section 09)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getLocalServerSession.mockResolvedValue({ user: { id: USER_ID }, roles: ['PEGAWAI'] })
+  })
+
+  const report = (cleaned: number) => ({
+    requested_count: 1,
+    cleaned_count: cleaned,
+    skipped_count: 1 - cleaned,
+    failed_count: 0,
+    items: [cleaned
+      ? { dokumen_id: DOKUMEN_ID_1, outcome: 'cleaned' }
+      : { dokumen_id: DOKUMEN_ID_1, outcome: 'skipped', reason: 'NOT_LED_BY_ACTOR' }],
+  })
+
+  it('cleaned_count > 0 -> runner dipicu; bentuk respons tidak berubah', async () => {
+    queueSelectResult([{ kegiatan_id: KEGIATAN_ID }])
+    mocks.executePembersihanLampiran.mockResolvedValue(report(1))
+
+    const response = await postHandler({ request: makeRequest({ dokumen_ids: [DOKUMEN_ID_1], confirmation: CONFIRMATION }) })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ success: true, report: report(1) })
+    expect(mocks.triggerDriveRunner).toHaveBeenCalledTimes(1)
+  })
+
+  it('tidak ada yang dibersihkan -> runner tidak dipicu', async () => {
+    queueSelectResult([{ kegiatan_id: KEGIATAN_ID }])
+    mocks.executePembersihanLampiran.mockResolvedValue(report(0))
+
+    await postHandler({ request: makeRequest({ dokumen_ids: [DOKUMEN_ID_1], confirmation: CONFIRMATION }) })
+
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
+  })
+
+  it('401 / 403 / 400 tidak memicu runner', async () => {
+    mocks.getLocalServerSession.mockResolvedValueOnce(null)
+    expect((await postHandler({ request: makeRequest({ dokumen_ids: [DOKUMEN_ID_1], confirmation: CONFIRMATION }) })).status).toBe(401)
+    mocks.getLocalServerSession.mockResolvedValueOnce({ user: { id: USER_ID }, roles: ['ADMIN'] })
+    expect((await postHandler({ request: makeRequest({ dokumen_ids: [DOKUMEN_ID_1], confirmation: CONFIRMATION }) })).status).toBe(403)
+    expect((await postHandler({ request: makeRequest({ dokumen_ids: [DOKUMEN_ID_1], confirmation: 'SALAH' }) })).status).toBe(400)
+    expect(mocks.triggerDriveRunner).not.toHaveBeenCalled()
   })
 })

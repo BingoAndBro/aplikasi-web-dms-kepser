@@ -316,3 +316,41 @@ describe('triggerDriveRunner', () => {
     expect(nextScheduledAt).not.toHaveBeenCalled()
   })
 })
+
+describe('handler hapus (section 09)', () => {
+  it("hasil 'DITUNDA' (D13): job tidak di-complete dan tidak dihitung gagal, tautan tidak ditandai", async () => {
+    jobs.add('HAPUS_TAUTAN')
+    jobs.add('HAPUS_FILE')
+    const ditunda: DriveJobHandler = async ({ job }) => {
+      // Handler sendiri yang memanggil deferDriveJob; tiru job kembali ke antrean masa depan.
+      jobs.jobs.find((j) => j.id === job.id)!.status = 'DIBATALKAN'
+      return { hasil: 'DITUNDA' }
+    }
+
+    const ringkasan = await runDriveRunnerOnce({ now: () => NOW, deps: deps({ HAPUS_TAUTAN: ditunda, HAPUS_FILE: ok }) })
+
+    expect(ringkasan).toMatchObject({ diproses: 2, selesai: 1, dijeda: 1, gagal: 0, dibatalkan: 0 })
+    expect(jobs.completed).toEqual([{ id: 'job-2', status: 'SELESAI' }])
+    expect(jobs.failed).toEqual([])
+    expect(tautanGagal).toEqual([])
+  })
+
+  it('GAGAL pada job HAPUS_* tidak menandai tautan GAGAL (hanya SINKRON_TAUTAN)', async () => {
+    jobs.add('HAPUS_TAUTAN')
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    const ringkasan = await runDriveRunnerOnce({
+      now: () => NOW,
+      deps: deps({ HAPUS_TAUTAN: throws(new DriveApiError('AKUN_DIPUTUS')) }),
+    })
+
+    expect(ringkasan).toMatchObject({ gagal: 1 })
+    expect(jobs.failed).toEqual([{ id: 'job-1', kategori: 'AKUN_DIPUTUS', pesan: 'Akun Google Drive diputus — hapus manual di Drive' }])
+    expect(tautanGagal).toEqual([])
+  })
+
+  it('deps bawaan mendaftarkan handler SINKRON_TAUTAN, HAPUS_TAUTAN, dan HAPUS_FILE', async () => {
+    const { createDefaultDriveRunnerDeps } = await import('#/lib/google-drive/runner')
+    expect(Object.keys(createDefaultDriveRunnerDeps().handlers).sort()).toEqual(['HAPUS_FILE', 'HAPUS_TAUTAN', 'SINKRON_TAUTAN'])
+  })
+})

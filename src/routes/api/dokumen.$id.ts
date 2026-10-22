@@ -26,6 +26,8 @@ import {
 import { type LampiranUrl } from '#/lib/dokumen-helpers'
 import { parseDokumen, parseDokumenWithNames, parseLampiranUrls } from '#/lib/dokumen'
 import { deriveLocalSubmitDisplayName } from '#/lib/dokumen/local-submit-write-bridge'
+import { tandaiFileDihapusUntukSumber } from '#/lib/google-drive/penghapusan'
+import { triggerDriveRunner } from '#/lib/google-drive/runner'
 import {
   assertSafeLogicalStoragePath,
   getLocalStorageRoot,
@@ -827,6 +829,14 @@ export const Route = createFileRoute('/api/dokumen/$id')({
               stepUrutan: null,
             })
 
+            // P4: salinan lampiran dokumen ini di tautan Google Drive ikut dihapus
+            // (baris file tanpa FK ke dokumen, jadi tetap ada untuk runner).
+            await tandaiFileDihapusUntukSumber(tx, {
+              dokumenIds: [params.id],
+              keterangan: 'DIHAPUS_PEMILIK',
+              now: new Date(),
+            })
+
             const deletedRows = await tx
               .delete(dokumenTransaksi)
               .where(eq(dokumenTransaksi.id, params.id))
@@ -840,6 +850,7 @@ export const Route = createFileRoute('/api/dokumen/$id')({
           console.error('[API/dokumen/:id] DELETE local DB error:', err)
           return Response.json({ error: 'Gagal menghapus dokumen' }, { status: 500 })
         }
+        triggerDriveRunner()
 
         let deleteResult: LocalDeleteExecutionResult
         try {

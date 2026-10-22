@@ -101,3 +101,47 @@ pnpm typecheck
 - [ ] Riwayat append-only tetap: tidak ada `UPDATE`/`DELETE` pada `audit_log`, `berkas_arsip_activity`, `log_aktivitas`.
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih.
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- File sesuai rencana: `google-drive/{penghapusan,hapus}.ts` (baru), `runner.ts`, `tautan-drive-repository.ts`, `jobs.ts`;
+  `laporan/tautan-repository.ts` + rute cabut; `archive/berkas-arsip-service.ts` + rute lifecycle;
+  `dokumen/pembersihan-service.ts` + rute bersihkan; rute `dokumen.$id.ts` (DELETE). Tidak ada rute baru
+  (`routeTree.gen.ts` tidak berubah; `pnpm build` sukses).
+- Signature aktual:
+  - `tandaiTautanDicabut(tx, { tautanId, akunId, now })`; `tandaiFileDihapusUntukSumber(tx, { dokumenIds?, manualArsipIds?,
+    keterangan, now })` → `{ tautanTerdampak }`; tambahan `tandaiFileBerkasDimusnahkan(tx, { berkasId, now })` (membaca
+    `berkas_arsip_item` WORKFLOW + MANUAL lalu memanggil fungsi sebelumnya). Tipe `PenghapusanExecutor` =
+    `Pick<db, 'select' | 'insert' | 'update'>`.
+  - `createHapusTautanHandler(deps)` / `createHapusFileHandler(deps)` dengan `HapusDriveDeps { repo, akun, driveClientFor,
+    jobs: { findActiveSinkron, defer } }`; `DriveJobHandler` kini bisa mengembalikan `DITUNDA`.
+  - Repository: antarmuka `HapusDriveRepository` (`ambilBarisMenghapusBerikut`, `tandaiBarisDihapus`,
+    `selesaikanHapusTautan`, `selesaikanHapusFile`, plus `muatTautanUntukSinkron`/`muatDataDaftarIsi` yang sudah ada).
+  - `revokeTautanByCreator(id, userId, executor = db)` — kontrak hasil tidak berubah; satu `transaction`.
+  - `BerkasArsipRepository.onBerkasDimusnahkan?({ berkasId, now })`; ekspor baru `createBerkasArsipRepositoryForExecutor`.
+  - `applyCleanupInTransaction(tx, { actorUserId, entries, now })` (isi transaksi `applyCleanup`, diekspor untuk tes).
+- **Penyimpangan (dicatat juga di `code-reviews/section-09-review.md`):**
+  1. Kueri isi berkas untuk pemusnahan ditaruh di `penghapusan.ts` (`tandaiFileBerkasDimusnahkan`); metode repository
+     Drizzle `onBerkasDimusnahkan` hanya mendelegasikan. Alasan: bisa diuji unit + integrasi tanpa repository arsip.
+  2. Akun `DIPUTUS` → `AKUN_DIPUTUS` hanya bila job memang perlu menyentuh Drive (client dibuat malas). Folder yang belum
+     pernah dibuat → `DIHAPUS` tanpa panggilan Drive walau akun diputus.
+  3. Audit `DRIVE_FILE_DIHAPUS` hanya ditulis bila ada file yang benar-benar dihapus dari Drive (`jumlah_file > 0`);
+     `keterangan` di metadata berupa array terurut dari keterangan unik (satu job bisa mencakup beberapa pemicu).
+     Audit `DRIVE_TAUTAN_DIHAPUS` metadata `{ jumlah_file }` = baris yang punya `drive_file_id` dan masih
+     `TERUNGGAH`/`MENGHAPUS` saat folder dihapus.
+  4. `HAPUS_FILE` memperbarui `DAFTAR_ISI.txt` hanya bila ID-nya tersimpan dan tautan belum dicabut; 404 diabaikan
+     (tidak ditulis ulang).
+  5. `tandaiTautanDicabut` juga membatalkan `HAPUS_FILE` `MENUNGGU` (plan Step 9; instruksi sesi menyebut sinkron saja).
+  6. Pemicu runner rute lifecycle dipanggil setelah transisi sukses dan **sebelum** pemusnahan fisik lokal (tidak ditunggu).
+     DELETE dokumen memicu runner setelah commit DB, sebelum penghapusan file lokal.
+  7. Cabut di `tautan-service.test.ts` (stub plan) tidak ditambah: logika cabut ada di repository yang dimock penuh di tes
+     itu; diuji di integrasi (`google-drive-penghapusan.test.ts`) dan tes rute (`tautan-route.test.ts`).
+- Tes yang disesuaikan (injeksi saja): lihat code review.
+- Hasil tes: unit baru — `hapus` 19, `penghapusan` 7, `pembersihan-drive-hook` 3; diperluas — `runner` (+3),
+  `berkas-arsip-service` (+7), `berkas-arsip-api` (+3), `dokumen-delete-audit-log` (+3), `pembersihan-route` (+3),
+  `tautan-route` (+4); integrasi baru `google-drive-penghapusan.test.ts` 13. Seluruh `pnpm test` 1680 lulus / 1 skip
+  (sebelum section 09: 1628 / 1 skip); integrasi 101 (sebelum 88), tanpa data uji tertinggal; `tests/unit/arsiparis`
+  344 + 1 skip (sebelum 334 + 1), `tests/unit/laporan` 295 (sebelum 291), `tests/unit/dokumen` 281 (sebelum 272),
+  `tests/unit/google-drive` 284 (sebelum 255); `pnpm typecheck` bersih; `pnpm build` sukses.

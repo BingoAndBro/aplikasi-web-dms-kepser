@@ -24,6 +24,7 @@ import {
   type BerkasArchiveStatus,
   type BerkasStatus,
 } from '#/lib/constants/archive-status'
+import { tandaiFileBerkasDimusnahkan } from '#/lib/google-drive/penghapusan'
 import {
   closeBerkasMetadataSchema,
   type CloseBerkasMetadataInput,
@@ -204,6 +205,14 @@ export type BerkasArsipRepository = OperationalKlasifikasiSelectionRepository & 
     nextStatusArsip: BerkasArchiveStatus
   }): Promise<BerkasRow | null>
   appendBerkasActivity(input: AppendBerkasActivityInput): Promise<void>
+  /**
+   * Optional hook (section 09 Google Drive): called inside the lifecycle
+   * transaction right after a successful USUL_MUSNAH -> DIMUSNAHKAN update and
+   * before the BERKAS_DIMUSNAHKAN activity, so Drive copies of the berkas
+   * contents are queued for deletion atomically with the status change.
+   * Test fakes may omit it.
+   */
+  onBerkasDimusnahkan?(input: { berkasId: string; now: Date }): Promise<void>
   /**
    * Optional: runs `operation` against a repository bound to one database
    * transaction. Repositories that are already transaction-scoped (route-owned
@@ -411,7 +420,18 @@ export async function transitionBerkasArchiveStatus(
   input: TransitionBerkasArchiveStatusInput,
   deps: BerkasArsipServiceDeps = {},
 ): Promise<BerkasArsipDto> {
-  const repository = getRepository(deps)
+  // Status update (conditional on the old status), the Drive deletion hook for
+  // approve_destruction, and the lifecycle activity must commit together.
+  return runInRepositoryTransaction(
+    getRepository(deps),
+    repository => transitionBerkasArchiveStatusWithRepository(input, repository),
+  )
+}
+
+async function transitionBerkasArchiveStatusWithRepository(
+  input: TransitionBerkasArchiveStatusInput,
+  repository: BerkasArsipRepository,
+): Promise<BerkasArsipDto> {
   const existing = await repository.findBerkasById(input.berkasId)
   if (!existing) {
     throw new BerkasArsipServiceError('BERKAS_NOT_FOUND', 'Berkas tidak ditemukan')
@@ -443,6 +463,9 @@ export async function transitionBerkasArchiveStatus(
       'BERKAS_LIFECYCLE_INVALID',
       'Status berkas sudah berubah',
     )
+  }
+  if (input.action === 'approve_destruction' && repository.onBerkasDimusnahkan) {
+    await repository.onBerkasDimusnahkan({ berkasId: input.berkasId, now: new Date() })
   }
   await repository.appendBerkasActivity({
     berkasId: input.berkasId,
@@ -781,6 +804,11 @@ function createDrizzleBerkasArsipRepository(
           metadataSnapshot: input.metadataSnapshot ?? null,
         })
     },
+
+    async onBerkasDimusnahkan(input) {
+      const database = await resolveDatabase()
+      await tandaiFileBerkasDimusnahkan(database, input)
+    },
   }
 
   if (options.transactional) {
@@ -796,6 +824,11 @@ function createDrizzleBerkasArsipRepository(
 }
 
 const defaultBerkasArsipRepository = createDrizzleBerkasArsipRepository(getDatabase, { transactional: true })
+
+/** Repository bound to one executor (e.g. a caller-owned transaction); runs without its own transaction. */
+export function createBerkasArsipRepositoryForExecutor(executor: BerkasArsipQueryExecutor): BerkasArsipRepository {
+  return createDrizzleBerkasArsipRepository(async () => executor, { transactional: false })
+}
 
 function getRepository(deps: BerkasArsipServiceDeps): BerkasArsipRepository {
   return deps.repository ?? defaultBerkasArsipRepository
