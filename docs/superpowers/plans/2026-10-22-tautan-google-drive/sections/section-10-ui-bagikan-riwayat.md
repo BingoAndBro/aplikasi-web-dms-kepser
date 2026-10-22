@@ -77,3 +77,25 @@ Uji visual manual (lokal, `pnpm dev`): dialog di lebar HP (kartu bertumpuk) dan 
 - [ ] Tidak ada kebocoran timer (polling berhenti saat dialog tertutup).
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tes UI lama lulus.
+
+## Implementasi Aktual (deep-implement, sesi D)
+
+- File: `src/components/laporan/BagikanTautan.tsx` (diubah), `tests/unit/laporan/tautan-drive-ui-source.test.ts` (baru),
+  `tests/TEST-CLASSIFICATION.md`.
+- **Penyimpangan / tambahan (dicatat juga di `code-reviews/section-10-review.md`):**
+  1. Lebar dialog Bagikan `sm:max-w-lg` → `sm:max-w-2xl` agar tiga kartu akses muat di desktop; di HP kartu bertumpuk.
+  2. 409 saat membuat tautan DRIVE dengan `kode` alasan yang dikenal (`DRIVE_ALASAN_TIDAK_TERSEDIA`): kartu Drive ditandai
+     tidak tersedia dengan alasan itu, akses dikembalikan ke Terbatas, dan pesan galat server ditampilkan.
+  3. Tombol **Buat Tautan** nonaktif bila DRIVE dipilih tetapi tidak tersedia; selama status dimuat kartu Drive nonaktif dengan
+     petunjuk "Memeriksa ketersediaan Google Drive...".
+  4. Judul dialog setelah membuat DRIVE: "Menyalin ke Google Drive" (sampai `SIAP` → "Tautan Siap Dibagikan"); tombol footer
+     "Tutup" selama belum siap.
+  5. Polling dialog memakai penghitung putaran (`pollTick`), putaran pertama 0 ms; Riwayat memakai `reload()` + efek yang
+     menjadwalkan ulang setiap `items` berganti (5000 ms), berhenti saat tidak ada baris berproses atau dialog ditutup.
+  6. Status GAGAL tanpa `drive_galat` → "Gagal: unggahan tidak selesai" (fallback).
+  7. `DriveRiwayatStatus` diekspor agar teks per status bisa diuji dengan `renderToStaticMarkup` (repo belum punya renderer
+     DOM; selebihnya source guard seperti `tautan-wiring-source.test.ts`).
+- E2E Playwright **tidak** dijalankan: alur butuh server + login + Google Drive nyata (Google diblokir di VM). Uji visual
+  manual (lebar HP/desktop, kartu Drive nonaktif tanpa env, progres, SIAP/GAGAL/cabut) masuk checklist section 12.
+- Hasil tes: `tautan-drive-ui-source` 17 lulus; `tests/unit/laporan` + `tests/unit/styles` 312 lulus; seluruh `pnpm test`
+  1697 lulus / 1 skip (sebelum 1680 / 1 skip); integrasi 101 (tidak berubah); `pnpm typecheck` bersih.
