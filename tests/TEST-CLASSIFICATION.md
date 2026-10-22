@@ -206,6 +206,14 @@ Catatan umum:
 | tests/unit/utils/file.test.ts | Unit test | White-box | Menguji utilitas file: sanitasi nama file, ekstraksi ekstensi, ekstraksi nama file dari path, dan deteksi file pending. |
 | tests/unit/utils/format.test.ts | Unit test | White-box | Menguji utilitas format tanggal/waktu dan pengurutan berdasarkan `created_at`. |
 
+## google-drive
+
+| File | Jenis Test | White/Black-box | Deskripsi Singkat |
+|---|---|---|---|
+| tests/unit/google-drive/config.test.ts | Unit test | White-box | Menguji `readDriveConfig`: tiga env wajib, trim, kunci base64/base64url tepat 32 byte, fitur mati rapi tanpa melempar, serta konstanta OAuth/Drive. |
+| tests/unit/google-drive/token-crypto.test.ts | Unit test | White-box | Menguji enkripsi refresh token AES-256-GCM `v1:<iv>:<tag>:<data>`: roundtrip, IV acak, ciphertext/tag/kunci salah, format tidak dikenal, dan pesan galat tanpa rahasia. |
+| tests/unit/google-drive/shared.test.ts | Unit test + static source guard (gabungan) | White-box | Menguji `buildDriveFolderName` (zona Asia/Jakarta, sanitasi, batas 150 karakter), teks alasan/peringatan/pesan galat Drive, dan memastikan `shared.ts` tidak mengimpor modul server. |
+
 ## Integrasi (`pnpm test:integration`, PostgreSQL asli)
 
 Dijalankan terpisah dengan `vitest.integration.config.ts` (tidak termasuk `pnpm test`). Butuh database yang sudah dimigrasi dan di-seed; data uji dibuat di transaksi yang di-ROLLBACK (lihat `docs/superpowers/plans/2026-10-22-tautan-google-drive/sections/index.md` untuk menyiapkan DB tes `dms_kepser_test`).

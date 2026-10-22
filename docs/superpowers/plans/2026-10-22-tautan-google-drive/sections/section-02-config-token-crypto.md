@@ -88,3 +88,18 @@ pnpm typecheck
 - [ ] Ketiga modul ada dan teruji; `shared.ts` aman diimpor klien.
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tidak ada regresi section 01.
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- File sesuai rencana. `config.ts` juga mengekspor tipe `DriveConfigResult`; `shared.ts` mengekspor ulang tipe
+  `DriveGalatKategori` dan `GoogleDriveAkunStatus` (impor tipe saja) serta tipe `DriveAlasan`.
+- Kunci env diterima bila cocok regex base64 standar atau base64url (padding opsional) **dan** terdekode tepat 32 byte.
+- Sanitasi nama folder: karakter `/ \ : * ? " < > |` dan karakter kontrol diganti `-`, spasi beruntun dirapatkan,
+  dipotong 150 code point; judul kosong memakai `Tautan Laporan`.
+- Tipe nullable (penyimpangan kecil): `PerluHapusManualItem.kategori: DriveGalatKategori | null`,
+  `jumlah_file: number | null` (null untuk `HAPUS_TAUTAN`).
+- Label status Drive untuk UI (Step 2 `claude-plan.md`) belum dibuat; ditunda ke section 10.
+- Hasil tes: `tests/unit/google-drive` 36 lulus (config 14, token-crypto 15, shared 7),
+  `tests/unit/db` lulus, `pnpm typecheck` bersih.
