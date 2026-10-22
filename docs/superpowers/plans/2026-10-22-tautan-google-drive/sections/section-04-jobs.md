@@ -86,3 +86,24 @@ pnpm typecheck
 - [ ] Klaim terbukti eksklusif di PostgreSQL asli; tidak ada data uji tertinggal setelah suite integrasi.
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
 - [ ] `pnpm typecheck` bersih; tidak ada regresi section sebelumnya.
+
+## Catatan Implementasi (deep-implement)
+
+Status: **selesai**.
+
+- File sesuai rencana. Ekspor tambahan: tipe `DriveJobExecutor` (`Pick<typeof db, 'select'|'insert'|'update'|'execute'>`),
+  `RetrySchedule`, `truncateGalatPesan`. Tipe `DriveJob` memakai `$inferSelect` skema (bentuk camelCase yang sama).
+- `DRIVE_JOB_PRIORITAS` berbentuk per jenis: `{ HAPUS_TAUTAN: 0, HAPUS_FILE: 0, SINKRON_TAUTAN: 10 }`.
+- Tes dua klaim bersamaan memakai `drizzle(poolClient)` sebagai executor (tidak perlu varian fungsi terpisah).
+- Signature yang berubah: `completeDriveJob`/`failDriveJob`/`deferDriveJob`/`findActiveSinkronJob` menerima
+  `executor?` (bukan `tx?`); `completeDriveJob`/`deferDriveJob` mengembalikan `boolean`, `failDriveJob` mengembalikan
+  `'MENUNGGU' | 'GAGAL' | null` (null = job sudah tidak PROSES); `nextScheduledAt({ executor? })` tanpa `now`.
+- **Penyimpangan 1 (perlu diketahui section 07/09):** mengembalikan job ke `MENUNGGU` saat sudah ada job `MENUNGGU`
+  kembar untuk (tautan, jenis) yang sama akan melanggar `drive_job_satu_menunggu`. `failDriveJob`/`deferDriveJob`
+  menangani ini dengan menandai job lama `DIBATALKAN` (+ `selesai_pada`, galat tetap dicatat) dan tetap melaporkan
+  `'MENUNGGU'`/`true`, karena job kembar akan memproses seluruh baris tautan itu.
+- **Penyimpangan 2:** `nextScheduledAt` juga mengembalikan `dikunci_pada + 15 m` untuk job `PROSES`, agar runner bangun
+  untuk mengklaim ulang job macet. Job akun yang `perlu_hubung_ulang_sejak` terisi tetap diabaikan.
+- Hasil tes: unit `jobs.test.ts` 13 lulus; integrasi 52 lulus (21 baru di `google-drive-jobs.test.ts`), tanpa data uji
+  tertinggal; uji mutasi (buang `SKIP LOCKED` / urutan prioritas) membuat tes merah. Seluruh `pnpm test` 1432 lulus /
+  1 skip; `pnpm typecheck` bersih.

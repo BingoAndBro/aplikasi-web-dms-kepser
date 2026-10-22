@@ -216,6 +216,7 @@ Catatan umum:
 | tests/unit/google-drive/drive-errors.test.ts | Unit test | White-box | Menguji `classifyDriveError`: pemetaan status/reason/`invalid_grant`/galat jaringan/`TokenCryptoError` ke kategori galat Drive dan pesan tanpa isi respons mentah. |
 | tests/unit/google-drive/drive-client.test.ts | Unit/Component test (dependency di-mock) + static source guard | White-box | Menguji `createGoogleDriveClient` dengan Drive API dan OAuth2Client di-mock (argumen setiap metode, `retry: false` + timeout, kueri `appProperties has`, penolakan nilai kueri berbahaya) dan memastikan paket Google hanya diimpor `drive-client.ts`/`oauth.ts`. |
 | tests/unit/google-drive/fake-drive.test.ts | Unit test | White-box | Menguji helper `FakeDrive` (Drive in-memory untuk tes): id berurutan, isi stream, hapus berantai, `failNext` termasuk mode respons hilang, dan `failWhen`. |
+| tests/unit/google-drive/jobs.test.ts | Unit test | White-box | Menguji fungsi murni antrean Drive: konstanta prioritas/jeda, `computeRetrySchedule` (8 percobaan ulang lalu GAGAL), pemotongan `galat_pesan`, dan impor modul tanpa DATABASE_URL. |
 
 ## Integrasi (`pnpm test:integration`, PostgreSQL asli)
 
@@ -226,3 +227,4 @@ Dijalankan terpisah dengan `vitest.integration.config.ts` (tidak termasuk `pnpm 
 | tests/integration/dokumen-transaksi-permintaan-fk.test.ts | Integration test | White-box | Memastikan FK `dokumen_transaksi` ke master permintaan menolak id yang tidak ada (23503). |
 | tests/integration/manual-arsip-effective-status.test.ts | Integration test | White-box | Menguji SQL status arsip efektif dokumen tambahan KSBU di SELECT, WHERE, dan UPDATE. |
 | tests/integration/google-drive-schema.test.ts | Integration test | White-box | Menguji hasil migrasi 0024: kolom/constraint/index sama dengan Drizzle, partial unique akun AKTIF dan email, check konsistensi tautan DRIVE, unique kunci lampiran, unique job MENUNGGU, dan aksi audit Drive. |
+| tests/integration/google-drive-jobs.test.ts | Integration test | White-box | Menguji antrean `app.drive_job` di PostgreSQL asli: enqueue + ON CONFLICT jadwal, urutan klaim, klaim ulang job macet, jeda akun perlu hubung ulang, selesai/gagal/tunda bersyarat PROSES, dan dua klaim bersamaan dari dua koneksi (`FOR UPDATE SKIP LOCKED`). |
