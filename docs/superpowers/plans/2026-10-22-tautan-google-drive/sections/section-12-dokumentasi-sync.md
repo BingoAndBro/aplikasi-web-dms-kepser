@@ -92,3 +92,24 @@ pnpm build
 - [ ] Uji terima manual SPEC 12.3 **dijadwalkan** di mesin lokal (tidak bisa di sandbox cloud karena Google diblokir); hasilnya
       dicatat di `uji-terima-manual.md` sebelum fitur dinyatakan selesai (SPEC 14).
 - [ ] Semua test stubs di section ini sudah diimplementasi dan passing.
+
+## Implementasi Aktual (deep-implement, sesi D)
+
+- File: `src/scripts/drive-sync.ts` (baru), `package.json` (skrip `drive:sync`), `.env.example` (blok Google Drive setelah
+  `DMS_PUBLIC_BASE_URL`), `AGENTS.md`, `docs/skripsi/rancangan-erd.md` (§10 baru), `uji-terima-manual.md` (baru),
+  `tests/unit/google-drive/drive-sync-script-source.test.ts` (baru), `tests/TEST-CLASSIFICATION.md`.
+- AGENTS.md: §1 baris Integrasi; §3 subbagian Tautan Laporan; **§3A baru "Google Drive"** (tabel + status, akses tautan
+  DRIVE, empat pemicu hapus yang kini mengantrekan hapus Drive di transaksi yang sama, `transitionBerkasArchiveStatus` kini
+  transaksional, runner + `pnpm drive:sync`, alur akun ADMIN); §4.8 catatan migrasi tulis tangan; §5 batas Drive; §6 peta
+  kode; §7 aturan hapus file → antrekan hapus Drive; §11 batasan Drive (termasuk dua batasan sesi C dan verifikasi
+  `tokens.scope` yang masih manual).
+- **Penyimpangan / tambahan (dicatat juga di `code-reviews/section-12-review.md`):**
+  1. Skrip mencetak penyebab galat saja (bukan pesan Drizzle yang memuat SQL + parameter) dan menambah catatan bila batas
+     waktu putaran tercapai.
+  2. Checklist uji terima menambah 1a (verifikasi `tokens.scope` dengan centang Drive dilepas), 5a (akun diputus/berganti
+     di antara dialog dibuka dan tautan dibuat), dan 10 (uji visual UI section 10–11), selain 1–6 SPEC + 7–9 plan.
+  3. ERD menambah empat tabel (termasuk `laporan_tautan` yang belum tercatat), relasi R-53–R-62 (R-61/R-62 logis karena
+     snapshot), diagram Mermaid, dan constraint `audit_log` terkini.
+  4. `TEST-CLASSIFICATION.md`: jumlah total diperbaiki (146 file unit; 13 file lama belum diklasifikasi, didaftar).
+- Gerbang global: `pnpm typecheck` bersih; `pnpm test` 1715 lulus / 1 skip (146 file); `pnpm test:integration` 101 lulus;
+  `pnpm build` sukses. Uji terima manual SPEC 12.3 **belum** dijalankan (butuh Google nyata di mesin lokal).

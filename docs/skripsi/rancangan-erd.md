@@ -795,3 +795,69 @@ Saran awal: **4.43–4.47 cukup Mermaid** (tata letak otomatisnya sudah terbaca)
 - Miro. *Database modeling made simple with new ER diagram templates in Miro*. https://miro.com/blog/database-modeling-erd-templates/
 - `src/db/schema/**` dan `drizzle/0000`–`0021*.sql` (otoritas verifikasi 28 dan 30 Sept 2026).
 - "Kerangka Bab IV - Analisis dan Perancangan" Rev 9.1, subbab 4.2.3.
+
+---
+
+## 10. Tambahan 22 Okt 2026 — Tautan Laporan dan Google Drive (pengembangan pasca-skripsi)
+
+Bagian 0–9 di atas adalah hasil verifikasi untuk naskah skripsi (22 tabel) dan **tidak diubah**. Bagian ini mencatat
+tabel yang ditambahkan sesudahnya di repo pengembangan: Tautan Laporan (migrasi `0022`, `0023`) dan salinan Google
+Drive (migrasi `0024`). Sumber kebenaran: `src/db/schema/app/` dan `drizzle/0022`–`0024` (ketiganya ditulis tangan).
+
+### 10.1 Inventaris tambahan (4 tabel, skema `app`) — total 26 tabel
+
+| No | Skema | Tabel | Nama di narasi | Bukti |
+|---|---|---|---|---|
+| 23 | app | `laporan_tautan` | Tautan Laporan (snapshot daftar dokumen; akses `LOGIN`/`PUBLIK`/`DRIVE`) | `app/laporan-tautan.ts`; `drizzle/0022`, `0023`, `0024` |
+| 24 | app | `google_drive_akun` | Akun Google Drive tujuan salinan | `app/google-drive-akun.ts`; `drizzle/0024:11` |
+| 25 | app | `laporan_tautan_drive_file` | File salinan per lampiran di folder Drive tautan | `app/laporan-tautan-drive-file.ts`; `drizzle/0024:152` |
+| 26 | app | `drive_job` | Antrean pekerjaan Google Drive (sinkron/hapus) | `app/drive-job.ts`; `drizzle/0024:206` |
+
+Kolom Drive di `laporan_tautan` (0024): `drive_akun_id`, `drive_folder_id`, `drive_folder_url`, `drive_status`,
+`drive_daftar_isi_file_id`, `drive_folder_dicoba_pada`, `drive_dokumen_dilewati` (jsonb). `audit.audit_log` diperluas:
+`entity_type` + `GOOGLE_DRIVE_AKUN`, `LAPORAN_TAUTAN`; `aksi` + `DRIVE_AKUN_DIHUBUNGKAN`, `DRIVE_AKUN_DINONAKTIFKAN`,
+`DRIVE_AKUN_DIPUTUS`, `DRIVE_TAUTAN_SIAP`, `DRIVE_TAUTAN_DIHAPUS`, `DRIVE_FILE_DIHAPUS`.
+
+### 10.2 Relasi tambahan (R-53 s.d. R-62)
+
+Singkatan ON DELETE sama dengan §4.
+
+| Kode | Induk | Anak | Kolom | Kardinalitas | ON DELETE | Jenis | Label |
+|---|---|---|---|---|---|---|---|
+| R-53 | users | laporan_tautan | `created_by` NOT NULL | `\|\|--o{` | NA | FK | membuat |
+| R-54 | users | laporan_tautan | `revoked_by` nullable | `\|o--o{` | NA | FK | mencabut |
+| R-55 | users | google_drive_akun | `dihubungkan_oleh` NOT NULL | `\|\|--o{` | NA | FK | menghubungkan |
+| R-56 | users | google_drive_akun | `diputus_oleh` nullable | `\|o--o{` | NA | FK | memutus |
+| R-57 | google_drive_akun | laporan_tautan | `drive_akun_id` nullable (wajib bila `DRIVE`) | `\|o--o{` | R | FK | menyimpan |
+| R-58 | google_drive_akun | drive_job | `akun_id` NOT NULL | `\|\|--o{` | R | FK | memproses |
+| R-59 | laporan_tautan | laporan_tautan_drive_file | `tautan_id` NOT NULL | `\|\|--o{` | NA | FK | berisi |
+| R-60 | laporan_tautan | drive_job | `tautan_id` NOT NULL | `\|\|--o{` | NA | FK | dikerjakan |
+| R-61 | dokumen_transaksi | laporan_tautan_drive_file | `dokumen_id` nullable | `\|o..o{` | — | logis (snapshot) | disalin |
+| R-62 | manual_arsip | laporan_tautan_drive_file | `manual_arsip_id` + `attachment_id` nullable | `\|o..o{` | — | logis (snapshot) | disalin |
+
+`dokumen_ids`/`manual_arsip_ids` di `laporan_tautan` adalah snapshot jsonb (bukan FK): dokumen yang kemudian dihapus
+permanen tetap tercatat dan ditampilkan sebagai "tidak tersedia". Karena itu R-61/R-62 juga relasi logis.
+
+```mermaid
+erDiagram
+    users ||--o{ laporan_tautan : "membuat"
+    users |o--o{ laporan_tautan : "mencabut"
+    users ||--o{ google_drive_akun : "menghubungkan"
+    users |o--o{ google_drive_akun : "memutus"
+    google_drive_akun |o--o{ laporan_tautan : "menyimpan"
+    google_drive_akun ||--o{ drive_job : "memproses"
+    laporan_tautan ||--o{ laporan_tautan_drive_file : "berisi"
+    laporan_tautan ||--o{ drive_job : "dikerjakan"
+    dokumen_transaksi |o..o{ laporan_tautan_drive_file : "disalin"
+    manual_arsip |o..o{ laporan_tautan_drive_file : "disalin"
+```
+
+### 10.3 Constraint tambahan
+
+| Entitas | Constraint (nama di basis data) | Aturan bisnis yang dijaga |
+|---|---|---|
+| `laporan_tautan` | UNIQUE `token`; CHECK `sumber` ∈ {LAPORAN_SAYA, LAPORAN_KEGIATAN, LAPORAN_KINERJA}; CHECK `akses` ∈ {LOGIN, PUBLIK, DRIVE} (`laporan_tautan_akses_check`); CHECK `akses = 'DRIVE'` ⇔ (`drive_akun_id` dan `drive_status` terisi) (`laporan_tautan_drive_check`); CHECK `drive_status` NULL atau ∈ {MENUNGGU, MENGUNGGAH, SIAP, GAGAL, MENGHAPUS, DIHAPUS} | Hanya tautan DRIVE yang punya akun dan status Drive |
+| `google_drive_akun` | CHECK `status` ∈ {AKTIF, NONAKTIF, DIPUTUS}; UNIQUE parsial `status` WHERE `status = 'AKTIF'` (`google_drive_akun_satu_aktif`); UNIQUE parsial `email` WHERE `status <> 'DIPUTUS'` (`google_drive_akun_email_belum_diputus`) | Paling banyak satu akun aktif; satu baris per email selama belum diputus. `refresh_token_enc` terenkripsi AES-256-GCM, `NULL` setelah diputus |
+| `laporan_tautan_drive_file` | UNIQUE (`tautan_id`, `kunci_lampiran`) (`laporan_tautan_drive_file_kunci_unique`); CHECK `sumber` ∈ {DOKUMEN, MANUAL_ARSIP}; CHECK `status` ∈ {MENUNGGU, TERUNGGAH, MENGHAPUS, DIHAPUS, DILEWATI}; CHECK `keterangan_hapus` NULL atau ∈ {DICABUT, DIMUSNAHKAN, DIBERSIHKAN, DIHAPUS_PEMILIK}; CHECK kolom referensi sesuai `sumber` | Satu baris per lampiran per tautan (idempoten saat sinkron diulang) |
+| `drive_job` | CHECK `jenis` ∈ {SINKRON_TAUTAN, HAPUS_TAUTAN, HAPUS_FILE}; CHECK `status` ∈ {MENUNGGU, PROSES, SELESAI, GAGAL, DIBATALKAN}; CHECK `galat_kategori` NULL atau ∈ {SEMENTARA, TOKEN_TIDAK_VALID, KUOTA_PENUH, TIDAK_DITEMUKAN, PERMANEN, AKUN_DIPUTUS}; UNIQUE parsial (`tautan_id`, `jenis`) WHERE `status = 'MENUNGGU'` (`drive_job_satu_menunggu`) | Paling banyak satu job menunggu per (tautan, jenis); enqueue kedua memajukan jadwal |
+| `audit_log` | CHECK `entity_type` ∈ {DOKUMEN, GOOGLE_DRIVE_AKUN, LAPORAN_TAUTAN}; CHECK `aksi` (sembilan nilai, lihat §10.1) | Menggantikan baris `audit_log` di §6 untuk skema terkini |

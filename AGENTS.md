@@ -21,8 +21,10 @@ bertentangan dengan kode, ikuti kode, lalu perbarui dokumennya.
 | Validasi | Zod |
 | Tes | Vitest (unit, integrasi), Playwright (E2E) |
 | Paket | **pnpm saja** — jangan `npm`/`yarn` |
+| Integrasi | Google Drive API v3 (`@googleapis/drive`, `google-auth-library`) — opsional, koneksi keluar saja |
 
-Aplikasi berjalan di jaringan lokal kantor (server lokal satuan kerja). Tidak ada layanan cloud.
+Aplikasi berjalan di jaringan lokal kantor (server lokal satuan kerja). Satu-satunya layanan luar adalah Google Drive
+untuk Tautan Laporan berakses `DRIVE` (opsional; tanpa env Google fitur ini nonaktif). Lihat §3A.
 
 ---
 
@@ -68,6 +70,55 @@ Aturan:
 - `DIMUSNAHKAN` memblokir pratinjau, unduhan, ekspor ZIP, dan tautan untuk seluruh isi berkas. Metadata tetap ada.
 - Sumber isi berkas: `WORKFLOW` (dokumen dari alur pengajuan) dan `MANUAL` (Penambahan Dokumen oleh Kepala Sub Bagian Umum, tabel `arsip.manual_arsip`).
 
+### Tautan Laporan (`src/lib/laporan/tautan-shared.ts`)
+
+- "Bagikan Tautan" di Laporan Saya / Laporan Kegiatan / Laporan Kinerja menyimpan snapshot daftar dokumen ke
+  `app.laporan_tautan`. Akses: `LOGIN` (wajib login, role apa pun), `PUBLIK` (tanpa akun), `DRIVE` (salinan di Google Drive).
+- Tautan berlaku sampai dicabut pembuatnya (Riwayat Tautan). Isinya tetap dicek ulang terhadap status terkini saat dibuka.
+
+---
+
+## 3A. Google Drive (Tautan Laporan berakses `DRIVE`)
+
+Modul `src/lib/google-drive/`. Spec: `docs/superpowers/specs/2026-10-22-tautan-google-drive-design.md`.
+
+**Tabel** (skema `app`, migrasi `0024`):
+
+| Tabel | Isi | Status |
+|---|---|---|
+| `google_drive_akun` | Akun Google yang dihubungkan ADMIN; refresh token terenkripsi AES-256-GCM (`DMS_DRIVE_TOKEN_KEY`), `NULL` setelah diputus | `AKTIF` (paling banyak satu) / `NONAKTIF` / `DIPUTUS`; `perlu_hubung_ulang_sejak` bila token ditolak |
+| `laporan_tautan` (kolom `drive_*`) | Folder tautan di Drive, link folder, ID `DAFTAR_ISI.txt` | `drive_status`: `MENUNGGU` → `MENGUNGGAH` → `SIAP` / `GAGAL`; setelah dicabut `MENGHAPUS` → `DIHAPUS` |
+| `laporan_tautan_drive_file` | Satu baris per lampiran yang disalin | `MENUNGGU` → `TERUNGGAH` / `DILEWATI`; `TERUNGGAH` → `MENGHAPUS` → `DIHAPUS` (`keterangan_hapus`: `DICABUT`, `DIMUSNAHKAN`, `DIBERSIHKAN`, `DIHAPUS_PEMILIK`) |
+| `drive_job` | Antrean `SINKRON_TAUTAN` / `HAPUS_TAUTAN` / `HAPUS_FILE` | `MENUNGGU` → `PROSES` → `SELESAI` / `GAGAL` / `DIBATALKAN`; satu `MENUNGGU` per (tautan, jenis) |
+
+**Akses tautan DRIVE.** Tautan DRIVE **tidak** bisa dibuka lewat DMS: `/tautan/<token>`, pratinjau/unduh, ekspor ZIP, dan
+`/lampiran/...` menjawab 404 identik untuk tautan DRIVE. Riwayat mengembalikan `path: null`; satu-satunya jalan buka adalah
+link folder Drive (`drive_url`, siapa saja yang memegang link dapat melihat/mengunduh — peringatan wajib di UI). Hanya
+pembuat yang bisa melihat riwayat, **Coba lagi** (`TAUTAN_API.cobaLagi`, 404 untuk tautan orang lain), dan mencabut.
+Respons API dan log tidak pernah memuat token, client secret, atau ID folder/file Drive; ADMIN tidak melihat nama file
+maupun daftar dokumen (hanya judul tautan, nama folder, email akun).
+
+**Pemicu hapus Drive** — dibuat di transaksi yang sama dengan perubahan statusnya (`src/lib/google-drive/penghapusan.ts`):
+1. **Cabut tautan** (`revokeTautanByCreator`) → `HAPUS_TAUTAN` (seluruh folder), job sinkron/hapus file yang menunggu dibatalkan.
+2. **Pemusnahan berkas** (`approve_destruction`) → file isi berkas `MENGHAPUS` (`DIMUSNAHKAN`) + `HAPUS_FILE`.
+   `transitionBerkasArchiveStatus` kini **transaksional** (`runInRepositoryTransaction`): update status bersyarat + hook
+   Drive + riwayat berkas commit bersama.
+3. **Pembersihan Dokumen** → `DIBERSIHKAN` + `HAPUS_FILE`.
+4. **Hapus permanen dokumen non-material `TERSIMPAN`** → `DIHAPUS_PEMILIK` + `HAPUS_FILE`.
+
+`HAPUS_FILE` juga menulis ulang `DAFTAR_ISI.txt`. Job hapus yang `GAGAL` tampil di ADMIN → Pengaturan → "Perlu dihapus manual
+di Drive" (termasuk `HAPUS_TAUTAN` kategori `AKUN_DIPUTUS` dengan `jumlah_file: null`).
+
+**Runner.** Single-flight di proses server, dipicu oleh: buat tautan DRIVE, GET riwayat, coba lagi, cabut, pemusnahan,
+pembersihan, hapus permanen, hubungkan akun, plus timer ke jadwal job berikutnya (maks 1 jam). Satu putaran ≤ 5 menit.
+Saat server mati atau sebagai penjadwal: `pnpm drive:sync` (Windows Task Scheduler). Jeda coba ulang `SEMENTARA`:
+1 m, 5 m, 15 m, 1 j, 3 j, 6 j, 12 j, 24 j → `GAGAL`. `TOKEN_TIDAK_VALID` menjeda job sampai akun dihubungkan ulang.
+
+**Akun (ADMIN → Pengaturan).** Hubungkan / Ganti akun / Hubungkan ulang lewat alur salin-tempel: tab login Google →
+setelah Izinkan, tab gagal memuat `http://127.0.0.1:53682/...` (normal) → alamat itu ditempel ke DMS. Scope hanya
+`drive.file`. Putuskan mencabut token (best effort) dan menggagalkan job akun itu (`AKUN_DIPUTUS`). Aksi Drive tidak
+memaksa logout seperti simpan tema/identitas.
+
 ---
 
 ## 4. Invariant Arsitektur
@@ -80,6 +131,9 @@ Aturan:
 6. **Rahasia hanya di env.** Jangan menulis atau mencetak isi `.env`, `DATABASE_URL`, hash kata sandi, token sesi, token file, token tautan, atau path fisik penyimpanan.
 7. **File tidak pernah dilayani statis.** Semua pratinjau/unduhan lewat rute API yang memeriksa ulang hak akses dan status terkini; cegah path traversal.
 8. **Perubahan skema lewat Drizzle.** Ubah `src/db/schema/**` → `pnpm db:local:generate` → baca SQL → `pnpm db:local:migrate`. Jangan `drizzle-kit push`, jangan mengedit migrasi lama.
+   Catatan: migrasi `0001`–`0024` ditulis tangan dan didaftarkan manual di `drizzle/meta/_journal.json`; snapshot meta
+   hanya sampai `0000`, sehingga `db:local:generate` belum bisa dipakai sampai snapshot diperbaiki. Migrasi baru ditulis
+   tangan dengan pola idempoten yang sama (`IF NOT EXISTS`, blok `DO $$`).
 
 ---
 
@@ -92,6 +146,8 @@ Aturan:
 | Tautan laporan | 500 dokumen | `src/lib/laporan/tautan-shared.ts` |
 | Pembersihan per batch | 200 dokumen | `src/lib/dokumen/pembersihan.ts` |
 | Catatan penolakan | ≥ 10 karakter | `src/lib/schemas/dokumen.ts` |
+| Lampiran disalin ke Google Drive | ≤ 5 MB per file (mengikuti batas unggah); ≤ 500 dokumen per tautan | `document-upload-policy.ts`, `tautan-shared.ts` |
+| Putaran runner Drive | ≤ 5 menit per putaran | `src/lib/google-drive/runner.ts` |
 
 Ekspor ZIP hanya membungkus file yang sudah boleh dibuka peminta satu per satu, dan `DAFTAR_ISI.txt` tidak memuat path.
 
@@ -102,7 +158,12 @@ Ekspor ZIP hanya membungkus file yang sudah boleh dibuka peminta satu per satu, 
 ```text
 src/routes/<peran>/...            halaman per peran (pegawai, ppk, ppspm, kasubag, penanggung-jawab-kinerja, admin.*)
 src/routes/api/...                rute API (pola: same-origin -> sesi -> peran -> Zod -> DB)
-src/routes/tautan.$token.tsx      halaman tautan laporan
+src/routes/tautan.$token.tsx      halaman tautan laporan (LOGIN/PUBLIK; DRIVE selalu 404)
+src/routes/api/laporan/tautan*.ts rute buat/riwayat/cabut/coba lagi tautan laporan
+src/routes/api/google-drive/status.ts, src/routes/api/admin/google-drive/*  status Drive + aksi akun ADMIN
+src/lib/google-drive/             config, token-crypto, oauth, akun, drive-client (satu-satunya pemanggil Google), jobs, runner, sinkron, hapus
+src/components/laporan/BagikanTautan.tsx, src/components/admin/GoogleDriveSettings.tsx  UI tautan dan pengaturan Drive
+src/scripts/drive-sync.ts         `pnpm drive:sync` (satu putaran antrean Drive)
 src/lib/fsm.ts                    transisi status dokumen
 src/lib/auth/                     sesi, kata sandi, rate limit login, resolusi peran
 src/lib/security/same-origin.ts   pemeriksaan Origin/Referer
@@ -130,6 +191,8 @@ Dokumen pendukung: `docs/peta-halaman-dan-komponen.md`, `docs/routing-sop.md`,
 - **Rute** → `routes.ts`, `navigation.ts`; `src/routeTree.gen.ts` dibuat ulang otomatis oleh `pnpm dev`/`pnpm build`, jangan diedit manual.
 - **Hak akses** → periksa rute API terkait dan `document-file-access.ts`, lalu tambah tes negatif (`401`/`403`).
 - **File/penyimpanan** → tetap lewat `src/lib/storage/*`, cek `DIMUSNAHKAN`, jangan bocorkan path/token.
+- **Menghapus/menyembunyikan file atau dokumen** (pemusnahan, pembersihan, hapus permanen, cabut tautan) → pastikan salinan
+  Google Drive ikut diantrekan untuk dihapus di transaksi yang sama (`src/lib/google-drive/penghapusan.ts`).
 
 ---
 
@@ -164,4 +227,17 @@ Dokumen pendukung: `docs/peta-halaman-dan-komponen.md`, `docs/routing-sop.md`,
 - Komunikasi masih HTTP di jaringan lokal; HTTPS + cookie `Secure` adalah target pemasangan di server satuan kerja.
 - Rate limit login hanya di memori proses.
 - Tautan laporan tanpa masa berlaku, token tidak di-hash, pembuka tautan `PUBLIK` tidak tercatat identitasnya.
+- Google Drive:
+  - Link Drive masih bisa dibuka sampai job hapus berhasil (mis. saat internet putus atau akun perlu dihubungkan ulang).
+  - Pembuka link Drive tidak tercatat; hitungan "dibuka N×" tidak ada untuk tautan DRIVE.
+  - OAuth client mode *Testing* di Google Cloud membuat refresh token kedaluwarsa 7 hari (akun perlu dihubungkan ulang);
+    publikasikan aplikasi OAuth untuk pemakaian tetap.
+  - State OAuth (PKCE) disimpan di memori proses (TTL 10 menit): restart server di tengah alur hubungkan → ulangi dari langkah 1.
+  - GET Riwayat Tautan memicu runner setiap kali dipanggil, termasuk tiap polling 3/5 detik dari dialog yang terbuka
+    (single-flight dan no-op tanpa env, tetapi tetap satu kueri antrean per polling).
+  - Akun aktif bisa berganti di antara cek ketersediaan dan insert tautan DRIVE; tautan lalu memakai akun yang kini
+    `NONAKTIF` (token tetap ada, runner tetap memprosesnya).
+  - `tokens.scope` pada consent granular baru terverifikasi dari sumber/dokumentasi, belum dengan login nyata
+    (checklist uji terima manual).
+  - Mengganti `DMS_DRIVE_TOKEN_KEY` membuat semua akun perlu dihubungkan ulang.
 - Saran pengembangan dari skripsi: penambahan dokumen tanpa alur persetujuan oleh Ketua Tim (F-1), integrasi BackOffice BPS dan SINERGI, pengaitan dokumen dengan indikator kinerja dan rencana tindak lanjut, peluncur (batch/shortcut) untuk menyalakan DB dan aplikasi.

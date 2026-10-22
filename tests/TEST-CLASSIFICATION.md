@@ -1,6 +1,11 @@
 # Klasifikasi File Test (`pnpm test`)
 
-`pnpm test` menjalankan Vitest dengan config `vitest.config.ts` (`include: ['tests/**/*.test.ts']`, `environment: 'node'`). Daftar di bawah mencakup **seluruh 90 file** yang tercakup pola tersebut.
+`pnpm test` menjalankan Vitest dengan config `vitest.config.ts` (`include: ['tests/**/*.test.ts']`, `environment: 'node'`). Pola tersebut mencakup **146 file** unit (di luar `tests/integration/`, per 22 Okt 2026). Tabel di bawah mencatat 133 di
+antaranya, termasuk semua file dari fitur Google Drive. 13 file lama berikut belum diklasifikasi (dibuat sebelum fitur
+Google Drive): `dokumen/dokumen-patch-route`, `dokumen/karakteristik-label-source`, `dokumen/kelengkapan-match`,
+`dokumen/legacy-draft-submit-removal-source`, `dokumen/master-data-read-requires-session`, `laporan/download-ticket`,
+`laporan/filter-toolbar`, `laporan/kegiatan-route`, `laporan/status-laporan`, `laporan/tautan-shared`,
+`laporan/tautan-wiring-source`, `users/create-user-route-username-case`, `utils/clipboard` (semua `tests/unit/.../*.test.ts`).
 
 Catatan umum:
 - Semua file adalah **White-box**: setiap test mengimpor modul `src/` secara langsung, mem-mock (`vi.mock`) dependency internal (auth/DB/storage), dan/atau membaca source code komponen React lewat `readFileSync` untuk mengecek isinya. Tidak ada yang murni memanggil sistem dari luar tanpa pengetahuan struktur internal.
@@ -226,6 +231,7 @@ Catatan umum:
 | tests/unit/google-drive/token-crypto.test.ts | Unit test | White-box | Menguji enkripsi refresh token AES-256-GCM `v1:<iv>:<tag>:<data>`: roundtrip, IV acak, ciphertext/tag/kunci salah, format tidak dikenal, dan pesan galat tanpa rahasia. |
 | tests/unit/google-drive/shared.test.ts | Unit test + static source guard (gabungan) | White-box | Menguji `buildDriveFolderName` (zona Asia/Jakarta, sanitasi, batas 150 karakter), teks alasan/peringatan/pesan galat Drive, dan memastikan `shared.ts` tidak mengimpor modul server. |
 | tests/unit/google-drive/drive-errors.test.ts | Unit test | White-box | Menguji `classifyDriveError`: pemetaan status/reason/`invalid_grant`/galat jaringan/`TokenCryptoError` ke kategori galat Drive dan pesan tanpa isi respons mentah. |
+| tests/unit/google-drive/drive-sync-script-source.test.ts | Unit test (static source guard) | White-box | Menjaga kontrak `pnpm drive:sync`: skrip `package.json` memakai `dotenv -e .env`, menjalankan `runDriveRunnerOnce()` dan mencetak ringkasan angka saja, env tidak lengkap → "Google Drive belum dikonfigurasi" tanpa `exitCode`, galat sistem → `exitCode = 1` (pesan penyebab saja), `pool.end()` di `finally`, tidak mencetak token/email; serta blok tiga variabel Google Drive tanpa nilai di `.env.example`. |
 | tests/unit/google-drive/drive-client.test.ts | Unit/Component test (dependency di-mock) + static source guard | White-box | Menguji `createGoogleDriveClient` dengan Drive API dan OAuth2Client di-mock (argumen setiap metode, `retry: false` + timeout, kueri `appProperties has`, penolakan nilai kueri berbahaya) dan memastikan paket Google hanya diimpor `drive-client.ts`/`oauth.ts`. |
 | tests/unit/google-drive/fake-drive.test.ts | Unit test | White-box | Menguji helper `FakeDrive` (Drive in-memory untuk tes): id berurutan, isi stream, hapus berantai, `failNext` termasuk mode respons hilang, dan `failWhen`. |
 | tests/unit/google-drive/jobs.test.ts | Unit test | White-box | Menguji fungsi murni antrean Drive: konstanta prioritas/jeda, `computeRetrySchedule` (8 percobaan ulang lalu GAGAL), pemotongan `galat_pesan`, dan impor modul tanpa DATABASE_URL. |
